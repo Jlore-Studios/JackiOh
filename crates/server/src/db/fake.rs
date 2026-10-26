@@ -99,6 +99,7 @@ use jackioh_engine::wire::stats::{
 use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
+use crate::bots::cosmetics::BotCosmetics;
 use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
@@ -106,19 +107,19 @@ use crate::config::{
     TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
-    EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
-    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult,
+    CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
+    CustomCardWrite, Db, EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow,
+    MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot,
+    PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -200,6 +201,8 @@ pub struct BotTableRow {
     /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
     pub grinding: bool,
     pub grind_wins: i32,
+    /// R1834005: its wardrobe and picks (migration 0061).
+    pub cosmetics: Option<BotCosmetics>,
 }
 
 /// R1450: a match id a queue pairing reserved (`tickets_claim_pair`) and when it was claimed; in
@@ -257,6 +260,9 @@ pub struct FakeTables {
     pub unreadable_game_records: IndexMap<String, String>,
     // R1044000 (migration 0041's three totals tables, in one): the records folded.
     pub stats_totals: StatsTotals,
+    // R1976000 (`public.game_record_batches`, migration 0060): each file folded as totals only, by the
+    // SHA-256 of its contents, with how many of its records it folded.
+    pub game_record_batches: IndexMap<String, usize>,
     // RankedTables
     pub seasons: Vec<Season>,
     pub season_ranks: Vec<SeasonRank>,
@@ -1067,7 +1073,7 @@ pub fn profiles_answer_username_prompt(f: &mut FakeTx<'_>, profile_id: &str) -> 
     Ok(())
 }
 
-/// §9.5: every terminal reason clears both players'. Setting `Some` is the same
+/// Clearing with `None` is unconditional. Setting `Some` is the same
 /// compare-and-set as Postgres's (R890000): only a free seat is written, and a taken one answers
 /// `Ok(false)` without writing. Goes through `call_cas` like `series.update`, so a race hook
 /// answering `CallOutcome::Lose` loses, as the store's other compare-and-sets do.
@@ -1089,7 +1095,7 @@ pub fn profiles_set_in_match(
     Ok(true)
 }
 
-/// R890000: clears the seat only while it points at `match_id`. Always `Ok`.
+/// R890000, R1896000: clears the seat only while it points at `match_id`, as every ending does. Always `Ok`.
 pub fn profiles_clear_in_match(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -1384,6 +1390,46 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
     });
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != row.id);
     Ok(())
+}
+
+/// R1834006: each person's seat of every match begun at or after `since` that froze loadouts,
+/// oldest match first (ties on id), seat order, as Postgres reads them: a seat whose profile is not
+/// a person's (a bot's, a deleted account's) is left out.
+pub fn matches_loadout_samples(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<LoadoutSample>, StoreError> {
+    call(f, "matches.loadoutSamples")?;
+    let tables = f.tables();
+    let mut matches: Vec<&MatchRow> = tables
+        .matches
+        .iter()
+        .filter(|row| row.created_at >= since && row.loadouts.is_some())
+        .collect();
+    matches.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id)));
+    let mut samples = Vec::new();
+    for row in matches {
+        let Some((first, second)) = &row.loadouts else {
+            continue;
+        };
+        for (profile_id, deck, loadout) in [
+            (&row.players.0, &row.decks.0, first),
+            (&row.players.1, &row.decks.1, second),
+        ] {
+            let Some(profile) = tables
+                .profiles
+                .iter()
+                .find(|profile| profile.id == *profile_id && profile.kind == ProfileKind::Human)
+            else {
+                continue;
+            };
+            samples.push(LoadoutSample {
+                profile_id: profile_id.clone(),
+                account_created_at: profile.created_at,
+                match_created_at: row.created_at,
+                deck: deck.clone(),
+                loadout: loadout.clone(),
+            });
+        }
+    }
+    Ok(samples)
 }
 
 pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
@@ -2719,6 +2765,46 @@ pub fn game_records_insert_batch(
     Ok(written)
 }
 
+/// R1976000: a batch held already folds nothing; otherwise each record whose id the ledger holds
+/// (every id `game_records` ever wrote, its detail emptied or not), and each repeat of an id the
+/// file named before, is left out, and the rest are folded. The fold reads no detail, so nothing here
+/// can fail half-way: the claim and the counts land together, as Postgres's one transaction lands them.
+pub fn game_record_batch_fold(
+    f: &mut FakeTx<'_>,
+    batch: &str,
+    records: &[GameRecord],
+) -> Result<Option<BatchFolded>, StoreError> {
+    call(f, "gameRecordBatches.fold")?;
+    // `game_record_batches_batch_check` (0060).
+    if batch.len() != 64
+        || !batch
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(StoreError::from(format!(
+            "game_record_batches_batch_check: {batch} is not a SHA-256 in lowercase hex"
+        )));
+    }
+    let tables = f.tables();
+    if tables.game_record_batches.contains_key(batch) {
+        return Ok(None);
+    }
+    let mut seen: IndexSet<&str> = IndexSet::new();
+    let mut folded = 0;
+    for record in records {
+        if tables.game_record_ledger.contains_key(&record.id) || !seen.insert(record.id.as_str()) {
+            continue;
+        }
+        tables.stats_totals.fold(record, true);
+        folded += 1;
+    }
+    tables.game_record_batches.insert(batch.to_string(), folded);
+    Ok(Some(BatchFolded {
+        folded,
+        left_out: records.len() - folded,
+    }))
+}
+
 /// The records of the query's sources, mode and patch whose detail is still held (R1044001), in id
 /// order (code points), filtered exactly as `card_stats` does.
 pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<Vec<GameRecord>, StoreError> {
@@ -3714,6 +3800,7 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 in_match_id: profile.in_match_id.clone(),
                 grinding: bot.grinding,
                 grind_wins: bot.grind_wins,
+                cosmetics: bot.cosmetics.clone(),
             })
         })
         .collect();
@@ -3769,6 +3856,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         retired_at: None,
         grinding: false,
         grind_wins: 0,
+        cosmetics: None,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -3812,6 +3900,16 @@ pub fn bots_set_decks(
     let row = bot_row_of(f.tables(), profile_id)?;
     row.decks = decks.to_vec();
     row.decks_catalog_version = Some(catalog_version.to_string());
+    Ok(())
+}
+
+pub fn bots_set_cosmetics(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    cosmetics: &BotCosmetics,
+) -> Result<(), StoreError> {
+    call(f, "bots.setCosmetics")?;
+    bot_row_of(f.tables(), profile_id)?.cosmetics = Some(cosmetics.clone());
     Ok(())
 }
 

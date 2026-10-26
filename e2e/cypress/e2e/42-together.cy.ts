@@ -31,7 +31,7 @@ import {
   PRESENCE_HEARTBEAT_MS,
   SOCIAL_POLL_MS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import { onStep } from "../../support/replays.ts";
 import {
   CHALLENGE_ACCEPT,
@@ -157,25 +157,17 @@ type JoinBody = { matchId: string | null; code: string; mode: QueueMode };
 type SharedBody = { shared: { matchId: string; sharer: PlayerRef }[] };
 type RoomBody = { code: string };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
-  return cy.request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) }).its("body");
+  return cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).its("body");
 }
 
 function friendsOf(account: E2EAccount): Cypress.Chainable<FriendsBody> {
-  return cy.request<FriendsBody>({ method: "GET", url: api("/api/friends"), headers: bearer(account) }).its("body");
+  return cy.request<FriendsBody>({ method: "GET", url: apiUrl("/api/friends"), headers: bearerHeaders(account.token) }).its("body");
 }
 
 function challengesOf(account: E2EAccount): Cypress.Chainable<ChallengesBody> {
   return cy
-    .request<ChallengesBody>({ method: "GET", url: api("/api/challenges"), headers: bearer(account) })
+    .request<ChallengesBody>({ method: "GET", url: apiUrl("/api/challenges"), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
@@ -198,24 +190,24 @@ function landedOn(pattern: RegExp, timeout: number): Cypress.Chainable<string> {
  */
 function separate(pairs: readonly [E2EAccount, string][]): void {
   for (const [self, otherId] of pairs) {
-    cy.request({ method: "DELETE", url: api(`/api/blocks/${otherId}`), headers: bearer(self), failOnStatusCode: false });
+    cy.request({ method: "DELETE", url: apiUrl(`/api/blocks/${otherId}`), headers: bearerHeaders(self.token), failOnStatusCode: false });
     friendsOf(self).then((body) => {
       if (body.friends.some((friend) => friend.profileId === otherId)) {
-        cy.request({ method: "DELETE", url: api(`/api/friends/${otherId}`), headers: bearer(self), failOnStatusCode: false });
+        cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${otherId}`), headers: bearerHeaders(self.token), failOnStatusCode: false });
       }
       for (const request of body.outgoing.filter((sent) => sent.to.profileId === otherId)) {
         cy.request({
           method: "DELETE",
-          url: api(`/api/friends/requests/${request.requestId}`),
-          headers: bearer(self),
+          url: apiUrl(`/api/friends/requests/${request.requestId}`),
+          headers: bearerHeaders(self.token),
           failOnStatusCode: false,
         });
       }
       for (const request of body.incoming.filter((got) => got.from.profileId === otherId)) {
         cy.request({
           method: "POST",
-          url: api(`/api/friends/requests/${request.requestId}/decline`),
-          headers: bearer(self),
+          url: apiUrl(`/api/friends/requests/${request.requestId}/decline`),
+          headers: bearerHeaders(self.token),
           failOnStatusCode: false,
         });
       }
@@ -224,16 +216,16 @@ function separate(pairs: readonly [E2EAccount, string][]): void {
       for (const challenge of body.outgoing) {
         cy.request({
           method: "DELETE",
-          url: api(`/api/challenges/${challenge.challengeId}`),
-          headers: bearer(self),
+          url: apiUrl(`/api/challenges/${challenge.challengeId}`),
+          headers: bearerHeaders(self.token),
           failOnStatusCode: false,
         });
       }
       for (const challenge of body.incoming) {
         cy.request({
           method: "POST",
-          url: api(`/api/challenges/${challenge.challengeId}/decline`),
-          headers: bearer(self),
+          url: apiUrl(`/api/challenges/${challenge.challengeId}/decline`),
+          headers: bearerHeaders(self.token),
           failOnStatusCode: false,
         });
       }
@@ -243,7 +235,7 @@ function separate(pairs: readonly [E2EAccount, string][]): void {
 
 /** Make `asked` a friend of `asker`: the request by name, then the accept (B43, B45). */
 function befriend(asker: E2EAccount, asked: E2EAccount, askedName: string, askerId: string): void {
-  cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(asker), body: { username: askedName } })
+  cy.request({ method: "POST", url: apiUrl("/api/friends/requests"), headers: bearerHeaders(asker.token), body: { username: askedName } })
     .its("status")
     .should("eq", 201);
   friendsOf(asked).then((body) => {
@@ -251,8 +243,8 @@ function befriend(asker: E2EAccount, asked: E2EAccount, askedName: string, asker
     expect(request, "B43: the request reached the friend").to.not.eq(undefined);
     cy.request({
       method: "POST",
-      url: api(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
-      headers: bearer(asked),
+      url: apiUrl(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
+      headers: bearerHeaders(asked.token),
     })
       .its("status")
       .should("eq", 200);
@@ -388,7 +380,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
 
     // B55: a request from seat two shows as incoming within a poll, and Decline ends it.
     cy.then(() => {
-      cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(two), body: { username: oneName } })
+      cy.request({ method: "POST", url: apiUrl("/api/friends/requests"), headers: bearerHeaders(two.token), body: { username: oneName } })
         .its("status")
         .should("eq", 201);
       cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(
@@ -415,8 +407,8 @@ describe("42 Play together — friends, chat and challenges between two accounts
         expect(request, "B43: seat one's request reached seat two").to.not.eq(undefined);
         cy.request({
           method: "POST",
-          url: api(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
-          headers: bearer(two),
+          url: apiUrl(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
+          headers: bearerHeaders(two.token),
         })
           .its("status")
           .should("eq", 200);
@@ -436,12 +428,12 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.contains(`${ts(CHAT_MESSAGE)}[data-from="you"]`, HELLO, { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {
       // B53: seat two reads it, being a friend, and answers.
-      cy.request<ChatBody>({ method: "GET", url: api(`/api/chat/${oneId}`), headers: bearer(two) })
+      cy.request<ChatBody>({ method: "GET", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token) })
         .its("body.messages")
         .should((messages: ChatBody["messages"]) => {
           expect(messages.map((message) => message.body)).to.include(HELLO);
         });
-      cy.request({ method: "POST", url: api(`/api/chat/${oneId}`), headers: bearer(two), body: { body: REPLY } })
+      cy.request({ method: "POST", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token), body: { body: REPLY } })
         .its("status")
         .should("eq", 201);
     });
@@ -454,8 +446,8 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.then(() => {
       cy.request<{ challengeId: string; roomCode: string }>({
         method: "POST",
-        url: api("/api/challenges"),
-        headers: bearer(two),
+        url: apiUrl("/api/challenges"),
+        headers: bearerHeaders(two.token),
         body: { mode: MODE, friendId: oneId },
       }).then((created) => {
         expect(created.status, "B48: a challenge to an online, idle friend").to.eq(201);
@@ -487,7 +479,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
     // B48, B56, #1831: seat one challenges seat two from its Friends panel, on a screen that is not
     // Play together; seat two joins the room, and the shell takes seat one to the game
     // (ChallengeToast's follow).
-    cy.request({ method: "POST", url: api("/api/presence"), headers: bearer(two) }).its("status").should("eq", 204);
+    cy.request({ method: "POST", url: apiUrl("/api/presence"), headers: bearerHeaders(two.token) }).its("status").should("eq", 204);
     cy.visitAs(one, routes.replays());
     cy.get(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
     cy.then(() => {
@@ -506,8 +498,8 @@ describe("42 Play together — friends, chat and challenges between two accounts
         expect(challenge?.mode, "the challenge plays the mode it was sent with").to.eq(MODE);
         cy.request<JoinBody>({
           method: "POST",
-          url: api(`/api/rooms/${challenge?.roomCode ?? ""}/join`),
-          headers: bearer(two),
+          url: apiUrl(`/api/rooms/${challenge?.roomCode ?? ""}/join`),
+          headers: bearerHeaders(two.token),
           body: { mode: MODE },
         }).then((joined) => {
           matchId = joined.body.matchId ?? "";
@@ -566,15 +558,15 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.then(() => {
       cy.request<RoomBody>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(one),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(one.token),
         body: { mode: MODE, seed: SEED },
       }).then((created) => {
         roomCode = created.body.code;
         cy.request<JoinBody>({
           method: "POST",
-          url: api(`/api/rooms/${roomCode}/join`),
-          headers: bearer(two),
+          url: apiUrl(`/api/rooms/${roomCode}/join`),
+          headers: bearerHeaders(two.token),
           body: { mode: MODE },
         }).then((joined) => {
           matchId = joined.body.matchId ?? "";
@@ -704,7 +696,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
 
     // B58, #1831: a message from seat two while the match runs badges the board's Friends button.
     cy.then(() => {
-      cy.request({ method: "POST", url: api(`/api/chat/${oneId}`), headers: bearer(two), body: { body: `${UNREAD} ${run}` } })
+      cy.request({ method: "POST", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token), body: { body: `${UNREAD} ${run}` } })
         .its("status")
         .should("eq", 201);
     });
@@ -728,12 +720,12 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.get(ts(CHAT_SEND)).click();
     cy.contains(`${ts(CHAT_MESSAGE)}[data-from="you"]`, `${MID_HELLO} ${run}`, { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {
-      cy.request<ChatBody>({ method: "GET", url: api(`/api/chat/${oneId}`), headers: bearer(two) })
+      cy.request<ChatBody>({ method: "GET", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token) })
         .its("body.messages")
         .should((messages: ChatBody["messages"]) => {
           expect(messages.map((message) => message.body)).to.include(`${MID_HELLO} ${run}`);
         });
-      cy.request({ method: "POST", url: api(`/api/chat/${oneId}`), headers: bearer(two), body: { body: `${MID_REPLY} ${run}` } })
+      cy.request({ method: "POST", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token), body: { body: `${MID_REPLY} ${run}` } })
         .its("status")
         .should("eq", 201);
     });
@@ -761,7 +753,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
         "data-shared",
         "true",
       );
-      cy.request<SharedBody>({ method: "GET", url: api("/api/replays/shared"), headers: bearer(two) })
+      cy.request<SharedBody>({ method: "GET", url: apiUrl("/api/replays/shared"), headers: bearerHeaders(two.token) })
         .its("body.shared")
         .should((shared: SharedBody["shared"]) => {
           const entry = shared.find((replay) => replay.matchId === matchId);

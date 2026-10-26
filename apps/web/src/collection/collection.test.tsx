@@ -20,8 +20,10 @@ import {
   readCardPicks,
   readCosmetics,
   resetCosmeticsForTests,
+  subscribeCardPickWrites,
   writeCardPick,
   writeCosmetics,
+  type CardPickChange,
 } from "../cards/cosmetics.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
 import {
@@ -344,7 +346,8 @@ describe("R1655000 a card in context", () => {
   const shown = (): Element | null => screen.queryByTestId(T.cardViewPreview)?.querySelector(".cf") ?? null;
   const item = (id: string): HTMLElement => screen.getByTestId(T.stripItem(id));
 
-  it("R1655000 a card opened in the Collection wears its own picks while another card keeps the account's", () => {
+  it("R1655000 a card opened in the Collection wears its own picks while another card draws the defaults", () => {
+    // R1953001: the account's synced finish is worn by no card.
     writeCosmetics({ finish: "finish-linen" });
     writeCardPick(BIG_D, "border", "border-wood");
     writeCardPick(BIG_D, "foil", "foil-rainbow");
@@ -352,14 +355,14 @@ describe("R1655000 a card in context", () => {
 
     expect(large().getAttribute("data-frame")).toBe("border-wood");
     expect(large().getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
-    expect(large().getAttribute("data-finish")).toBe("finish-linen");
+    expect(large().getAttribute("data-finish")).toBeNull();
     expect(item("border-wood")).toHaveAttribute("data-equipped", "true");
     expect(item("border-standard")).toHaveAttribute("data-equipped", "false");
 
-    // Another card, in the same view: the account's picks, and none of Big D-fender's.
+    // Another card, in the same view: the defaults, and none of Big D-fender's.
     fireEvent.click(screen.getByTestId(T.card(PLAIN)));
     expect(screen.getByTestId(T.cardView)).toHaveAttribute("data-card", PLAIN);
-    expect(large().getAttribute("data-finish")).toBe("finish-linen");
+    expect(large().getAttribute("data-finish")).toBeNull();
     expect(large().getAttribute("data-frame")).toBeNull();
     expect(large().getAttribute("data-cosmetic-foil")).toBeNull();
   });
@@ -398,12 +401,13 @@ describe("R1655000 a card in context", () => {
 
     fireEvent.focus(item("foil-holo-sweep"));
     expect(shown()?.getAttribute("data-cosmetic-foil")).toBe("foil-holo-sweep");
-    // A preview's foil holds still: the cap on moving foils belongs to a game's faces.
+    // A preview of a foil that is no chase holds still; a chase moves (R1953001).
     expect(shown()?.getAttribute("data-cosmetic-motion")).toBe("static");
     fireEvent.mouseEnter(item("finish-gilded-edge"));
     fireEvent.blur(item("foil-holo-sweep"));
     expect(shown()?.getAttribute("data-finish")).toBe("finish-gilded-edge");
     expect(shown()?.getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(shown()?.getAttribute("data-cosmetic-motion")).toBe("animated");
 
     fireEvent.mouseLeave(item("finish-gilded-edge"));
     expect(shown()).toBeNull();
@@ -422,9 +426,10 @@ describe("R1655000 a card in context", () => {
   });
 
   it("R1655000 clicking an owned item equips it on that card only, and Use default clears it", () => {
+    // R1953001: the account's synced border is worn by no card, before a pick or after Use default.
     writeCosmetics({ border: "border-bone" });
     open(BIG_D);
-    expect(large().getAttribute("data-frame")).toBe("border-bone");
+    expect(large().getAttribute("data-frame")).toBeNull();
 
     fireEvent.click(item("border-wood"));
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-wood" });
@@ -433,7 +438,7 @@ describe("R1655000 a card in context", () => {
     expect(screen.getByTestId(T.stripDefault("border"))).toHaveAttribute("aria-pressed", "false");
     expect(readCosmetics().border).toBe("border-bone");
 
-    // A pick of the kind's default is a pick: it beats the account's pick that is not the default.
+    // A pick of the kind's default is a pick of its own.
     fireEvent.click(item("border-standard"));
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-standard" });
     expect(large().getAttribute("data-frame")).toBeNull();
@@ -441,7 +446,7 @@ describe("R1655000 a card in context", () => {
     fireEvent.click(screen.getByTestId(T.stripDefault("border")));
     expect(readCardPicks(BIG_D)).toEqual({});
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe("{}");
-    expect(large().getAttribute("data-frame")).toBe("border-bone");
+    expect(large().getAttribute("data-frame")).toBeNull();
     expect(screen.getByTestId(T.stripDefault("border"))).toHaveAttribute("aria-pressed", "true");
 
     // Another card has none of it.
@@ -483,7 +488,7 @@ describe("R1655000 a card in context", () => {
     expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "true");
   });
 
-  it("R1655000 a full art is shown by holding its pick, which is given back when it stops being shown", () => {
+  it("R1655000 a full art is shown while it is shown, and stands once chosen", () => {
     writeCardSettings({ fullArt: false });
     open(BIG_D, OWNS_BIG_D_ART);
     expect(large().getAttribute("data-full-art")).toBeNull();
@@ -493,7 +498,7 @@ describe("R1655000 a card in context", () => {
     fireEvent.mouseLeave(item(BIG_D_ART));
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({});
-    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe("{}");
+    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBeNull();
 
     // Clicked, the pick stands past the pointer leaving.
     fireEvent.mouseEnter(item(BIG_D_ART));
@@ -532,24 +537,37 @@ describe("R1655000 a card in context", () => {
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: true });
   });
 
-  it("R1655000 a shown full art is given back when the view closes or the page is left", () => {
+  it("R1834000 a shown full art writes no pick, so none is sent to the account, whether the view closes or the page is left", () => {
     writeCardSettings({ fullArt: false });
     writeCardPick(BIG_D, "border", "border-bone");
+    const stored = localStorage.getItem(CARD_PICKS_SETTINGS_KEY);
+    const writes: [string, CardPickChange][] = [];
+    const unsubscribe = subscribeCardPickWrites((defId, change) => {
+      writes.push([defId, change]);
+    });
     open(BIG_D, OWNS_BIG_D_ART);
 
     fireEvent.focus(item(BIG_D_ART));
-    expect(readCardPicks(BIG_D).fullArt).toBe(true);
+    expect(large().getAttribute("data-full-art"), "the large card shows it").toBe("true");
+    expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
     fireEvent.click(screen.getByTestId(T.cardViewClose));
     expect(screen.queryByTestId(T.cardView)).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
 
     fireEvent.click(screen.getByTestId(T.card(BIG_D)));
+    fireEvent.focus(item(NO_FULL_ART_ID));
     fireEvent.focus(item(BIG_D_ART));
-    expect(readCardPicks(BIG_D).fullArt).toBe(true);
     act(() => {
       window.dispatchEvent(new Event("pagehide"));
     });
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
+    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe(stored);
+    expect(writes, "no preview reaches the account's sync").toEqual([]);
+
+    // Chosen, it is a write like any other.
+    fireEvent.click(item(BIG_D_ART));
+    expect(writes).toEqual([[BIG_D, { fullArt: true }]]);
+    unsubscribe();
   });
 
   it("R1655000 Escape closes the view, but the card's text open over it takes the Escape first", () => {

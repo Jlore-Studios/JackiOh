@@ -15,21 +15,36 @@
 //! end of a match, so nothing typed into a file can ever count as live play or stand in a live
 //! game's place. A record already in the table (the same run imported twice) is skipped, never
 //! doubled.
+//!
+//! ```text
+//! jackioh-server stats-import --totals-only <records.jsonl>
+//! ```
+//!
+//! R1976000: the same checks, then the file's records are folded into the totals and no row of
+//! `game_records` is written for them, so the database keeps their counts and nothing per game:
+//! the file is the run's copy of every game. The file itself is the one row kept, the SHA-256 of
+//! its contents in `game_record_batches`, so the same file imported twice is folded once. A record
+//! whose id `game_records` holds (imported a record at a time) is left out, and so is a repeat of an
+//! id the file named before. The learn lane's import and the gather workflow import this way.
 
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
-use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, forced_series};
+use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameRecord, GameSource, forced_series};
 
 use crate::cli::card_stats::literal;
 use crate::cli::{connect_one, database_url};
 use crate::config::STATS_FOLD_BATCH_RECORDS;
 use crate::db::store::Db;
 
-const USAGE: &str = "Usage: jackioh-server stats-import <records.jsonl>";
+const USAGE: &str = "Usage: jackioh-server stats-import [--totals-only] <records.jsonl>";
+
+/// R1976000: the flag that files a run's records as totals only.
+const TOTALS_ONLY_FLAG: &str = "--totals-only";
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +52,19 @@ pub struct ImportOutcome {
     pub read: usize,
     pub written: usize,
     pub skipped: usize,
+}
+
+/// R1976000: what `--totals-only` did with a file: its records read, those folded into the totals
+/// and those left out, and its batch (the SHA-256 of its contents), held already when `again`, in
+/// which case nothing was folded.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TotalsOutcome {
+    pub read: usize,
+    pub folded: usize,
+    pub left_out: usize,
+    pub batch: String,
+    pub again: bool,
 }
 
 /// Node's `path.resolve(base, path)`: `path` itself when it is absolute, else `base` joined with
@@ -67,8 +95,10 @@ pub fn run_file_path(path: &str, env: &IndexMap<String, String>, cwd: &str) -> P
     resolve(cwd, base, path)
 }
 
-/// R378: every record a development record, or nothing is written.
-pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<ImportOutcome> {
+/// R378, R1284000: the file's records, each read and checked before anything is written: every
+/// one a development record, under a development id, and none a forced run's, or the file is
+/// refused whole.
+fn dev_records(contents: &str) -> anyhow::Result<Vec<GameRecord>> {
     // R1371000: a file written before the version retcon names its versions the old way.
     let records =
         jackioh_cards::versions::read_game_record_lines(contents).map_err(|error| anyhow!("{error}"))?;
@@ -101,6 +131,20 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
             forced.id
         );
     }
+    Ok(records)
+}
+
+/// The SHA-256 of a file's contents, in lowercase hex: its batch (R1976000).
+pub fn batch_of(contents: &str) -> String {
+    Sha256::digest(contents.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+/// R378: every record a development record, or nothing is written.
+pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<ImportOutcome> {
+    let records = dev_records(contents)?;
 
     // R1044000: `STATS_FOLD_BATCH_RECORDS` records to a transaction, the ones written folded into the
     // totals together, so a day's file rewrites each card's totals a few times rather than once per
@@ -119,12 +163,41 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
     })
 }
 
+/// R1976000: the file folded into the totals in one transaction, with no row per record, once.
+pub async fn import_dev_records_totals_only(db: &Db, contents: &str) -> anyhow::Result<TotalsOutcome> {
+    let records = dev_records(contents)?;
+    let batch = batch_of(contents);
+    let mut tx = db.begin(None).await?;
+    let done = tx.game_record_batch_fold(&batch, &records).await?;
+    tx.commit().await?;
+    Ok(match done {
+        Some(done) => TotalsOutcome {
+            read: records.len(),
+            folded: done.folded,
+            left_out: done.left_out,
+            batch,
+            again: false,
+        },
+        None => TotalsOutcome {
+            read: records.len(),
+            folded: 0,
+            left_out: records.len(),
+            batch,
+            again: true,
+        },
+    })
+}
+
 /// TS `main()`: `stats-import`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
-    let mut args = args.into_iter();
-    let (Some(path), None) = (args.next(), args.next()) else {
+    let totals_only = args.iter().any(|arg| arg == TOTALS_ONLY_FLAG);
+    let mut paths = args.into_iter().filter(|arg| arg != TOTALS_ONLY_FLAG);
+    let (Some(path), None) = (paths.next(), paths.next()) else {
         bail!(USAGE);
     };
+    if path.starts_with("--") {
+        bail!(USAGE);
+    }
     let connection_string = database_url()?;
 
     let env: IndexMap<String, String> = std::env::vars().collect();
@@ -135,6 +208,23 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         .map_err(|error| anyhow!("{}: {error}", Path::new(&file).display()))?;
     // One connection: this process runs its inserts one after another and exits.
     let db = connect_one(&connection_string).await?;
+    if totals_only {
+        let outcome = import_dev_records_totals_only(&db, &contents).await;
+        db.close().await;
+        let outcome = outcome?;
+        if outcome.again {
+            println!(
+                "stats:import: read {} records; this file (batch {}) was imported before, so nothing was folded",
+                outcome.read, outcome.batch
+            );
+        } else {
+            println!(
+                "stats:import: read {} records, folded {} into the totals, left out {} already imported (batch {})",
+                outcome.read, outcome.folded, outcome.left_out, outcome.batch
+            );
+        }
+        return Ok(());
+    }
     let outcome = import_dev_records(&db, &contents).await;
     db.close().await;
     let outcome = outcome?;

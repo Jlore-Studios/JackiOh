@@ -158,7 +158,7 @@ impl SummonArgs {
 
 /// §5.1: the row a card type lives in, or `None` for a Spell, which is never summoned. B2.7: a card's
 /// type is its running face's (`faces::card_type_of`), a pool's definition its base face's.
-fn row_of(card_type: CardType) -> Option<Row> {
+pub(super) fn row_of(card_type: CardType) -> Option<Row> {
     match card_type {
         CardType::Unit => Some(Row::Units),
         CardType::Spell => None,

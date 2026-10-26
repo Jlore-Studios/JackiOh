@@ -15,8 +15,10 @@
 // beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
 // sends anything (ConfirmConcede.tsx; `concedeFor` is the seat that asked), and the draw offer's
 // notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx). So does
-// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), and R1838000's Trade
-// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx).
+// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), R1838000's Trade
+// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx),
+// and R1853003's Marketplace shop, its buys and sales live exactly as `legal` lists them
+// (Marketplace.tsx).
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
 // While the runner holds it back (the AI's last attack still playing out, say), the board draws the
@@ -40,12 +42,14 @@ import {
 import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
+import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
+import Marketplace from "./Marketplace.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
@@ -150,10 +154,17 @@ export type GameProps = {
   wearCosmetics?: boolean;
   /**
    * R1297000: the picks of the deck the viewer plays (cards/cosmetics.ts), which beat the account's
-   * on the viewer's own side. The practice route sets it from the saved deck it plays; online
-   * matches, hotseat and Duos leave it off and wear the account's choice.
+   * on the viewer's own side. The practice route sets it from the saved deck it plays, and an online
+   * match from its own seat's frozen loadout (R1834004); hotseat and Duos leave it off and wear the
+   * account's choice.
    */
   deckCosmetics?: DeckCosmetics | null;
+  /**
+   * R1834004: both seats' frozen loadouts (R1834002) on an online board, a live match's, a watched
+   * game's or a replay's: every seat whose cards do not wear the device's picks wears its own.
+   * Absent, every such seat draws the defaults.
+   */
+  loadouts?: SeatLoadouts | null;
   /**
    * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
    * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
@@ -215,6 +226,7 @@ export default function Game({
   trackStats = false,
   wearCosmetics = false,
   deckCosmetics = null,
+  loadouts = null,
   aim,
   replay = false,
   lesson = false,
@@ -626,6 +638,8 @@ export default function Game({
     burstTurn?.type === "turnStarted" ? burstTurn.player : undefined,
     burstTurn?.type === "turnStarted" && burstTurn.extra === true,
   );
+  // R1295000: the seat whose own cards wear the device's picks, for the layers drawn over the board.
+  const wearer = wearCosmetics && !replay ? shown.viewer : null;
 
   return (
     <div
@@ -669,6 +683,7 @@ export default function Game({
         view={shown}
         wearCosmetics={wearCosmetics && !replay}
         deckCosmetics={deckCosmetics}
+        loadouts={loadouts}
         highlight={highlight}
         animating={animating}
         animated={animated}
@@ -709,7 +724,7 @@ export default function Game({
           cast on draw up as the runner reaches it. */}
       <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
-      <WearerProvider seat={wearCosmetics && !replay ? shown.viewer : null}>
+      <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       <CardShowcase view={view} queue={runner} />
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
@@ -741,16 +756,21 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {/* R1853003: the Marketplace's shop, once the view carries it. */}
+      {replay ? null : <Marketplace view={shown} legal={legal} onAction={dispatch} />}
 
+      {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
       {shown.result !== null ? (
-        <GameResult
-          result={shown.result}
-          viewer={shown.viewer}
-          form={resultForm}
-          actions={resultActions}
-          animating={animating.get(testid.result)}
-          theirHand={theirHandOf(shown)}
-        />
+        <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
+          <GameResult
+            result={shown.result}
+            viewer={shown.viewer}
+            form={resultForm}
+            actions={resultActions}
+            animating={animating.get(testid.result)}
+            theirHand={theirHandOf(shown)}
+          />
+        </WearerProvider>
       ) : null}
 
       {concedeOpen ? <ConfirmConcede onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}

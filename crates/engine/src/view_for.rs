@@ -2061,8 +2061,9 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it.
-        GameEventType::ResourceGained => {
+        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it; R1853003:
+        // so does a card bought at the Marketplace.
+        GameEventType::ResourceGained | GameEventType::MarketBought => {
             if hidden(&instance) {
                 shown.remove("radiant");
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2426,7 +2427,9 @@ fn redact_event(
         // as a burned card is (R317); R1840005: Credits are a player and a number.
         | GameEventType::ResourceSold
         | GameEventType::ResourceDiscarded
-        | GameEventType::MarketCreditsChanged => event.clone(),
+        | GameEventType::MarketCreditsChanged
+        // R1853003: so did a Resource sold at the Marketplace.
+        | GameEventType::MarketSold => event.clone(),
         // R1852000, R1852003: a piece's fusion names the dead card in its graveyard and the Dormant
         // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
         // the Starship's memory is on both seats' views.
@@ -2435,7 +2438,9 @@ fn redact_event(
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
         // R1847001: a starscape travel names a player, a node and its reward, all public.
-        | GameEventType::StarscapeTravelled => event.clone(),
+        | GameEventType::StarscapeTravelled
+        // R1855000: a board replacement names its player alone.
+        | GameEventType::BoardReplaced => event.clone(),
 
         // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
         // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps
@@ -2797,6 +2802,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         },
         // R1838000: the viewer's own Trades, while their hand holds a Tradable card.
         trades: trades_view(state, player_id),
+        // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
+        marketplace: crate::marketplace::marketplace_view(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

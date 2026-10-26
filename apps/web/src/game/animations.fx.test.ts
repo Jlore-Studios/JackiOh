@@ -184,6 +184,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
+  marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
   starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
   voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
@@ -191,6 +194,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
+  // Issue #1855 (R1855000).
+  boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -329,6 +334,9 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   resourceSold: null,
   resourceDiscarded: null,
   marketCreditsChanged: null,
+  // Issue #1853 (R1853003): a purchase and a sale glint the hand's edge with no effect.
+  marketBought: null,
+  marketSold: null,
   // R1852000: a piece's fusion is drawn by the `fused` before it; R1852003: a launch brands.
   starshipFused: null,
   starshipLaunched: "brand",
@@ -341,6 +349,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   starscapeTravelled: null,
   // #1850 (R1850003): the held card fades as an exiled one; no effect decorates it.
   held: null,
+  // Issue #1855 (R1855000): the board tilts with no effect; the cards' own events carry theirs.
+  boardReplaced: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -471,6 +481,8 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   resourceSold: ["jk-hand-full", 700, "hand-<side>"],
   resourceDiscarded: ["jk-hand-edge", 250, "hand-<side>"],
   marketCreditsChanged: ["jk-badge-tick", 200, "hero-<side>"],
+  marketBought: ["jk-hand-edge", 250, "hand-<side>"],
+  marketSold: ["jk-hand-edge", 250, "hand-<side>"],
   starshipFused: ["jk-fuse-merge", 400, "card-<instanceId>"],
   starshipLaunched: ["jk-radiant-pulse", 600, "card-<instanceId>"],
   voteCast: ["jk-radiant-pulse", 400, "card-<instanceId> | backrow-<side>"],
@@ -478,10 +490,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   fled: ["jk-exile-fade", 900, "hero-<side>"],
   starscapeTravelled: ["jk-badge-tick", 200, "hero-<side>"],
   held: ["jk-exile-fade", 350, "card-<instanceId>"],
+  boardReplaced: ["jk-swap-cross", 500, "board"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 64 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003) and #1843's two endings (R1843000, R1843002) carry fx with the listed recipe and the other 28 carry none", () => {
+  it("B1 exactly the 64 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003) and #1843's two endings (R1843000, R1843002) carry fx with the listed recipe and the other 31 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(64);
@@ -496,9 +509,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 28 rows without an effect have no fx value at all", () => {
+  it("B1 the 31 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(28);
+    expect(bare).toHaveLength(31);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

@@ -6,7 +6,7 @@
 // BUILD M6 and M7-T1 supply the server and clock; M8 requires isolated seeds and retried waits.
 
 import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   BOARD,
   CLOCK_OPPONENT,
@@ -236,14 +236,6 @@ function waitForMyTurn(): void {
 
 // A room match (§9.5)
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
-
 function openMatch(seed: string): void {
   const seatOne = accounts.p1();
   const seatTwo = accounts.p2();
@@ -253,14 +245,14 @@ function openMatch(seed: string): void {
       // R143: the server honours the room seed.
       cy.request<{ code: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne.token),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo1", deckId: one.deckIds[0], seed },
       }).then((created) => {
         cy.request<{ matchId: string; seat: string }>({
           method: "POST",
-          url: api(`/api/rooms/${created.body.code}/join`),
-          headers: bearer(seatTwo.token),
+          url: apiUrl(`/api/rooms/${created.body.code}/join`),
+          headers: bearerHeaders(seatTwo.token),
           body: { mode: "bo1", deckId: two.deckIds[0] },
         }).then((joined) => {
           expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);

@@ -5,6 +5,7 @@
 pub mod account;
 pub mod auth;
 pub mod bots;
+pub mod card_picks;
 pub mod catalog;
 pub mod challenges;
 pub mod chat;

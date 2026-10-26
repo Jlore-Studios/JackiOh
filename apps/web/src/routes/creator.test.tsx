@@ -133,7 +133,9 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
     await screen.findByTestId(creatorTestid.saved);
     // The note Back opened clears on the report the save's own render carries, a render later.
     await waitFor(() => expect(screen.queryByText(UNSAVED)).toBeNull());
-    expect(unloadIsCancelled()).toBe(false);
+    // That render commits the note's removal before its effect cleanup drops the beforeunload
+    // listener, and a busy scheduler can yield in between, so the listener is waited for too.
+    await waitFor(() => expect(unloadIsCancelled()).toBe(false));
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe(paths.collection);

@@ -236,12 +236,12 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("CARD_TOKEN_BAR_SIZE", json!(c::CARD_TOKEN_BAR_SIZE)),
         ("COSMETIC_TOKEN_BAR_SIZE", json!(c::COSMETIC_TOKEN_BAR_SIZE)),
         (
-            "CARD_TOKEN_BAR_POINTS_PER_DUPLICATE",
-            json!(c::CARD_TOKEN_BAR_POINTS_PER_DUPLICATE),
+            "TOKEN_BAR_POINTS_BY_CARD_RARITY",
+            json!(c::TOKEN_BAR_POINTS_BY_CARD_RARITY),
         ),
         (
-            "COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE",
-            json!(c::COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE),
+            "TOKEN_BAR_POINTS_BY_COSMETIC_RARITY",
+            json!(c::TOKEN_BAR_POINTS_BY_COSMETIC_RARITY),
         ),
         (
             "CARD_TOKEN_BAR_TARGET_PACKS",

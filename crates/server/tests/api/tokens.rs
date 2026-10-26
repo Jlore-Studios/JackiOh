@@ -16,10 +16,7 @@ use jackioh_engine::SetName;
 use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_catalog, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
-use jackioh_server::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-    COSMETIC_TOKEN_BAR_SIZE, PACK_PRICE_JLORE, PACK_SLOTS,
-};
+use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, PACK_PRICE_JLORE};
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::packs::open_pack;
@@ -278,13 +275,15 @@ async fn r1305000_a_bar_pays_when_full_and_keeps_the_overflow() {
         .await
         .expect("R111's grant");
     // One point short of full; the opening below spends every slot (an empty registry drops no
-    // cosmetic), so it gains PACK_SLOTS points and pays once with the overflow kept.
+    // cosmetic), so it gains its slots' points (R1953000), less than a second size, and pays once
+    // with the overflow kept.
     set_counter(&app, Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE - 1).await;
     buy(&app, &token).await;
-    let gained = PACK_SLOTS as i64 * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE;
-    open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &[], "r1305000")
+    let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &[], "r1305000")
         .await
         .expect("the opening");
+    let gained: i64 = opened.bars.slot_points.iter().sum();
+    assert!(gained < CARD_TOKEN_BAR_SIZE, "{gained}");
 
     assert_eq!(held(&app, InventoryItem::CardToken, "").await, 1);
     assert_eq!(
@@ -292,10 +291,7 @@ async fn r1305000_a_bar_pays_when_full_and_keeps_the_overflow() {
         CARD_TOKEN_BAR_SIZE - 1 + gained - CARD_TOKEN_BAR_SIZE
     );
     // The cosmetic bar accrues as before: no payout, one PackOpen row.
-    assert_eq!(
-        counter_of(&app, Counter::CosmeticTokenBar).await,
-        PACK_SLOTS as i64 * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE
-    );
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, gained);
 
     let ledger = ledger(&app).await;
     // Still one row per bar per opening: the paying write replaces the accrual row.
@@ -350,8 +346,9 @@ async fn r1305001_the_cycle_pays_rare_epic_rare_epic_rare_pack_then_restarts() {
     for _ in 0..7 {
         buy(&app, &token).await;
     }
-    // Each opening spends every slot, so prefilling to SIZE - PACK_SLOTS pays exactly one step.
-    let fill = COSMETIC_TOKEN_BAR_SIZE - PACK_SLOTS as i64 * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE;
+    // Each opening spends every slot, adding at least a point and less than a size (R1953000), so
+    // prefilling to one point short pays exactly one step.
+    let fill = COSMETIC_TOKEN_BAR_SIZE - 1;
     for at in 0..6 {
         set_counter(&app, Counter::CosmeticTokenBar, fill).await;
         open_pack(

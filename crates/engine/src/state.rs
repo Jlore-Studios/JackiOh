@@ -1090,6 +1090,67 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// R1853000–R1853005: Stinkyscape's Marketplace (`marketplace.rs`), one for both players: the offering
+/// rolled `rolled_turn` and the quotes the tray's Resources sell for this turn.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Marketplace {
+    /// R1853001: the turn the offering was last rolled (`GameState.turn`).
+    pub rolled_turn: i32,
+    /// The lots on offer, rolled lots in table order then the lots effects added, by their index.
+    pub offers: Vec<MarketOffer>,
+    /// R1853002: what each of the catalog's Resources sells for this turn. Absent while the catalog
+    /// holds none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<ResourceQuote>>", optional))]
+    pub quotes: Vec<ResourceQuote>,
+}
+
+/// R1853001, R1853005: one lot at the Marketplace: a card of `def_id`, at `price` Credits this turn
+/// (`base` before it moved), `stock` of it for each player this cycle and the copies each has bought.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketOffer {
+    pub def_id: String,
+    /// R1853001: a Radiant lot, sold on its Radiant face. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub radiant: Option<bool>,
+    pub base: i32,
+    pub price: i32,
+    pub stock: i32,
+    pub bought: PerPlayer<i32>,
+    /// R1853005: the one player a lot an effect added is offered to; absent on a rolled lot, which is
+    /// both players'.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub owner: Option<PlayerId>,
+}
+
+/// R1853002: what a Resource of `def_id` sells for at the Marketplace this turn, on each face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceQuote {
+    pub def_id: String,
+    pub base: i32,
+    pub radiant: i32,
+}
+
 /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
 /// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
 /// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, or by an autopilot
@@ -1339,6 +1400,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub starscape: Option<StarscapeMap>,
+    /// R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+    /// scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+    /// Absent until the first miss, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub anomaly_misses: Option<i32>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -1576,6 +1643,12 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub held: Option<Vec<HeldCard>>,
+    /// R1853000: Stinkyscape's Marketplace, opened for both players by the first Resource or Credits
+    /// either gains (`marketplace.rs`). Absent until then, so a game without either hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub marketplace: Option<Marketplace>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1946,6 +2019,7 @@ pub fn create_player_state() -> PlayerState {
         votes: None,
         fled: None,
         starscape: None,
+        anomaly_misses: None,
     }
 }
 
@@ -2407,6 +2481,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         custom_cards,
         custom_defs,
         held: None,
+        marketplace: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 

@@ -50,8 +50,8 @@ use jackioh_server::config::PersonaName;
 use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
+    Db, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
@@ -5404,6 +5404,53 @@ mod game_records {
         );
     }
 
+    /// R1976000: a batch is folded into the totals once, with no row per record, leaving out each
+    /// record whose id the table holds and each repeat in the batch; the claim and the counts land
+    /// together.
+    async fn r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        let batch = "a".repeat(64);
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records[..2])),
+            vec![true, true]
+        );
+        let mut file: Vec<GameRecord> = records.clone();
+        file.push(records[4].clone());
+        assert_eq!(
+            q!(harness, t => t.game_record_batch_fold(&batch, &file)),
+            Some(BatchFolded {
+                folded: records.len() - 2,
+                left_out: 3,
+            })
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // The same batch again folds nothing, whatever it holds.
+        assert_eq!(
+            q!(harness, t => t.game_record_batch_fold(&batch, &records[2..3])),
+            None
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // No row was written for the batch's records: only the two written a record at a time read.
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        let mut written = records[..2].to_vec();
+        written.sort_by(|a, b| a.id.cmp(&b.id));
+        assert_eq!(ids_of(&held), ids_of(&written));
+        // A batch is a SHA-256 in lowercase hex, or nothing is claimed.
+        assert!(call!(harness, t => t.game_record_batch_fold("not-a-sha", &records)).is_err());
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
@@ -5415,6 +5462,7 @@ mod game_records {
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
         r1596000_lists_the_finished_matches_whose_record_was_never_filed,
         r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
+        r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
     );
 }
 
@@ -9632,6 +9680,439 @@ mod economy {
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Cosmetic loadouts (SPEC §14.2, #1834; migration 0061)
+// ---------------------------------------------------------------------------
+
+/// Migration 0061: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
+/// a room, a trio and a match freeze (R1834002), a ladder bot's wardrobe and picks and what people
+/// own that it may (R1834005), and the people's seats `cosmetics-fit` reads (R1834006).
+mod cosmetic_loadouts {
+    use super::*;
+    use jackioh_server::bots::cosmetics::BotCosmetics;
+    use jackioh_server::cli::cosmetics_fit::read_samples;
+    use jackioh_server::economy::store::{CardPicks, CosmeticGrant};
+    use jackioh_server::loadout::Loadout;
+
+    const DAY: i64 = 86_400_000;
+    const HOUR: i64 = 3_600_000;
+    const MINUTE: i64 = 60_000;
+
+    fn picks(value: Value) -> CardPicks {
+        from(value)
+    }
+
+    /// The account's card picks, as their JSON.
+    async fn picks_of(harness: &StoreHarness, profile_id: &str) -> Value {
+        j(&q!(harness, t => t.economy_card_picks_get(profile_id)))
+    }
+
+    fn new_bot(created_at: i64) -> NewBot {
+        from(json!({
+            "profileId": id(),
+            "strength": 1,
+            "speed": 1.0,
+            "persona": "balanced",
+            "activeFromHour": 0,
+            "activeHours": 24,
+            "decks": [],
+            "decksCatalogVersion": null,
+            "createdAt": created_at,
+            "seedRating": 1000,
+        }))
+    }
+
+    fn grant(
+        profile_id: &str,
+        card_id: Option<&str>,
+        cosmetic_id: &str,
+        delta: i64,
+        at: i64,
+    ) -> CosmeticGrant {
+        from(json!({
+            "profileId": profile_id, "cardId": card_id, "cosmeticId": cosmetic_id, "delta": delta,
+            "reason": "pack_open", "reference": null, "dev": false, "at": at,
+        }))
+    }
+
+    /// A seat's loadout: `table` on the playmat, every other slot its kind's default, and `cards`.
+    fn loadout(table: &str, cards: Value) -> Loadout {
+        from(json!({
+            "seat": {
+                "table": table, "field": "field-none", "cardBack": "card-back-standard",
+                "foil": "foil-none", "finish": "finish-plain", "border": "border-standard",
+            },
+            "cards": cards,
+        }))
+    }
+
+    fn ticket(harness: &StoreHarness, profile_id: &str, over: Value) -> Ticket {
+        from(spread(
+            json!({
+                "id": id(),
+                "profileId": profile_id,
+                "rating": 1000,
+                "mode": "bo1",
+                "deck": deck_of(harness, 0),
+                "portrait": null,
+                "trio": null,
+                "catalogVersion": harness.catalog_version,
+                "enqueuedAt": harness.now(),
+                "status": "open",
+                "matchId": null,
+            }),
+            over,
+        ))
+    }
+
+    /// R1834000: a put writes one card's picks whole (what it leaves out is gone) and one with
+    /// nothing in it deletes the row; the device's one-time upload writes only cards with no row,
+    /// never one held, and answers how many it wrote; an id the registry does not know is kept as
+    /// written; a read is the account's own, by card; deleting the account takes its rows.
+    async fn r1834000_card_picks_put_upload_get_cascade(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(picks_of(harness, &profile.id).await, json!([]));
+
+        q!(harness, t => t.economy_card_picks_put(
+            &profile.id, &picks(json!({ "cardId": "core-002", "foil": "foil-rainbow" })), now));
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([{ "cardId": "core-002", "foil": "foil-rainbow" }])
+        );
+        // A second put replaces the first whole: the foil it leaves out is gone.
+        let second = json!({ "cardId": "core-002", "finish": "finish-linen", "border": "border-wood", "fullArt": false });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(second.clone()), now + 1));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([second]));
+        // An id the registry does not know (a newer client's) is kept as written; a read sorts by card.
+        let newer = json!({ "cardId": "core-001", "foil": "foil-from-a-newer-client" });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(newer.clone()), now + 2));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([newer, second]));
+        // A put of nothing deletes the card's row, and writes none for a card that has none.
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(json!({ "cardId": "core-001" })), now + 3));
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(json!({ "cardId": "core-009" })), now + 3));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([second]));
+
+        // The upload passes over the card held (core-002) and the one with nothing in it (core-004).
+        let upload = vec![
+            picks(json!({ "cardId": "core-002", "foil": "foil-cracked-ice" })),
+            picks(json!({ "cardId": "core-005", "fullArt": true })),
+            picks(json!({ "cardId": "core-004" })),
+            picks(json!({ "cardId": "core-003", "border": "border-bone" })),
+        ];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 4)),
+            2
+        );
+        let held = json!([
+            second,
+            { "cardId": "core-003", "border": "border-bone" },
+            { "cardId": "core-005", "fullArt": true },
+        ]);
+        assert_eq!(picks_of(harness, &profile.id).await, held);
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 5)),
+            0
+        );
+        assert_eq!(picks_of(harness, &profile.id).await, held);
+
+        // Another account's picks are its own, both ways.
+        assert_eq!(picks_of(harness, &other.id).await, json!([]));
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&other.id, &upload[..1], now + 6)),
+            1
+        );
+        let others = json!([{ "cardId": "core-002", "foil": "foil-cracked-ice" }]);
+        assert_eq!(picks_of(harness, &other.id).await, others);
+        assert_eq!(picks_of(harness, &profile.id).await, held);
+
+        // Deleting the account takes its rows, and nobody else's.
+        assert!(q!(harness, t => t.profiles_remove(&profile.id)));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([]));
+        assert_eq!(picks_of(harness, &other.id).await, others);
+    }
+
+    /// R1834002: a Best-of-1 ticket and a room freeze their deck's slots beside the deck, a trio's
+    /// decks theirs inside it, a match both seats' loadouts, and a bot's decks and trio theirs; each
+    /// reads back as it was written, and one written without them reads back without them.
+    async fn r1834002_frozen_slots_and_loadouts_round_trip(harness: &StoreHarness) {
+        let now = harness.now();
+        let slots = json!({ "table": "table-felt", "cardBack": "card-back-lacquer" });
+        let every =
+            json!({ "table": "table-neon-grid", "field": "field-rain", "cardBack": "card-back-starfield" });
+
+        // Tickets: a Best-of-1 deck's slots, and a trio's decks' own, absence kept absent.
+        let queued = active_profile(harness, None).await;
+        let plain = active_profile(harness, None).await;
+        let conquest = active_profile(harness, None).await;
+        let bo1 = ticket(harness, &queued.id, json!({ "deckSlots": slots }));
+        let bare = ticket(harness, &plain.id, json!({}));
+        let mut trio = j(&frozen_trio(harness, None));
+        trio["decks"][0]["slots"] = every.clone();
+        trio["decks"][2]["slots"] = json!({ "field": "field-embers" });
+        let bo3 = ticket(
+            harness,
+            &conquest.id,
+            json!({ "mode": "bo3", "deck": [], "trio": trio }),
+        );
+        for row in [&bo1, &bare, &bo3] {
+            q!(harness, t => t.tickets_insert(row));
+            assert_eq!(q!(harness, t => t.tickets_get(&row.id)), Some(row.clone()));
+        }
+        assert!(absent(&j(&bare), "deckSlots"));
+
+        // A room keeps the host deck's slots while it waits, and its claim answers them.
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let room = super::rooms::room(harness, "SLT234", &host.id, json!({ "hostDeckSlots": slots }));
+        assert!(q!(harness, t => t.rooms_create(&room)));
+        let found = j(&must(q!(harness, t => t.rooms_get("SLT234")), "the room"));
+        assert_eq!(found["hostDeckSlots"], slots);
+        let claimed = j(&must(
+            q!(harness, t => t.rooms_claim("SLT234", &guest.id, &id(), now)),
+            "the claim",
+        ));
+        assert_eq!(claimed["hostDeckSlots"], slots);
+        let unpicked = super::rooms::room(harness, "SLT345", &host.id, json!({}));
+        assert!(q!(harness, t => t.rooms_create(&unpicked)));
+        assert!(absent(
+            &j(&must(q!(harness, t => t.rooms_get("SLT345")), "the room")),
+            "hostDeckSlots"
+        ));
+
+        // A match keeps both seats' loadouts, seat order; one begun without reads as none.
+        let frozen = (
+            loadout(
+                "table-felt",
+                json!([{ "cardId": "core-002", "foil": "foil-rainbow" }, { "cardId": "core-001", "fullArt": true }]),
+            ),
+            loadout("table-tavern", json!([])),
+        );
+        let dressed = id();
+        let mut row = match_row(&dressed, &queued.id, &plain.id, harness, now);
+        row.loadouts = Some(frozen.clone());
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(
+            must(q!(harness, t => t.matches_get(&dressed)), "the match").loadouts,
+            Some(frozen)
+        );
+        let undressed = id();
+        q!(harness, t => t.matches_create(&match_row(&undressed, &conquest.id, &host.id, harness, now)));
+        assert_eq!(
+            must(q!(harness, t => t.matches_get(&undressed)), "the match").loadouts,
+            None
+        );
+
+        // A bot's Best-of-1 decks and trio keep theirs.
+        let bot = new_bot(now - DAY);
+        q!(harness, t => t.bots_create(&bot));
+        let decks: Vec<BotDeck> = from(json!([
+            { "cards": deck_of(harness, 0), "portrait": "vanilla", "slots": every },
+            { "cards": deck_of(harness, 1), "portrait": "gary" },
+        ]));
+        q!(harness, t => t.bots_set_decks(&bot.profile_id, &decks, "core-9"));
+        let bot_trio: FrozenTrio = from(json!({
+            "name": "Conquest",
+            "decks": [
+                { "name": "Deck 1", "cards": deck_of(harness, 0), "portrait": "vanilla", "slots": every },
+                { "name": "Deck 2", "cards": deck_of(harness, 1), "portrait": "gary" },
+                { "name": "Deck 3", "cards": deck_of(harness, 2), "portrait": "vanilla", "slots": slots },
+            ],
+        }));
+        q!(harness, t => t.bots_set_trio(&bot.profile_id, &bot_trio, "core-9"));
+        let listed = q!(harness, t => t.bots_list());
+        let row = must(
+            listed.iter().find(|row| row.profile_id == bot.profile_id),
+            "the bot",
+        );
+        assert_eq!(row.decks, decks);
+        assert_eq!(row.trio.as_ref(), Some(&bot_trio));
+    }
+
+    /// R1834005: a bot's wardrobe and picks are written whole to its own row and read back from
+    /// it, nowhere in the ledger; a bot that does not exist takes no write.
+    async fn r1834005_bots_keep_their_cosmetics(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(now - DAY);
+        q!(harness, t => t.bots_create(&bot));
+        assert_eq!(q!(harness, t => t.bots_list())[0].cosmetics, None);
+
+        let drawn: BotCosmetics = from(json!({
+            "wardrobe": {
+                "cards": [{ "cardId": "core-001", "cosmeticId": "full-art-big-d-fender" }],
+                "account": ["table-velvet"],
+            },
+            "account": {
+                "picks": { "cardBack": "card-back-lacquer", "foil": "foil-rainbow", "table": "table-felt" },
+                "fullArt": true,
+            },
+            "cards": [{ "cardId": "core-001", "fullArt": false }, { "cardId": "core-002", "border": "border-wood" }],
+            "drawnAt": now,
+        }));
+        q!(harness, t => t.bots_set_cosmetics(&bot.profile_id, &drawn));
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].cosmetics.as_ref(),
+            Some(&drawn)
+        );
+
+        // Drawn again as it ages, the row holds the new draw whole.
+        let aged: BotCosmetics = from(json!({
+            "wardrobe": { "cards": [], "account": [] },
+            "account": { "picks": { "table": "table-wood" }, "fullArt": true },
+            "drawnAt": now + 7 * DAY,
+        }));
+        q!(harness, t => t.bots_set_cosmetics(&bot.profile_id, &aged));
+        let listed = q!(harness, t => t.bots_list());
+        assert_eq!(listed[0].cosmetics.as_ref(), Some(&aged));
+        assert!(listed[0].decks.is_empty(), "the rest of the row is as it was");
+
+        let unknown = id();
+        assert!(call!(harness, t => t.bots_set_cosmetics(&unknown, &aged)).is_err());
+        // None of it is a holding or a ledger row.
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&bot.profile_id))),
+            json!({ "cards": [], "account": [] })
+        );
+        assert!(
+            q!(harness, t => t.economy_ledger_get(&bot.profile_id))
+                .cosmetics
+                .is_empty()
+        );
+        assert_eq!(picks_of(harness, &bot.profile_id).await, json!([]));
+    }
+
+    /// R1834005: how many people own each cosmetic where it is held, and when the first of them was
+    /// granted it: a bot's holdings and grants count for nothing, nor does a grant since taken back.
+    async fn r1834005_cosmetic_owners_count_people_and_their_first_grant(harness: &StoreHarness) {
+        let now = harness.now();
+        let anna = active_profile(harness, None).await;
+        let boris = active_profile(harness, None).await;
+        let bot = new_bot(now - 30 * DAY);
+        q!(harness, t => t.bots_create(&bot));
+        let card = must(harness.playable_ids.first().cloned(), "a card");
+        let other_card = must(harness.playable_ids.get(1).cloned(), "a second card");
+        for row in [
+            grant(&bot.profile_id, Some(&card), FOIL_COSMETIC, 1, now - 9 * DAY),
+            grant(&bot.profile_id, None, BOARD_COSMETIC, 1, now - 9 * DAY),
+            grant(&anna.id, Some(&card), FOIL_COSMETIC, 1, now - 5 * DAY),
+            grant(&anna.id, None, BOARD_COSMETIC, 1, now - 2 * DAY),
+            grant(&boris.id, Some(&card), FOIL_COSMETIC, 1, now - 3 * DAY),
+            grant(&boris.id, Some(&other_card), FOIL_COSMETIC, 1, now - 4 * DAY),
+            grant(&boris.id, Some(&other_card), FOIL_COSMETIC, -1, now - DAY),
+        ] {
+            assert!(q!(harness, t => t.economy_cosmetics_grant(&row)));
+        }
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetic_owners())),
+            json!([
+                { "cosmeticId": BOARD_COSMETIC, "cardId": null, "owners": 1, "firstGrantedAt": now - 2 * DAY },
+                { "cosmeticId": FOIL_COSMETIC, "cardId": card, "owners": 2, "firstGrantedAt": now - 5 * DAY },
+            ])
+        );
+    }
+
+    /// R1834006: the seats `cosmetics-fit` reads are people's, of matches begun at or after the
+    /// cutoff that froze loadouts, oldest first and in seat order; a bot's seat, a match from
+    /// before the cutoff and one with no loadouts give none. `read_samples` adds what each of those
+    /// people owns, and nothing of the bot.
+    async fn r1834006_samples_are_people_only(harness: &StoreHarness) {
+        let now = harness.now();
+        let anna = active_profile(harness, None).await;
+        let boris = active_profile(harness, None).await;
+        let bot = new_bot(now - DAY);
+        q!(harness, t => t.bots_create(&bot));
+        let card = must(harness.playable_ids.first().cloned(), "a card");
+        assert!(
+            q!(harness, t => t.economy_cosmetics_grant(&grant(&anna.id, Some(&card), FOIL_COSMETIC, 1, now)))
+        );
+
+        let anna_wore = loadout(
+            "table-felt",
+            json!([{ "cardId": "core-002", "foil": "foil-rainbow" }]),
+        );
+        let boris_wore = loadout("table-neon-grid", json!([]));
+        let boris_later = loadout("table-wood", json!([]));
+        let bot_wore = loadout("table-tavern", json!([]));
+        let create = |match_id: &str, p1: &str, p2: &str, at: i64, loadouts: Option<(Loadout, Loadout)>| {
+            let mut row = match_row(match_id, p1, p2, harness, at);
+            row.loadouts = loadouts;
+            row
+        };
+        let (old, people, against_bot, bare) = (id(), id(), id(), id());
+        for row in [
+            create(
+                &old,
+                &anna.id,
+                &boris.id,
+                now - 2 * HOUR,
+                Some((boris_wore.clone(), anna_wore.clone())),
+            ),
+            create(
+                &people,
+                &anna.id,
+                &boris.id,
+                now - 20 * MINUTE,
+                Some((anna_wore.clone(), boris_wore.clone())),
+            ),
+            create(
+                &against_bot,
+                &boris.id,
+                &bot.profile_id,
+                now - 10 * MINUTE,
+                Some((boris_later.clone(), bot_wore)),
+            ),
+            create(&bare, &boris.id, &anna.id, now - 5 * MINUTE, None),
+        ] {
+            q!(harness, t => t.matches_create(&row));
+        }
+
+        let seat = |profile: &Profile, at: i64, slot: usize, wore: &Loadout| {
+            json!({
+                "profileId": profile.id, "accountCreatedAt": profile.created_at, "matchCreatedAt": at,
+                "deck": deck_of(harness, slot), "loadout": j(wore),
+            })
+        };
+        let recent = json!([
+            seat(&anna, now - 20 * MINUTE, 0, &anna_wore),
+            seat(&boris, now - 20 * MINUTE, 1, &boris_wore),
+            seat(&boris, now - 10 * MINUTE, 0, &boris_later),
+        ]);
+        let since = now - HOUR;
+        assert_eq!(j(&q!(harness, t => t.matches_loadout_samples(since))), recent);
+        let mut all = vec![
+            seat(&anna, now - 2 * HOUR, 0, &boris_wore),
+            seat(&boris, now - 2 * HOUR, 1, &anna_wore),
+        ];
+        all.extend(recent.as_array().cloned().unwrap_or_default());
+        assert_eq!(
+            j(&q!(harness, t => t.matches_loadout_samples(now - 3 * HOUR))),
+            Value::Array(all)
+        );
+        assert_eq!(j(&q!(harness, t => t.matches_loadout_samples(now))), json!([]));
+
+        let (samples, owned) = read_samples(&harness.db, since)
+            .await
+            .unwrap_or_else(|error| panic!("{}: read_samples: {error}", harness.name));
+        assert_eq!(j(&samples), recent);
+        assert_eq!(
+            j(&owned),
+            json!({
+                anna.id.clone(): { "cards": [{ "cardId": card, "cosmeticId": FOIL_COSMETIC }], "account": [] },
+                boris.id.clone(): { "cards": [], "account": [] },
+            })
+        );
+    }
+
+    both_stores!(
+        r1834000_card_picks_put_upload_get_cascade,
+        r1834002_frozen_slots_and_loadouts_round_trip,
+        r1834005_bots_keep_their_cosmetics,
+        r1834005_cosmetic_owners_count_people_and_their_first_grant,
+        r1834006_samples_are_people_only,
     );
 }
 

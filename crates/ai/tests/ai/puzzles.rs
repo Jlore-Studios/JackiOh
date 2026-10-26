@@ -23,17 +23,9 @@ use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{
-    AI, HUMAN, PuzzleRun, act, all_out_attack, card_by_id, in_graveyard, on_field, run_puzzle, trace,
+    AI, HUMAN, PuzzleRun, act, ai_options, all_out_attack, card_by_id, in_graveyard, on_field, run_puzzle,
+    trace,
 };
-
-/// TS's `{ rng: createRng(seed), budget: AI_BUDGET }`, with no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
-}
 
 /// `runPuzzle(name, setup)` at its default budget (AI_BUDGET).
 fn puzzle(name: &str, setup: Value) -> PuzzleRun {
@@ -333,7 +325,7 @@ mod prompts_through_the_search_b19 {
             .unwrap_or_else(|| panic!("True Strike is not in p1's graveyard"));
 
         let start = s.state().clone();
-        let turn = play_ai_turn(&start, AI, &mut ai_options("puzzle:P11"));
+        let turn = play_ai_turn(&start, AI, &mut ai_options("puzzle:P11", AI_BUDGET));
         let end = turn.state.clone();
         let run = PuzzleRun { start, turn, end };
         expect_enemy_dead(&run);
@@ -401,7 +393,7 @@ mod prompts_through_the_search_b19 {
         );
         assert_eq!(state.players[AI].hero.health, 3);
 
-        let decision = decide(&state, AI, &mut ai_options("puzzle:P14"));
+        let decision = decide(&state, AI, &mut ai_options("puzzle:P14", AI_BUDGET));
         assert_eq!(
             decision.as_ref().map(|decision| decision.reason),
             Some(DecisionReason::Prompt)

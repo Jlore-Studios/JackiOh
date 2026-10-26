@@ -134,6 +134,9 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   resourceSold: 700,
   resourceDiscarded: 250,
   marketCreditsChanged: 200,
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: 250,
+  marketSold: 250,
   // Stinkyscape's Starship (R1852000, R1852003).
   starshipFused: 400,
   starshipLaunched: 600,
@@ -145,6 +148,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   starscapeTravelled: 200,
   // #1850 (R1850003).
   held: 350,
+  // Issue #1855 (R1855000).
+  boardReplaced: 500,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -264,6 +269,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
+  marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
   starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
   voteCast: { type: "voteCast", player: "p2", instanceId: "c7", defId: "core-073", votes: 2, needed: 3 },
@@ -279,6 +287,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
+  boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -349,7 +358,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(92);
+    expect(rows).toHaveLength(95);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -682,6 +691,12 @@ describe("target resolution", () => {
   it("board-wide events animate the board", () => {
     expect(targetFor({ type: "rotated", direction: "left" }, view)).toBe(testid.board);
     expect(targetFor({ type: "swapped", what: "library" }, view)).toBe(testid.board);
+  });
+
+  it("R1855000 a board replacement animates the board for either side", () => {
+    expect(targetFor({ type: "boardReplaced", player: "p1" }, view)).toBe(testid.board);
+    expect(targetFor({ type: "boardReplaced", player: "p2" }, view)).toBe(testid.board);
+    expect(animationsCss).toContain(`[data-animating="boardReplaced"]`);
   });
 
   it("turnEnded animates the end-turn button", () => {

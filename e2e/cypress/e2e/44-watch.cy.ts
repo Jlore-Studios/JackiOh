@@ -36,7 +36,7 @@
 // at compile time, and the spec waits it out.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
-import { E2E_RESEED_PATH, accounts, inviteCodes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   GAME,
   TOGETHER_FRIEND_ROW,
@@ -77,16 +77,8 @@ const CLOCK_SLACK_MS = 1_000;
 type MeBody = { profile: { id: string }; username?: { name: string } };
 type JoinBody = { matchId: string; seat: string };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
-  return cy.request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) }).its("body");
+  return cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).its("body");
 }
 
 /** A friend row of the page, by the profile it shows. */
@@ -108,8 +100,8 @@ function watchPath(matchId: string, friendId: string): string {
 function allowSpectators(account: E2EAccount, allow: boolean): Cypress.Chainable<Cypress.Response<{ settings: { allowSpectators: boolean } }>> {
   return cy.request<{ settings: { allowSpectators: boolean } }>({
     method: "PUT",
-    url: api("/api/settings"),
-    headers: bearer(account),
+    url: apiUrl("/api/settings"),
+    headers: bearerHeaders(account.token),
     body: { allowSpectators: allow },
   });
 }
@@ -179,11 +171,11 @@ describe("44 watching a friend's live game", () => {
   before(() => {
     // R144: the server puts back the fixture accounts and codes, so `pending` is waiting at the
     // gate again whatever ran before and the code is unspent; redeeming it makes the third account.
-    cy.request({ method: "POST", url: api(E2E_RESEED_PATH) }).its("status").should("eq", 200);
+    cy.request({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).its("status").should("eq", 200);
     cy.request<{ status: string }>({
       method: "POST",
-      url: api("/api/codes/redeem"),
-      headers: bearer(accounts.pending()),
+      url: apiUrl("/api/codes/redeem"),
+      headers: bearerHeaders(accounts.pending().token),
       body: { code: inviteCodes.good() },
     })
       .its("body.status")
@@ -215,13 +207,13 @@ describe("44 watching a friend's live game", () => {
     });
 
     // §9.5: a friend allows watching until they say otherwise.
-    cy.request<{ settings: { allowSpectators: boolean } }>({ method: "GET", url: api("/api/settings"), headers: bearer(one) })
+    cy.request<{ settings: { allowSpectators: boolean } }>({ method: "GET", url: apiUrl("/api/settings"), headers: bearerHeaders(one.token) })
       .its("body.settings.allowSpectators")
       .should("eq", true);
 
     // B43: `one` asks `two` to be friends, and `two` opens Play together, where the request waits.
     cy.then(() => {
-      cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(one), body: { username: twoName } })
+      cy.request({ method: "POST", url: apiUrl("/api/friends/requests"), headers: bearerHeaders(one.token), body: { username: twoName } })
         .its("status")
         .should("eq", 201);
     });
@@ -235,15 +227,15 @@ describe("44 watching a friend's live game", () => {
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(one),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(one.token),
         body: { mode: "random", seed: SEED },
       }).then((created) => {
         joinRequestedAt = Date.now();
         cy.request<JoinBody>({
           method: "POST",
-          url: api(`/api/rooms/${created.body.code}/join`),
-          headers: bearer(joiner),
+          url: apiUrl(`/api/rooms/${created.body.code}/join`),
+          headers: bearerHeaders(joiner.token),
           body: { mode: "random" },
         }).then((joined) => {
           expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq("p2");
@@ -333,7 +325,7 @@ describe("44 watching a friend's live game", () => {
     // Watching back on, but no longer friends: the same refusal, and the way back leads to Play together.
     cy.then(() => {
       allowSpectators(one, true).its("status").should("eq", 200);
-      cy.request({ method: "DELETE", url: api(`/api/friends/${twoId}`), headers: bearer(one) }).its("status").should("eq", 204);
+      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
       cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
     });
     expectRefused();

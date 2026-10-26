@@ -1,8 +1,9 @@
 // `/stats`: Public card and player statistics page (SPEC §9.11, R654).
 //
 // Accessible signed out and signed in.
-// Provides two tabs:
+// Provides three tabs:
 //  - Cards: sortable, filterable table of card win rates, play rates, and personal numbers.
+//  - Sets: each set's cards on the patch (below).
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
 //  - Provisional banner while the current patch is below the publication gate (R654). It, like the
@@ -14,8 +15,8 @@
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
-//  - Daily runs tab (R1935000): the daily super run's last runs on main, read live from GitHub by the server and
-//    asked for again every `CI_RUNS_CACHE_TTL_SECONDS` while the tab is open.
+//  - Patch bar (R1973002): a picker of the newest patches with enough games, and the patch before and after
+//    the one shown; a patch is the window the cards share (R1973001), so a micro is never a step of its own.
 //  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
 //    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
 
@@ -27,23 +28,20 @@ import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
-import { CI_RUNS_CACHE_TTL_SECONDS } from "@jackioh/server-config";
-import { formatDateTime, formatNumber, t, useLocale } from "../i18n/i18n.ts";
+import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   getCardDrillDown,
   getCardStats,
-  getCiRuns,
   getPublicPlayers,
   type CardDrillDownResponse,
-  type CiRun,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { ciInsights } from "../stats/ciInsights.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
+import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
@@ -54,14 +52,8 @@ import "./stats.css";
 
 const CATALOG = catalogJson as unknown as CardDefs;
 
-/** Unit conversion, not configuration. */
-const MS_PER_SECOND = 1000;
-
 /** Unit conversion, not configuration: a rate as a percentage has two more decimal places than as a fraction. */
 const PERCENT_PLACES = 2;
-
-/** How much of a commit's hash a daily run shows, as GitHub shortens one. */
-const SHORT_COMMIT = 7;
 
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
@@ -117,6 +109,19 @@ function faceRate(
  * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
  * needs and English reads as it always did.
  */
+/**
+ * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
+ * at, from the response's patch list; a server without one names the version before.
+ */
+function previousPatchOf(res: PublicStatsCardsResponse): { name: string; target: string } | null {
+  const list = res.patches ?? [];
+  if (list.length > 0) {
+    const before = neighbours(list, patchIndex(list, res.patch)).previous;
+    return before ? { name: patchName(before), target: patchTarget(before) } : null;
+  }
+  return res.previousPatch ? { name: res.previousPatch, target: res.previousPatch } : null;
+}
+
 /** R1966000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
 function setPercent(rate: number, signed = false): string {
   return formatNumber(rate, {
@@ -134,7 +139,7 @@ function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>)
   });
 }
 
-type TabKey = "cards" | "sets" | "players" | "ci";
+type TabKey = "cards" | "sets" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
@@ -189,7 +194,7 @@ export default function StatsRoute(): ReactElement {
 
   const [tab, setTab] = useState<TabKey>(() => {
     const asked = initialParams.get("tab");
-    return asked === "sets" || asked === "players" || asked === "ci" ? asked : "cards";
+    return asked === "sets" || asked === "players" ? asked : "cards";
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
@@ -260,12 +265,6 @@ export default function StatsRoute(): ReactElement {
   // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
   const [setsAttempt, setSetsAttempt] = useState(0);
 
-  // R1935000: the daily runs, null until the first answer; a failed refresh keeps the runs shown.
-  const [ciRuns, setCiRuns] = useState<CiRun[] | null>(null);
-  const [ciError, setCiError] = useState(false);
-  // Bumped by the Daily runs tab's Retry, as `cardStatsAttempt` is by the table's.
-  const [ciAttempt, setCiAttempt] = useState(0);
-  const ciSummary = useMemo(() => (ciRuns && ciRuns.length > 0 ? ciInsights(ciRuns) : null), [ciRuns]);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -369,31 +368,6 @@ export default function StatsRoute(): ReactElement {
     }
   }, [tab, playerQuery, playerPage, fetchPlayers]);
 
-  // R1935000: the daily runs, asked for when the tab opens and again every `CI_RUNS_CACHE_TTL_SECONDS`
-  // while it stays open, as long as the server keeps what GitHub answered.
-  useEffect(() => {
-    if (tab !== "ci") return;
-    const controller = new AbortController();
-    const read = (): void => {
-      getCiRuns(controller.signal)
-        .then((res) => {
-          if (controller.signal.aborted) return;
-          setCiRuns(res.runs);
-          setCiError(false);
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return;
-          setCiError(true);
-        });
-    };
-    read();
-    const timer = window.setInterval(read, CI_RUNS_CACHE_TTL_SECONDS * MS_PER_SECOND);
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-    };
-  }, [tab, ciAttempt]);
-
   // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
   // patch's for each set's change; a previous patch that fails to load only leaves the change out.
   useEffect(() => {
@@ -405,8 +379,10 @@ export default function StatsRoute(): ReactElement {
         if (controller.signal.aborted) return;
         setSetsData(res);
         setSetsPrevious(null);
-        if (!res.previousPatch) return;
-        getCardStats({ patch: res.previousPatch, mode: mode ? mode : undefined, signal: controller.signal })
+        // R1973002: the patch before, not the version before, which may be a micro of the same patch.
+        const before = previousPatchOf(res);
+        if (!before) return;
+        getCardStats({ patch: before.target, mode: mode ? mode : undefined, signal: controller.signal })
           .then((previous) => {
             if (!controller.signal.aborted) setSetsPrevious(previous);
           })
@@ -489,7 +465,8 @@ export default function StatsRoute(): ReactElement {
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
-  // R1966000: the Sets tab's figures, off the cards it read.
+  // R1966000: the Sets tab's figures, off the cards it read; R1973002: compared with the patch before.
+  const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
   const setLeaders = useMemo(() => leaders(sets), [sets]);
@@ -613,6 +590,15 @@ export default function StatsRoute(): ReactElement {
   }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, minSample]);
 
   const summary = cardStatsData?.summary;
+
+  // R1973002: the patch shown, the picker's choices and the patches either side of it. The newest is
+  // asked for with no `?patch=`, so the address stays the plain one.
+  const patchList = cardStatsData?.patches ?? [];
+  const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
+  const pickable = offeredPatches(patchList, shownPatch);
+  const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
+  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  const fallback = cardStatsData ? previousPatchOf(cardStatsData) : null;
   const isProvisional = cardStatsData?.source === "provisional";
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
@@ -633,10 +619,55 @@ export default function StatsRoute(): ReactElement {
         {cardStatsData && (
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">{t("Games on patch {patch}", { patch: cardStatsData.patch })}</span>
+              <span className="stats-summary-label">
+                {t("Games on patch {patch}", {
+                  patch: shownPatch >= 0 ? patchName(patchList[shownPatch]!) : cardStatsData.patch,
+                })}
+              </span>
               <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
             </div>
           </section>
+        )}
+
+        {/* R1973002: the patch picker, and the patch before and after the one shown */}
+        {patchList.length > 0 && (
+          <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
+            <button
+              type="button"
+              className="stats-pager-btn"
+              data-testid={statsTestid.patchPrevious}
+              disabled={previousWindow === null}
+              onClick={() => previousWindow && choosePatch(previousWindow)}
+            >
+              {previousWindow ? t("← Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("← Previous patch")}
+            </button>
+            <select
+              className="stats-select"
+              data-testid={statsTestid.patchSelect}
+              aria-label={t("Patch")}
+              value={shownPatch >= 0 ? patchTarget(patchList[shownPatch]!) : ""}
+              onChange={(e) => {
+                const chosen = patchList.find((window) => patchTarget(window) === e.target.value);
+                if (chosen) choosePatch(chosen);
+              }}
+            >
+              {shownPatch < 0 && <option value="">{cardStatsData?.patch}</option>}
+              {pickable.map((window) => (
+                <option key={patchTarget(window)} value={patchTarget(window)}>
+                  {t("{patch} · {games} games", { patch: patchName(window), games: formatNumber(window.games) })}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="stats-pager-btn"
+              data-testid={statsTestid.patchNext}
+              disabled={nextWindow === null}
+              onClick={() => nextWindow && choosePatch(nextWindow)}
+            >
+              {nextWindow ? t("Next patch ({patch}) →", { patch: patchName(nextWindow) }) : t("Next patch →")}
+            </button>
+          </nav>
         )}
 
         {/* Provisional banner */}
@@ -645,14 +676,14 @@ export default function StatsRoute(): ReactElement {
             <div className="stats-provisional-info">
               <span className="stats-provisional-title">{t("Provisional statistics")}</span>
             </div>
-            {cardStatsData?.previousPatch && (
+            {fallback && (
               <button
                 type="button"
                 className="stats-fallback-btn link-button"
                 data-testid={statsTestid.fallbackToggle}
-                onClick={() => setPatch(cardStatsData.previousPatch!)}
+                onClick={() => setPatch(fallback.target)}
               >
-                {t("View previous patch ({patch}) →", { patch: cardStatsData.previousPatch })}
+                {t("View previous patch ({patch}) →", { patch: fallback.name })}
               </button>
             )}
           </div>
@@ -684,6 +715,12 @@ export default function StatsRoute(): ReactElement {
                   "{whenDrawn} shows win rate when the card was in hand or played; {playRate} shows the percentage of all recorded decks containing the card.",
                 ),
                 { whenDrawn: <em>{t("When drawn")}</em>, playRate: <em>{t("Play rate")}</em> },
+              )}
+            </p>
+            <p>
+              <strong>{t("Patches:")}</strong>{" "}
+              {t(
+                "A card's figures start again at each patch. A micro patch starts again only the cards it changed, and every other card keeps all its games; a patch nobody played before the next one shipped counts as a micro.",
               )}
             </p>
             <p>
@@ -736,18 +773,6 @@ export default function StatsRoute(): ReactElement {
             onClick={() => setTab("players")}
           >
             {t("Players")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-ci"
-            aria-selected={tab === "ci"}
-            aria-controls="stats-panel-ci"
-            className={`stats-tab ${tab === "ci" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabCi}
-            onClick={() => setTab("ci")}
-          >
-            {t("Daily runs")}
           </button>
         </div>
 
@@ -1403,7 +1428,7 @@ export default function StatsRoute(): ReactElement {
                         <th scope="col" className="stats-th">{t("Mean")}</th>
                         <th scope="col" className="stats-th">{t("Median")}</th>
                         <th scope="col" className="stats-th">
-                          {setsData.previousPatch ? t("Since {patch}", { patch: setsData.previousPatch }) : t("Change")}
+                          {setsSince ? t("Since {patch}", { patch: setsSince }) : t("Change")}
                         </th>
                         <th scope="col" className="stats-th">{t("Best card")}</th>
                         <th scope="col" className="stats-th">{t("Worst card")}</th>
@@ -1619,122 +1644,6 @@ export default function StatsRoute(): ReactElement {
                   {t("Next page")}
                 </button>
               </div>
-            )}
-          </section>
-        )}
-
-        {/* DAILY RUNS TAB (R1935000) */}
-        {tab === "ci" && (
-          <section id="stats-panel-ci" role="tabpanel" aria-labelledby="stats-tab-ci" className="stats-panel one-screen__body">
-            <p className="stats-player-note">
-              {t("The daily run tests the whole game on main: every fuzz seed, end-to-end spec and AI gate. Read live from GitHub.")}
-            </p>
-            {ciRuns === null ? (
-              ciError ? (
-                <div className="stats-error">
-                  <p>{t("Failed to load the daily runs.")}</p>
-                  <button
-                    type="button"
-                    className="stats-retry-btn"
-                    data-testid={statsTestid.ciRetry}
-                    onClick={() => {
-                      setCiError(false);
-                      setCiAttempt((attempt) => attempt + 1);
-                    }}
-                  >
-                    {t("Retry")}
-                  </button>
-                </div>
-              ) : (
-                <p className="stats-loading">{t("Loading daily runs…")}</p>
-              )
-            ) : ciRuns.length === 0 ? (
-              <p className="stats-empty">{t("No daily runs yet.")}</p>
-            ) : (
-              <>
-                {ciSummary && (
-                  <section
-                    className="stats-summary-tiles stats-ci-summary"
-                    data-testid={statsTestid.ciSummary}
-                    aria-label={t("Daily runs summary")}
-                  >
-                    <div className="stats-summary-tile">
-                      <span className="stats-summary-label">{t("Finished runs that passed")}</span>
-                      <span className="stats-summary-value">
-                        {t("{passed} of {finished}", { passed: ciSummary.passed, finished: ciSummary.finished })}
-                      </span>
-                    </div>
-                    {ciSummary.streak && (
-                      <div className="stats-summary-tile">
-                        <span className="stats-summary-label">
-                          {ciSummary.streak.result === "passed" ? t("Passed in a row") : t("Failed in a row")}
-                        </span>
-                        <span className={`stats-summary-value stats-ci-result--${ciSummary.streak.result}`}>
-                          {formatNumber(ciSummary.streak.runs)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="stats-summary-tile">
-                      <span className="stats-summary-label">{t("Failed most often")}</span>
-                      <span className="stats-summary-value">
-                        {ciSummary.mostFailed ? ciSummary.mostFailed.name : t("Nothing failed")}
-                      </span>
-                      {ciSummary.mostFailed && (
-                        <span className="stats-sample-hint">
-                          {t("in {runs} of {finished} runs", { runs: ciSummary.mostFailed.runs, finished: ciSummary.finished })}
-                        </span>
-                      )}
-                    </div>
-                  </section>
-                )}
-                <div className="stats-table-wrapper">
-                  <table className="stats-table" data-testid={statsTestid.ciTable}>
-                    <thead>
-                      <tr>
-                        <th scope="col" className="stats-th">{t("Started")}</th>
-                        <th scope="col" className="stats-th">{t("Commit")}</th>
-                        <th scope="col" className="stats-th">{t("Result")}</th>
-                        <th scope="col" className="stats-th">{t("Jobs that did not pass")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ciRuns.map((run) => (
-                        <tr key={run.id} className="stats-tr" data-result={run.result}>
-                          <td className="stats-td">
-                            <a href={run.url} target="_blank" rel="noopener noreferrer">
-                              {formatDateTime(Date.parse(run.startedAt))}
-                            </a>
-                          </td>
-                          <td className="stats-td">
-                            <code>{run.commit.slice(0, SHORT_COMMIT)}</code>
-                          </td>
-                          <td className="stats-td">
-                            <span className={`stats-ci-result stats-ci-result--${run.result}`}>
-                              {run.result === "passed" ? t("Passed") : run.result === "failed" ? t("Failed") : t("Running")}
-                            </span>
-                          </td>
-                          <td className="stats-td">
-                            {run.failedJobs.length === 0 ? (
-                              "—"
-                            ) : (
-                              <ul className="stats-ci-jobs">
-                                {run.failedJobs.map((job) => (
-                                  <li key={job.url}>
-                                    <a href={job.url} target="_blank" rel="noopener noreferrer">
-                                      {job.name}
-                                    </a>{" "}
-                                    ({job.conclusion})
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
             )}
           </section>
         )}

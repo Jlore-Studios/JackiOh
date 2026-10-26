@@ -56,10 +56,6 @@ mod tests {
             .collect()
     }
 
-    fn at(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     fn hero_p1() -> Value {
         json!([{ "pick": "hero", "player": "p1" }])
     }
@@ -151,7 +147,7 @@ mod tests {
             step_param(s.card_mut(SNAKE), "damage", 1);
 
             let snake = s.card(SNAKE).id.clone();
-            s.play(HIT_JOB, json!({ "targets": at(&snake) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&snake) }));
 
             let on_hero = hero_hits(&s, P1);
             assert!(!on_hero.is_empty());
@@ -229,7 +225,7 @@ mod tests {
             let mut s = under_fire(json!({}), json!({ "hand": [HIT_JOB, LUNAR, FILLER] }), false);
 
             let anime = s.card(ANIME).id.clone();
-            s.play(HIT_JOB, json!({ "targets": at(&anime) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&anime) }));
             s.play(LUNAR, json!({ "targets": hero_p1() }));
 
             s.expect_in_zone(ANIME, "graveyard");
@@ -242,7 +238,7 @@ mod tests {
             let mut s = under_fire(json!({}), json!({ "hand": [SILENCE, LUNAR, FILLER] }), false);
 
             let anime = s.card(ANIME).id.clone();
-            s.play(SILENCE, json!({ "targets": at(&anime) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&anime) }));
             s.play(LUNAR, json!({ "targets": hero_p1() }));
 
             assert_eq!(hero_hits(&s, P1), vec![3]);
@@ -273,7 +269,7 @@ mod tests {
             let anime = s.card(ANIME).clone();
             s.expect_stats(&anime, json!({ "attack": 8, "health": 8 }));
 
-            s.play(HIT_JOB, json!({ "targets": at(&anime.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&anime.id) }));
             let back = s.unit(P1, 1).expect("the Reborn body");
             assert_eq!(back.def_id, ANIME);
             s.expect_stats(&back, json!({ "health": 1 }));

@@ -42,14 +42,16 @@
 }
 
 /* BackLink's bar: the pill leads the language button and the gear at the bar's far end, as the
-   language button leads the gear (language.css), and follows the screen's own line when it has one. */
+   language button leads the gear (language.css), and follows the screen's own line when it has one,
+   and the gear alone once the language button has gone (R1916000). */
 .screen-nav .jlore-pill {
   margin-left: auto;
   margin-right: 8px;
 }
 
 .screen-nav__extra + .jlore-pill,
-.screen-nav .jlore-pill + .language-button {
+.screen-nav .jlore-pill + .language-button,
+.screen-nav .jlore-pill + .settings-gear {
   margin-left: 0;
 }
 

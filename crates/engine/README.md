@@ -105,6 +105,10 @@ so a fold of a game played on an older catalog version reads that version's card
   effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
   `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
   `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
+- `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
+  `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
+  their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random
+  mode; `scan_for_anomaly` rolls the Probes' chance, the misses counted in `PlayerState.anomaly_misses`.
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
@@ -157,9 +161,13 @@ R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`T
 `DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`), the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
 `trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
-R1840000–R1840002, `resources.rs`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
+R1840000–R1840002, `resources.rs`), the Marketplace's (`MARKETPLACE_TABLE`, empty until the set's own,
+its cycle, its price rule, its spread and its Radiant chance and premium, R1853001–R1853005,
+`marketplace.rs`; a test registers a fixture table with `testkit::register_marketplace_table`) and
+#1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
 that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
-opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004).
+opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004),
+and the Anomalies' (`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).
 The ones the web reads are written to `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript
@@ -177,7 +185,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at` and the one-instance pick builders (`pick`, #1826). Every test crate enables it as a dev-dependency |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests

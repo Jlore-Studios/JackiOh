@@ -68,14 +68,6 @@ fn hero(player: PlayerId) -> Value {
     json!([{ "pick": "hero", "player": player.as_str() }])
 }
 
-fn instance(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    s.unit(player, lane).expect("a unit stands in that lane")
-}
-
 fn hand_card(s: &Scenario, player: PlayerId, def_id: &str) -> CardInstance {
     s.hand(player)
         .into_iter()
@@ -306,7 +298,7 @@ mod r1180001_spell_damage_this_turn {
         s.activate(POTION, json!({}));
         s.activate(POTION, json!({}));
         assert_eq!(spell_damage_mods(&s, P1), 2);
-        let potion = unit_at(&s, P1, 1);
+        let potion = s.unit_at(P1, 1);
         apply_as(
             &mut s,
             None,
@@ -382,7 +374,7 @@ mod r1180002_spells_have_lifesteal {
             json!({ "field": [MAGE], "hand": [BOLT], "health": 20 }),
             json!({}),
         );
-        let mage = unit_at(&s, P1, 1);
+        let mage = s.unit_at(P1, 1);
         apply_as(
             &mut s,
             None,
@@ -410,8 +402,11 @@ mod r1180003_healing_twice_as_effective {
         );
         s.play(MEND, json!({ "targets": hero(P1) }));
         assert_eq!(health(&s, P1), 16);
-        let body = unit_at(&s, P1, 2);
-        s.play(hand_card(&s, P1, MEND), json!({ "targets": instance(&body) }));
+        let body = s.unit_at(P1, 2);
+        s.play(
+            hand_card(&s, P1, MEND),
+            json!({ "targets": pick::instance(&body) }),
+        );
         assert_eq!(s.card(&body.id).damage, 2);
     }
 
@@ -457,7 +452,7 @@ mod r1180003_healing_twice_as_effective {
             json!({ "field": [DOUBLER, { "def": BODY, "damage": 8 }], "health": 10 }),
             json!({}),
         );
-        let body = unit_at(&s, P1, 2);
+        let body = s.unit_at(P1, 2);
         apply_as(
             &mut s,
             None,
@@ -683,9 +678,9 @@ mod r1180005_after_a_spell_targeting_an_enemy {
             json!({ "hand": [BOLT, PILER] }),
             json!({ "field": [BODY] }),
         );
-        let body = unit_at(&s, P2, 1);
+        let body = s.unit_at(P2, 1);
         let piler = hand_card(&s, P1, PILER);
-        s.play(BOLT, json!({ "targets": instance(&body) }));
+        s.play(BOLT, json!({ "targets": pick::instance(&body) }));
         assert_eq!(hits_on(&s, &body.id), vec![1, 2]);
         assert_eq!(graveyard_count(&s, P1, PILER), 1);
         let named = answers(&s);
@@ -718,8 +713,8 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         );
         s.play(ECHO_BOLT, json!({ "targets": hero(P2) }));
         // The repeat asks again; the body is picked, and the answer is the first enemy targeted.
-        let body = unit_at(&s, P2, 1);
-        s.answer(instance(&body));
+        let body = s.unit_at(P2, 1);
+        s.answer(pick::instance(&body));
         assert_eq!(answers(&s)[0].1.at, Selection::Hero { player: P2 });
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2]);
     }
@@ -768,8 +763,8 @@ mod r1180005_after_a_spell_targeting_an_enemy {
             json!({ "hand": [BOLT] }),
         );
         s.play(ZAP, json!({}));
-        let body = unit_at(&s, P1, 1);
-        s.play(MEND, json!({ "targets": instance(&body) }));
+        let body = s.unit_at(P1, 1);
+        s.play(MEND, json!({ "targets": pick::instance(&body) }));
         s.end_turn();
         s.play(BOLT, json!({ "targets": hero(P1) }));
         assert!(answers(&s).is_empty());
@@ -783,8 +778,8 @@ mod r1180005_after_a_spell_targeting_an_enemy {
             json!({ "hand": [BOLT, PILER] }),
             json!({ "field": [PAWN] }),
         );
-        let pawn = unit_at(&s, P2, 1);
-        s.play(BOLT, json!({ "targets": instance(&pawn) }));
+        let pawn = s.unit_at(P2, 1);
+        s.play(BOLT, json!({ "targets": pick::instance(&pawn) }));
         assert!(answers(&s).is_empty());
         assert_eq!(s.hand(P1).iter().filter(|card| card.def_id == PILER).count(), 1);
     }
@@ -870,8 +865,8 @@ mod r1180006_the_answer_chain_is_bounded {
     #[test]
     fn r1180006_a_chain_names_at_most_the_cap_and_then_ends() {
         let mut s = deep_deck("sp-pile-cap");
-        let body = unit_at(&s, P2, 1);
-        s.play(BOLT, json!({ "targets": instance(&body) }));
+        let body = s.unit_at(P2, 1);
+        s.play(BOLT, json!({ "targets": pick::instance(&body) }));
         let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
         assert_eq!(named(s.events()), cap);
         // The Bolt's hit, then one hit for each answer the chain named.
@@ -884,9 +879,9 @@ mod r1180006_the_answer_chain_is_bounded {
     #[test]
     fn r1180006_the_next_spell_starts_a_new_chain() {
         let mut s = deep_deck("sp-pile-cap-again");
-        let body = unit_at(&s, P2, 1);
-        s.play(BOLT, json!({ "targets": instance(&body) }));
-        s.play(BOLT, json!({ "targets": instance(&body) }));
+        let body = s.unit_at(P2, 1);
+        s.play(BOLT, json!({ "targets": pick::instance(&body) }));
+        s.play(BOLT, json!({ "targets": pick::instance(&body) }));
         // The rest of the deck answers the second Bolt: its chain counts from the first again.
         let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
         assert_eq!(named(s.last_events()), 25 - cap);

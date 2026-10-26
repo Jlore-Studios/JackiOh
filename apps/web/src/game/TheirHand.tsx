@@ -6,16 +6,22 @@
 //   inspect sheet on a click, a tap, a long-press or Enter, as a card in a pile's list does.
 // - `TheirHandButton`: the result chip's "Their hand", which opens the whole hand in the list dialog
 //   (`CardListSheet`). Practice keeps the chip from the start, so this is its way in.
+//
+// R1834004: the cards are the opponent's, so they wear that seat's loadout where the board carries one
+// (game/wearer.ts), faces and backs alike, as they did in their hand.
 
 import { useContext, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardView, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace, CardListSheet, useInspectTrigger, type CardListEntry, type FaceModel } from "../cards/index.ts";
+import { DEFAULT_CARD_COSMETICS } from "../cards/cosmetics.ts";
+import { TheirCopy } from "../cards/loadouts.ts";
 import { CatalogContext, type CardLookup } from "./catalog.ts";
 import { touchHoldMode } from "./contract.ts";
 import { listedFace } from "./faces.ts";
 import { revealTestid } from "./reveal.ts";
+import { useSeatDeckCosmetics, useTheirLoadout } from "./wearer.ts";
 import { t } from "../i18n/i18n.ts";
 import "./reveal.css";
 
@@ -28,16 +34,37 @@ const THEIR_HAND_ORDER = "As held";
 /** R434: the revealed hand and the view its cards are read in. */
 export type TheirHandProps = { view: PlayerView; cards: readonly CardView[] };
 
-/** Each card's face in play (faces.ts), or a back for a card the view names by the sentinel alone. */
-export function theirHandEntries(lookup: CardLookup | null, view: PlayerView, cards: readonly CardView[]): CardListEntry[] {
-  return cards.map((card) => ({ key: card.instanceId, face: listedFace(lookup, view, card) }));
+/**
+ * Each card's face in play (faces.ts), or a back for a card the view names by the sentinel alone,
+ * wearing `back` (R1834004: the opponent's seat's card back, absent for the default).
+ */
+export function theirHandEntries(lookup: CardLookup | null, view: PlayerView, cards: readonly CardView[], back?: string): CardListEntry[] {
+  return cards.map((card) => ({ key: card.instanceId, face: listedFace(lookup, view, card), ...(back === undefined ? {} : { back }) }));
+}
+
+/** R1834004: the card back the opponent's seat wears, absent for the default (a back names no card, B16). */
+function useTheirBack(view: PlayerView): string | undefined {
+  const { cardBack } = useSeatDeckCosmetics(view.opponent.player);
+  return cardBack === DEFAULT_CARD_COSMETICS.cardBack ? undefined : cardBack;
 }
 
 function cardsWord(count: number): string {
   return count === 1 ? t("· 1 card") : t("· {count} cards", { count: String(count) });
 }
 
-function TheirCard({ card, face, index, touchHold }: { card: CardView; face: FaceModel | null; index: number; touchHold?: "sheet" | "preview" }): ReactElement {
+function TheirCard({
+  card,
+  face,
+  index,
+  back,
+  touchHold,
+}: {
+  card: CardView;
+  face: FaceModel | null;
+  index: number;
+  back?: string;
+  touchHold?: "sheet" | "preview";
+}): ReactElement {
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above", touchHold, showLoc: false });
   const style = { "--i": index } as CSSProperties;
@@ -45,7 +72,7 @@ function TheirCard({ card, face, index, touchHold }: { card: CardView; face: Fac
     return (
       <li className="their-hand__item" style={style}>
         <span className="their-hand__card" data-testid={revealTestid.theirHandCard(card.instanceId)} role="img" aria-label={t("Unknown card")}>
-          <CardBack />
+          <CardBack back={back} />
         </span>
       </li>
     );
@@ -74,21 +101,25 @@ function TheirCard({ card, face, index, touchHold }: { card: CardView; face: Fac
 export function TheirHand({ view, cards }: TheirHandProps): ReactElement {
   const lookup = useContext(CatalogContext);
   const entries = theirHandEntries(lookup, view, cards);
+  const back = useTheirBack(view);
+  const theirs = useTheirLoadout(view.opponent.player);
   return (
-    <section className="their-hand" data-testid={revealTestid.theirHand} data-count={cards.length} aria-label={t(THEIR_HAND_TITLE)}>
-      <h3 className="their-hand__title">
-        {t(THEIR_HAND_TITLE)} <span className="their-hand__count">{cardsWord(cards.length)}</span>
-      </h3>
-      {cards.length === 0 ? (
-        <p className="their-hand__empty">{t("Their hand was empty.")}</p>
-      ) : (
-        <ul className="their-hand__cards">
-          {cards.map((card, index) => (
-            <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} touchHold={touchHoldMode(view)} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <TheirCopy loadout={theirs}>
+      <section className="their-hand" data-testid={revealTestid.theirHand} data-count={cards.length} aria-label={t(THEIR_HAND_TITLE)}>
+        <h3 className="their-hand__title">
+          {t(THEIR_HAND_TITLE)} <span className="their-hand__count">{cardsWord(cards.length)}</span>
+        </h3>
+        {cards.length === 0 ? (
+          <p className="their-hand__empty">{t("Their hand was empty.")}</p>
+        ) : (
+          <ul className="their-hand__cards">
+            {cards.map((card, index) => (
+              <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} back={back} touchHold={touchHoldMode(view)} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </TheirCopy>
   );
 }
 
@@ -96,6 +127,8 @@ export function TheirHand({ view, cards }: TheirHandProps): ReactElement {
 export function TheirHandButton({ view, cards }: TheirHandProps): ReactElement | null {
   const lookup = useContext(CatalogContext);
   const [open, setOpen] = useState(false);
+  const back = useTheirBack(view);
+  const theirs = useTheirLoadout(view.opponent.player);
   if (cards.length === 0) return null;
   return (
     <>
@@ -112,14 +145,16 @@ export function TheirHandButton({ view, cards }: TheirHandProps): ReactElement |
         {t(THEIR_HAND_TITLE)}
       </button>
       {open ? (
-        <CardListSheet
-          title={t(THEIR_HAND_TITLE)}
-          entries={theirHandEntries(lookup, view, cards)}
-          order={t(THEIR_HAND_ORDER)}
-          onClose={() => {
-            setOpen(false);
-          }}
-        />
+        <TheirCopy loadout={theirs}>
+          <CardListSheet
+            title={t(THEIR_HAND_TITLE)}
+            entries={theirHandEntries(lookup, view, cards, back)}
+            order={t(THEIR_HAND_ORDER)}
+            onClose={() => {
+              setOpen(false);
+            }}
+          />
+        </TheirCopy>
       ) : null}
     </>
   );

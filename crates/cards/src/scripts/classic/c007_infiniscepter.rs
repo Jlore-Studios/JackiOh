@@ -150,10 +150,6 @@ mod tests {
         }))
     }
 
-    fn pick(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// The `activate` actions `legalActions` lists for the InfiniScepter, as JSON.
     fn activations(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let card = s.card(SCEPTER).id.clone();
@@ -184,7 +180,7 @@ mod tests {
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({}));
                 let spell = s.card(STOCKPILE).clone();
 
-                s.play(SCEPTER, json!({ "zone": 1, "targets": pick(&spell) }));
+                s.play(SCEPTER, json!({ "zone": 1, "targets": pick::instance(&spell) }));
 
                 s.expect_in_zone(&spell, "exile");
                 assert_eq!(remembered(&s, SCEPTER), Some(json!({ "defId": STOCKPILE, "radiant": false })));
@@ -195,7 +191,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, { "def": STOCKPILE, "radiant": true }, FILLER] }), false, json!({}));
 
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
 
                 assert_eq!(remembered(&s, SCEPTER), Some(json!({ "defId": STOCKPILE, "radiant": true })));
@@ -219,7 +215,7 @@ mod tests {
                 assert!(!offered.contains(&s.card(TIMMY).id));
                 assert!(offered.contains(&s.card(FILLER).id));
                 s.expect_refused(|s| {
-                    let targets = pick(s.card(CALL));
+                    let targets = pick::instance(s.card(CALL));
                     s.play(SCEPTER, json!({ "zone": 1, "targets": targets }))
                 });
             }
@@ -243,7 +239,7 @@ mod tests {
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({}));
                 let spell = s.card(STOCKPILE).clone();
 
-                s.play(SCEPTER, json!({ "zone": 1, "targets": pick(&spell) })).activate(SCEPTER, json!({}));
+                s.play(SCEPTER, json!({ "zone": 1, "targets": pick::instance(&spell) })).activate(SCEPTER, json!({}));
 
                 s.expect_in_zone(&spell, "exile");
             }
@@ -254,7 +250,7 @@ mod tests {
                 let mut s = setup(json!({ "hand": [SCEPTER, CALL, FILLER] }), false, json!({}));
                 step_param(s.card_mut(SCEPTER), "costLimit", 1);
 
-                let targets = pick(s.card(CALL));
+                let targets = pick::instance(s.card(CALL));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
 
                 s.expect_in_zone(CALL, "exile");
@@ -269,7 +265,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({}));
                 let spell = s.card(STOCKPILE).clone();
-                s.play(SCEPTER, json!({ "zone": 1, "targets": pick(&spell) }));
+                s.play(SCEPTER, json!({ "zone": 1, "targets": pick::instance(&spell) }));
                 let played = s.state().players.p1.turn_log.cards_played;
 
                 s.activate(SCEPTER, json!({}));
@@ -288,7 +284,7 @@ mod tests {
             fn r81_the_copy_s_targets_are_chosen_in_a_prompt_as_the_cast_begins_the_action_carries_none() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, FLAME, FILLER] }), false, json!({}));
-                let targets = pick(s.card(FLAME));
+                let targets = pick::instance(s.card(FLAME));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
 
                 s.activate(SCEPTER, json!({}));
@@ -302,7 +298,7 @@ mod tests {
             fn r57_a_radiant_spell_s_copy_is_cast_on_its_radiant_face() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, { "def": FLAME, "radiant": true }, FILLER] }), false, json!({}));
-                let targets = pick(s.card(FLAME));
+                let targets = pick::instance(s.card(FLAME));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
 
                 s.activate(SCEPTER, json!({})).answer(json!([{ "pick": "hero", "player": "p2" }]));
@@ -314,7 +310,7 @@ mod tests {
             fn r384_usable_the_turn_it_is_played_once_per_turn_a_second_is_refused_and_not_listed_back_next_turn() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({}));
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
 
                 s.activate(SCEPTER, json!({}));
@@ -330,7 +326,7 @@ mod tests {
             fn r384_only_in_its_controller_s_own_turn() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({ "hand": [FILLER, VANILLA] }));
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 assert!(!activations(&s, P1).is_empty());
 
@@ -345,7 +341,7 @@ mod tests {
             fn r384_not_while_a_prompt_is_open() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, TUTOR, FILLER] }), false, json!({}));
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 assert!(!activations(&s, P1).is_empty());
 
@@ -360,7 +356,7 @@ mod tests {
             fn r384_the_activation_is_no_play_it_adds_nothing_to_the_turn_s_plays_beyond_the_cast() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({}));
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 let before = s.state().players.p1.turn_log.cards_played;
 
@@ -377,12 +373,12 @@ mod tests {
             fn r78_leaving_the_field_clears_what_it_remembered() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, STOCKPILE, FILLER] }), false, json!({ "hand": [JAMMED, FILLER] }));
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 let scepter = s.card(SCEPTER).clone();
 
                 s.end_turn();
-                s.play(JAMMED, json!({ "targets": pick(&scepter) }));
+                s.play(JAMMED, json!({ "targets": pick::instance(&scepter) }));
 
                 s.expect_in_zone(&scepter, "graveyard");
                 assert!(s.card(&scepter).memory.get("scepter").is_none());
@@ -393,7 +389,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, DIVIDEND, FILLER] }), false, json!({}));
                 // In hand an X Spell costs 0 (R65), so it is within the limit.
-                let targets = pick(s.card(DIVIDEND));
+                let targets = pick::instance(s.card(DIVIDEND));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 s.expect_mana(P1, 3);
 
@@ -427,7 +423,7 @@ mod tests {
                     json!({}),
                 );
 
-                let targets = pick(s.card(CALL));
+                let targets = pick::instance(s.card(CALL));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 s.expect_in_zone(CALL, "exile");
                 s.activate(SCEPTER, json!({}));
@@ -442,7 +438,7 @@ mod tests {
                 let mut s = setup(json!({ "hand": [{ "def": SCEPTER, "radiant": true }, HIT_JOB, FILLER] }), true, json!({}));
 
                 s.expect_refused(|s| {
-                    let targets = pick(s.card(HIT_JOB));
+                    let targets = pick::instance(s.card(HIT_JOB));
                     s.play(SCEPTER, json!({ "zone": 1, "targets": targets }))
                 });
             }
@@ -454,10 +450,10 @@ mod tests {
                 step_param(s.card_mut(SCEPTER), "costLimit", -1);
 
                 s.expect_refused(|s| {
-                    let targets = pick(s.card(CALL));
+                    let targets = pick::instance(s.card(CALL));
                     s.play(SCEPTER, json!({ "zone": 1, "targets": targets }))
                 });
-                let targets = pick(s.card(FILLER));
+                let targets = pick::instance(s.card(FILLER));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
                 s.expect_in_zone(FILLER, "exile");
             }
@@ -474,7 +470,7 @@ mod tests {
                     panic!("fixture");
                 };
 
-                s.expect_refused(|s| s.play(SCEPTER, json!({ "zone": 1, "targets": pick(&grave) })));
+                s.expect_refused(|s| s.play(SCEPTER, json!({ "zone": 1, "targets": pick::instance(&grave) })));
             }
         }
 
@@ -490,7 +486,7 @@ mod tests {
                     json!({ "hand": [MANA_WELL, FILLER] }),
                 );
                 let scepter = s.card(SCEPTER).id.clone();
-                let targets = pick(s.card(STOCKPILE));
+                let targets = pick::instance(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 2, "targets": targets }));
                 s.end_turn();
                 // C #85 Unlicensed Experimentation fuses the opponent's Mana Well onto your one Field Spell:

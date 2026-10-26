@@ -4,6 +4,7 @@
 
 pub mod activate;
 pub mod ai_wheel;
+pub mod anomalies;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;
@@ -34,6 +35,7 @@ pub mod ky_competition;
 pub mod ky_test;
 pub mod last_boards;
 pub mod layered_summons;
+pub mod marketplace;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod mplus_b03;

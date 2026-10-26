@@ -163,6 +163,9 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
     resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
     marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+    // Issue #1853 (the Marketplace, R1853003).
+    marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
+    marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
     starshipFused: { type: "starshipFused", player: "p1", instanceId: unit, pieceId: "u2", defId: "core-008", pieces: 2 },
     starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: unit, defId: "core-008", name: "Ember of Departure", pieces: ["core-008"] },
     voteCast: { type: "voteCast", player: "p1", instanceId: unit, defId: "core-004", votes: 1, needed: 3 },
@@ -170,6 +173,8 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     fled: { type: "fled", player: "p1", opponent: "draw" },
     starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
     held: { type: "held", player: "p2", instanceId: enemy, defId: "core-004", holderId: trap },
+    // Issue #1855 (R1855000).
+    boardReplaced: { type: "boardReplaced", player: "p1" },
   };
 }
 

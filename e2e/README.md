@@ -79,6 +79,10 @@ pnpm test:e2e --expose wsUrl=ws://127.0.0.1:8787/ws/match --expose apiUrl=http:/
 16 replaced `Cypress.env()` with `expose` / `Cypress.expose()`, which is why the flag is
 `--expose`.
 
+A networked spec reaches the server through `support/config.ts`'s `apiUrl(path)` (the `apiUrl`
+origin plus `path`) and `bearerHeaders(token)`, and opens a screen signed in with
+`cy.visitAs(account, path, options)`, so no spec spells the origin, the auth header or the session key.
+
 Two runs on one machine (parallel agents, a component run beside an e2e run) must not share the
 artifacts folder: Cypress empties its screenshots folder at the start of every run, so one run
 deletes the other's evidence. Give each its own, and keep what is already there:

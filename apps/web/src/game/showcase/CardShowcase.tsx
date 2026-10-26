@@ -23,6 +23,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace, costPhrase } from "../../cards/index.ts";
 import { chineseName, drawnInChinese } from "../../cards/chinese.ts";
+import { TheirCopy } from "../../cards/loadouts.ts";
 import { chaosNames, type ChaosRoll } from "../../fx/chaos.ts";
 import { FX_BANNER_TAIL_MS } from "../../fx/constants.ts";
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
@@ -31,7 +32,7 @@ import { CatalogContext } from "../catalog.ts";
 import { sideOf, type Side } from "../contract.ts";
 import { namedFace } from "../faces.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
-import { useWearerSeat } from "../wearer.ts";
+import { useSeatDeckCosmetics, useTheirLoadout, useWearerSeat } from "../wearer.ts";
 import ChaosBanner from "./ChaosBanner.tsx";
 import {
   CAST_ON_DRAW_TEXT,
@@ -375,6 +376,10 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   }, [showing]);
 
   const play = showing?.play ?? null;
+  // R1834004: another seat's play wears that seat's loadout, and a card it set that seat's card back (B16).
+  const worn = wearer !== null && play !== null && play.player === wearer;
+  const theirs = useTheirLoadout(play === null || worn ? null : play.player);
+  const { cardBack } = useSeatDeckCosmetics(play?.player ?? null);
   // SPEC §10.10: use the current face, or the paid-cost definition once it has left the view.
   const face =
     play === null || play.defId === null
@@ -434,13 +439,15 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
               </span>
               {face !== null ? (
                 <span ref={cardRef} className="showcase-card" data-testid={showcaseTestid.face}>
-                  <CardFace face={face} layout="full" worn={wearer !== null && showing.play.player === wearer} />
+                  <TheirCopy loadout={theirs}>
+                    <CardFace face={face} layout="full" worn={worn} />
+                  </TheirCopy>
                   {kind === "cast" ? <CastRibbon /> : null}
                   {badge === undefined ? null : <ShowcaseOrdinal ordinal={badge} />}
                 </span>
               ) : (
                 <span ref={cardRef} className="showcase-card showcase-card--back" data-testid={showcaseTestid.back}>
-                  <CardBack />
+                  <CardBack back={cardBack} />
                   {/* R370: a card set face down shows the cost its back shows on the board. */}
                   {showing.play.cost === undefined ? null : (
                     <span

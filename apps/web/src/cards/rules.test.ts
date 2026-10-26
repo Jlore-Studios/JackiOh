@@ -154,6 +154,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
     "Gain a Resource",
     "Credits",
+    // R1853000–R1853005: Stinkyscape's Marketplace, which no shipped card reaches; the board's shop
+    // (game/Marketplace.tsx) shows it once it opens.
+    "Marketplace",
     // R1854000–R1854004: Stinkyscape's staged Quests, which no card prints until the set ships; its card
     // parts make a term of any its texts bold.
     "Quest stages",
@@ -181,6 +184,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Hold beneath",
     "Cast it for yourself",
     "Radiant at N keywords",
+    // R1855000–R1855003: engine primitives no shipped card prints yet; Stinkyscape's Anomaly Found! and
+    // Scanning Probes (S20) explain them on their own faces.
+    "Replace your board",
+    "Scan for an Anomaly",
   ],
 };
 

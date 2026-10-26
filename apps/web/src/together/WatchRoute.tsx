@@ -16,12 +16,17 @@
 // running, and while a reopen waits (#1691), "Reconnect now" (the match bar's, `routes/match.tsx`)
 // opens it again and starts the attempts over (#1570). Run out before the first view, the screen says
 // the game can no longer be reached rather than waiting on (#1599).
+//
+// R1834003, R1834004: the socket also sends both seats' frozen loadouts (`loadouts`, then a
+// `cardLoadouts` after each view that showed a card), kept merged as the match socket keeps them
+// (game/net.ts); a watched board wears nobody's device picks, so both seats wear their own.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
+import { createLoadoutsHolder, type SeatLoadouts } from "../cards/loadouts.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { CatalogContext } from "../game/catalog.ts";
@@ -58,9 +63,13 @@ export function watchSocketUrl(matchId: string, friendId: string, base: string =
   return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
 }
 
-/** The newest delayed view of the friend's seat, how the socket stands, and the watcher's own retry. */
-function useWatch(matchId: string, friendId: string): { view: PlayerView | null; connection: WatchConnection; reconnect: () => void } {
+/** The newest delayed view of the friend's seat, both seats' loadouts (R1834003), how the socket stands, and the watcher's own retry. */
+function useWatch(
+  matchId: string,
+  friendId: string,
+): { view: PlayerView | null; loadouts: SeatLoadouts | null; connection: WatchConnection; reconnect: () => void } {
   const [view, setView] = useState<PlayerView | null>(null);
+  const [loadouts, setLoadouts] = useState<SeatLoadouts | null>(null);
   const [connection, setConnection] = useState<WatchConnection>("connecting");
   /** The running effect's retry (#1570); a no-op until the effect sets it. */
   const reconnectRef = useRef<() => void>(IGNORE);
@@ -72,6 +81,7 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
     let tries = 0;
     let refused = false;
     let over = false;
+    const held = createLoadoutsHolder();
 
     const replace = (stale: WebSocket): void => {
       if (stopped || refused || over) return;
@@ -136,6 +146,10 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
         if (frame.type === "view") {
           over = frame.view.result !== null;
           setView(frame.view);
+        } else if (frame.type === "loadouts") {
+          setLoadouts(held.seats(frame.seats));
+        } else if (frame.type === "cardLoadouts") {
+          setLoadouts(held.cards(frame.cards));
         } else if (frame.type === "error" && frame.code === "forbidden") {
           refused = true;
           setConnection("refused");
@@ -180,7 +194,7 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
     reconnectRef.current();
   }, []);
 
-  return { view, connection, reconnect };
+  return { view, loadouts, connection, reconnect };
 }
 
 /** The connection in a watcher's words. */
@@ -216,7 +230,7 @@ function ReconnectNow({ className, onReconnect }: { className: string; onReconne
 
 export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: string }): ReactElement {
   useLocale();
-  const { view, connection, reconnect } = useWatch(matchId, friendId);
+  const { view, loadouts, connection, reconnect } = useWatch(matchId, friendId);
   const lookup = useCatalogLookup();
   const [friends] = usePolled(getFriends, null);
   const name = friends.kind === "ready" ? friends.value.friends.find((friend) => friend.profileId === friendId)?.username : undefined;
@@ -270,6 +284,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
             onAction={IGNORE}
             replay
             resultForm="chip"
+            loadouts={loadouts}
             matchStatus={
               <>
                 <span data-testid={watchTestid.status} data-connection={connection}>

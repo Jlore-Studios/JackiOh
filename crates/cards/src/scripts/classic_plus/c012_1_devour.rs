@@ -67,13 +67,6 @@ mod tests {
     const BLOOD_MOON: &str = "classicplus-022"; // Trap: enemy heals become Pierce damage
     const FILLER: &str = "core-005";
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {player} lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     use crate::merged;
 
     fn devour(radiant: bool, p1: Value, p2: Value) -> Scenario {
@@ -102,7 +95,7 @@ mod tests {
         fn destroys_a_target_unit_and_your_hero_takes_damage_equal_to_its_health_one_instance_from_devour() {
             crate::register_all();
             let mut s = devour(false, json!({}), json!({}));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_in_zone(MENACE, "graveyard").expect_health(P1, HERO_HEALTH - 9);
             let hits = hits_on(&s, "hero-p1");
@@ -114,7 +107,7 @@ mod tests {
         fn reads_its_current_health_damage_included_before_the_destroy_either_side_is_legal() {
             crate::register_all();
             let mut s = devour(false, json!({ "field": [{ "def": MENACE, "damage": 5 }] }), json!({ "field": [] }));
-            let targets = at(&s, P1, 1);
+            let targets = pick::unit_at(&s, P1, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_health(P1, HERO_HEALTH - 4);
         }
@@ -123,7 +116,7 @@ mod tests {
         fn s4_4_your_hero_s_armor_takes_its_share() {
             crate::register_all();
             let mut s = devour(false, json!({ "armor": 5 }), json!({}));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_health(P1, HERO_HEALTH - 4);
         }
@@ -132,7 +125,7 @@ mod tests {
         fn s4_4_step_0_your_own_spell_damage_raises_it() {
             crate::register_all();
             let mut s = devour(false, json!({ "field": [SOLARIUS] }), json!({}));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_health(P1, HERO_HEALTH - 11);
         }
@@ -141,7 +134,7 @@ mod tests {
         fn anime_armor_clamps_the_hit_to_1() {
             crate::register_all();
             let mut s = devour(false, json!({ "field": [ANIME_ARMOR] }), json!({}));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_health(P1, HERO_HEALTH - 1);
         }
@@ -150,7 +143,7 @@ mod tests {
         fn r46_an_indestructible_target_survives_and_the_damage_still_happens() {
             crate::register_all();
             let mut s = devour(false, json!({}), json!({ "field": [ROCK] }));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_in_zone(ROCK, "field").expect_health(P1, HERO_HEALTH - 10);
         }
@@ -170,7 +163,7 @@ mod tests {
         fn destroys_the_unit_and_heals_your_hero_by_its_health_instead() {
             crate::register_all();
             let mut s = devour(true, json!({ "health": 10 }), json!({}));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_in_zone(MENACE, "graveyard").expect_health(P1, 19);
             assert_eq!(hits_on(&s, "hero-p1").len(), 0);
@@ -180,7 +173,7 @@ mod tests {
         fn r46_an_indestructible_target_survives_and_the_heal_still_happens() {
             crate::register_all();
             let mut s = devour(true, json!({ "health": 10 }), json!({ "field": [ROCK] }));
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_in_zone(ROCK, "field").expect_health(P1, 20);
         }
@@ -193,7 +186,7 @@ mod tests {
                 json!({ "health": 20 }),
                 json!({ "backrow": [{ "def": BLOOD_MOON, "faceUp": false }] }),
             );
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(DEVOUR, json!({ "targets": targets }));
             s.expect_in_zone(MENACE, "graveyard").expect_health(P1, 11);
         }

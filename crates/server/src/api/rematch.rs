@@ -41,6 +41,7 @@ use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
+use crate::loadout::DeckSlots;
 use crate::seats::Seat;
 
 /// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
@@ -220,6 +221,18 @@ async fn create_rematch(
     let dealt_portrait = |seat: &str| -> Option<String> {
         Some(jackioh_engine::wire::pick_portrait_from_seed(&format!("{seed}:portrait:{seat}")).to_string())
     };
+    // R1834002: a Best-of-1 rematch plays the same decks under the slots their seats wore, which the
+    // new loadout judges again; All Random deals new decks and wears the accounts' slots.
+    let slots_of = |at: usize| -> Option<DeckSlots> {
+        if random {
+            return None;
+        }
+        finished.loadouts.as_ref().map(|loadouts| {
+            (if at == 0 { &loadouts.0 } else { &loadouts.1 })
+                .seat
+                .deck_slots()
+        })
+    };
     let seats = (
         MatchSeat {
             profile_id: finished.players.0.clone(),
@@ -237,6 +250,7 @@ async fn create_rematch(
             } else {
                 portrait_of(0)
             },
+            deck_slots: slots_of(0),
         },
         MatchSeat {
             profile_id: finished.players.1.clone(),
@@ -254,6 +268,7 @@ async fn create_rematch(
             } else {
                 portrait_of(1)
             },
+            deck_slots: slots_of(1),
         },
     );
 
@@ -386,18 +401,24 @@ async fn create_rematch(
         Ok::<_, ApiError>(taken)
     }
     .await;
-    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant) and a
-    // fenced write both undo the rematch: stop the actor, then erase the live match with no result
-    // (R679), whose `on delete set null` releases the winner seat's flag and any bot flags
-    // `bots_claim_for_rematch` set, while a taken seat is untouched. The caller clears the offer
-    // claim and the seats re-offer; the lease gives the ledger's seats back as it drops.
+    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant), a
+    // fenced write and a write that failed (a database hiccup) all undo the rematch: kept without
+    // its flags it would refuse every socket and end in a draw nobody played. Stop the actor, then
+    // erase the live match with no result (R679), whose `on delete set null` releases the winner
+    // seat's flag and any bot flags `bots_claim_for_rematch` set, while a taken seat is untouched.
+    // The caller clears the offer claim and the seats re-offer; the lease gives the ledger's seats
+    // back as it drops.
     let refused = match seated {
-        Err(error) if error.code == ApiErrorCode::Unavailable => error,
         Err(error) => {
-            tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
-            lease.commit();
-            tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
-            return Ok(());
+            // A fenced write (`unavailable`) is a newer server taking over, not a failure.
+            if error.code != ApiErrorCode::Unavailable {
+                tracing::error!(
+                    event = "rematch.in_match_failed",
+                    matchId = %match_id,
+                    message = %error.message,
+                );
+            }
+            error
         }
         Ok(Some(taken)) => {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);

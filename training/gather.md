@@ -11,9 +11,12 @@ AI-against-AI figures for every card beside its live games, whether or not anyon
 ## Where the development games come from now
 
 Since #1676 they come from the learn lane's exports, which `cargo jackioh stats from-selfplay` files as
-development records (R1676000; `training/README.md`, The gather lane). The training box goes back to the
-night bot (#682's audit), so this lane no longer has a home there. What follows is its contract for any box
-that still runs `loop.sh gather`.
+development records (R1676000; `training/README.md`, The gather lane), and since #1976 `learn.yml` files
+every export's games itself and imports them as totals only (R1976000). On the owner's PC,
+`.github/workflows/gather.yml` plays each newly shipped patch's games the way this lane did, `stats
+--series gather`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>`, once the repository variable
+`GATHER_ON_PATCH` is `true`. The training box went back to the night bot (#682's audit), so this lane no
+longer has a home there. What follows is its contract for any box that still runs `loop.sh gather`.
 
 ## What it plays
 

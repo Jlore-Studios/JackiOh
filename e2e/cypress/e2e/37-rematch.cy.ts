@@ -18,6 +18,8 @@ import {
 import { type InstalledLoadout } from "../../support/commands.ts";
 import {
   accounts,
+  apiUrl,
+  bearerHeaders,
   routes,
   seedFor,
   server,
@@ -109,17 +111,9 @@ type RanksBody = { ranked: boolean };
 
 type SeriesView = { status: "picking" | "playing" | "over"; currentMatchId: string | null };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy
-    .request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) })
+    .request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
@@ -140,8 +134,8 @@ function offerAs(account: E2EAccount, matchId: string, stakes: number): Cypress.
   return cy
     .request<RematchOfferBody>({
       method: "POST",
-      url: api(`/api/matches/${matchId}/rematch`),
-      headers: bearer(account),
+      url: apiUrl(`/api/matches/${matchId}/rematch`),
+      headers: bearerHeaders(account.token),
       body: { stakes },
     })
     .its("body");
@@ -152,8 +146,8 @@ function statusAs(account: E2EAccount, matchId: string): Cypress.Chainable<Remat
   return cy
     .request<RematchStatusBody>({
       method: "GET",
-      url: api(`/api/matches/${matchId}/rematch`),
-      headers: bearer(account),
+      url: apiUrl(`/api/matches/${matchId}/rematch`),
+      headers: bearerHeaders(account.token),
     })
     .its("body");
 }
@@ -167,8 +161,8 @@ function refused(
 ): Cypress.Chainable<Cypress.Response<ErrorBody>> {
   return cy.request<ErrorBody>({
     method,
-    url: api(`/api/matches/${matchId}/rematch`),
-    headers: bearer(account),
+    url: apiUrl(`/api/matches/${matchId}/rematch`),
+    headers: bearerHeaders(account.token),
     ...(stakes === undefined ? {} : { body: { stakes } }),
     failOnStatusCode: false,
   });
@@ -177,7 +171,7 @@ function refused(
 /** Whether `matchId` is ranked. */
 function ranksOf(account: E2EAccount, matchId: string): Cypress.Chainable<RanksBody> {
   return cy
-    .request<RanksBody>({ method: "GET", url: api(`/api/matches/${matchId}/ranks`), headers: bearer(account) })
+    .request<RanksBody>({ method: "GET", url: apiUrl(`/api/matches/${matchId}/ranks`), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
@@ -215,8 +209,8 @@ function finishedRoomMatch(seed: string, seatOneDeck: string, seatTwoDeck: strin
   let matchId = "";
   cy.request<{ code: string }>({
     method: "POST",
-    url: api("/api/rooms"),
-    headers: bearer(seatOne),
+    url: apiUrl("/api/rooms"),
+    headers: bearerHeaders(seatOne.token),
     body: { mode: "bo1", deckId: seatOneDeck, seed },
   }).then((created) => {
     code = created.body.code;
@@ -224,8 +218,8 @@ function finishedRoomMatch(seed: string, seatOneDeck: string, seatTwoDeck: strin
   cy.then(() => {
     cy.request<JoinBody>({
       method: "POST",
-      url: api(`/api/rooms/${code}/join`),
-      headers: bearer(seatTwo),
+      url: apiUrl(`/api/rooms/${code}/join`),
+      headers: bearerHeaders(seatTwo.token),
       body: { mode: "bo1", deckId: seatTwoDeck },
     }).then((joined) => {
       matchId = joined.body.matchId ?? "";
@@ -354,8 +348,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request({
         method: "POST",
-        url: api("/api/queue"),
-        headers: bearer(seatTwo),
+        url: apiUrl("/api/queue"),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo1", deckId: installed(theirs).deckIds[FIXTURE_DECK] ?? "", seed: seedFor("37-rematch-ranked") },
       }).should((response) => {
         expect(response.status, "R143: the queue takes an end-to-end seed").to.eq(200);
@@ -488,8 +482,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo3", trioId: installed(mine).trioId, seed: seedFor("37-rematch-conquest") },
       }).then((created) => {
         code = created.body.code;
@@ -498,8 +492,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request<JoinBody>({
         method: "POST",
-        url: api(`/api/rooms/${code}/join`),
-        headers: bearer(seatTwo),
+        url: apiUrl(`/api/rooms/${code}/join`),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo3", trioId: installed(theirs).trioId },
       }).then((joined) => {
         // A Conquest join makes the series, no match yet (R264).
@@ -511,8 +505,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request({
         method: "POST",
-        url: api(`/api/series/${seriesId}/pick`),
-        headers: bearer(seatOne),
+        url: apiUrl(`/api/series/${seriesId}/pick`),
+        headers: bearerHeaders(seatOne.token),
         body: { slot: FIRST_SLOT },
       })
         .its("status")
@@ -521,8 +515,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request<SeriesView>({
         method: "POST",
-        url: api(`/api/series/${seriesId}/pick`),
-        headers: bearer(seatTwo),
+        url: apiUrl(`/api/series/${seriesId}/pick`),
+        headers: bearerHeaders(seatTwo.token),
         body: { slot: FIRST_SLOT },
       }).then((second) => {
         expect(second.body.status).to.eq("playing");
@@ -558,8 +552,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     cy.then(() => {
       cy.request({
         method: "POST",
-        url: api(`/api/series/${seriesId}/forfeit`),
-        headers: bearer(seatTwo),
+        url: apiUrl(`/api/series/${seriesId}/forfeit`),
+        headers: bearerHeaders(seatTwo.token),
       })
         .its("body.status")
         .should("eq", "over");

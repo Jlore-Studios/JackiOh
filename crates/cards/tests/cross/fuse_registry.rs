@@ -23,13 +23,6 @@ const LIBRARY: [&str; 6] = [RENO; 6];
 
 use super::scenario;
 
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 /// p1 plays Pointmaster into p2's Unlicensed Experimentation, which fuses it onto p2's lane-1 unit.
 fn fused_onto(big_unit: &str) -> Scenario {
     let mut g = scenario(json!({
@@ -74,7 +67,7 @@ mod r179_a_fused_definitions_id_names_its_ingredients {
         // Match A fuses Pointmaster onto Jlockeed Shredder-10 ("End of turn: deal 2 damage to each
         // enemy unit and the enemy hero"); only its JSON is kept, as a match actor keeps it (§9.3).
         let a = fused_onto(SHREDDER);
-        let fused_a = a.card(&unit_at(&a, P2, 1).id).def_id.clone();
+        let fused_a = a.card(&a.unit_at(P2, 1).id).def_id.clone();
         assert!(a.state().transient_defs.contains_key(&fused_a));
         assert_eq!(fused_a, format!("t-1:{POINTMASTER}+{SHREDDER}"));
         let saved_a = through_json(a.state());
@@ -83,7 +76,7 @@ mod r179_a_fused_definitions_id_names_its_ingredients {
         // Match B, same process, same fusion slot, a different pair (Midrange Menace heals itself at the
         // end of the turn and deals no damage): a different id, so its scripts register beside A's.
         let b = fused_onto(MENACE);
-        let fused_b = b.card(&unit_at(&b, P2, 1).id).def_id.clone();
+        let fused_b = b.card(&b.unit_at(P2, 1).id).def_id.clone();
         assert_eq!(fused_b, format!("t-1:{POINTMASTER}+{MENACE}"));
         assert_ne!(fused_b, fused_a);
 

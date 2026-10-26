@@ -23,7 +23,7 @@ use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{
-    AI, act, ai_pool, card_by_id, clone, dealt_game, every_card, is_legal, random_decks,
+    AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, is_legal, js, random_decks,
     random_policy_states, trap_pool,
 };
 
@@ -68,25 +68,6 @@ fn spread(base: Value, over: Value) -> Value {
         }
     }
     out
-}
-
-/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
-
-/// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
 }
 
 /// TS's `build(seed, p2, p1 = P1_SIDE)`; the default is passed explicitly.
@@ -507,7 +488,12 @@ mod redact_b9 {
                 .map(|open| open.p1.prompt.options.clone()))
         );
         assert_eq!(
-            decide(&kept_all, AI, &mut ai_options("observe-their-mulligan")).map(|decision| decision.reason),
+            decide(
+                &kept_all,
+                AI,
+                &mut ai_options("observe-their-mulligan", AI_BUDGET)
+            )
+            .map(|decision| decision.reason),
             Some(DecisionReason::Mulligan)
         );
     }
@@ -601,8 +587,9 @@ mod redact_b9 {
             hash_state(&redact(&kept_all, AI))
         );
         assert_eq!(
-            decide(&kept_none, AI, &mut ai_options("observe-owed")).map(|decision| decision.action),
-            decide(&kept_all, AI, &mut ai_options("observe-owed")).map(|decision| decision.action),
+            decide(&kept_none, AI, &mut ai_options("observe-owed", AI_BUDGET))
+                .map(|decision| decision.action),
+            decide(&kept_all, AI, &mut ai_options("observe-owed", AI_BUDGET)).map(|decision| decision.action),
         );
     }
 
@@ -849,8 +836,8 @@ mod decide_cannot_see_hidden_cards_b11 {
     fn r185_b11_decide_gives_deep_equal_decisions_for_the_fixed_pair_under_the_same_ai_rng() {
         let (a, b) = pair();
         for k in ["observe-k1", "observe-k2", "observe-k3"] {
-            let from_a = decide(&a, AI, &mut ai_options(k));
-            let from_b = decide(&b, AI, &mut ai_options(k));
+            let from_a = decide(&a, AI, &mut ai_options(k, AI_BUDGET));
+            let from_b = decide(&b, AI, &mut ai_options(k, AI_BUDGET));
             assert!(from_a.is_some(), "{k}");
             assert_eq!(from_b, from_a, "{k}");
             let action = from_a.map(|decision| decision.action).expect("a decision");
@@ -871,9 +858,9 @@ mod decide_cannot_see_hidden_cards_b11 {
             let seat = seat_to_act(state).expect("a seat to act");
             let mutated = mutate_hidden(state, seat, at as i64 + 1);
             let rng_seed = format!("observe-b11-real-{at}");
-            let original = decide(state, seat, &mut ai_options(&rng_seed));
+            let original = decide(state, seat, &mut ai_options(&rng_seed, AI_BUDGET));
             assert_eq!(
-                decide(&mutated, seat, &mut ai_options(&rng_seed)),
+                decide(&mutated, seat, &mut ai_options(&rng_seed, AI_BUDGET)),
                 original,
                 "state {at}"
             );
