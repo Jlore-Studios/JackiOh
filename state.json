@@ -2753,11 +2753,11 @@
       "audit_tier": "",
       "died": 0,
       "difficulty_by": {
-        "at": "2026-10-26T21:49:04Z",
+        "at": "2026-10-26T22:16:58Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "the fix is in crates/engine/src/view_for.rs (hidden-information redaction) plus web and e2e changes, so the engine line makes it hard; it was stepped up after three failures and is not lowered"
       },
       "failures": 0,
       "forced": false,
