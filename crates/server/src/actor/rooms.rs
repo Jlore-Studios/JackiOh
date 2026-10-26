@@ -31,7 +31,7 @@ use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
-use crate::api::queue::{new_seed, new_uuid, seed_override_of};
+use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 // `now_ms`: the server's one clock (SURFACE §11.3), read through tokio's clock so a paused test
@@ -48,10 +48,12 @@ const CODE_ATTEMPTS: usize = 8;
 
 // R143 — the end-to-end mode's optional seed, for the room half
 
-/// One remembered seed and the expiry of the room it belongs to.
+/// One remembered seed, the seat the host asked for with it (R1989000), and the expiry of the
+/// room they belong to.
 #[derive(Clone, Debug)]
 struct HeldSeed {
     seed: String,
+    seat: Option<PlayerId>,
     expires_at: i64,
 }
 
@@ -80,24 +82,33 @@ pub fn e2e_room_seed_count() -> usize {
 
 /// A room never joined has no claim to clear it, so each remembered seed carries its room's expiry
 /// and stale ones are dropped as new rooms are made.
-fn remember_seed(code: &str, seed: &str, expires_at: i64, now: i64) {
+fn remember_seed(code: &str, seed: &str, seat: Option<PlayerId>, expires_at: i64, now: i64) {
     let mut held = seeds();
     held.retain(|_, entry| entry.expires_at > now);
     held.insert(
         code.to_string(),
         HeldSeed {
             seed: seed.to_string(),
+            seat,
             expires_at,
         },
     );
 }
 
-/// The seed for this room, consumed. The host's seed wins over the joiner's: the room came first.
-fn take_seed_for_room(code: &str, joiner_seed: Option<String>) -> Option<String> {
+/// The seed for this room, consumed, with the host's and the joiner's seat pins beside it. The
+/// host's seed wins over the joiner's: the room came first. A seat-only pin carries no seed (R143),
+/// so the joiner's seed is honored then. R1989000 resolves the pins at the join, the host's first:
+/// a honored pin skips the seed's coin.
+fn take_seed_for_room(
+    code: &str,
+    joiner_seed: Option<String>,
+    joiner_seat: Option<PlayerId>,
+) -> (Option<String>, Option<PlayerId>, Option<PlayerId>) {
     let held = seeds().shift_remove(code);
     match held {
-        Some(entry) => Some(entry.seed),
-        None => joiner_seed,
+        Some(entry) if !entry.seed.is_empty() => (Some(entry.seed), entry.seat, joiner_seat),
+        Some(entry) => (joiner_seed, entry.seat, joiner_seat),
+        None => (joiner_seed, None, joiner_seat),
     }
 }
 
@@ -221,13 +232,22 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     Ok(room)
 }
 
-/// The two seats of a room's match: the host is p1 (§9.5), the joiner p2.
+/// The two seats of a room's match: R1989000 seats the host and the joiner by the seed's coin
+/// (`host_is_p1`), so the same seed always seats the same way. Decks, portraits and slots travel
+/// with the profile; All Random deals stay seat-keyed, each leaning on the set its seat's player
+/// picked, if any.
 fn room_seats(
     room: &Room,
     joiner_id: &str,
     joiner: &FrozenChoice,
     seed: &str,
+    host_is_p1: bool,
 ) -> Result<(MatchSeat, MatchSeat), ApiError> {
+    let (host_player, joiner_player) = if host_is_p1 {
+        (PlayerId::P1, PlayerId::P2)
+    } else {
+        (PlayerId::P2, PlayerId::P1)
+    };
     if room.mode == QueueMode::Random {
         // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
         // R642: the portraits are dealt the same way, uniformly and seat by seat. R1372, R924000:
@@ -240,10 +260,13 @@ fn room_seats(
         return Ok((
             MatchSeat {
                 profile_id: room.host_profile_id.clone(),
-                player: PlayerId::P1,
-                deck: deal_random_deck(&format!("{seed}:p1-deck"), lean_of(room.host_lean)),
+                player: host_player,
+                deck: deal_random_deck(
+                    &format!("{seed}:{}-deck", host_player.as_str()),
+                    lean_of(room.host_lean),
+                ),
                 portrait: Some(
-                    pick_portrait_from_seed(&format!("{seed}:portrait:p1"))
+                    pick_portrait_from_seed(&format!("{seed}:portrait:{}", host_player.as_str()))
                         .as_str()
                         .to_string(),
                 ),
@@ -252,10 +275,13 @@ fn room_seats(
             },
             MatchSeat {
                 profile_id: joiner_id.to_string(),
-                player: PlayerId::P2,
-                deck: deal_random_deck(&format!("{seed}:p2-deck"), lean_of(joiner_lean)),
+                player: joiner_player,
+                deck: deal_random_deck(
+                    &format!("{seed}:{}-deck", joiner_player.as_str()),
+                    lean_of(joiner_lean),
+                ),
                 portrait: Some(
-                    pick_portrait_from_seed(&format!("{seed}:portrait:p2"))
+                    pick_portrait_from_seed(&format!("{seed}:portrait:{}", joiner_player.as_str()))
                         .as_str()
                         .to_string(),
                 ),
@@ -272,7 +298,7 @@ fn room_seats(
     Ok((
         MatchSeat {
             profile_id: room.host_profile_id.clone(),
-            player: PlayerId::P1,
+            player: host_player,
             deck: room.host_deck.clone(),
             portrait: room.host_portrait.clone().flatten(),
             // R1834002: each deck's slots, frozen with it: the host's at the room's making.
@@ -280,7 +306,7 @@ fn room_seats(
         },
         MatchSeat {
             profile_id: joiner_id.to_string(),
-            player: PlayerId::P2,
+            player: joiner_player,
             deck: deck.cards.clone(),
             portrait: deck.portrait.clone().flatten(),
             deck_slots: deck.slots.clone(),
@@ -316,7 +342,9 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
     let choice = read_mode_choice(&req.body)?;
     // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
     // read before any work so a production caller gets the 400 without a room being made.
+    // R1989000: an optional `seat` beside it, under the same rule.
     let seed = seed_override_of(app, &req.body)?;
+    let seat = seat_override_of(app, &req.body)?;
     assert_free_to_play(app, &profile_id).await?;
 
     // R253: checked now and frozen into the room — a deck, a trio, or nothing for All Random.
@@ -384,8 +412,13 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
             continue;
         }
         // R143, after the create won: a seed for a room that does not exist would never be dropped.
+        // R1989000: the seat pin rides with it, forgotten with it.
         if let Some(seed) = seed.as_deref() {
-            remember_seed(&code, seed, expires_at, now);
+            remember_seed(&code, seed, seat, expires_at, now);
+        } else if let Some(seat) = seat {
+            // A pin without a seed still needs holding until the join: remember it under a
+            // placeholder entry the join consumes with the room.
+            remember_seed(&code, "", Some(seat), expires_at, now);
         }
         tracing::info!(event = "room.created", code = %code, hostProfileId = %profile_id, mode = mode.as_str());
         return Ok(OpenedRoom {
@@ -411,7 +444,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = profile_of(&req)?;
     let choice = read_mode_choice(&req.body)?;
     // R143 again: both endpoints accept the field in end-to-end mode and refuse it outside one.
+    // R1989000: the joiner's `seat` beside it, under the same rule.
     let joiner_seed = seed_override_of(app, &req.body)?;
+    let joiner_seat = seat_override_of(app, &req.body)?;
     assert_free_to_play(app, &profile_id).await?;
 
     let typed = req.params.get("code").cloned().unwrap_or_default();
@@ -485,25 +520,29 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "someone already joined that room",
         ));
     };
-    // R143: the server mints the seed, unless an end-to-end room asked for one.
-    let seed = match take_seed_for_room(&claimed.code, joiner_seed) {
-        Some(seed) => seed,
-        None => new_seed(),
+    // R143: the server mints the seed, unless an end-to-end room asked for one. R1989000: the
+    // host's seat pin wins over the joiner's, and a honored pin skips the seed's coin, so the same
+    // seed always seats the same way.
+    let (seed_held, host_pin, guest_pin) = take_seed_for_room(&claimed.code, joiner_seed, joiner_seat);
+    let seed = seed_held.filter(|held| !held.is_empty()).unwrap_or_else(new_seed);
+    let host_is_p1 = match (host_pin, guest_pin) {
+        (Some(seat), _) => seat == PlayerId::P1,
+        (None, Some(seat)) => seat == PlayerId::P2,
+        (None, None) => seat_coin_p1_first(&seed),
     };
 
     if let FrozenChoice::Bo3 { trio } = &frozen {
-        // R259, R263: the series, with the host as series p1 and the id the claim reserved as game
-        // 1's. Nobody is in a match yet: the series opens on its pick phase.
+        // R259, R263: the series, with the id the claim reserved as game 1's. Nobody is in a match
+        // yet: the series opens on its pick phase. R1989000: sides index 0 is the coin winner, and
+        // R335's alternation runs from there.
         let Some(host_trio) = claimed.host_trio.clone() else {
             return Err(wiring_fault(format!(
                 "Conquest room {} holds no trio",
                 claimed.code
             )));
         };
-        let input = NewSeriesInput {
-            series_id,
-            first_match_id: match_id.clone(),
-            sides: (
+        let (first, second) = if host_is_p1 {
+            (
                 NewSeriesSide {
                     profile_id: claimed.host_profile_id.clone(),
                     trio: host_trio,
@@ -512,7 +551,23 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                     profile_id: profile_id.clone(),
                     trio: trio.as_ref().clone(),
                 },
-            ),
+            )
+        } else {
+            (
+                NewSeriesSide {
+                    profile_id: profile_id.clone(),
+                    trio: trio.as_ref().clone(),
+                },
+                NewSeriesSide {
+                    profile_id: claimed.host_profile_id.clone(),
+                    trio: host_trio,
+                },
+            )
+        };
+        let input = NewSeriesInput {
+            series_id,
+            first_match_id: match_id.clone(),
+            sides: (first, second),
             seed_base: seed.clone(),
             catalog_version: app.catalog.version.clone(),
             // R604: a room's series is unranked.
@@ -567,13 +622,20 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 "matchId": Value::Null,
                 "seriesId": series.id,
                 "code": claimed.code,
-                "seat": "p2",
+                // R1989000: the joiner's actual seat, which the coin may have given the host's away.
+                "seat": if host_is_p1 { "p2" } else { "p1" },
                 "mode": claimed.mode,
             }),
         ));
     }
 
-    let seats = room_seats(&claimed, &profile_id, &frozen, &seed)?;
+    let (host_seat, joiner_seat) = room_seats(&claimed, &profile_id, &frozen, &seed, host_is_p1)?;
+    // The row is seat-ordered — index 0 is p1 — whatever the coin gave the host.
+    let seats = if host_is_p1 {
+        (host_seat, joiner_seat)
+    } else {
+        (joiner_seat, host_seat)
+    };
 
     // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
     // "clears both players' in-match state" when the result lands). Both seats are claimed
@@ -676,7 +738,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "matchId": match_id,
             "seriesId": Value::Null,
             "code": claimed.code,
-            "seat": "p2",
+            // R1989000: the joiner's actual seat, which the coin may have given the host's away.
+            "seat": if host_is_p1 { "p2" } else { "p1" },
             "mode": claimed.mode,
         }),
     ))
