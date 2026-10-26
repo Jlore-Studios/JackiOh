@@ -1935,11 +1935,13 @@
         "by": "`claude` (strong)",
         "sha": "42800a53ac0eadd40747d3d7eaeb0f05780c65fd"
       },
+      "closed_at": "2026-10-26T03:34:37Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T02:03:50Z",
       "issue": 1849,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
