@@ -196,6 +196,8 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
 /// Creates the rematch both seats offered, as `queue.rs`'s `start_paired_match` makes a paired
 /// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
 /// fresh decks from it, each leaning on the set its seat picked, if any (`leans`, R1372, R924000).
+/// R1989000 swaps the seats: the finished match's P2 takes P1, its P1 takes P2, each profile's
+/// deck, portrait, slots and lean travelling with it; All Random redeals are keyed by the new seat.
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
@@ -233,42 +235,45 @@ async fn create_rematch(
                 .deck_slots()
         })
     };
+    // R1989000: the seats swap — the finished match's P2 takes P1 with that profile's deck,
+    // portrait, slots and lean, and its P1 takes P2 with theirs. `leans` is still keyed by the
+    // finished match's seats, so the new P1 leans on the old P2's pick.
     let seats = (
         MatchSeat {
-            profile_id: finished.players.0.clone(),
+            profile_id: finished.players.1.clone(),
             player: PlayerId::P1,
             deck: if random {
                 crate::actor::engine::deal_random_deck(
                     &format!("{seed}:p1-deck"),
-                    crate::actor::engine::lean_of(leans.0),
-                )
-            } else {
-                finished.decks.0.clone()
-            },
-            portrait: if random {
-                dealt_portrait("p1")
-            } else {
-                portrait_of(0)
-            },
-            deck_slots: slots_of(0),
-        },
-        MatchSeat {
-            profile_id: finished.players.1.clone(),
-            player: PlayerId::P2,
-            deck: if random {
-                crate::actor::engine::deal_random_deck(
-                    &format!("{seed}:p2-deck"),
                     crate::actor::engine::lean_of(leans.1),
                 )
             } else {
                 finished.decks.1.clone()
             },
             portrait: if random {
-                dealt_portrait("p2")
+                dealt_portrait("p1")
             } else {
                 portrait_of(1)
             },
             deck_slots: slots_of(1),
+        },
+        MatchSeat {
+            profile_id: finished.players.0.clone(),
+            player: PlayerId::P2,
+            deck: if random {
+                crate::actor::engine::deal_random_deck(
+                    &format!("{seed}:p2-deck"),
+                    crate::actor::engine::lean_of(leans.0),
+                )
+            } else {
+                finished.decks.0.clone()
+            },
+            portrait: if random {
+                dealt_portrait("p2")
+            } else {
+                portrait_of(0)
+            },
+            deck_slots: slots_of(0),
         },
     );
 
