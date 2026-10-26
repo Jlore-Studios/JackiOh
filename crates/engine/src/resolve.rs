@@ -63,7 +63,8 @@ pub fn make_context<'b>(
         .controller
         .or(self_.map(|card| card.controller))
         .unwrap_or(sink.state.active);
-    let radiant = self_.is_some_and(|card| card.radiant);
+    // R1850000: the face of the text the card runs, a copier's copied one.
+    let radiant = self_.is_some_and(|card| crate::subsystems::unit_text::text_def_of(card).1);
     // B2.7, B3.4: the X it was played for, as Degrade and Upgrade have tuned it (`tuning.xOf`).
     let x = self_.map_or(0, crate::tuning::x_of);
     let embiggened = self_.and_then(|card| card.embiggened).unwrap_or(false);
@@ -196,6 +197,8 @@ pub struct CastOptions {
     pub data: Option<IndexMap<String, Value>>,
     pub random: Option<bool>,
     pub target_enemies: Option<bool>,
+    /// R1850004: its target picks are its caster's own side alone.
+    pub friends_only: Option<bool>,
     pub afterward: Option<CastAfterward>,
     /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration.
     pub aim_at: Option<String>,

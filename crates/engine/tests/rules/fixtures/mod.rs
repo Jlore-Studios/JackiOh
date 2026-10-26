@@ -3,10 +3,12 @@
 //! files are part 24's.
 
 pub mod activate;
+pub mod ai_wheel;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
+pub mod card_on_card;
 pub mod catalog;
 pub mod combat;
 pub mod combat_judge;
