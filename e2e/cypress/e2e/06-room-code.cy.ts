@@ -151,12 +151,13 @@ describe("06 room code — a networked match between a browser and a Node client
 
     // ASK: create through §9.5's endpoint until the room screen has testids. R143 requires the
     // E2E server to honour this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
+    // R1989000 pins the host to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(seatOne.token),
-        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed },
+        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed, seat: "p1" },
       }).then((created) => {
         roomCode = created.body.code;
 
@@ -376,13 +377,14 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // Host makes a Best-of-1 room and hands over its link.
+    // Host makes a Best-of-1 room and hands over its link. R1989000 pins the host to p1 beside
+    // the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(seatOne.token),
-        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("06-room-link") },
+        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("06-room-link"), seat: "p1" },
       }).then((created) => {
         roomCode = created.body.code;
         expect(created.body.mode, "R264: the room plays the mode it was made with").to.eq("bo1");

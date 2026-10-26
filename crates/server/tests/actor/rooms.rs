@@ -28,6 +28,7 @@ use jackioh_engine::newest_shipped_set;
 use jackioh_engine::wire::{DEFAULT_PORTRAIT, PortraitId, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
+use jackioh_server::api::queue::seat_coin_p1_first;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use jackioh_server::cosmetics::portrait_cosmetic_id;
@@ -269,16 +270,20 @@ mod the_room_code_challenge {
     use super::*;
 
     #[tokio::test]
-    async fn creates_a_room_and_starts_the_match_on_the_join_with_the_host_as_p1() {
+    async fn creates_a_room_and_starts_the_match_on_the_join_with_the_coin_seating_either_side_first() {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         let (code, _) = play_through(&h, json!({}), json!({})).await;
 
         assert_eq!(code.chars().count(), ROOM_CODE_LENGTH);
         let row = started(&h.app).await.remove(0);
-        // The frozen decks, host first: the row's seat order is p1, p2.
+        // The frozen decks, seat-ordered; both decks hold the same cards here.
         assert_eq!(row["decks"], json!([deck(), deck()]));
-        assert_eq!(row["players"], json!([HOST, GUEST]));
+        // R1989000: the coin on the match seed seats the host and the joiner.
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let host_is_p1 = seat_coin_p1_first(&seed);
+        let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
+        assert_eq!(row["players"], json!([first, second]));
         // R604: a room challenge is never ranked.
         assert_eq!(row["ranked"], json!(false));
         // R376: the mode its game record is filed under is read off the room.
@@ -697,7 +702,8 @@ mod r264_rooms_carry_a_mode {
     }
 
     #[tokio::test]
-    async fn r264_makes_the_series_when_a_best_of_3_room_is_joined_the_host_as_series_p1_and_no_match_yet() {
+    async fn r264_makes_the_series_when_a_best_of_3_room_is_joined_with_the_coin_as_series_p1_and_no_match_yet()
+     {
         let _turn = ROOMS.lock().await;
         let h = harness(true).await;
         let host_trio = save_trio(&h.app, HOST, 20).await;
@@ -722,20 +728,30 @@ mod r264_rooms_carry_a_mode {
         assert_eq!(status, 200, "{answer}");
 
         let series = table(&h.app, |data| json!(data.tables.series)).await.remove(0);
+        // R1989000: the coin on the seed base seats the host and the joiner; the joiner learns
+        // their actual seat.
+        let host_is_p1 = seat_coin_p1_first("room-series");
+        let joiner_seat = if host_is_p1 { "p2" } else { "p1" };
         assert_eq!(
             answer,
-            json!({ "matchId": null, "seriesId": series["id"], "code": code, "seat": "p2", "mode": "bo3" })
+            json!({ "matchId": null, "seriesId": series["id"], "code": code, "seat": joiner_seat, "mode": "bo3" })
         );
         let sides = series["sides"].as_array().cloned().unwrap_or_default();
+        let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
         assert_eq!(
             sides
                 .iter()
                 .map(|side| side["profileId"].clone())
                 .collect::<Vec<_>>(),
-            vec![json!(HOST), json!(GUEST)]
+            vec![json!(first), json!(second)]
         );
-        assert_eq!(sides[0]["trio"], room["hostTrio"]);
-        assert_eq!(sides[1]["trio"]["name"], "guest's trio");
+        if host_is_p1 {
+            assert_eq!(sides[0]["trio"], room["hostTrio"]);
+            assert_eq!(sides[1]["trio"]["name"], "guest's trio");
+        } else {
+            assert_eq!(sides[0]["trio"]["name"], "guest's trio");
+            assert_eq!(sides[1]["trio"], room["hostTrio"]);
+        }
         // R604: a room's series is never ranked either.
         assert_eq!(series["ranked"], json!(false));
         // R263: game 1's match id is the one the claim reserved; R143: the host's seed is the base.
@@ -766,11 +782,16 @@ mod r264_rooms_carry_a_mode {
         let row = started(&h.app).await.remove(0);
         let seed = row["seed"].as_str().unwrap_or_default().to_string();
         let match_id = row["id"].as_str().expect("a match id").to_string();
+        // R1989000: the coin on the match seed seats the host and the joiner; the joiner learns
+        // their actual seat. The deals stay seat-keyed below.
+        let host_is_p1 = seat_coin_p1_first(&seed);
+        let joiner_seat = if host_is_p1 { "p2" } else { "p1" };
         assert_eq!(
             answer,
-            json!({ "matchId": match_id, "seriesId": null, "code": code, "seat": "p2", "mode": "random" })
+            json!({ "matchId": match_id, "seriesId": null, "code": code, "seat": joiner_seat, "mode": "random" })
         );
-        assert_eq!(row["players"], json!([HOST, GUEST]));
+        let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
+        assert_eq!(row["players"], json!([first, second]));
         let mode = store!(h.app, t => t.matches_mode_of(&match_id).await.expect("matches.modeOf"));
         assert_eq!(to_json(&mode), "random");
         assert_eq!(
@@ -818,14 +839,28 @@ mod r264_rooms_carry_a_mode {
         let row = started(&h.app).await.remove(0);
         let seed = row["seed"].as_str().unwrap_or_default().to_string();
         let newest = Some(newest_shipped_set());
-        assert_eq!(
-            row["decks"],
-            json!([
-                deal_random_deck(&format!("{seed}:p1-deck"), newest),
-                deal_random_deck(&format!("{seed}:p2-deck"), None)
-            ])
+        // R1989000: the host's lean rides whichever seat the coin gave the host; the row stays
+        // seat-ordered.
+        let host_is_p1 = seat_coin_p1_first(&seed);
+        let (host_stream, guest_stream) = if host_is_p1 {
+            ("p1-deck", "p2-deck")
+        } else {
+            ("p2-deck", "p1-deck")
+        };
+        let host_deck = json!(deal_random_deck(&format!("{seed}:{host_stream}"), newest));
+        let guest_deck = json!(deal_random_deck(&format!("{seed}:{guest_stream}"), None));
+        let (p1_deck, p2_deck) = if host_is_p1 {
+            (host_deck.clone(), guest_deck.clone())
+        } else {
+            (guest_deck.clone(), host_deck.clone())
+        };
+        assert_eq!(row["decks"], json!([p1_deck, p2_deck]));
+        let host_seat = usize::from(!host_is_p1);
+        assert!(
+            newest_in(&row["decks"][host_seat]) >= lean_floor(),
+            "{}",
+            row["decks"][host_seat]
         );
-        assert!(newest_in(&row["decks"][0]) >= lean_floor(), "{}", row["decks"][0]);
     }
 
     #[tokio::test]
@@ -840,18 +875,32 @@ mod r264_rooms_carry_a_mode {
         let row = started(&h.app).await.remove(0);
         let seed = row["seed"].as_str().unwrap_or_default().to_string();
         let newest = Some(newest_shipped_set());
-        assert_eq!(
-            row["decks"],
-            json!([
-                deal_random_deck(&format!("{seed}:p1-deck"), None),
-                deal_random_deck(&format!("{seed}:p2-deck"), newest)
-            ])
+        // R1989000: the joiner's lean rides whichever seat the coin gave the joiner; the row stays
+        // seat-ordered.
+        let guest_is_p1 = !seat_coin_p1_first(&seed);
+        let (guest_stream, host_stream) = if guest_is_p1 {
+            ("p1-deck", "p2-deck")
+        } else {
+            ("p2-deck", "p1-deck")
+        };
+        let guest_deck = json!(deal_random_deck(&format!("{seed}:{guest_stream}"), newest));
+        let host_deck = json!(deal_random_deck(&format!("{seed}:{host_stream}"), None));
+        let (p1_deck, p2_deck) = if guest_is_p1 {
+            (guest_deck.clone(), host_deck.clone())
+        } else {
+            (host_deck.clone(), guest_deck.clone())
+        };
+        assert_eq!(row["decks"], json!([p1_deck, p2_deck]));
+        let guest_seat = usize::from(!guest_is_p1);
+        assert!(
+            newest_in(&row["decks"][guest_seat]) >= lean_floor(),
+            "{}",
+            row["decks"][guest_seat]
         );
-        assert!(newest_in(&row["decks"][1]) >= lean_floor(), "{}", row["decks"][1]);
         // The lean is real: the same seed deals the joiner another deck without it.
         assert_ne!(
-            row["decks"][1],
-            json!(deal_random_deck(&format!("{seed}:p2-deck"), None))
+            row["decks"][guest_seat],
+            json!(deal_random_deck(&format!("{seed}:{guest_stream}"), None))
         );
     }
 
@@ -880,13 +929,28 @@ mod r264_rooms_carry_a_mode {
         assert_eq!(status, 200, "{answer}");
         let row = started(&h.app).await.remove(0);
         let seed = row["seed"].as_str().unwrap_or_default().to_string();
-        assert_eq!(
-            row["decks"],
-            json!([
-                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Core)),
-                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::ClassicPlus))
-            ])
-        );
+        // R1989000: each seat's deal leans on its own player's set; the host's rides whichever seat
+        // the coin gave the host, the row staying seat-ordered.
+        let host_is_p1 = seat_coin_p1_first(&seed);
+        let (host_stream, guest_stream) = if host_is_p1 {
+            ("p1-deck", "p2-deck")
+        } else {
+            ("p2-deck", "p1-deck")
+        };
+        let host_deck = json!(deal_random_deck(
+            &format!("{seed}:{host_stream}"),
+            Some(SetName::Core)
+        ));
+        let guest_deck = json!(deal_random_deck(
+            &format!("{seed}:{guest_stream}"),
+            Some(SetName::ClassicPlus)
+        ));
+        let (p1_deck, p2_deck) = if host_is_p1 {
+            (host_deck, guest_deck)
+        } else {
+            (guest_deck, host_deck)
+        };
+        assert_eq!(row["decks"], json!([p1_deck, p2_deck]));
     }
 
     #[tokio::test]
@@ -1049,9 +1113,12 @@ mod r642_the_portraits_on_a_rooms_match {
         assert_eq!(status, 200, "{joined}");
 
         let row = started(&h.app).await.remove(0);
-        // PREMISE: the host's seed really is the match's (R143), the host p1 as ever (§9.5).
+        // PREMISE: the host's seed really is the match's (R143); R1989000's coin on it seats the
+        // host and the joiner.
         assert_eq!(row["seed"], "room-portraits");
-        assert_eq!(row["players"], json!([HOST, GUEST]));
+        let host_is_p1 = seat_coin_p1_first("room-portraits");
+        let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
+        assert_eq!(row["players"], json!([first, second]));
         // Each seat's pick is `pick_portrait_from_seed` on its own seat-keyed suffix — both
         // `:portrait:p1` and `:portrait:p2` — and the row the actor will read keeps them in that
         // seat order.
@@ -1106,11 +1173,16 @@ mod r642_the_portraits_on_a_rooms_match {
         assert_eq!(status, 200, "{joined}");
 
         // The host's seat carries the frozen one, not "timmy"; the guest's carries what the join
-        // froze. Both land on the match row in seat order.
-        assert_eq!(
-            started(&h.app).await.remove(0)["portraits"],
-            json!(["gary", "shredder"])
-        );
+        // froze. Both land on the match row in seat order, R1989000's coin deciding whose seat is
+        // whose.
+        let row = started(&h.app).await.remove(0);
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let (first_portrait, second_portrait) = if seat_coin_p1_first(&seed) {
+            ("gary", "shredder")
+        } else {
+            ("shredder", "gary")
+        };
+        assert_eq!(row["portraits"], json!([first_portrait, second_portrait]));
     }
 
     #[tokio::test]
@@ -1214,13 +1286,17 @@ mod r1834002_the_loadouts_on_a_rooms_match {
         let (status, joined) = h.join(&code, json!({ "mode": "bo1", "deckId": uuid(2) })).await;
         assert_eq!(status, 200, "{joined}");
         let row = started(&h.app).await.remove(0);
+        // R1989000: each seat's loadout travels with its profile; the coin decides whose seat is
+        // whose.
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let host_seat = usize::from(!seat_coin_p1_first(&seed));
         let mut host = defaults();
         host["table"] = json!("table-felt");
         let mut guest = defaults();
         guest["field"] = json!("field-embers");
         guest["cardBack"] = json!("card-back-starfield");
-        assert_eq!(row["loadouts"][0]["seat"], host);
-        assert_eq!(row["loadouts"][1]["seat"], guest);
+        assert_eq!(row["loadouts"][host_seat]["seat"], host);
+        assert_eq!(row["loadouts"][1 - host_seat]["seat"], guest);
     }
 
     #[tokio::test]
@@ -1242,10 +1318,13 @@ mod r1834002_the_loadouts_on_a_rooms_match {
         let (status, joined) = h.join(&code, json!({ "mode": "random" })).await;
         assert_eq!(status, 200, "{joined}");
         let row = started(&h.app).await.remove(0);
+        // R1989000: the host's loadout rides whichever seat the coin gave the host.
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let host_seat = usize::from(!seat_coin_p1_first(&seed));
         let mut host = defaults();
         host["table"] = json!("table-neon-grid");
-        assert_eq!(row["loadouts"][0]["seat"], host);
-        assert_eq!(row["loadouts"][1]["seat"], defaults());
+        assert_eq!(row["loadouts"][host_seat]["seat"], host);
+        assert_eq!(row["loadouts"][1 - host_seat]["seat"], defaults());
     }
 }
 
@@ -1572,5 +1651,139 @@ mod a_deck_with_a_custom_card_r915005 {
         // Control: the guest's own legal deck joins the same room.
         let (status, joined) = h.join(&code, json!({})).await;
         assert_eq!(status, 200, "{joined}");
+    }
+}
+
+// R1989000 — the match seed's coin seats the host and the joiner
+
+/// R1989000, the room half: a fixed seed set seats both orders, the same seed seats the same way
+/// twice, an end-to-end `seat` pin skips the coin with the host winning a conflict, and the join
+/// answer names the joiner's actual seat.
+mod r1989000_the_seed_coin_seats_the_room {
+    use super::*;
+
+    /// A fixed set of seeds. The coin test below asserts it deals both seat orders, so the set is
+    /// pinned without pinning the answer: it fails if the stream ever stops varying.
+    const SEEDS: [&str; 8] = [
+        "room-coin-alpha",
+        "room-coin-bravo",
+        "room-coin-charlie",
+        "room-coin-delta",
+        "room-coin-echo",
+        "room-coin-foxtrot",
+        "room-coin-golf",
+        "room-coin-hotel",
+    ];
+
+    /// A room the host makes with `create_body`, joined by the guest with `join_body`: the join's
+    /// answer with the match row it started.
+    async fn played(h: &Harness, create_body: Value, join_body: Value) -> (Value, Value) {
+        let (status, created) = h.create(create_body).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+        let (status, joined) = h.join(&code, join_body).await;
+        assert_eq!(status, 200, "{joined}");
+        let row = started(&h.app).await.pop().expect("the join started a match");
+        (joined, row)
+    }
+
+    #[tokio::test]
+    async fn r1989000_a_fixed_seed_set_seats_both_orders_and_the_same_seed_seats_the_same_way() {
+        let _turn = ROOMS.lock().await;
+        let mut seen_host_first = false;
+        let mut seen_guest_first = false;
+        for seed in SEEDS {
+            // A fresh harness per seed: a match seats its profiles, and they stay seated.
+            let h = harness(true).await;
+            let (joined, row) = played(&h, json!({ "seed": seed }), json!({})).await;
+            assert_eq!(row["seed"], seed);
+            let host_is_p1 = seat_coin_p1_first(seed);
+            let joiner_seat = if host_is_p1 { "p2" } else { "p1" };
+            assert_eq!(joined["seat"], joiner_seat, "seed {seed}");
+            let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
+            assert_eq!(row["players"], json!([first, second]), "seed {seed}");
+            seen_host_first |= host_is_p1;
+            seen_guest_first |= !host_is_p1;
+            // The same seed run again seats the same way.
+            let h = harness(true).await;
+            let (again_joined, again) = played(&h, json!({ "seed": seed }), json!({})).await;
+            assert_eq!(again["players"], json!([first, second]), "seed {seed} again");
+            assert_eq!(again_joined["seat"], joiner_seat, "seed {seed} again");
+        }
+        assert!(
+            seen_host_first && seen_guest_first,
+            "the fixed set must deal both seat orders"
+        );
+        assert_eq!(e2e_room_seed_count() as i64, 0);
+    }
+
+    #[tokio::test]
+    async fn r1989000_a_host_pin_skips_the_coin_with_the_host_winning_a_conflict() {
+        let _turn = ROOMS.lock().await;
+        // A pin against the coin proves the pin skipped it: the host takes the pinned seat either
+        // way the coin would have seated them, and the joiner takes the free one. A fresh harness
+        // per seed, as above.
+        for seed in SEEDS {
+            let h = harness(true).await;
+            let host_pin = if seat_coin_p1_first(seed) { "p2" } else { "p1" };
+            let joiner_pin = if host_pin == "p1" { "p2" } else { "p1" };
+            let (joined, row) = played(
+                &h,
+                json!({ "seed": seed, "seat": host_pin }),
+                json!({ "seat": joiner_pin }),
+            )
+            .await;
+            let (first, second, joiner_seat) = if host_pin == "p1" {
+                (HOST, GUEST, "p2")
+            } else {
+                (GUEST, HOST, "p1")
+            };
+            assert_eq!(row["players"], json!([first, second]), "seed {seed}");
+            assert_eq!(joined["seat"], joiner_seat, "seed {seed}");
+        }
+        assert_eq!(e2e_room_seed_count() as i64, 0);
+    }
+
+    #[tokio::test]
+    async fn r1989000_a_joiner_only_pin_seats_the_joiner_and_the_host_takes_the_free_seat() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(true).await;
+        let (joined, row) = played(&h, json!({}), json!({ "seat": "p1" })).await;
+        assert_eq!(row["players"], json!([GUEST, HOST]));
+        assert_eq!(joined["seat"], "p1");
+        assert_eq!(e2e_room_seed_count() as i64, 0);
+    }
+
+    #[tokio::test]
+    async fn r1989000_seat_is_refused_outside_end_to_end_mode_on_both_doors() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, refused) = h.create(json!({ "seat": "p1" })).await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("seat"),
+            "{refused}"
+        );
+        assert!(h.rooms().await.is_empty());
+
+        let code = {
+            let (status, created) = h.create(json!({})).await;
+            assert_eq!(status, 200, "{created}");
+            created["code"].as_str().expect("a code").to_string()
+        };
+        let (status, refused) = h.join(&code, json!({ "seat": "p1" })).await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("seat"),
+            "{refused}"
+        );
+        assert!(started(&h.app).await.is_empty());
+        assert_eq!(e2e_room_seed_count() as i64, 0);
     }
 }

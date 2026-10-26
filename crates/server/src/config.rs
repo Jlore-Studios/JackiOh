@@ -1325,6 +1325,11 @@ pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
 pub const BOT_FALLBACK_MAX_SECONDS: i64 = 40;
 /// R1453: a player is not paired with a bot they faced in this many of their last games.
 pub const BOT_RECENT_OPPONENTS: usize = 5;
+/// SPEC §11 R1989000: the stream label the seat coin is drawn on. Every 1v1 door seats its two
+/// profiles by one draw of the match or series seed on `{seed}:seats` at cursor 0, beside the
+/// dealt-deck streams (`{seed}:p1-deck`, R258) and the emote stream (`{seed}:emotes:{seat}`,
+/// R1341), so a fixed seed always seats the same way and a replay folds unchanged.
+pub const SEAT_COIN_LABEL: &str = "seats";
 /// R1454: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
 pub const BOT_ACTIVE_HOURS_MIN: i32 = 8;
 /// R1454: the most hours a day a bot is on.

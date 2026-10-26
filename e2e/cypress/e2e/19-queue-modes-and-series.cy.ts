@@ -250,7 +250,7 @@ function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.get(ts(playModeId(mode))).should("be.checked");
 }
 
-/** Queue browser first so R335 gives it series seat p1. */
+/** Queue browser first and pin seat two to p2, so R1989000's coin leaves the browser as series seat p1 and R335's alternation runs from there. */
 function findMatch(): void {
   cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("not.be.disabled").click();
   cy.get(ts(PLAY_STATUS), { timeout: timeouts.view }).should("be.visible");
@@ -479,7 +479,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     cy.get(ts(PLAY_VERDICT)).should("have.attr", "data-ready", "true");
     findMatch();
     cy.then(() => {
-      enqueue(seatTwo, { mode: "bo3", trioId: installed(theirs).trioId, seed }).should((response) => {
+      enqueue(seatTwo, { mode: "bo3", trioId: installed(theirs).trioId, seed, seat: "p2" }).should((response) => {
         expect(response.status).to.eq(200);
         expect(response.body.mode, "R257: a Conquest ticket").to.eq("bo3");
         expect(response.body.matchId, "R338: a series opens on its pick phase, not on a match").to.eq(null);
@@ -546,7 +546,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         const game = view.games[0];
         expect(game?.yourSlot).to.eq(GAME_ONE_PICKS.browser);
         expect(game?.opponentSlot, "a played slot is shown once both picks are in").to.eq(GAME_ONE_PICKS.seatTwo);
-        expect(game?.youWentFirst, "R335: series seat p1, the older ticket, goes first in game 1").to.eq(true);
+        expect(game?.youWentFirst, "R335: series seat p1 goes first in game 1").to.eq(true);
         expect(view.result, "a conceded game did not end the series").to.eq(null);
       });
     });
@@ -665,11 +665,11 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         method: "POST",
         url: apiUrl(`/api/rooms/${code}/join`),
         headers: bearerHeaders(seatTwo.token),
-        body: { mode: "bo3", trioId: installed(theirs).trioId, seed },
+        body: { mode: "bo3", trioId: installed(theirs).trioId, seed, seat: "p2" },
       }).should((response) => {
         expect(response.status).to.eq(200);
         expect(response.body.mode).to.eq("bo3");
-        expect(response.body.seat, "the joiner is series seat p2").to.eq("p2");
+        expect(response.body.seat, "R1989000 pins the joiner to series seat p2").to.eq("p2");
         expect(response.body.matchId, "R264: a Conquest join makes the series, no match yet").to.eq(null);
         expect(response.body.seriesId).to.be.a("string").and.not.eq("");
         seriesId = response.body.seriesId ?? "";

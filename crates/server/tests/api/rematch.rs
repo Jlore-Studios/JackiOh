@@ -430,8 +430,8 @@ mod rematch_offers {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn matching_offers_create_exactly_one_match_with_the_finished_decks_a_fresh_seed_and_the_same_seats()
-     {
+    async fn matching_offers_create_exactly_one_match_with_the_finished_decks_a_fresh_seed_and_swapped_seats()
+    {
         let app = test_app().await;
         let (a, b, finished_id) = names("matching");
         let token_a = active_profile(&app, &a, 1000.0).await;
@@ -447,8 +447,12 @@ mod rematch_offers {
         let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
 
         let rematch = match_row(&app, &rematch_id).await;
-        assert_eq!(rematch["players"], json!([a, b]));
-        assert_eq!(rematch["decks"], finished["decks"]);
+        // R1989000: the rematch swaps the seats — the previous P2 taking P1 with their deck.
+        assert_eq!(rematch["players"], json!([b, a]));
+        assert_eq!(
+            rematch["decks"],
+            json!([finished["decks"][1].clone(), finished["decks"][0].clone()])
+        );
         assert_eq!(rematch["ranked"], true);
         assert_eq!(rematch["mode"], "bo1");
         assert_eq!(rematch["status"], "live");
@@ -608,11 +612,12 @@ mod rematch_offers {
         )
         .await;
         let seed = rematch["seed"].as_str().expect("a seed").to_string();
+        // R1989000: the seats swap, so B's lean (newest) rides the new p1 and A's (none) the new p2.
         assert_eq!(
             rematch["decks"],
             json!([
-                deal_random_deck(&format!("{seed}:p1-deck"), None),
-                deal_random_deck(&format!("{seed}:p2-deck"), Some(newest_shipped_set()))
+                deal_random_deck(&format!("{seed}:p1-deck"), Some(newest_shipped_set())),
+                deal_random_deck(&format!("{seed}:p2-deck"), None)
             ])
         );
     }
@@ -641,11 +646,12 @@ mod rematch_offers {
         )
         .await;
         let seed = rematch["seed"].as_str().expect("a seed").to_string();
+        // R1989000: the seats swap, so B's Meditative rides the new p1 and A's Classic the new p2.
         assert_eq!(
             rematch["decks"],
             json!([
-                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Classic)),
-                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::Meditative))
+                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Meditative)),
+                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::Classic))
             ])
         );
     }
@@ -663,7 +669,11 @@ mod rematch_offers {
         lean_offer(&app, &token_a, &finished_id, true).await;
         let (_, created) = lean_offer(&app, &token_b, &finished_id, true).await;
         let rematch = match_row(&app, created["matchId"].as_str().expect("the rematch")).await;
-        assert_eq!(rematch["decks"], finished["decks"]);
+        // R1989000: the frozen decks travel with their profiles into the swapped seats.
+        assert_eq!(
+            rematch["decks"],
+            json!([finished["decks"][1].clone(), finished["decks"][0].clone()])
+        );
         // And a lean that is not a boolean is refused like a malformed stake.
         let (code, _) = request(
             &app,
@@ -1260,13 +1270,14 @@ mod r890000_a_seat_taken_mid_start {
         finished_match(&app, &finished, &a, &b, json!({})).await;
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
 
-        // The loser finds another game between the rematch's start and its flags: the second
-        // seat claim loses.
+        // The loser finds another game between the rematch's start and its flags: its seat claim
+        // loses. R1989000: the loser takes the new p1, the first seat flagged, so the race is rigged
+        // on the first flag write, not the second.
         let b_elsewhere = b.clone();
         let claims = Arc::new(AtomicU32::new(0));
         fake_lock(&app).await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
             if method == "profiles.setInMatch"
-                && claims.fetch_add(1, Ordering::SeqCst) == 1
+                && claims.fetch_add(1, Ordering::SeqCst) == 0
                 && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == b_elsewhere)
             {
                 row.in_match_id = Some("r89-elsewhere".to_string());
@@ -1514,16 +1525,16 @@ mod r1834002_a_rematch_keeps_the_slots {
         let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
         let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
         let rematch = match_row(&app, &rematch_id).await;
-        assert_eq!(rematch["players"], json!([a, b]));
-        // The deck slots are the finished seat's; the foil is neither the finished seat's nor the
-        // account's, but the default.
+        assert_eq!(rematch["players"], json!([b, a]));
+        // The deck slots are the finished seat's, carried into the swapped seat; the foil is
+        // neither the finished seat's nor the account's, but the default.
         assert_eq!(
             rematch["loadouts"][0]["seat"],
-            seat("table-felt", "field-rain", "card-back-lacquer", "foil-none")
+            seat("table-tavern", "field-none", "card-back-standard", "foil-none")
         );
         assert_eq!(
             rematch["loadouts"][1]["seat"],
-            seat("table-tavern", "field-none", "card-back-standard", "foil-none")
+            seat("table-felt", "field-rain", "card-back-lacquer", "foil-none")
         );
     }
 
@@ -1549,9 +1560,74 @@ mod r1834002_a_rematch_keeps_the_slots {
         let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
         let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
         let rematch = match_row(&app, &rematch_id).await;
+        // R1989000: B's loadout rides the new p1, index 0.
         assert_eq!(
-            rematch["loadouts"][1]["seat"],
+            rematch["loadouts"][0]["seat"],
             seat("table-wood", "field-none", "card-back-standard", "foil-none")
         );
+    }
+}
+
+// R1989000 — a rematch swaps the seats of the match it follows
+
+/// R1989000, the rematch half: the new match seats the finished match's previous P2 as P1, with
+/// their deck, portrait, slots and lean, at normal and at double stakes.
+mod r1989000_the_rematch_swaps_the_seats {
+    use super::*;
+
+    /// A finished Best-of-1 between `a` (p1) and `b` (p2), rematched at `stakes`: the finished and
+    /// the rematch rows.
+    async fn rematched(app: &Arc<App>, prefix: &str, stakes: i32) -> (Value, Value) {
+        let (a, b, finished_id) = names(prefix);
+        let token_a = active_profile(app, &a, 1000.0).await;
+        let token_b = active_profile(app, &b, 1000.0).await;
+        let finished = finished_match(
+            app,
+            &finished_id,
+            &a,
+            &b,
+            json!({ "portraits": ["gary", "timmy"] }),
+        )
+        .await;
+        paired_tickets(app, &finished_id, [&a, &b], "bo1").await;
+        offer(app, &token_a, &finished_id, stakes).await;
+        let (_, created) = offer(app, &token_b, &finished_id, stakes).await;
+        let rematch = match_row(app, created["matchId"].as_str().expect("a match id")).await;
+        (finished, rematch)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_rematch_seats_the_previous_p2_as_p1_with_their_deck_and_portrait() {
+        let app = test_app().await;
+        let (finished, rematch) = rematched(&app, "swap", STAKE_NORMAL).await;
+        let a = finished["players"][0].clone();
+        let b = finished["players"][1].clone();
+        assert_eq!(rematch["players"], json!([b, a]));
+        // Each profile's frozen deck and portrait travel with it into the swapped seat.
+        assert_eq!(
+            rematch["decks"],
+            json!([finished["decks"][1].clone(), finished["decks"][0].clone()])
+        );
+        assert_eq!(rematch["portraits"], json!(["timmy", "gary"]));
+        assert_eq!(rematch["ranked"], true);
+        assert_eq!(rematch["mode"], "bo1");
+        assert_ne!(rematch["seed"], finished["seed"]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_double_or_nothing_rematch_swaps_the_seats_and_still_doubles() {
+        let app = test_app().await;
+        let (finished, rematch) = rematched(&app, "swap-double", STAKE_DOUBLE).await;
+        let a = finished["players"][0].clone();
+        let b = finished["players"][1].clone();
+        // The swap rides along: the previous P2 takes P1 even with the stakes doubled (R672).
+        assert_eq!(rematch["players"], json!([b, a]));
+        assert_eq!(
+            rematch["decks"],
+            json!([finished["decks"][1].clone(), finished["decks"][0].clone()])
+        );
+        assert_eq!(rematch["ranked"], true);
+        assert_eq!(rematch["stake"], json!(STAKE_DOUBLE));
+        assert_eq!(rematch["mode"], "bo1");
     }
 }

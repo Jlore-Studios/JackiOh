@@ -41,7 +41,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
-use jackioh_server::api::queue::{kick_off_bot_match, try_pair};
+use jackioh_server::api::queue::{kick_off_bot_match, seat_coin_p1_first, try_pair};
 use jackioh_server::api::ranked::rate_ranked_game;
 use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::api::series::sweep_series;
@@ -53,8 +53,8 @@ use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_STEP_GAMES, BOT_RECENT_OPPONENTS,
     BOT_REMATCH_DELAY_MAX_MS, BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, BOT_STRENGTHS,
-    BOT_VS_BOT_MIN_GAP_SECONDS, JLORIOUS_SIZE, MAX_FAIR_GAP, QUEUE_TICKET_STALE_MS, RANK_PLACEMENT_GAMES,
-    RATING_WINDOW_FULL_AFTER_SECONDS,
+    BOT_VS_BOT_MIN_GAP_SECONDS, JLORIOUS_SIZE, MAX_FAIR_GAP, MAX_SAVED_DECKS, QUEUE_TICKET_STALE_MS,
+    RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::store::{
     BotDeck, BotRow, FrozenTrio, NewBot, QueueMode, RatedGameRow, SeriesStatus, StoreError, Ticket,
@@ -256,7 +256,13 @@ async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
     assert_eq!(try_pair(app).await.expect("a sweep").made, 1);
     let opened = fake_lock(app).await.tables.series[0].clone();
     series_post(app, &opened.id, "pick", &token, json!({ "slot": 0, "gameNo": 1 })).await;
-    let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
+    // R1989000: the coin may have seated the bot as series p1; its pick delay reads its own seat.
+    let bot_player = if opened.sides.0.profile_id == bot {
+        PlayerId::P1
+    } else {
+        PlayerId::P2
+    };
+    let due = pick_due_at(&opened, bot_player).expect("a pick phase");
     tokio::time::advance(Duration::from_millis(
         u64::try_from(due - now_ms()).expect("a wait"),
     ))
@@ -550,10 +556,10 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1453_the_player_is_player_1_as_the_older_ticket_is() {
-    // Between two people the older ticket is p1 and goes first; a ticket past its fallback time is
-    // older than anyone who would come to pair with it, so a bot match seats the person p1 every time.
-    // A coin for the seats would put the person second about half of these.
+async fn r1989000_the_seed_coin_seats_the_person_and_the_bot() {
+    // Between two people the older ticket's seat is the seed's coin, and a bot pairing is a coin
+    // too: each round's seats match the match seed's coin, in either order, with each side playing
+    // its own deck.
     let app = app_with_bots(true).await;
     for round in 0..8 {
         let (person, _) = new_person(&app, 1000.0).await;
@@ -568,7 +574,22 @@ async fn r1453_the_player_is_player_1_as_the_older_ticket_is() {
             .last()
             .cloned()
             .expect("a match");
-        assert_eq!(row.players, (person, bot), "round {round} ({mode})");
+        let person_is_p1 = seat_coin_p1_first(&row.seed);
+        let expected = if person_is_p1 {
+            (person.clone(), bot.clone())
+        } else {
+            (bot.clone(), person.clone())
+        };
+        assert_eq!(row.players, expected, "round {round} ({mode})");
+        // A Best-of-1 seat plays its own deck, whichever seat the coin gave it: the person's
+        // frozen one, the bot's held one. (An All Random seat plays a dealt deck, as R258's tests
+        // cover.)
+        if mode == "bo1" {
+            let person_deck = if person_is_p1 { &row.decks.0 } else { &row.decks.1 };
+            let bot_deck = if person_is_p1 { &row.decks.1 } else { &row.decks.0 };
+            assert_eq!(person_deck, &deck(0), "round {round} ({mode})");
+            assert_eq!(bot_deck, &deck(1), "round {round} ({mode})");
+        }
     }
 }
 
@@ -612,12 +633,23 @@ async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
     let made = fake_lock(&app).await.tables.series.clone();
     assert_eq!(made.len(), 1);
     let series = &made[0];
-    // The person is series p1, as the older ticket of a pair is (R335), with the trio they queued;
-    // the bot p2, with its own. It is ranked (R604) and opens on game 1's pick phase.
-    assert_eq!(series.sides.0.profile_id, person);
-    assert_eq!(Some(&series.sides.0.trio), conquest.trio.as_ref());
-    assert_eq!(series.sides.1.profile_id, bot);
-    assert_eq!(series.sides.1.trio, trio);
+    // R1989000: sides index 0 is the coin winner on the seed base; each side carries its own
+    // profile's trio. It is ranked (R604) and opens on game 1's pick phase.
+    let person_is_p1 = seat_coin_p1_first(&series.seed_base);
+    let (p1, p2) = if person_is_p1 {
+        (person.clone(), bot.clone())
+    } else {
+        (bot.clone(), person.clone())
+    };
+    assert_eq!(series.sides.0.profile_id, p1);
+    assert_eq!(series.sides.1.profile_id, p2);
+    let (p1_trio, p2_trio) = if person_is_p1 {
+        (conquest.trio.as_ref(), Some(&trio))
+    } else {
+        (Some(&trio), conquest.trio.as_ref())
+    };
+    assert_eq!(Some(&series.sides.0.trio), p1_trio);
+    assert_eq!(Some(&series.sides.1.trio), p2_trio);
     assert_eq!(series.ranked, Some(true));
     assert_eq!(series.status, SeriesStatus::Picking);
     assert!(series.games.is_empty());
@@ -665,7 +697,21 @@ async fn r641000_a_bot_in_a_series_is_seated_nowhere_else_until_it_ends() {
     // The person forfeits between games, the series is over, and the bot is free again.
     series_post(&app, &series_id, "forfeit", &token, json!({})).await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    assert_eq!(matches(&app).await, vec![(other, bot)]);
+    // R1989000: the coin on the match seed seats the pair.
+    let row = fake_lock(&app)
+        .await
+        .tables
+        .matches
+        .last()
+        .cloned()
+        .expect("a match");
+    let other_is_p1 = seat_coin_p1_first(&row.seed);
+    let expected = if other_is_p1 {
+        (other.clone(), bot.clone())
+    } else {
+        (bot.clone(), other.clone())
+    };
+    assert_eq!(matches(&app).await, vec![expected]);
 }
 
 #[tokio::test(start_paused = true)]
@@ -678,7 +724,13 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let opened = fake_lock(&app).await.tables.series[0].clone();
 
-    // The person picks through the route; the bot's pick is not in yet.
+    // The person picks through the route; the bot's pick is not in yet. R1989000: the coin may
+    // have seated the bot as series p1, so its delay, pick and slot read its own seat.
+    let bot_player = if opened.sides.0.profile_id == bot {
+        PlayerId::P1
+    } else {
+        PlayerId::P2
+    };
     let view = series_post(
         &app,
         &opened.id,
@@ -688,8 +740,8 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     )
     .await;
     assert_eq!(view["opponent"]["picked"], json!(false), "{view}");
-    let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
-    let wanted = pick_slot(&opened, PlayerId::P2, &app.catalog.defs).expect("a pick");
+    let due = pick_due_at(&opened, bot_player).expect("a pick phase");
+    let wanted = pick_slot(&opened, bot_player, &app.catalog.defs).expect("a pick");
 
     // A sweep a moment before its delay ends picks nothing.
     tokio::time::advance(Duration::from_millis(
@@ -700,7 +752,12 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     assert!(swept.bot_picked.is_empty(), "{swept:?}");
     let waiting = q!(app, series_get(&opened.id)).expect("the series");
     assert_eq!(waiting.status, SeriesStatus::Picking);
-    assert_eq!(waiting.sides.1.pick, None);
+    let bot_pick = if bot_player == PlayerId::P1 {
+        waiting.sides.0.pick
+    } else {
+        waiting.sides.1.pick
+    };
+    assert_eq!(bot_pick, None);
 
     // The sweep at its delay makes it, and the pick that completes both begins game 1.
     tokio::time::advance(Duration::from_millis(1)).await;
@@ -708,8 +765,16 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     assert_eq!(swept.bot_picked, vec![opened.id.clone()]);
     let begun = q!(app, series_get(&opened.id)).expect("the series");
     assert_eq!(begun.status, SeriesStatus::Playing);
-    assert_eq!(begun.games[0].slots, (0, i64::try_from(wanted).expect("a slot")));
-    // Game 1 is started: the person, series p1, goes first (R335); the bot plays its picked deck.
+    // The person's pick is slot 0, the bot's `wanted`, each at its own side's index.
+    let wanted_slot = i64::try_from(wanted).expect("a slot");
+    let expected_slots = if begun.sides.0.profile_id == person {
+        (0, wanted_slot)
+    } else {
+        (wanted_slot, 0)
+    };
+    assert_eq!(begun.games[0].slots, expected_slots);
+    // Game 1 is started: R335's alternation puts series p1 first, whoever the coin seated there;
+    // the bot plays its picked deck at its own seat.
     let row = fake_lock(&app)
         .await
         .tables
@@ -718,9 +783,17 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
         .cloned()
         .expect("game 1 started");
     assert_eq!(row.id, begun.next_match_id);
-    assert_eq!(row.players, (person, bot));
+    assert_eq!(
+        row.players,
+        (begun.sides.0.profile_id.clone(), begun.sides.1.profile_id.clone())
+    );
     let decks = [&trio.decks.0, &trio.decks.1, &trio.decks.2];
-    assert_eq!(row.decks.1, decks[wanted].cards);
+    let bot_deck = if bot_player == PlayerId::P1 {
+        &row.decks.0
+    } else {
+        &row.decks.1
+    };
+    assert_eq!(bot_deck, &decks[wanted].cards);
     assert_eq!(row.ranked, Some(true));
 }
 
@@ -746,7 +819,13 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     assert_eq!(q!(app, ranked_bot(&bot)), Some(bot_before.clone()));
     let between = q!(app, series_get(&series_id)).expect("the series");
     assert_eq!(between.status, SeriesStatus::Picking, "game 2's pick phase");
-    assert_eq!(between.sides.1.wins, 1);
+    // R1989000: the bot's wins ride whichever side the coin gave it.
+    let bot_wins = if between.sides.0.profile_id == bot {
+        between.sides.0.wins
+    } else {
+        between.sides.1.wins
+    };
+    assert_eq!(bot_wins, 1);
 
     // The person forfeits between games: the series is rated once, as one game (R262, R604), the
     // bot's side as the bot it is (R610, R611).
@@ -756,10 +835,15 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     let game = serde_json::to_value(&rated[0]).expect("a rated game");
     assert_eq!(game["kind"], "series", "{game}");
     assert_eq!(game["id"], series_id.as_str(), "{game}");
-    assert_eq!(game["sides"][0]["profileId"], person.as_str(), "{game}");
-    assert_eq!(game["sides"][0]["pilot"], "human", "{game}");
-    assert_eq!(game["sides"][1]["botId"], bot.as_str(), "{game}");
-    assert_eq!(game["sides"][1]["pilot"], "ai", "{game}");
+    // R1989000: the rated sides follow the series seats, so the person's and the bot's indices
+    // are the coin's to decide.
+    let ended = q!(app, series_get(&series_id)).expect("the ended series");
+    let bot_side = usize::from(ended.sides.0.profile_id != bot);
+    let person_side = 1 - bot_side;
+    assert_eq!(game["sides"][person_side]["profileId"], person.as_str(), "{game}");
+    assert_eq!(game["sides"][person_side]["pilot"], "human", "{game}");
+    assert_eq!(game["sides"][bot_side]["botId"], bot.as_str(), "{game}");
+    assert_eq!(game["sides"][bot_side]["pilot"], "ai", "{game}");
     let bot_after = q!(app, ranked_bot(&bot)).expect("the bot's rating");
     assert_eq!(bot_after.games, bot_before.games + 1);
     assert!(
@@ -781,7 +865,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
 #[tokio::test(start_paused = true)]
 async fn r641000_a_series_game_s_bot_draws_no_rematch_plan() {
     let app = app_with_bots(true).await;
-    let (person, _, _, _) = series_in_game_1(&app).await;
+    let (person, _, bot, _) = series_in_game_1(&app).await;
     let game_1 = fake_lock(&app)
         .await
         .tables
@@ -789,23 +873,26 @@ async fn r641000_a_series_game_s_bot_draws_no_rematch_plan() {
         .last()
         .cloned()
         .expect("game 1 started");
+    // R1989000: the coin may have seated the bot as series p1, so its presence reads its own seat.
+    let bot_player = if game_1.players.0 == bot {
+        PlayerId::P1
+    } else {
+        PlayerId::P2
+    };
     let actor = app
         .matches
         .actor_for(&app, &game_1.id)
         .await
         .expect("game 1's actor");
     assert!(
-        actor.presence()[PlayerId::P2],
+        actor.presence()[bot_player],
         "the bot is on its game while it goes on"
     );
 
     // A series game offers no rematch (R672), so the bot stays for none: the series' next pick
     // phase is what comes next.
     concede_bot_match(&app, &person).await;
-    assert!(
-        !actor.presence()[PlayerId::P2],
-        "the bot lingers on a series game"
-    );
+    assert!(!actor.presence()[bot_player], "the bot lingers on a series game");
 }
 
 #[tokio::test(start_paused = true)]
@@ -1262,7 +1349,21 @@ async fn r640001_past_the_gap_a_far_person_is_not_paired_and_the_near_one_gets_a
     let waiting = ticket(&app, &far, 1500.0, WAITED_MS, "bo1").await;
 
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    assert_eq!(matches(&app).await, vec![(near, bot)]);
+    // R1989000: the coin on the match seed seats the pair.
+    let row = fake_lock(&app)
+        .await
+        .tables
+        .matches
+        .last()
+        .cloned()
+        .expect("a match");
+    let near_is_p1 = seat_coin_p1_first(&row.seed);
+    let expected = if near_is_p1 {
+        (near.clone(), bot.clone())
+    } else {
+        (bot.clone(), near.clone())
+    };
+    assert_eq!(matches(&app).await, vec![expected]);
     let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
     assert_eq!(serde_json::to_value(&held).expect("a ticket")["status"], "open");
 }
@@ -1293,8 +1394,8 @@ async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
         .to_string();
     assert_eq!(made["opponentOffer"], json!(STAKE_NORMAL), "{made}");
 
-    // The rematch seats the same two in the same seats, ranked as the fallback's match was, and the
-    // bot is claimed for it.
+    // R1989000: the rematch swaps the seats — the bot takes p1 with its deck, the person p2
+    // with theirs — ranked as the fallback's match was, and the bot is claimed for it.
     let row = fake_lock(&app)
         .await
         .tables
@@ -1303,7 +1404,7 @@ async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
         .find(|row| row.id == rematch)
         .cloned()
         .expect("the rematch's row");
-    assert_eq!(row.players, (person.clone(), bot.clone()));
+    assert_eq!(row.players, (bot.clone(), person.clone()));
     assert_eq!(row.ranked, Some(true));
     let bots = q!(app, bots_list());
     assert_eq!(bots[0].in_match_id.as_deref(), Some(rematch.as_str()));
@@ -1317,8 +1418,9 @@ async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
     for _ in 0..200 {
         actor.idle().await;
         let log = q!(app, matches_actions(&rematch));
+        // R1989000: the bot plays the rematch from its swapped seat, p1.
         if log.iter().any(|row| {
-            row.action.player_id == PlayerId::P2
+            row.action.player_id == PlayerId::P1
                 && row.action.nonce.starts_with("srv-bot-")
                 && serde_json::to_value(&row.action).is_ok_and(|action| action["type"] == "mulligan")
         }) {
@@ -1538,7 +1640,21 @@ async fn r1555000_above_every_bot_the_closest_free_grinder_in_the_gap_pairs() {
         seated(&app, &[&not_grinding, &busy, &at_the_gap, &past_the_gap]).await,
         vec![at_the_gap.clone()]
     );
-    assert_eq!(matches(&app).await, vec![(person, at_the_gap)]);
+    // R1989000: the coin on the match seed seats the pair.
+    let row = fake_lock(&app)
+        .await
+        .tables
+        .matches
+        .last()
+        .cloned()
+        .expect("a match");
+    let person_is_p1 = seat_coin_p1_first(&row.seed);
+    let expected = if person_is_p1 {
+        (person.clone(), at_the_gap.clone())
+    } else {
+        (at_the_gap.clone(), person.clone())
+    };
+    assert_eq!(matches(&app).await, vec![expected]);
 }
 
 #[tokio::test(start_paused = true)]
@@ -1690,7 +1806,14 @@ async fn r1555000_an_empty_queue_starts_one_bot_match_for_the_lowest_grinder() {
         .expect("a kickoff")
         .expect("a match between two bots");
     let row = match_row(&app, &started).await;
-    assert_eq!(row.players, (low.clone(), closest.clone()), "the grinder is p1");
+    // R1989000: the seed's coin seats the grinder and its opponent, in either order.
+    let low_is_p1 = seat_coin_p1_first(&row.seed);
+    let expected = if low_is_p1 {
+        (low.clone(), closest.clone())
+    } else {
+        (closest.clone(), low.clone())
+    };
+    assert_eq!(row.players, expected);
     assert_eq!(row.ranked, Some(true));
     assert_eq!(row.mode, Some(QueueMode::Bo1));
     assert_eq!(row.decks, (deck(1), deck(1)), "each plays its own deck");
@@ -1791,6 +1914,17 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
         .await
         .expect("a kickoff")
         .expect("a match between two bots");
+    // R1989000: the seed's coin seats the grinder and its opponent, in either order.
+    let row = match_row(&app, &started).await;
+    let winner_is_p1 = row.players.0 == winner;
+    assert_eq!(
+        row.players,
+        if winner_is_p1 {
+            (winner.clone(), loser.clone())
+        } else {
+            (loser.clone(), winner.clone())
+        }
+    );
     let actor = app.matches.actor_for(&app, &started).await.expect("its actor");
     // Both seats are played: each bot's mulligan lands as a bot's server action, nobody attached.
     let mut mulliganed = [false, false];
@@ -1810,7 +1944,10 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
         pass(250).await;
     }
     assert_eq!(mulliganed, [true, true], "a bot never moved");
-    end_bot_match(&app, &started, PlayerId::P2).await;
+    // The loser concedes from its own seat, so the grinder wins from whichever seat the coin gave
+    // it.
+    let loser_seat = if winner_is_p1 { PlayerId::P2 } else { PlayerId::P1 };
+    end_bot_match(&app, &started, loser_seat).await;
 
     // R610: rated for both, zero-sum.
     let (winner_after, loser_after) = (before(&winner).await, before(&loser).await);
@@ -1823,11 +1960,20 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
     let sides = serde_json::to_value(&rated.sides).expect("the sides");
     assert_eq!(sides[0]["pilot"], "ai", "{sides}");
     assert_eq!(sides[1]["pilot"], "ai", "{sides}");
+    // The rated sides follow the match's seats, so the winner's and the loser's indices are the
+    // coin's to decide — and the winner's side is the winning one from either seat.
+    let winner_side = usize::from(!winner_is_p1);
+    assert_eq!(sides[winner_side]["botId"], json!(winner), "{sides}");
+    assert_eq!(sides[1 - winner_side]["botId"], json!(loser), "{sides}");
     assert_eq!(
         (rated.sides.0.bot_id.as_deref(), rated.sides.1.bot_id.as_deref()),
-        (Some(winner.as_str()), Some(loser.as_str()))
+        if winner_is_p1 {
+            (Some(winner.as_str()), Some(loser.as_str()))
+        } else {
+            (Some(loser.as_str()), Some(winner.as_str()))
+        }
     );
-    assert_eq!(rated.winner_side, Some(0));
+    assert_eq!(rated.winner_side, Some(winner_side));
     // R640000: each bot's season row moved.
     for id in [&winner, &loser] {
         assert_eq!(
@@ -1881,9 +2027,16 @@ async fn r1555000_a_bot_match_waits_out_the_gap_and_the_grinder_s_recent_opponen
         .await
         .expect("a kickoff")
         .expect("a match between two bots");
+    // R1989000: the seed's coin seats the grinder and its opponent, in either order.
+    let first_row = match_row(&app, &first).await;
+    let climbing_is_p1 = seat_coin_p1_first(&first_row.seed);
     assert_eq!(
-        match_row(&app, &first).await.players,
-        (climbing.clone(), near.clone())
+        first_row.players,
+        if climbing_is_p1 {
+            (climbing.clone(), near.clone())
+        } else {
+            (near.clone(), climbing.clone())
+        }
     );
     end_bot_match(&app, &first, PlayerId::P2).await;
     let ended = q!(app, ranked_game(&first)).expect("the rated game").ended_at;
@@ -1900,8 +2053,18 @@ async fn r1555000_a_bot_match_waits_out_the_gap_and_the_grinder_s_recent_opponen
         .await
         .expect("a kickoff")
         .expect("a second match");
-    // The bot it just played is among its recent opponents: the next closest plays it.
-    assert_eq!(match_row(&app, &second).await.players, (climbing, far));
+    // The bot it just played is among its recent opponents: the next closest plays it, seated
+    // by the new match seed's coin.
+    let second_row = match_row(&app, &second).await;
+    let climbing_is_p1 = seat_coin_p1_first(&second_row.seed);
+    assert_eq!(
+        second_row.players,
+        if climbing_is_p1 {
+            (climbing, far)
+        } else {
+            (far, climbing)
+        }
+    );
 }
 
 /// R639000, R1555000: a seed on which both seats' bots plan to offer a rematch and to accept one.
@@ -1968,11 +2131,47 @@ async fn r1555000_a_person_queued_during_a_bot_match_meets_a_bot_outside_it() {
         .expect("a kickoff")
         .expect("a match between two bots");
 
-    // The match plays on once someone queues; they meet the bot it does not hold.
+    // The match plays on once someone queues; they meet the bot it does not hold. Table order
+    // is creation order: the kickoff first, then the fallback's.
     let (person, _) = new_person(&app, 1195.0).await;
     ticket(&app, &person, 1195.0, past_any_fallback(), "bo1").await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    assert_eq!(matches(&app).await, vec![(playing, opponent), (person, outside)]);
+    let rows = fake_lock(&app).await.tables.matches.clone();
+    assert_eq!(rows.len(), 2);
+    // R1989000: each match seats its pair by its own seed's coin — the kickoff its grinder first
+    // on heads, the fallback its person first on heads.
+    let kickoff_first = if seat_coin_p1_first(&rows[0].seed) {
+        &playing
+    } else {
+        &opponent
+    };
+    assert_eq!(
+        (&rows[0].players.0, &rows[0].players.1),
+        (
+            kickoff_first,
+            if kickoff_first == &playing {
+                &opponent
+            } else {
+                &playing
+            }
+        )
+    );
+    let fallback_first = if seat_coin_p1_first(&rows[1].seed) {
+        &person
+    } else {
+        &outside
+    };
+    assert_eq!(
+        (&rows[1].players.0, &rows[1].players.1),
+        (
+            fallback_first,
+            if fallback_first == &person {
+                &outside
+            } else {
+                &person
+            }
+        )
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -2073,4 +2272,144 @@ async fn r1523000_a_bot_another_door_holds_or_an_old_epoch_starts_no_bot_match()
             .expect("a kickoff")
             .is_some()
     );
+}
+
+// R1989000 — the match seed's coin seats the person and the bot
+
+/// R1989000, the bot half: a fixed seed set seats both orders at the bot door, the same seed seats
+/// the same way twice, and an end-to-end `seat` pin skips the coin. The person queues through the
+/// queue endpoint, so the seeds and pins ride the end-to-end maps; the module holds the queue
+/// tests' `SEED_MAP` while it does, as the queue's own seed tests do.
+mod r1989000_the_seed_coin_seats_the_bot {
+    use super::*;
+    use crate::api::queue::SEED_MAP;
+    use crate::support::store::uuid;
+    use jackioh_server::api::collection::grant_entire_catalog;
+    use jackioh_server::db::store::SavedDeck;
+
+    /// A fixed set of seeds. The coin test below asserts it deals both seat orders, so the set is
+    /// pinned without pinning the answer: it fails if the stream ever stopped varying.
+    const SEEDS: [&str; 8] = [
+        "bot-coin-alpha",
+        "bot-coin-bravo",
+        "bot-coin-charlie",
+        "bot-coin-delta",
+        "bot-coin-echo",
+        "bot-coin-foxtrot",
+        "bot-coin-golf",
+        "bot-coin-hotel",
+    ];
+
+    /// A person with a saved Best-of-1 deck, queued with `seed` (and maybe `seat`) against the
+    /// fallback: the match the sweeper makes once the ticket is past its fallback time, with the
+    /// person's id beside it.
+    async fn bot_pair_on(
+        app: &Arc<App>,
+        name: &str,
+        seed: &str,
+        seat: Option<&str>,
+    ) -> (jackioh_server::db::store::MatchRow, String) {
+        let (person, token) = new_person(app, 1000.0).await;
+        grant_entire_catalog(app, &person, None)
+            .await
+            .expect("a launch grant");
+        // R256: a saved deck's id is a UUID the client mints.
+        let deck_id = uuid(NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1);
+        let now = now_ms();
+        q!(
+            app,
+            decks_upsert(
+                &from::<SavedDeck>(json!({
+                    "id": deck_id,
+                    "profileId": person,
+                    "name": format!("{name}'s deck"),
+                    "cards": deck(0),
+                    "portrait": null,
+                    "catalogVersion": app.catalog.version,
+                    "createdAt": now,
+                    "updatedAt": now,
+                })),
+                MAX_SAVED_DECKS as i64,
+            )
+        );
+        let mut body = json!({ "mode": "bo1", "deckId": deck_id, "seed": seed });
+        if let Some(seat) = seat {
+            body["seat"] = json!(seat);
+        }
+        let (status, _, queued) = call(app, "POST", "/api/queue", Some(&token), body).await;
+        assert_eq!(status, 200, "{queued}");
+        assert_eq!(queued["status"], "open", "{queued}");
+        // Past every fallback time the ticket could have drawn, as `past_any_fallback` backdates a
+        // stored ticket, then heard from again: R897000 cancels a ticket unheard from for longer
+        // than the stale window, and a lone queuer past its fallback is past that too, so the
+        // client re-touches presence with any signed-in request before the sweep runs.
+        tokio::time::advance(Duration::from_secs((BOT_FALLBACK_MAX_SECONDS + 1) as u64)).await;
+        let (status, _, _) = call(app, "GET", "/api/queue/population", Some(&token), json!({})).await;
+        assert_eq!(status, 200);
+        assert_eq!(try_pair(app).await.expect("a sweep").made, 1);
+        let row = fake_lock(app)
+            .await
+            .tables
+            .matches
+            .last()
+            .cloned()
+            .expect("a match");
+        (row, person)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_fixed_seed_set_seats_both_orders_and_the_same_seed_seats_the_same_way() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = app_with_bots(true).await;
+        // One free bot per round: the sweep has no one else to choose, and a seated bot stays
+        // seated.
+        let mut seen_person_first = false;
+        let mut seen_bot_first = false;
+        for (index, seed) in SEEDS.into_iter().enumerate() {
+            let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+            let (row, person) = bot_pair_on(&app, &format!("coin-{index}"), seed, None).await;
+            assert_eq!(row.seed, seed);
+            let person_is_p1 = seat_coin_p1_first(seed);
+            let expected = if person_is_p1 {
+                (person.clone(), bot.clone())
+            } else {
+                (bot.clone(), person.clone())
+            };
+            assert_eq!(row.players, expected, "seed {seed}");
+            seen_person_first |= person_is_p1;
+            seen_bot_first |= !person_is_p1;
+            // The same seed run again seats the same way.
+            let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+            let (again, person) = bot_pair_on(&app, &format!("again-{index}"), seed, None).await;
+            let expected = if person_is_p1 {
+                (person.clone(), bot.clone())
+            } else {
+                (bot.clone(), person.clone())
+            };
+            assert_eq!(again.players, expected, "seed {seed} again");
+        }
+        assert!(
+            seen_person_first && seen_bot_first,
+            "the fixed set must deal both seat orders"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_seat_pin_skips_the_coin_at_the_bot_door() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = app_with_bots(true).await;
+        // A pin against the coin proves the pin skipped it: the person takes the pinned seat
+        // either way the coin would have seated them. One free bot per round, as above.
+        for seed in SEEDS {
+            let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+            let person_pin = if seat_coin_p1_first(seed) { "p2" } else { "p1" };
+            let (row, person) = bot_pair_on(&app, &format!("pin-{seed}"), seed, Some(person_pin)).await;
+            let expected = if person_pin == "p1" {
+                (person.clone(), bot.clone())
+            } else {
+                (bot.clone(), person.clone())
+            };
+            assert_eq!(row.players, expected, "seed {seed}");
+        }
+    }
 }
