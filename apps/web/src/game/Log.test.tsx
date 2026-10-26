@@ -589,6 +589,24 @@ describe("#552 the log reads as English on the Meditative cards' events", () => 
     ).toEqual(["A hidden card was transformed", `${nameOf("meditative-037")} became ${nameOf("core-005")}`]);
   });
 
+  it("a line that opens on the viewer's own seat opens with a capital: a lock, an unlock, a trap and the hero's health", () => {
+    expect(
+      lines(
+        withEvents(baseView(), [
+          { type: "locked", player: "p1", row: "units", lane: 2 },
+          { type: "unlocked", player: "p1", row: "backrow", lane: 1 },
+          { type: "trapFired", instanceId: "c1", defId: "core-005", controller: "p1", row: "backrow", lane: 1 },
+          { type: "healthSet", player: "p1", health: 10, sourceId: null },
+        ]),
+      ),
+    ).toEqual([
+      "Your lane 2 was locked",
+      "Your backrow lane 1 was unlocked",
+      `Your trap ${nameOf("core-005")} fired`,
+      "Your hero's health was set to 10",
+    ]);
+  });
+
   it("R880 a craft prompt reads as a card to craft", () => {
     expect(lines(withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "ch1", kind: "craft" }]))).toEqual([
       "Opponent must choose a card to craft",
