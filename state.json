@@ -1783,7 +1783,7 @@
       "verdict_rounds": 0
     },
     "1954": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -1803,11 +1803,11 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "muse",
       "queued_at": "2026-10-26T00:29:59Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40251056316",
-      "started_at": "2026-10-26T00:47:27Z",
+      "run_id": "pending:a4749d6e-1792991158",
+      "started_at": "2026-10-26T05:06:46Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -2087,9 +2087,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T05:05:46Z",
+    "at": "2026-10-26T05:06:46Z",
     "url": "",
-    "what": "build #1855 on claude-4"
+    "what": "build #1954 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T04:54:36Z",
