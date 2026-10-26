@@ -2973,7 +2973,25 @@
       "feedback_since": "2026-10-26T17:48:38Z",
       "issue": 2013,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40372103160",
+            "tier": "strong"
+          }
+        ],
+        "sha": "eab88c9126a7ac46b789546d68012dcbbee62604",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
