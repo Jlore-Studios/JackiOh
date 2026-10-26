@@ -6,11 +6,21 @@
 // the other routes'): an active account sees the shop, the landing's Shop door lands on it, and the
 // account screen links it no more but by the top bar's Jlore pill (R1646000, R1651000).
 
+import { CATALOG } from "@jackioh/cards";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
-import { readOwnedFullArt, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
+import { CardFace, faceModel } from "../cards/index.ts";
+import { resetCosmeticsForTests } from "../cards/cosmetics.ts";
+import {
+  ViewerAccountCosmetics,
+  ViewerFullArt,
+  readOwnedFullArt,
+  resetOwnedFullArtForTests,
+} from "../cards/ownedFullArt.ts";
+import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
+import { collectionTestid } from "../collection/collection.ts";
 import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
@@ -85,11 +95,13 @@ beforeEach(() => {
   window.localStorage.clear();
   resetUsernamePromptForTests();
   resetOwnedFullArtForTests();
+  resetCosmeticsForTests();
   at("/");
 });
 
 afterEach(() => {
   cleanup();
+  resetCosmeticsForTests();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -217,6 +229,69 @@ describe("#1577 the shop screen", () => {
     // The opening may have granted a per-card cosmetic: the Collection's strip and the board read again.
     await readOwnedFullArt(TOKEN, fetchOwned);
     expect(fetchOwned).toHaveBeenCalledTimes(2);
+  });
+
+  it("R1955000 an opening has the open screen read what the account owns again, so what its reveal equips is worn at once", async () => {
+    const before = ownedCosmeticsOf({ account: ["table-chessboard"] });
+    let owned = before;
+    stubServer((call) => {
+      if (call.method === "POST" && call.path === "/api/cosmetic-packs/open") {
+        // The server settled the grant: the ledger lists both cosmetics from now on.
+        owned = {
+          cards: [...before.cards, { cardId: "core-001", cosmeticId: "border-stone" }],
+          account: [...before.account, "table-marble"],
+        };
+        const answer = openedCosmeticPack();
+        return {
+          status: 200,
+          body: {
+            ...answer,
+            slots: [
+              {
+                rarity: "Common",
+                grant: { kind: "cosmetic", cosmeticId: "border-stone", cosmeticRarity: "Common", cardId: "core-001", cardGranted: false },
+              },
+              {
+                rarity: "Epic",
+                grant: { kind: "cosmetic", cosmeticId: "table-marble", cosmeticRarity: "Epic", cardId: null, cardGranted: false },
+              },
+            ],
+          },
+        };
+      }
+      if (call.method === "GET" && call.path === "/api/cosmetics") return { status: 200, body: owned };
+      return shopRead(call);
+    });
+    render(
+      <ViewerFullArt token={TOKEN} gated>
+        <ViewerAccountCosmetics token={TOKEN} gated>
+          <div data-testid="viewer-card">
+            <CardFace face={faceModel({ defId: "core-001", def: CATALOG["core-001"], radiant: false })} worn />
+          </div>
+          <AccountCosmeticTiles />
+          <ShopRoute token={TOKEN} />
+        </ViewerAccountCosmetics>
+      </ViewerFullArt>,
+    );
+    // The first read landed: the chessboard is owned and the marble is not, yet.
+    await waitFor(() => {
+      expect(screen.getByTestId(collectionTestid.tile("table-chessboard"))).toHaveAttribute("data-owned", "true");
+    }, SLOW);
+    expect(screen.getByTestId(collectionTestid.tile("table-marble"))).toHaveAttribute("data-owned", "false");
+
+    fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
+    await screen.findByTestId(shopTestid.reveal, undefined, SLOW);
+    fireEvent.click(screen.getByTestId(shopTestid.equip(0)));
+    fireEvent.click(screen.getByTestId(shopTestid.equip(1)));
+
+    // Equip only wrote the picks; the re-read of the ledger is what lets the card and the side wear them.
+    await waitFor(() => {
+      expect(within(screen.getByTestId("viewer-card")).getByText(CATALOG["core-001"]!.name).closest(".cf")).toHaveAttribute(
+        "data-frame",
+        "border-stone",
+      );
+      expect(screen.getByTestId(collectionTestid.tile("table-marble"))).toHaveAttribute("data-equipped", "true");
+    }, SLOW);
   });
 
   it("R1665000 renders no pity counters and no odds table, and links /purchases", async () => {
