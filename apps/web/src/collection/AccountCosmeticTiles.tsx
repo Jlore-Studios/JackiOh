@@ -9,7 +9,8 @@
 // /api/cosmetics` says what the account owns, through the `AccountCosmeticsOwned` main.tsx mounts
 // while ownership decides (R1833000, `useOwnsAccountCosmetic`); with none above it every tile is
 // owned. A stored pick the account does not own shows as the kind's default, which is what the
-// board draws. This decides nothing (CLAUDE.md rule 7).
+// board draws. R1953001: a locked tile a held cosmetic token covers offers that token in place
+// (TokenOffer.tsx). This decides nothing (CLAUDE.md rule 7).
 //
 // Every animation is a transform or opacity (the backdrops' particles, game/table.css) and holds still
 // under reduced motion; a tile's particles move only while it is the equipped one, hovered or focused
@@ -30,6 +31,7 @@ import {
 import { t } from "../i18n/i18n.ts";
 import { accountTiles, collectionTestid as T, cosmeticKindWords, type AccountTile } from "./collection.ts";
 import { MiniBoard } from "./CosmeticLook.tsx";
+import TokenOffer, { offerTier, useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 
 import "../game/table.css";
 import "../settings/settings.css";
@@ -52,16 +54,21 @@ function TilePicture({ kind, id, equipped }: { kind: DeckSlotKind; id: CosmeticI
   return <MiniBoard table={kind === "table" ? id : equipped.table} field={kind === "field" ? id : equipped.field} />;
 }
 
+/** R1953001: the session's token and its held cosmetic tokens, which a locked tile's offer spends. */
+type Offers = { token: string | null; held: HeldTokens | null; onRedeemed: (held: HeldTokens) => void };
+
 function TileRow({
   kind,
   hint,
   tiles,
   equipped,
+  offers,
 }: {
   kind: DeckSlotKind;
   hint: string;
   tiles: AccountTile[];
   equipped: Record<DeckSlotKind, CosmeticId>;
+  offers: Offers;
 }): ReactElement {
   return (
     <section className="collection-tiles" data-testid={T.tiles(kind)} aria-label={cosmeticKindWords(kind)}>
@@ -70,6 +77,7 @@ function TileRow({
       <ul className="collection-tiles__list">
         {tiles.map(({ cosmetic, owned }) => {
           const worn = equipped[kind] === cosmetic.id;
+          const tier = owned ? null : offerTier(cosmetic, offers.held);
           return (
             <li
               key={cosmetic.id}
@@ -93,6 +101,17 @@ function TileRow({
                   if (owned) writeCosmetics({ [kind]: cosmetic.id });
                 }}
               />
+              {tier === null || offers.token === null || offers.held === null ? null : (
+                <TokenOffer
+                  token={offers.token}
+                  tier={tier}
+                  held={offers.held}
+                  cosmeticId={cosmetic.id}
+                  onRedeemed={offers.onRedeemed}
+                  testid={T.tokenOffer(cosmetic.id)}
+                  errorTestid={T.tokenOfferError(cosmetic.id)}
+                />
+              )}
             </li>
           );
         })}
@@ -104,11 +123,16 @@ function TileRow({
 /**
  * R1297000, R1655000: the playmat, backdrop and card back your own side wears in a game. A deck's
  * own pick, set in the deck builder, beats these. R1833000: what the account owns is
- * `useOwnsAccountCosmetic`'s, and an unowned pick is equipped as its kind's default.
+ * `useOwnsAccountCosmetic`'s, and an unowned pick is equipped as its kind's default. R1953001:
+ * `token` reads the held cosmetic tokens a locked tile offers; none offers none.
  */
-export default function AccountCosmeticTiles(): ReactElement {
+export default function AccountCosmeticTiles({ token = null }: { token?: string | null }): ReactElement {
   const picks = useCosmetics();
   const owns = useOwnsAccountCosmetic();
+  const rows = TILE_ROWS.map((row) => ({ ...row, tiles: accountTiles(row.kind, owns) }));
+  // The held tokens are read only while a tile is locked, the only place they are offered.
+  const [held, setHeld] = useHeldTokens(rows.some(({ tiles }) => tiles.some(({ owned }) => !owned)) ? token : null);
+  const offers: Offers = { token, held, onRedeemed: setHeld };
   const wornOf = (kind: DeckSlotKind): CosmeticId => {
     const id = resolveCosmetic(kind, picks[kind]);
     return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
@@ -116,8 +140,8 @@ export default function AccountCosmeticTiles(): ReactElement {
   const equipped: Record<DeckSlotKind, CosmeticId> = { table: wornOf("table"), field: wornOf("field"), cardBack: wornOf("cardBack") };
   return (
     <>
-      {TILE_ROWS.map(({ kind, hint }) => (
-        <TileRow key={kind} kind={kind} hint={hint} tiles={accountTiles(kind, owns)} equipped={equipped} />
+      {rows.map(({ kind, hint, tiles }) => (
+        <TileRow key={kind} kind={kind} hint={hint} tiles={tiles} equipped={equipped} offers={offers} />
       ))}
     </>
   );

@@ -1,9 +1,10 @@
 /* The bar that fills and the reward reveal (#1658, part of #1651): the token bars, the pack opening's
-   two bars and the rewards that fly out of them. Every @keyframes moves only transform and opacity
-   (the fill is a scaleX), each taking its duration from the constants in bars.ts through
-   `--fill-ms`, `--burst-ms` and `--reveal-ms`, and `--fill-from` and `--fill-to` as fractions of the
-   bar. Every animation sits in the one gate below: with the system's reduced motion or the settings'
-   Reduce motion on <html> (`data-reduce-motion`), nothing moves and each element holds its end state
+   two bars, pinned as a HUD with the points that fly into them (R1953000), and the rewards that fly
+   out of them. Every @keyframes moves only transform and opacity (the fill is a scaleX), each taking
+   its duration from the constants in bars.ts through `--fill-ms`, `--burst-ms`, `--reveal-ms`,
+   `--flight-ms` and `--pulse-ms`, and `--fill-from` and `--fill-to` as fractions of the bar. Every
+   animation sits in the one gate below: with the system's reduced motion or the settings' Reduce
+   motion on <html> (`data-reduce-motion`), nothing moves and each element holds its end state
    (cards/cosmetics.css's gate). The components draw that end state at once under either switch too. */
 
 .fill-bar {
@@ -104,6 +105,72 @@
   width: min(100%, 24rem);
 }
 
+/* R1953000: the opening's bars pinned across the top of the viewport while it is on screen. z-index 38
+   keeps it under every modal dialog, the pack scene's 39 among them, so a cosmetic opening's HUD left
+   on the shop never covers a card pack's scene; inside that scene, a stacking context of its own, it
+   sits over the cards with the scene's `.pack-fx` riding on top. It takes no transform or filter,
+   which would make it the box its fixed flights are placed in. */
+.opening-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 38;
+  width: min(100% - 2rem, 32rem);
+  margin: 0 auto;
+  padding: 10px 16px 12px;
+  border: 1px solid rgb(201 149 63 / 0.45);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: rgb(14 9 5 / 0.94);
+  color: var(--tavern-parchment, #efe0bf);
+}
+
+/* A full bar's glow while it bursts in the HUD; the pulse is the gate's. */
+.opening-hud[data-motion="full"] .fill-bar[data-state="bursting"] .fill-bar__well {
+  border-color: var(--tavern-gold, #f3c969);
+  box-shadow: 0 0 14px 2px var(--tavern-flame, #ffb347);
+}
+
+/* One spent slot's points, from its slot's centre (`--flight-x`, `--flight-y`) to the HUD's
+   (`--flight-dx`, `--flight-dy` further on), in its rarity's colour; a bigger rarity lands in a
+   bigger burst (`--flight-land`). It is drawn only while motion is on, and holds no pointer. */
+.bar-flight {
+  --flight-colour: var(--rarity-common, #d9dde6);
+  --flight-land: 1.2;
+
+  position: fixed;
+  top: var(--flight-y);
+  left: var(--flight-x);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--flight-colour);
+  text-shadow: 0 0 10px var(--flight-colour), 0 1px 0 #000;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.bar-flight[data-rarity="Rare"] {
+  --flight-colour: var(--rarity-rare, #3d8bfd);
+  --flight-land: 1.5;
+}
+
+.bar-flight[data-rarity="Epic"] {
+  --flight-colour: var(--rarity-epic, #a45cf0);
+  --flight-land: 1.8;
+}
+
+.bar-flight[data-rarity="Legendary"] {
+  --flight-colour: var(--rarity-legendary, #ff9f1c);
+  --flight-land: 2.1;
+}
+
+.bar-flight[data-rarity="Mythic"] {
+  --flight-colour: var(--rarity-mythic, #ff5fd2);
+  --flight-land: 2.4;
+}
+
 .reward-reveal {
   display: flex;
   flex-wrap: wrap;
@@ -171,6 +238,45 @@
   }
 }
 
+@keyframes bar-flight {
+  from {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+
+  15% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  80% {
+    transform: translate(calc(var(--flight-dx) - 50%), calc(var(--flight-dy) - 50%)) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translate(calc(var(--flight-dx) - 50%), calc(var(--flight-dy) - 50%)) scale(var(--flight-land));
+    opacity: 0;
+  }
+}
+
+@keyframes opening-hud-pulse {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  40% {
+    transform: scale(1.04, 1.6);
+    opacity: 0.8;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .fill-bar__fill--sweep {
     will-change: transform;
@@ -185,5 +291,15 @@
   :root:not([data-reduce-motion="true"]) .reward-reveal__item {
     will-change: transform, opacity;
     animation: reward-reveal-fly var(--reveal-ms) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .bar-flight {
+    will-change: transform, opacity;
+    animation: bar-flight var(--flight-ms) ease-in var(--flight-delay) both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .opening-hud[data-motion="full"] .fill-bar[data-state="bursting"] .fill-bar__track {
+    will-change: transform, opacity;
+    animation: opening-hud-pulse var(--pulse-ms) ease-out both;
   }
 }

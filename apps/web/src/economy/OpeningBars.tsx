@@ -1,34 +1,107 @@
-// The two bars of a card pack's opening (#1658, part of #1651, SPEC §14.5, R1305000): the card token
-// bar and the cosmetic token bar, each filling from where the opening found it to where it left it,
-// and the reward of every fill revealed as the bar bursts. The pack-opening scene mounts it with the
+// The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
+// bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
+// on screen. Each spent slot's points fly from the slot into the HUD, labelled and tinted by the slot's
+// rarity, a bigger rarity landing in a bigger burst; once the last has landed each bar fills from where
+// the opening found it to where it left it, a full one pulsing and glowing as it bursts, and the reward
+// of every fill is revealed as it does. The pack-opening scene and the cosmetic packs mount it with the
 // opening's answer.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer: the points before and after,
-// the size, how often each bar paid and what the cosmetic bar paid (R1305001). Nothing here counts a
-// point or picks a reward; a bar the opening did not move is not drawn, and with neither moved
-// nothing is.
+// the size, how often each bar paid, what the cosmetic bar paid (R1305001) and each slot's points
+// (R1953000), which `flights` carry. Nothing here counts a point or picks a reward, and both bars are
+// drawn whether or not the opening moved them.
+//
+// `play` holds the opening back (the scene's cards still face down): both bars rest at their points
+// before. REDUCED MOTION (the panel's, the system's or the effects' own), or the effects' intensity
+// off, flies nothing and pulses nothing: the bars fill at once (FillBar draws the end state at once
+// under reduced motion).
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
+import { useFxSettings } from "../fx/settings.ts";
 import { t } from "../i18n/i18n.ts";
 import type { OpeningBarsAnswer } from "../net/api.ts";
-import { barMoved, fillReward, type RevealItem } from "./bars.ts";
-import FillBar from "./FillBar.tsx";
+import {
+  BAR_FLIGHT_MS,
+  BAR_FLIGHT_STAGGER_MS,
+  BURST_MS,
+  fillReward,
+  flightsMs,
+  type BarFlight,
+  type OpeningBar,
+  type RevealItem,
+} from "./bars.ts";
+import FillBar, { useReducedMotion } from "./FillBar.tsx";
 import RewardReveal from "./RewardReveal.tsx";
 import "./economy.css";
 
 export type OpeningBarsProps = {
   bars: OpeningBarsAnswer;
+  /** The spent slots' points, flown in before the bars fill (`bars.ts::flightsOf`); with none they fill at once. */
+  flights?: readonly BarFlight[];
+  /** Whether the opening plays yet; until it does, both bars rest at their points before. */
+  play?: boolean;
   testid?: string;
 };
 
-/** The bars of one opening; a new answer plays from its start, its rewards shown afresh. */
-export default function OpeningBars({ bars, testid }: OpeningBarsProps): ReactElement | null {
-  return <Opening key={JSON.stringify(bars)} bars={bars} testid={testid} />;
+/** Where an opening is: held back, its points in flight, or its bars filling. */
+type Phase = "waiting" | "flights" | "fill";
+
+/** Where a flight takes off and how far it travels to the HUD's centre, in viewport pixels. */
+type Course = { x: number; y: number; dx: number; dy: number };
+
+/** The centre of an element's box on the viewport. */
+function centreOf(element: Element): { x: number; y: number } {
+  const box = element.getBoundingClientRect();
+  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 }
 
-function Opening({ bars, testid }: OpeningBarsProps): ReactElement | null {
+/** The bars of one opening; a new answer plays from its start, its rewards shown afresh. */
+export default function OpeningBars(props: OpeningBarsProps): ReactElement {
+  return <Opening key={JSON.stringify(props.bars)} {...props} />;
+}
+
+function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps): ReactElement {
+  const [fx] = useFxSettings();
+  const moving = !useReducedMotion() && fx.intensity !== "off";
+  const next: Phase = moving && flights.length > 0 ? "flights" : "fill";
+  const [phase, setPhase] = useState<Phase>(play ? next : "waiting");
+  const [courses, setCourses] = useState<Readonly<Record<string, Course>> | null>(null);
   const [rewards, setRewards] = useState<readonly RevealItem[]>([]);
+  const hud = useRef<HTMLDivElement | null>(null);
+
+  // The opening plays: its points take off, or with none to fly the bars fill.
+  useEffect(() => {
+    if (phase === "waiting" && play) setPhase(next);
+  }, [phase, play, next]);
+
+  // The bars fill once the last flight has landed; motion turned off mid-flight lands them all at once.
+  useEffect(() => {
+    if (phase !== "flights") return undefined;
+    if (!moving) {
+      setPhase("fill");
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setPhase("fill");
+    }, flightsMs(flights.length));
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [phase, moving, flights.length]);
+
+  // Each flight takes off from its slot's centre (the HUD's, when the slot is not on the page) for the HUD's.
+  useLayoutEffect(() => {
+    if (phase !== "flights" || hud.current === null) return;
+    const to = centreOf(hud.current);
+    const measured: Record<string, Course> = {};
+    for (const flight of flights) {
+      const source = document.querySelector(`[data-testid="${flight.source}"]`);
+      const from = source === null ? to : centreOf(source);
+      measured[flight.key] = { x: from.x, y: from.y, dx: to.x - from.x, dy: to.y - from.y };
+    }
+    setCourses(measured);
+  }, [phase, flights]);
 
   const reveal = (bar: "card" | "cosmetic", fill: number): void => {
     const item = fillReward(bars, bar, fill);
@@ -36,39 +109,63 @@ function Opening({ bars, testid }: OpeningBarsProps): ReactElement | null {
     setRewards((before) => (before.some((shown) => shown.key === item.key) ? before : [...before, item]));
   };
 
-  const cardMoved = barMoved(bars.card);
-  const cosmeticMoved = barMoved(bars.cosmetic);
-  if (!cardMoved && !cosmeticMoved) return null;
   const part = (name: string): string | undefined => (testid === undefined ? undefined : `${testid}-${name}`);
+  // Until the bars fill, each rests where the opening found it.
+  const drawBar = (name: "card" | "cosmetic", label: string, bar: OpeningBar): ReactElement =>
+    phase === "fill" ? (
+      <FillBar
+        label={label}
+        size={bar.size}
+        value={bar.after}
+        from={bar.before}
+        fills={bar.pays}
+        onFill={(fill) => {
+          reveal(name, fill);
+        }}
+        testid={part(name)}
+      />
+    ) : (
+      <FillBar label={label} size={bar.size} value={bar.before} testid={part(name)} />
+    );
+
+  const style = { "--flight-ms": `${String(BAR_FLIGHT_MS)}ms`, "--pulse-ms": `${String(BURST_MS)}ms` } as CSSProperties;
   return (
-    <div className="opening-bars" data-testid={testid}>
-      {cardMoved ? (
-        <FillBar
-          label={t("Card token bar")}
-          size={bars.card.size}
-          value={bars.card.after}
-          from={bars.card.before}
-          fills={bars.card.pays}
-          onFill={(fill) => {
-            reveal("card", fill);
-          }}
-          testid={part("card")}
-        />
-      ) : null}
-      {cosmeticMoved ? (
-        <FillBar
-          label={t("Cosmetic token bar")}
-          size={bars.cosmetic.size}
-          value={bars.cosmetic.after}
-          from={bars.cosmetic.before}
-          fills={bars.cosmetic.pays}
-          onFill={(fill) => {
-            reveal("cosmetic", fill);
-          }}
-          testid={part("cosmetic")}
-        />
-      ) : null}
+    <div
+      ref={hud}
+      className="opening-bars opening-hud"
+      data-testid={testid}
+      data-motion={moving ? "full" : "still"}
+      data-phase={phase}
+      style={style}
+    >
+      {drawBar("card", t("Card token bar"), bars.card)}
+      {drawBar("cosmetic", t("Cosmetic token bar"), bars.cosmetic)}
       <RewardReveal items={rewards} testid={part("rewards")} />
+      {phase === "flights"
+        ? flights.map((flight, index) => {
+            const course = courses?.[flight.key];
+            if (course === undefined) return null;
+            const at = {
+              "--flight-x": `${String(course.x)}px`,
+              "--flight-y": `${String(course.y)}px`,
+              "--flight-dx": `${String(course.dx)}px`,
+              "--flight-dy": `${String(course.dy)}px`,
+              "--flight-delay": `${String(index * BAR_FLIGHT_STAGGER_MS)}ms`,
+            } as CSSProperties;
+            return (
+              <span
+                key={flight.key}
+                className="bar-flight"
+                data-testid={part(flight.key)}
+                data-rarity={flight.rarity}
+                aria-hidden="true"
+                style={at}
+              >
+                {`+${String(flight.points)}`}
+              </span>
+            );
+          })
+        : null}
     </div>
   );
 }

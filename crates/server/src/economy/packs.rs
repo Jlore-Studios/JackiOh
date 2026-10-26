@@ -437,9 +437,9 @@ pub(crate) async fn settle_bars(
 /// counters (the pity counters and both bars with the cycle's position), rolls the opening from
 /// `seed` (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the
 /// collection and its ledger, reason `pack`), the cosmetics, a per-card one on its slot's card and
-/// an account one on none (R1661001), each pity counter that moved, both bars'
-/// points for the spent duplicates, each its slot's rarity's (R1953000), and each bar that reached its size paying its tokens with
-/// the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
+/// an account one on none (R1661001), each pity counter that moved, both bars' points for the
+/// spent duplicates, each its slot's rarity's (R1953000), and each bar that reached its size paying
+/// its tokens with the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
 /// collection's rows have no `ref` and share the opening's `at`. No pack held is 409. Every
 /// refusal and failure returns before the commit, so it writes nothing.
 pub async fn open_pack(

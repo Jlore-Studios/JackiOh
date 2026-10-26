@@ -11,8 +11,11 @@
 // R1833000: the same answer's account list is mounted as `AccountCosmeticsOwned`
 // (`ViewerAccountCosmetics`), so the playmat, backdrop and card-back pickers offer, and the viewer's
 // side wears, only what the account owns. Both read one cached answer per session.
+//
+// R1953001: a cosmetic token spent in place (collection/TokenOffer.tsx) grants on a screen that stays
+// up, so `rereadOwnedCosmetics` drops that answer and has both providers read it again.
 
-import { createElement, useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { createElement, useEffect, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 
 import { sessionIdFromToken } from "../auth/redirect.ts";
 import { getOwnedCosmetics, type OwnedCosmeticsResponse } from "../net/api.ts";
@@ -105,6 +108,32 @@ export function forgetOwnedCosmetics(): void {
   cached = null;
 }
 
+/** How many times a screen has asked the mounted providers to read again. */
+let revision = 0;
+const revisionListeners = new Set<() => void>();
+
+/**
+ * R1953001: drops the session's answer, as `forgetOwnedCosmetics` does, and has every mounted
+ * provider read it again: called where an answer granted a cosmetic on a screen that stays up (a
+ * cosmetic token spent in place), so the locked entry it bought shows owned.
+ */
+export function rereadOwnedCosmetics(): void {
+  cached = null;
+  revision += 1;
+  for (const listener of [...revisionListeners]) listener();
+}
+
+function subscribeRevision(listener: () => void): () => void {
+  revisionListeners.add(listener);
+  return () => {
+    revisionListeners.delete(listener);
+  };
+}
+
+function useOwnedCosmeticsRevision(): number {
+  return useSyncExternalStore(subscribeRevision, () => revision, () => revision);
+}
+
 /**
  * The cosmetics the faces below it wear: `token`'s account's own once ownership decides (`gated`),
  * none past the defaults and starters for no token (a pending account's screen) or until the read
@@ -123,6 +152,7 @@ export function ViewerFullArt({
 }): ReactElement {
   const session = token === null ? null : sessionOf(token);
   const [owned, setOwned] = useState<{ session: string; cards: OwnedByCard } | null>(null);
+  const revision = useOwnedCosmeticsRevision();
   useEffect(() => {
     if (!gated || token === null) return;
     let current = true;
@@ -137,7 +167,7 @@ export function ViewerFullArt({
     return () => {
       current = false;
     };
-  }, [gated, token, read]);
+  }, [gated, token, read, revision]);
   // Another session's answer is never this one's.
   const cards = owned !== null && owned.session === session ? owned.cards : NO_FULL_ART;
   return createElement(FullArtOwned, { owned: gated ? cards : "every" }, children);
@@ -161,6 +191,7 @@ export function ViewerAccountCosmetics({
 }): ReactElement {
   const session = token === null ? null : sessionOf(token);
   const [owned, setOwned] = useState<{ session: string; ids: ReadonlySet<string> } | null>(null);
+  const revision = useOwnedCosmeticsRevision();
   useEffect(() => {
     if (!gated || token === null) return;
     let current = true;
@@ -175,7 +206,7 @@ export function ViewerAccountCosmetics({
     return () => {
       current = false;
     };
-  }, [gated, token, read]);
+  }, [gated, token, read, revision]);
   // Another session's answer is never this one's.
   const ids = owned !== null && owned.session === session ? owned.ids : NO_ACCOUNT_COSMETICS;
   return createElement(AccountCosmeticsOwned, { owned: gated ? ids : "every" }, children);
@@ -183,4 +214,5 @@ export function ViewerAccountCosmetics({
 
 export function resetOwnedFullArtForTests(): void {
   cached = null;
+  revision = 0;
 }

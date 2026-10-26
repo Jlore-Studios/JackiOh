@@ -668,9 +668,10 @@
 /* The one gate every look moves in. The holo band crosses the window and leaves it; the rainbow and
    the aurora drift one period of their stripes, and molten gold flows one of its bands, so no loop
    has a seam; the cracked ice, the glitter, the sunburst and the gold's hot spots glint in place;
-   the galaxy and the void's shimmer turn, and the void's edge pulses. Obsidian's gloss crosses the
-   face and rests off it; Starlit's stars and Celestial's ring twinkle; Filigree's ring glints. The
-   chase backs' emblems breathe, turn and orbit: a back has no motion slot, only this gate. */
+   the galaxy and the void's shimmer turn, and the void's edge pulses. Gilded edge's gold hairline
+   glints; Obsidian's gloss crosses the face and rests off it; Starlit's stars and Celestial's ring
+   twinkle; Filigree's ring glints. The chase backs' emblems breathe, turn and orbit: a back has no
+   motion slot, only this gate, and the deck pile, which draws no emblem, holds still. */
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-holo-sweep"][data-cosmetic-motion="animated"] .cf-art::after {
     will-change: transform;
@@ -725,6 +726,11 @@
   :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-void-shimmer"][data-cosmetic-motion="animated"] .cf-art::before {
     will-change: transform, opacity;
     animation: cosmetic-foil-pulse 2.6s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-finish="finish-gilded-edge"][data-cosmetic-motion="animated"]::before {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 3s ease-in-out infinite alternate;
   }
 
   :root:not([data-reduce-motion="true"]) .cf[data-finish="finish-obsidian"][data-cosmetic-motion="animated"]::before {

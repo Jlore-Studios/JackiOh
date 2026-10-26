@@ -22,6 +22,12 @@
   color: var(--text, #e8eaf2);
 }
 
+/* R1953000: once the server has answered, the opening's bars are pinned across the top
+   (economy.css' `.opening-hud`), so the scene starts below them. */
+.pack-scene[data-hud] {
+  padding-top: 10rem;
+}
+
 .pack-scene__title {
   margin: 0;
   text-align: center;

@@ -2,7 +2,8 @@
 // PackObject on the shelf, Buy pressing it and, on the answer, a copy flying into the count and the
 // wallet announced; a short wallet disabling every buy with its shortfall, a refused buy changing
 // nothing, a bought pack moving the wallet and the count; the cosmetic pack as an object above Open and
-// no odds; an opening's reveal naming every slot, with the token bars it moved; the Chase Shard bar
+// no odds; an opening's reveal naming every slot, with both token bars pinned at the top and its spent
+// slot's points flying into them (R1953000); the Chase Shard bar
 // filling from before to after and, at full, bursting and revealing the chase choice; reduce motion
 // showing every end state at once; each panel telling the page what it changed and reading again when
 // told. The tier filters live beside them as pure tests over crafted registries, since the shipped
@@ -16,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
-import { REVEAL_STAGGER_MS, segmentMs } from "../economy/bars.ts";
+import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import type { BoughtPackResponse } from "../net/api.ts";
@@ -73,11 +74,10 @@ describe("#1309 the shop model", () => {
     expect(shortfallOf(100, 250)).toBe(0);
   });
 
-  it("a cosmetic slot says what it became, a spent one the bars it filled", () => {
+  it("R1953000 a cosmetic slot says what it became, a spent one the points the server gave each bar", () => {
     const [foil, , bars] = openedCosmeticPack().slots;
-    expect(cosmeticSlotOutcome(foil!)).toBe("New cosmetic: Mr. Vanilla full art");
-    expect(cosmeticSlotOutcome(bars!)).toContain("Duplicate:");
-    expect(cosmeticSlotOutcome(bars!)).toContain("card token bar");
+    expect(cosmeticSlotOutcome(foil!, 0)).toBe("New cosmetic: Mr. Vanilla full art");
+    expect(cosmeticSlotOutcome(bars!, 4)).toBe("Duplicate: +4 card token bar, +4 cosmetic token bar");
   });
 
   it("a full shard bar buys Legendary or Mythic, a chase included, and nothing below", () => {
@@ -392,32 +392,58 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.open)).toBeNull();
   });
 
-  it("an opened cosmetic pack mounts the token bars it moved in its reveal, and none it left alone", async () => {
+  it("R1953000 an opened cosmetic pack pins both token bars at the top, its spent slot's points flying in before they fill", async () => {
+    vi.useFakeTimers();
     cosmeticServer();
     render(<CosmeticPacks token={TOKEN} />);
-    await screen.findByTestId(T.unopened);
+    await flush();
     expect(screen.queryByTestId(T.openingBars)).toBeNull();
 
     fireEvent.click(screen.getByTestId(T.open));
-    await screen.findByTestId(T.reveal);
+    await flush();
 
     const bars = screen.getByTestId(T.openingBars);
-    expect(bars).toContainElement(screen.getByTestId(`${T.openingBars}-card`));
-    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("Card token bar");
-    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("7 / 12");
-    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("Cosmetic token bar");
-    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("9 / 30");
+    const card = (): HTMLElement => screen.getByTestId(`${T.openingBars}-card`);
+    const cosmetic = (): HTMLElement => screen.getByTestId(`${T.openingBars}-cosmetic`);
+    expect(bars).toHaveClass("opening-hud");
+    expect(bars).toContainElement(card());
+    expect(card()).toHaveTextContent("Card token bar");
+    expect(cosmetic()).toHaveTextContent("Cosmetic token bar");
+    // The spent slot's points, the server's, fly from it; the bars wait where the opening found them.
+    const flight = screen.getByTestId(`${T.openingBars}-flight-2`);
+    expect(flight).toHaveTextContent("+4");
+    expect(flight).toHaveAttribute("data-rarity", "Rare");
+    expect(bars.querySelectorAll(".bar-flight")).toHaveLength(1);
+    expect(card()).toHaveTextContent("3 / 12");
+    expect(cosmetic()).toHaveTextContent("5 / 30");
+    expect(text(T.slot(2))).toContain("Duplicate: +4 card token bar, +4 cosmetic token bar");
+
+    advance(flightsMs(1));
+    expect(bars.querySelector(".bar-flight")).toBeNull();
+    expect(card()).toHaveTextContent("7 / 12");
+    expect(cosmetic()).toHaveTextContent("9 / 30");
     cleanup();
 
+    // An opening that spent no slot still shows both bars, at rest, with nothing to fly.
     const still = { card: { before: 3, after: 3, size: 12, pays: 0 }, cosmetic: { before: 5, after: 5, size: 30, pays: 0 } };
+    const opened = openedCosmeticPack();
     cosmeticServer({
-      open: { status: 200, body: { ...openedCosmeticPack(), bars: { ...still, cosmeticPaid: [] } } },
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: opened.slots.slice(0, 2),
+          bars: { ...still, cosmeticPaid: [], slotPoints: [0, 0] },
+        },
+      },
     });
     render(<CosmeticPacks token={TOKEN} />);
-    await screen.findByTestId(T.unopened);
+    await flush();
     fireEvent.click(screen.getByTestId(T.open));
-    await screen.findByTestId(T.reveal);
-    expect(screen.queryByTestId(T.openingBars)).toBeNull();
+    await flush();
+    expect(screen.getByTestId(T.openingBars).querySelector(".bar-flight")).toBeNull();
+    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("3 / 12");
+    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("5 / 30");
   });
 
   it("an opened cosmetic pack reveals each slot, and tells the page", async () => {
