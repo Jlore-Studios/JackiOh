@@ -2015,9 +2015,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T09:40:56Z",
+    "at": "2026-10-26T09:57:56Z",
     "url": "",
-    "what": "revise #1960 on claude-1"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-26T09:48:15Z",
@@ -4837,11 +4837,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-26T09:26:16Z",
-    "last_run": null,
-    "provider": null,
+    "idle_since": "2026-10-26T09:57:56Z",
+    "last_run": "2026-10-26T09:57:56Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:559a81f0-1793008630",
     "taken_asks": []
   },
   "usage": null,
