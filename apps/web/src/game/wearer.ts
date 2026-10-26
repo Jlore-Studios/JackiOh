@@ -12,7 +12,14 @@ import { createContext, createElement, useContext, type ReactElement, type React
 
 import type { PlayerId } from "@jackioh/shared";
 
-import { useCosmetics, wornDeckCosmetics, type CosmeticId, type DeckCosmetics, type DeckSlotKind } from "../cards/cosmetics.ts";
+import {
+  useCosmetics,
+  useOwnsAccountCosmetic,
+  wornDeckCosmetics,
+  type CosmeticId,
+  type DeckCosmetics,
+  type DeckSlotKind,
+} from "../cards/cosmetics.ts";
 
 const WearerContext = createContext<PlayerId | null>(null);
 const DeckCosmeticsContext = createContext<DeckCosmetics | null>(null);
@@ -42,10 +49,10 @@ export function useWearerSeat(): PlayerId | null {
 /**
  * R1297000: the deck slots a side wears: the deck's picks, else the account's, else the defaults
  * for `own` (the viewer's own side) on a board that has a wearer, and the defaults for every other
- * side. Its hooks run on every call.
+ * side. R1833000: a pick the viewer does not own draws as the default. Its hooks run on every call.
  */
 export function useWornDeckCosmetics(own: boolean): Record<DeckSlotKind, CosmeticId> {
   const seat = useContext(WearerContext);
   const deck = useContext(DeckCosmeticsContext);
-  return wornDeckCosmetics(own && seat !== null, deck, useCosmetics());
+  return wornDeckCosmetics(own && seat !== null, deck, useCosmetics(), useOwnsAccountCosmetic());
 }

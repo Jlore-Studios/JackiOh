@@ -57,10 +57,10 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
-    SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, QuestBook, Script,
+    SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
     TriggerExtraHook, TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
-    condition_hook, hook, mode_allowed_hook, read_hook, target_check, would_counter_hook,
+    condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -541,15 +541,38 @@ fn build_def(
         params: None,
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc,
         radiant_fallback: None,
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
         craft: None,
-        base: fused_face(ingredients, defs, false, forced),
-        radiant: fused_face(ingredients, defs, true, forced),
+        base: kept_piece_only(
+            fused_face(ingredients, defs, false, forced),
+            target_def.map(|def| &def.base),
+        ),
+        radiant: kept_piece_only(
+            fused_face(ingredients, defs, true, forced),
+            target_def.map(|def| &def.radiant),
+        ),
     }
+}
+
+/// R1852001: a fusion that keeps a card prints Starship Piece only when the kept card's own face does,
+/// so a piece fused onto a card that is no piece — an Equip onto its host, a copy into the Starship —
+/// leaves it no piece. A fusion that keeps no card unites the keyword as it unites every other (R77).
+fn kept_piece_only(mut face: CardFace, kept: Option<&CardFace>) -> CardFace {
+    if let Some(kept) = kept
+        && !kept
+            .keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+    {
+        face.keywords
+            .retain(|keyword| keyword.kind() != KeywordKind::StarshipPiece);
+    }
+    face
 }
 
 /// R470: what "its cost doesn't change" writes, read off the kept card before it becomes the fusion:
@@ -1148,6 +1171,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
                 embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
+                // R1839000: a card fused from a Dormant ingredient prints the first ingredient's Dormant.
+                slumber: defined.iter().find_map(|f| f.slumber.clone()),
+                // R1852000: a fusion the Dormant Starship is in is still its hull.
+                starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
             })
         }
     }
@@ -1227,6 +1254,7 @@ fn combine_objects(records: &[Script]) -> Script {
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
         mode_allowed: fused_mode_allowed(records),
+        play_allowed: fused_play_allowed(records),
         // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
         secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
@@ -1250,6 +1278,8 @@ fn combine_objects(records: &[Script]) -> Script {
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),
+        // R1854000: a list, the ingredients' stages in order.
+        stages: concat(records.iter().map(|s| s.stages.clone())),
         tribute_when: None,
         would_counter: None,
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
@@ -1275,6 +1305,21 @@ fn fused_mode_allowed(records: &[Script]) -> Option<ModeAllowedHook> {
     }
     Some(mode_allowed_hook(move |state, player, option| {
         checks.iter().all(|check| check(state, player, option))
+    }))
+}
+
+/// R1851002: a fusion may be played only while every ingredient's play gate holds, as it needs every
+/// ingredient's needed pick (R703, whose declarations it carries in order).
+fn fused_play_allowed(records: &[Script]) -> Option<PlayAllowedHook> {
+    let gates: Vec<PlayAllowedHook> = records
+        .iter()
+        .filter_map(|record| record.play_allowed.clone())
+        .collect();
+    if gates.is_empty() {
+        return None;
+    }
+    Some(play_allowed_hook(move |state, player| {
+        gates.iter().all(|gate| gate(state, player))
     }))
 }
 
@@ -1922,7 +1967,15 @@ fn keep_instance(
         .iter()
         .flat_map(|card| card.granted_keywords.iter().cloned())
         .collect();
-    let granted = union_keywords(&all_granted);
+    let mut granted = union_keywords(&all_granted);
+    // R1852001: and keeps a granted Starship Piece only when the kept card had it granted itself.
+    if !kept
+        .granted_keywords
+        .iter()
+        .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+    {
+        granted.retain(|keyword| keyword.kind() != KeywordKind::StarshipPiece);
+    }
     let before = crate::catalog::def_of(Some(&*state), &kept.def_id).clone();
 
     // R102: the price each ingredient's text reads as its own, recorded before any of them ceases to
@@ -1962,6 +2015,9 @@ fn keep_instance(
         live.armor_override = None;
     }
 
+    // R1086, R1829000: an Equip card standing on its host uncovers it as it ceases to exist, but the
+    // host is the kept card and never left: it keeps the turn it arrived.
+    let arrived = find_instance(state, &kept.id).and_then(|card| card.summoned_turn);
     // R77 and R86: an ingredient that is not kept ceases to exist — no graveyard, no exile pile, no
     // Death trigger and nothing destroyed — and one that stood on the field has left it (R174).
     for card in ingredients {
@@ -1969,6 +2025,9 @@ fn keep_instance(
             continue;
         }
         crate::zones::cease_to_exist(state, &mut card.clone());
+    }
+    if let Some(live) = find_instance_mut(state, &kept.id) {
+        live.summoned_turn = arrived;
     }
     find_instance(state, &kept.id)
         .cloned()

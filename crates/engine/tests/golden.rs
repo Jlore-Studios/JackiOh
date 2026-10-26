@@ -175,6 +175,30 @@ mod a_doctored_trace {
     }
 }
 
+/// R1846003: no card of a shipped set asks for a BUSTED or complicated pool (R1846000), so the
+/// recorded games replay to their recorded hashes whatever the lists hold: every card in both, or
+/// none. One shard's games under each, on this thread's override of the compiled metrics.
+mod r1846003_the_card_metrics_reach_no_recorded_game {
+    use super::*;
+    use jackioh_engine::testkit::{clear_overrides, register_code_lines};
+
+    #[test]
+    fn r1846003_a_shard_replays_alike_with_every_card_or_none_busted_and_complicated() {
+        register_all();
+        let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
+        for lines in [every, Vec::new()] {
+            register_code_lines(lines);
+            for (index, line) in golden_lines().into_iter().enumerate().step_by(GOLDEN_SHARDS) {
+                if let Err(mismatch) = replay_line(index, line) {
+                    clear_overrides();
+                    panic!("{}", mismatch.report());
+                }
+            }
+            clear_overrides();
+        }
+    }
+}
+
 /// One test per shard of the games, numbered 0.. in order; `GOLDEN_SHARDS` is how many there are.
 macro_rules! golden_shards {
     ($($name:ident = $shard:expr),* $(,)?) => {

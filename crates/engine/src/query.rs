@@ -135,6 +135,27 @@ pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hand_cap.unwrap_or(HAND_CAP)
 }
 
+/// R1840000: a copy of this player's Resource tray, oldest first; empty while it holds none. Its
+/// owner reads it, the other player its count (§10.8), so a hook asks it of its own controller.
+pub fn resource_tray_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    state.players[player].resource_tray.clone().unwrap_or_default()
+}
+
+/// R1840000: whether this player's Resource tray holds a Resource of one of these definitions
+/// ("if you have a Narcor").
+pub fn tray_holds(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
+    state.players[player]
+        .resource_tray
+        .iter()
+        .flatten()
+        .any(|card| def_ids.contains(&card.def_id.as_str()))
+}
+
+/// R1840005: this player's Credits, 0 until first gained. Public (§10.8).
+pub fn market_credits_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].market_credits.unwrap_or(0)
+}
+
 /// The mana this player holds now and has not spent: `turnEnded.unspentMana` is this number as the
 /// turn ends (R62), which #18 Bread and Butter's X reads, so its preview (R280) reads the same number
 /// off the same function for the turn as it stands. Mana is public (§10.8).
@@ -172,7 +193,7 @@ pub fn played_earlier<'a>(state: &GameState, player: PlayerId, card: impl Into<C
         CardOrId::Card(card) => (card.id.as_str(), Some(card)),
         CardOrId::Id(id) => (id, find_instance(state, id)),
     };
-    if instance.is_some_and(|instance| matches!(instance.zone, Zone::Hand { .. })) {
+    if instance.is_some_and(|instance| matches!(instance.zone, Zone::Hand { .. } | Zone::Tray { .. })) {
         return log.cards_played;
     }
     match log.played_ids.iter().rposition(|played| played == id) {
@@ -426,7 +447,7 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
     }
     let granted = permanents_held_by(state, player).iter().any(|held| {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if crate::preview::lasting_text_dormant(state, held) {
+        if crate::preview::lasting_text_off(state, held) {
             return false;
         }
         match crate::scripts::flags_of(state, held).quickstriker {

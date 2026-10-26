@@ -431,6 +431,8 @@ pub fn allure_enemy_units() -> Effect {
                 .into_iter()
                 .cloned(),
         );
+        // R1839000: a Dormant card is marked by nothing, so Allure passes it by.
+        units.retain(|unit| !crate::slumber::is_slumbering(unit));
         for unit in units {
             let mut data: IndexMap<String, Value> = IndexMap::new();
             data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
@@ -509,7 +511,8 @@ pub fn duo_radiant(args: DuoRadiantArgs) -> Effect {
 /// R1850001 (Stinkyscape #110 iKwzki's Radiant face): "Squad with all your permanents and make them
 /// Radiant next turn" — `duo_radiant` for each permanent its controller has on the field now: the top
 /// of each unit zone's pile in lane order, then each backrow zone's card in lane order (a Unit standing
-/// there among them), as Allure walks the board. Each is one delayed entry with Duo's mark.
+/// there among them), as Allure walks the board. Each is one delayed entry with Duo's mark. A Dormant
+/// card is marked by nothing (R1839000), so Squad passes it by.
 pub fn squad_radiant() -> Effect {
     Effect::new("squadRadiant", move |ctx| {
         let owner = ctx.controller;
@@ -517,6 +520,7 @@ pub fn squad_radiant() -> Effect {
             .into_iter()
             .chain(slots_of(owner, Row::Backrow))
             .filter_map(|slot| card_at(ctx.state, slot).cloned())
+            .filter(|card| !crate::slumber::is_slumbering(card))
             .collect();
         for card in cards {
             schedule_radiant(ctx, &card);

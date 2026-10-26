@@ -7,13 +7,17 @@
 // read is pending, or when it fails, nothing counts as owned past the defaults and starters. The
 // answer is the caller's own, keyed on its token by the server; nobody else's ownership is read or
 // guessed (CLAUDE.md rule 7).
+//
+// R1833000: the same answer's account list is mounted as `AccountCosmeticsOwned`
+// (`ViewerAccountCosmetics`), so the playmat, backdrop and card-back pickers offer, and the viewer's
+// side wears, only what the account owns. Both read one cached answer per session.
 
 import { createElement, useEffect, useState, type ReactElement, type ReactNode } from "react";
 
 import { sessionIdFromToken } from "../auth/redirect.ts";
 import { getOwnedCosmetics, type OwnedCosmeticsResponse } from "../net/api.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
-import { CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
+import { AccountCosmeticsOwned, CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
 
 /** The kinds a card carries: the three slots and the full art. The account's kinds are no card's. */
@@ -35,24 +39,41 @@ export function ownedCardCosmetics(owned: OwnedCosmeticsResponse): OwnedByCard {
   return byCard;
 }
 
+/**
+ * R1833000: the account cosmetics `owned` holds: a row naming a cosmetic the registry does not know,
+ * or a per-card one, is not one.
+ */
+export function ownedAccountCosmetics(owned: OwnedCosmeticsResponse): ReadonlySet<string> {
+  return new Set(
+    owned.account.filter((id) => {
+      const found = COSMETICS.find((cosmetic) => cosmetic.id === id);
+      return found !== undefined && !PER_CARD_KINDS.has(found.kind);
+    }),
+  );
+}
+
+/** R1833000: no account cosmetic owned past the defaults and starters: an account's while its ownership is unread, or a pending one's. */
+export const NO_ACCOUNT_COSMETICS: ReadonlySet<string> = new Set();
+
 /** The provider session a token belongs to (its `session_id` claim), else the token itself. */
 function sessionOf(token: string): string {
   return sessionIdFromToken(token) ?? token;
 }
 
-let cached: { session: string; read: Promise<OwnedByCard> } | null = null;
+let cached: { session: string; read: Promise<OwnedCosmeticsResponse> } | null = null;
 
 /**
- * The per-card cosmetics `token`'s account owns: one read per session, kept for the page (a renewed
- * token of the same session reuses it), and read again for another session or after a failure.
+ * What `token`'s account owns, as `GET /api/cosmetics` answers: one read per session, kept for the
+ * page (a renewed token of the same session reuses it), and read again for another session or after
+ * a failure.
  */
-export function readOwnedFullArt(
+function readOwnedCosmetics(
   token: string,
-  fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
-): Promise<OwnedByCard> {
+  fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse>,
+): Promise<OwnedCosmeticsResponse> {
   const session = sessionOf(token);
   if (cached !== null && cached.session === session) return cached.read;
-  const entry = { session, read: fetchOwned(token).then(ownedCardCosmetics) };
+  const entry = { session, read: fetchOwned(token) };
   cached = entry;
   entry.read.catch(() => {
     if (cached === entry) cached = null;
@@ -60,9 +81,25 @@ export function readOwnedFullArt(
   return entry.read;
 }
 
+/** The per-card cosmetics `token`'s account owns, by card, from the session's one read. */
+export function readOwnedFullArt(
+  token: string,
+  fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
+): Promise<OwnedByCard> {
+  return readOwnedCosmetics(token, fetchOwned).then(ownedCardCosmetics);
+}
+
+/** R1833000: the account cosmetics `token`'s account owns, from the session's one read. */
+export function readOwnedAccountCosmetics(
+  token: string,
+  fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
+): Promise<ReadonlySet<string>> {
+  return readOwnedCosmetics(token, fetchOwned).then(ownedAccountCosmetics);
+}
+
 /**
  * Drops the session's answer, so the next screen reads what the account owns again: called where an
- * answer may have granted a per-card cosmetic (a card pack, a cosmetic pack, a token, the Chase Shard).
+ * answer may have granted a cosmetic, per-card or account (a card pack, a cosmetic pack, a token, the Chase Shard).
  */
 export function forgetOwnedCosmetics(): void {
   cached = null;
@@ -104,6 +141,44 @@ export function ViewerFullArt({
   // Another session's answer is never this one's.
   const cards = owned !== null && owned.session === session ? owned.cards : NO_FULL_ART;
   return createElement(FullArtOwned, { owned: gated ? cards : "every" }, children);
+}
+
+/**
+ * R1833000: the account cosmetics the pickers and the viewer's side below it own: `token`'s
+ * account's once ownership decides (`gated`), none past the defaults and starters for no token (a
+ * pending account's screen) or until the read answers, and every one otherwise.
+ */
+export function ViewerAccountCosmetics({
+  token,
+  gated = FULL_ART_GATED,
+  read = readOwnedAccountCosmetics,
+  children,
+}: {
+  token: string | null;
+  gated?: boolean;
+  read?: (token: string) => Promise<ReadonlySet<string>>;
+  children?: ReactNode;
+}): ReactElement {
+  const session = token === null ? null : sessionOf(token);
+  const [owned, setOwned] = useState<{ session: string; ids: ReadonlySet<string> } | null>(null);
+  useEffect(() => {
+    if (!gated || token === null) return;
+    let current = true;
+    read(token).then(
+      (ids) => {
+        if (current) setOwned({ session: sessionOf(token), ids });
+      },
+      () => {
+        // Nothing counts as owned past the starters, and the next screen reads again.
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [gated, token, read]);
+  // Another session's answer is never this one's.
+  const ids = owned !== null && owned.session === session ? owned.ids : NO_ACCOUNT_COSMETICS;
+  return createElement(AccountCosmeticsOwned, { owned: gated ? ids : "every" }, children);
 }
 
 export function resetOwnedFullArtForTests(): void {

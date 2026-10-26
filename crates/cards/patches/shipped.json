@@ -296,5 +296,29 @@
     "commit": "4134f4c4f285343a2818ec46befee3aacbb83108",
     "blob": "45224017753dda6797125ab4edb59455421226a3",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "b665a5ae035bfc43bfdb421c599886c0974f1683",
+    "blob": "45224017753dda6797125ab4edb59455421226a3",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.11b",
+    "commit": "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392",
+    "blob": "45224017753dda6797125ab4edb59455421226a3",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392",
+    "blob": "7dc0cfe7212645db135d55efea8293a707714f6a",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.12b",
+    "commit": "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392",
+    "blob": "693d7f46e429b702f420f8caa29a765ecebc715f",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   }
 ]

@@ -19,7 +19,7 @@ use jackioh_server::config::{
     CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY,
     COSMETIC_PACK_SLOTS, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, portrait_of, shipped};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase,
@@ -341,13 +341,14 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
             assert!(*cosmetic_rarity >= CosmeticRarity::Epic, "{:?}", pack.slots[0]);
         }
         CosmeticSlotGrant::Bars => panic!(
-            "the shipped full arts and portraits are Epic and open: {:?}",
+            "the shipped registry has an unowned cosmetic at every tier: {:?}",
             pack.slots[0]
         ),
     }
-    // Every cosmetic granted is owned, on its card or the account; the shipped registry's
-    // droppable ones are the six Epic full arts, each on its card, and the five Epic portraits, on
-    // the account (R1827000).
+    // Every cosmetic granted is owned, on its card when its kind is a card's (a full art, a foil,
+    // a finish or a border) and on the account otherwise (a portrait, R1827000; a playmat, a
+    // backdrop or a card back, R1833000).
+    let registry = shipped().expect("the shipped registry");
     for slot in &pack.slots {
         if let CosmeticSlotGrant::Cosmetic {
             cosmetic_id,
@@ -356,8 +357,12 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
             ..
         } = &slot.grant
         {
-            assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic, "{slot:?}");
-            assert_eq!(card_id.is_some(), portrait_of(cosmetic_id).is_none(), "{slot:?}");
+            let entry = registry
+                .iter()
+                .find(|cosmetic| cosmetic.id == *cosmetic_id)
+                .expect("a shipped cosmetic");
+            assert_eq!(*cosmetic_rarity, entry.rarity, "{slot:?}");
+            assert_eq!(card_id.is_some(), entry.kind.is_per_card(), "{slot:?}");
             assert!(
                 owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await,
                 "{slot:?}"
@@ -468,10 +473,14 @@ async fn r1306000_an_unowned_card_s_cosmetic_also_grants_the_card() {
 #[tokio::test]
 async fn r1306001_a_legendary_or_mythic_roll_falls_to_the_highest_tier_with_something_unowned() {
     let (app, _) = setup().await;
-    // The shipped registry has no Legendary or Mythic cosmetic a pack can drop: its droppable
-    // ones are six Epic full arts. A seed whose first slot rolls Legendary, and one whose first
-    // slot rolls Mythic, each find the Epic one.
-    let registry = shipped().expect("the shipped registry");
+    // A registry with no Legendary or Mythic cosmetic a pack can drop: the shipped one before
+    // #1833's chases (R1833000), whose droppable ones below them are Epic and lower. A seed whose
+    // first slot rolls Legendary, and one whose first slot rolls Mythic, each find an Epic one.
+    let registry: Vec<Cosmetic> = shipped()
+        .expect("the shipped registry")
+        .into_iter()
+        .filter(|cosmetic| !cosmetic.chase)
+        .collect();
     let pool = pack_pool(&app.catalog.defs, PackKind::Global);
     for rolled in [CosmeticRarity::Legendary, CosmeticRarity::Mythic] {
         let seed = (0..)
@@ -494,9 +503,50 @@ async fn r1306001_a_legendary_or_mythic_roll_falls_to_the_highest_tier_with_some
             ..
         } = &pack.slots[0].grant
         else {
-            panic!("an Epic full art was open: {:?}", pack.slots[0]);
+            panic!("an Epic cosmetic was open: {:?}", pack.slots[0]);
         };
         assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic);
+        assert!(owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await);
+    }
+}
+
+#[tokio::test]
+async fn r1833000_a_legendary_or_mythic_slot_grants_a_new_chase() {
+    // The shipped registry's chases since #1833 can drop: a seed whose first slot rolls Legendary,
+    // and one whose first slot rolls Mythic, each grant a chase of that tier instead of falling.
+    let registry = shipped().expect("the shipped registry");
+    let (app, _) = setup().await;
+    let pool = pack_pool(&app.catalog.defs, PackKind::Global);
+    for rolled in [CosmeticRarity::Legendary, CosmeticRarity::Mythic] {
+        let seed = (0..)
+            .map(|at| format!("r1833000-{rolled}-{at}"))
+            .find(|seed| {
+                roll_cosmetic_pack(&pool, &CosmeticHoldings::default(), &registry, seed).slots[0].rarity
+                    == rolled
+            })
+            .expect("a seed that rolls the tier");
+        let (app, _) = setup().await;
+        grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+        let pack = open_cosmetic_pack(&app, PROFILE, &registry, &seed)
+            .await
+            .expect("the opening");
+        assert_eq!(pack.slots[0].rarity, rolled);
+        let CosmeticSlotGrant::Cosmetic {
+            cosmetic_id,
+            cosmetic_rarity,
+            card_id,
+            ..
+        } = &pack.slots[0].grant
+        else {
+            panic!("a {rolled} chase was open: {:?}", pack.slots[0]);
+        };
+        assert_eq!(*cosmetic_rarity, rolled, "{:?}", pack.slots[0]);
+        let entry = registry
+            .iter()
+            .find(|cosmetic| cosmetic.id == *cosmetic_id)
+            .expect("a shipped cosmetic");
+        assert!(entry.chase && !entry.starter, "{entry:?}");
+        assert_eq!(card_id.is_some(), entry.kind.is_per_card(), "{entry:?}");
         assert!(owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await);
     }
 }
@@ -815,7 +865,7 @@ async fn r1306002_a_chase_cosmetic_is_allowed_and_the_route_buys_the_shipped_reg
     .expect("the purchase");
     assert!(owns_cosmetic(&app, Some(&cards[0]), "foil-fixture-chase").await);
 
-    // The shipped registry: its Legendaries are starters, owned by everyone, so the route
+    // The shipped registry: its first two Legendaries are starters, owned by everyone, so the route
     // refuses them, and so it does a full art the account has no card for.
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     let before = everything(&app).await;
@@ -835,6 +885,18 @@ async fn r1306002_a_chase_cosmetic_is_allowed_and_the_route_buys_the_shipped_reg
         assert_eq!(status, 409, "{body}: {answer}");
     }
     assert_eq!(everything(&app).await, before);
+    // #1833's chases are no starters (R1833000): the route buys one on a card the account owns.
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": "foil-molten-gold", "cardId": cards[0] }),
+    )
+    .await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owns_cosmetic(&app, Some(&cards[0]), "foil-molten-gold").await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
 }
 
 #[tokio::test]
@@ -906,15 +968,15 @@ async fn r1306002_buying_refuses_an_owned_cosmetic_and_anything_below_legendary(
 }
 
 #[tokio::test]
-async fn r1306002_a_full_bar_holds_when_no_legendary_or_mythic_cosmetic_exists() {
+async fn r1306002_a_full_bar_holds_full_and_buys_no_starter() {
     let (app, token) = setup().await;
     let cards = three_cards(&app);
     own(&app, &cards[..1]).await;
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     grant_item(&app, InventoryItem::CosmeticPack, "", 2).await;
 
-    // The shipped registry holds no Legendary or Mythic a player can own: its two Legendaries
-    // are starters. The bar holds full.
+    // A full bar holds full through an opening, over the shipped registry and over one with
+    // nothing to drop, until a purchase empties it.
     let (status, _, body) = call(
         &app,
         "POST",
@@ -940,7 +1002,7 @@ async fn r1306002_a_full_bar_holds_when_no_legendary_or_mythic_cosmetic_exists()
     assert_eq!(rows.len(), 1);
     assert!(rows[0].reference.is_none());
 
-    // And nothing it could buy exists to buy: the shipped registry's Legendaries are starters.
+    // A starter Legendary is owned by every account already, so it is nothing to buy.
     let before = everything(&app).await;
     let (status, _, body) = call(
         &app,
@@ -1078,6 +1140,54 @@ async fn r1306003_an_opening_replays_from_its_stored_seed() {
         "r1306003",
     );
     assert_eq!(again.slots, pack.slots);
+}
+
+#[tokio::test]
+async fn r1833000_a_full_shard_bar_buys_a_new_chase_and_the_openings_replay() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    nearly_full(&app).await;
+
+    // The opening that fills the bar, through the route over the shipped registry, replays from
+    // its log as every opening does (R1306003), its chases among the cosmetics it logged.
+    let (before_ledger, before_holdings) = (ledger(&app).await, holdings(&app).await);
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let pack = opened(&body);
+    assert_eq!(pack.shard_bar.points, CHASE_SHARD_PACKS);
+    assert_replays(&app, &before_ledger, &before_holdings, &pack).await;
+
+    // The full bar buys #1833's Mythic playmat, on the account, and empties.
+    assert!(!owns_cosmetic(&app, None, "table-astral").await);
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": "table-astral" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owns_cosmetic(&app, None, "table-astral").await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
+    let bought: Vec<_> = ledger(&app)
+        .await
+        .cosmetics
+        .into_iter()
+        .filter(|row| row.reason == EconomyReason::ChaseShard)
+        .collect();
+    assert_eq!(bought.len(), 1);
+    assert_eq!(
+        (bought[0].card_id.as_deref(), bought[0].cosmetic_id.as_str()),
+        (None, "table-astral")
+    );
 }
 
 #[tokio::test]

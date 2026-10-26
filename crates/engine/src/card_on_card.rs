@@ -17,14 +17,15 @@ use crate::effects::targets::cards_in_scope_aimed;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, HeldCard, find_instance};
-use crate::wire::{KeywordKind, TargetAim};
+use crate::wire::{KeywordKind, TargetAim, ZoneName};
 
 /// R1850003: whether the card holding `held` is gone — it has left the field since the card was taken,
-/// or stands on it no longer (a holder that never landed holds nothing).
+/// or is on it no longer (a holder that never landed holds nothing). A holder still on the field holds
+/// though it does not act there: beneath a Stack pile's top (§3.2) or Dormant (R1839000).
 fn holder_gone(sink: &EngineSink<'_>, held: &HeldCard) -> bool {
     crate::stays::left_field_after(sink.state, held.holder_mark, &held.holder_id)
         || !find_instance(sink.state, &held.holder_id)
-            .is_some_and(|holder| crate::zones::acts_on_field(sink.state, holder))
+            .is_some_and(|holder| holder.zone.z() == ZoneName::Field)
 }
 
 /// R1850003: summon every held card whose holder is gone, in the order they were taken — for the
@@ -87,7 +88,8 @@ fn standing_rules(state: &GameState) -> (Vec<String>, Vec<(String, i32)>) {
             .take(BACKROW_ZONES as usize)
             .filter_map(Option::as_ref);
         for card in tops.chain(backrow) {
-            if crate::preview::lasting_text_dormant(state, card) {
+            // R1487000, R1839000: a face-down or Dormant card's lasting text is off.
+            if crate::preview::lasting_text_off(state, card) {
                 continue;
             }
             let script = crate::scripts::script_of(state, card);
@@ -113,8 +115,9 @@ pub fn standing_text(sink: &mut EngineSink<'_>) -> bool {
 }
 
 /// R1850002: the exile auras of `sources`, each exiling the cards it reaches as the walk comes to it: a
-/// source or a card already gone is passed by. A card never exiles itself, and a face-down card is
-/// never reached (its cost is hidden). True when any card was exiled.
+/// source or a card already gone is passed by. A card never exiles itself, a face-down card is never
+/// reached (its cost is hidden), and a card with a keyword kind the aura spares is passed by. True when
+/// any card was exiled.
 fn exile_by_auras(sink: &mut EngineSink<'_>, sources: &[String]) -> bool {
     let mut changed = false;
     for id in sources {
@@ -144,6 +147,10 @@ fn exile_by_auras(sink: &mut EngineSink<'_>, sources: &[String]) -> bool {
                             .cost
                             .as_ref()
                             .is_some_and(|filter| !matches_cost(&ctx, &card, filter))
+                        || aura
+                            .not_keywords
+                            .iter()
+                            .any(|kind| crate::layers::unit_has(ctx.state, &card, *kind))
                     {
                         continue;
                     }

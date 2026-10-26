@@ -33,9 +33,8 @@ import { CATALOG } from "@jackioh/cards";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
+import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
-import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
-import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
@@ -47,6 +46,7 @@ import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
 import { getPacks, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
 import { useSetting } from "../settings/store.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
   PACK_FLIP_MS,
   PACK_HOLD_MS,
@@ -263,8 +263,10 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           {opened.slots.map((slot, index) => {
             const hold = holdsToFlip(slot.rarity);
             const shown = shows(index);
-            // R1827000: a dropped portrait is an account cosmetic, on no card: its face is the portrait's art.
-            const portrait = slot.grant.kind === "cosmetic" ? portraitOfCosmetic(slot.grant.cosmeticId) : null;
+            // R1827000, R1833000: a dropped cosmetic shows its look in the card's place: a portrait's
+            // art, a playmat's or backdrop's mini board, a card back, a per-card one on its card.
+            const cosmetic = slot.grant.kind === "cosmetic" ? slot.grant : null;
+            const look = cosmetic !== null && hasLook(cosmetic.cosmeticId, slot.cardId) ? cosmetic.cosmeticId : null;
             return (
               <div
                 key={index}
@@ -272,21 +274,29 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 data-testid={packTestid.slot(index)}
                 data-rarity={slot.rarity}
                 data-grant={slot.grant.kind}
+                data-cosmetic-rarity={cosmetic?.cosmeticRarity}
                 data-revealed={shown ? "true" : "false"}
                 data-holding={holding === index ? "true" : undefined}
               >
                 {shown ? (
                   <>
                     <div className="pack-slot__face">
-                      {portrait === null ? (
+                      {look === null ? (
                         <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
                       ) : (
-                        <PortraitArt portrait={portrait} className="pack-slot__portrait" />
+                        <CosmeticLook id={look} cardId={slot.cardId} />
                       )}
                     </div>
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot)}
                     </p>
+                    {/* R1833000: a cosmetic's own rarity, never its card's (R1333000), a chase marked. */}
+                    {cosmetic === null ? null : (
+                      <p className="pack-slot__cosmetic-rarity">
+                        {t(cosmetic.cosmeticRarity)}
+                        {COSMETICS.some((entry) => entry.id === cosmetic.cosmeticId && entry.chase) ? ` · ${t("Chase")}` : null}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <button

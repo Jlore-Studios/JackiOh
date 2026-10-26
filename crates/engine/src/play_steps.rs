@@ -259,11 +259,13 @@ pub enum Awaiting {
     CastX,
 }
 
-/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard.
+/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard; R1840003 — a
+/// Resource played from its player's Resource tray.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum PlaySource {
     Graveyard,
+    Tray,
 }
 
 /// `PlayRun.repeat` (TS `NonNullable<PlayRun["repeat"]>`): the repeat being re-resolved, or a cast's
@@ -628,10 +630,12 @@ fn hand_card<'a>(state: &'a GameState, player: PlayerId, instance_id: &str) -> O
 enum PlayFrom {
     Hand,
     Graveyard,
+    Tray,
 }
 
-/// E11, R454: where a play takes its card from — the player's hand, or their own graveyard, where a
-/// permission may let them play it (`graveyard_play.rs`). Undefined when the card is in neither.
+/// E11, R454: where a play takes its card from — the player's hand, their own Resource tray
+/// (R1840003), or their own graveyard, where a permission may let them play it (`graveyard_play.rs`).
+/// Undefined when the card is in none of them.
 fn play_source_of(
     state: &GameState,
     player: PlayerId,
@@ -639,6 +643,15 @@ fn play_source_of(
 ) -> Option<(CardInstance, PlayFrom)> {
     if let Some(in_hand) = hand_card(state, player, instance_id) {
         return Some((in_hand.clone(), PlayFrom::Hand));
+    }
+    // R1840003: a Resource in the player's own tray is played as from hand.
+    if let Some(in_tray) = state.players[player]
+        .resource_tray
+        .iter()
+        .flatten()
+        .find(|card| card.id == instance_id)
+    {
+        return Some((in_tray.clone(), PlayFrom::Tray));
     }
     let in_graveyard = state.players[player]
         .graveyard
@@ -684,7 +697,7 @@ pub fn validate_play(
         )));
     };
     // R454: Plague Counters pay only for a play from the graveyard a permission lets them pay for.
-    if from == PlayFrom::Hand && action.plague.is_some() {
+    if from != PlayFrom::Graveyard && action.plague.is_some() {
         return Err(EngineError::new(
             "only a play from your graveyard can spend Plague Counters",
         ));
@@ -727,9 +740,13 @@ pub fn validate_play(
     // read as the Spell reveals (R1045), so none is stamped.
     let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> =
         action.face_down.map(|reveal| (reveal, sink.state.turn, None));
+    // R1848003: an X-cost card whose X is set is played for that X, which the play names (`cardPlayed`).
+    let fixed_x = card.fixed_x.filter(|_| is_x_cost(sink.state, &card));
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
+        } else if let Some(fixed) = fixed_x {
+            stamped.x = Some(fixed);
         }
         if embiggens {
             stamped.embiggened = Some(action.embiggen == Some(true));
@@ -823,6 +840,10 @@ pub fn validate_play(
     // B5 E14, R546: a copier's copy is fixed as its play is checked, the choices with it.
     if copies_text(&card) {
         run.copied = Some(copied_text_of(state, &card));
+    }
+    // R1840003: a play from the tray takes its card from there at step 4.
+    if from == PlayFrom::Tray {
+        run.source = Some(PlaySource::Tray);
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
@@ -1267,7 +1288,8 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             }
         } else {
             match zone {
-                Zone::Hand { player } => {
+                // R1840003: a play from the tray is a play as from hand, so its card is replaced there.
+                Zone::Hand { player } | Zone::Tray { player } => {
                     if player != run.player {
                         return;
                     }
@@ -1276,9 +1298,10 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
                 _ => return,
             }
         }
-        // R177: a card replaced in a hand was never the other player's to read.
+        // R177: a card replaced in a hand (or a Resource tray, R1840000) was never the other player's
+        // to read.
         let hidden_from: Vec<PlayerId> = match zone {
-            Zone::Hand { player } => vec![opponent_of(player)],
+            Zone::Hand { player } | Zone::Tray { player } => vec![opponent_of(player)],
             _ => Vec::new(),
         };
 
@@ -1334,10 +1357,11 @@ fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
     let Some(card) = snapshot(sink.state, &run.instance_id) else {
         return;
     };
-    let playing = if run.source == Some(PlaySource::Graveyard) {
-        in_own_graveyard(sink.state, run.player, &card)
-    } else {
-        card.zone == (Zone::Hand { player: run.player })
+    let playing = match run.source {
+        Some(PlaySource::Graveyard) => in_own_graveyard(sink.state, run.player, &card),
+        // R1840003: a play from the tray takes its card from there.
+        Some(PlaySource::Tray) => card.zone == (Zone::Tray { player: run.player }),
+        None => card.zone == (Zone::Hand { player: run.player }),
     };
     let embiggen_card = crate::play_choices::has_embiggen_price(sink.state, &card);
     if playing && let Some(live) = find_instance_mut(sink.state, &card.id) {
@@ -1547,11 +1571,11 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         embiggened: card.embiggened,
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so, for a client to animate it from there. Public: the
-        // graveyard is.
-        from: if run.source == Some(PlaySource::Graveyard) {
-            Some(PlayedFrom::Graveyard)
-        } else {
-            None
+        // graveyard is. R1840003: so does a play from the tray, which the tray's count already shows.
+        from: match run.source {
+            Some(PlaySource::Graveyard) => Some(PlayedFrom::Graveyard),
+            Some(PlaySource::Tray) => Some(PlayedFrom::Tray),
+            None => None,
         },
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
@@ -1764,6 +1788,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             .map(|n| crate::params::declared_or(sink.state, b, "buffs", n))
     });
 
+    // R1852007: whether the play lands on a Dormant Starship, read before it lands.
+    let onto_starship = run
+        .zone
+        .and_then(|zone| card_at(sink.state, zone))
+        .is_some_and(crate::starship::exiles_stacked_play);
     let placed = match run.zone {
         Some(zone) => {
             // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
@@ -1826,6 +1855,16 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    // R1852007: a Stack card played onto a Dormant Starship lands, is played and counted, and is exiled
+    // at once, before anything of it resolves: step 5 finds it gone, so its Cry is lost (R17). The
+    // Starship tops its zone again, still Dormant.
+    if placed && onto_starship {
+        if let Some(on_top) = find_instance(sink.state, &card.id).cloned() {
+            crate::zones::exile_to_pile(sink, on_top);
+        }
+        run.echo_queued = true;
+        return true;
+    }
     // R783010: a Crater Unit Locks the zone it was played into, before its Cry.
     crate::crater::lock_on_arrival(sink, &card.id);
     if placed
@@ -1863,6 +1902,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // E39 (Classic+ #14): "the next Spell you play gains …" is gained as it is played, as Echo is (R178).
     let card = live(sink.state, &card);
     stamp_next_spell(sink, &card, run.player);
+    // R1848002: "your next Spell this turn has Poisonous" is had as it is played, as Forever&'s is.
+    let card = live(sink.state, &card);
+    give_next_spell_keywords(sink, &card, run.player);
     true
 }
 
@@ -1886,6 +1928,16 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         if run.flashback == Some(true) {
             card.flashback_spent = Some(true);
         }
+        return true;
+    }
+    // R1840003: a play from the tray takes the Resource out of its player's own tray.
+    if run.source == Some(PlaySource::Tray) {
+        let in_tray = find_instance(state, &card.id)
+            .is_some_and(|held| held.zone == (Zone::Tray { player: run.player }));
+        if !in_tray {
+            return false;
+        }
+        remove_from_any_zone(state, card);
         return true;
     }
     let side = &mut state.players[run.player];
@@ -1936,6 +1988,46 @@ fn stamp_next_spell(sink: &mut EngineSink<'_>, card: &CardInstance, player: Play
     }
 }
 
+/// R1848002 (Stinkyscape #13 Asphyxiants Cloud): every live `keywordNextSpell` modifier of the player
+/// gives its keyword to the Spell being played face-up and is spent — "your next Spell this turn has
+/// Poisonous". The keyword is a granted one, read through the layers wherever the Spell's keywords are
+/// (§4.4 step 7's Poisonous, R346), and R78's reset takes it off as the Spell lands from the resolving
+/// zone once its Echo repeats are done, so it lasts this resolution alone. A cast is a play (R70); a
+/// Spell set face-down is a Trap until it resolves (R783005) and a countered play never reaches step 4,
+/// so both leave it waiting.
+fn give_next_spell_keywords(sink: &mut EngineSink<'_>, card: &CardInstance, player: PlayerId) {
+    if card_type_of(sink.state, card) != CardType::Spell || card.set_as.is_some() {
+        return;
+    }
+    let mods = sink.state.players[player].mods.clone();
+    for modifier in &mods {
+        let ModifierKind::KeywordNextSpell { keyword } = &modifier.kind else {
+            continue;
+        };
+        if !modifier_is_live(sink.state, modifier) {
+            continue;
+        }
+        let given = find_instance_mut(sink.state, &card.id).is_some_and(|stamped| {
+            let had = stamped
+                .granted_keywords
+                .iter()
+                .any(|held| held.kind() == keyword.kind());
+            if !had {
+                stamped.granted_keywords.push(keyword.clone());
+            }
+            !had
+        });
+        if given {
+            sink.events.push(GameEvent::KeywordGranted {
+                instance_id: card.id.clone(),
+                keyword: keyword.clone(),
+                lost: None,
+            });
+        }
+        remove_modifier(sink, player, &modifier.id);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Step 5 — resolve the card (§10.5 step 5)
 // ---------------------------------------------------------------------------
@@ -1946,7 +2038,8 @@ fn stamp_next_spell(sink: &mut EngineSink<'_>, card: &CardInstance, player: Play
 fn played_earlier_this_turn(state: &GameState, run: &PlayRun) -> i32 {
     let log = &state.players[run.player].turn_log;
     let id = &run.instance_id;
-    if find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Hand { .. })) {
+    if find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Hand { .. } | Zone::Tray { .. }))
+    {
         return log.cards_played;
     }
     match log.played_ids.iter().rposition(|played| played == id) {
@@ -1995,9 +2088,7 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
     let mut multiples: Vec<i32> = Vec::new();
     for held in crate::zones::acting_on(state, run.player, crate::zones::StandingAt::ItsLane) {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if held.id == played.id
-            || arrived.contains(&held.id)
-            || crate::preview::lasting_text_dormant(state, held)
+        if held.id == played.id || arrived.contains(&held.id) || crate::preview::lasting_text_off(state, held)
         {
             continue;
         }

@@ -1,0 +1,51 @@
+/* The Trade control (R1838000, TradeControl.tsx): the Duos pass control's bar and button
+   (duos/duos.css, `.duos-card-actions` and `.duos-pass`), borrowed for a Tradable hand card on a 1v1
+   board. Just above the card, never over it, so a tap on a phone keeps its click; only the button
+   takes the pointer. On a Duos board the button rides the card bar, where duos.css draws it. */
+
+.trade-bar {
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, calc(-100% - 4px));
+  pointer-events: none;
+}
+
+:root[data-dragging] .trade-bar {
+  display: none;
+}
+
+.trade-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.72em;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.trade-control .duos-pass__label {
+  font-weight: 700;
+}
+
+.trade-control .duos-pass__meta {
+  color: var(--text-dim);
+}
+
+.trade-control:disabled {
+  opacity: 0.55;
+}
+
+/* A finger's target grows to 40px on a touch screen, as the pass control's does (B29). */
+@media (pointer: coarse) {
+  .trade-control {
+    min-height: 40px;
+    padding: 4px 12px;
+    justify-content: center;
+  }
+}

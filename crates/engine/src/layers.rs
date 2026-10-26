@@ -203,12 +203,21 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     let mut sources: Vec<&CardInstance> = Vec::new();
     for player in PLAYER_IDS {
         let side = &state.players[player];
+        // R1839000: a Dormant card's aura is off until it awakens.
         for lane in 1..=UNIT_ZONES {
-            if let Some(top) = unit_top(state, player, lane) {
+            if let Some(top) = unit_top(state, player, lane)
+                && top.slumber.is_none()
+            {
                 sources.push(top);
             }
         }
-        sources.extend(side.carried.iter().flatten().flatten());
+        sources.extend(
+            side.carried
+                .iter()
+                .flatten()
+                .flatten()
+                .filter(|carried| carried.slumber.is_none()),
+        );
         for lane in 1..=BACKROW_ZONES {
             let card = usize::try_from(lane - 1)
                 .ok()
@@ -217,6 +226,7 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
             // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if let Some(card) = card
                 && !crate::preview::lasting_text_dormant(state, card)
+                && card.slumber.is_none()
             {
                 sources.push(card);
             }
@@ -456,7 +466,8 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
     // and an aura is one, so none reaches it: it keeps its damage and its own layers 1 to 4, and the
     // board's auras apply again the moment it resumes on top. Without this an aura that shrinks max
     // health (#46) killed buried cards the top of the pile shielded.
-    let auras: Vec<StatMod> = if is_dormant(state, instance) {
+    // R1839000: no aura reaches a Dormant card either, an effect like any other.
+    let auras: Vec<StatMod> = if is_dormant(state, instance) || crate::slumber::is_slumbering(instance) {
         Vec::new()
     } else {
         match table {

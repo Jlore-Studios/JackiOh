@@ -179,7 +179,8 @@ pub fn cheap_exiler() -> CardDef {
     unit(18512, "cheap-exiler", EXILE_CAP, (4, 4), json!([]))
 }
 
-/// A (4) Human 4/4: "Aura: all non-Human Units are exiled" (Stinkyscape #115 Scornboi's shape).
+/// A (4) Human 4/4: "Aura: all Units that are neither Human, Starship Piece nor Starship are exiled"
+/// (Stinkyscape #115 Scornboi's shape).
 pub fn tag_exiler() -> CardDef {
     unit_with(
         18513,
@@ -453,6 +454,7 @@ pub static COC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(
     let cheap_permanents = |side: &str| ExileAura {
         scope: json_as(json!({ "side": side, "rows": ["units", "backrow"] })),
         cost: Some(json_as(json!({ "maxCost": EXILE_CAP }))),
+        not_keywords: Vec::new(),
     };
     table.insert(
         cheap_exiler().id,
@@ -473,6 +475,7 @@ pub static COC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(
             exile_auras: vec![ExileAura {
                 scope: json_as(json!({ "side": "any", "notTags": ["Human"] })),
                 cost: None,
+                not_keywords: vec![KeywordKind::StarshipPiece, KeywordKind::Starship],
             }],
             ..Script::default()
         }),

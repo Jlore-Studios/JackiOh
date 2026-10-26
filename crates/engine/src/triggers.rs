@@ -378,6 +378,9 @@ pub fn trigger_holder_for(state: &GameState, card: &CardInstance) -> Option<Trig
         Zone::Hand { player } => Some(holder_of(state, card, TriggerZone::Hand, player)),
         Zone::Library { player } => Some(holder_of(state, card, TriggerZone::Library, player)),
         Zone::Graveyard { player } => Some(holder_of(state, card, TriggerZone::Graveyard, player)),
+        // R1839000: a Dormant card registers nothing until it awakens; its "When this awakens" answers
+        // the `awakened` it is awake for.
+        Zone::Field { .. } if crate::slumber::is_slumbering(card) => None,
         Zone::Field { player, row, lane } => {
             // B5 E21: a card dormant under a backrow pile registers nothing, as one under a unit pile does
             // (§3.2, R13, R447); a Unit a carrier holds is a unit on the field (R446).

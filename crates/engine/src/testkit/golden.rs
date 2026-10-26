@@ -33,9 +33,11 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// is and moves the hash alone: R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and
 /// R457 (§6.2; B5 E4), and R943's Created mark and R982's last element, which the Meditative set's
 /// release (R1420, v0.3.5) began to record: the same log, both stripped, still folds to the old
-/// `a798906b`. A change to the game itself re-records the log (R244, R275, R276, R360–R366).
+/// `a798906b`. #1837's tags moved it once more, from `8784adae` (R1837000): the log's last play, p1's
+/// Friend of Felinors, records no Felinor tag in `playedByTag`, and no card in either deck reads one.
+/// A change to the game itself re-records the log (R244, R275, R276, R360–R366).
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
-pub const HOTSEAT_HASH: &str = "8784adae";
+pub const HOTSEAT_HASH: &str = "7044d528";
 
 /// A game's first divergence from its trace.
 pub struct Mismatch {

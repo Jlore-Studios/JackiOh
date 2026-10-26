@@ -410,6 +410,80 @@ pub fn summon(args: SummonArgs) -> Effect {
     })
 }
 
+/// `summonPile`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SummonPileArgs {
+    /// The pile's cards, bottom first; the last is its top, the one that acts (§3.2).
+    pub def_ids: Vec<String>,
+    /// Who controls the pile; its owner too, as its cards are created here (R12).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    /// A named lane; nothing is summoned when that zone is occupied or reserved (R47).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lane: Option<i32>,
+    /// Every card of the pile is Radiant (the Radiant Drone Battleship's layers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R1842000: a layered summon, `def_ids` summoned into one unit zone as a §3.2 Stack pile, first at
+/// the bottom, last on top (the Drone Battleship's layers, so the Shield is fought first). The bottom
+/// takes the zone a summon takes (`zone_for`, R64, R688) and each later card is summoned onto it as
+/// the new top, Stack or not; with no such zone nothing is summoned. Each card is its own summon (no
+/// Cry, R1), and a definition that is not a Unit is passed over. The zone is the part's memo, so a
+/// question a card asks as it arrives (R151) pauses the rest, which resumes onto the same zone (R113).
+pub fn summon_pile(args: SummonPileArgs) -> Effect {
+    lazy_part("summonPile", move |ctx, memo| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let remembered = memo
+            .as_ref()
+            .and_then(Value::as_i64)
+            .and_then(|lane| i32::try_from(lane).ok());
+        let lane = match remembered {
+            Some(lane) => lane,
+            None => {
+                let at = SummonPlacement {
+                    lane: args.lane,
+                    ..SummonPlacement::default()
+                };
+                let Some(slot) = zone_for(ctx, player, Row::Units, &at) else {
+                    return EffectPart::default();
+                };
+                slot.lane
+            }
+        };
+        let source_id = ctx.self_.as_ref().map(|me| me.id.clone());
+        let effects: Vec<Effect> = args
+            .def_ids
+            .iter()
+            .enumerate()
+            .map(|(index, def_id)| {
+                let def_id = def_id.clone();
+                let placement = SummonPlacement {
+                    lane: Some(lane),
+                    stack: (index > 0).then_some(true),
+                    radiant: args.radiant,
+                    source_id: source_id.clone(),
+                    ..SummonPlacement::default()
+                };
+                Effect::new("summonPileCard", move |at| {
+                    let probe = face_probe(&def_id, player, placement.radiant == Some(true));
+                    if card_type_of(at.state, &probe) != CardType::Unit {
+                        return;
+                    }
+                    summon_fresh(at, &def_id, player, &placement);
+                })
+            })
+            .collect();
+        EffectPart {
+            effects,
+            memo: Some(json!(lane)),
+        }
+    })
+}
+
 /// What §10.7's copy semantics need on top of a placement: R57's two #61 deviations.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

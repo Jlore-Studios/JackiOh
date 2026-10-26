@@ -74,7 +74,15 @@ function rowNames(section: TableSection): string[] {
  * glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
-  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based", "Luck X"],
+  "§6.1": [
+    "Can't attack or be attacked",
+    "A keyword while a condition holds",
+    "Luck-based",
+    "Luck X",
+    // R1846000: card metrics no shipped card prints yet; the Stinkyscape cards that name them bring their terms.
+    "BUSTED",
+    "Complicated",
+  ],
   "§6.2": [
     "Cry and Death",
     "After this is attacked",
@@ -115,6 +123,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Answer questions in a row",
     "Alternative win condition",
     "Win the game",
+    // #1843 (R1843000, R1843002): no shipped card shows either until the Stinkyscape set does.
+    "Vote to remove",
+    "Escape the Universe",
     "Switch position",
     "Forced attack",
     "Cancel an attack",
@@ -127,6 +138,22 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1848001–R1848006: Stinkyscape's spell verbs, which no card prints until the set ships; its card
+    // parts make a term of any its texts bold (Inflation).
+    "Trample onto adjacent Units",
+    "Next Spell keyword",
+    "Set X",
+    "Melee",
+    "Inflation",
+    // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
+    "Gain a Resource",
+    "Credits",
+    // R1854000–R1854004: Stinkyscape's staged Quests, which no card prints until the set ships; its card
+    // parts make a term of any its texts bold.
+    "Quest stages",
+    "Complete the current stage",
+    "Hear back",
+    "Steal mana crystals",
     // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
     // them (#1836), which may make a term of one (Duo, Squad).
     "Copy a Unit's text",
@@ -161,6 +188,8 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Quickdraw",
   "Float",
   "Activate",
+  "When this awakens",
+  "When launched",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds, which patch v0.2.0's cards print. */
@@ -170,6 +199,7 @@ const STATUSES: readonly StatusTermId[] = [
   "Only Units in this lane can attack this",
   "Berserk",
   "Frozen",
+  "Dormant",
   "Combat keyword",
 ];
 
@@ -198,6 +228,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Look at a hand",
   "Allure",
   "Freeze",
+  "Awaken",
+  "Launch",
   "Jade Counter",
   "Exile",
   "Hand size",
@@ -242,6 +274,9 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Cloaked: "CK",
   Crater: "CR",
   Flashback: "FB",
+  Tradable: "TD",
+  "Starship Piece": "SP",
+  Starship: "SS",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -760,7 +795,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   it("R512 every new term has at least one catalog text that prints it", () => {
     // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
     // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
-    const unprinted: readonly GlossaryTermId[] = ["Frozen"];
+    // R1839000: and Dormant is a §6.1 status no card prints until Stinkyscape's cards ship.
+    const unprinted: readonly GlossaryTermId[] = ["Frozen", "Dormant"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
@@ -942,6 +978,29 @@ describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () =>
     expect(GLOSSARY.Allure.rule).toContain("permanents");
     // Jade Beauty keeps Allure-ing Units only, as it prints.
     expect(played("meditative-039-5")).toContain("Allure every enemy Unit.");
+  });
+});
+
+describe("R1839000: Dormant, When this awakens and Awaken", () => {
+  it("R1839000 R1839002 Dormant is a §6.1 status, When this awakens a §6.2 trigger and Awaken a §6.3 verb, each bold where a card prints it", () => {
+    expect(GLOSSARY.Dormant.section).toBe("§6.1");
+    expect(GLOSSARY["When this awakens"].section).toBe("§6.2");
+    expect(GLOSSARY.Awaken.section).toBe("§6.3");
+    expect(termsIn("Dormant for 2 turns. When this awakens, deal 3 damage.")).toEqual(["Dormant", "When this awakens"]);
+    expect(termsIn("Activate: Awaken this.")).toEqual(["Activate", "Awaken"]);
+    // A card under a Stack pile's top is buried to a player: plain words, never the keyword.
+    expect(termsIn("the dormant cards beneath it")).toEqual([]);
+  });
+});
+
+describe("R1852000: Starship Piece, Starship, When launched and Launch", () => {
+  it("R1852000 R1852003 Starship Piece and Starship are §6.1 keywords, When launched a §6.2 trigger and Launch a §6.3 verb, each bold where a card prints it", () => {
+    expect(GLOSSARY["Starship Piece"].section).toBe("§6.1");
+    expect(GLOSSARY.Starship.section).toBe("§6.1");
+    expect(GLOSSARY["When launched"].section).toBe("§6.2");
+    expect(GLOSSARY.Launch.section).toBe("§6.3");
+    expect(termsIn("Starship Piece. When launched, gain 2 random Combat Keywords.")).toEqual(["Starship Piece", "When launched"]);
+    expect(termsIn("If you are building a ship, Launch it.")).toEqual(["Launch"]);
   });
 });
 

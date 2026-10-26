@@ -18,7 +18,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
     TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
-    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view,
+    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view, units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 
@@ -727,11 +727,12 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
 }
 
 /// One side's parts of `search_signature` beyond its units and backrow (#898): its mana maximum and
-/// riders, a lost refresh still to come (R844), its zone Locks, its modifiers, this turn's log, its
-/// fatigue, Jade, extra turns and hand cap, its graveyard and exile, and its backrow piles. Each is
-/// pushed only when it is not the default, as R1224's debt is, so a position that has none of them
-/// signs as before; and each is kept free of the order the moves came in (sorted, the engine's sequence
-/// ids left out), so two orders of the same moves still sign alike for the beam's duplicate check.
+/// riders, a lost refresh still to come (R844), stolen mana crystals (R1854003), its zone Locks, its
+/// modifiers, this turn's log, its fatigue, Jade, extra turns and hand cap, its graveyard and exile,
+/// and its backrow piles. Each is pushed only when it is not the default, as R1224's debt is, so a
+/// position that has none of them signs as before; and each is kept free of the order the moves came in
+/// (sorted, the engine's sequence ids left out), so two orders of the same moves still sign alike for
+/// the beam's duplicate check.
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -744,6 +745,10 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     // R844: a lost refresh still to come, only while one is.
     if let Some(through) = side.lost_refresh_through {
         parts.push(format!("R{player}{through}"));
+    }
+    // R1854003: mana crystals a steal moved, which every later refresh reads, only while some are.
+    if let Some(crystals) = side.mana_crystals {
+        parts.push(format!("C{player}{crystals}"));
     }
     if side
         .locks
@@ -877,6 +882,17 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 unit.position.map_or("ATK", |position| position.as_str()),
                 unit_play_signature(state, unit),
             ));
+        }
+        // R1839000: a Dormant card is no active unit, yet it fills its zone and counts down: it is part of
+        // the position, said only when there is one, so every other signature stays as it was.
+        for unit in units_on_field_of(state, player) {
+            if let Some(slumber) = unit.slumber {
+                parts.push(format!("z{}:{:?}", unit.id, slumber.turns));
+            }
+            // R1852000: and a Dormant Starship is the pieces fused into it, which its definition names.
+            if let Some(ship) = unit.starship.as_ref().filter(|_| unit.slumber.is_some()) {
+                parts.push(format!("s{}:{}:{}", unit.id, unit.def_id, ship.pieces.len()));
+            }
         }
         let backrow = state.players[player]
             .backrow

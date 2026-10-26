@@ -4,10 +4,11 @@
 //! last turn or never marked, with any exertion, and optionally a Stack card on top), then applies
 //! one to three random control changes for either player, the inactive one too: a steal, Steal all,
 //! the board swap, or a rotation either way on either face. Four properties are read from outside:
-//!   P1 bookkeeping: only a card that crossed takes this turn and a fresh exertion; a controller
-//!      changes only with a `controlChanged`; no owner changes.
-//!   P2 the §6.1 oracle: a unit that crossed or entered this turn is sick (no target without Rush
-//!      or Charge, no hero without Charge); one that crossed with Charge has a target.
+//!   P1 bookkeeping: only a card that crossed takes this turn and a fresh exertion, and one a steal
+//!      uncovered in its pile takes this turn and keeps its own (R1829000); a controller changes only
+//!      with a `controlChanged`; no owner changes.
+//!   P2 the §6.1 oracle: a unit that crossed, was uncovered or entered this turn is sick (no target
+//!      without Rush or Charge, no hero without Charge); one that crossed with Charge has a target.
 //!   P3 `legalActions` offers exactly the attacks `reduce` accepts.
 //!   P4 R53: a forced attack by a unit that crossed still happens and spends nothing.
 //! Runs reproduce from PROPERTY_SEED (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
@@ -233,6 +234,16 @@ fn mark(card: &mut CardInstance, marks: Marks, turn: i32) {
     };
 }
 
+/// R1829000: the cards dormant beneath the top of a unit pile.
+fn dormant_cards(state: &GameState) -> IndexSet<String> {
+    PLAYER_IDS
+        .into_iter()
+        .flat_map(|player| state.players[player].units.iter().flatten())
+        .flat_map(|pile| pile.iter().skip(1))
+        .map(|card| card.id.clone())
+        .collect()
+}
+
 /// Every card on the field, dormant pile cards and backrow cards included.
 fn field_cards(state: &GameState) -> Vec<CardInstance> {
     PLAYER_IDS
@@ -252,6 +263,7 @@ struct Snapshot {
     exertion: Exertion,
     controller: PlayerId,
     owner: PlayerId,
+    dormant: bool,
 }
 
 fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapshot>) {
@@ -291,6 +303,7 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
             );
         }
     }
+    let dormant = dormant_cards(&state);
     let start: IndexMap<String, Snapshot> = field_cards(&state)
         .into_iter()
         .map(|card| {
@@ -301,6 +314,7 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
                     exertion: card.exertion,
                     controller: card.controller,
                     owner: card.owner,
+                    dormant: dormant.contains(&card.id),
                 },
             )
         })
@@ -381,7 +395,7 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
     use super::*;
 
     #[test]
-    fn r171_r747_p1_only_a_card_that_changed_sides_takes_this_turn_and_a_fresh_exertion_and_no_owner_changes_but_a_bounce_s()
+    fn r171_r747_r1829000_p1_only_a_card_that_changed_sides_takes_this_turn_and_a_fresh_exertion_one_uncovered_takes_this_turn_and_keeps_its_own_and_no_owner_changes_but_a_bounce_s()
      {
         let base = base();
         for case in 0..BOOKKEEPING_RUNS {
@@ -392,6 +406,7 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 crossed,
             } = run(&base, &sample);
             let turn = state.turn;
+            let dormant = dormant_cards(&state);
             for card in field_cards(&state) {
                 let Some(before) = start.get(&card.id) else {
                     panic!("run {case}: {} appeared on the field", card.id);
@@ -412,6 +427,21 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 if crossed.contains(&card.id) {
                     assert_eq!(card.summoned_turn, Some(turn), "run {case}: {} crossed", card.id);
                     assert_eq!(card.exertion, FRESH, "run {case}: {} crossed", card.id);
+                } else if before.dormant && !dormant.contains(&card.id) {
+                    // R1829000: a steal took the card above it, and no verb here covers a card again, so
+                    // it was uncovered: it entered on this turn and keeps its exertion. A swap or a
+                    // rotation lifts whole piles and uncovers nothing.
+                    assert_eq!(
+                        card.summoned_turn,
+                        Some(turn),
+                        "run {case}: {} uncovered",
+                        card.id
+                    );
+                    assert_eq!(
+                        card.exertion, before.exertion,
+                        "run {case}: {} uncovered",
+                        card.id
+                    );
                 } else {
                     assert_eq!(
                         card.summoned_turn, before.summoned_turn,
@@ -460,10 +490,11 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 let rush = has_keyword(&view.keywords, KeywordKind::Rush);
                 let charge = has_keyword(&view.keywords, KeywordKind::Charge);
                 let moved = crossed.contains(&unit.id);
+                // R1829000: a unit acting now that was dormant at the start was uncovered.
                 let sick = moved
                     || start
                         .get(&unit.id)
-                        .is_some_and(|before| before.summoned_turn == Some(turn));
+                        .is_some_and(|before| before.summoned_turn == Some(turn) || before.dormant);
                 let targets = attack_targets(&state, unit);
                 let who = format!("run {case}: {} ({})", unit.id, unit.def_id);
                 if sick && !rush && !charge {

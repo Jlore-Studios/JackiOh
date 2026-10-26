@@ -5,16 +5,18 @@
 // account's cosmetics as tiles.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLOBAL_PACK_NAME, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, type CardDef } from "@jackioh/shared";
 
 import {
+  AccountCosmeticsOwned,
   CARD_PICKS_SETTINGS_KEY,
   COSMETICS_SETTINGS_KEY,
   cosmeticsOf,
+  ownsAccountCosmetic,
   readCardPicks,
   readCosmetics,
   resetCosmeticsForTests,
@@ -50,27 +52,6 @@ import {
   setCompletions,
 } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
-
-// R1655000: the account's cosmetics, a table past the registry's that no account owns yet, so a locked
-// tile has something to show. The registry's own playmats, backdrops and card backs are every one a
-// starter (§14.2); its portraits past vanilla are not (R1827000), but no tile shows a portrait.
-vi.mock("../cards/cosmetics.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../cards/cosmetics.ts")>();
-  const future = {
-    id: "table-future",
-    kind: "table",
-    name: "Future table",
-    rarity: "Mythic",
-    default: false,
-    starter: false,
-    chase: true,
-  } as const;
-  return {
-    ...actual,
-    cosmeticsOf: (kind: Parameters<typeof actual.cosmeticsOf>[0]) =>
-      kind === "table" ? [...actual.cosmeticsOf(kind), future] : actual.cosmeticsOf(kind),
-  };
-});
 
 beforeEach(() => {
   localStorage.clear();
@@ -619,22 +600,28 @@ describe("R1655000 a card in context", () => {
 });
 
 describe("R1655000 the account's cosmetics as tiles", () => {
-  it("R1655000 accountTiles lists a kind's entries, a default and a starter owned and the rest as the account's list says", () => {
-    const none = accountTiles("table", null);
+  it("R1655000 R1833000 accountTiles lists a kind's entries, a default and a starter owned and the rest as the account's list says", () => {
+    const none = accountTiles("table", (id) => ownsAccountCosmetic(new Set(), id));
     expect(none.map((tile) => [tile.cosmetic.id, tile.owned])).toEqual([
       ["table-tavern", true],
       ["table-wood", true],
       ["table-felt", true],
       ["table-neon-grid", true],
-      ["table-future", false],
+      ["table-marble", false],
+      ["table-chessboard", false],
+      ["table-desert-sand", false],
+      ["table-obsidian-slab", false],
+      ["table-ancient-map", false],
+      ["table-astral", false],
     ]);
-    expect(accountTiles("table", { cards: [], account: [] }).at(-1)?.owned).toBe(false);
-    expect(accountTiles("table", { cards: [], account: ["table-future"] }).at(-1)?.owned).toBe(true);
-    expect(accountTiles("cardBack", null).map((tile) => tile.cosmetic.id)).toEqual(cosmeticsOf("cardBack").map((cosmetic) => cosmetic.id));
+    expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).at(-1)?.owned).toBe(true);
+    // Where nothing decides ownership, every tile is owned.
+    expect(accountTiles("table", (id) => ownsAccountCosmetic("every", id)).every((tile) => tile.owned)).toBe(true);
+    expect(accountTiles("cardBack", () => false).map((tile) => tile.cosmetic.id)).toEqual(cosmeticsOf("cardBack").map((cosmetic) => cosmetic.id));
   });
 
   it("R1655000 a playmat and a backdrop are drawn together as a mini board, a card back as a back", () => {
-    render(<AccountCosmeticTiles owned={null} />);
+    render(<AccountCosmeticTiles />);
 
     // A playmat tile is its playmat over the equipped backdrop; a backdrop tile, its backdrop over the equipped playmat.
     const felt = screen.getByTestId(T.tile("table-felt"));
@@ -659,8 +646,12 @@ describe("R1655000 the account's cosmetics as tiles", () => {
     expect(screen.getByTestId(T.tile("table-felt")).querySelector(".board-backdrop")).toHaveAttribute("data-backdrop", "field-rain");
   });
 
-  it("R1655000 clicking an owned tile equips it through the cosmetics store; a locked one shows its rarity and equips nothing", () => {
-    const { rerender } = render(<AccountCosmeticTiles owned={null} />);
+  it("R1655000 R1833000 clicking an owned tile equips it through the cosmetics store; a locked one shows its rarity and equips nothing", () => {
+    const { rerender } = render(
+      <AccountCosmeticsOwned owned={new Set()}>
+        <AccountCosmeticTiles />
+      </AccountCosmeticsOwned>,
+    );
 
     fireEvent.click(within(screen.getByTestId(T.tile("card-back-lacquer"))).getByRole("button"));
     expect(readCosmetics().cardBack).toBe("card-back-lacquer");
@@ -668,7 +659,7 @@ describe("R1655000 the account's cosmetics as tiles", () => {
     expect(screen.getByTestId(T.tile("card-back-lacquer"))).toHaveAttribute("data-equipped", "true");
     expect(screen.getByTestId(T.tile("card-back-standard"))).toHaveAttribute("data-equipped", "false");
 
-    const locked = screen.getByTestId(T.tile("table-future"));
+    const locked = screen.getByTestId(T.tile("table-astral"));
     expect(locked).toHaveAttribute("data-owned", "false");
     expect(locked).toHaveTextContent("Mythic");
     expect(locked).toHaveTextContent("Locked");
@@ -676,9 +667,14 @@ describe("R1655000 the account's cosmetics as tiles", () => {
     fireEvent.click(within(locked).getByRole("button"));
     expect(readCosmetics().table).toBe("table-tavern");
 
-    rerender(<AccountCosmeticTiles owned={{ cards: [], account: ["table-future"] }} />);
-    expect(screen.getByTestId(T.tile("table-future"))).toHaveAttribute("data-owned", "true");
-    fireEvent.click(within(screen.getByTestId(T.tile("table-future"))).getByRole("button"));
-    expect(readCosmetics().table).toBe("table-future");
+    rerender(
+      <AccountCosmeticsOwned owned={new Set(["table-astral"])}>
+        <AccountCosmeticTiles />
+      </AccountCosmeticsOwned>,
+    );
+    expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-owned", "true");
+    fireEvent.click(within(screen.getByTestId(T.tile("table-astral"))).getByRole("button"));
+    expect(readCosmetics().table).toBe("table-astral");
+    expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-equipped", "true");
   });
 });

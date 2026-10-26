@@ -14594,5 +14594,302 @@
       "classic-061"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.4.11",
+    "date": "2026-10-25",
+    "title": "Units uncovered under a Stack are summoning sick",
+    "source": "#1829",
+    "notes": "R1829000: a card a Stack pile uncovers, as the cards above it leave (destroyed, bounced, stolen, captured, tributed or gone), is summoning sick that turn as a card that entered the field on that turn is, its exertion kept; an Equip host a fusion keeps keeps its turn (R1086), and a move that lifts a whole pile uncovers nothing.",
+    "player": {
+      "title": "Uncovered Units are summoning sick",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit left on top when the card stacked on it leaves is summoning sick that turn, as if it had just been played. It still cannot attack again if it already attacked before it was covered."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b665a5ae035bfc43bfdb421c599886c0974f1683"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-015",
+      "classic-041",
+      "classic-051",
+      "classic-058",
+      "classic-071",
+      "classic-080",
+      "classic-089",
+      "classicplus-004",
+      "classicplus-013",
+      "classicplus-024",
+      "classicplus-044",
+      "classicplus-047",
+      "classicplus-048",
+      "classicplus-051",
+      "core-033",
+      "core-043",
+      "core-046",
+      "core-049",
+      "core-061",
+      "core-071",
+      "core-084",
+      "core-092",
+      "core-t",
+      "meditative-012",
+      "meditative-027",
+      "meditative-034",
+      "meditative-041",
+      "meditative-049",
+      "meditative-070",
+      "meditative-091",
+      "meditative-097",
+      "meditativeplus-004",
+      "meditativeplus-024"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.4.11b",
+    "date": "2026-10-25",
+    "title": "Prestige can be played only with a card to De-Radiant",
+    "source": "#1851",
+    "notes": "R1851000-R1851003: Meditative #53 Prestige is offered, and its play accepted, only while a Radiant card it could De-Radiant exists, where R1103 let either face be played and fizzle. The base face's declared target is required (R703): a Radiant Unit or face-up backrow card on either side or a Radiant card in your hand, never a face-down Trap. The Radiant face declares no target, so it takes the engine's new play gate (Script.play_allowed, play_choices::play_allowed), one check for legal_actions, the reducer's refusal (\"<name> cannot be played without something to act on\") and the view's playReason, read off the face the play resolves (R214); its gate asks for a Radiant card the opponent controls on the field that its player can see, so a face-down one does not open it (R440), though the Cry still clears it. A cast, an Echo repeat and a random cast never ask the gate (R70) and a set Spell's Reveal waits for it (R783006); a fusion holds every ingredient's gate and a copier its copied face's (R1851002). A Trade is no play, so Prestige is still Traded with nothing to clear. The script v0.4.9 ran is kept for replays (KEPT_SCRIPTS, R767000).",
+    "player": {
+      "title": "Prestige needs a card to De-Radiant",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Prestige can be played only with a card to De-Radiant: a Radiant card on the field or in your hand, or for its Radiant face a Radiant enemy card on the field.",
+        "A face-down card does not count, since you cannot see whether it is Radiant.",
+        "Prestige can still be Traded with nothing to De-Radiant, and a Prestige that is cast still resolves."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-053"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.4.12",
+    "date": "2026-10-25",
+    "title": "Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean tags on shipped cards, and Felinor and Fruit off four",
+    "source": "#1837",
+    "notes": "R1837000: ahead of the Stinkyscape set, Terminus on core-100, Quest on classic-090 (beside its Quickdraw), Otherworldly on classicplus-032, Other-Origins on its tokens classicplus-032-1 to -3, and a new Jelly Bean tag on core-026 to core-029: family tags, not tribes (no TRIBAL_TAGS), and no pool by them takes tokens (no POOL_TOKEN_TAGS); the server admits them from migration 0058. classic-032 and core-062 lose Felinor, so Tatches the Totem answers neither; classicplus-063 and classicplus-068 lose Fruit, so no Fruit pool holds a Field Spell, Mulch Muncher counts neither and Organic Produce's aura makes neither Radiant. A play records its card's tags (playedByTag), so the golden traces were re-blessed: of 240, 104 are unchanged, 115 replay the same actions with new hashes (the tag record, fused cards' tags, the tags a view shows), and 21 play differently from the first random Fruit drawn without the two Field Spells (Fruit Basket, Fruit Tree, Organic Produce, Call to Chaos (Classic+ Edition), Heroic Power) or Organic Produce's aura; the hotseat fixture's log stands and its hash moves from 8784adae to 7044d528 (its last play, Friend of Felinors, records no Felinor). The practice claim fixture is recorded again for the same reason.",
+    "player": {
+      "title": "Five new tags, and four cards lose one",
+      "new": [
+        "The Terminus tag, on Ceaseless Void.",
+        "The Quest tag, on In Too Deep.",
+        "The Otherworldly tag, on Otherworldly Removal.",
+        "The Other-Origins tag, on Execute, Brawl and Blade Storm, the cards Otherworldly Removal adds.",
+        "The Jelly Bean tag, on Glowy Jelly Bean, Blood Ridden Glowy Jelly Bean, Knockoff Temu Glowy Jelly Bean and GIGA Glowy Jelly Bean."
+      ],
+      "balance": [],
+      "changes": [
+        "Felinor Feelings and Friend of Felinors lose the Felinor tag; the Felinor Tokens they summon keep it.",
+        "Fruit Tree and Organic Produce lose the Fruit tag, so a random Fruit is never one of them.",
+        "Mulch Muncher no longer costs less for Fruit Tree or Organic Produce, and Organic Produce no longer makes them Radiant.",
+        "Tatches the Totem no longer summons itself when you play Felinor Feelings or Friend of Felinors."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-032",
+      "classic-090",
+      "classicplus-032",
+      "classicplus-063",
+      "classicplus-068",
+      "core-026",
+      "core-027",
+      "core-028",
+      "core-029",
+      "core-062",
+      "core-100"
+    ],
+    "changes": [
+      {
+        "id": "core-026",
+        "name": "Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-032",
+        "name": "Felinor Feelings",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-090",
+        "name": "In Too Deep",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-032",
+        "name": "Otherworldly Removal",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-032-1",
+        "name": "Execute",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-032-2",
+        "name": "Brawl",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.4.12b",
+    "date": "2026-10-25",
+    "title": "Tradable on Showdown and Prestige",
+    "source": "#1838",
+    "notes": "R1838000: Tradable, Hearthstone's Tradeable at no mana (TRADE_COST 0): in their own main phase a player may Trade a Tradable hand card, which goes into their deck at a random position as they draw a card, one Trade a turn (TRADES_PER_TURN, or a figure of the player's own, PlayerState.tradesPerTurn) over all their Tradable cards, refused into a full deck; one refusal (trade::why_trade_refused) for legal_actions, the reducer and the view's tradeReason and trades. R1838001: a public traded naming only the player, then the shuffledIn and drawn it is made of, hidden per zone. R1838002: the draw is a draw for every rule and the Trade no play. R1838003: a Trade on offer keeps a turn from ending by itself; the AI, the random policy and the clock answer it. Meditative #53 Prestige and #98 Showdown are Tradable on both faces. Against main's build, the classifier's games find no family playing differently but the two Tradable cards themselves: a game moves only once a Trade is on offer, and that needs Prestige or Showdown in a hand, so the fragment claims those two cards and no `plays` or rule (R1370000).",
+    "player": {
+      "title": "Showdown and Prestige are Tradable",
+      "new": [
+        "Tradable: in your main phase, shuffle the card from your hand into your deck and draw a card, at no mana. One Trade per turn."
+      ],
+      "balance": [],
+      "changes": [
+        "Showdown is Tradable.",
+        "Prestige is Tradable."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-053",
+      "meditative-098"
+    ],
+    "changes": [
+      {
+        "id": "meditative-053",
+        "name": "Prestige",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-098",
+        "name": "Showdown",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

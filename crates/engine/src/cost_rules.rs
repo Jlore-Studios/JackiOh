@@ -112,7 +112,7 @@ fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
         .into_iter()
         .flat_map(|player| crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane))
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .filter(|card| !crate::preview::lasting_text_off(state, card))
         .collect()
 }
 

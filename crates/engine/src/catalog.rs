@@ -24,6 +24,10 @@
 //! answer from it first. R1329000: so does every compiled table the engine reads while it folds, the
 //! win-rate table among them, or a ruling says why it does not. The code blocks (`code_block_of`)
 //! stay the build's: no final hash holds them.
+//!
+//! R1846003: so do the card metrics (`card_metrics`, R1846000): no card of a carried version asks for
+//! a BUSTED or complicated pool, so no fold reads them, and the patch that ships the first card that
+//! asks owes each version its own lists.
 
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -455,6 +459,20 @@ pub struct CatalogQueryArgs {
     /// flag, not catalog data, so the pool keeps up with every new Tribute card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tribute: Option<bool>,
+    /// R1846000: `true` asks for BUSTED cards only, those whose script has more code lines than
+    /// `BUSTED_CODE_LINES` (`is_busted`), `false` forbids them. Read off the compiled card metrics,
+    /// so the pool grows with the catalog.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub busted: Option<bool>,
+    /// R1846000: `true` asks for complicated cards only, more code lines than
+    /// `COMPLICATED_CODE_LINES` (`is_complicated`), `false` forbids them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub complicated: Option<bool>,
+    /// R1846001: `true` widens a pool that names no set from the sets that ship (R380, R1420) to every
+    /// set, single-player ones too (`SINGLE_PLAYER_SETS`). A pool that names its set or its cards
+    /// keeps to them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub every_set: Option<bool>,
 }
 
 /// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
@@ -490,6 +508,9 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             def_id: None,
             token: None,
             tribute: None,
+            busted: None,
+            complicated: None,
+            every_set: None,
         }
     }
 }
@@ -579,8 +600,9 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     let sets = as_list(&args.set);
     if sets.is_empty() {
         // R1420: a pool that names no set draws from the sets that ship, unless it names its cards
-        // outright (`defId`); one that names a set draws from that set, shipped or not.
-        if as_list(&args.def_id).is_empty() && !set_is_open(def.set) {
+        // outright (`defId`); one that names a set draws from that set, shipped or not. R1846001:
+        // `everySet` adds the single-player sets.
+        if as_list(&args.def_id).is_empty() && !set_is_open(def.set) && !every_set_takes(args, def.set) {
             return false;
         }
     } else if !sets.contains(&def.set) {
@@ -625,6 +647,17 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1221: the Tribute-cost filter, read off the registered script.
     if let Some(wanted) = args.tribute
         && has_tribute_cost(def) != wanted
+    {
+        return false;
+    }
+    // R1846000: the BUSTED and complicated filters, read off the compiled card metrics.
+    if let Some(wanted) = args.busted
+        && is_busted(&def.id) != wanted
+    {
+        return false;
+    }
+    if let Some(wanted) = args.complicated
+        && is_complicated(&def.id) != wanted
     {
         return false;
     }
@@ -953,4 +986,75 @@ pub fn glitch_or_not<'a>(rng: &mut Rng, def: &'a CardDef, glitch: &GlitchOdds) -
         return def;
     }
     find_def(None, GLITCH_DEF_ID).unwrap_or(def)
+}
+
+// ---------------------------------------------------------------------------
+// R1846000: the card metrics, BUSTED and complicated cards (Stinkyscape #109, #111).
+// ---------------------------------------------------------------------------
+
+/// R1846000: the card metrics `crates/cards/build.rs` compiles in from the card scripts, and
+/// `jackioh_cards::register_all` hands to the engine (`register_card_metrics`): each script's code
+/// lines (the lines above its tests that hold code once its comments are taken out), and the two
+/// lists they make, every catalog entry's, a token's included. Each is sorted by id, so the engine
+/// finds an id by binary search.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CardMetrics {
+    /// Each catalog entry's script's code lines, by catalog id.
+    pub code_lines: &'static [(&'static str, usize)],
+    /// The BUSTED cards: more code lines than `BUSTED_CODE_LINES`.
+    pub busted: &'static [&'static str],
+    /// The complicated cards: more code lines than `COMPLICATED_CODE_LINES`.
+    pub complicated: &'static [&'static str],
+}
+
+/// R1846000: the compiled card metrics, set once by `register_card_metrics`, beside the registry.
+static METRICS: OnceLock<CardMetrics> = OnceLock::new();
+
+/// R1846000: hands the compiled card metrics to the engine (`jackioh_cards::register_all`). Set once
+/// per process, as `register_catalog` is: a second call is ignored, and a test that needs other
+/// metrics sets the testkit's override (`testkit::register_code_lines`) instead.
+pub fn register_card_metrics(metrics: CardMetrics) {
+    let _ = METRICS.set(metrics);
+}
+
+/// R1846000: the card metrics: the testkit's override first, then the compiled ones, never a shipped
+/// catalog's (R1846003); none before anything is registered.
+pub fn card_metrics() -> CardMetrics {
+    #[cfg(feature = "testkit")]
+    if let Some(metrics) = crate::testkit::scenario::card_metrics_override() {
+        return metrics;
+    }
+    METRICS.get().copied().unwrap_or_default()
+}
+
+/// R1846000: a card's code lines, or `None` for a definition with no script of its own in the
+/// catalog: a fused or crafted card, a fixture the metrics do not list, or a custom card, whatever a
+/// table lists (R1846002: its Luau script is not the game's code).
+pub fn code_lines_of(def_id: &str) -> Option<usize> {
+    if crate::custom::is_custom_id(def_id) {
+        return None;
+    }
+    let lines = card_metrics().code_lines;
+    lines
+        .binary_search_by(|(id, _)| (*id).cmp(def_id))
+        .ok()
+        .map(|at| lines[at].1)
+}
+
+/// R1846000: whether a definition is BUSTED, its script over `BUSTED_CODE_LINES` code lines; a
+/// custom card never is (R1846002).
+pub fn is_busted(def_id: &str) -> bool {
+    !crate::custom::is_custom_id(def_id) && card_metrics().busted.binary_search(&def_id).is_ok()
+}
+
+/// R1846000: whether a definition is complicated, its script over `COMPLICATED_CODE_LINES` code
+/// lines; a custom card never is (R1846002).
+pub fn is_complicated(def_id: &str) -> bool {
+    !crate::custom::is_custom_id(def_id) && card_metrics().complicated.binary_search(&def_id).is_ok()
+}
+
+/// R1846001: whether a query's `everySet` takes a card of `set` into a pool that names no set: a
+/// single-player set (`SINGLE_PLAYER_SETS`). The sets that ship are in every such pool already.
+fn every_set_takes(args: &CatalogQueryArgs, set: SetName) -> bool {
+    args.every_set == Some(true) && crate::wire::SINGLE_PLAYER_SETS.contains(&set)
 }

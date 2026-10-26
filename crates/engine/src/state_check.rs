@@ -259,6 +259,12 @@ pub struct DeathPass {
     /// the check's own pass goes round again (§4.5 step 5). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sacrificed: Option<bool>,
+    /// R1852000: the Starship Pieces among the collected cards, each the snapshot of the card as it
+    /// died (R89), in R68's order: once the pass has returned its Reborn bodies and reported its
+    /// graveyard, a copy of each fuses into its owner's Dormant Starship. Absent when none died, so a
+    /// pass without one serializes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pieces: Option<Vec<CardInstance>>,
 }
 
 /// One of step 4's returns (`DeathPass.reborn`).
@@ -363,6 +369,7 @@ pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
         } else {
             None
         },
+        pieces: raw.get("pieces").map(|pieces| instances_of(Some(pieces))),
     })
 }
 
@@ -474,9 +481,10 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             prepare_body(card, entry);
         }
         // R175: a unit that died on top of a Stack pile left the card beneath to resume in its zone
-        // (§3.2), and that card did not enter anything, so the zone is still the one R64 reserved. The
-        // body returns on top of the pile, and the card beneath goes dormant again. With no pile the
-        // zone is empty, which `stack` never changes: every other card was kept out by the reservation.
+        // (§3.2), and that card never left the zone (sick though it is, R1829000), so the zone is still
+        // the one R64 reserved. The body returns on top of the pile, and the card beneath goes dormant
+        // again. With no pile the zone is empty, which `stack` never changes: every other card was kept
+        // out by the reservation.
         let slot = ZoneSlot {
             player: entry.at.player,
             row: entry.at.row,
@@ -656,7 +664,20 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
     // Neither of these can ask anything, so they finish the pass once step 3 is done.
     reborn_step(sink, pass);
     graveyard_step(sink, pass);
+    starship_step(sink, pass);
     true
+}
+
+/// R1852000: the pass's last step — each Starship Piece that died in it fuses a copy of itself into its
+/// owner's Dormant Starship, in R68's order, once the Reborn bodies are back and the graveyard has been
+/// reported, so the Starship takes the leftmost zone open after them. It asks nothing.
+fn starship_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
+    for snapshot in pass.pieces.iter().flatten() {
+        if sink.state.result.is_some() {
+            return;
+        }
+        crate::starship::fuse_dead_piece(sink, snapshot);
+    }
 }
 
 /// `work.ts`'s handler for a parked pass: the same pass, continued where it stopped (R113, R122).
@@ -699,6 +720,8 @@ enum DeathCause {
 struct ReadCard {
     unit: CardInstance,
     reborn: bool,
+    /// R1852000: it dies as a Starship Piece.
+    piece: bool,
     attack: i32,
     max_health: i32,
     at: Option<ZoneRef>,
@@ -730,6 +753,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             let view = crate::layers::unit_view(sink.state, &unit);
             ReadCard {
                 reborn: has_keyword(&view.keywords, KeywordKind::Reborn),
+                piece: crate::starship::dies_as_piece(sink.state, &unit),
                 attack: view.attack,
                 max_health: view.max_health,
                 at: crate::zones::slot_of(sink.state, &unit),
@@ -772,6 +796,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             continue;
         }
         pass.owed.push(card.snapshot.clone());
+        // R1852000: a piece that died, which the pass's last step fuses into its owner's Starship.
+        if card.piece {
+            pass.pieces
+                .get_or_insert_with(Vec::new)
+                .push(card.snapshot.clone());
+        }
         let runs = extra.get(&card.snapshot.controller).copied().unwrap_or(0);
         if runs > 0
             && crate::scripts::script_of(sink.state, &card.snapshot)

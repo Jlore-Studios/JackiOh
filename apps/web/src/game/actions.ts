@@ -292,11 +292,19 @@ function inOwnGraveyard(view: PlayerView, instanceId: string): boolean {
   return view.you.graveyard.some((card) => card.instanceId === instanceId);
 }
 
+/** R1840003: whether the view puts this card in the viewer's own Resource tray. */
+function inOwnTray(view: PlayerView, instanceId: string): boolean {
+  const tray = view.you.resourceTray;
+  return Array.isArray(tray) && tray.some((card) => card.instanceId === instanceId);
+}
+
 /**
- * The element a `play` is started from: the hand card, or the "Play" on a card in the viewer's
- * graveyard pile (B5 E11). A card the view places nowhere is taken for a hand card.
+ * The element a `play` is started from: the hand card, a Resource in the viewer's own tray
+ * (R1840003), or the "Play" on a card in the viewer's graveyard pile (B5 E11). A card the view
+ * places nowhere is taken for a hand card.
  */
 export function playSourceTestid(view: PlayerView, instanceId: string): string {
+  if (inOwnTray(view, instanceId)) return testid.trayCard(instanceId);
   return inOwnGraveyard(view, instanceId) ? testid.pilePlay(instanceId) : testid.handCard(instanceId);
 }
 
@@ -964,6 +972,12 @@ export function onClickTarget(
     }
 
     case "graveyard": {
+      if (interaction.stage === "playing" && interaction.instanceId === target.instanceId) return { interaction: IDLE };
+      return startPlay(legal, interaction, target.instanceId, view);
+    }
+
+    // R1840003: a Resource in the viewer's own tray is played as a hand card is.
+    case "tray": {
       if (interaction.stage === "playing" && interaction.instanceId === target.instanceId) return { interaction: IDLE };
       return startPlay(legal, interaction, target.instanceId, view);
     }

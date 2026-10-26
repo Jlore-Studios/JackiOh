@@ -168,9 +168,9 @@ pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) 
 }
 
 /// `has_exertion` read through a sweep's `AuraTable` (#892). R1174000: a Frozen Unit has neither
-/// half, whatever it spent (`freeze.rs`).
+/// half, whatever it spent (`freeze.rs`); R1839000: nor has a Dormant card, until it awakens.
 pub fn has_exertion_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
-    unit.frozen.is_none() && exertion_unspent_in(auras, unit, kind)
+    unit.frozen.is_none() && unit.slumber.is_none() && exertion_unspent_in(auras, unit, kind)
 }
 
 /// R1174000: the half of the unit's exertion it has not spent this turn, Frozen or not — what a
@@ -197,7 +197,8 @@ pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: Exe
 
 /// §4.1: a unit that entered the field this turn is summoning sick. A unit that enters again, a
 /// Reborn body included, entered it on that turn like any other (R83), and so does a unit whose
-/// controller changed this turn (R171, through `enter_new_side` below), so this is the one comparison.
+/// controller changed this turn (R171, through `enter_new_side` below), and a card a Stack pile
+/// uncovers is sick in the same way (R1829000, `zones::remove_from_field`), so this is the one comparison.
 pub fn is_sick(state: &GameState, unit: &CardInstance) -> bool {
     unit.summoned_turn == Some(state.turn)
 }
@@ -282,6 +283,10 @@ pub fn why_cannot_switch_in(
     to: Position,
     spend_exertion: bool,
 ) -> CombatResult {
+    // R1839000: a Dormant card switches by nothing, its own action or an effect.
+    if crate::slumber::is_slumbering(unit) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
     if spend_exertion && unit.frozen.is_some() {
         return Err(EngineError::new(FROZEN_REFUSAL));
@@ -308,6 +313,10 @@ pub fn switch_position(
     let Some(unit) = live_card(sink.state, unit) else {
         return Err(EngineError::new("that unit is not on the field"));
     };
+    // R1839000: told it is Dormant ahead of "not on the field", which it is (it fills its zone).
+    if crate::slumber::is_slumbering(&unit) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     if !is_active_on_field(sink.state, &unit) {
         return Err(EngineError::new("that unit is not on the field"));
     }
@@ -352,6 +361,10 @@ pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<
 /// `why_cannot_declare` read through a sweep's `AuraTable` (#892).
 pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Result<(), EngineError> {
     let state = auras.state();
+    // R1839000: a Dormant card is on the field and attacks nothing until it awakens.
+    if crate::slumber::is_slumbering(attacker) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     if !is_active_on_field(state, attacker) {
         return Err(EngineError::new("that unit is not on the field"));
     }
@@ -439,6 +452,10 @@ pub fn why_cannot_attack_in(
         DamageTarget::Unit { instance } => {
             if instance.controller != enemy {
                 return Err(EngineError::new("that target is not an enemy"));
+            }
+            // R1839000: nor is a Dormant card attacked, though it fills its zone.
+            if crate::slumber::is_slumbering(instance) {
+                return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
             }
             if !is_active_on_field(state, instance) {
                 return Err(EngineError::new("that unit is not on the field"));
@@ -1315,6 +1332,17 @@ pub(crate) fn declare_instead(
 /// emits still reaches the traps through §10.3's immediate check, exactly as it does today, because
 /// the withholding above is per declaration rather than per event type.
 pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
+    force_attack_with(sink, attacker, target, false);
+}
+
+/// `force_attack`, with `allies` set for R1848005's melee, whose compulsion reaches the attacker's own
+/// side too ("allies can attack each other"): the one change to R173 a melee makes.
+fn force_attack_with(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    allies: bool,
+) {
     if sink.state.result.is_some() {
         return;
     }
@@ -1349,7 +1377,7 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
     // on. A target that is not this attacker's enemy — it changed sides mid-run, or had crossed to
     // the attacker's side before the run began — is not attacked, and the attacker is passed over in
     // silence, as R96 passes over one that is gone.
-    if !is_enemy_of(&attacker, &target) {
+    if !allies && !is_enemy_of(&attacker, &target) {
         return;
     }
     // B5 E35: nor the unit restrictions — a forced attack on a target its attacker may not attack does
@@ -1677,6 +1705,95 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
     });
     resolve_combat(sink, &attacker, &target);
     close_combat(sink, &attacker, &target, true, None);
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1848005: the melee, every Unit on the field attacking another until one is left
+// ---------------------------------------------------------------------------------------------
+
+/// R1848005 (Stinkyscape #120 Wild System, "All units attack each other until only one survives",
+/// "allies can attack each other, max 20 attacks"): up to `attacks` forced attacks (R53), each between
+/// a pair drawn from the match rng as it begins. The fighters are every Unit acting on the field, the
+/// active player's in lane order and then the other's (`active_units_of`, so a card beneath a Stack
+/// neither attacks nor is hit, R13, and a carried Unit is passed by, R446); an attacker is drawn among
+/// the ones with a Unit they may attack under §4.2 step 2's restrictions — an ally as well as an enemy,
+/// never a hero — and then its target among those. Each attack is its own combat with its own state
+/// check, so the fighters are read again for the next. The melee ends once one Unit or none is left,
+/// once no fighter has a Unit it may attack, once the game is over, or after `attacks` of them; a
+/// question a combat's deaths ask owes the rest (`MELEE_WORK`, R113).
+pub fn run_melee(sink: &mut EngineSink<'_>, attacks: i32) {
+    let mut left = attacks;
+    while left > 0 {
+        if sink.state.result.is_some() {
+            return;
+        }
+        if is_paused(sink) {
+            owe_melee(sink, left);
+            return;
+        }
+        let Some((attacker, target)) = melee_pair(sink) else {
+            return;
+        };
+        force_attack_with(sink, &attacker, &target, true);
+        left -= 1;
+    }
+}
+
+/// R1848005: the next pair of a melee — the attacker drawn among the fighters that have a target, then
+/// its target among the Units it may attack — or `None` when one Unit or none is left or no fighter may
+/// attack another. Two draws per attack, none when there is no pair.
+fn melee_pair(sink: &mut EngineSink<'_>) -> Option<(CardInstance, AttackTarget)> {
+    let pairs: Vec<(CardInstance, Vec<AttackTarget>)> = {
+        let state = &*sink.state;
+        let first = state.active;
+        let fighters: Vec<CardInstance> = crate::zones::active_units_of(state, first)
+            .into_iter()
+            .chain(crate::zones::active_units_of(state, opponent_of(first)))
+            .filter(|unit| !carried_out_of_combat(state, unit))
+            .cloned()
+            .collect();
+        if fighters.len() <= 1 {
+            return None;
+        }
+        fighters
+            .iter()
+            .filter_map(|attacker| {
+                let targets: Vec<AttackTarget> = fighters
+                    .iter()
+                    .filter(|other| other.id != attacker.id)
+                    .map(|other| DamageTarget::Unit {
+                        instance: other.clone(),
+                    })
+                    .filter(|target| crate::restrictions::attack_restriction(state, attacker, target).is_ok())
+                    .collect();
+                (!targets.is_empty()).then(|| (attacker.clone(), targets))
+            })
+            .collect()
+    };
+    let (attacker, targets) = sink.rng.pick(&pairs)?.clone();
+    let target = sink.rng.pick(&targets)?.clone();
+    Some((attacker, target))
+}
+
+/// R113: the `resume.hook` of a melee a combat's question stopped between two attacks.
+pub const MELEE_WORK: &str = "@melee";
+
+/// (`{ left }`: the attacks the melee may still make.)
+fn owe_melee(sink: &mut EngineSink<'_>, left: i32) {
+    if left <= 0 || sink.state.result.is_some() {
+        return;
+    }
+    let mut data = IndexMap::new();
+    data.insert("left".to_string(), json!(left));
+    owe(sink, engine_resume(MELEE_WORK, "run", data));
+}
+
+/// `work.rs`'s handler for a melee a prompt stopped: the same melee, with the attacks it has left.
+pub fn run_owed_melee(sink: &mut EngineSink<'_>, item: &WorkItem) {
+    let Some(left) = item.resume.data.get("left").and_then(Value::as_i64) else {
+        return;
+    };
+    run_melee(sink, left as i32);
 }
 
 // ---------------------------------------------------------------------------------------------

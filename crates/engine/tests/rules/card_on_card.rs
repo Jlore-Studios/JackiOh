@@ -15,6 +15,7 @@ use super::fixtures::card_on_card::{
     cheap_trap, copier, crier, dear, duo, human, immutable_copier, legend, radiant_copier,
     register_card_on_card, rod, rod_field, sack, sacker, tag_exiler, ticket, token, wormhole,
 };
+use super::fixtures::combat::stacker;
 use super::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
 
 /// Every action this file sends gets a fresh nonce.
@@ -161,6 +162,12 @@ fn on_field(state: &GameState, id: &str) -> bool {
 fn has(state: &GameState, id: &str, kind: KeywordKind) -> bool {
     let card = find_instance(state, id).cloned().expect("the card");
     unit_has(state, &card, kind)
+}
+
+/// R1839000: make the card on the field `id` Dormant until an effect awakens it, or awaken it.
+fn set_dormant(state: &mut GameState, id: &str, dormant: bool) {
+    let live = find_instance_mut(state, id).expect("on the field");
+    live.slumber = dormant.then_some(Slumber { turns: None });
 }
 
 mod r1850000_copy_a_units_text {
@@ -469,6 +476,23 @@ mod r1850001_duo_and_squad {
                 .radiant
         );
     }
+
+    #[test]
+    fn r1850001_squad_passes_a_dormant_card_by() {
+        let mut state = playing("squad-dormant");
+        let asleep = put(&mut state, &cheap().id, slot(P1, Row::Units, 1), json!({}));
+        set_dormant(&mut state, &asleep.id, true);
+        let awake = put(&mut state, &cheap().id, slot(P1, Row::Units, 3), json!({}));
+        let played = play(
+            &state,
+            P1,
+            &duo().id,
+            true,
+            json!({ "zone": { "row": "units", "lane": 2 } }),
+        );
+        // R1839000: a Dormant card is marked by nothing.
+        assert_eq!(duo_marks(&played.events, true), vec![awake.id.clone()]);
+    }
 }
 
 mod r1850002_exile_auras {
@@ -587,6 +611,26 @@ mod r1850002_exile_auras {
     }
 
     #[test]
+    fn r1850002_a_keyword_the_aura_spares_keeps_its_card() {
+        let mut state = playing("keywords");
+        let piece = put(&mut state, &cheap().id, slot(P1, Row::Units, 1), json!({}));
+        let ship = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let other = put(&mut state, &cheap().id, slot(P2, Row::Units, 2), json!({}));
+        for (id, keyword) in [(&piece.id, Keyword::StarshipPiece), (&ship.id, Keyword::Starship)] {
+            find_instance_mut(&mut state, id)
+                .expect("on the field")
+                .granted_keywords
+                .push(keyword);
+        }
+        put(&mut state, &tag_exiler().id, slot(P1, Row::Units, 2), json!({}));
+        // Scornboi's Starship Piece and Starship, read through the layers: a granted one spares too.
+        assert_eq!(exiled(&check(&mut state)), vec![other.id.clone()]);
+        for id in [&piece.id, &ship.id] {
+            assert!(on_field(&state, id));
+        }
+    }
+
+    #[test]
     fn r1850002_the_aura_ends_with_its_card() {
         let mut state = playing("ends");
         let source = put(&mut state, &cheap_exiler().id, slot(P1, Row::Units, 2), json!({}));
@@ -607,6 +651,22 @@ mod r1850002_exile_auras {
         let later = put(&mut state, &cheap().id, slot(P1, Row::Units, 1), json!({}));
         assert!(exiled(&check(&mut state)).is_empty());
         assert!(on_field(&state, &later.id));
+    }
+
+    #[test]
+    fn r1850002_a_dormant_cards_aura_is_off_and_reaches_no_dormant_card() {
+        let mut state = playing("dormant");
+        let asleep = put(&mut state, &cheap().id, slot(P1, Row::Units, 1), json!({}));
+        set_dormant(&mut state, &asleep.id, true);
+        let theirs = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let source = put(&mut state, &cheap_exiler().id, slot(P1, Row::Units, 2), json!({}));
+        set_dormant(&mut state, &source.id, true);
+        // R1839000: a Dormant card's lasting text is off, its aura with it.
+        assert!(exiled(&check(&mut state)).is_empty());
+        // Awake, its aura passes the Dormant card by, as every walk of the board does.
+        set_dormant(&mut state, &source.id, false);
+        assert_eq!(exiled(&check(&mut state)), vec![theirs.id.clone()]);
+        assert!(on_field(&state, &asleep.id));
     }
 }
 
@@ -740,6 +800,42 @@ mod r1850003_hold_beneath {
         assert_eq!(summoned(&events), vec![(held.id.clone(), P1)]);
         let back = find_instance(&state, &held.id).expect("back");
         assert_eq!((back.controller, back.owner), (P1, P2));
+    }
+
+    #[test]
+    fn r1850003_a_holder_beneath_a_stack_or_dormant_still_holds() {
+        let mut state = playing("covered");
+        let held = put(&mut state, &dear().id, slot(P2, Row::Units, 2), json!({}));
+        let played = play(
+            &state,
+            P1,
+            &sacker().id,
+            false,
+            json!({ "targets": [{ "pick": "instance", "instanceId": held.id }] }),
+        );
+        let mut state = played.state;
+        let bag = top(&state, P2, 1).expect("the Sack in p2's first zone");
+        // A Stack card tops the Sack: beneath it, the Sack is on the field still (§3.2), so it holds.
+        let mut cover = new_instance(&mut state, &stacker.id, P2, Zone::Hand { player: P2 });
+        assert!(place_on_field(
+            &mut state,
+            &mut cover,
+            slot(P2, Row::Units, 1),
+            json_as(json!({ "stack": true }))
+        ));
+        assert!(summoned(&check(&mut state)).is_empty());
+        destroy(&mut state, &cover.id);
+        assert_eq!(top(&state, P2, 1).map(|card| card.id), Some(bag.id.clone()));
+        assert_eq!(state.held.as_ref().map(Vec::len), Some(1));
+        // Dormant, it is on the field still, and holds (R1839000).
+        set_dormant(&mut state, &bag.id, true);
+        assert!(summoned(&check(&mut state)).is_empty());
+        assert!(!on_field(&state, &held.id));
+        set_dormant(&mut state, &bag.id, false);
+        assert_eq!(
+            summoned(&destroy(&mut state, &bag.id)),
+            vec![(held.id.clone(), P2)]
+        );
     }
 
     #[test]
@@ -1045,6 +1141,25 @@ mod r1850005_radiant_at_n_keywords {
         assert!(find_instance(&state, &card.id).expect("the rod").radiant);
         let events = grant(&mut state, &card.id, json!({ "kind": "Lifesteal" }));
         assert!(events_of_type(&events, GameEventType::RadiantSet).is_empty());
+    }
+
+    #[test]
+    fn r1850005_a_dormant_card_is_not_made_radiant_until_it_awakens() {
+        let mut state = playing("rod-dormant");
+        let card = put(&mut state, &rod().id, slot(P1, Row::Units, 1), json!({}));
+        set_dormant(&mut state, &card.id, true);
+        find_instance_mut(&mut state, &card.id)
+            .expect("the rod")
+            .granted_keywords
+            .push(Keyword::DivineShield);
+        // R1839000: its text is off while it is Dormant, so its keywords reach nothing.
+        assert!(events_of_type(&check(&mut state), GameEventType::RadiantSet).is_empty());
+        assert!(!find_instance(&state, &card.id).expect("the rod").radiant);
+        set_dormant(&mut state, &card.id, false);
+        assert_eq!(
+            events_of_type(&check(&mut state), GameEventType::RadiantSet).len(),
+            1
+        );
     }
 
     #[test]
