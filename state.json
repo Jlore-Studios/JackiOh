@@ -2269,7 +2269,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-26T13:04:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:16ba0bf7-1793024378",
+      "run_id": "40338762790",
       "started_at": "2026-10-26T14:20:33Z",
       "stop_requested": false,
       "suggestion": true,
