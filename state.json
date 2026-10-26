@@ -2126,31 +2126,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/game/animations.fx.test.ts",
-            "apps/web/src/game/animations.test.ts",
-            "apps/web/src/wire/generated/GameEvent.ts",
-            "apps/web/src/wire/generated/GameEventType.ts",
-            "crates/cards/luau/jackioh.luau",
-            "crates/engine/src/config.rs",
-            "crates/engine/src/wire/events.rs",
-            "spec/06-keywords.md",
-            "spec/10-engine-guide.md"
-          ],
-          "from": "750db626404546288fa8e902f914ac0d6ef7a67e",
-          "main": "761dae6c900915ce3bf39dcfc21e1616bbe1f145"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40270406458",
+            "run": "40278165230",
             "tier": "strong"
           }
         ],
-        "sha": "baede85d400e7a8cd536ce54e5a5a54191afc77b",
+        "sha": "c3ba9ffde9d14affacd1bf20e968e3970960d490",
         "tiers": {
           "claude": "strong"
         }
