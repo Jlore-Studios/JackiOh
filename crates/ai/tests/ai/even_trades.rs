@@ -2,11 +2,13 @@
 //! better, by the opponent model's own static read (`reply.rs`'s `trade_value`: the target's worth less
 //! the attacker's when it dies too, at least 0), just after the winning trades and ahead of the plays.
 //! A losing trade, and every other even trade of the same attacker, stays behind the plays.
+//! #1821: a Cleave attack whose splash kills a neighbour is a kill, though its target lives.
 //!
 //! The cards: Wrong-House Attacker (classicplus-006) 1/1 Rush, Lifesteal, Poisonous, Midrange Menace
 //! (core-019) 9/9 Taunt, Hit Job (core-016, 3 mana: destroy a Unit), Mr. Vanilla (core-008) 4/4, Reno
-//! (core-053) 4/6, Tempo Timmy (core-011) 3/3 Rush, First Strike, and Mommy Barker (classicplus-013),
-//! Radiant 4/4 Reborn.
+//! (core-053) 4/6, Tempo Timmy (core-011) 3/3 Rush, First Strike, Mommy Barker (classicplus-013),
+//! Radiant 4/4 Reborn, Nurse Cleaver (classic-073) 3/6 Rush, Cleave, Lifesteal, and Zoomerbin Oomen
+//! (core-067) 1/2.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -20,6 +22,8 @@ const VANILLA: &str = "core-008";
 const RENO: &str = "core-053";
 const TIMMY: &str = "core-011";
 const BARKER: &str = "classicplus-013";
+const CLEAVER: &str = "classic-073";
+const OOMEN: &str = "core-067";
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 
 fn board(setup: Value) -> GameState {
@@ -228,4 +232,24 @@ fn of_two_targets_with_equal_stats_the_even_trade_goes_into_the_one_without_rebo
          Barker at {on_barker}: {:?}",
         keys(&actions)
     );
+}
+
+#[test]
+fn a_cleave_attack_whose_only_kills_are_its_splash_is_tried_ahead_of_the_plays() {
+    // #1821: Nurse Cleaver's 3 leaves Reno standing, but its splash kills the Oomen on each side.
+    let state = board(json!({
+        "seed": "ai-even-trades-cleave",
+        "p1": { "hand": [VANILLA], "field": [CLEAVER] },
+        "p2": { "field": [
+            { "def": OOMEN, "lane": 1 },
+            { "def": RENO, "lane": 2 },
+            { "def": OOMEN, "lane": 3 },
+        ] },
+    }));
+    let actions = candidate_actions(&state, AI);
+    let trade = place(
+        &actions,
+        &attack(&unit_id(&state, AI, CLEAVER), &unit_id(&state, HUMAN, RENO)),
+    );
+    assert!(trade < first_play(&actions), "{:?}", keys(&actions));
 }

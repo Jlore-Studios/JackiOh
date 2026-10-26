@@ -68,8 +68,9 @@ it can see on the field, then its attacks, a kill priced at what it removes (a u
 less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
-enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
-opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
+enemy hero, kills the attacker survives, each attacker's best kill (its target, or with Cleave a
+neighbour, #1821) at an even trade or better by the opponent model's own read (`reply.rs`'s
+`trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its

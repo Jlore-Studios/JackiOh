@@ -54,11 +54,12 @@ use crate::simulate::{
 };
 use crate::types::NodeCounter;
 
-/// `trade_value`'s answer: what an attack is worth to the static trader, and whether its strike
-/// kills the target.
+/// `trade_value`'s answer: what an attack is worth to the static trader, whether its strike kills
+/// the target and whether its Cleave splash kills a neighbour.
 pub(crate) struct Trade {
     pub(crate) value: f64,
     pub(crate) kills: bool,
+    pub(crate) splash_kills: bool,
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
@@ -68,15 +69,16 @@ pub(crate) struct Trade {
 /// nothing is worth a little per point dealt, so a second attacker can finish what the first one
 /// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
 /// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
-/// same share of the Divine Shield weight. `kills` says whether the strike kills the target itself; the
-/// move order reads both (`candidates.rs`'s even trades, #1779). Its screen (#1796), 400 games of
-/// improve-dev against the parent (`633568b99`), read 196-202 with 2 aborted, edge -0.015 (-0.041 to
-/// 0.011).
+/// same share of the Divine Shield weight. `kills` says whether the strike kills the target itself,
+/// `splash_kills` whether the splash kills a neighbour; the move order reads all three
+/// (`candidates.rs`'s even trades, #1779, #1821). Its screen (#1796), 400 games of improve-dev against
+/// the parent (`633568b99`), read 196-202 with 2 aborted, edge -0.015 (-0.041 to 0.011).
 pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> Trade {
     let Some(target) = find_instance(state, target_id) else {
         return Trade {
             value: f64::NEG_INFINITY,
             kills: false,
+            splash_kills: false,
         };
     };
     let a = side_of(state, attacker);
@@ -97,11 +99,13 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     // R63: the splash belongs to the attack, so it lands whenever the strike does — every case but
     // the defender-first one above, where the attacker is destroyed before it strikes at all.
     let mut cleave_value = 0.0;
+    let mut splash_kills = false;
     if has_keyword(&a.view.keywords, KeywordKind::Cleave) && !(t.first_strike && !a.first_strike && dies) {
         for neighbour in cleaved_neighbours(state, attacker, target) {
             let n = side_of(state, &neighbour);
             let splash = blow(&a, combat.splash, combat.poisonous, &n);
             if splash.kills {
+                splash_kills = true;
                 cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL);
             } else if splash.pops_shield {
                 cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
@@ -123,6 +127,7 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     Trade {
         value: value + cleave_value,
         kills,
+        splash_kills,
     }
 }
 
