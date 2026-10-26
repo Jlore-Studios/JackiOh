@@ -605,14 +605,20 @@
       "verdict_rounds": 2
     },
     "1857": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-10-26T14:57:32Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:e13bcda0-1793026638",
+      "started_at": "2026-10-26T14:58:13Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1889": {
       "action": "build",
@@ -2500,9 +2506,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T14:57:04Z",
+    "at": "2026-10-26T14:58:13Z",
     "url": "",
-    "what": "revise #2004 on muse"
+    "what": "plan #1857 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-26T14:40:33Z",
