@@ -2026,9 +2026,12 @@
         "by": "`claude` (strong)",
         "sha": "da1cfc25a87818d7223a6b9d526c49fe3a289ddd"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T10:19:35Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1956,
       "kind": "revise",
       "last_findings": [],
