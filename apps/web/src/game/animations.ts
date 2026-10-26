@@ -888,6 +888,21 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1853003: a card bought at the Marketplace reaches its buyer's hand (or a Resource their tray), and
+  // a Resource sold leaves the tray: the hand's edge glints as for `resourceGained`, with no effect
+  // (FX "—"); the other seat's view names no card bought.
+  marketBought: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  marketSold: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
   // R1852000: a dead piece's copy merges into its owner's Dormant Starship, which the `fused` before it
   // drew; the Starship's piece count rises with the next view.
   starshipFused: {
@@ -1400,7 +1415,8 @@ export const HIDDEN_ID = "hidden";
  * zeroes its `value`, `cardAnnounced` reads a face-down card as a Trap whatever its `cardType` (R448),
  * and `radiantSet` moves its `zone` to the owner's hand. Every one of them is rewritten only when the
  * event's own `instanceId` is the one hidden. `libraryOverflow` drops the `radiant` of the card it
- * refused (R316); `burned` (R317) changes nothing but its ids, and `fatigue` (R315) is public.
+ * refused (R316), and `marketBought` the face of the card bought (R1853003); `burned` (R317) changes
+ * nothing but its ids, and `fatigue` (R315) is public.
  *
  * An event type missing here makes its two copies stop matching, `newEventsSince` finds no overlap,
  * and the runner animates the whole window again.
@@ -1420,6 +1436,7 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
   radiantSet: ["zone"],
   deradianted: ["zone"],
   libraryOverflow: ["radiant"],
+  marketBought: ["radiant"],
 };
 
 const NOTHING_REWRITTEN: readonly string[] = [];

@@ -3,6 +3,7 @@ import type { CardDef } from "./CardDef";
 import type { DrawOfferView } from "./DrawOfferView";
 import type { GameEvent } from "./GameEvent";
 import type { GameResult } from "./GameResult";
+import type { MarketplaceView } from "./MarketplaceView";
 import type { MulliganView } from "./MulliganView";
 import type { PendingView } from "./PendingView";
 import type { Phase } from "./Phase";
@@ -69,4 +70,10 @@ emotesHeard?: true,
  * can say its price and how many are left; which Trades are offered stays `legal_actions`' answer.
  * Only ever the viewer's own (CLAUDE.md rule 7). Absent while their hand holds no Tradable card.
  */
-trades?: TradesView, };
+trades?: TradesView, 
+/**
+ * R1853000, R1853003: the Marketplace as the viewer reads it, once it is open: the offering and
+ * its prices, which are public, and the viewer's own stock and sales (CLAUDE.md rule 7). Absent
+ * while it is closed, so a game without one sends the view it did before.
+ */
+marketplace?: MarketplaceView, };

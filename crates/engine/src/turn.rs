@@ -420,6 +420,8 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
         turn,
         extra: extra.then_some(true),
     });
+    // R1853001, R1853002: an open Marketplace moves its prices and quotes, and re-rolls each cycle.
+    crate::marketplace::marketplace_turn_start(sink);
     // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
     let natural = crate::mana::natural_mana_on(sink.state);
     let side = &mut sink.state.players[player];

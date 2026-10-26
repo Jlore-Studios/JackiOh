@@ -15,6 +15,7 @@ import type { GameResult } from "./GameResult";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { MarkRecord } from "./MarkRecord";
+import type { Marketplace } from "./Marketplace";
 import type { MulliganSeat } from "./MulliganSeat";
 import type { OpeningRecord } from "./OpeningRecord";
 import type { PendingChoice } from "./PendingChoice";
@@ -206,4 +207,10 @@ customCards?: { [key in string]: CustomCard },
  * R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
  * `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
  */
-customDefs?: { [key in string]: CardDef }, };
+customDefs?: { [key in string]: CardDef }, 
+/**
+ * R1853000: Stinkyscape's Marketplace, opened for both players by the first Resource or Credits
+ * either gains (`marketplace.rs`). Absent until then, so a game without either hashes as it did
+ * before this field existed (D14).
+ */
+marketplace?: Marketplace, };

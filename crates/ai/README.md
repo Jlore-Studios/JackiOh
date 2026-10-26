@@ -39,7 +39,7 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
 them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
 it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), and what the opponent bought at the Marketplace this cycle (R1853004)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
 traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while
@@ -71,7 +71,7 @@ re-plans after every action. Each line tries its moves in move order (`candidate
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
-other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units

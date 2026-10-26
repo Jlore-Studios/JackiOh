@@ -1948,6 +1948,11 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
             ActionBody::Trade {
                 instance_id: "c7".to_string(),
             },
+            // R1853003: a buy and a sale at the Marketplace.
+            ActionBody::MarketBuy { offer: 2 },
+            ActionBody::MarketSell {
+                instance_id: "c9".to_string(),
+            },
             ActionBody::SetAutoEndTurn { enabled: false },
         ]
     }
