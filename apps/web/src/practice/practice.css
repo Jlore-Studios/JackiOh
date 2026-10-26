@@ -176,7 +176,7 @@
     inset 0 1px 0 rgb(255 255 255 / 4%),
     0 12px 24px -16px rgb(0 0 0 / 85%);
   text-align: center;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition:
     transform calc(160ms * var(--anim-scale, 1)) ease,
     border-color calc(160ms * var(--anim-scale, 1)),
@@ -214,7 +214,7 @@
   border-radius: 50%;
   background: var(--tavern-well);
   appearance: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .practice-tier__radio::after {
@@ -325,7 +325,7 @@
   color: var(--tavern-parchment, #efe0bf);
   font-size: 14px;
   line-height: 1.35;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .practice-setup__sandbox input {
@@ -357,7 +357,7 @@
 }
 
 .practice-setup__deck-label {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .practice-select {
@@ -393,7 +393,7 @@
   font: inherit;
   font-weight: 550;
   appearance: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .practice-select select:hover {

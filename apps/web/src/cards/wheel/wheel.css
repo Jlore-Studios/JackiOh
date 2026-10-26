@@ -31,7 +31,7 @@
   color: #e8c85c;
   font-size: 28px;
   line-height: 1;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .card-wheel-turn:disabled {
@@ -55,7 +55,7 @@
 }
 
 button.card-wheel-card {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .card-wheel-card--primary {

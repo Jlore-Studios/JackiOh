@@ -264,7 +264,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         between them and the hub; the page never scrolls, a section's body does. Cards is
                         the account's cards per shipped set, wallet, set tracks and quests, each panel
                         reading for itself and saying why when its read fails, each track a filling bar
-                        (economy/FillBar.tsx); Cosmetics is the only place to equip one: the defaults every
+                        (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip, collection/EquipButton.tsx, R1955000): the defaults every
                         card wears (three selects, collection/CosmeticsPanel.tsx) and the playmat, backdrop
                         and card back as preview tiles (collection/AccountCosmeticTiles.tsx), on the same
                         store and `cosmetics` settings group as before (R633), beside the owned list from
@@ -281,8 +281,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the next
-                        screen read the owned cosmetics again; the page never scrolls, its body does
+                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
+                        read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
                         /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
@@ -314,7 +314,7 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
                         /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
                         glow, cards turned one at a time (Epic and above on a hold), what each became, a
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
-                        at once; the server decided every slot before anything animates (`packs.ts` holds the
+                        at once, and a new cosmetic's Equip (R1955000); the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
 shop/                   #1309: spending what the economy pays, on /shop (R1580000) beside the opening
                         (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, imported by
@@ -327,7 +327,7 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         cosmetics at its tier or below with a preview on the card (`POST
                         /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
-                        filling from the opening's `shardBefore` and, only when full, its reward moment: the
+                        with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
                         refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,

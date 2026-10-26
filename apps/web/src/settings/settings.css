@@ -188,7 +188,7 @@
   font-size: 14.5px;
   font-weight: 600;
   white-space: nowrap;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .settings-tab:hover {
@@ -246,7 +246,7 @@
   justify-content: space-between;
   gap: 14px;
   min-height: 44px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .settings-label {
@@ -282,7 +282,7 @@
   color: var(--text);
   font: inherit;
   font-size: 15px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .settings-select:focus-visible {
@@ -318,7 +318,7 @@
   min-height: 44px;
   margin: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   accent-color: #7dd3fc;
   appearance: none;
 }
@@ -404,7 +404,7 @@
   grid-row: 1;
   grid-column: 1;
   font-size: 15px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .settings-slot .settings-audio .audio-controls__row--check > input[type="checkbox"] {
@@ -426,7 +426,7 @@
   background-origin: content-box;
   background-clip: content-box;
   background-position: left center;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition:
     background-position calc(140ms * var(--anim-scale)) ease-out,
     background-color calc(140ms * var(--anim-scale)) ease-out;
@@ -469,7 +469,7 @@
   background-origin: content-box;
   background-clip: content-box;
   background-position: left center;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition:
     background-position calc(140ms * var(--anim-scale)) ease-out,
     background-color calc(140ms * var(--anim-scale)) ease-out;
