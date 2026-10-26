@@ -17,7 +17,7 @@ use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
-use crate::wire::{Keyword, Zone, ZoneName};
+use crate::wire::{AttackHealth, Keyword, Tuning, Zone, ZoneName};
 
 /// The riders a card reaches a hand with. R65 starts the cost from `costOverride` IN PLACE OF the
 /// printed cost, so a discount that must stack with other modifiers is a `costMod`, never a
@@ -40,6 +40,13 @@ struct HandRiders {
     temporary: Option<bool>,
     /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
     chinese: Option<bool>,
+    /// R57: a definition-remade copy may carry the source's layer-1 face without using `copyOf`
+    /// (Classic #14 Shadowstep, which R1300 says is not Chinese).
+    stats_override: Option<AttackHealth>,
+    /// R175: the Bread Token's Armor X travels with its X/X face.
+    armor_override: Option<i32>,
+    /// R57: tuning is one of the instance riders a fresh copy keeps.
+    tuning: Option<Tuning>,
     /// R1438: the card is given Lucky X (a granted keyword) as it reaches the hand.
     lucky: Option<i32>,
     /// ME-SECRET, R862: what the new card remembers from the start (Mind Games' link rides the
@@ -70,6 +77,15 @@ fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
     // ME-CN, R1300: what the card is shown in, like what face it wears, so a burned card keeps it too.
     if riders.chinese == Some(true) {
         card.chinese = Some(true);
+    }
+    if let Some(stats) = riders.stats_override {
+        card.stats_override = Some(stats);
+    }
+    if let Some(armor) = riders.armor_override {
+        card.armor_override = Some(armor);
+    }
+    if let Some(tuning) = &riders.tuning {
+        card.tuning = Some(tuning.clone());
     }
 }
 
@@ -162,6 +178,7 @@ fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
     // MD-B15, R923: a copy keeps the granted tags of the card copied.
     copy.granted_tags = source.granted_tags.clone();
     copy.stats_override = source.stats_override;
+    copy.armor_override = source.armor_override;
     copy.tuning = source.tuning.clone();
 }
 
@@ -192,6 +209,15 @@ pub struct AddToHandArgs {
     /// Initiative), so it is Chinese too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R57: the layer-1 face a definition-remade copy keeps without taking every `copyOf` rider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats_override: Option<AttackHealth>,
+    /// R175: the Bread Token's Armor X beside its copied X/X face.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub armor_override: Option<i32>,
+    /// R57: tuning a definition-remade copy keeps.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tuning: Option<Tuning>,
     /// R1438: give the card Lucky X once it is in the hand.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lucky: Option<i32>,
@@ -221,6 +247,9 @@ impl AddToHandArgs {
             cost_mod_up_to: None,
             temporary: self.temporary,
             chinese: self.chinese,
+            stats_override: self.stats_override,
+            armor_override: self.armor_override,
+            tuning: self.tuning.clone(),
             lucky: self.lucky,
             memory: self.memory.clone(),
             fixed_x: self.fixed_x,
@@ -334,6 +363,9 @@ impl AddRandomFromCatalogArgs {
             cost_mod_up_to: self.cost_mod_up_to,
             temporary: self.temporary,
             chinese: self.chinese,
+            stats_override: None,
+            armor_override: None,
+            tuning: None,
             lucky: self.lucky,
             memory: None,
             fixed_x: None,

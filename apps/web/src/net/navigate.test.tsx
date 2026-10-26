@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { MeResponse } from "./api.ts";
 import { MATCH_FOUND_STATUS, readQueued, rememberQueued, useQueueFollow } from "./liveGame.ts";
-import { guardLeaving, navigate, paths, usePathname } from "./navigate.ts";
+import { guardLeaving, leaveFirst, navigate, paths, usePathname } from "./navigate.ts";
 import { at, signIn } from "../test/stubServer.ts";
 
 function me(currentMatchId: string | null): MeResponse {
@@ -94,6 +94,26 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
     for (const release of releases.splice(0)) release();
     expect(navigate("/decks")).toBe(true);
     expect(window.location.pathname).toBe("/decks");
+  });
+
+  it("R1754000 leaveFirst runs at once unguarded, else through the hold", () => {
+    at(paths.creator);
+    const ran = vi.fn();
+
+    expect(leaveFirst(ran)).toBe(true);
+    expect(ran).toHaveBeenCalledTimes(1);
+
+    const held = guard();
+    expect(leaveFirst(ran)).toBe(false);
+    expect(ran).toHaveBeenCalledTimes(1);
+    expect(held).toHaveLength(1);
+
+    held[0]?.();
+    expect(ran).toHaveBeenCalledTimes(2);
+
+    for (const release of releases.splice(0)) release();
+    expect(leaveFirst(ran)).toBe(true);
+    expect(ran).toHaveBeenCalledTimes(3);
   });
 
   it("R1754000 the browser's Back off a guarded page puts its address back, and the held move goes back unheld", async () => {

@@ -760,7 +760,7 @@ export function replaysOnlineId(matchId: string): string {
 }
 
 // #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
-// the chat panel and the board rail's chat, the challenge toast, the watch screen and the replay share.
+// the chat panel and the Friends button's panel (#1831), the challenge toast, the watch screen and the replay share.
 
 export const TOGETHER_ROOT = "together";
 export const TOGETHER_ADD_INPUT = "together-add-input";
@@ -818,14 +818,14 @@ export const CHAT_REPORT = "chat-report";
 export const CHAT_REPORT_REASON = "chat-report-reason";
 export const CHAT_REPORT_SEND = "chat-report-send";
 export const CHAT_REPORTED = "chat-reported";
-export const IN_MATCH_CHAT_TOGGLE = "in-match-chat-toggle";
-export const IN_MATCH_CHAT_LIST = "in-match-chat-list";
-export const IN_MATCH_CHAT_FRIEND = "in-match-chat-friend";
-export const IN_MATCH_CHAT_UNREAD = "in-match-chat-unread";
+/** #1831: the Friends button every signed-in screen has at the top right, its badge and its panel. */
+export const FRIENDS_BUTTON = "friends-button";
+export const FRIENDS_BADGE = "friends-badge";
+export const FRIENDS_PANEL = "friends-panel";
 
 /** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
 export const CHALLENGE_TOAST = "challenge-toast";
-export const CHALLENGE_ACCEPT = "challenge-accept";
+export const CHALLENGE_ACCEPT = "challenge-toast-accept";
 export const CHALLENGE_DECLINE = "challenge-decline";
 export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
 

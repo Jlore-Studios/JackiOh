@@ -6,14 +6,15 @@
 // `name#tag` and shows the server's refusal in its words; a request from
 // the other side can be declined from the page, and one sent from the page, once accepted, makes a
 // friend row; Chat opens the conversation, a message sent is shown, and the friend's reply arrives
-// within a poll; a friend's challenge is a toast whose Accept opens `/play` with the room filled in,
-// and joining it reaches the game; a challenge sent from a friend row takes the challenger to the game
-// once the friend joins its room.
+// within a poll; a friend's challenge is a toast whose Accept joins the room with the remembered deck
+// and reaches the game (R1831000); a challenge sent from a friend row of the Friends panel (#1831),
+// from a screen that is not Play together, leaves the challenger there until the friend joins its
+// room, which takes the challenger to the game.
 //
 // In a live match between the two (seat p1 the browser, seat p2 `wsPlayer`): seat two's aim draws the
 // arrow from public ends only, a backrow zone's smuggled fields stripped and an aim at seat one's hand
 // dropped (R738); an emote shows its bubble, and once muted a relayed one shows nothing (R643, R1342);
-// the board rail's chat badges an unread message and carries messages both ways (B58); the replay shared
+// the Friends button badges an unread message and its panel opens the chat, which carries messages both ways (B58); the replay shared
 // from the result screen is listed under the friend's Shared with me and opens (B52, B59).
 //
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as
@@ -43,15 +44,12 @@ import {
   EMOTE_BUBBLE,
   EMOTE_MUTE,
   EMOTE_MUTE_MENU,
-  IN_MATCH_CHAT_FRIEND,
-  IN_MATCH_CHAT_LIST,
-  IN_MATCH_CHAT_TOGGLE,
-  IN_MATCH_CHAT_UNREAD,
+  FRIENDS_BADGE,
+  FRIENDS_BUTTON,
+  FRIENDS_PANEL,
   MATCH_WATCH_REPLAY,
   OPPONENT_AIM,
   OPPONENT_AIM_ARROW,
-  PLAY_JOIN_INPUT,
-  PLAY_JOIN_SUBMIT,
   REPLAYS_SHARED_WITH_ME,
   SHARE_FRIEND_OPEN,
   SHARE_FRIEND_OPTION,
@@ -65,13 +63,11 @@ import {
   TOGETHER_CHALLENGE_SEND,
   TOGETHER_CHAT_OPEN,
   TOGETHER_FRIEND_ROW,
-  TOGETHER_OUTGOING_CHALLENGE,
   TOGETHER_REQUEST_DECLINE,
   TOGETHER_REQUEST_ROW,
   TOGETHER_SHARED_OPEN,
   TOGETHER_SHARED_ROW,
   heroId,
-  playModeId,
   togetherChallengeModeId,
   ts,
   type QueueMode,
@@ -454,7 +450,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.get(ts(CHAT_PANEL)).should("not.exist");
 
     // B57: seat two challenges seat one (online: its browser sends the heartbeat); the toast's Accept
-    // opens /play with the room's code and mode filled in, and Join reaches the game.
+    // joins the room with the remembered deck and reaches the game (R1831000).
     cy.then(() => {
       cy.request<{ challengeId: string; roomCode: string }>({
         method: "POST",
@@ -471,19 +467,13 @@ describe("42 Play together — friends, chat and challenges between two accounts
         cy.get(ts(CHALLENGE_ACCEPT)).click();
       });
     });
-    cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.play());
-    cy.then(() => {
-      cy.get(ts(PLAY_JOIN_INPUT), { timeout: timeouts.view }).should("have.value", roomCode);
-    });
-    cy.get(ts(playModeId(MODE))).should("be.checked");
-    cy.get(ts(PLAY_JOIN_SUBMIT)).should("not.be.disabled").click();
     landedOn(MATCH_PATH, timeouts.view).then((id) => {
       matchId = id;
       expect(matchId, "the match the challenge's room made").to.not.eq("");
     });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
-    // B58: the board rail carries the chat toggle.
-    cy.get(ts(IN_MATCH_CHAT_TOGGLE)).should("be.visible");
+    // B58, #1831: the board's controls carry the Friends button.
+    cy.get(ts(FRIENDS_BUTTON)).should("be.visible");
     // B49: joining the room accepted the challenge, so it is open for neither seat any more.
     cy.then(() => {
       challengesOf(two)
@@ -494,19 +484,21 @@ describe("42 Play together — friends, chat and challenges between two accounts
       cy.concedeAs(one, matchId);
     });
 
-    // B48, B56: seat one challenges seat two from its friend row; seat two joins the room, and the
-    // shell takes seat one to the game (ChallengeToast's follow).
+    // B48, B56, #1831: seat one challenges seat two from its Friends panel, on a screen that is not
+    // Play together; seat two joins the room, and the shell takes seat one to the game
+    // (ChallengeToast's follow).
     cy.request({ method: "POST", url: api("/api/presence"), headers: bearer(two) }).its("status").should("eq", 204);
-    cy.visitAs(one, TOGETHER);
+    cy.visitAs(one, routes.replays());
+    cy.get(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
     cy.then(() => {
-      cy.get(friendRow(twoId, "online"), { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
+      cy.get(`${ts(FRIENDS_PANEL)} ${friendRow(twoId, "online")}`, { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
         cy.get(ts(TOGETHER_CHALLENGE)).click();
       });
     });
     cy.get(ts(TOGETHER_CHALLENGE_FORM), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(togetherChallengeModeId(MODE))).check();
     cy.get(ts(TOGETHER_CHALLENGE_SEND)).should("not.be.disabled").click();
-    cy.get(ts(TOGETHER_OUTGOING_CHALLENGE), { timeout: timeouts.view }).should("exist");
+    cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.replays());
     cy.then(() => {
       challengesOf(two).then((body) => {
         const challenge = body.incoming.find((got) => got.from.profileId === oneId);
@@ -710,21 +702,23 @@ describe("42 Play together — friends, chat and challenges between two accounts
       expect(bubblesDrawnOf(win), "R644: no bubble was drawn for the muted seat's emote").to.eq(bubblesBeforeMute);
     });
 
-    // B58: a message from seat two while the match runs badges the board rail's toggle.
+    // B58, #1831: a message from seat two while the match runs badges the board's Friends button.
     cy.then(() => {
       cy.request({ method: "POST", url: api(`/api/chat/${oneId}`), headers: bearer(two), body: { body: `${UNREAD} ${run}` } })
         .its("status")
         .should("eq", 201);
     });
-    cy.get(ts(IN_MATCH_CHAT_UNREAD), { timeout: UNREAD_TIMEOUT_MS }).should("be.visible");
+    cy.get(ts(FRIENDS_BADGE), { timeout: UNREAD_TIMEOUT_MS }).should("be.visible");
 
-    // B58: the toggle lists the friends who are on; picking seat two opens the conversation, with the
-    // message that was waiting.
-    cy.get(ts(IN_MATCH_CHAT_TOGGLE)).click();
-    cy.get(ts(IN_MATCH_CHAT_LIST)).should("be.visible");
+    // B58, #1831: the button opens the friends panel; Chat on seat two's row opens the conversation,
+    // with the message that was waiting.
+    cy.get(ts(FRIENDS_BUTTON)).click();
+    cy.get(ts(FRIENDS_PANEL)).should("be.visible");
     cy.then(() => {
-      cy.get(`${ts(IN_MATCH_CHAT_FRIEND)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).click();
-      cy.get(ts(IN_MATCH_CHAT_LIST)).should("not.exist");
+      cy.get(`${ts(FRIENDS_PANEL)} ${friendRow(twoId)}`, { timeout: timeouts.view }).within(() => {
+        cy.get(ts(TOGETHER_CHAT_OPEN)).click();
+      });
+      cy.get(ts(FRIENDS_PANEL)).should("not.exist");
       cy.get(`${ts(CHAT_PANEL)}[data-friend-id="${twoId}"]`).should("be.visible");
     });
     cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, `${UNREAD} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
@@ -746,7 +740,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
     cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, `${MID_REPLY} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
     cy.get(ts(CHAT_CLOSE)).click();
     cy.get(ts(CHAT_PANEL)).should("not.exist");
-    cy.get(ts(IN_MATCH_CHAT_UNREAD), { timeout: timeouts.view }).should("not.exist");
+    cy.get(ts(FRIENDS_BADGE), { timeout: timeouts.view }).should("not.exist");
     cy.wsPlayer({ action: "view", name: SEAT_TWO }).then((result) => {
       expect(result.view?.result ?? null, "the match was still running while they chatted").to.eq(null);
     });
