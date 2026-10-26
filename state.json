@@ -4492,7 +4492,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-10-26T04:55:39Z",
     "last_run": null,
     "provider": null,
     "requested": false,
