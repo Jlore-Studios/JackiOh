@@ -16,7 +16,7 @@ use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
 };
 use crate::wire::craft::CraftRecipe;
-use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice};
+use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice, StarscapeReward};
 use crate::wire::string_union;
 
 string_union! {
@@ -998,6 +998,36 @@ pub struct CreditView {
     pub used: Option<bool>,
 }
 
+/// R1847000: one node of a starscape map, its reward and the reward's amount (config
+/// `STARSCAPE_REWARDS`); the edge has none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeNodeView {
+    pub reward: StarscapeReward,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub amount: Option<i32>,
+}
+
+/// R1847000: a seat's starscape map, public on both seats: its nodes in order, the edge last, and the
+/// node the player stands on (`at`, 0 the start).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeView {
+    pub nodes: Vec<StarscapeNodeView>,
+    pub at: i32,
+}
+
 /// ME-SECRET, R860: one secret of a side, as the viewer reads it — the choice only for its owner,
 /// or for anyone once revealed (R864).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1111,6 +1141,11 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub luck: Option<i32>,
+    /// R1847000: this seat's starscape map, shown to both seats. Absent until the player first
+    /// travels, so a game without one sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starscape: Option<StarscapeView>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.

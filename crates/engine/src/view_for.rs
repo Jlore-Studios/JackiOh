@@ -1529,6 +1529,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         rift_extra_turn: side.rift_extra_turn,
         // R860: the side's secrets, the choice only where the viewer may read it.
         secrets: crate::secrets::secret_views(state, player, viewer),
+        // R1847000: the seat's starscape map, public on both seats, absent until its first travel.
+        starscape: crate::subsystems::starscape::starscape_view(state, player),
     }
 }
 
@@ -2431,7 +2433,9 @@ fn redact_event(
         | GameEventType::StarshipFused
         | GameEventType::StarshipLaunched
         // R1843002: a flight names a player and what it leaves the other.
-        | GameEventType::Fled => event.clone(),
+        | GameEventType::Fled
+        // R1847001: a starscape travel names a player, a node and its reward, all public.
+        | GameEventType::StarscapeTravelled => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 
