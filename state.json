@@ -1611,15 +1611,26 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/rules.test.ts",
+            "crates/cards/luau/jackioh.luau",
+            "crates/engine/src/script.rs",
+            "crates/engine/src/subsystems/fuse.rs"
+          ],
+          "from": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2",
+          "main": "761dae6c900915ce3bf39dcfc21e1616bbe1f145"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40262760633",
+            "run": "40270327481",
             "tier": "strong"
           }
         ],
-        "sha": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2",
+        "sha": "2fa06d9d73bd3971b979420511aa6adb523fe75c",
         "tiers": {
           "claude": "strong"
         }
