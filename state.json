@@ -2462,7 +2462,25 @@
       "feedback_since": "2026-10-26T13:29:54Z",
       "issue": 1989,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40331090099",
+            "tier": "medium"
+          }
+        ],
+        "sha": "ac0c8c59a54f26592d014c82ede5214d7d66d2c4",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
