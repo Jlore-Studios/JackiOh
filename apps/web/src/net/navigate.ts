@@ -74,6 +74,22 @@ export function navigate(path: string, options: { replace?: boolean; force?: boo
 }
 
 /**
+ * R1754000, R1831000: work that leaves the page without a `navigate` of its own (the toast's Accept
+ * joins a room, then goes) waits on the guard as a move would. Runs `then` at once when no page
+ * guards; otherwise the guard is handed it, to run if the player lets the work go, and this returns
+ * false.
+ */
+export function leaveFirst(then: () => void): boolean {
+  const guard = leaveGuard;
+  if (guard === null) {
+    then();
+    return true;
+  }
+  guard.hold(then);
+  return false;
+}
+
+/**
  * R1754000: a `popstate` off a guarded page puts its address back before any screen reads the
  * path, and hands the guard the way out: the browser's own Back, the guard gone, which returns to
  * the entry the player went to (the restored address sits just after it). Had the player pressed

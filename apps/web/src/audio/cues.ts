@@ -704,6 +704,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 
+  // R1847001: a starscape travel sweeps one node on.
+  starscapeTravelled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
   // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
   boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },

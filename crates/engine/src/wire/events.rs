@@ -142,6 +142,17 @@ string_union! {
 }
 
 string_union! {
+    /// R1847000: what a starscape node gives (config `STARSCAPE_REWARDS`); `Edge` is the last node's.
+    pub enum StarscapeReward {
+        Heal = "heal",
+        Draw = "draw",
+        Mana = "mana",
+        Damage = "damage",
+        Edge = "edge",
+    }
+}
+
+string_union! {
     /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
     pub enum FengShuiOutcome {
         Positive = "positive",
@@ -1039,6 +1050,13 @@ pub enum GameEvent {
         player: PlayerId,
         opponent: FleeOpponent,
     },
+    /// R1847001: `player` travelled to `node` (1 to `STARSCAPE_EDGE_TRAVELS`) of their starscape map,
+    /// which gives `reward`. Public: a player, a number and a reward.
+    StarscapeTravelled {
+        player: PlayerId,
+        node: i32,
+        reward: StarscapeReward,
+    },
     // -------------------------------------------------------------------------------------------
     // Issue #1855: Anomalies, the board swap (R1855000–R1855003)
     // -------------------------------------------------------------------------------------------
@@ -1193,6 +1211,7 @@ string_union! {
         VoteCast = "voteCast",
         VotedOut = "votedOut",
         Fled = "fled",
+        StarscapeTravelled = "starscapeTravelled",
         BoardReplaced = "boardReplaced",
     }
 }
@@ -1372,6 +1391,7 @@ impl GameEvent {
             GameEvent::VoteCast { .. } => GameEventType::VoteCast,
             GameEvent::VotedOut { .. } => GameEventType::VotedOut,
             GameEvent::Fled { .. } => GameEventType::Fled,
+            GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
             GameEvent::BoardReplaced { .. } => GameEventType::BoardReplaced,
         }
     }
@@ -1458,10 +1478,10 @@ mod tests {
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
         // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
         // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
-        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); and #1843's
-        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); and #1855's `boardReplaced`
-        // (R1855000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 91);
+        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
+        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
+        // `starscapeTravelled` (R1847001); and #1855's `boardReplaced` (R1855000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 92);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

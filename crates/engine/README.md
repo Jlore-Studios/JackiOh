@@ -163,8 +163,8 @@ R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place
 `trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
 R1840000–R1840002, `resources.rs`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
 that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
-opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004), and the Anomalies'
-(`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).
+opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004),
+and the Anomalies' (`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).
 The ones the web reads are written to `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript

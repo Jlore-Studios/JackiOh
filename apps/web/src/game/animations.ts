@@ -928,6 +928,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1847001 (Stinkyscape #148): a player travelled one node of their starscape map; their hero ticks
+  // as on `jadeChanged`, no fx, and the map redraws from the view.
+  starscapeTravelled: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
   // Issue #1855 (R1855000): an Anomaly replaces one side's board; the board tilts as for `swapped`,
   // before its cards' `exiled` and `summoned` play the cards going and coming.
   boardReplaced: {

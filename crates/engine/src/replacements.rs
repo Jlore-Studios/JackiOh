@@ -691,6 +691,21 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
     left
 }
 
+/// R1849002 (Stinkyscape #105 Disintegrex): whether this card, which §4.5 step 1 collected and no
+/// "would die" replacement took, is exiled instead of destroyed — a card acting on either side says
+/// "anytime something would be Destroyed, it is Exiled instead", or its Radiant face's "an enemy
+/// permanent", of a card its controller's opponent controls. Read before any collected card moves, so
+/// an aura card dying in the same pass still exiles what dies beside it, itself included.
+pub fn destroy_exiles(state: &GameState, card: &CardInstance) -> bool {
+    crate::wire::PLAYER_IDS.into_iter().any(|side| {
+        crate::damage::acting_texts_of(state, side).iter().any(|source| {
+            let flags = crate::scripts::flags_of(state, source);
+            flags.destroyed_exiled == Some(true)
+                || (flags.enemy_destroyed_exiled == Some(true) && source.controller != card.controller)
+        })
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Every move into a graveyard (E5)
 // ---------------------------------------------------------------------------
