@@ -577,6 +577,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return capitalised(
         t("{card} is held beneath {holder}", { card: name.card(event.instanceId, event.defId), holder: name.instance(event.holderId) }),
       );
+    case "boardReplaced":
+      // R1855000: whose board an Anomaly replaced; the cards' `exiled` and `summoned` lines follow.
+      return capitalised(t("{whose} board was replaced", { whose: name.whose(event.player) }));
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

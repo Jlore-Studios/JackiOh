@@ -247,6 +247,8 @@ fn room_seats(
                         .as_str()
                         .to_string(),
                 ),
+                // R1834002: an All Random seat plays no deck of its own: the account's slots.
+                deck_slots: None,
             },
             MatchSeat {
                 profile_id: joiner_id.to_string(),
@@ -257,6 +259,7 @@ fn room_seats(
                         .as_str()
                         .to_string(),
                 ),
+                deck_slots: None,
             },
         ));
     }
@@ -272,12 +275,15 @@ fn room_seats(
             player: PlayerId::P1,
             deck: room.host_deck.clone(),
             portrait: room.host_portrait.clone().flatten(),
+            // R1834002: each deck's slots, frozen with it: the host's at the room's making.
+            deck_slots: room.host_deck_slots.clone(),
         },
         MatchSeat {
             profile_id: joiner_id.to_string(),
             player: PlayerId::P2,
             deck: deck.cards.clone(),
             portrait: deck.portrait.clone().flatten(),
+            deck_slots: deck.slots.clone(),
         },
     ))
 }
@@ -351,8 +357,13 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
                 FrozenChoice::Bo1 { deck } => Some(deck.portrait.clone().flatten()),
                 _ => Some(None),
             },
+            // R1834002: and its slots with it.
+            host_deck_slots: match &frozen {
+                FrozenChoice::Bo1 { deck } => deck.slots.clone(),
+                _ => None,
+            },
             host_trio: match &frozen {
-                FrozenChoice::Bo3 { trio } => Some(trio.clone()),
+                FrozenChoice::Bo3 { trio } => Some(trio.as_ref().clone()),
                 _ => None,
             },
             // R1372, R924000: an All Random host's lean waits with the room for the deal at the join.
@@ -499,7 +510,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 },
                 NewSeriesSide {
                     profile_id: profile_id.clone(),
-                    trio: trio.clone(),
+                    trio: trio.as_ref().clone(),
                 },
             ),
             seed_base: seed.clone(),

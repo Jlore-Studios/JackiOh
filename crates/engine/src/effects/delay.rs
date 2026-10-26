@@ -33,6 +33,7 @@ use crate::effects::targets::{
 use crate::marks::{mark_delayed, sync_marks};
 use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delayed};
 use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
+use crate::random_cast::RANDOM_CHOICES_KEY;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
@@ -253,11 +254,12 @@ pub fn due_resume(entry: &DelayedEffect) -> Resume {
 /// own. R127: it re-enters as whatever is left of its card then, so a Death hook's snapshot (R89) is
 /// not carried past the hook that read it; nor does it carry the run it was made in
 /// (`work.RUN_MARKS_KEY`): it resolves at its own R62 point, and a card it watches is watched through
-/// `watch` (R174).
+/// `watch` (R174). Nor are its choices random for being made in a run whose were (R1855001).
 fn delayed_resume(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, Value>, hook: &str) -> Resume {
     let mut built = resume_self(ctx, step, data);
     built.data.shift_remove(SELF_KEY);
     built.data.shift_remove(RUN_MARKS_KEY);
+    built.data.shift_remove(RANDOM_CHOICES_KEY);
     Resume {
         hook: hook.to_string(),
         ..built

@@ -1400,6 +1400,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub starscape: Option<StarscapeMap>,
+    /// R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+    /// scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+    /// Absent until the first miss, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub anomaly_misses: Option<i32>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -2021,6 +2027,7 @@ pub fn create_player_state() -> PlayerState {
         votes: None,
         fled: None,
         starscape: None,
+        anomaly_misses: None,
     }
 }
 

@@ -1305,6 +1305,14 @@
   animation-duration: calc(900ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- boardReplaced: issue #1855's Anomalies (R1855000) -------------------------------- */
+/* The board tilts as for `swapped` (500 ms) before the old cards go and the preset comes. */
+
+[data-animating="boardReplaced"] {
+  animation-name: jk-swap-cross;
+  animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
 /* --- locked: chain icon closes over the zone (250 ms) -------------------------------- */
 
 @keyframes jk-chain-close {

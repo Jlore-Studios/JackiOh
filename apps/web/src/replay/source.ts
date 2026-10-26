@@ -4,6 +4,7 @@
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 
+import type { SeatLoadouts } from "../cards/loadouts.ts";
 import { t } from "../i18n/i18n.ts";
 
 /**
@@ -13,10 +14,15 @@ import { t } from "../i18n/i18n.ts";
  * steps `from`, … as one seat saw them; it holds 1 to `count` of them, and when it holds fewer
  * (a Glitch swap moved the viewer, or the engine's page ended early) the next page starts at
  * `from + length`. A page that cannot be had rejects with a `ReplayFailure`.
+ *
+ * R1834003: an online match's source also answers both seats' frozen loadouts (R1834002) as the pages
+ * fetched so far have merged them, null before the first; any other source has none, and its board
+ * draws the defaults.
  */
 export type ReplaySource = {
   readonly total: number;
   page(from: number, count: number): Promise<readonly ReplayStep[]>;
+  loadouts?(): SeatLoadouts | null;
 };
 
 /** A source over steps already held in memory (#1160): a file opened from the player's own device. */

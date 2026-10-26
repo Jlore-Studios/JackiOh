@@ -58,6 +58,7 @@ fn frozen(name: &str, cards: Vec<String>) -> FrozenDeck {
         name: name.to_string(),
         cards,
         portrait: Some(Some("vanilla".to_string())),
+        slots: None,
     }
 }
 

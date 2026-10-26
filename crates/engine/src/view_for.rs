@@ -2460,7 +2460,9 @@ fn redact_event(
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
         // R1847001: a starscape travel names a player, a node and its reward, all public.
-        | GameEventType::StarscapeTravelled => event.clone(),
+        | GameEventType::StarscapeTravelled
+        // R1855000: a board replacement names its player alone.
+        | GameEventType::BoardReplaced => event.clone(),
 
         // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
         // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps

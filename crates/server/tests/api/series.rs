@@ -1232,6 +1232,82 @@ mod r890000_a_seat_taken_mid_start {
     }
 }
 
+/// R1834002: a Conquest game freezes the loadout of the deck each side picked for it, its slots
+/// frozen into the trio with it (as R642 freezes its portrait), the account's picks filling what
+/// the deck leaves out.
+mod r1834002_a_conquest_game_wears_the_picked_deck {
+    use super::*;
+    use jackioh_server::loadout::DeckSlots;
+
+    #[tokio::test]
+    async fn r1834002_conquest_wears_the_picked_decks_slots() {
+        let h = harness_at_1000().await;
+        {
+            let mut data = fake_ref(&h.app).lock().await;
+            let series = data
+                .tables
+                .series
+                .iter_mut()
+                .find(|row| row.id == SERIES_ID)
+                .expect("the series row");
+            let decks = &mut series.sides.0.trio.decks;
+            decks.0.slots = Some(DeckSlots {
+                table: Some("table-wood".to_string()),
+                ..DeckSlots::default()
+            });
+            decks.1.slots = Some(DeckSlots {
+                table: Some("table-felt".to_string()),
+                field: None,
+                card_back: Some("card-back-blueprint".to_string()),
+            });
+        }
+        let (status, body) = request(
+            &h,
+            "PUT",
+            "/api/settings",
+            h.tokens.alice,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": {
+                "table": "table-neon-grid",
+                "field": "field-rain",
+                "border": "border-bone",
+            } } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        // Alice plays her second deck, so its slots and none of her first deck's; her account's
+        // border dresses no card, each wearing its own picks or its kinds' defaults (R1953001).
+        pick_both(&h, [1, 2]).await;
+        let row = match_row(&h.app, FIRST_MATCH).await;
+        let alice = row["players"]
+            .as_array()
+            .and_then(|players| players.iter().position(|id| id == ALICE))
+            .expect("alice has a seat");
+        assert_eq!(
+            row["loadouts"][alice]["seat"],
+            json!({
+                "table": "table-felt",
+                "field": "field-rain",
+                "cardBack": "card-back-blueprint",
+                "foil": "foil-none",
+                "finish": "finish-plain",
+                "border": "border-standard",
+            })
+        );
+        assert_eq!(
+            row["loadouts"][1 - alice]["seat"],
+            json!({
+                "table": "table-tavern",
+                "field": "field-none",
+                "cardBack": "card-back-standard",
+                "foil": "foil-none",
+                "finish": "finish-plain",
+                "border": "border-standard",
+            })
+        );
+    }
+}
+
 // A seat-flag write that fails (#1895)
 
 /// A seat-flag write that fails undoes the game as a taken seat does, so the sweeper can start the

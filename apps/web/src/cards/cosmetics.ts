@@ -3,13 +3,14 @@
 // `COSMETICS_SETTINGS_KEY` and on the account as the `cosmetics` group (R633, `settings/groups.ts`).
 // R1953001: nothing sets those three any more and no face wears them; the group keeps its shape
 // (R1655000), and a card wears its own picks (below) or its kind's default. The ids are the
-// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`).
+// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`). The
+// server refuses a pick of the wrong kind or one the account does not own (R1834001).
 //
 // R1297000: the same store holds three deck slots beside them: the playmat (`table`), the ambient
 // backdrop (`field`) and the back of the viewer's face-down cards and deck (`cardBack`). Each saved
 // deck may carry its own picks (`DeckCosmetics`); a viewer's side wears the deck's, else the
 // account's, else the kind's default (`wornDeckCosmetics`), and an id this client does not know
-// draws as the default. The opponent's side draws the defaults, as every card cosmetic does.
+// draws as the default.
 //
 // R1833000: the account's playmats, backdrops and card backs are no longer all starters, so a pick
 // of one is worn only where the viewer owns it (`ownsAccountCosmetic`: a default or a starter counts,
@@ -17,23 +18,27 @@
 // (practice, hotseat, R1310004's builds: no `AccountCosmeticsOwned` above it). A stored pick the
 // account does not own, one synced from another device say, draws as its kind's default.
 //
-// The picks are the device's own: nothing here reaches the engine, an action, `PlayerView`, the
-// log or a replay, and a face wears them only where the board says it is the viewer's own card in
-// a game (`worn`, game/wearer.ts); every other face draws the defaults (CLAUDE.md rule 7). Each
+// The picks never reach the engine, an action, `PlayerView` or the log, and a face wears them only
+// where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). R1834004: an
+// opponent's side, and every side of a watched or replayed online game, wears instead the loadout
+// its seat froze when the match began (R1834002, `cards/loadouts.ts`), as the server sent it, below
+// a `TheirCopy`; every other face draws the defaults (CLAUDE.md rule 7). Each
 // slot is its own attribute on the face, apart from the rarity foil (`data-foil`, model.ts), so a
 // decorative foil never blurs the Mythic and Radiant signal: a Mythic face wears no cosmetic foil,
-// and a Radiant face no foil, finish or border. A default adds no attribute at all, so a face
-// wearing nothing is the face it was before.
+// and a Radiant face no foil, finish or border, whoever's loadout it wears. A default adds no
+// attribute at all, so a face wearing nothing is the face it was before.
 //
-// R1655000: a card may also carry picks of its own, on the device alone (`jackioh.cosmetics.cards.v1`,
-// never the `cosmetics` group above, so no client overwrites another's): a foil, a finish, a border
-// and whether its full art prints. R1953001: a kind a card has no pick of wears its kind's default,
+// R1655000: a card may also carry picks of its own (`jackioh.cosmetics.cards.v1`, never the
+// `cosmetics` group above, so no client overwrites another's): a foil, a finish, a border and
+// whether its full art prints. R1953001: a kind a card has no pick of wears its kind's default,
 // never the account's pick above, which nothing sets any more (full art keeps the Full-art cards
 // setting as its default). A card's pick is worn only where the viewer owns that
 // cosmetic on that card (`ownsCosmetic`: a default or a starter counts, and so does a ledger row),
 // or where every cosmetic counts as owned (practice, hotseat, R1310004's builds); the store keeps what
 // it is given, the wear path and `useCanEquip` apply ownership. The face wearing them is still only
-// the viewer's own copy (`worn`, or below an `OwnCopy`, fullArt.ts).
+// the viewer's own copy (`worn`, or below an `OwnCopy`, fullArt.ts). R1834000: they live on the
+// account now, and this store is its cache on the device: `cardPicksSync.ts` sends the device's own
+// up once, then puts the account's in it and sends each later write (`subscribeCardPickWrites`).
 //
 // R1956000: from their first read, both stores listen for a window "storage" event on their key,
 // re-read and notify, so a pick another tab makes shows on every face this tab draws at once, and on
@@ -63,6 +68,7 @@ import {
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
@@ -194,7 +200,10 @@ export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean };
 
 /** One card's picks as stored: a short text is kept for each kind, known or not (as `normalizeCosmetics` keeps one). */
-type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean };
+export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean };
+
+/** R1834000: what one write changed of a card's picks, field by field: the new pick, or null where it was cleared. */
+export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | null };
 
 const CARD_PICK_FIELDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
 const NO_PICKS: CardPicks = Object.freeze({});
@@ -260,6 +269,8 @@ let cardPicksState: CardPicksState | null = null;
 /** Whether a write failed, so the picks in memory are newer than storage's. */
 let cardPicksUnsaved = false;
 const cardPicksListeners = new Set<() => void>();
+/** R1834000: told of each write `updateCardPicks` makes, never of `replaceAllCardPicks`. */
+const cardPickWriteListeners = new Set<(defId: string, change: CardPickChange) => void>();
 
 function cardPicks(): CardPicksState {
   listenToStorage();
@@ -313,6 +324,18 @@ export function useCardPicks(defId: string): CardPicks {
 }
 
 /**
+ * What storage holds now, so a pick another tab wrote since this page read stands: as written, and as
+ * read. After a failed write the picks live in memory alone, and what storage holds would forget them.
+ */
+function currentCardPicks(): { written: Record<string, unknown>; state: CardPicksState } {
+  if (defaultStorage() !== null && !cardPicksUnsaved) {
+    const written = readStoredCardPicks();
+    return { written, state: cardPicksFrom(written) };
+  }
+  return { written: Object.fromEntries(cardPicks().stored) as Record<string, unknown>, state: cardPicks() };
+}
+
+/**
  * Changes `defId`'s stored picks by `change`, persists in try/catch and notifies synchronously, unless
  * nothing changed. It starts from what storage holds now, so a pick another tab wrote since this page
  * read stands, and it rewrites only the fields this client knows of `defId`'s entry, so a newer
@@ -320,15 +343,13 @@ export function useCardPicks(defId: string): CardPicks {
  */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
   const storage = defaultStorage();
-  // After a failed write the picks live in memory alone, and what storage holds would forget them.
-  const fromStorage = storage !== null && !cardPicksUnsaved;
-  const written = fromStorage ? readStoredCardPicks() : (Object.fromEntries(cardPicks().stored) as Record<string, unknown>);
-  const state = fromStorage ? cardPicksFrom(written) : cardPicks();
+  const { written, state } = currentCardPicks();
   cardPicksState = state;
   const before = state.stored.get(defId) ?? {};
   const picks: StoredCardPicks = { ...before };
   change(picks);
-  if (CARD_PICK_FIELDS.every((field) => before[field] === picks[field])) return;
+  const changed = CARD_PICK_FIELDS.filter((field) => before[field] !== picks[field]);
+  if (changed.length === 0) return;
   if (Object.keys(picks).length === 0) {
     state.stored.delete(defId);
     state.resolved.delete(defId);
@@ -352,6 +373,9 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
     cardPicksUnsaved = true;
   }
   for (const listener of [...cardPicksListeners]) listener();
+  const sent: Record<string, string | boolean | null> = {};
+  for (const field of changed) sent[field] = picks[field] ?? null;
+  for (const listener of [...cardPickWriteListeners]) listener(defId, sent as CardPickChange);
 }
 
 /** Sets `defId`'s `kind` pick to `id`, or clears it with null, which leaves it to the kind's default. */
@@ -370,6 +394,46 @@ export function writeCardFullArt(defId: string, on: boolean | null): void {
   });
 }
 
+/** R1834000: every card's stored picks by card id, as the device holds them now, an id this client does not know kept. */
+export function readAllCardPicks(): Record<string, StoredCardPicks> {
+  return Object.fromEntries(currentCardPicks().state.stored);
+}
+
+/**
+ * R1834000: puts `picks` (card id to its picks, the account's copy) in place of every card's, persists
+ * in try/catch and notifies the faces synchronously. A card whose picks did not change keeps the
+ * object a face read. It tells no write listener: the account's answer is never sent back to it.
+ */
+export function replaceAllCardPicks(picks: Readonly<Record<string, unknown>>): void {
+  const before = cardPicks();
+  const next = cardPicksFrom(picks as Record<string, unknown>);
+  for (const [defId, stored] of next.stored) {
+    const held = before.stored.get(defId);
+    const kept = before.resolved.get(defId);
+    if (held !== undefined && kept !== undefined && CARD_PICK_FIELDS.every((field) => held[field] === stored[field])) {
+      next.resolved.set(defId, kept);
+    }
+  }
+  cardPicksState = next;
+  const storage = defaultStorage();
+  try {
+    storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(Object.fromEntries(next.stored)));
+    cardPicksUnsaved = storage === null;
+  } catch {
+    // Quota, private mode or blocked storage: the picks still hold in memory for this page.
+    cardPicksUnsaved = true;
+  }
+  for (const listener of [...cardPicksListeners]) listener();
+}
+
+/** R1834000: calls `listener` with the card and what changed after every write of a card's picks on this page. */
+export function subscribeCardPickWrites(listener: (defId: string, change: CardPickChange) => void): () => void {
+  cardPickWriteListeners.add(listener);
+  return () => {
+    cardPickWriteListeners.delete(listener);
+  };
+}
+
 /** The cosmetic ids the viewer owns on each card, past the defaults and starters that every account owns on every card. */
 export type OwnedByCard = ReadonlyMap<string, ReadonlySet<string>>;
 
@@ -378,6 +442,13 @@ export type CardOwnership = "every" | OwnedByCard;
 
 /** R1655000: what the faces below it own; `"every"` with none above it. Provided by `FullArtOwned` (fullArt.ts). */
 export const OwnershipContext = createContext<CardOwnership>("every");
+
+/**
+ * R1834004: the loadout of the seat that owns the copy drawn below it, which its faces wear where
+ * they are not the viewer's own (`worn`): null with none above it, and wherever the board says the
+ * copy draws the defaults (game/wearer.ts). Provided by `TheirCopy` (loadouts.ts).
+ */
+export const TheirCopyContext = createContext<SeatLoadout | null>(null);
 
 /**
  * Whether `cosmeticId` is the viewer's on the card `defId`: every one is where `owned` is `"every"`;
@@ -493,7 +564,7 @@ export function resolveDeckCosmetic(
   return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
 }
 
-/** The deck slots a side wears: the defaults when `worn` is false (the opponent's side), and each pick `owns` refuses. */
+/** The deck slots a side wears: the defaults when `worn` is false (a side with no loadout to wear, game/wearer.ts), and each pick `owns` refuses. */
 export function wornDeckCosmetics(
   worn: boolean,
   deck: DeckCosmetics | null | undefined,
@@ -628,16 +699,23 @@ export type CosmeticAttributes = {
 /**
  * The cosmetic attributes of a face: when `worn`, the card's own picks (R1655000) where the viewer
  * owns them and its kinds' defaults under them (R1953001: never the account's picks); the defaults
- * otherwise. R1956001: a Created card's are its generator's (`createdBy`), owned on the generator,
- * worn by its own face's rarity rules. `animatedFoil` is the card settings' switch, which stills a
- * cosmetic foil as it does the rarity foil, and a moving finish or border with it (R1833000). Its
- * hooks run on every face, worn or not.
+ * otherwise. R1956001: a worn Created card's are its generator's (`createdBy`), owned on the
+ * generator, worn by its own face's rarity rules. R1834004: a face that is not `worn` below a
+ * `TheirCopy` wears that seat's picks of its card, every one owned (the server checked, R1834001),
+ * and its kinds' defaults under them, as its owner sees it (R1953001: never the seat's account foil,
+ * finish and border), under the same rarity rules. `animatedFoil` is the card settings' switch,
+ * which stills a cosmetic foil as it does the rarity foil, and a moving finish or border with it
+ * (R1833000). Its hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
   const source = face.createdBy ?? face.defId;
   const card = useCardPicks(source);
   const owned = useContext(OwnershipContext);
-  const wears = wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id));
+  const theirs = useContext(TheirCopyContext);
+  const wears =
+    !worn && theirs !== null
+      ? wornCosmetics(face, DEFAULT_CARD_COSMETICS, theirs.cards[face.defId])
+      : wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id));
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
   const moves = useFoilSlot(animates && animatedFoil);
@@ -656,6 +734,7 @@ export function resetCosmeticsForTests(): void {
   cardPicksState = null;
   cardPicksUnsaved = false;
   cardPicksListeners.clear();
+  cardPickWriteListeners.clear();
   if (storageListening) window.removeEventListener("storage", onCosmeticsStorage);
   storageListening = false;
   moving.clear();

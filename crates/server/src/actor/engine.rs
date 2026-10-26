@@ -40,6 +40,7 @@
 //! as `duos::engine` does, so a patch deployed under a live match never changes what its log
 //! folds to.
 
+use std::collections::BTreeMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde::{Deserialize, Serialize};
@@ -366,6 +367,39 @@ pub fn deal_random_deck_excluding_with_strength(
 /// no pick is no lean.
 pub fn lean_of(lean: Option<LeanPick>) -> Option<SetName> {
     lean.map(LeanPick::resolve)
+}
+
+/// R1834003: every card dealt from a deck in a game no action has touched yet (`begin_game`'s, a
+/// replay's step 0), by instance id, with the seat whose deck dealt it and the card it was dealt as.
+/// A card minted after the deal (R943's Created: a token, a copy, a last board's) is not one. A
+/// card's owner can change later (R12: a steal off the field, a Bounce, Pocket Chaos's swap) and its
+/// definition too (a transform), so what this read says about the deal is kept apart from the views:
+/// a card's own cosmetics are sent only for a card that came from its seat's deck and still shows
+/// as what it was dealt (`loadout::shown_defs`), which no decklist can be read from.
+pub fn dealt_cards(state: &EngineState) -> BTreeMap<String, (PlayerId, String)> {
+    let mut dealt = BTreeMap::new();
+    for seat in [PlayerId::P1, PlayerId::P2] {
+        let side = &state.players[seat];
+        let field = side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(side.backrow.iter().flatten())
+            .chain(side.carried.iter().flatten().flatten());
+        let cards = side
+            .library
+            .iter()
+            .chain(&side.hand)
+            .chain(&side.graveyard)
+            .chain(&side.exile)
+            .chain(&side.resolving)
+            .chain(field);
+        for card in cards.filter(|card| card.created.is_none()) {
+            dealt.insert(card.id.clone(), (card.owner, card.def_id.clone()));
+        }
+    }
+    dealt
 }
 
 /// R417, R565: each seat's last board from a finished game, seat order — every card on the field,

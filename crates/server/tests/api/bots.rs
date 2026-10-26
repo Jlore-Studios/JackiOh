@@ -165,6 +165,7 @@ async fn new_bot(app: &App, spec: BotSpec) -> String {
         let decks = vec![BotDeck {
             cards: deck(1),
             portrait: pick_portrait_from_seed("bot-deck").to_string(),
+            slots: None,
         }];
         q!(app, bots_set_decks(&id, &decks, &app.catalog.version));
     }

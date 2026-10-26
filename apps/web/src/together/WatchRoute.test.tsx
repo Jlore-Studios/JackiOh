@@ -5,7 +5,8 @@
 // never reopens it, opens again `WATCH_RECONNECT_MS` after an unexpected close up to
 // `WATCH_RECONNECT_ATTEMPTS` times and offers Reconnect now, while one waits (#1691) and once they run
 // out, whose click opens it again with the attempts started over (#1570), and does not reopen a
-// finished game. The board's rail offers the newest view's live modifiers in full (R169).
+// finished game. The board's rail offers the newest view's live modifiers in full (R169). The socket's
+// loadouts dress both seats of the watched board (R1834004).
 //
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance
@@ -17,13 +18,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registeredCatalog } from "@jackioh/engine";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
-import { baseView, card, emptySide, opponentModifiers, yourModifiers } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
 import { must, signIn, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { WatchRoute } from "./WatchRoute.tsx";
@@ -623,5 +625,40 @@ describe("R169 the modifier list on the watch screen", () => {
     socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
     expect(screen.getByTestId("game")).toBeInTheDocument();
     expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+  });
+});
+
+describe("R1834004 the watched board wears both seats' loadouts", () => {
+  it("R1834004 a watched board dresses both seats from the watch socket's loadouts, a card's picks sent first kept for them", () => {
+    const borders = cosmeticsOf("border").filter((cosmetic) => !cosmetic.default);
+    const [seatBorder, cardBorder, theirBorder] = borders.map((cosmetic) => cosmetic.id);
+    const table = cosmeticsOf("table").find((cosmetic) => !cosmetic.default)?.id;
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "cardLoadouts", seat: "p1", cards: [{ cardId: "core-001", border: cardBorder }] });
+    socket.frame({
+      type: "loadouts",
+      p1: { ...DEFAULT_CARD_COSMETICS, border: seatBorder },
+      p2: { ...DEFAULT_CARD_COSMETICS, table },
+    });
+    socket.frame({ type: "cardLoadouts", seat: "p2", cards: [{ cardId: "core-004", border: theirBorder }] });
+    socket.frame({
+      type: "view",
+      view: baseView({
+        viewer: "p1",
+        you: emptySide("p1", { hand: [card({ instanceId: "h-1", defId: "core-001" }), card({ instanceId: "h-2", defId: "core-002" })] }),
+        opponent: emptySide("p2", { hand: { count: 2 }, units: [unit("p2"), null, null, null, null] }),
+      }),
+      legal: [],
+    });
+
+    // Nobody wears the device's picks here: the lower seat's card wears its own pick, and a card with
+    // none its kind's default, never the seat's border (R1953001).
+    expect(screen.getByTestId("hand-card-h-1").querySelector(".cf")?.getAttribute("data-frame")).toBe(cardBorder);
+    expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
+    // And the friend's opponent wears theirs.
+    expect(document.querySelector('.card[data-owner="p2"] > .cf')?.getAttribute("data-frame")).toBe(theirBorder);
+    expect(document.querySelector(".field")?.getAttribute("data-their-table")).toBe(table);
   });
 });
