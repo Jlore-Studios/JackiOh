@@ -17,7 +17,7 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, ai_pool};
+use super::support::{AI, ai_pool, js};
 
 const FLAGS: &[&str] = &["error", "timeout", "neverPlayed", "selfHarm", "selfKill"];
 
@@ -29,11 +29,6 @@ fn matches_reason(reason: &str) -> bool {
     };
     head.split(", ").all(|flag| FLAGS.contains(&flag))
         && rest.chars().next().is_some_and(|c| !c.is_whitespace())
-}
-
-/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
 }
 
 /// Every JSON number as a float, so an `f64` field written `0.0` equals TS's literal `0`.

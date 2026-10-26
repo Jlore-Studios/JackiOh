@@ -738,6 +738,20 @@ pub struct StaticFlags {
     /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reveal_chance: Option<i32>,
+    // ---- Stinkyscape (issue #1844) ----
+    /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
+    /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands
+    /// the turn back (`subsystems::autopilot::aura_reach`); several take the largest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pilots_actions: Option<i32>,
+    /// R1844000 (Stinkyscape #47 Circadian Fullcycler): while this card acts on the field, the
+    /// autopilot plays each of its controller's turns whole, as Cognitive Offloading does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pilots_turn: Option<bool>,
+    /// R1844001 (Stinkyscape #147.2 Wardrum Blob): while this card acts on the field, its controller
+    /// is shown the Pareto hint on each of their turns (`subsystems::pareto::pareto_hint_ids`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hints_plays: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -1201,6 +1215,26 @@ pub struct Script {
     /// reading had it. Only a kept script sets it (C #88 Siphon Squad's v0.3.7b), so its replays fold
     /// as they played; every other card's sleeps there (`preview::lasting_text_dormant`).
     pub live_face_down: bool,
+    // ---- Card-on-card verbs (#1850) ----
+    /// R1850002: "Exile all …" as a lasting text, an aura that exiles rather than buffs: while the card
+    /// acts on the field (face-up), every state check exiles each card on the field each entry reaches
+    /// (`card_on_card::exile_by_auras`). A list, so a fused card carries each ingredient's.
+    pub exile_auras: Vec<ExileAura>,
+    /// R1850005: "When this has N or more keywords, make it Radiant" — the N, read at every state check
+    /// against the card's distinct keyword kinds through the layers (`card_on_card::radiant_by_keywords`).
+    pub radiant_at_keywords: Option<i32>,
+}
+
+/// R1850002: one exile aura — the cards on the field it reaches (`scope`, read for the card as an
+/// enemy's harm would read it, so Stealth and Immune keep theirs), when set, the cost they must pass
+/// (`cost`, read as R66's sweeps read it), and the keyword kinds that spare a card that has one through
+/// the layers (`not_keywords`: Scornboi's Starship Piece and Starship, R1852000, R1852003). The card
+/// itself and a face-down card are never reached.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ExileAura {
+    pub scope: crate::effects::BoardScope,
+    pub cost: Option<crate::effects::CostFilter>,
+    pub not_keywords: Vec<crate::wire::KeywordKind>,
 }
 
 impl Script {

@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CI_RUNS_CACHE_TTL_SECONDS } from "@jackioh/server-config";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1375,142 +1374,236 @@ describe("the drill-down's card preview", () => {
   });
 });
 
-describe("R1935000 the Daily runs tab", () => {
-  /** How long the open tab waits before it asks again, in ms. */
-  const REFRESH_MS = CI_RUNS_CACHE_TTL_SECONDS * 1000;
+describe("R1966000 the Sets tab", () => {
+  /** A card row: `wins` of `games`, in `set`. */
+  function row(id: string, name: string, set: string, wins: number, games: number) {
+    return {
+      ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
+      id,
+      name,
+      set,
+      games,
+      winRate: wins / games,
+      hasEnoughGames: games >= 20,
+    };
+  }
 
-  const RUNS = {
-    runs: [
-      {
-        id: 3,
-        url: "https://github.com/o/r/actions/runs/3",
-        startedAt: "2026-10-25T07:17:00Z",
-        commit: "abcdef0123456789",
-        result: "running",
-        failedJobs: [],
-      },
-      {
-        id: 2,
-        url: "https://github.com/o/r/actions/runs/2",
-        startedAt: "2026-10-24T07:17:00Z",
-        commit: "1d6ec71fedcba987",
-        result: "failed",
-        failedJobs: [
-          { name: "fuzz (2/4)", url: "https://github.com/o/r/job/1", conclusion: "failure" },
-          { name: "fuzz (4/4)", url: "https://github.com/o/r/job/2", conclusion: "cancelled" },
-        ],
-      },
-      {
-        id: 1,
-        url: "https://github.com/o/r/actions/runs/1",
-        startedAt: "2026-10-23T07:17:00Z",
-        commit: "0123456789abcdef",
-        result: "passed",
-        failedJobs: [],
-      },
+  const NOW = {
+    ...MOCK_CARD_STATS_PROVISIONAL,
+    patch: "0.2.0",
+    previousPatch: "0.1.0",
+    cards: [
+      row("core-001", "Spark Pup", "Core", 700, 1200), // 58.3%: 5.8 standard errors over 50%
+      row("core-002", "Lava Hound", "Core", 450, 1000), // 45%: 3.2 under
+      row("classic-001", "Palantir", "Classic", 520, 1000),
+      row("classic-002", "Counterspell", "Classic", 480, 1000),
     ],
   };
+  const BEFORE = {
+    ...NOW,
+    patch: "0.1.0",
+    previousPatch: null,
+    cards: [row("core-001", "Spark Pup", "Core", 500, 1000), row("classic-001", "Palantir", "Classic", 550, 1000)],
+  };
 
-  /** Answers `GET /api/stats/ci` with what `answer` makes at the time, anything else with the card statistics. */
-  function serveCi(answer: () => Response): void {
+  /** Answers the card statistics of patch 0.1.0 with `BEFORE`, any other with `NOW` (or `answer`'s), and a card's details with Spark Pup's. */
+  function serveSets(answer: () => Response = () => new Response(JSON.stringify(NOW), { status: 200 })): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
         const url = new URL(String(input), window.location.origin);
-        if (url.pathname === "/api/stats/ci") return Promise.resolve(answer());
-        return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_DRILL_DOWN), { status: 200 }));
+        }
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        if (url.searchParams.get("patch") === "0.1.0") {
+          return Promise.resolve(new Response(JSON.stringify(BEFORE), { status: 200 }));
+        }
+        return Promise.resolve(answer());
       }),
     );
   }
 
-  it("R1935000 lists each run newest first with its result, a failed run's jobs that did not pass, each linking to GitHub", async () => {
-    serveCi(() => new Response(JSON.stringify(RUNS), { status: 200 }));
+  it("R1966000 ranks each set by its pooled win rate, with its mean, median, change since the previous patch, best and worst card", async () => {
+    serveSets();
     const user = userEvent.setup();
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    // Not asked for before the tab opens.
-    expect(requested("/api/stats/ci")).toEqual([]);
 
-    await user.click(screen.getByTestId(statsTestid.tabCi));
-    const table = await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.tabSets));
+    const table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(window.location.search).toBe("?tab=sets");
     const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows.map((row) => row.getAttribute("data-result"))).toEqual(["running", "failed", "passed"]);
-    const [running, failed, passed] = [rows[0]!, rows[1]!, rows[2]!];
-    expect(running).toHaveTextContent("Running");
-    expect(failed).toHaveTextContent("Failed");
-    expect(passed).toHaveTextContent("Passed");
-    expect(within(failed).getByText("1d6ec71")).toBeInTheDocument();
-    expect(within(running).getAllByRole("link")[0]).toHaveAttribute("href", "https://github.com/o/r/actions/runs/3");
-    expect(within(failed).getByRole("link", { name: "fuzz (2/4)" })).toHaveAttribute("href", "https://github.com/o/r/job/1");
-    expect(within(failed).getByRole("link", { name: "fuzz (4/4)" })).toHaveAttribute("href", "https://github.com/o/r/job/2");
-    expect(failed).toHaveTextContent("(cancelled)");
-    expect(within(passed).queryByRole("list")).toBeNull();
-    expect(window.location.search).toBe("?tab=ci");
+    expect(rows.map((r) => r.getAttribute("data-set"))).toEqual(["Core", "Classic"]);
+    const [core, classic] = [rows[0]!, rows[1]!];
+    // Core pools 1,150 wins of 2,200 card-games (52.3%); its two cards' mean and median are 51.7%.
+    expect(core).toHaveTextContent("2,200");
+    expect(core).toHaveTextContent("52.3%");
+    expect(core).toHaveTextContent("51.7%");
+    // Since 0.1.0: Core from 50% to 52.3%, Classic from 55% to 50%.
+    expect(within(table).getByRole("columnheader", { name: "Since 0.1.0" })).toBeInTheDocument();
+    expect(core).toHaveTextContent("+2.3%");
+    expect(classic).toHaveTextContent("-5.0%");
+    expect(within(core).getByRole("button", { name: "Spark Pup 58.3%" })).toBeInTheDocument();
+    expect(within(core).getByRole("button", { name: "Lava Hound 45.0%" })).toBeInTheDocument();
+    expect(within(classic).getByRole("button", { name: "Palantir 52.0%" })).toBeInTheDocument();
 
-    // The summary reads the finished runs alone: one of two passed, the newest failed, and of the
-    // failed run's two jobs the one listed first is named.
-    const summary = screen.getByTestId(statsTestid.ciSummary);
-    expect(summary).toHaveTextContent("1 of 2");
-    expect(summary).toHaveTextContent("Failed in a row1");
-    expect(summary).toHaveTextContent("fuzz (2/4)");
-    expect(summary).toHaveTextContent("in 1 of 2 runs");
+    const best = screen.getByTestId(statsTestid.setsLeaders);
+    expect(best).toHaveTextContent("Highest win rateCore");
+    expect(best).toHaveTextContent("Highest mean cardCore");
+    expect(best).toHaveTextContent("Highest median cardCore");
+
+    // Spark Pup is 5.8 standard errors over 50% and Lava Hound 3.2 under; the Classic cards are nearer.
+    const far = screen.getByTestId(statsTestid.setsOutliers);
+    const strongest = within(far).getByRole("region", { name: "Strongest cards" });
+    const weakest = within(far).getByRole("region", { name: "Weakest cards" });
+    expect(within(strongest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-001"]);
+    expect(strongest).toHaveTextContent("Core · 58.3% over 1,200 games · +5.8 standard errors");
+    expect(within(weakest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-002"]);
+
+    // A card opens its details, as a row of the Cards tab does.
+    await user.click(within(strongest).getByRole("button", { name: "Spark Pup" }));
+    expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
   });
 
-  it("R1935000 the open tab asks again every CI_RUNS_CACHE_TTL_SECONDS, and stops once another tab is chosen", async () => {
-    serveCi(() => new Response(JSON.stringify(RUNS), { status: 200 }));
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    at("/stats?tab=ci");
+  it("R1966000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {
+    serveSets();
+    at("/stats?set=core&rarity=Rare&cost=2&mode=bo1");
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
-    expect(requested("/api/stats/ci")).toHaveLength(1);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
-    });
-    expect(requested("/api/stats/ci")).toHaveLength(1);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1);
-    });
-    expect(requested("/api/stats/ci")).toHaveLength(2);
-
-    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(REFRESH_MS * 3);
-    });
-    expect(requested("/api/stats/ci")).toHaveLength(2);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    const asked = requested("/api/stats/cards").filter((url) => !url.searchParams.has("set"));
+    expect(asked.map((url) => [url.searchParams.get("patch"), url.searchParams.get("mode")])).toEqual([
+      [null, "bo1"],
+      ["0.1.0", "bo1"],
+    ]);
+    expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("R1935000 a read that fails shows Retry, which asks again, and a failed refresh keeps the runs shown", async () => {
+  it("R1966000 a read that fails shows Retry, which asks again", async () => {
     let up = false;
-    serveCi(() =>
+    serveSets(() =>
       up
-        ? new Response(JSON.stringify(RUNS), { status: 200 })
-        : new Response(JSON.stringify({ error: { code: "unavailable", message: "GitHub" } }), { status: 503 }),
+        ? new Response(JSON.stringify(NOW), { status: 200 })
+        : new Response(JSON.stringify({ error: { code: "unavailable", message: "down" } }), { status: 503 }),
     );
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    at("/stats?tab=ci");
+    at("/stats?tab=sets");
     render(<StatsRoute />);
-    const retry = await screen.findByTestId(statsTestid.ciRetry, undefined, SLOW);
-    expect(screen.getByText("Failed to load the daily runs.")).toBeInTheDocument();
-
+    const retry = await screen.findByTestId(statsTestid.setsRetry, undefined, SLOW);
+    expect(screen.getByText("Failed to load the set statistics.")).toBeInTheDocument();
     up = true;
     fireEvent.click(retry);
-    await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
-    expect(requested("/api/stats/ci")).toHaveLength(2);
-
-    up = false;
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(REFRESH_MS);
-    });
-    expect(requested("/api/stats/ci")).toHaveLength(3);
-    expect(screen.getByTestId(statsTestid.ciTable)).toBeInTheDocument();
-    expect(screen.queryByTestId(statsTestid.ciRetry)).toBeNull();
+    expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
   });
 
-  it("R1935000 says so when GitHub lists no daily run", async () => {
-    serveCi(() => new Response(JSON.stringify({ runs: [] }), { status: 200 }));
+  it("R1966000 says so when the patch has no games, and when no card is far from 50%", async () => {
+    serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: [] }), { status: 200 }));
+    at("/stats?tab=sets");
+    render(<StatsRoute />);
+    expect(await screen.findByText("No games on patch 0.2.0 yet.", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: NOW.cards.slice(2) }), { status: 200 }));
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(within(table).getByRole("columnheader", { name: "Change" })).toBeInTheDocument();
+    expect(within(screen.getByTestId(statsTestid.setsOutliers)).getAllByText("No card is 3 standard errors from 50% yet.")).toHaveLength(2);
+  });
+});
+
+describe("R1973002 the patch bar", () => {
+  /** Newest first: 0.7.0 (newest, short of games), then the older patches with their games. */
+  const PATCHES = [
+    { versions: ["0.7.0", "0.7.0b"], games: 300, liveGames: 0 },
+    { versions: ["0.6.0"], games: 1500, liveGames: 0 },
+    { versions: ["0.5.0"], games: 999, liveGames: 0 },
+    { versions: ["0.4.0", "0.4.0b"], games: 2000, liveGames: 0 },
+    { versions: ["0.3.0"], games: 1000, liveGames: 0 },
+    { versions: ["0.2.0"], games: 5000, liveGames: 0 },
+    { versions: ["0.1.0"], games: 4000, liveGames: 0 },
+    { versions: ["0.0.9"], games: 3000, liveGames: 0 },
+  ];
+
+  /** Answers the card statistics at the version asked for (the newest, 0.7.0b, when none is), with the patch list. */
+  function servePatches(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const patch = url.searchParams.get("patch") ?? "0.7.0b";
+        const body = { ...MOCK_CARD_STATS_PROVISIONAL, patch, previousPatch: null, patches: PATCHES };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R1973002 offers the newest five patches with 1,000 games and the one shown, and steps to the patch before and after", async () => {
+    servePatches();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const select = await screen.findByTestId(statsTestid.patchSelect, undefined, SLOW);
+    // The newest, shown, is short of games but offered first; 0.5.0 (999) and the sixth, 0.0.9, are not.
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "0.7.0 · 300 games",
+      "0.6.0 · 1,500 games",
+      "0.4.0 · 2,000 games",
+      "0.3.0 · 1,000 games",
+      "0.2.0 · 5,000 games",
+      "0.1.0 · 4,000 games",
+    ]);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.7.0");
+    expect(screen.getByTestId(statsTestid.patchNext)).toBeDisabled();
+
+    // Back one patch: 0.6.0, asked for at its version.
+    const previous = screen.getByTestId(statsTestid.patchPrevious);
+    expect(previous).toHaveTextContent("← Previous patch (0.6.0)");
+    await user.click(previous);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.6.0");
+    // Back again, to 0.5.0: not offered for its 999 games, but shown, so the picker holds it.
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.0"), SLOW);
+    await waitFor(() => expect(screen.getByTestId(statsTestid.patchSelect)).toHaveValue("0.5.0"), SLOW);
+
+    // Forward: the next patch, then the newest, which is the plain address.
+    const next = screen.getByTestId(statsTestid.patchNext);
+    expect(next).toHaveTextContent("Next patch (0.6.0) →");
+    await user.click(next);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    await user.click(screen.getByTestId(statsTestid.patchNext));
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+
+    // The picker asks for a patch at its newest version.
+    await user.selectOptions(screen.getByTestId(statsTestid.patchSelect), "0.4.0b");
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0");
+  });
+
+  it("R1973002 the provisional banner's previous patch is the patch before, not a micro of the same one", async () => {
+    servePatches();
+    render(<StatsRoute />);
+    const fallback = await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW);
+    expect(fallback).toHaveTextContent("View previous patch (0.6.0) →");
+    fireEvent.click(fallback);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+  });
+
+  it("R1973002 a server with no patch list shows no patch bar", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
+  });
+});
+
+describe("R1973000 the Daily runs tab is gone", () => {
+  it("R1973000 the page offers Cards, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
-    expect(await screen.findByText("No daily runs yet.", undefined, SLOW)).toBeInTheDocument();
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Cards", "Sets", "Players"]);
+    expect(screen.queryByText("Daily runs")).toBeNull();
+    expect(requested("/api/stats/ci")).toEqual([]);
   });
 });

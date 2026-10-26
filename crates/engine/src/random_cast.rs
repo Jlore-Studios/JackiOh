@@ -77,6 +77,7 @@ pub fn random_choices_of(resume: &Resume) -> Option<CastMode> {
         random: true,
         target_enemies: false,
         casts: 0,
+        friends_only: None,
     })
 }
 
@@ -120,6 +121,8 @@ pub fn count_chain_cast(state: &mut GameState, player: PlayerId) {
 pub struct CastPromptMode {
     pub random: bool,
     pub target_enemies: bool,
+    /// R1850004: its target options are the caster's own side alone (`friends_only`).
+    pub friends_only: bool,
 }
 
 /// R452: how a prompt opened for `player` is to be answered while casts are being driven: at random
@@ -134,16 +137,18 @@ pub fn cast_mode_for_prompt(
         return Some(CastPromptMode {
             random: true,
             target_enemies: random.target_enemies,
+            friends_only: random.friends_only == Some(true),
         });
     }
     let own = cast_modes_of(state).iter().find(|entry| {
         entry.player == player
-            && entry.target_enemies
+            && (entry.target_enemies || entry.friends_only == Some(true))
             && Some(entry.instance_id.as_str()) == resume_instance_id
     });
-    own.map(|_| CastPromptMode {
+    own.map(|entry| CastPromptMode {
         random: false,
-        target_enemies: true,
+        target_enemies: entry.target_enemies,
+        friends_only: entry.friends_only == Some(true),
     })
 }
 
@@ -257,6 +262,27 @@ pub fn prefer_friends<T: Clone>(
     } else {
         options.to_vec()
     }
+}
+
+/// R1850004: "cast it for yourself" — the options narrowed strictly to the chooser's own side: their
+/// hero and the cards they control on the field among the target picks (a mode or a zone option is
+/// kept as it is). Nothing else is offered, even when nothing is left.
+pub fn friends_only<T: Clone>(
+    state: &GameState,
+    chooser: PlayerId,
+    options: &[T],
+    selection_of: impl Fn(&T) -> Selection,
+) -> Vec<T> {
+    options
+        .iter()
+        .filter(|option| match selection_of(option) {
+            Selection::Hero { player } => player == chooser,
+            Selection::Instance { instance_id } => find_instance(state, &instance_id)
+                .is_some_and(|card| matches!(card.zone, Zone::Field { .. }) && card.controller == chooser),
+            _ => true,
+        })
+        .cloned()
+        .collect()
 }
 
 /// R452: a uniformly random set of between `low` and `high` of `items` (the size first, then the set),

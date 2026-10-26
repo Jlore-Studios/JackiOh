@@ -1057,6 +1057,16 @@ pub enum GameEvent {
         node: i32,
         reward: StarscapeReward,
     },
+    /// R1850003: the permanent `instance_id` (of `player`'s field) is held beneath the card
+    /// `holder_id` until that card leaves the field — off the field, in no pile, and back as a summon.
+    /// Only a face-up card is held, so both read it as it happens; a view judges the card and its
+    /// holder by where each is now, as `exiled` is (R97).
+    Held {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        holder_id: String,
+    },
     // -------------------------------------------------------------------------------------------
     // Issue #1855: Anomalies, the board swap (R1855000–R1855003)
     // -------------------------------------------------------------------------------------------
@@ -1212,6 +1222,7 @@ string_union! {
         VotedOut = "votedOut",
         Fled = "fled",
         StarscapeTravelled = "starscapeTravelled",
+        Held = "held",
         BoardReplaced = "boardReplaced",
     }
 }
@@ -1392,6 +1403,7 @@ impl GameEvent {
             GameEvent::VotedOut { .. } => GameEventType::VotedOut,
             GameEvent::Fled { .. } => GameEventType::Fled,
             GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
+            GameEvent::Held { .. } => GameEventType::Held,
             GameEvent::BoardReplaced { .. } => GameEventType::BoardReplaced,
         }
     }
@@ -1480,8 +1492,9 @@ mod tests {
         // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
         // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
-        // `starscapeTravelled` (R1847001); and #1855's `boardReplaced` (R1855000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 92);
+        // `starscapeTravelled` (R1847001); and #1850's one, `held` (R1850003); and #1855's
+        // `boardReplaced` (R1855000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 93);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

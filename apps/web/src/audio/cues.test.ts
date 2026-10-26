@@ -250,6 +250,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   // #1847 (R1847001).
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+  // #1850 (R1850003).
+  held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
 };
@@ -353,6 +355,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   votedOut: "trapSting",
   fled: "whoosh",
   starscapeTravelled: "whoosh",
+  held: "poof",
   boardReplaced: "whoosh",
 };
 
@@ -394,6 +397,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "voteCast",
   "votedOut",
   "fled",
+  "held",
   // R1855000: a board replacement's whoosh, whatever the seat.
   "boardReplaced",
   "countered",

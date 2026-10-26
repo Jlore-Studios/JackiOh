@@ -60,13 +60,6 @@ mod tests {
     const TIMMY: &str = "core-011"; // Unit, 3/3 — the unit already on the board
     const LANES: [i32; 5] = [1, 2, 3, 4, 5];
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("expected a unit in {player} lane {lane}, found none"),
-        }
-    }
-
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         LANES.iter().map(|&lane| s.unit(player, lane).map(|u| u.def_id)).collect()
     }
@@ -90,10 +83,10 @@ mod tests {
                 defs_of(&s, PlayerId::P1),
                 row(&[Some(TIMMY), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
             );
-            let token = unit_at(&s, PlayerId::P1, 2);
+            let token = s.unit_at(PlayerId::P1, 2);
             s.expect_stats(&token, json!({ "attack": 1, "maxHealth": 1 }));
             // The pre-existing unit is untouched by the base face.
-            let timmy = unit_at(&s, PlayerId::P1, 1);
+            let timmy = s.unit_at(PlayerId::P1, 1);
             s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
@@ -131,10 +124,10 @@ mod tests {
             s.play(FRIEND, json!({}));
 
             // "Then": the buff lands after the fill, so the Felinors it just made are units you control.
-            let timmy = unit_at(&s, PlayerId::P1, 1);
+            let timmy = s.unit_at(PlayerId::P1, 1);
             s.expect_stats(&timmy, json!({ "attack": 5, "maxHealth": 5 }));
             for lane in [2, 3, 4, 5] {
-                let token = unit_at(&s, PlayerId::P1, lane);
+                let token = s.unit_at(PlayerId::P1, lane);
                 assert_eq!(token.def_id, FELINOR);
                 s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
             }
@@ -151,9 +144,9 @@ mod tests {
 
             s.play(FRIEND, json!({}));
 
-            let token = unit_at(&s, PlayerId::P1, 1);
+            let token = s.unit_at(PlayerId::P1, 1);
             s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
-            let timmy = unit_at(&s, PlayerId::P2, 1);
+            let timmy = s.unit_at(PlayerId::P2, 1);
             s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
@@ -167,7 +160,7 @@ mod tests {
             s.play(FRIEND, json!({}));
 
             for lane in LANES {
-                let unit = unit_at(&s, PlayerId::P1, lane);
+                let unit = s.unit_at(PlayerId::P1, lane);
                 s.expect_stats(&unit, json!({ "attack": 5, "maxHealth": 5 }));
             }
         }
@@ -186,7 +179,7 @@ mod tests {
                 };
                 assert_eq!(moved, buff);
                 s.play(FRIEND, json!({}));
-                let unit = unit_at(&s, PlayerId::P1, 1);
+                let unit = s.unit_at(PlayerId::P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 3 + buff, "maxHealth": 3 + buff }));
             }
         }

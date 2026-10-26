@@ -150,6 +150,7 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
       case "radiantSet":
       case "deradianted":
       case "trapFired":
+      case "held":
         note(event.instanceId, event.defId);
         break;
       case "fused":
@@ -565,6 +566,11 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return event.opponent === "loss"
         ? t("{seat} escaped the universe, leaving the other side a loss", { seat: name.seat(event.player) })
         : t("{seat} escaped the universe, leaving the other side a draw", { seat: name.seat(event.player) });
+    case "held":
+      // R1850003: the card and the one it is held beneath, each a card back where the view hides it.
+      return capitalised(
+        t("{card} is held beneath {holder}", { card: name.card(event.instanceId, event.defId), holder: name.instance(event.holderId) }),
+      );
     case "boardReplaced":
       // R1855000: whose board an Anomaly replaced; the cards' `exiled` and `summoned` lines follow.
       return capitalised(t("{whose} board was replaced", { whose: name.whose(event.player) }));

@@ -68,10 +68,6 @@ mod tests {
         }))
     }
 
-    fn at(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     fn reborn_count(s: &Scenario, id: &str) -> usize {
         s.stats(id).keywords.iter().filter(|k| k.kind() == KeywordKind::Reborn).count()
     }
@@ -104,17 +100,17 @@ mod tests {
             let mut s = setup(json!({ "hand": [WRAPS, HIT_JOB, HIT_JOB, FILLER], "field": [VANILLA] }), json!({}));
             let vanilla = s.card(VANILLA).clone();
 
-            s.play(WRAPS, json!({ "targets": at(&vanilla.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&vanilla.id) }));
             assert!(s.card(&vanilla).granted_keywords.contains(&Keyword::Reborn));
             assert_eq!(reborn_count(&s, &vanilla.id), 1);
 
-            s.play(HIT_JOB, json!({ "targets": at(&vanilla.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&vanilla.id) }));
             let back = s.unit(P1, 1).expect("the Reborn body");
             assert_eq!(back.def_id, VANILLA);
             s.expect_stats(&back, json!({ "attack": 4, "health": 1 }));
             assert_eq!(reborn_count(&s, &back.id), 0);
 
-            s.play(HIT_JOB, json!({ "targets": at(&back.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&back.id) }));
             assert!(s.unit(P1, 1).is_none());
             s.expect_in_zone(&vanilla, "graveyard");
         }
@@ -125,7 +121,7 @@ mod tests {
             let mut s = setup(json!({ "hand": [WRAPS, FILLER] }), json!({ "field": [VANILLA] }));
 
             let vanilla = s.card(VANILLA).id.clone();
-            s.play(WRAPS, json!({ "targets": at(&vanilla) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&vanilla) }));
 
             assert_eq!(reborn_count(&s, VANILLA), 1);
         }
@@ -136,11 +132,11 @@ mod tests {
             let mut s = setup(json!({ "hand": [WRAPS, SILENCE, HIT_JOB, FILLER], "field": [VANILLA] }), json!({}));
             let vanilla = s.card(VANILLA).clone();
 
-            s.play(WRAPS, json!({ "targets": at(&vanilla.id) }));
-            s.play(SILENCE, json!({ "targets": at(&vanilla.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&vanilla.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&vanilla.id) }));
             assert_eq!(reborn_count(&s, &vanilla.id), 1);
 
-            s.play(HIT_JOB, json!({ "targets": at(&vanilla.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&vanilla.id) }));
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
         }
 
@@ -150,7 +146,7 @@ mod tests {
             let mut s = setup(json!({ "hand": [WRAPS, FLOOD, FILLER], "field": [VANILLA] }), json!({}));
             let vanilla = s.card(VANILLA).clone();
 
-            s.play(WRAPS, json!({ "targets": at(&vanilla.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&vanilla.id) }));
             s.play(FLOOD, json!({}));
 
             assert_eq!(s.card(&vanilla).zone.z(), ZoneName::Hand);
@@ -163,13 +159,13 @@ mod tests {
             let mut s = setup(json!({ "hand": [WRAPS, HIT_JOB, HIT_JOB, FILLER], "field": [DEFENDER] }), json!({}));
             let defender = s.card(DEFENDER).clone();
 
-            s.play(WRAPS, json!({ "targets": at(&defender.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&defender.id) }));
             assert_eq!(reborn_count(&s, &defender.id), 1);
 
-            s.play(HIT_JOB, json!({ "targets": at(&defender.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&defender.id) }));
             let back = s.unit(P1, 1).expect("the Reborn body");
             assert_eq!(reborn_count(&s, &back.id), 0);
-            s.play(HIT_JOB, json!({ "targets": at(&back.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&back.id) }));
             assert!(s.unit(P1, 1).is_none());
         }
 
@@ -178,20 +174,20 @@ mod tests {
             crate::register_all();
             let mut s = setup(json!({ "hand": [WRAPS, SILENCE, HIT_JOB, FILLER], "field": [DEFENDER] }), json!({}));
             let defender = s.card(DEFENDER).clone();
-            s.play(WRAPS, json!({ "targets": at(&defender.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&defender.id) }));
             assert!(s.card(&defender).granted_keywords.contains(&Keyword::Reborn));
 
-            s.play(SILENCE, json!({ "targets": at(&defender.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&defender.id) }));
             assert_eq!(reborn_count(&s, &defender.id), 1);
-            s.play(HIT_JOB, json!({ "targets": at(&defender.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&defender.id) }));
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(DEFENDER.to_string()));
 
             // Without New Wraps a Vanilla Right-house defender has no Reborn left, and stays dead.
             let mut bare = setup(json!({ "hand": [SILENCE, HIT_JOB, FILLER], "field": [DEFENDER] }), json!({}));
             let target = bare.card(DEFENDER).id.clone();
-            bare.play(SILENCE, json!({ "targets": at(&target) }));
+            bare.play(SILENCE, json!({ "targets": pick::id(&target) }));
             let target = bare.card(DEFENDER).id.clone();
-            bare.play(HIT_JOB, json!({ "targets": at(&target) }));
+            bare.play(HIT_JOB, json!({ "targets": pick::id(&target) }));
             assert!(bare.unit(P1, 1).is_none());
         }
 
@@ -200,13 +196,13 @@ mod tests {
             crate::register_all();
             let mut s = setup(json!({ "hand": [WRAPS, HIT_JOB, HIT_JOB, FILLER], "field": [DEFENDER] }), json!({}));
             let defender = s.card(DEFENDER).id.clone();
-            s.play(HIT_JOB, json!({ "targets": at(&defender) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&defender) }));
             let body = s.unit(P1, 1).expect("the Reborn body");
             assert_eq!(reborn_count(&s, &body.id), 0);
 
-            s.play(WRAPS, json!({ "targets": at(&body.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&body.id) }));
             assert_eq!(reborn_count(&s, &body.id), 1);
-            s.play(HIT_JOB, json!({ "targets": at(&body.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&body.id) }));
 
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(DEFENDER.to_string()));
         }
@@ -223,9 +219,9 @@ mod tests {
                 json!({}),
             );
             let unit = s.card(MR_TOKEN).clone();
-            s.play(SURGERY, json!({ "targets": at(&unit.id) })); // +3/+3: a 4/4 Mr Token
+            s.play(SURGERY, json!({ "targets": pick::id(&unit.id) })); // +3/+3: a 4/4 Mr Token
 
-            s.play(WRAPS, json!({ "targets": at(&unit.id) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&unit.id) }));
 
             assert!(s.card(&unit).radiant);
             s.expect_stats(&unit, json!({ "attack": 2 + 3, "maxHealth": 2 + 3 }));
@@ -243,7 +239,7 @@ mod tests {
             );
 
             let vanilla = s.card(VANILLA).id.clone();
-            s.play(WRAPS, json!({ "targets": at(&vanilla) }));
+            s.play(WRAPS, json!({ "targets": pick::id(&vanilla) }));
 
             s.expect_stats(VANILLA, json!({ "attack": 12, "maxHealth": 12, "health": 9 })); // Radiant Mr. Vanilla is 12/12
         }

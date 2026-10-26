@@ -62,18 +62,6 @@ mod tests {
         s
     }
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("no unit in {player} unit lane {lane}"),
-        }
-    }
-
-    /// R81: one declared `target`, carried in the play action's flat `targets` list.
-    fn aim(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     mod n16_hit_job_base {
         use super::*;
 
@@ -84,9 +72,9 @@ mod tests {
                 "p1": { "hand": ["core-016", "core-010"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
             }));
-            let victim = unit_at(&s, PlayerId::P2, 1);
+            let victim = s.unit_at(PlayerId::P2, 1);
 
-            s.play("core-016", json!({ "targets": aim(&victim) }));
+            s.play("core-016", json!({ "targets": pick::instance(&victim) }));
 
             s.expect_in_zone(&victim, "graveyard");
             assert!(s.unit(PlayerId::P2, 1).is_none());
@@ -101,9 +89,9 @@ mod tests {
                 // #66 The Rock is Indestructible (§8.3 row 66).
                 "p2": { "field": ["core-066"] }
             }));
-            let survivor = unit_at(&s, PlayerId::P2, 1);
+            let survivor = s.unit_at(PlayerId::P2, 1);
 
-            s.play("core-016", json!({ "targets": aim(&survivor) }));
+            s.play("core-016", json!({ "targets": pick::instance(&survivor) }));
 
             s.expect_in_zone(&survivor, "field");
             s.expect_stats(&survivor, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
@@ -116,9 +104,9 @@ mod tests {
                 "p1": { "hand": ["core-016", "core-010"], "field": ["core-012"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
             }));
-            let mine = unit_at(&s, PlayerId::P1, 1);
+            let mine = s.unit_at(PlayerId::P1, 1);
 
-            s.play("core-016", json!({ "targets": aim(&mine) }));
+            s.play("core-016", json!({ "targets": pick::instance(&mine) }));
 
             s.expect_in_zone(&mine, "graveyard");
             s.expect_in_zone("core-019", "field");
@@ -149,12 +137,12 @@ mod tests {
                 "p2": { "field": ["core-002", "core-019", "core-020", "core-008"] }
             }));
             make_radiant(&mut s, "core-016");
-            let left = unit_at(&s, PlayerId::P2, 1);
-            let target = unit_at(&s, PlayerId::P2, 2);
-            let right = unit_at(&s, PlayerId::P2, 3);
-            let far = unit_at(&s, PlayerId::P2, 4);
+            let left = s.unit_at(PlayerId::P2, 1);
+            let target = s.unit_at(PlayerId::P2, 2);
+            let right = s.unit_at(PlayerId::P2, 3);
+            let far = s.unit_at(PlayerId::P2, 4);
 
-            s.play("core-016", json!({ "targets": aim(&target) }));
+            s.play("core-016", json!({ "targets": pick::instance(&target) }));
 
             s.expect_in_zone(&target, "graveyard");
             s.expect_in_zone(&left, "graveyard");
@@ -173,12 +161,12 @@ mod tests {
                 "p2": { "field": ["core-002", "core-019", "core-020"] }
             }));
             make_radiant(&mut s, "core-016");
-            let across_left = unit_at(&s, PlayerId::P1, 1);
-            let across_target = unit_at(&s, PlayerId::P1, 2);
-            let across_right = unit_at(&s, PlayerId::P1, 3);
+            let across_left = s.unit_at(PlayerId::P1, 1);
+            let across_target = s.unit_at(PlayerId::P1, 2);
+            let across_right = s.unit_at(PlayerId::P1, 3);
 
-            let target = unit_at(&s, PlayerId::P2, 2);
-            s.play("core-016", json!({ "targets": aim(&target) }));
+            let target = s.unit_at(PlayerId::P2, 2);
+            s.play("core-016", json!({ "targets": pick::instance(&target) }));
 
             // The target's lane and both its neighbours, on the other side of the line: all untouched.
             s.expect_in_zone(&across_left, "field");
@@ -194,11 +182,11 @@ mod tests {
                 "p2": { "field": [{ "def": "core-025", "radiant": true }, "core-019", "core-012"] }
             }));
             make_radiant(&mut s, "core-016");
-            let indestructible = unit_at(&s, PlayerId::P2, 1);
-            let target = unit_at(&s, PlayerId::P2, 2);
-            let neighbour = unit_at(&s, PlayerId::P2, 3);
+            let indestructible = s.unit_at(PlayerId::P2, 1);
+            let target = s.unit_at(PlayerId::P2, 2);
+            let neighbour = s.unit_at(PlayerId::P2, 3);
 
-            s.play("core-016", json!({ "targets": aim(&target) }));
+            s.play("core-016", json!({ "targets": pick::instance(&target) }));
 
             s.expect_in_zone(&indestructible, "field");
             s.expect_in_zone(&target, "graveyard");
@@ -213,12 +201,12 @@ mod tests {
                 "p2": { "field": ["core-002", "core-019", "core-020"] }
             }));
             make_radiant(&mut s, "core-016");
-            let my_left = unit_at(&s, PlayerId::P1, 1);
-            let my_target = unit_at(&s, PlayerId::P1, 2);
-            let my_right = unit_at(&s, PlayerId::P1, 3);
-            let theirs = unit_at(&s, PlayerId::P2, 2);
+            let my_left = s.unit_at(PlayerId::P1, 1);
+            let my_target = s.unit_at(PlayerId::P1, 2);
+            let my_right = s.unit_at(PlayerId::P1, 3);
+            let theirs = s.unit_at(PlayerId::P2, 2);
 
-            s.play("core-016", json!({ "targets": aim(&my_target) }));
+            s.play("core-016", json!({ "targets": pick::instance(&my_target) }));
 
             s.expect_in_zone(&my_target, "graveyard");
             s.expect_in_zone(&my_left, "graveyard");
@@ -234,9 +222,9 @@ mod tests {
                 "p2": { "field": [{ "def": "core-019", "lane": 3 }] }
             }));
             make_radiant(&mut s, "core-016");
-            let target = unit_at(&s, PlayerId::P2, 3);
+            let target = s.unit_at(PlayerId::P2, 3);
 
-            s.play("core-016", json!({ "targets": aim(&target) }));
+            s.play("core-016", json!({ "targets": pick::instance(&target) }));
 
             s.expect_in_zone(&target, "graveyard");
         }

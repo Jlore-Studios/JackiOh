@@ -313,7 +313,10 @@ triggers = {
   re-runs the card's chunk to call `module[face][hook]` when the engine reaches it. A second use
   of one verb in a face appends `_2` (`each_cards_2`), and a name that resolves to nothing fails
   the card's own test with an error naming the card, face and function. `vm::SUB_HOOKS` lists
-  the valid names.
+  the valid names. `choose_target_where`'s `where` names one too (#1904, `where = "admits"`): it
+  is called as `face[where](ctx, card)` for each card the scope offers, `card` nil for a hero,
+  with a `HookArgs` `ctx`, since the engine asks with a shared context and the effect context's
+  readers take theirs mutably; with no running card it admits nothing.
 
 ```luau
 cry = function(ctx: J.EffectContext)

@@ -11,6 +11,12 @@
 //! `play` the opponent makes and stores `state.play_judgement`; Pareto Optimality's trigger reads
 //! it off its play's `cardResolved` and sends the remembered Cane. The verdict never reaches a view
 //! (§10.8): the Cane's attack tells the opponent only that a better-scored card was in their hand.
+//!
+//! R1844001 (Stinkyscape #147 IN33DH3, #147.2 Wardrum Blob): the Pareto hint shows a player the
+//! judge's own reading of their plays. While it is on (`pareto_hint_active`: the `pareto_hint` verb's
+//! turn, or a card with `StaticFlags.hints_plays` on their field, on their own turn), their view marks
+//! each hand card the judge would call optimal now (`pareto_hint_ids`), so a hinted play never sets
+//! off an opposing Pareto Optimality. It reads only what `judge_play` reads, their concealed copy.
 
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +69,46 @@ pub fn judge_play(state: &GameState, player: PlayerId, instance_id: &str) -> boo
         }
     }
     true
+}
+
+/// R1844001: whether `player` is shown the Pareto hint now — on their own turn, the one the verb
+/// showed it for, or while a card of theirs that hints plays acts on their field.
+pub fn pareto_hint_active(state: &GameState, player: PlayerId) -> bool {
+    state.active == player
+        && (state.players[player].pareto_hint == Some(state.turn)
+            || crate::query::acting_with_flag(state, player, |flags| flags.hints_plays))
+}
+
+/// R1844001: the cards `player` may play now that the judge would call optimal (`judge_play`'s
+/// scores: at least every other playable card's, so ties share the mark), in `legal_actions`' order;
+/// none while the hint is off or `player` cannot play now.
+pub fn pareto_hint_ids(state: &GameState, player: PlayerId) -> Vec<String> {
+    if !pareto_hint_active(state, player) {
+        return Vec::new();
+    }
+    let Some(mut base) = crate::subsystems::scorer::dry_run_base(state, player) else {
+        return Vec::new();
+    };
+    // As `judge_play`'s copy: the last verdict is no trial's.
+    base.play_judgement = None;
+    let mut scored: Vec<(String, f64)> = Vec::new();
+    for action in crate::reduce::legal_actions(state, player) {
+        if let ActionBody::Play { instance_id: id, .. } = action
+            && !scored.iter().any(|(held, _)| *held == id)
+            && let Some(card) = crate::subsystems::scorer::score_instance(state, player, &id, Some(&mut base))
+        {
+            scored.push((id, card.score));
+        }
+    }
+    let best = scored
+        .iter()
+        .map(|(_, score)| *score)
+        .fold(f64::NEG_INFINITY, f64::max);
+    scored
+        .into_iter()
+        .filter(|(_, score)| *score >= best)
+        .map(|(id, _)| id)
+        .collect()
 }
 
 /// The verdict on the last judged play, if one was stored.

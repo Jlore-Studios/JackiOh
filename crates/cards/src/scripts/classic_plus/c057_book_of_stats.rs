@@ -57,12 +57,6 @@ mod tests {
         }))
     }
 
-    /// The play's `targets`: the unit in lane 1 of `player`'s side.
-    fn at(s: &Scenario, player: PlayerId) -> Value {
-        let unit = s.unit(player, 1).unwrap_or_else(|| panic!("no unit for {player}"));
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     /// The instance ids `legalActions` offers Book of Stats as targets.
     fn offered(s: &Scenario) -> Vec<String> {
         let book = s.card(BOOK).id.clone();
@@ -104,7 +98,7 @@ mod tests {
         #[test]
         fn s10_4_your_unit_gets_5_5() {
             let mut s = stats(false);
-            let targets = at(&s, PlayerId::P1);
+            let targets = pick::unit_at(&s, PlayerId::P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P1, 1);
             s.expect_stats(&unit, json!({ "attack": 9, "health": 9, "maxHealth": 9 }));
@@ -113,7 +107,7 @@ mod tests {
         #[test]
         fn r81_an_enemy_unit_is_a_legal_target_too() {
             let mut s = stats(false);
-            let targets = at(&s, PlayerId::P2);
+            let targets = pick::unit_at(&s, PlayerId::P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P2, 1);
             s.expect_stats(&unit, json!({ "attack": 9, "health": 9 }));
@@ -122,7 +116,7 @@ mod tests {
         #[test]
         fn s10_4_the_buff_is_permanent_through_the_turns_and_is_lost_when_the_unit_leaves_the_field_r78() {
             let mut s = stats(false);
-            let targets = at(&s, PlayerId::P1);
+            let targets = pick::unit_at(&s, PlayerId::P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P1, 1);
             s.end_turn().end_turn();
@@ -140,7 +134,7 @@ mod tests {
             }));
             let unit = unit_id(&s, PlayerId::P1, 1);
             assert!(!offered(&s).contains(&unit));
-            let targets = at(&s, PlayerId::P1);
+            let targets = pick::unit_at(&s, PlayerId::P1, 1);
             s.expect_refused(|s| s.play(BOOK, json!({ "targets": targets })));
             s.expect_stats(&unit, json!({ "attack": 18, "health": 18 }));
         }
@@ -155,7 +149,7 @@ mod tests {
                 .push(Keyword::ImmuneToSpells);
             assert!(!offered(&s).contains(&immune.id));
             assert!(offered(&s).contains(&unit_id(&s, PlayerId::P1, 1)));
-            let targets = at(&s, PlayerId::P2);
+            let targets = pick::unit_at(&s, PlayerId::P2, 1);
             s.expect_refused(|s| s.play(BOOK, json!({ "targets": targets })));
         }
 
@@ -163,14 +157,14 @@ mod tests {
         fn r386_an_upgrade_gives_6_6_a_degrade_4_4() {
             let mut up = stats(false);
             step_param(up.card_mut(BOOK), "buff", 1);
-            let targets = at(&up, PlayerId::P1);
+            let targets = pick::unit_at(&up, PlayerId::P1, 1);
             up.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&up, PlayerId::P1, 1);
             up.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
 
             let mut down = stats(false);
             step_param(down.card_mut(BOOK), "buff", -1);
-            let targets = at(&down, PlayerId::P1);
+            let targets = pick::unit_at(&down, PlayerId::P1, 1);
             down.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&down, PlayerId::P1, 1);
             down.expect_stats(&unit, json!({ "attack": 8, "health": 8 }));
@@ -183,7 +177,7 @@ mod tests {
         #[test]
         fn s10_4_the_unit_gets_10_10() {
             let mut s = stats(true);
-            let targets = at(&s, PlayerId::P2);
+            let targets = pick::unit_at(&s, PlayerId::P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P2, 1);
             s.expect_stats(&unit, json!({ "attack": 14, "health": 14, "maxHealth": 14 }));
@@ -193,7 +187,7 @@ mod tests {
         fn r386_the_radiant_buff_steps_by_its_declared_step_an_upgrade_gives_11_11() {
             let mut s = stats(true);
             step_param(s.card_mut(BOOK), "buff", 1);
-            let targets = at(&s, PlayerId::P1);
+            let targets = pick::unit_at(&s, PlayerId::P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P1, 1);
             s.expect_stats(&unit, json!({ "attack": 15, "health": 15 }));

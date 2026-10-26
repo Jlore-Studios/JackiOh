@@ -169,6 +169,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     votedOut: { type: "votedOut", player: "p1", ballots: [{ instanceId: unit, defId: "core-004" }] },
     fled: { type: "fled", player: "p1", opponent: "draw" },
     starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+    held: { type: "held", player: "p2", instanceId: enemy, defId: "core-004", holderId: trap },
     // Issue #1855 (R1855000).
     boardReplaced: { type: "boardReplaced", player: "p1" },
   };

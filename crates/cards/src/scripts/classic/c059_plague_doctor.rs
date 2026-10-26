@@ -121,11 +121,6 @@ mod tests {
 
     use crate::js;
 
-    /// The selection naming one instance, by its id.
-    fn at(card: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": card }])
-    }
-
     fn enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
@@ -189,7 +184,7 @@ mod tests {
                 }));
                 let menace = s.card(MENACE).id.clone();
 
-                s.play(DOCTOR, json!({ "targets": at(&menace) }));
+                s.play(DOCTOR, json!({ "targets": pick::id(&menace) }));
 
                 s.expect_stats(DOCTOR, json!({ "attack": 2, "health": 3 }));
                 assert_eq!(s.card(DOCTOR).counters.plague, Some(1));
@@ -270,7 +265,7 @@ mod tests {
                     ]),
                 );
                 let well = s.card(MANA_WELL).id.clone();
-                s.expect_refused(|s| s.play(&doctor, json!({ "targets": at(&well) })));
+                s.expect_refused(|s| s.play(&doctor, json!({ "targets": pick::id(&well) })));
             }
 
             #[test]
@@ -356,7 +351,7 @@ mod tests {
                 }));
                 let menace = s.card(MENACE).id.clone();
 
-                s.play(DOCTOR, json!({ "targets": at(&menace) }));
+                s.play(DOCTOR, json!({ "targets": pick::id(&menace) }));
 
                 s.expect_stats(DOCTOR, json!({ "attack": 4, "health": 6 }));
                 assert_eq!(s.card(DOCTOR).counters.plague, Some(2));

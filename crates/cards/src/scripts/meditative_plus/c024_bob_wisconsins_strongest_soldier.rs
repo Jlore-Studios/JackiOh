@@ -157,10 +157,6 @@ mod tests {
         }))
     }
 
-    fn taking(target: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": target.id }])
-    }
-
     fn coins_of(s: &Scenario, player: PlayerId) -> usize {
         s.hand(player).iter().filter(|card| card.def_id == COIN).count()
     }
@@ -212,7 +208,7 @@ mod tests {
         fn r1185003_mode_2_takes_the_declared_enemy_unit_into_your_hand_and_gives_3_coins() {
             let mut s = bob("bob-take", false, json!([FILLER, FILLER]), json!([{ "def": VANILLA, "lane": 3, "damage": 1 }]));
             let target = s.unit(P2, 3).expect("the enemy Unit");
-            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": taking(&target) }));
+            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": pick::instance(&target) }));
             let taken = s.card(&target).clone();
             assert_eq!(taken.zone, Zone::Hand { player: P1 });
             assert_eq!((taken.owner, taken.damage), (P1, 0));
@@ -224,7 +220,7 @@ mod tests {
         fn r1185003_a_token_taken_ceases_to_exist_and_the_coins_are_still_given() {
             let mut s = bob("bob-token", false, json!([FILLER, FILLER]), json!([{ "def": "core-t-rush", "lane": 1 }]));
             let token = s.unit(P2, 1).expect("the Rush Token");
-            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": taking(&token) }));
+            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": pick::instance(&token) }));
             s.expect_in_zone(&token, "gone");
             assert_eq!(coins_of(&s, P2), 3);
         }
@@ -251,7 +247,7 @@ mod tests {
             let mut s = bob("bob-param", false, json!([FILLER, FILLER]), json!([{ "def": VANILLA, "lane": 1 }]));
             assert_eq!(crate::upgrade_number(&mut s, ID, "coins"), 2);
             let target = s.unit(P2, 1).expect("the enemy Unit");
-            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": taking(&target) }));
+            s.play(ID, json!({ "zone": 1, "modes": [TAKE], "targets": pick::instance(&target) }));
             assert_eq!(coins_of(&s, P2), 2);
         }
 
@@ -305,7 +301,7 @@ mod tests {
             );
             let target = s.unit(P2, 1).expect("the enemy Unit to take");
             let kept = s.unit(P2, 2).expect("the enemy Unit left");
-            s.play(ID, json!({ "zone": 1, "targets": taking(&target) }));
+            s.play(ID, json!({ "zone": 1, "targets": pick::instance(&target) }));
             // 1, 2: frozen and taken, the Coins given, then 3: the Discover asks.
             assert!(s.card(&kept).frozen.is_some());
             assert_eq!(s.card(&target).zone, Zone::Hand { player: P1 });

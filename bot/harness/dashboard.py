@@ -18,6 +18,10 @@ is kept in the state file; when it is missing or the issue was closed, an open i
 title and the marker, opened by the bot or someone on the trust list, is adopted, or a new one is
 opened and pinned.
 
+Every runner has a section too (`runners_section`): each job a runner holds now, the step it is on
+and what it is for, the jobs queued for one, and, folded, what each runner and each workflow is
+for. Between rewrites the loop redraws that section alone every two minutes (`refresh_runners`).
+
 Squishy (#60) has a section of its own in the same issue, apart from the night bot's: what it is
 working on, its account, its queue and its trees. Squishy's own process draws it (`section`), and
 the night bot's status loop runs that process each tick and puts the section in (`update`'s
@@ -792,12 +796,274 @@ def learn_lane(ctx: Context) -> list[str]:
     return lines + ["| Started (Central) | Trigger | Result | Run |", "|---|---|---|---|", *rows]
 
 
+# ------------------------------------------------------------------ every runner
+
+#: How often the `bot-status` loop redraws the runners section alone, between its rewrites
+#: (`RUNNERS_EVERY_SECONDS` in bot-status.yml, `refresh_runners`).
+RUNNERS_MINUTES = 2
+RUNNERS_START = "<!-- jackioh-bot:runners -->"
+RUNNERS_END = "<!-- /jackioh-bot:runners -->"
+#: GitHub's runners the organization may hold at once, its every repository's jobs together (the
+#: Free plan's 20: selfplay.yml's header, #1455).
+HOSTED_RUNNERS = 20
+#: The runs going or queued whose jobs the section reads, the oldest first: a call each, which
+#: costs no rate limit while the run's jobs are as they were at the last read (`gh._CACHED`).
+RUNNER_RUNS = 40
+#: How many busy runners the table lists (the issue keeps under `MAX_BODY`).
+RUNNER_ROWS = 25
+#: The owner's PC's own label (bot/machine/README.md, The local runner).
+LOCAL_LABEL = "jackioh-selfplay-local"
+#: What each workflow is for, by file. A workflow added without a line here fails `bot selftest`
+#: (test_dashboard.RunnersTests).
+WORKFLOWS = {
+    "bot-cache.yml": "the night bot's Rust build cache, built from main for its jobs on GitHub's",
+    "bot-commands.yml": "the night bot's ears: commands, labels, reviews, CI results; its sweep",
+    "bot-night.yml": "the night bot: gate, plan, `work` (one item planned, built, checked, "
+                     "reviewed), deliver",
+    "bot-status.yml": "this issue's loop: rewrites it, sweeps, plans and starts night runs, "
+                      "delivers them",
+    "ci-duration.yml": "after CI, an issue for any job over seven minutes",
+    "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
+    "claude-wake.yml": "starts each Claude account's 5-hour session at 06:00 Central",
+    "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
+    "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",
+    "hygiene.yml": "weekly: the hygiene issues for Squishy",
+    "learn.yml": "the learn lane: weekly self-play, retrain and gate of the learned evaluation",
+    "lock-conversations.yml": "locks every conversation to collaborators",
+    "patches-ship.yml": "ships the pending card-patch fragments after a merge",
+    "pr-title.yml": "holds a pull request's title to the convention",
+    "promote-production.yml": "merges main into production once a day",
+    "selfplay-shards.yml": "one round of a self-play export's shards",
+    "selfplay.yml": "a self-play export, on the owner's PC unless asked otherwise",
+    "squishy-commands.yml": "Squishy's ears and its sweep",
+    "squishy-run.yml": "Squishy: gate, plan, `work` on its own Claude account, deliver",
+    "super.yml": "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
+    "sweep.yml": "sweeps the shadow bans again when the AI's generation moves",
+    "title-retcon.yml": "the title retcon, by hand only",
+    "triage.yml": "labels each new issue and pull request from fixed rules",
+    "voice.yml": "renders a branch's voice lines (macOS `say`, Windows SAPI), checked on Linux",
+    "winrates-refresh.yml": "daily: the Tech decks' win-rate table, once a patch",
+}
+#: GitHub's runners and the owner's PC, and what each is for, as (label, where, what it runs);
+#: the bot's machine's are drawn from the pool (`runner_roles`).
+HOSTED_ROLES = (
+    ("ubuntu-latest", "GitHub's Linux: a fresh machine each job",
+     "nearly every job: CI, every bot job that holds a write token (gate, plan, deliver, the "
+     "sweeps, this loop), the Claude accounts' and Squishy's model jobs, every other workflow"),
+    ("macos-15", "GitHub's macOS", "`voice`'s macOS `say` lines"),
+    ("windows-2022", "GitHub's Windows", "`voice`'s Windows SAPI lines"),
+)
+LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC, `pc-selfplay-<time>`, only while it is idle",
+              "`learn`, every job, and `selfplay` exports")
+BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
+              "machines; each starts when one of its jobs queues and stops after 30 idle minutes. A "
+              "lane past the first is `-2`, `-3` …. A subscription logged in on the owner's PC may "
+              "take its job there (`pc-<id>-<time>`). More in bot/machine/README.md.")
+#: Opens the section's folded explanation, which `fit` leaves out when the issue would pass
+#: GitHub's limit even without its statistics' merged pull requests (`short_runners`).
+EXPLAIN_SUMMARY = "<details><summary>What each runner is for, and each workflow</summary>"
+
+
+def runner_roles(ctx: Context) -> list[str]:
+    """What each runner is for: GitHub's, each subscription's on the bot's machine (from the
+    pool, so a subscription added there shows), and the owner's PC; then each workflow."""
+    pool = ctx.cfg.pool
+    rows = [f"| `{label}` | {where} | {what} |" for label, where, what in HOSTED_ROLES]
+    for provider in pool.ordered():
+        if pool.on_machine(provider.id):
+            lanes = f", {provider.lanes} lanes" if provider.lanes > 1 else ""
+            rows.append(f"| `{provider.runs_on}` | the bot's AWS boxes{lanes} | `bot-night`'s "
+                        f"`work` for `{provider.id}`: `{provider.cli}` with `{provider.model}`, as "
+                        f"the user `agent-{provider.id}` |")
+    rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
+    flows = " · ".join(f"**{name.removesuffix('.yml')}**: {what}"
+                       for name, what in sorted(WORKFLOWS.items()))
+    return [EXPLAIN_SUMMARY, "", "| Runner | Where | What it runs |", "|---|---|---|", *rows, "",
+            f"<sub>{BOXES_NOTE}</sub>", "", f"<sub>{flows}.</sub>", "", "</details>"]
+
+
+def short_runners(section: str) -> str:
+    """The runners section without its folded explanation, for an issue near GitHub's limit."""
+    start = section.find(EXPLAIN_SUMMARY)
+    end = section.find("</details>", start)
+    if start < 0 or end < 0:
+        return section
+    return (section[:start] + "<sub>What each runner is for is left out while the issue is this "
+            "full; it comes back once there is room.</sub>" + section[end + len("</details>"):])
+
+
+def _where(job: dict[str, Any]) -> tuple[int, str]:
+    """Where a job runs, from its runner's name and its label, as (order, words)."""
+    name, labels = str(job.get("runner_name") or ""), [str(x) for x in job.get("labels") or []]
+    label = labels[0] if labels else ""
+    if name.startswith("pc-") or label == LOCAL_LABEL:
+        return 3, "owner's PC"
+    if name.startswith("night-vm-") or label.startswith("night-vm-"):
+        return (2, "Muse box") if memory_mod.box_of(name, label) else (1, "night box")
+    for prefix, system in (("ubuntu", "Linux"), ("macos", "macOS"), ("windows", "Windows")):
+        if label.startswith(prefix):
+            return 0, system
+    return (0, "GitHub's") if providers_mod.hosted(label) else (4, "unknown box")
+
+
+def _step(job: dict[str, Any]) -> str:
+    """The step a running job is on, or the last it finished."""
+    steps = job.get("steps") or []
+    going = next((s for s in steps if s.get("status") == "in_progress"), None)
+    if going is not None:
+        return _cell(going.get("name"), 45)
+    done = [s for s in steps if s.get("status") == "completed"]
+    return f"after {_cell(done[-1].get('name'), 39)}" if done else "setting up"
+
+
+def _night_items(state: dict[str, Any]) -> dict[str, int]:
+    """The night bot's runs its state file names, by run id (or `pending:<ref>`), to the item
+    each works on (0: the suggestion survey)."""
+    found = {str(record["run_id"]): int(number)
+             for number, record in (state.get("items") or {}).items()
+             if isinstance(record, dict) and record.get("run_id") and str(number).isdigit()}
+    survey = state.get("suggest") or {}
+    if survey.get("run_id"):
+        found[str(survey["run_id"])] = 0
+    return found
+
+
+def _run_for(state: dict[str, Any], items: dict[str, int], run: dict[str, Any]) -> str:
+    """What a run is for: the night bot's item and what it does to it, the pull request it
+    checks, or its title."""
+    number = items.get(str(run.get("id")))
+    title = str(run.get("display_title") or "")
+    if number is None:
+        number = next((n for ref, n in items.items() if ref.startswith(plan_mod.PENDING)
+                       and title.startswith(f"bot-night {ref[len(plan_mod.PENDING):]} ")), None)
+    if number == 0:
+        return "the suggestion survey"
+    if number is not None:
+        doing, item, _ = _doing(state, number)
+        provider = status_mod.record_of(state, number).get("provider")
+        return f"{doing} {item}" + (f" on `{provider}`" if provider else "")
+    pulls = run.get("pull_requests") or []
+    if pulls:
+        return f"#{pulls[0].get('number')} {_cell(title, 36)}"
+    return f"{run.get('event')}: {_cell(title, 36)}"
+
+
+def _job_name(run: dict[str, Any], job: dict[str, Any]) -> str:
+    """`ci · rust (test engine)`: the workflow by its file, then the job."""
+    flow = str(run.get("path") or "").rsplit("/", 1)[-1].removesuffix(".yml")
+    return f"{flow or _cell(run.get('name'), 24)} · {_cell(job.get('name'), 32)}"
+
+
+def runners_section(ctx: Context, state: dict[str, Any]) -> str:
+    """Every runner and what it is doing: each job a runner holds now, the step it is on and what
+    it is for, the jobs queued for a runner, the self-hosted labels with no job, and, folded, what
+    each runner and workflow is for. Read from the runs going and queued and their jobs, since
+    GitHub lists a repository's own runners only to an admin, which the bot is not."""
+    lines = [RUNNERS_START, "## 🖥️ Every runner", ""]
+    read = _clock(ctx, ctx.now())
+    try:
+        runs = (ctx.gh.list_repo_runs(status="in_progress", cached=True)
+                + ctx.gh.list_repo_runs(status="queued", cached=True))
+    except GitHubError:
+        return "\n".join(lines + [f"The runs going could not be read at {read}.", "",
+                                  *runner_roles(ctx), RUNNERS_END])
+    runs.sort(key=lambda run: str(run.get("created_at") or ""))
+    busy: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    queued: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    unread = max(0, len(runs) - RUNNER_RUNS)
+    for run in runs[:RUNNER_RUNS]:
+        try:
+            jobs = ctx.gh.list_jobs(run["id"], cached=True)
+        except (GitHubError, KeyError):
+            unread += 1
+            continue
+        for job in jobs:
+            if job.get("status") == "in_progress":
+                busy.append((run, job))
+            elif job.get("status") == "queued":
+                queued.append((run, job))
+    busy.sort(key=lambda pair: (_where(pair[1])[0], str(pair[1].get("started_at") or "")))
+    hosted, places = 0, {}
+    for _, job in busy:
+        order, place = _where(job)
+        if order == 0:
+            hosted += 1
+        else:
+            places[place] = places.get(place, 0) + 1
+    counts = [f"{hosted} on GitHub's (of the {HOSTED_RUNNERS} the organization may hold)"]
+    counts += [f"{n} on the {place}" for place, n in places.items()]
+    lines += [f"🟢 **{len(busy)} {'runner' if len(busy) == 1 else 'runners'} busy**: "
+              + ", ".join(counts) + f" · ⏳ **{len(queued)} "
+              + ("job" if len(queued) == 1 else "jobs") + f" queued** for a runner · read at {read}",
+              "", f"<sub>Redrawn every {RUNNERS_MINUTES} minutes from the runs going and queued "
+              "and their jobs; each time links to its job.</sub>", ""]
+    items = _night_items(state)
+    if busy:
+        lines += ["| Runner | Workflow · job | Step now | For | Running |", "|---|---|---|---|---|"]
+        for run, job in busy[:RUNNER_ROWS]:
+            since = parse_iso(job.get("started_at"))
+            took = human_delta(ctx.now() - since) if since else "?"
+            url = str(job.get("html_url") or "")
+            running = f"[{took}]({url})" if url else took
+            name = f"`{job['runner_name']}`" if job.get("runner_name") else "—"
+            lines.append(f"| {name} ({_where(job)[1]}) | {_job_name(run, job)} | {_step(job)} "
+                         f"| {_run_for(state, items, run)} | {running} |")
+        more = len(busy) - RUNNER_ROWS
+        lines += ([f"\n…and {more} more."] if more > 0 else []) + [""]
+    else:
+        lines += ["No runner holds a job right now.", ""]
+    waiting: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for run, job in queued:
+        label = ", ".join(str(x) for x in job.get("labels") or []) or "any"
+        waiting.setdefault(label, []).append((run, job))
+    if waiting:
+        parts = []
+        for label, jobs in sorted(waiting.items(), key=lambda kv: -len(kv[1])):
+            run, job = min(jobs, key=lambda pair: str(pair[1].get("created_at") or ""))
+            since = parse_iso(job.get("created_at"))
+            longest = f", the longest {human_delta(ctx.now() - since)}" if since else ""
+            parts.append(f"`{label}` {len(jobs)} ({_job_name(run, job)}{longest})")
+        lines += ["⏳ **Queued for a runner:** " + "; ".join(parts) + ".", ""]
+    pool = ctx.cfg.pool
+    labels = [p.runs_on for p in pool.ordered() if pool.on_machine(p.id)] + [LOCAL_LABEL]
+    held = {str(label) for _, job in busy for label in job.get("labels") or []}
+    idle = [label for label in dict.fromkeys(labels) if label not in held]
+    if idle:
+        lines += ["💤 **No job on any of its runners:** " + ", ".join(f"`{x}`" for x in idle)
+                  + " (idle, or its box or the PC is off).", ""]
+    if unread:
+        lines += [f"<sub>{unread} more {'run' if unread == 1 else 'runs'} not read.</sub>", ""]
+    return "\n".join(lines + runner_roles(ctx) + [RUNNERS_END])
+
+
+def refresh_runners(ctx: Context) -> str:
+    """Redraw the status issue's runners section alone, between the loop's rewrites: the rest of
+    the issue stays as the last rewrite left it."""
+    state = ctx.store.load()
+    number = (state.get("dashboard") or {}).get("issue")
+    if not number:
+        return "no status issue yet"
+    issue = ctx.gh.get_issue(int(number))
+    body = str(issue.get("body") or "")
+    start, end = body.find(RUNNERS_START), body.find(RUNNERS_END)
+    if issue.get("state") != "open" or start < 0 or end < start:
+        return f"#{number} has no runners section to redraw: the next rewrite draws it"
+    section = runners_section(ctx, state)
+    for drawn in (section, short_runners(section)):
+        fresh = body[:start] + drawn + body[end + len(RUNNERS_END):]
+        if len(fresh) <= MAX_BODY:
+            ctx.gh.update_issue(int(number), body=fresh)
+            return f"redrew #{number}'s runners"
+    return f"#{number} would pass GitHub's limit: the next rewrite makes room"
+
+
 @dataclass
 class View:
     """What both bots' views are drawn from, read from GitHub once per rewrite: the state, the
     open threads, the live lanes, why nothing may start (halted) if so, the queue and the
     subscriptions explained, the last runs and the full status text. `learn` is the learn lane's
-    section, read once per rewrite by `update` (None: `render` reads it)."""
+    section, and `runners` the runners', read once per rewrite by `update` (None: `render` reads
+    them)."""
 
     state: dict[str, Any]
     issues: list[dict[str, Any]]
@@ -807,6 +1073,7 @@ class View:
     runs: list[str]
     report: str
     learn: list[str] | None = None
+    runners: str | None = None
 
 
 def look(ctx: Context) -> View:
@@ -864,7 +1131,8 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
                   ""]
     lines += [f"> {headline(ctx, live, explained)}", "",
               f"<sub>`bot-status` rewrites this issue every "
-              f"{EVERY_MINUTES} minutes; the statistics are counted every "
+              f"{EVERY_MINUTES} minutes, and its runners every {RUNNERS_MINUTES}; the statistics "
+              f"are counted every "
               f"{int(stats_mod.STATS_EVERY.total_seconds() // 60)}. Times are Central; hover one "
               f"to see how long it ran. `{SLASH} status` gives the same facts on demand.</sub>", "",
               "## ⚡ Running now", ""]
@@ -872,6 +1140,7 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     lines += (running + [""] if running else [])
     lines += timeline(ctx, state, live) + [""]
     lines += lanes_boxes(ctx, state, live, explained.now) + [""]
+    lines += [view.runners if view.runners is not None else runners_section(ctx, state), ""]
     lines += ["## 📋 Queue", "", difficulty_legend(ctx.cfg.pool), ""]
     lines += queue_table(ctx, explained, issues) + [""]
     people = waiting_for_people(issues)
@@ -896,11 +1165,15 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
 
 def fit(ctx: Context, view: View, extra: tuple[str, ...], draw: Callable[[int], str]) -> str:
     """The body, listing fewer merged pull requests in the statistics (`draw(shown)`) while it
-    would pass GitHub's limit on an issue's body, and leaving the statistics out last of all."""
-    for shown in SHOWN_STEPS:
-        body = render(ctx, extra, draw(shown), view)
-        if len(body) <= MAX_BODY:
-            return body
+    would pass GitHub's limit on an issue's body, then leaving out the runners' explanation
+    (`short_runners`) and listing them all again, and leaving the statistics out last of all."""
+    full = view.runners if view.runners is not None else runners_section(ctx, view.state)
+    for runners in (full, short_runners(full)):
+        view.runners = runners
+        for shown in SHOWN_STEPS:
+            body = render(ctx, extra, draw(shown), view)
+            if len(body) <= MAX_BODY:
+                return body
     return render(ctx, extra, "", view)
 
 
@@ -942,6 +1215,7 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
     view.learn = learn_lane(ctx)
+    view.runners = runners_section(ctx, view.state)
     state = view.state
     issue = find(ctx, state)
     body_now = issue.get("body") if (stats and issue is not None) else None
@@ -955,6 +1229,10 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
         body, note = count()
     elif kept is not None:
         body = render(ctx, extra, kept, view)
+        if len(body) > MAX_BODY:  # more runners busy: their explanation goes before a count
+            full, view.runners = view.runners, short_runners(view.runners or "")
+            body = render(ctx, extra, kept, view)
+            view.runners = full
         if len(body) > MAX_BODY:
             body, note = count()
     else:

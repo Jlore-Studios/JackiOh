@@ -29,7 +29,7 @@ fn backrow_at(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardI
         .and_then(Option::as_ref)
 }
 
-fn unit_at(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
+fn unit_in(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
     state.players[player]
         .units
         .get(lane - 1)
@@ -715,7 +715,7 @@ mod e5_would_die {
 
         // Back in their zones at once, reset (no buff, no damage) and summoning sick.
         for (lane, unit) in mine.iter().enumerate() {
-            let back = unit_at(&after, P1, lane + 1).expect("back in its zone");
+            let back = unit_in(&after, P1, lane + 1).expect("back in its zone");
             assert_eq!(back.id, unit.id);
             assert_eq!(back.damage, 0);
             assert_eq!(back.buffs, AttackHealth { attack: 0, health: 0 });
@@ -850,7 +850,7 @@ mod e5_would_go_to_a_graveyard {
 
         assert!(in_pile(&after, P2, ZoneName::Exile, &bird.id));
         assert!(in_pile(&after, P1, ZoneName::Exile, &bell.id));
-        assert!(unit_at(&after, P2, 1).is_none());
+        assert!(unit_in(&after, P2, 1).is_none());
         assert!(after.reserved.is_empty());
         assert!(events_json(&result.events, GameEventType::Destroyed).is_empty());
         assert!(notes(&after).is_empty());
@@ -1201,7 +1201,7 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
             ]
         );
         assert_eq!(
-            unit_at(&b.state, P2, 2).and_then(|c| c.summoned_turn),
+            unit_in(&b.state, P2, 2).and_then(|c| c.summoned_turn),
             Some(b.state.turn)
         );
     }

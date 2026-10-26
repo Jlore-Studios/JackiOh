@@ -926,6 +926,15 @@ impl StatsTotals {
             .map(|(_, records)| records)
             .sum()
     }
+
+    /// R1973001: every record filed under `patch`, live and development alike.
+    pub fn games(&self, patch: &str) -> i64 {
+        self.records
+            .iter()
+            .filter(|(key, _)| key.patch == patch)
+            .map(|(_, records)| records)
+            .sum()
+    }
 }
 
 /// Whether a pilot filter counts a seat with this pilot.

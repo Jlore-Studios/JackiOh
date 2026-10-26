@@ -12,7 +12,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, card_by_id, random_policy_states};
+use super::support::{AI, HUMAN, ai_options, card_by_id, random_policy_states};
 
 fn text(state: &GameState) -> String {
     serde_json::to_string(state).expect("a GameState serialises")
@@ -31,14 +31,6 @@ fn facing_a_face_down_trap() -> GameState {
     }))
     .state()
     .clone()
-}
-
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
 }
 
 /// A face-down trap's placeholder keeps the price it shows, and the second pass is the identity
@@ -68,8 +60,12 @@ fn a_face_down_traps_placeholder_keeps_its_shown_price_when_redacted_again() {
 #[test]
 fn the_ai_decides_the_same_on_the_redacted_state_as_on_the_true_one() {
     let state = facing_a_face_down_trap();
-    let on_truth = decide(&state, AI, &mut ai_options("redact-twice-decide"));
-    let on_view = decide(&redact(&state, AI), AI, &mut ai_options("redact-twice-decide"));
+    let on_truth = decide(&state, AI, &mut ai_options("redact-twice-decide", AI_BUDGET));
+    let on_view = decide(
+        &redact(&state, AI),
+        AI,
+        &mut ai_options("redact-twice-decide", AI_BUDGET),
+    );
     assert!(on_truth.is_some());
     assert_eq!(on_view, on_truth);
 }

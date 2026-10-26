@@ -272,7 +272,7 @@ fn summon_onto(
 }
 
 /// A fresh card of `def_id`, created only once a zone is known so a fizzle creates nothing.
-pub(super) fn summon_fresh(
+pub(crate) fn summon_fresh(
     ctx: &mut EffectContext<'_>,
     def_id: &str,
     player: PlayerId,

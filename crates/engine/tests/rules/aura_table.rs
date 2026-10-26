@@ -111,11 +111,6 @@ fn view(attack: i32, max_health: i32, keywords: Vec<Keyword>, armor: i32, positi
     }
 }
 
-fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    s.unit(player, lane)
-        .unwrap_or_else(|| panic!("no unit at {player:?}'s lane {lane}"))
-}
-
 #[test]
 fn a_table_reads_every_unit_as_a_single_read_does_across_sources_dormant_carried_and_vanilla() {
     let calls = Arc::new(AtomicUsize::new(0));
@@ -161,18 +156,18 @@ fn a_table_reads_every_unit_as_a_single_read_does_across_sources_dormant_carried
     let expected: Vec<(&str, CardInstance, UnitView)> = vec![
         (
             "p1 lane 1 plain",
-            unit_at(&s, P1, 1),
+            s.unit_at(P1, 1),
             view(4, 3, stack(), 0, Position::Atk),
         ),
         (
             "p1 lane 2 stacker",
-            unit_at(&s, P1, 2),
+            s.unit_at(P1, 2),
             view(6, 7, stack(), 0, Position::Atk),
         ),
         ("p1 dormant plain", dormant, view(3, 3, vec![], 0, Position::Atk)),
         (
             "p1 lane 3 taunter",
-            unit_at(&s, P1, 3),
+            s.unit_at(P1, 3),
             view(
                 3,
                 5,
@@ -188,18 +183,18 @@ fn a_table_reads_every_unit_as_a_single_read_does_across_sources_dormant_carried
         ),
         (
             "p1 lane 4 big_dfender",
-            unit_at(&s, P1, 4),
+            s.unit_at(P1, 4),
             view(1, 8, stack(), 0, Position::Atk),
         ),
         ("p1 carried plain", carried, view(4, 3, stack(), 0, Position::Atk)),
         (
             "p2 lane 1 spikey_pillow",
-            unit_at(&s, P2, 1),
+            s.unit_at(P2, 1),
             view(0, 2, vec![], 0, Position::Atk),
         ),
         (
             "p2 lane 2 plain",
-            unit_at(&s, P2, 2),
+            s.unit_at(P2, 2),
             view(2, 3, vec![], 0, Position::Atk),
         ),
     ];
@@ -229,7 +224,7 @@ fn the_last_set_attack_in_aura_order_holds_through_a_table() {
     // p2's backrow comes last in aura order, and its lane 2 last within it: a reordered side or lane
     // would leave a set-two holding.
     for player in [P1, P2] {
-        let card = unit_at(&s, player, 1);
+        let card = s.unit_at(player, 1);
         assert_eq!(
             table.unit_view(&card).attack,
             5,
@@ -260,14 +255,14 @@ fn each_aura_hook_runs_once_per_table_legal_actions_and_view_for() {
     let vanilla = s.backrow(P1, 2).expect("the second counted aura").id;
     s.card_mut(vanilla.as_str()).vanilla = true;
     let state = s.state();
-    let wall = unit_at(&s, P2, 2).id;
+    let wall = s.unit_at(P2, 2).id;
 
     // One counted source acts (the other is Vanilla'd), so each sweep below asks one hook.
     calls.store(0, SeqCst);
     let table = AuraTable::new(state);
     assert_eq!(calls.load(SeqCst), 1, "building a table");
     for lane in 1..=3 {
-        let unit = unit_at(&s, P1, lane);
+        let unit = s.unit_at(P1, lane);
         assert_eq!(
             table.unit_view(&unit),
             layers::unit_view(state, &unit),
@@ -296,13 +291,13 @@ fn each_aura_hook_runs_once_per_table_legal_actions_and_view_for() {
     assert_eq!(calls.load(SeqCst), 1, "view_for");
 
     calls.store(0, SeqCst);
-    layers::unit_view(state, &unit_at(&s, P1, 1));
+    layers::unit_view(state, &s.unit_at(P1, 1));
     assert_eq!(calls.load(SeqCst), 1, "one single read");
 
     calls.store(0, SeqCst);
     let per_read = AuraTable::per_read(state);
     assert_eq!(calls.load(SeqCst), 0, "building a per-read table");
-    per_read.unit_view(&unit_at(&s, P1, 1));
-    per_read.unit_view(&unit_at(&s, P1, 2));
+    per_read.unit_view(&s.unit_at(P1, 1));
+    per_read.unit_view(&s.unit_at(P1, 2));
     assert_eq!(calls.load(SeqCst), 2, "two reads through a per-read table");
 }
