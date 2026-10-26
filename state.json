@@ -2105,6 +2105,9 @@
         }
       }
     },
+    "1989": {
+      "suggestion": true
+    },
     "1999": {
       "action": "plan",
       "asks": [],
