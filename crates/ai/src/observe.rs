@@ -558,8 +558,11 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.opening = None;
     next.glitch_boards = None;
     // R1956001: the Created cards' generators dress a card for its owner's client and play no part
-    // in a game; the opponent's hidden ones are no seat's to read, so all go.
-    next.generators.clear();
+    // in a game. The seat keeps its own cards', which its view names (B10); the opponent's, which
+    // would name what made a hidden card, go.
+    next.generators.retain(|id, _| {
+        !hidden.contains(id) && find_instance(state, id).is_some_and(|card| card.owner == seat)
+    });
     // R865: the opponent's unrevealed secret choices are no seat's to read either — the seat's own
     // stay, and a revealed choice is public history both seats watched happen.
     if let Some(secrets) = next.secrets.as_mut() {

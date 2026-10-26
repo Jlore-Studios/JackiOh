@@ -12,6 +12,7 @@ import type { EchoItem } from "./EchoItem";
 import type { FieldExits } from "./FieldExits";
 import type { GameCounters } from "./GameCounters";
 import type { GameResult } from "./GameResult";
+import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { MarkRecord } from "./MarkRecord";
@@ -207,6 +208,12 @@ customCards?: { [key in string]: CustomCard },
  * `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
  */
 customDefs?: { [key in string]: CardDef }, 
+/**
+ * R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
+ * order they were taken. D14: absent until the first is held, so a game that never holds one
+ * hashes exactly as before this field existed. Never in a view: the view sees `held` events.
+ */
+held?: Array<HeldCard>, 
 /**
  * R1956001: each Created card's generator by instance id: the catalog id of the card whose
  * script minted it, or that card's own generator when it was Created too

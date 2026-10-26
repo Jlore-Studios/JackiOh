@@ -245,7 +245,7 @@ fn awaiting_shuffle(state: &GameState) -> Vec<Returned> {
     out
 }
 
-/// Every card the state holds, in every pile (`find_instance`'s piles).
+/// Every card the state holds, in every pile (`find_instance`'s piles) and beneath a holder (R1850003).
 fn cards_of(state: &GameState) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
     for player in PLAYER_IDS {
@@ -262,6 +262,8 @@ fn cards_of(state: &GameState) -> Vec<&CardInstance> {
         // R1840000: a Resource in a Resource tray.
         out.extend(side.resource_tray.iter().flatten());
     }
+    // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
+    out.extend(state.held.iter().flatten().map(|entry| &entry.card));
     out
 }
 

@@ -267,7 +267,7 @@ pub struct CostFilter {
 }
 
 /// Whether one card passes a cost filter, read at the moment the effect applies (R66).
-fn matches_cost(ctx: &EffectContext<'_>, card: &CardInstance, filter: &CostFilter) -> bool {
+pub(crate) fn matches_cost(ctx: &EffectContext<'_>, card: &CardInstance, filter: &CostFilter) -> bool {
     if filter.exempt_x_cost == Some(true) && is_x_cost(ctx.state, card) {
         return false;
     }

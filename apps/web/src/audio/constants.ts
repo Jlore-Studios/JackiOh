@@ -153,6 +153,8 @@ export const MUSIC_DUCK_ATTACK_TC_S = 0.03;
 export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
 /** The effects the music ducks under, besides every voice line. */
 export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "entrance", "victory", "defeat"];
+/** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
+export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
 /** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
 export const MUSIC_FOCUS_TC_S = 0.15;
 /** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */

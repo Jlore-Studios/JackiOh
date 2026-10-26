@@ -288,21 +288,22 @@ mod redact_b9 {
         assert_eq!(serde_json::to_string(&a).expect("serialisable"), before);
     }
 
-    /// R1956001: the Created cards' generators, the opponent's hidden hand card's among them, are no
-    /// seat's to read: redact drops every one, so a state that records them redacts as one that does not
+    /// R1956001: the opponent's Created cards' generators, a hidden hand card's among them, are no
+    /// seat's to read, and redact drops them; the seat's own stay, as its view names them
     #[test]
-    fn r1956001_redact_drops_every_generator() {
+    fn r1956001_redact_keeps_the_seats_own_generators_and_drops_the_opponents() {
         let (a, _) = pair();
-        let mut dressed = a.clone();
-        let hidden = dressed.players[PlayerId::P2].hand[0].id.clone();
-        let own = dressed.players[PlayerId::P1].hand[0].id.clone();
+        let hidden = a.players[PlayerId::P2].hand[0].id.clone();
+        let own = a.players[AI].hand[0].id.clone();
+        let mut own_only = a.clone();
+        own_only.generators.insert(own.clone(), "core-019".to_string());
+        let mut dressed = own_only.clone();
         dressed.generators.insert(hidden, "core-011".to_string());
-        dressed.generators.insert(own, "core-019".to_string());
         let public = redact(&dressed, AI);
-        assert!(public.generators.is_empty());
+        assert_eq!(public.generators.keys().collect::<Vec<_>>(), vec![&own]);
         assert_eq!(
             serde_json::to_value(&public).expect("serialisable"),
-            serde_json::to_value(redact(&a, AI)).expect("serialisable")
+            serde_json::to_value(redact(&own_only, AI)).expect("serialisable")
         );
     }
 

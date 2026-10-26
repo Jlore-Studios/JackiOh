@@ -119,7 +119,7 @@
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 /* Each kind's rule is two classes deep so it outranks src/index.css's `.app-shell button` (a
@@ -489,7 +489,7 @@
   font-size: 0.66em;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .portrait-current:hover,
@@ -543,7 +543,7 @@
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .portrait-tile[data-selected="true"] .portrait-pick {
@@ -571,7 +571,7 @@
   color: var(--text-dim);
   font: inherit;
   font-size: 0.72em;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .portrait-preview-toggle[aria-expanded="true"] {
