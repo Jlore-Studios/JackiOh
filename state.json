@@ -1964,7 +1964,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-26T06:30:45Z",
+      "feedback_since": "2026-10-26T07:31:54Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1834,
@@ -1977,11 +1977,11 @@
       "round_tier": "strong",
       "run_id": "40286356428",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-26T07:31:54Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [
           "claude"
