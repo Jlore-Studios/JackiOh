@@ -38,7 +38,7 @@
   border-radius: 10px;
   background: var(--bg-sunken);
   color: var(--text);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .lobby .lobby-mode[data-selected="true"] {
@@ -269,7 +269,7 @@
   border-radius: 12px;
   background: var(--play-tile);
   color: var(--tavern-parchment);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: border-color 140ms, box-shadow 140ms, transform 120ms ease-out;
 }
 
@@ -326,7 +326,7 @@
   border: 2px solid var(--tavern-brass);
   border-radius: 50%;
   background: var(--tavern-well);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.play-screen .play-mode-tile input[type="radio"]:checked {

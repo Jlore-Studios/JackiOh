@@ -76,7 +76,7 @@
     inset 0 -3px 0 rgba(0, 0, 0, 0.2),
     0 3px 0 #4a2a0e,
     0 8px 16px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: transform 90ms ease-out, filter 140ms ease-out;
 }
 

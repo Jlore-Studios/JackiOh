@@ -722,7 +722,7 @@ export default function Board({
 
         <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
           {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
-          <SandSurface field={field} disabled={sandDisabled} />
+          <SandSurface field={field} disabled={sandDisabled} table={table} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
               {FIELD_ROWS.map((slot) => (

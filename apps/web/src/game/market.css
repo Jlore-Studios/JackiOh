@@ -92,7 +92,7 @@
   border: 1px solid #8c2a1e;
   background: rgba(40, 18, 14, 0.85);
   color: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .market-deal {

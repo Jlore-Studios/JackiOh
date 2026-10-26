@@ -22,6 +22,7 @@ import {
   MUSIC_DUCK_RELEASE_TC_S,
   MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
+  RAPID_SFX,
   SFX_DUCK_ATTACK_TC_S,
   SFX_DUCK_RELEASE_TC_S,
   SFX_MAX_VOICES,
@@ -451,10 +452,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
         return true;
       }
 
-      // Sand is a fidget surface: every physical tap gets its own crunch, even in a burst faster
-      // than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still disconnect
-      // through the normal delayed cleanup below.
-      const rapid = id === "sand";
+      // A field tap is a fidget surface: every physical tap gets its own crunch, even in a burst
+      // faster than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still
+      // disconnect through the normal delayed cleanup below.
+      const rapid = RAPID_SFX.has(id);
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
@@ -468,7 +469,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       if (!rapid) {
         lastSfxAt.set(id, t);
-        // Sand's short voices stay out of the gameplay polyphony budget.
+        // A field tap's short voices stay out of the gameplay polyphony budget.
         sfxEnds.push(t + delay + lengthMs);
       }
       if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
