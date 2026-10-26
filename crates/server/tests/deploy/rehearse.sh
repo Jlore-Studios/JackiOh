@@ -36,13 +36,14 @@
 # CI splits the rehearsal so every job finishes under its five-minute budget (#1556): one job
 # per Dockerfile stage, then the image, then one boot shard per database shape.
 # REHEARSAL_STAGE=deps stops after building the Dockerfile's `deps` stage (the image's
-# dependencies, `cargo chef cook`), and REHEARSAL_STAGE=crates after its `crates` stage (the
-# workspace's crates and the server's library, compiled on them), with the cache flags below: no
-# database, no image, no boot. REHEARSAL_DEPS_ONLY=1 is REHEARSAL_STAGE=deps. CI builds each stage in
-# a job of its own before the rehearsal (#653, #1223: db-deploy-deps, then db-deploy-crates), so a
-# change to a manifest or Cargo.lock, which recompiles every dependency, is paid in the first, the
-# workspace's crates in the second, and the rehearsal's own build compiles only the server's binary
-# and its thin-LTO link.
+# dependencies, `cargo chef cook`), REHEARSAL_STAGE=game after its `game` stage (the engine, the
+# cards and the AI, compiled on them) and REHEARSAL_STAGE=crates after its `crates` stage (the
+# server's library, compiled on those), with the cache flags below: no database, no image, no boot.
+# REHEARSAL_DEPS_ONLY=1 is REHEARSAL_STAGE=deps. CI builds each stage in a job of its own before the
+# rehearsal (#653, #1223, #2013: db-deploy-deps, db-deploy-game, then db-deploy-crates), so a change
+# to a manifest or Cargo.lock, which recompiles every dependency, is paid in the first, the engine,
+# the cards and the AI in the second, the server's library in the third, and the rehearsal's own
+# build compiles only the server's binary and its thin-LTO link.
 # REHEARSAL_STAGE=image builds the whole image exactly as the rehearsal below does (`-t` the image,
 # the same cache flags, `--load` under buildx) and, when REHEARSAL_SAVE_IMAGE is set, saves it with
 # `docker save` to that path, then stops: no database, no container, no boot (CI's db-deploy-image,
@@ -54,8 +55,8 @@
 # which is what the daily full rehearsal and local runs keep doing (CI's db-deploy-boot matrix runs
 # one REHEARSAL_BOOT value per job on the downloaded tarball).
 # REHEARSAL_STAGE cannot be combined with REHEARSAL_BOOT, REHEARSAL_SAVE_IMAGE cannot be combined
-# with REHEARSAL_LOAD_IMAGE, and neither image flag applies to the deps or crates stages (those
-# builds tag no image).
+# with REHEARSAL_LOAD_IMAGE, and neither image flag applies to the deps, game or crates stages
+# (those builds tag no image).
 #
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
@@ -93,8 +94,8 @@ BOOT=${REHEARSAL_BOOT:-}
 SAVE_IMAGE=${REHEARSAL_SAVE_IMAGE:-}
 LOAD_IMAGE=${REHEARSAL_LOAD_IMAGE:-}
 case "$STAGE" in
-  "" | deps | crates | image) ;;
-  *) echo "FAIL: REHEARSAL_STAGE is deps, crates or image, not $STAGE" >&2; exit 1 ;;
+  "" | deps | game | crates | image) ;;
+  *) echo "FAIL: REHEARSAL_STAGE is deps, game, crates or image, not $STAGE" >&2; exit 1 ;;
 esac
 case "$BOOT" in
   "" | all | migrate | stale) ;;
@@ -109,7 +110,7 @@ if [ -n "$SAVE_IMAGE" ] && [ -n "$LOAD_IMAGE" ]; then
   exit 1
 fi
 case "$STAGE" in
-  deps | crates)
+  deps | game | crates)
     if [ -n "$SAVE_IMAGE" ] || [ -n "$LOAD_IMAGE" ]; then
       echo "FAIL: REHEARSAL_SAVE_IMAGE and REHEARSAL_LOAD_IMAGE need the built image, not the $STAGE stage" >&2
       exit 1

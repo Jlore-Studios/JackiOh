@@ -1,5 +1,5 @@
 // crates/server/tests/deploy/rehearse.sh's split modes (#1556), which CI runs as jobs of their own:
-// REHEARSAL_STAGE builds one Dockerfile stage (`deps`, then `crates`) into the layer cache and starts
+// REHEARSAL_STAGE builds one Dockerfile stage (`deps`, `game`, then `crates`) into the layer cache and starts
 // nothing (REHEARSAL_DEPS_ONLY=1 is `deps`); REHEARSAL_STAGE=image builds the whole image and saves it
 // with REHEARSAL_SAVE_IMAGE; REHEARSAL_LOAD_IMAGE with REHEARSAL_BOOT runs one boot shard on it.
 // REHEARSAL_CACHE_FROM may name several caches, separated by spaces, one --cache-from each (#1787).
@@ -77,6 +77,31 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(calls.filter((call) => call.startsWith("buildx") || call.startsWith("run "))).toEqual([]);
   });
 
+  it("builds only the game stage through the cache and starts no container", () => {
+    const { status, stdout, calls } = rehearse({
+      REHEARSAL_STAGE: "game",
+      REHEARSAL_CACHE_FROM: "type=gha,scope=t",
+      REHEARSAL_CACHE_TO: "type=gha,mode=max,scope=t",
+    });
+    const [build] = builds(calls);
+    expect(status).toBe(0);
+    expect(builds(calls)).toHaveLength(1);
+    expect(build).toMatch(/^buildx build --target game /);
+    expect(build).toContain("--cache-from type=gha,scope=t");
+    expect(build).toContain("--cache-to type=gha,mode=max,scope=t");
+    expect(build).not.toContain("--load");
+    expect(build).not.toContain(" -t ");
+    expect(calls.filter((call) => call.startsWith("run "))).toEqual([]);
+    expect(stdout).toContain("the game stage is built and cached");
+  });
+
+  it("refuses an image flag with the game stage, before any docker call", () => {
+    const { status, stderr, calls } = rehearse({ REHEARSAL_STAGE: "game", REHEARSAL_SAVE_IMAGE: "/tmp/deploy-image.tgz" });
+    expect(status).not.toBe(0);
+    expect(stderr).toContain("need the built image, not the game stage");
+    expect(calls).toEqual([]);
+  });
+
   it("builds only the crates stage through the cache and starts no container", () => {
     const { status, stdout, calls } = rehearse({
       REHEARSAL_STAGE: "crates",
@@ -109,10 +134,10 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(build).toContain("--cache-to type=gha,mode=max,scope=crates");
   });
 
-  it("refuses a REHEARSAL_STAGE that is neither deps, crates nor image, before any docker call", () => {
+  it("refuses a REHEARSAL_STAGE that is neither deps, game, crates nor image, before any docker call", () => {
     const { status, stderr, calls } = rehearse({ REHEARSAL_STAGE: "build" });
     expect(status).not.toBe(0);
-    expect(stderr).toContain("REHEARSAL_STAGE is deps, crates or image, not build");
+    expect(stderr).toContain("REHEARSAL_STAGE is deps, game, crates or image, not build");
     expect(calls).toEqual([]);
   });
 
@@ -159,12 +184,15 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(stdout).toContain("image stage is built");
   });
 
-  it("keeps the cook in a deps stage, the workspace's crates in a crates stage on it, and the binary on that", () => {
+  it("keeps the cook in a deps stage, the engine, cards and AI in a game stage on it, the server's library in a crates stage on that, and the binary last", () => {
     const dockerfile = readFileSync(DOCKERFILE, "utf8");
     const at = [
       "\nFROM chef AS deps\n",
       "\nRUN cargo chef cook ",
-      "\nFROM deps AS crates\n",
+      "\nFROM deps AS game\n",
+      "\nRUN cargo build --release --locked -p jackioh-server --lib \\\n && cargo clean --release --locked -p jackioh-server\n",
+      "\nFROM game AS crates\n",
+      "\nCOPY crates/server ./crates/server\n",
       "\nRUN cargo build --release --locked -p jackioh-server --lib\n",
       "\nFROM crates AS build\n",
       "\nRUN cargo build --release --locked -p jackioh-server \\\n",
@@ -172,8 +200,18 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     for (const index of at) expect(index).toBeGreaterThanOrEqual(0);
     expect(at).toEqual([...at].sort((a, b) => a - b));
     expect(new Set(at).size).toBe(at.length);
-    const buildAt = at[4] ?? -1;
-    const build = dockerfile.slice(buildAt, dockerfile.indexOf("\nFROM ", buildAt + 1));
-    expect(build).not.toContain("\nCOPY ");
+    const stage = (from: number): string => dockerfile.slice(from, dockerfile.indexOf("\nFROM ", from + 1));
+    const copied = (text: string): string[] => [...text.matchAll(/^(COPY crates\/\S+ \.\/\S+)$/gm)].map((match) => match[1] ?? "");
+    const game = stage(at[2] ?? -1);
+    const crates = stage(at[4] ?? -1);
+    expect(copied(game)).toEqual([
+      "COPY crates/engine ./crates/engine",
+      "COPY crates/cards ./crates/cards",
+      "COPY crates/ai ./crates/ai",
+    ]);
+    expect(copied(crates)).toEqual(["COPY crates/server ./crates/server"]);
+    expect(game).not.toContain("\nCOPY crates ./crates\n");
+    expect(crates).not.toContain("\nCOPY crates ./crates\n");
+    expect(stage(at[7] ?? -1)).not.toContain("\nCOPY ");
   });
 });
