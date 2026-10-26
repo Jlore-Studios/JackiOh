@@ -545,7 +545,7 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "run_id": "pending:a8483c5b-1792978610",
+      "run_id": "40255146937",
       "started_at": "2026-10-26T01:37:40Z",
       "stop_requested": false,
       "taken_asks": []
