@@ -2283,10 +2283,8 @@
       ]
     },
     "1996": {
-      "action": "plan",
-      "asks": [
-        "c:6416699448"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-26T14:29:30Z",
         "difficulty": "hard",
@@ -2312,14 +2310,16 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-10-26T13:05:08Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40337185792",
-      "started_at": "2026-10-26T14:10:30Z",
+      "run_id": "pending:7c443699-1793025833",
+      "started_at": "2026-10-26T14:44:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6416699448"
+      ]
     },
     "1997": {
       "action": "plan",
@@ -2459,9 +2459,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T14:43:39Z",
+    "at": "2026-10-26T14:44:51Z",
     "url": "",
-    "what": "revise #2002 on claude-3"
+    "what": "build #1996 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-26T14:28:10Z",
