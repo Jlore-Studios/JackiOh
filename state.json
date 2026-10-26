@@ -2519,6 +2519,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2007": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-26T13:44:26Z",
+      "issue": 1991,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
