@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0062: each patch's whole games, kept past the week's purge (issue
+-- Migration 0063: each patch's whole games, kept past the week's purge (issue
 -- #1994, R1994000)
 -- ============================================================================
 -- Serves SPEC §9.11, R1044000 and R1994000.
@@ -20,7 +20,7 @@
 -- TRUST BOUNDARY: as the totals (0041). RLS on, no policy and no grant: only
 -- service_role (BYPASSRLS) reads or writes it. It holds no account and no game.
 --
--- Apply order: ... -> 0061 -> 0062 (this file).
+-- Apply order: ... -> 0062 -> 0063 (this file).
 -- Safe to re-apply: every statement is guarded.
 -- ============================================================================
 
@@ -43,7 +43,7 @@ comment on table public.game_totals is
   and both seats' pilots (record_totals' key). `total` is a GameTotal: games,
   draws, firstWins, reasons (games per ending), turns (games per turn count),
   and R1256000's sums over the `counted` records that carry them. A record
-  folded before migration 0062 is in record_totals and not here.
+  folded before migration 0063 is in record_totals and not here.
   Server-only.$$;
 
 alter table public.game_totals enable row level security;

@@ -72,6 +72,7 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
             if let Some(tuning) = source.tuning.clone() {
                 copy.tuning = Some(tuning);
             }
+            crate::generators::record_generator(ctx, &copy);
             let landed = add_to_hand(ctx, &mut copy);
             if matches!(landed, AddToHandOutcome::Hand)
                 && let Some(brittle) = args.brittle

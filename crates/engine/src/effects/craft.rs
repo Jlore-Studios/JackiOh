@@ -40,6 +40,7 @@ pub fn craft_card(args: CraftCardArgs) -> Effect {
         if args.radiant == Some(true) {
             card.radiant = true;
         }
+        crate::generators::record_generator(ctx, &card);
         let _ = add_to_hand(&mut ctx.sink, &mut card);
     })
 }

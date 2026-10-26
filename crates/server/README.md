@@ -203,7 +203,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
-| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
@@ -406,9 +406,9 @@ and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of 
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
 learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
-whole game under its `record_totals` key into `game_totals` (migration 0062), read and added to in
+whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
 Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
-outlive the purge; a record folded before 0062 counts in `record_totals` alone, with no back-fill
+outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
@@ -919,7 +919,14 @@ every reader takes as all defaults (R1834002); and `bots.cosmetics` a ladder bot
 picks, never in the ledger (R1834005). Its checks pin a slug of at most 40 characters and the jsonb
 shapes; what an id names is the server's to check, against `cosmetics.json` (R1834001).
 
-Migration 0062 adds `game_totals` (R1994000) and only adds objects: one row per `record_totals` key,
+Migration 0062 indexes the three reads of a recent window of a table nothing purges (#1996), and
+only adds indexes: `tickets (claimed_at) where status = 'claimed'` for `tickets_recent_waits` and
+`results (ended_at)` for `results_count_since`, the queue readout's two counts (R640002), and
+`matches (ended_at) where status = 'over'` for `game_records_unfiled`, the refile sweep's
+(R1596000). `tests/sql/01_schema_invariants.sql` CHECK 20 plans each query with sequential scans
+off, and fails when one reads its table whole or does not use its index.
+
+Migration 0063 adds `game_totals` (R1994000) and only adds objects: one row per `record_totals` key,
 its `total` the engine's `GameTotal` as JSON (games, draws, first-seat wins, games per ending and per
 turn count, R1256000's sums with the count of records that carry them), written whole by
 `stats_totals_add` under 0041's advisory locks. Its checks pin the source, mode and pilots as

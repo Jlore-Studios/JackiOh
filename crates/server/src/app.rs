@@ -68,6 +68,9 @@ pub struct App {
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
     pub queue_presence: api::queue::QueuePresence,
+    /// SPEC §11 R1996000: the queue readout last counted, kept for `QUEUE_READOUT_CACHE_TTL_SECONDS`.
+    /// One per app, so parallel tests never share it.
+    pub queue_readout: api::queue::KeptReadout,
     /// SPEC §11 R672: the rematch offers in memory (`api::rematch`). One per app, so parallel tests
     /// never share offers.
     pub rematch_offers: api::rematch::RematchOffers,
@@ -968,6 +971,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         replays: api::replays::Replays::default(),
         card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
+        queue_readout: api::queue::KeptReadout::default(),
         rematch_offers: api::rematch::RematchOffers::default(),
         seats: crate::seats::Seats::default(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----

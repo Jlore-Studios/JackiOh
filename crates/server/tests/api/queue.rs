@@ -22,6 +22,8 @@
 //!    further apart than that never pair.
 //!  - **R640002**: the queue readout is each mode's expected wait and the last hour's games, every
 //!    number counted; no read answers a count of open tickets.
+//!  - **R1996000**: the readout is counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS`; a
+//!    readout inside it reaches no store.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, so `enqueuedAt` and the widening
 //! window are set by this file rather than by the host clock (`app::now_ms()` reads tokio's clock).
@@ -56,9 +58,9 @@ use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, RATING_WINDOW_FULL_AFTER_SECONDS,
-    RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
-    STARTER_CARDS, rating_window,
+    QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
+    RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY,
+    RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS, STARTER_CARDS, rating_window,
 };
 use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::fake::{
@@ -1457,6 +1459,52 @@ mod r640002_the_queue_readout {
                 "expectedWaitSeconds": { "bo1": 30, "bo3": null, "random": null },
             })
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1996000_readouts_inside_the_ttl_share_one_count_and_the_next_one_counts_again() {
+        let app = test_app().await;
+        let token = active_profile(&app, "watcher", 1000.0).await;
+        let calls = record_calls(&mut *fake_lock(&app).await, |_, _| false);
+        let reads = || {
+            let seen = calls.lock().expect("calls");
+            let n = |name: &str| seen.iter().filter(|method| *method == name).count();
+            (n("tickets.recentWaits"), n("results.countSince"))
+        };
+        let empty = json!({
+            "gamesLastHour": 0,
+            "expectedWaitSeconds": { "bo1": null, "bo3": null, "random": null },
+        });
+
+        let (status, first) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(first, empty);
+        assert_eq!(reads(), (1, 1));
+
+        // A game ends, but the next readout inside the TTL answers what was kept, reading nothing.
+        claimed_pair(&app, ["t-1", "t-2"], "bo1", [4_000, 8_000]).await;
+        ended(&app, "m-1", ["t-1", "t-2"]).await;
+        tokio::time::advance(
+            Duration::from_secs(QUEUE_READOUT_CACHE_TTL_SECONDS as u64) - Duration::from_millis(1),
+        )
+        .await;
+        let (status, kept) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(kept, empty);
+        assert_eq!(reads(), (1, 1));
+
+        // Once the TTL has run, the next readout counts again and sees the game.
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (status, recounted) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            recounted,
+            json!({
+                "gamesLastHour": 1,
+                "expectedWaitSeconds": { "bo1": null, "bo3": null, "random": null },
+            })
+        );
+        assert_eq!(reads(), (2, 2));
     }
 
     #[tokio::test(start_paused = true)]

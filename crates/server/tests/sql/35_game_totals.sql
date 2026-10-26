@@ -1,4 +1,4 @@
--- Each patch's whole games, kept past the week's purge (migration 0062, SPEC §9.11, R1994000).
+-- Each patch's whole games, kept past the week's purge (migration 0063, SPEC §9.11, R1994000).
 -- Runs after 34_cosmetic_loadouts.sql. The client's refusal on game_totals is 02_rls_as_client.sql's
 -- CHECK 3, with the other server-only tables.
 \set ON_ERROR_STOP on
@@ -77,7 +77,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R1994000: 0062 re-applies over rows of its own and changes none ###'
+\echo '### R1994000: 0063 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
 values ('v0.5.1', 'dev', 'random', 'ai', 'ai', '{"games": 2}');
@@ -85,7 +85,7 @@ create temp table r1994000_rows (n bigint not null) on commit drop;
 insert into r1994000_rows select count(*) from public.game_totals;
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0062_game_totals.sql
+\i /tmp/0063_game_totals.sql
 set local client_min_messages = notice;
 do $$
 begin
@@ -93,12 +93,12 @@ begin
     raise exception 'FAIL (R1994000): % totals before the re-apply, expected the one written', (select n from r1994000_rows);
   end if;
   if (select count(*) from public.game_totals) <> (select n from r1994000_rows) then
-    raise exception 'FAIL (R1994000): re-applying 0062 changed the totals';
+    raise exception 'FAIL (R1994000): re-applying 0063 changed the totals';
   end if;
   if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'game_totals') then
-    raise exception 'FAIL (R1994000): re-applying 0062 left a policy on game_totals';
+    raise exception 'FAIL (R1994000): re-applying 0063 left a policy on game_totals';
   end if;
-  raise notice 'OK (R1994000): 0062 re-applies over its own rows and changes none';
+  raise notice 'OK (R1994000): 0063 re-applies over its own rows and changes none';
 end $$;
 rollback;
 

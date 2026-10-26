@@ -35,10 +35,11 @@ function canonical(value: unknown): string {
 }
 
 /**
- * Hash canonical state without bookkeeping `applied` or a Glitch-redrawn opening (R676).
+ * Hash canonical state without bookkeeping `applied`, a Glitch-redrawn opening (R676) or the Created
+ * cards' generators (R1956001), the keys the engine's `replay::hash_state` leaves out.
  */
 function hashState(state: unknown): string {
-  const { applied: _applied, opening: _opening, ...rest } = state as Record<string, unknown>;
+  const { applied: _applied, opening: _opening, generators: _generators, ...rest } = state as Record<string, unknown>;
   const text = canonical(rest);
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {

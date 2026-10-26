@@ -311,7 +311,7 @@ pub struct PublicStatsGamesResponse {
     pub mode_label: String,
     /// The games below which the page shows none of the figures.
     pub min_sample: i64,
-    /// Every record the window counts, its whole game kept or, folded before migration 0062, not.
+    /// Every record the window counts, its whole game kept or, folded before migration 0063, not.
     pub total_games: i64,
     /// The counted records' whole games, or null when none is kept.
     pub figures: Option<GameFigures>,

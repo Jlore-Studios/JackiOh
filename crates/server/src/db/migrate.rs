@@ -263,8 +263,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0061_cosmetic_loadouts.sql"),
     ),
     (
-        "0062_game_totals.sql",
-        include_str!("../../migrations/0062_game_totals.sql"),
+        "0062_queue_readout_indexes.sql",
+        include_str!("../../migrations/0062_queue_readout_indexes.sql"),
+    ),
+    (
+        "0063_game_totals.sql",
+        include_str!("../../migrations/0063_game_totals.sql"),
     ),
 ];
 

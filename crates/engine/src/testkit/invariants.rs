@@ -86,6 +86,8 @@
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding. An empty id names
 //!      no card: a Cry run out of a graveyard runs with none (R127), so the `chaosRolled` its Call to
 //!      Chaos sends carries `""` beside the definition (R436; fuzz seed 7232 of the handicapped wave, #1645).
+//!      A seat's own Created card names the card that generated it (`createdBy`, R1956001), which is
+//!      read off that card as Echo's `copies` is.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
 //!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
 //!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
@@ -762,6 +764,13 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
             if let Enchantment::SwapsBook { from } = enchantment {
                 defs.shift_remove(from);
             }
+        }
+        // R1956001: a Created card's owner is told the card that generated it (`CardView.createdBy`),
+        // read off the card, as an Echo's copied Spell is.
+        if card.owner == viewer
+            && let Some(generator) = state.generators.get(&card.id)
+        {
+            defs.shift_remove(generator);
         }
     }
     // R311, R312: the viewer's own library reads as it was shown going in, and a card never shown not at all.

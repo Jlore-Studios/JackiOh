@@ -420,7 +420,7 @@ declare
   -- (0042, #1169): a live match's whole state, both hands and both libraries, as `matches`.
   -- `practice_seeds` (0047, #1303): the seeds a practice claim pays on, and each game's setup.
   -- `game_record_batches` (0060, R1976000): the files folded as totals only, which the server alone
-  -- claims. `game_totals` (0062, R1994000): each patch's whole games, folded as the totals are, which
+  -- claims. `game_totals` (0063, R1994000): each patch's whole games, folded as the totals are, which
   -- the server alone reads and serves as the public game figures.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'match_checkpoints',
                                      'series', 'game_records', 'player_stats',

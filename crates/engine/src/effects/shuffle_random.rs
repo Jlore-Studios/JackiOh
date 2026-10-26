@@ -54,6 +54,7 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
             for enchantment in args.enchantments.iter().flatten() {
                 crate::enchantments::add_enchantment(&mut card, enchantment);
             }
+            crate::generators::record_generator(ctx, &card);
             shuffle_into_library(ctx, &mut card, false, None);
             at += 1;
         }

@@ -90,6 +90,12 @@ conditionTargets?: Array<string>,
  */
 created?: true, 
 /**
+ * R1956001: on the viewer's own Created card, the catalog id of the card that generated it
+ * (`GameState.generators`), whose foil, finish and border the client dresses it in. Never on
+ * another player's card.
+ */
+createdBy?: string, 
+/**
  * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
  * (`grants::grant_texts`). Absent when it holds none.
  */
