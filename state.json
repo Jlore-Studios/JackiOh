@@ -3096,7 +3096,7 @@
     "2026": {
       "action": "review",
       "asks": [],
-      "difficulty": "medium",
+      "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T18:52:49Z",
       "issue": 2010,
