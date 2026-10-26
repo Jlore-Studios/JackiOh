@@ -13,6 +13,7 @@ import { fixtureCatalog, fixtureCollection, legalDecks } from "../game/deckbuild
 import {
   CARD_POOL,
   DECK_PRACTICE_ONLY,
+  DECK_TO_PRACTICE,
   DECKS_OPEN_CREATOR,
   addPoolId,
   deckRowId,
@@ -164,6 +165,21 @@ describe("R915005 a deck with a custom card is marked practice only", () => {
     expect(within(editor).getByTestId(DECK_PRACTICE_ONLY)).toBeInTheDocument();
     const l7 = within(editor).getByTestId(loadoutErrorId("L7"));
     expect(l7).toHaveAttribute("data-card", IMP.id);
+  });
+
+  it("issue #1991 a complete deck naming a custom card offers practice as any deck does, by its place in the list", async () => {
+    vi.mocked(getDecks).mockResolvedValue(
+      decksResponse([savedDeck("d-plain", "Plain", TWO, 1, catalog.version), savedDeck("d-custom", "Imps", [...ONE.slice(0, ONE.length - 1), IMP.id], 2, catalog.version)], [], catalog.version),
+    );
+    await mount();
+
+    fireEvent.click(screen.getByTestId(deckRowId("d-custom")));
+    expect(screen.getByTestId("deck-editor")).toHaveAttribute("data-deck", "d-custom");
+    await waitFor(() => {
+      expect(within(screen.getByTestId("deck-editor")).getByTestId(DECK_PRACTICE_ONLY)).toBeInTheDocument();
+    });
+    fireEvent.click(within(screen.getByTestId("deck-editor")).getByTestId(DECK_TO_PRACTICE));
+    expect(window.location.pathname + window.location.search).toBe("/practice?deck=saved:2");
   });
 
   it("R915005 adding a custom card to a deck makes it practice only, and the draft saves with it", async () => {
