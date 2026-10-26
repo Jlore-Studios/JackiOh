@@ -149,13 +149,19 @@
     "1820": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
+      "pr": 1972,
       "provider": "claude-8",
+      "question": "",
+      "round_tier": "strong",
       "run_id": "40275632228",
       "started_at": "2026-10-26T05:41:57Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "1821": {
       "action": "build",
