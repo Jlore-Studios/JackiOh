@@ -2274,9 +2274,7 @@
     },
     "1996": {
       "action": "plan",
-      "asks": [
-        "c:6416699448"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-26T13:40:26Z",
         "difficulty": "hard",
@@ -2303,14 +2301,16 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "claude-2",
+      "provider": "claude-7",
       "queued_at": "2026-10-26T13:05:08Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40334756038",
-      "started_at": "2026-10-26T13:54:34Z",
+      "run_id": "pending:0528f43e-1793023774",
+      "started_at": "2026-10-26T14:10:30Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6416699448"
+      ]
     },
     "1997": {
       "action": "plan",
@@ -2412,9 +2412,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T13:54:34Z",
+    "at": "2026-10-26T14:10:30Z",
     "url": "",
-    "what": "plan #1996 on claude-2"
+    "what": "plan #1996 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T13:51:56Z",
