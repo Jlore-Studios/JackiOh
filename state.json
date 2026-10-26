@@ -1862,9 +1862,12 @@
         "resolved_by": "`claude` (strong)",
         "sha": "bf37d9d895e3573c4aff9d46f1e17888675e58ad"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T08:58:36Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1953,
       "kind": "revise",
       "last_findings": [],
