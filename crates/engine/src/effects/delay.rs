@@ -24,14 +24,16 @@ use serde_json::Value;
 
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, discard_hand};
+use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::effects::steal::{StealOtherwise, StealTarget, steal};
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, cards_in_scope_aimed, instance_of, player_of,
+    BoardScope, PlayerSpec, TargetSpec, cards_in_scope_aimed, instance_by_id_or_spec, instance_of, player_of,
     stands_since_script_began,
 };
 use crate::marks::{mark_delayed, sync_marks};
 use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delayed};
 use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
+use crate::random_cast::RANDOM_CHOICES_KEY;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
@@ -252,11 +254,12 @@ pub fn due_resume(entry: &DelayedEffect) -> Resume {
 /// own. R127: it re-enters as whatever is left of its card then, so a Death hook's snapshot (R89) is
 /// not carried past the hook that read it; nor does it carry the run it was made in
 /// (`work.RUN_MARKS_KEY`): it resolves at its own R62 point, and a card it watches is watched through
-/// `watch` (R174).
+/// `watch` (R174). Nor are its choices random for being made in a run whose were (R1855001).
 fn delayed_resume(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, Value>, hook: &str) -> Resume {
     let mut built = resume_self(ctx, step, data);
     built.data.shift_remove(SELF_KEY);
     built.data.shift_remove(RUN_MARKS_KEY);
+    built.data.shift_remove(RANDOM_CHOICES_KEY);
     Resume {
         hook: hook.to_string(),
         ..built
@@ -296,6 +299,13 @@ pub const DELAYED_ALLURE_HOOK: &str = "@delayedAllure";
 pub const ALLURE_MARK: &str = "allure";
 /// R963: that mark's colour.
 pub const ALLURE_MARK_COLOR: &str = "pink";
+/// R1850001 (Stinkyscape #110 iKwzki's Duo and Squad): the hook a marked permanent's Make Radiant
+/// waits under.
+pub const DELAYED_RADIANT_HOOK: &str = "@delayedRadiant";
+/// R1850001: the mark a Duo'd or Squad'd permanent carries in both views while it waits (R437).
+pub const DUO_MARK: &str = "duo";
+/// R1850001: that mark's colour.
+pub const DUO_MARK_COLOR: &str = "gold";
 
 /// A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
 /// running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546). `(defId, radiant)`.
@@ -438,6 +448,84 @@ pub fn allure_enemy_units() -> Effect {
             };
             let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), None);
             mark_delayed(ctx, &entry, &mark);
+        }
+    })
+}
+
+/// `duoRadiant`'s argument: the permanent to Duo with (the first chosen one by default).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct DuoRadiantArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<TargetSpec>,
+}
+
+/// R1850001: the delayed Make Radiant of one permanent at the start of `owner`'s next turn, watching
+/// its stay (R174) and carrying the public gold `duo` mark (R437) while it waits. A face-up card
+/// already Radiant is passed by; a face-down one is marked whatever its face, since which face it
+/// wears is what the other seat may not read (R177), and Make Radiant reports it either way.
+fn schedule_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) {
+    if card.radiant && !crate::preview::is_face_down(ctx.state, card) {
+        return;
+    }
+    let (def_id, radiant) = maker_of(ctx);
+    let owner = ctx.controller;
+    let at = DelayedAt {
+        phase: Phase::Start,
+        player: owner,
+    };
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("instanceId".to_string(), Value::String(card.id.clone()));
+    let resume = Resume {
+        def_id,
+        hook: DELAYED_RADIANT_HOOK.to_string(),
+        step: "permanent".to_string(),
+        radiant,
+        instance_id: None,
+        data,
+    };
+    let entry = schedule_delayed(ctx, owner, at, resume, Some(card.id.clone()), None);
+    let mark = CardMark {
+        mark: DUO_MARK.to_string(),
+        color: DUO_MARK_COLOR.to_string(),
+    };
+    mark_delayed(ctx, &entry, &mark);
+}
+
+/// R1850001 (Stinkyscape #110 iKwzki): "Duo with a permanent and make it Radiant next turn" — the
+/// permanent `target` names, on either side and face-down or not, is made Radiant at the start of the
+/// Duo's controller's next turn (`schedule_radiant`). It is aimed at that stay: one that leaves the
+/// field meanwhile is not made Radiant (R174), and the Make Radiant lands even after the card that
+/// made it has left (R76). A card off the field is not Duo'd.
+pub fn duo_radiant(args: DuoRadiantArgs) -> Effect {
+    Effect::new("duoRadiant", move |ctx| {
+        let Some(card) = instance_by_id_or_spec(ctx, None, args.target.as_ref()) else {
+            return;
+        };
+        if !crate::zones::acts_on_field(ctx.state, &card) {
+            return;
+        }
+        schedule_radiant(ctx, &card);
+    })
+}
+
+/// R1850001 (Stinkyscape #110 iKwzki's Radiant face): "Squad with all your permanents and make them
+/// Radiant next turn" — `duo_radiant` for each permanent its controller has on the field now: the top
+/// of each unit zone's pile in lane order, then each backrow zone's card in lane order (a Unit standing
+/// there among them), as Allure walks the board. Each is one delayed entry with Duo's mark. A Dormant
+/// card is marked by nothing (R1839000), so Squad passes it by.
+pub fn squad_radiant() -> Effect {
+    Effect::new("squadRadiant", move |ctx| {
+        let owner = ctx.controller;
+        let cards: Vec<CardInstance> = slots_of(owner, Row::Units)
+            .into_iter()
+            .chain(slots_of(owner, Row::Backrow))
+            .filter_map(|slot| card_at(ctx.state, slot).cloned())
+            .filter(|card| !crate::slumber::is_slumbering(card))
+            .collect();
+        for card in cards {
+            schedule_radiant(ctx, &card);
         }
     })
 }
@@ -589,6 +677,16 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
                 player: Some(PlayerSpec::SelfSide),
             });
             (discard.apply)(&mut ctx);
+            true
+        }
+        DELAYED_RADIANT_HOOK => {
+            if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
+                let target = RadiantTarget {
+                    instance_id: Some(instance_id.to_string()),
+                    target: None,
+                };
+                (set_radiant(target).apply)(&mut ctx);
+            }
             true
         }
         DELAYED_ALLURE_HOOK => {

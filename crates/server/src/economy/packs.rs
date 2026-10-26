@@ -28,10 +28,9 @@ use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, ok_of, str};
 use crate::app::App;
 use crate::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-    COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY,
-    GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS,
-    PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
+    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
+    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
@@ -42,7 +41,7 @@ use crate::economy::store::{
     InventoryItem, JloreGrant, JloreReason,
 };
 use crate::economy::tiers::{card_odds, cosmetic_odds};
-use crate::economy::tokens::settle_bar;
+use crate::economy::tokens::{card_bar_points, settle_bar};
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
 /// closed set, as `api::collection::LAUNCH_GRANT_REASON` is its `launch`.
@@ -83,13 +82,16 @@ pub struct BarSettle {
 
 /// What an opening did to both token bars (R1305000, R1305001), for the client to animate from
 /// where each stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the
-/// cycle's steps it paid, in order, so its length is `cosmetic.pays`.
+/// cycle's steps it paid, in order, so its length is `cosmetic.pays`, and `slot_points` are the
+/// points each slot added to each bar, in slot order, 0 for a slot that was not spent, so the
+/// client can send each spent slot's points to the bars without counting them (R1953000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarsSettled {
     pub card: BarSettle,
     pub cosmetic: BarSettle,
     pub cosmetic_paid: Vec<CosmeticTokenStep>,
+    pub slot_points: Vec<i64>,
 }
 
 /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
@@ -285,7 +287,20 @@ pub(crate) async fn grant_unlocked(
     Ok(())
 }
 
-/// Both token bars' points for `spent` duplicates, each paying when it reaches its size
+/// The points each of a card pack's slots adds to each token bar, in slot order (R1953000): a spent
+/// duplicate's are its slot's card rarity's ([`card_bar_points`]), and any other slot's are 0.
+pub fn slot_bar_points(slots: &[Slot]) -> Vec<i64> {
+    slots
+        .iter()
+        .map(|slot| match slot.grant {
+            SlotGrant::Bars { .. } => card_bar_points(slot.rarity),
+            SlotGrant::Card | SlotGrant::Cosmetic { .. } => 0,
+        })
+        .collect()
+}
+
+/// Both token bars' points for an opening's slots, `slot_points` each slot's to each bar
+/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size
 /// (R1305000, R1305001): the points accrue, a bar that reaches its size pays its tokens and keeps
 /// the overflow, and the cosmetic bar's payouts are the cycle's next steps, whose stored position
 /// then advances. Each bar's write carries `reference`, the opening's log, and every row shares
@@ -295,10 +310,12 @@ pub(crate) async fn settle_bars(
     tx: &mut Tx<'_>,
     profile_id: &str,
     counters: &[CounterEntry],
-    spent: i64,
+    slot_points: Vec<i64>,
     reference: &Option<String>,
     at: i64,
 ) -> Result<BarsSettled, ApiError> {
+    // Every spent slot's points go to both bars (R1953000).
+    let gained: i64 = slot_points.iter().sum();
     let card_bar_before = bar_before(counters, Counter::CardTokenBar);
     let cosmetic_bar_before = bar_before(counters, Counter::CosmeticTokenBar);
     let cycle_before = bar_before(counters, Counter::CosmeticTokenCycle);
@@ -306,11 +323,7 @@ pub(crate) async fn settle_bars(
     // The card token bar (R1305000): the spent duplicates' points accrue, and a bar that reaches
     // its size pays card tokens and keeps the overflow, in this transaction. The paying write
     // replaces the accrual row, so still one row per bar per opening.
-    let (card_pays, card_remainder) = settle_bar(
-        card_bar_before,
-        spent * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-        CARD_TOKEN_BAR_SIZE,
-    );
+    let (card_pays, card_remainder) = settle_bar(card_bar_before, gained, CARD_TOKEN_BAR_SIZE);
     if card_pays > 0 {
         grant_counter(
             tx,
@@ -339,7 +352,7 @@ pub(crate) async fn settle_bars(
             tx,
             profile_id,
             Counter::CardTokenBar,
-            spent * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
+            gained,
             EconomyReason::PackOpen,
             reference,
             at,
@@ -349,11 +362,8 @@ pub(crate) async fn settle_bars(
 
     // The cosmetic token bar (R1305000, R1305001): as above, and each payout is the cycle's next
     // step, whose stored position then advances by the payouts.
-    let (cosmetic_pays, cosmetic_remainder) = settle_bar(
-        cosmetic_bar_before,
-        spent * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-        COSMETIC_TOKEN_BAR_SIZE,
-    );
+    let (cosmetic_pays, cosmetic_remainder) =
+        settle_bar(cosmetic_bar_before, gained, COSMETIC_TOKEN_BAR_SIZE);
     if cosmetic_pays > 0 {
         grant_counter(
             tx,
@@ -395,7 +405,7 @@ pub(crate) async fn settle_bars(
             tx,
             profile_id,
             Counter::CosmeticTokenBar,
-            spent * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
+            gained,
             EconomyReason::PackOpen,
             reference,
             at,
@@ -418,6 +428,7 @@ pub(crate) async fn settle_bars(
         cosmetic_paid: (0..cosmetic_pays)
             .map(|paid| cycle_at(cycle_before + paid))
             .collect(),
+        slot_points,
     })
 }
 
@@ -426,9 +437,9 @@ pub(crate) async fn settle_bars(
 /// counters (the pity counters and both bars with the cycle's position), rolls the opening from
 /// `seed` (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the
 /// collection and its ledger, reason `pack`), the cosmetics, a per-card one on its slot's card and
-/// an account one on none (R1661001), each pity counter that moved, both bars'
-/// points for the spent duplicates, and each bar that reached its size paying its tokens with
-/// the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
+/// an account one on none (R1661001), each pity counter that moved, both bars' points for the
+/// spent duplicates, each its slot's rarity's (R1953000), and each bar that reached its size paying
+/// its tokens with the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
 /// collection's rows have no `ref` and share the opening's `at`. No pack held is 409. Every
 /// refusal and failure returns before the commit, so it writes nothing.
 pub async fn open_pack(
@@ -541,15 +552,10 @@ pub async fn open_pack(
         .await?;
     }
 
-    let spent = delta_of(
-        opening
-            .slots
-            .iter()
-            .filter(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
-            .count(),
-    )?;
+    let slot_points = slot_bar_points(&opening.slots);
+    let spent = slot_points.iter().filter(|points| **points > 0).count();
 
-    let bars = settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
+    let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
 
     tx.commit().await?;
     tracing::info!(

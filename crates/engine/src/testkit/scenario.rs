@@ -187,6 +187,8 @@ thread_local! {
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
     static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
+    static MARKETPLACE_TABLE_OVERRIDE: Cell<Option<&'static [crate::config::MarketLot]>> =
+        const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -303,6 +305,17 @@ pub fn card_metrics_override() -> Option<crate::catalog::CardMetrics> {
     CARD_METRICS_OVERRIDE.with(Cell::get)
 }
 
+/// R1853001: the Marketplace's table of lots for this thread, in place of `MARKETPLACE_TABLE`
+/// (`marketplace::marketplace_table`), until the thread ends or `clear_overrides()` runs.
+pub fn register_marketplace_table(table: &'static [crate::config::MarketLot]) {
+    MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(Some(table)));
+}
+
+/// The Marketplace table this thread registered, if any.
+pub fn marketplace_table_override() -> Option<&'static [crate::config::MarketLot]> {
+    MARKETPLACE_TABLE_OVERRIDE.with(Cell::get)
+}
+
 /// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
 /// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
 /// leaked `&'static` the override already holds: nothing is copied.
@@ -315,6 +328,7 @@ pub struct ThreadOverrides {
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
     card_metrics: Option<crate::catalog::CardMetrics>,
+    marketplace_table: Option<&'static [crate::config::MarketLot]>,
 }
 
 impl ThreadOverrides {
@@ -328,6 +342,7 @@ impl ThreadOverrides {
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
         CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
+        MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(self.marketplace_table));
     }
 }
 
@@ -341,6 +356,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
         card_metrics: card_metrics_override(),
+        marketplace_table: marketplace_table_override(),
     }
 }
 
@@ -354,6 +370,7 @@ pub fn clear_overrides() {
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
+    MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1857,6 +1874,14 @@ impl Scenario {
         .cloned()
     }
 
+    /// `Scenario::unit` for a lane the setup filled: panics when it is empty (#1826;
+    /// crates/tools/tests/acceptance.rs refuses a test's own copy).
+    pub fn unit_at(&self, player: impl SeatRef, lane: i32) -> CardInstance {
+        let seat = player.seat_or(self.current.active);
+        self.unit(seat, lane)
+            .unwrap_or_else(|| panic!("setup: {seat} should hold a unit in lane {lane}"))
+    }
+
     pub fn backrow(&self, player: impl SeatRef, lane: i32) -> Option<CardInstance> {
         Scenario::check_lane("backrow", Row::Backrow, lane);
         let player = player.seat_or(self.current.active);
@@ -3217,6 +3242,40 @@ mod tests {
             assert!(!view["opponent"]["hand"].to_string().contains("core-043"));
             assert!(!view["opponent"].to_string().contains("core-010"));
             assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
+        }
+    }
+
+    /// The reads every card and rules test shares rather than copying (#1826).
+    mod shared_reads {
+        use super::*;
+        use crate::testkit::pick;
+
+        fn board() -> Scenario {
+            scenario(json!({ "p1": { "field": ["core-043"] }, "p2": { "field": ["core-056"] } }))
+        }
+
+        #[test]
+        fn unit_at_reads_a_filled_lane_and_fails_loudly_on_an_empty_one() {
+            let s = board();
+            assert_eq!(s.unit_at("p1", 1).def_id, "core-043");
+            assert_eq!(s.unit_at(PlayerId::P2, 1), s.unit("p2", 1).expect("p2's lane 1"));
+            expect_throw_with(
+                || {
+                    s.unit_at("p1", 2);
+                },
+                "should hold a unit in lane 2",
+            );
+        }
+
+        #[test]
+        fn every_pick_builder_is_the_one_instance_selection() {
+            let s = board();
+            let unit = s.unit_at("p1", 1);
+            let one = json!([{ "pick": "instance", "instanceId": unit.id }]);
+            assert_eq!(pick::id(&unit.id), one);
+            assert_eq!(pick::instance(&unit), one);
+            assert_eq!(pick::card(&s, "core-043"), one);
+            assert_eq!(pick::unit_at(&s, "p1", 1), one);
         }
     }
 }

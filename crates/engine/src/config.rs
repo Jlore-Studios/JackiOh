@@ -19,7 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, SetName, StarscapeReward, Tag,
+    string_union,
 };
 
 /// §2.6, R1705000
@@ -1141,6 +1142,74 @@ pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
 ];
 
 // ---------------------------------------------------------------------------------------------
+// Stinkyscape's Marketplace (#1853, R1853000–R1853005; docs/stinkyscape-set.md ST3).
+// ---------------------------------------------------------------------------------------------
+
+/// R1853001: what one lot of `MarketLot` draws its cards from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarketPool {
+    /// Every Resource in the catalog (`resources::resource_def_ids`).
+    Resources,
+    /// The ids named, those the catalog holds.
+    Ids(&'static [&'static str]),
+    /// Every card of the set that is no token, in catalog order.
+    Set(SetName),
+}
+
+/// R1853001: one lot of the Marketplace's table: `count` different cards of `pool`, each stocked
+/// `stock_min` to `stock_max` for each player.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MarketLot {
+    pub pool: MarketPool,
+    pub count: i32,
+    pub stock_min: i32,
+    pub stock_max: i32,
+}
+
+/// R1853001: the Marketplace's table of lots, rolled as it opens and every `MARKETPLACE_CYCLE_TURNS`.
+/// Empty until the set's own (S21) ships, so an open Marketplace offers nothing but the lots an effect
+/// adds; a test registers a fixture table (`testkit::register_marketplace_table`).
+pub const MARKETPLACE_TABLE: &[MarketLot] = &[];
+/// R1853001: the turns between two rolls of the offering, counted on `GameState.turn` from the turn
+/// it was last rolled.
+pub const MARKETPLACE_CYCLE_TURNS: i32 = 6;
+/// R1853002: the Credits a lot asks for each mana of its cost up to `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA: i32 = 10;
+/// R1853002: the cost up to which each mana is priced at `MARKETPLACE_CREDITS_PER_MANA`.
+pub const MARKETPLACE_FULL_PRICE_MANA: i32 = 4;
+/// R1853002: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 5;
+/// R1853002: the price of a (0) card.
+pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 5;
+/// R1853001: the chance a lot is rolled Radiant.
+pub const MARKETPLACE_RADIANT_CHANCE: f64 = 0.2;
+/// R1853002: a Radiant lot's price, as a multiple of its base face's.
+pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
+/// R1853002: a price moves each turn within a tenth of its base: the base divided by this, rounded down.
+pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
+/// R1853005: the stock each cycle renews for a lot an effect added for the rest of the game.
+pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,
+// `subsystems::starscape`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1847000, R1847001: a starscape map's nodes, the edge the last: the travels from the start to the
+/// edge of the universe.
+pub const STARSCAPE_EDGE_TRAVELS: i32 = 20;
+/// R1847002: a travel's mana, the Radiant face's first each turn free.
+pub const STARSCAPE_TRAVEL_MANA: i32 = 1;
+/// R1847000, R1847001: the rewards a node before the edge may hold, one entry each, drawn uniformly,
+/// and each one's amount: the health healed, the cards drawn, the mana gained, the damage dealt.
+pub const STARSCAPE_REWARDS: &[(StarscapeReward, i32)] = &[
+    (StarscapeReward::Heal, 3),
+    (StarscapeReward::Draw, 1),
+    (StarscapeReward::Mana, 1),
+    (StarscapeReward::Damage, 2),
+];
+
+// ---------------------------------------------------------------------------------------------
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 
@@ -1862,6 +1931,17 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
+// Stinkyscape's combat and replacement verbs (#1849, R1849000–R1849009; SPEC §4.2, §4.4, §6)
+// ---------------------------------------------------------------------------------------------
+
+/// R1849005 (Stinkyscape #157 The Gauntlet): "the middle 3 unit lanes", the 1-based lanes of the
+/// `UNIT_ZONES` whose Units the Gauntlet traps, on both sides.
+pub const GAUNTLET_LANES: [i32; 3] = [2, 3, 4];
+
+/// R1849009: what a chance in percent is out of ("30% chance to Reveal" is 30 of this).
+pub const PERCENT: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
 // The Starship (Stinkyscape, issue #1852; SPEC §6.1, §6.2, §6.3; R1852000–R1852007)
 // ---------------------------------------------------------------------------------------------
 
@@ -1904,6 +1984,23 @@ pub const VOTE_TALLY_SIZE: i32 = 3;
 /// draw for the player left. Every other ending is the same for both sides: the winner's win and the
 /// other's loss, or a draw for both. The client reads it (`engineConfig.ts`).
 pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
+
+// ---------------------------------------------------------------------------------------------
+// Anomalies and the Scanning Probes (Stinkyscape, issue #1855; SPEC §6.3; R1855003)
+// ---------------------------------------------------------------------------------------------
+
+/// R1855003: a scan's chance, out of `ANOMALY_ROLL_SIDES`, to find a Radiant Anomaly before any miss
+/// (Stinkyscape #166 and #167, the Scanning Probes: "5% chance to add a Radiant Anomaly Found!").
+pub const ANOMALY_RADIANT_CHANCE: i32 = 5;
+/// R1855003: a scan's chance, out of `ANOMALY_ROLL_SIDES`, to find a plain Anomaly before any miss
+/// ("20% chance to add a Anomaly Found!").
+pub const ANOMALY_PLAIN_CHANCE: i32 = 20;
+/// R1855003: what each earlier miss of the player's adds to the Radiant chance ("+1%").
+pub const ANOMALY_RADIANT_STEP: i32 = 1;
+/// R1855003: what each earlier miss of the player's adds to the plain chance ("+4%").
+pub const ANOMALY_PLAIN_STEP: i32 = 4;
+/// R1855003: the sides of a scan's one roll, the chances' denominator (percent).
+pub const ANOMALY_ROLL_SIDES: i32 = 100;
 
 // ---------------------------------------------------------------------------------------------
 // Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers

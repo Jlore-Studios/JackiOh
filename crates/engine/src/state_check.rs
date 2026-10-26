@@ -218,6 +218,30 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     }
 }
 
+/// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor),
+/// every Unit on either side in Defense Position switches to Attack Position, active player's first
+/// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
+/// exertion is spent; `positionSwitched` reports it.
+fn leave_defense(sink: &mut EngineSink<'_>) {
+    if !crate::restrictions::defense_barred(sink.state) {
+        return;
+    }
+    for player in active_first(sink.state) {
+        for unit in units_of(sink.state, player) {
+            if unit.position != Some(Position::Def) {
+                continue;
+            }
+            if let Some(card) = find_instance_mut(sink.state, &unit.id) {
+                card.position = Some(Position::Atk);
+            }
+            sink.events.push(GameEvent::PositionSwitched {
+                instance_id: unit.id.clone(),
+                position: Position::Atk,
+            });
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // One pass of §4.5 steps 3 to 5, and the remainder it owes (R113, R117)
 // ---------------------------------------------------------------------------
@@ -992,6 +1016,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         // before anything is collected.
         crate::carriers::settle_carried(sink);
         resolve_indestructible_marks(sink);
+        leave_defense(sink);
         crate::modifiers::end_orphaned_modifiers(sink);
         crate::modifiers::install_lasting_modifiers(sink);
         // R403: a permanent whose "When …, Tribute this" (`Script.tributeWhen`) holds now — face-down ones
@@ -1032,6 +1057,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         exile_marked(sink);
         if sink.state.result.is_some() {
             return;
+        }
+        // R1850003, R1850002, R1850005: the card-on-card verbs' standing rules, each a whole step that
+        // the check starts over after when it changed something.
+        if crate::card_on_card::release_held(sink) || crate::card_on_card::standing_text(sink) {
+            continue;
         }
 
         let order = active_first(sink.state);
@@ -1086,6 +1116,16 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         // B5 E5: before any card moves, the units that would die meet the "would die" replacements
         // (Classic #14's Radiant flicker), which take some of them out of the collection (R462).
         let remaining: Vec<CardInstance> = crate::replacements::would_die_window(sink, &dying);
+        // R1849002: what a destroy-to-exile aura reaches is exiled instead, judged for every card
+        // before any moves, and exiled first in R68's order — not collected, so no Death, Reborn or
+        // `destroyed` (R461, R1124's shape). Without such an aura every card is collected, as before.
+        let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
+            .into_iter()
+            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live(sink.state, card)));
+        for card in &exiled {
+            let card = live(sink.state, card);
+            crate::zones::exile_to_pile(sink, card);
+        }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);
 
         // Step 2: heroes.

@@ -1,0 +1,114 @@
+# The gather workflow (#1976, R1976000; training/gather.md): development games of each card patch as it
+# ships, played on the owner's PC and filed into production's card statistics as totals only.
+#
+# A card change ships as a new patch (patches-ship.yml), and a changed card's figures start again on
+# it (R1367000). The learn lane's exports file a patch's games too (learn.yml, `import`), but one
+# export takes about 40 hours of the PC, so a patch shipped between two has none until the next. This
+# plays GATHER_GAMES games of the newest patch as soon as it ships: `cargo jackioh stats --series
+# gather`, AI against AI on R258's All Random deals at the browser's budget, the records filed with
+# `jackioh-server stats-import --totals-only` over STATS_IMPORT_DATABASE_URL (no row per game, the
+# file claimed once by its SHA-256). Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`,
+# so no two runs play the same game and no two of its files hold one (R1976000, What it does not
+# catch). The file is kept as the run's artifact, `gather-<run>`, for GATHER_RETENTION_DAYS.
+#
+# Off until the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
+# Actions -> Variables). Each patch's development totals take about 3 MB of the database however few
+# its games (#1976), and patches ship 2 to 7 times a day: more than the free plan's 500 MB holds for
+# long, so it waits for the Pro plan. A dispatch (`gh workflow run gather.yml -f games=…`) runs
+# whatever the variable says.
+#
+# Its one job runs on the PC (`jackioh-selfplay-local`, bot/machine/README.md, The local runner).
+# gather.yml is left out of the supervisor's config.json on purpose: a job of a workflow listed there
+# gets a runner of its own, and this one waits for the idle runner the PC keeps, so a learn shard or a
+# night-bot job queued at the same time is served first. Without STATS_IMPORT_DATABASE_URL it plays
+# and keeps the file, and files nothing.
+name: gather
+
+on:
+  push:
+    branches: [main]
+    paths: ["crates/cards/patches/patches.json"]
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Games to play of the newest patch (at most GATHER_STRIDE)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  # Games a run plays of the newest patch: about half an hour of the PC's six CPUs.
+  GATHER_GAMES: "2000"
+  # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
+  GATHER_STRIDE: "100000"
+  # Days the run's record file is kept as its artifact.
+  GATHER_RETENTION_DAYS: "30"
+
+# One at a time; a patch shipped while one runs is played next, and of several, the newest.
+concurrency:
+  group: gather
+  cancel-in-progress: false
+
+jobs:
+  gather:
+    name: gather the newest patch
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.GATHER_ON_PATCH == 'true' }}
+    runs-on: jackioh-selfplay-local
+    # The PC's runner slows a job to half a CPU while the PC is busy, so allow a day.
+    timeout-minutes: 1440
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: build
+        run: cargo build --release -q -p jackioh-tools -p jackioh-server
+      - name: play (cargo jackioh stats --series gather)
+        id: play
+        env:
+          GAMES: ${{ inputs.games || env.GATHER_GAMES }}
+          RUN: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$GAMES" =~ ^[1-9][0-9]*$ ]] || [ "$GAMES" -gt "$GATHER_STRIDE" ]; then
+            echo "::error::games must be a whole number from 1 to $GATHER_STRIDE, not $GAMES"
+            exit 1
+          fi
+          patch=$(jq -r '.[-1].version' crates/cards/patches/patches.json)
+          from=$(( (RUN - 1) * GATHER_STRIDE + 1 ))
+          file="$RUNNER_TEMP/gather-$patch-$RUN.jsonl"
+          target/release/jackioh stats --series gather --patch "$patch" --from "$from" --games "$GAMES" \
+            --out "$file" > "$RUNNER_TEMP/cards.txt"
+          filed=$(grep -c . "$file" || true)
+          {
+            echo "file=$file"
+            echo "filed=$filed"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "## gather: $patch, games $from to $((from + GAMES - 1))"
+            echo "$filed of $GAMES games finished and were filed."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: file them (stats-import --totals-only)
+        if: ${{ steps.play.outputs.filed != '0' }}
+        env:
+          DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          FILE: ${{ steps.play.outputs.file }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so the games are kept as the run's artifact and filed nowhere"
+            exit 0
+          fi
+          target/release/jackioh-server stats-import --totals-only "$FILE" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.play.outputs.file != '' }}
+        with:
+          name: gather-${{ github.run_number }}
+          path: ${{ steps.play.outputs.file }}
+          if-no-files-found: ignore
+          retention-days: ${{ env.GATHER_RETENTION_DAYS }}

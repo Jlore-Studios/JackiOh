@@ -17,6 +17,8 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
+use super::register_fixture_script;
+
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
         Some(value) => value,
@@ -45,20 +47,8 @@ fn fixture_def(id: &str, type_: CardType) -> CardDef {
     }))
 }
 
-fn register_fixture_script(id: &str, script: Script) {
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
-
 /// A fixture card: a transient def in the match state and its script in the registry.
-fn fixture(state: &mut GameState, id: &str, type_: CardType, script: Script) {
+fn state_fixture(state: &mut GameState, id: &str, type_: CardType, script: Script) {
     state
         .transient_defs
         .insert(id.to_string(), fixture_def(id, type_));
@@ -180,7 +170,7 @@ mod r224_setup_waits_for_a_question {
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
 
         // A card whose start-of-game clause asks, on top of p1's library: the replacement draw reaches it.
-        fixture(
+        state_fixture(
             &mut state,
             "edge-r7-l7-asks",
             CardType::Spell,
@@ -258,7 +248,7 @@ mod r224_setup_waits_for_a_question {
         let mut game = create_game(&game_args("edge-r7-setup", (deck.clone(), deck)));
         // A card whose start-of-game clause asks, as it arrives in a hand (R151).
         let id = "edge-r7-asking";
-        fixture(
+        state_fixture(
             &mut game,
             id,
             CardType::Spell,
@@ -741,7 +731,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             .state;
             assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
             let id = format!("edge-r10-setup-boomerang-{seat}");
-            fixture(&mut state, &id, CardType::Spell, setup_boomerang());
+            state_fixture(&mut state, &id, CardType::Spell, setup_boomerang());
 
             if seat == PlayerId::P2 {
                 state = keep_all(&state, PlayerId::P1);
@@ -794,7 +784,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
 
         // /fullsend's end-of-turn clause, verbatim in shape, on a Spell setup casts.
         let id = "edge-r10-setup-late-exile";
-        fixture(
+        state_fixture(
             &mut state,
             id,
             CardType::Spell,
@@ -866,7 +856,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
         // "Start of game: choose one; then deal 3 damage to the enemy hero", at the bottom of p1's
         // library, where no opening draw reaches it: §2.1 step 4 runs it over the library too (R153).
         let id = "edge-r10-setup-start-asks";
-        fixture(
+        state_fixture(
             &mut state,
             id,
             CardType::Unit,

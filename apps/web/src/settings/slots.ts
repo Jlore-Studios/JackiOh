@@ -14,6 +14,7 @@ import {
   FullArtSwitch,
   FxControls,
   LanguageSelect,
+  OpponentCosmeticsSwitch,
   VibrationSwitch,
 } from "./controls.tsx";
 
@@ -59,6 +60,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FullArtSwitch),
     reset: () => {
       writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-opponent-cosmetics",
+    render: () => createElement(OpponentCosmeticsSwitch),
+    reset: () => {
+      writeCardSettings({ opponentCosmetics: CARD_SETTINGS_DEFAULTS.opponentCosmetics });
     },
   },
   {

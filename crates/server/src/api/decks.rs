@@ -42,6 +42,7 @@ use crate::cosmetics::{self, CosmeticKind};
 use crate::db::store::{
     FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
+use crate::loadout::DeckSlots;
 use crate::seats::Seat;
 
 // Ids
@@ -493,11 +494,11 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let picks = [
-        ("tableCosmetic", &table_cosmetic),
-        ("fieldCosmetic", &field_cosmetic),
-        ("cardBackCosmetic", &card_back_cosmetic),
+        ("tableCosmetic", CosmeticKind::Table, &table_cosmetic),
+        ("fieldCosmetic", CosmeticKind::Field, &field_cosmetic),
+        ("cardBackCosmetic", CosmeticKind::CardBack, &card_back_cosmetic),
     ];
-    if portrait.is_some() || picks.iter().any(|(_, pick)| pick.is_some()) {
+    if portrait.is_some() || picks.iter().any(|(_, _, pick)| pick.is_some()) {
         let owned = tx.economy_cosmetics_get(&profile.id).await?;
         // R1827000: on top of D5, a portrait the account does not own is refused, in D5's shape.
         if let Some(picked) = portrait.as_deref()
@@ -510,14 +511,14 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
             }])?;
             return Err(draft_refused(UNOWNED_PORTRAIT, &issues));
         }
-        // R1833000: so is a playmat, backdrop or card back it does not own, as a malformed pick is.
-        for (key, pick) in picks {
-            if let Some(id) = pick.as_deref()
-                && !cosmetics::owns_account_cosmetic(id, &owned.account)
+        // R1833000: so is a playmat, backdrop or card back it does not own, as a malformed pick is,
+        // by the check every write of a pick makes (a default, a starter or a ledger row), since a
+        // match shows it to the other seat (R1834001).
+        for (key, kind, pick) in picks {
+            if let Some(id) = pick
+                && let Err(refusal) = cosmetics::check_pick(cosmetics::registry(), &owned, kind, id, None)
             {
-                return Err(bad_request(format!(
-                    "\"{key}\" is a cosmetic this account does not own"
-                )));
+                return Err(bad_request(refusal.message(key)));
             }
         }
     }
@@ -798,7 +799,7 @@ pub enum FrozenChoice {
         deck: FrozenDeck,
     },
     Bo3 {
-        trio: FrozenTrio,
+        trio: Box<FrozenTrio>,
     },
     /// R258: nothing to freeze but the player's lean (R1372, R924000), which waits for the deal
     /// (written only when there is one).
@@ -1027,10 +1028,13 @@ pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
     // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
+    // R1834002: and its slots, as the deck carries them; the loadout judges them when the match
+    // begins.
     FrozenDeck {
         name: deck.name.clone(),
         cards: deck.cards.clone(),
         portrait: Some(deck.portrait.clone()),
+        slots: DeckSlots::of_deck(deck),
     }
 }
 
@@ -1087,10 +1091,10 @@ pub async fn freeze_choice(
         )));
     };
     Ok(FrozenChoice::Bo3 {
-        trio: FrozenTrio {
+        trio: Box::new(FrozenTrio {
             name: trio.name.clone(),
             decks: (freeze(first), freeze(second), freeze(third)),
-        },
+        }),
     })
 }
 

@@ -241,6 +241,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
+  marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   // Stinkyscape's Starship (R1852000, R1852003).
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
   starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
@@ -248,6 +251,12 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
   votedOut: { type: "votedOut", player: "p2", ballots: [{ instanceId: "u1", defId: "core-073" }] },
   fled: { type: "fled", player: "p1", opponent: "draw" },
+  // #1847 (R1847001).
+  starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+  // #1850 (R1850003).
+  held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
+  // Issue #1855 (R1855000).
+  boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -343,11 +352,16 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   resourceSold: "burn",
   resourceDiscarded: "draw",
   marketCreditsChanged: "uiClick",
+  marketBought: "draw",
+  marketSold: "uiClick",
   starshipFused: "buff",
   starshipLaunched: "entrance",
   voteCast: "uiClick",
   votedOut: "trapSting",
   fled: "whoosh",
+  starscapeTravelled: "whoosh",
+  held: "poof",
+  boardReplaced: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -383,11 +397,17 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "resourceSold",
   "resourceDiscarded",
   "marketCreditsChanged",
+  // R1853003: a purchase's and a sale's sounds, whatever the seat.
+  "marketBought",
+  "marketSold",
   "starshipFused",
   "starshipLaunched",
   "voteCast",
   "votedOut",
   "fled",
+  "held",
+  // R1855000: a board replacement's whoosh, whatever the seat.
+  "boardReplaced",
   "countered",
   "stolen",
   "unlocked",

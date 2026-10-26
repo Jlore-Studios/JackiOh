@@ -49,11 +49,10 @@ pub fn trades_left(state: &GameState, player: PlayerId) -> i32 {
     (trades_per_turn_of(state, player) - trades_this_turn(state, player)).max(0)
 }
 
-/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. The one rule:
-/// `legal_actions`, the reducer and the view all ask it. In order: a live game in `player`'s own main
-/// phase with no prompt open, the card in their hand and Tradable, a Trade left this turn, the mana for
-/// `TRADE_COST`, and room in their deck for the card (R80's cap, which would otherwise turn it away).
-pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str) -> Result<(), EngineError> {
+/// R1838000, R1853003: why `player` may not take a main-phase deal now — a Trade, or a buy or a sale
+/// at the Marketplace (`marketplace.rs`) — or `Ok`: a live game in their own main phase with no
+/// prompt open.
+pub fn why_not_in_main_phase(state: &GameState, player: PlayerId) -> Result<(), EngineError> {
     if state.result.is_some() {
         return Err(EngineError::new("the game is over"));
     }
@@ -63,6 +62,15 @@ pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str)
     if state.active != player || state.phase != Phase::Main {
         return Err(EngineError::new("it is not your turn"));
     }
+    Ok(())
+}
+
+/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. The one rule:
+/// `legal_actions`, the reducer and the view all ask it. In order: a live game in `player`'s own main
+/// phase with no prompt open, the card in their hand and Tradable, a Trade left this turn, the mana for
+/// `TRADE_COST`, and room in their deck for the card (R80's cap, which would otherwise turn it away).
+pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str) -> Result<(), EngineError> {
+    why_not_in_main_phase(state, player)?;
     let side = &state.players[player];
     let Some(card) = side.hand.iter().find(|card| card.id == instance_id) else {
         return Err(EngineError::new(format!("no card {instance_id} in your hand")));

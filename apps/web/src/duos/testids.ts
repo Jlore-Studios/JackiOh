@@ -32,6 +32,8 @@ export const duosTestid = {
   coopRejoin: "coop-rejoin",
   /** #1568: a failed deck read offers Try again beside the alert. */
   coopDecksRetry: "coop-decks-retry",
+  /** #1900: a failed read of the live co-op game offers Try again beside the alert. */
+  coopLiveRetry: "coop-live-retry",
   // The board's own: the rail's pieces, the concede offer and the result.
   board: "duos-board",
   lifeStrip: "duos-life-strip",

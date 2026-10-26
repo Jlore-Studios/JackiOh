@@ -334,7 +334,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell button.collection-strip__item:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):is(:hover, :focus-visible) {
@@ -460,7 +460,7 @@
   border-radius: 10px;
   background: transparent;
   box-shadow: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell button.collection-tile__button:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):is(:hover, :focus-visible),
@@ -482,8 +482,9 @@
 }
 
 /* A mini board: the viewer's half on the playmat, the backdrop over it, a row of pads each side.
-   The playmats are game/table.css's, at tile size, and still. It draws the same in a tile and in a
-   `.cosmetic-look` outside the tavern frame (a pack's reveal, the shop's rows), at the same weight. */
+   The playmats are game/table.css's, at tile size; a chase playmat's pads on the viewer's side move
+   as a game's do (the motion gate below). It draws the same in a tile and in a `.cosmetic-look`
+   outside the tavern frame (a pack's reveal, the shop's rows), at the same weight. */
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard {
   --mini-line: rgb(201 149 63 / 35%);
   --mini-zone: rgb(255 226 178 / 10%);
@@ -675,8 +676,45 @@
   transform-origin: 30px 14px;
 }
 
-/* A tile's particles and card back move only while it is the equipped one, hovered or focused. */
+/* R1953001: a chase playmat's pads glint, pulse or twinkle pad by pad, with game/table.css's loops at
+   a game's pace. Under reduced motion (the media query, or the settings' Reduce motion on <html>)
+   they hold still. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-obsidian-slab"] .collection-miniboard__pads--you > span {
+    will-change: opacity;
+    animation: table-glint 4.2s ease-in-out infinite;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  :root:not([data-reduce-motion="true"]) :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-ancient-map"] .collection-miniboard__pads--you > span {
+    will-change: transform, opacity;
+    animation: table-pulse 3.2s ease-in-out infinite alternate;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  :root:not([data-reduce-motion="true"]) :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-astral"] .collection-miniboard__pads--you > span {
+    will-change: opacity;
+    animation: table-twinkle 3.8s linear infinite;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  /* The pads keep out of step as a game's lanes do; only the pad rules above read it. */
+  :root:not([data-reduce-motion="true"]) :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard__pads--you > span:nth-child(2) {
+    --pad-delay: -1.1s;
+  }
+
+  :root:not([data-reduce-motion="true"]) :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard__pads--you > span:nth-child(3) {
+    --pad-delay: -2.3s;
+  }
+}
+
+/* A tile's particles, pads and card back move only while it is the equipped one, hovered or focused.
+   The pads' rule weighs what their motion rules above do, so it comes after them. */
 .tavern.app-shell .collection-tile:not([data-equipped="true"]):not(:hover):not(:focus-within) .board-backdrop-particle {
+  animation-play-state: paused;
+}
+
+.tavern.app-shell .collection-tile:not([data-equipped="true"]):not(:hover):not(:focus-within) .collection-miniboard__pads > span {
   animation-play-state: paused;
 }
 

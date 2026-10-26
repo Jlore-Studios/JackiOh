@@ -68,6 +68,9 @@ export type { KeywordKind } from "./generated/KeywordKind.ts";
 export type { LibraryEntryView } from "./generated/LibraryEntryView.ts";
 export type { LibraryOverflowOutcome } from "./generated/LibraryOverflowOutcome.ts";
 export type { LibraryView } from "./generated/LibraryView.ts";
+export type { MarketOfferView } from "./generated/MarketOfferView.ts";
+export type { MarketSaleView } from "./generated/MarketSaleView.ts";
+export type { MarketplaceView } from "./generated/MarketplaceView.ts";
 export type { ModeDecl } from "./generated/ModeDecl.ts";
 export type { ModifierView } from "./generated/ModifierView.ts";
 export type { MulliganView } from "./generated/MulliganView.ts";
@@ -92,6 +95,9 @@ export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
 export type { SpawnZone } from "./generated/SpawnZone.ts";
+export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
+export type { StarscapeReward } from "./generated/StarscapeReward.ts";
+export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
@@ -215,6 +221,9 @@ export const GAME_EVENT_TYPES = [
   "resourceSold",
   "resourceDiscarded",
   "marketCreditsChanged",
+  // Issue #1853's Marketplace: a card bought, a Resource sold (R1853003).
+  "marketBought",
+  "marketSold",
   // Stinkyscape's Starship: a piece fused into its owner's Dormant Starship, and a Starship launched
   // (issue #1852, R1852000, R1852003).
   "starshipFused",
@@ -223,6 +232,12 @@ export const GAME_EVENT_TYPES = [
   "voteCast",
   "votedOut",
   "fled",
+  // Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847001).
+  "starscapeTravelled",
+  // #1850's card-on-card verbs: a permanent held beneath a card (R1850003).
+  "held",
+  // Issue #1855's Anomalies: a side's board replaced by a preset (R1855000).
+  "boardReplaced",
 ] as const satisfies readonly GameEventType[];
 
 /**

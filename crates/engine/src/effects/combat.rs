@@ -24,9 +24,10 @@ use serde::{Deserialize, Serialize};
 use super::destroy::{DestroyArgs, destroy};
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of, resolve_target};
 use crate::combat::{
-    AttackAmong, AttackTarget, force_attack_own_hero, force_attacks_on, force_attacks_random,
+    AttackAmong, AttackTarget, force_attack_own_hero, force_attacks_on, force_attacks_random, is_enemy_of,
 };
 use crate::prompts::summoned_so_far;
+use crate::restrictions::attack_restriction;
 use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
 use crate::state_check::state_check;
@@ -35,7 +36,7 @@ use crate::subsystems::ai_policy::play_out_turn;
 use crate::triggers::{SETTLE_PASS_CAP, SettleSink, dispatch_pending, run_queued_trigger};
 use crate::wire::{GameEvent, RedirectWhat, ZoneName, opponent_of};
 use crate::work::paused;
-use crate::zones::active_units_of;
+use crate::zones::{active_units_of, is_carried};
 
 /// Which side's units are compelled. "any" is both, in R68's order (active side first). (TS
 /// `PlayerSpec | "any"`.)
@@ -118,6 +119,11 @@ pub struct ForcedAttackerFilter {
     /// "the tokens THIS effect list just summoned" — see `freshly_summoned`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summoned_this_script: Option<bool>,
+    /// R1849007 (Stinkyscape #23 Warp Disruptor): "a random unit from your side attacks it" — one of the
+    /// named units, drawn from the match rng among those that may attack the target. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random: Option<bool>,
 }
 
 /// "summon 2 Rush Tokens; if it was a Unit, they attack it" (#60 Bear Honeypot). "They" is the
@@ -200,6 +206,25 @@ pub fn forced_attacks(args: ForcedAttacksArgs) -> Effect {
                     fresh.as_ref().is_none_or(|fresh| fresh.contains(&unit.id))
                 })
                 .collect();
+        // R1849007: one of them at random, drawn only from those that may attack the target — on a
+        // carrier, or barred by a restriction (§4.2 step 2), a unit is no candidate — and with none,
+        // nothing is drawn.
+        let attackers = if args.attackers.random == Some(true) {
+            let able: Vec<CardInstance> = attackers
+                .into_iter()
+                .filter(|unit| {
+                    !is_carried(ctx.state, unit)
+                        && is_enemy_of(unit, &target)
+                        && attack_restriction(ctx.state, unit, &target).is_ok()
+                })
+                .collect();
+            match ctx.sink.rng.pick(&able) {
+                Some(unit) => vec![unit.clone()],
+                None => return,
+            }
+        } else {
+            attackers
+        };
 
         // R174, R53: the run is the list's, so its stays are the ones the list began with — the tokens
         // it summoned are on them, and a target it took off the field is gone (`force_attacks_on`).
@@ -389,6 +414,20 @@ pub fn autopilot() -> Effect {
     Effect::new("autopilot", move |ctx| {
         let player = ctx.controller;
         crate::subsystems::autopilot::engage(ctx, player);
+    })
+}
+
+/// R1844001 (Stinkyscape #147 IN33DH3): "for the rest of your turn an AI will help you make the
+/// Pareto Optimal decisions". The caster is shown the Pareto hint for the turn running
+/// (`PlayerState.pareto_hint`, read by `subsystems::pareto::pareto_hint_ids`) — on their own turn
+/// only, so on the opponent's it does nothing — until that turn's cleanup.
+pub fn pareto_hint() -> Effect {
+    Effect::new("paretoHint", move |ctx| {
+        if ctx.sink.state.result.is_some() || ctx.sink.state.active != ctx.controller {
+            return;
+        }
+        let turn = ctx.sink.state.turn;
+        ctx.sink.state.players[ctx.controller].pareto_hint = Some(turn);
     })
 }
 

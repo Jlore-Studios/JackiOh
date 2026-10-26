@@ -142,6 +142,17 @@ string_union! {
 }
 
 string_union! {
+    /// R1847000: what a starscape node gives (config `STARSCAPE_REWARDS`); `Edge` is the last node's.
+    pub enum StarscapeReward {
+        Heal = "heal",
+        Draw = "draw",
+        Mana = "mana",
+        Damage = "damage",
+        Edge = "edge",
+    }
+}
+
+string_union! {
     /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
     pub enum FengShuiOutcome {
         Positive = "positive",
@@ -947,8 +958,8 @@ pub enum GameEvent {
         player: PlayerId,
     },
     // -------------------------------------------------------------------------------------------
-    // Stinkyscape's Resources and Credits (#1840, `resources`). Their BUILD M5-T4 rows, `ANIMATIONS`
-    // and `SOUND_CUES` rows came with them.
+    // Stinkyscape's Resources and Credits (#1840, `resources`) and its Marketplace (#1853,
+    // `marketplace`). Their BUILD M5-T4 rows, `ANIMATIONS` and `SOUND_CUES` rows came with them.
     // -------------------------------------------------------------------------------------------
     /// R1840000: `player` gained a Resource into their Resource tray. It names the card as
     /// `addedToHand` does, so a view hides the card where the viewer may not read it, its face with
@@ -988,6 +999,34 @@ pub enum GameEvent {
     MarketCreditsChanged {
         player: PlayerId,
         value: i32,
+    },
+    /// R1853003: `player` bought a fresh card at the Marketplace for `credits` Credits; it reaches
+    /// their hand (`addedToHand`) or, a Resource, their tray (`resourceGained`) next. It names the card
+    /// as `addedToHand` does, so a view hides the card where the viewer may not read it, its face with
+    /// it (R97). The price is public, as Credits are.
+    MarketBought {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        /// Set when the card bought is Radiant (a Radiant lot, R1853001). It is the card's, so a view
+        /// that hides the card hides this too (R97). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        radiant: Option<bool>,
+        credits: i32,
+    },
+    /// R1853003: `player` sold a Resource from their tray at the Marketplace for `credits` Credits, and
+    /// it ceased to exist; the `marketCreditsChanged` after it says the new count. Public, as a
+    /// Resource sold from a full tray is (R1840001).
+    MarketSold {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        /// Set when the Resource sold is Radiant. Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        radiant: Option<bool>,
+        credits: i32,
     },
     /// R1852000 (Stinkyscape's Starship, §6.1 Starship Piece): `player`'s Starship Piece `piece_id`
     /// (of `def_id`) died, and a copy of it fused into their Dormant Starship `instance_id`, which now
@@ -1038,6 +1077,32 @@ pub enum GameEvent {
     Fled {
         player: PlayerId,
         opponent: FleeOpponent,
+    },
+    /// R1847001: `player` travelled to `node` (1 to `STARSCAPE_EDGE_TRAVELS`) of their starscape map,
+    /// which gives `reward`. Public: a player, a number and a reward.
+    StarscapeTravelled {
+        player: PlayerId,
+        node: i32,
+        reward: StarscapeReward,
+    },
+    /// R1850003: the permanent `instance_id` (of `player`'s field) is held beneath the card
+    /// `holder_id` until that card leaves the field — off the field, in no pile, and back as a summon.
+    /// Only a face-up card is held, so both read it as it happens; a view judges the card and its
+    /// holder by where each is now, as `exiled` is (R97).
+    Held {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        holder_id: String,
+    },
+    // -------------------------------------------------------------------------------------------
+    // Issue #1855: Anomalies, the board swap (R1855000–R1855003)
+    // -------------------------------------------------------------------------------------------
+    /// R1855000: `player`'s board is replaced by a preset (`effects::replace_board`): the `exiled`
+    /// events after it are their cards going and the `summoned` ones the preset's coming. Public: a
+    /// player alone.
+    BoardReplaced {
+        player: PlayerId,
     },
 }
 
@@ -1179,11 +1244,16 @@ string_union! {
         ResourceSold = "resourceSold",
         ResourceDiscarded = "resourceDiscarded",
         MarketCreditsChanged = "marketCreditsChanged",
+        MarketBought = "marketBought",
+        MarketSold = "marketSold",
         StarshipFused = "starshipFused",
         StarshipLaunched = "starshipLaunched",
         VoteCast = "voteCast",
         VotedOut = "votedOut",
         Fled = "fled",
+        StarscapeTravelled = "starscapeTravelled",
+        Held = "held",
+        BoardReplaced = "boardReplaced",
     }
 }
 
@@ -1357,11 +1427,16 @@ impl GameEvent {
             GameEvent::ResourceSold { .. } => GameEventType::ResourceSold,
             GameEvent::ResourceDiscarded { .. } => GameEventType::ResourceDiscarded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
+            GameEvent::MarketBought { .. } => GameEventType::MarketBought,
+            GameEvent::MarketSold { .. } => GameEventType::MarketSold,
             GameEvent::StarshipFused { .. } => GameEventType::StarshipFused,
             GameEvent::StarshipLaunched { .. } => GameEventType::StarshipLaunched,
             GameEvent::VoteCast { .. } => GameEventType::VoteCast,
             GameEvent::VotedOut { .. } => GameEventType::VotedOut,
             GameEvent::Fled { .. } => GameEventType::Fled,
+            GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
+            GameEvent::Held { .. } => GameEventType::Held,
+            GameEvent::BoardReplaced { .. } => GameEventType::BoardReplaced,
         }
     }
 }
@@ -1447,9 +1522,11 @@ mod tests {
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
         // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
         // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
-        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); and #1843's
-        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002).
-        assert_eq!(GAME_EVENT_TYPES.len(), 90);
+        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
+        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
+        // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
+        // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 95);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

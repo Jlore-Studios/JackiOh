@@ -1,5 +1,7 @@
 # Contributing to JackiOh
 
+**At this time, JackiOh is not accepting external contributions.**
+
 For people and agents alike. This is a pointer page: the rules live in the files it names.
 
 ## Read first

@@ -78,6 +78,14 @@ export function counteredAttr(card: Pick<CardView, "counteredOnPlay"> | null | u
   return card?.counteredOnPlay === true ? "true" : undefined;
 }
 
+/**
+ * `data-pareto-optimal`: "true" when the engine put `paretoOptimal: true` on the hand card's view, the
+ * Pareto hint (R1844001); undefined otherwise. Which card the judge calls optimal is the engine's alone.
+ */
+export function paretoAttr(card: Pick<CardView, "paretoOptimal"> | null | undefined): "true" | undefined {
+  return card?.paretoOptimal === true ? "true" : undefined;
+}
+
 /** Prefixes of the glowing testids that are a move: a play from the graveyard (B5 E11), an Activate control or a further Heroic Power (R384). */
 const MOVE_PREFIXES: readonly string[] = [
   "hand-card-",

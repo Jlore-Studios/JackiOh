@@ -794,12 +794,14 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
         let Some(deck) = trio_deck(&side.trio, slot) else {
             panic!("series {}: slot {} is not a deck", series.id, slot);
         };
-        // R642: a Conquest game plays the picked deck's portrait, frozen into the trio with it.
+        // R642: a Conquest game plays the picked deck's portrait, frozen into the trio with it, and
+        // R1834002 its slots.
         MatchSeat {
             profile_id: side.profile_id.clone(),
             player,
             deck: deck.cards.clone(),
             portrait: deck.portrait.clone().flatten(),
+            deck_slots: deck.slots.clone(),
         }
     };
     Ok(GameSeats {

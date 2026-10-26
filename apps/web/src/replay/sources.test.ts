@@ -7,6 +7,7 @@ import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { PlayerId } from "@jackioh/shared";
 
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CosmeticKind } from "../cards/cosmetics.ts";
 import { ApiRequestError, ApiUnreachableError, API_UNREACHABLE_MESSAGE, getReplaySteps } from "../net/api.ts";
 import type { PracticeCoreEnv } from "../practice/core.ts";
 import { createPracticeHost } from "../practice/host.ts";
@@ -16,7 +17,7 @@ import { memorySaveStore } from "../practice/saveStore.ts";
 import type { PracticeReplay, PracticeSaveStore } from "../practice/saveStore.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { ReplayFailure } from "./source.ts";
-import { onlineFailure, onlineReplaySource, practiceFailure, practiceReplaySource } from "./sources.ts";
+import { onlineFailure, onlineReplaySource, openOnlineMatchReplay, practiceFailure, practiceReplaySource } from "./sources.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -189,5 +190,53 @@ describe("the online source", () => {
 
     const limited = onlineFailure(new ApiRequestError(429, { code: "rate_limited", message: "slow down" }));
     expect([limited.reason, limited.message]).toEqual(["error", "slow down"]);
+  });
+
+  it("R1834003 a page's loadouts merge into the source's, and a match from before them wears the defaults", async () => {
+    const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
+    const theirs = { ...DEFAULT_CARD_COSMETICS, table: item("table"), border: item("border") };
+    const loadouts = { p1: DEFAULT_CARD_COSMETICS, p2: theirs };
+    const page = (from: number, cardLoadouts: unknown) => ({
+      matchId: "m-1",
+      from,
+      steps: steps.slice(from, from + REPLAY_PAGE_STEPS),
+      total: steps.length,
+      loadouts,
+      cardLoadouts,
+    });
+    vi.mocked(getReplaySteps)
+      .mockResolvedValueOnce(page(0, [{ seat: "p2", cards: [{ cardId: "core-004", foil: item("foil") }] }]))
+      .mockResolvedValueOnce(
+        page(REPLAY_PAGE_STEPS, [
+          { seat: "p1", cards: [{ cardId: "core-008", fullArt: true }] },
+          { seat: "p2", cards: [{ cardId: "core-005", finish: item("finish") }] },
+          { seat: "p3", cards: [{ cardId: "core-006" }] },
+        ]),
+      );
+    const source = onlineReplaySource(TOKEN, listing);
+    expect(source.loadouts?.()).toBeNull();
+
+    await source.page(0, REPLAY_PAGE_STEPS);
+    expect(source.loadouts?.()).toEqual({
+      p1: { seat: DEFAULT_CARD_COSMETICS, cards: {} },
+      p2: { seat: theirs, cards: { "core-004": { foil: item("foil") } } },
+    });
+    // A later page adds its cards to what the earlier ones gave; a malformed entry is skipped.
+    await source.page(REPLAY_PAGE_STEPS, REPLAY_PAGE_STEPS);
+    expect(source.loadouts?.()).toEqual({
+      p1: { seat: DEFAULT_CARD_COSMETICS, cards: { "core-008": { fullArt: true } } },
+      p2: { seat: theirs, cards: { "core-004": { foil: item("foil") }, "core-005": { finish: item("finish") } } },
+    });
+
+    // A finished match's first page, fetched to open it, counts as well.
+    vi.mocked(getReplaySteps).mockResolvedValueOnce(page(0, [{ seat: "p2", cards: [{ cardId: "core-004", foil: item("foil") }] }]));
+    const opened = await openOnlineMatchReplay(TOKEN, "m-1");
+    expect(opened.loadouts?.()?.p2).toEqual({ seat: theirs, cards: { "core-004": { foil: item("foil") } } });
+
+    // A page that names no loadouts (a match from before R1834002) wears every kind's default.
+    vi.mocked(getReplaySteps).mockResolvedValueOnce({ matchId: "m-1", from: 0, steps: steps.slice(0, REPLAY_PAGE_STEPS), total: steps.length });
+    const old = onlineReplaySource(TOKEN, listing);
+    await old.page(0, REPLAY_PAGE_STEPS);
+    expect(old.loadouts?.()).toEqual({ p1: { seat: DEFAULT_CARD_COSMETICS, cards: {} }, p2: { seat: DEFAULT_CARD_COSMETICS, cards: {} } });
   });
 });

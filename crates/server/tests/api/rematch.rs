@@ -42,7 +42,7 @@ use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
-use jackioh_server::db::store::{MatchSeat, StartMatchInput};
+use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::store::{fake_lock, q, to_json};
@@ -237,12 +237,14 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
                         player: PlayerId::P1,
                         deck: one,
                         portrait: None,
+                        deck_slots: None,
                     },
                     MatchSeat {
                         profile_id: b.to_string(),
                         player: PlayerId::P2,
                         deck: two,
                         portrait: None,
+                        deck_slots: None,
                     },
                 ),
                 mode: None,
@@ -1283,6 +1285,51 @@ mod r890000_a_seat_taken_mid_start {
     }
 }
 
+// A seat-flag write that fails (#1895)
+
+/// A seat-flag write that fails for an ordinary reason undoes the rematch as a taken seat does: no
+/// live match, no flag, no seat, and the offer claim released so the next equal offer makes the game.
+mod a_failed_seat_flag_write {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_failed_seat_flag_write_voids_the_rematch_and_frees_the_offer() {
+        let app = test_app().await;
+        let (a, b, finished) = names("flag-fails");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+
+        fake_lock(&app).await.on_call = Some(Arc::new(|method: &str| {
+            if method == "profiles.setInMatch" {
+                return Err(StoreError::Other("the database hiccuped".to_string()));
+            }
+            Ok(())
+        }));
+        let (code, failed) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        fake_lock(&app).await.on_call = None;
+
+        assert_eq!(code, 500, "{failed}");
+        assert_eq!(failed["error"]["code"], "internal");
+        assert!(live_ids(&app).await.is_empty());
+        assert!(app.matches.live().is_empty());
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
+        assert_eq!(app.seats.of(&a), None);
+        assert_eq!(app.seats.of(&b), None);
+
+        // The claim is released: the status names no game, and the next equal offer makes one.
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], Value::Null);
+        let (code, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(code, 200, "{created}");
+        let created_id = created["matchId"].as_str().expect("a match id").to_string();
+        assert_eq!(live_ids(&app).await, vec![json!(created_id)]);
+        assert_eq!(in_match_of(&app, &a).await, json!(created_id));
+        assert_eq!(in_match_of(&app, &b).await, json!(created_id));
+    }
+}
+
 // R1638000 — a rematch across a card patch (§9.4, §9.5)
 
 /// R1638000: a match played on a catalog version other than the server's offers no rematch.
@@ -1409,5 +1456,102 @@ mod r1638000_a_rematch_across_a_patch {
 
         assert_nothing_made(&app, &a, &b).await;
         clear_overrides();
+    }
+}
+
+/// R1834002: a Best-of-1 rematch plays the same decks under the deck slots their seats wore, which
+/// its own loadout judges again as it begins; the cards' own picks are read from the accounts again,
+/// and the card slots are their kinds' defaults (R1953001), whatever the finished seat or the account
+/// holds. A finished match from before loadouts has no slots to replay, so its rematch wears the
+/// accounts' picks.
+mod r1834002_a_rematch_keeps_the_slots {
+    use super::*;
+
+    fn seat(table: &str, field: &str, card_back: &str, foil: &str) -> Value {
+        json!({
+            "table": table,
+            "field": field,
+            "cardBack": card_back,
+            "foil": foil,
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_a_rematch_keeps_the_slots() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("dressed-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(
+            &app,
+            &finished_id,
+            &a,
+            &b,
+            json!({ "loadouts": [
+                { "seat": seat("table-felt", "field-rain", "card-back-lacquer", "foil-rainbow"), "cards": [] },
+                { "seat": seat("table-tavern", "field-none", "card-back-standard", "foil-none"), "cards": [] },
+            ] }),
+        )
+        .await;
+        paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
+        // Since the game, A's account picked another playmat and another foil.
+        let (status, body) = request(
+            &app,
+            "PUT",
+            "/api/settings",
+            &token_a,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": {
+                "table": "table-wood",
+                "foil": "foil-holo-sweep",
+            } } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
+        let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
+        let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
+        let rematch = match_row(&app, &rematch_id).await;
+        assert_eq!(rematch["players"], json!([a, b]));
+        // The deck slots are the finished seat's; the foil is neither the finished seat's nor the
+        // account's, but the default.
+        assert_eq!(
+            rematch["loadouts"][0]["seat"],
+            seat("table-felt", "field-rain", "card-back-lacquer", "foil-none")
+        );
+        assert_eq!(
+            rematch["loadouts"][1]["seat"],
+            seat("table-tavern", "field-none", "card-back-standard", "foil-none")
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_a_rematch_of_a_match_from_before_loadouts_wears_the_accounts_picks() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("plain-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
+        let (status, body) = request(
+            &app,
+            "PUT",
+            "/api/settings",
+            &token_b,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": { "table": "table-wood" } } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
+        let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
+        let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
+        let rematch = match_row(&app, &rematch_id).await;
+        assert_eq!(
+            rematch["loadouts"][1]["seat"],
+            seat("table-wood", "field-none", "card-back-standard", "foil-none")
+        );
     }
 }

@@ -1,6 +1,7 @@
 // CLAUDE.md rule 7 / SPEC §9.1: this client sends intent and renders server views; it never computes legality (BUILD M5-T2).
 // The handshake names the match in its query and offers the token as a subprotocol (SURFACE §11.3, R1379000); `hello` refreshes the view (§9.5).
 // `MatchClocks` is structural across the deployable boundary (§9.2); view frames carry legal actions (BUILD §1, M6-T4).
+// R1834003: `loadouts` and `cardLoadouts` carry both seats' frozen cosmetics (R1834002), kept merged here as `portraits` are kept.
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -8,6 +9,8 @@ import type { ActionBody, Aim, EmoteId, PlayerId, PlayerView, PortraitId, Prompt
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
+import type { CardCosmetics } from "../cards/cosmetics.ts";
+import { createLoadoutsHolder, parseCardLoadouts, parseSeatPicks, type CardLoadouts, type SeatLoadouts } from "../cards/loadouts.ts";
 import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
@@ -316,7 +319,11 @@ export type ServerFrame =
   /** R738: what the opponent is aiming at now, or null when its aim has ended. */
   | { type: "aim"; from: PlayerId; aim: Aim | null }
   /** #936 B51: how many friends are watching this match, sent when the count changes. */
-  | { type: "watchers"; count: number };
+  | { type: "watchers"; count: number }
+  /** R1834003: both seats' frozen picks (R1834002), on every join and hello, before the view. */
+  | { type: "loadouts"; seats: Record<PlayerId, CardCosmetics> }
+  /** R1834003: the picks of one seat's cards the view before it newly showed. */
+  | { type: "cardLoadouts"; cards: CardLoadouts };
 
 /**
  * Parse one text frame; unknown frames must not take the board down.
@@ -406,6 +413,14 @@ export function parseServerFrame(text: string): ServerFrame | null {
       if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return null;
       return { type: "watchers", count };
     }
+    case "loadouts": {
+      const seats = parseSeatPicks(parsed);
+      return seats === null ? null : { type: "loadouts", seats };
+    }
+    case "cardLoadouts": {
+      const cards = parseCardLoadouts(parsed);
+      return cards === null ? null : { type: "cardLoadouts", cards };
+    }
     default:
       return null;
   }
@@ -433,7 +448,7 @@ export type ConnectionState =
   | "reconnecting"
   /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
-  /** `close()` was called. */
+  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679): the match is gone, and nothing reopens it until `connect()`. */
   | "closed";
 
 /**
@@ -479,6 +494,11 @@ export type MatchSnapshot = {
   aim: { from: PlayerId; aim: Aim } | null;
   /** #936 B51: the last `watchers` frame's count; 0 until one arrives. */
   watchers: number;
+  /**
+   * R1834003: both seats' frozen loadouts, the card picks every `cardLoadouts` frame sent merged in;
+   * null until the first `loadouts` frame.
+   */
+  loadouts: SeatLoadouts | null;
 };
 
 export type MatchClient = {
@@ -539,6 +559,7 @@ const INITIAL: MatchSnapshot = {
   emote: null,
   aim: null,
   watchers: 0,
+  loadouts: null,
 };
 
 /**
@@ -580,6 +601,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let awaitingFirstView = false;
   /** R1115000: the token a 4401 refused while the client stays refused for it; null otherwise. */
   let refusedToken: string | null = null;
+  /** R1834003: the frames' loadouts, kept apart so card picks sent before the first `loadouts` are not lost. */
+  const loadouts = createLoadoutsHolder();
 
   const wakeProbe = createWakeProbe({
     socket: () => socket,
@@ -660,6 +683,14 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "watchers":
         patch({ watchers: frame.count });
         return;
+      case "loadouts":
+        patch({ loadouts: loadouts.seats(frame.seats) });
+        return;
+      case "cardLoadouts": {
+        const next = loadouts.cards(frame.cards);
+        if (next !== snapshot.loadouts) patch({ loadouts: next });
+        return;
+      }
     }
   }
 

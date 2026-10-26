@@ -50,7 +50,9 @@
 //!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
 //!     only, beside the normal price `cost` already is. #992, R90: a fifth, `choicesTruncated`, on the
 //!     viewer's own hand cards only, while `legal_actions` lists plays of the card whose choice
-//!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`).
+//!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`). R1844001: a sixth,
+//!     `paretoOptimal` (the Pareto hint), on the viewer's own hand cards only, while the viewer is
+//!     shown the hint and the judge would call the card's play optimal (`pareto::pareto_hint_ids`).
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
@@ -98,6 +100,7 @@ use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
 use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
+use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
@@ -509,6 +512,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         power: None,
         condition_active: None,
         countered_on_play: None,
+        pareto_optimal: None,
         play_reason: None,
         trade_reason: None,
         choices_truncated: None,
@@ -635,6 +639,14 @@ fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance
 fn with_counter_warning(mut view: CardView, countered: bool) -> CardView {
     if countered {
         view.countered_on_play = Some(true);
+    }
+    view
+}
+
+/// R1844001: the Pareto hint's mark, `true` or absent like the warning above.
+fn with_pareto_hint(mut view: CardView, hinted: bool) -> CardView {
+    if hinted {
+        view.pareto_optimal = Some(true);
     }
     view
 }
@@ -1365,6 +1377,12 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
     } else {
         IndexSet::new()
     };
+    // R1844001: the Pareto hint, likewise only ever the viewer's own hand's.
+    let hinted: IndexSet<String> = if player == viewer {
+        pareto_hint_ids(state, viewer).into_iter().collect()
+    } else {
+        IndexSet::new()
+    };
     // §10.8: the viewer's own hand in full, the opponent's as a count — until the game is over, when
     // both hands are revealed (R434): the opponent's cards as they stand, as their owner saw them.
     let hand = if player == viewer {
@@ -1372,7 +1390,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             side.hand
                 .iter()
                 .map(|card| {
-                    with_trade_reason(
+                    let view = with_trade_reason(
                         with_choices_truncated(
                             with_preview(
                                 with_play_reason(
@@ -1394,7 +1412,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                         state,
                         card,
                         viewer,
-                    )
+                    );
+                    with_pareto_hint(view, hinted.contains(&card.id))
                 })
                 .collect(),
         )
@@ -1510,6 +1529,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         rift_extra_turn: side.rift_extra_turn,
         // R860: the side's secrets, the choice only where the viewer may read it.
         secrets: crate::secrets::secret_views(state, player, viewer),
+        // R1847000: the seat's starscape map, public on both seats, absent until its first travel.
+        starscape: crate::subsystems::starscape::starscape_view(state, player),
     }
 }
 
@@ -2040,8 +2061,9 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it.
-        GameEventType::ResourceGained => {
+        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it; R1853003:
+        // so does a card bought at the Marketplace.
+        GameEventType::ResourceGained | GameEventType::MarketBought => {
             if hidden(&instance) {
                 shown.remove("radiant");
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2405,14 +2427,34 @@ fn redact_event(
         // as a burned card is (R317); R1840005: Credits are a player and a number.
         | GameEventType::ResourceSold
         | GameEventType::ResourceDiscarded
-        | GameEventType::MarketCreditsChanged => event.clone(),
+        | GameEventType::MarketCreditsChanged
+        // R1853003: so did a Resource sold at the Marketplace.
+        | GameEventType::MarketSold => event.clone(),
         // R1852000, R1852003: a piece's fusion names the dead card in its graveyard and the Dormant
         // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
         // the Starship's memory is on both seats' views.
         | GameEventType::StarshipFused
         | GameEventType::StarshipLaunched
         // R1843002: a flight names a player and what it leaves the other.
-        | GameEventType::Fled => event.clone(),
+        | GameEventType::Fled
+        // R1847001: a starscape travel names a player, a node and its reward, all public.
+        | GameEventType::StarscapeTravelled
+        // R1855000: a board replacement names its player alone.
+        | GameEventType::BoardReplaced => event.clone(),
+
+        // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
+        // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps
+        // its id, and may since have been bounced into a hand, and a holder may since be somewhere this
+        // viewer cannot read. A holder that never found a zone is named by no id, and stays so.
+        GameEventType::Held => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            if nullable_at(&shown, "holderId").is_some_and(|holder| !holder.is_empty() && hidden(&holder)) {
+                hide(&mut shown, &["holderId"]);
+            }
+            rebuild(shown)
+        }
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 
@@ -2760,6 +2802,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         },
         // R1838000: the viewer's own Trades, while their hand holds a Tradable card.
         trades: trades_view(state, player_id),
+        // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
+        marketplace: crate::marketplace::marketplace_view(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

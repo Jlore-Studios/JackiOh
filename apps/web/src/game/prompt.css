@@ -360,7 +360,7 @@
   border: 1px solid var(--line-bright);
   border-radius: var(--radius);
   background: var(--bg-sunken);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   user-select: none;
   font-size: 18px;
 }

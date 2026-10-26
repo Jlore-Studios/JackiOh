@@ -42,18 +42,9 @@ fn setup(opts: Value) -> Scenario {
     scenario(opts)
 }
 
-fn unit_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
-    g.unit(player, lane)
-        .unwrap_or_else(|| panic!("setup: {player} should hold a unit in lane {lane}"))
-}
-
 fn backrow_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
     g.backrow(player, lane)
         .unwrap_or_else(|| panic!("setup: {player} should hold a backrow card in lane {lane}"))
-}
-
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
 }
 
 /// The attacks `legalActions` offers this unit right now, as target ids.
@@ -130,10 +121,10 @@ mod r171_with_the_cards_that_change_control {
                 "library": LIBRARY,
             },
         }));
-        let prey = unit_at(&g, "p2", 3);
-        let bystander = unit_at(&g, "p2", 5);
+        let prey = g.unit_at("p2", 3);
+        let bystander = g.unit_at("p2", 5);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&prey) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&prey) }));
 
         assert_eq!(g.card(&prey).controller, PlayerId::P1);
         expect_entered_now(&g, &prey);
@@ -157,7 +148,7 @@ mod r171_with_the_cards_that_change_control {
         }));
         let trap = backrow_at(&g, "p2", 3);
 
-        g.play(MAGIC_JAMMED, json!({ "targets": at(&trap) }));
+        g.play(MAGIC_JAMMED, json!({ "targets": pick::instance(&trap) }));
 
         // The Lock lands on p2's lane 3, the original zone, so R15 puts the trap in p1's lane 3.
         assert_eq!(g.backrow("p1", 3).map(|c| c.id), Some(trap.id.clone()));
@@ -171,10 +162,10 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [MIND_CONTROL, VANILLA] },
             "p2": { "field": [{ "def": JILLIAX, "lane": 2 }, { "def": VANILLA, "lane": 4, "damage": 1 }] },
         }));
-        let jilliax = unit_at(&g, "p2", 2);
-        let vanilla = unit_at(&g, "p2", 4);
+        let jilliax = g.unit_at("p2", 2);
+        let vanilla = g.unit_at("p2", 4);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&jilliax) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&jilliax) }));
 
         expect_entered_now(&g, &jilliax);
         g.expect_refused_with(|g| g.attack(&jilliax, "hero"), RUSH_NOT_HERO);
@@ -192,14 +183,14 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": DUELIST, "lane": 1 }], "library": LIBRARY },
         }));
-        let duelist = unit_at(&g, "p2", 1);
+        let duelist = g.unit_at("p2", 1);
         g.attack(&duelist, "hero");
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         // Exertion resets at its controller's own turn start, so it is still spent on p1's turn.
         assert!(g.card(&duelist).exertion.attacked);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&duelist) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&duelist) }));
 
         expect_entered_now(&g, &duelist);
         assert!(offered_attacks(&g, &duelist).contains(&"hero-p2".to_string()));
@@ -217,13 +208,13 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 3 }, { "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
         }));
-        let switcher = unit_at(&g, "p2", 3);
+        let switcher = g.unit_at("p2", 3);
         g.switch_position(&switcher);
         assert_eq!(g.card(&switcher).position, Some(Position::Def));
         g.end_turn();
         assert!(g.card(&switcher).exertion.switched);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&switcher) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&switcher) }));
 
         expect_entered_now(&g, &switcher);
         assert!(offers_switch(&g, &switcher));
@@ -244,8 +235,8 @@ mod r171_with_the_cards_that_change_control {
                 "library": LIBRARY,
             },
         }));
-        let prey = unit_at(&g, "p2", 2);
-        g.play(KPOP, json!({ "targets": at(&prey) }));
+        let prey = g.unit_at("p2", 2);
+        g.play(KPOP, json!({ "targets": pick::instance(&prey) }));
 
         g.end_turn().end_turn();
 
@@ -270,9 +261,9 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [VANILLA], "field": [{ "def": MROW, "radiant": true, "lane": 1 }] },
             "p2": { "hand": [VANILLA], "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 4 }] },
         }));
-        let mrow = unit_at(&g, "p1", 1);
-        let seven_seven = unit_at(&g, "p2", 3);
-        let vanilla = unit_at(&g, "p2", 4);
+        let mrow = g.unit_at("p1", 1);
+        let seven_seven = g.unit_at("p2", 3);
+        let vanilla = g.unit_at("p2", 4);
 
         // Radiant Mrow has Rush: 2 into Armor 7 is nothing, and 7 back kills it, so the 7/7 destroyed it.
         g.attack(&mrow, &seven_seven);
@@ -299,9 +290,9 @@ mod r171_with_the_cards_that_change_control {
                 "library": LIBRARY,
             },
         }));
-        let mrow = unit_at(&g, "p1", 1);
-        let seven_seven = unit_at(&g, "p2", 3);
-        let vanilla = unit_at(&g, "p2", 4);
+        let mrow = g.unit_at("p1", 1);
+        let seven_seven = g.unit_at("p2", 3);
+        let vanilla = g.unit_at("p2", 4);
 
         g.attack(&seven_seven, &mrow);
 
@@ -331,9 +322,9 @@ mod r171_with_the_cards_that_change_control {
                 "library": LIBRARY,
             },
         }));
-        let mine = unit_at(&g, "p1", 1);
-        let duelist = unit_at(&g, "p2", 2);
-        let seven_seven = unit_at(&g, "p2", 3);
+        let mine = g.unit_at("p1", 1);
+        let duelist = g.unit_at("p2", 2);
+        let seven_seven = g.unit_at("p2", 3);
         let trap = backrow_at(&g, "p2", 4);
 
         g.play(CHAOS, json!({ "modes": ["board"] }));
@@ -372,10 +363,10 @@ mod r171_with_the_cards_that_change_control {
             },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }, { "def": VANILLA, "lane": 4 }] },
         }));
-        let spent = unit_at(&g, "p1", 2);
-        let ready = unit_at(&g, "p1", 3);
-        let outbound = unit_at(&g, "p1", 5);
-        let inbound = unit_at(&g, "p2", 1);
+        let spent = g.unit_at("p1", 2);
+        let ready = g.unit_at("p1", 3);
+        let outbound = g.unit_at("p1", 5);
+        let inbound = g.unit_at("p2", 1);
         g.attack(&spent, "hero");
 
         // Right from p1's seat: p1 lane n → n+1, p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
@@ -405,9 +396,9 @@ mod r171_with_the_cards_that_change_control {
             },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }, { "def": VANILLA, "lane": 4 }] },
         }));
-        let ready = unit_at(&g, "p1", 3);
-        let outbound = unit_at(&g, "p1", 5);
-        let inbound = unit_at(&g, "p2", 1);
+        let ready = g.unit_at("p1", 3);
+        let outbound = g.unit_at("p1", 5);
+        let inbound = g.unit_at("p2", 1);
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
 
@@ -438,10 +429,10 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [MIND_CONTROL, VANILLA], "backrow": [{ "def": WEAPONS, "lane": 1 }] },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 5 }] },
         }));
-        let prey = unit_at(&g, "p2", 3);
-        let vanilla = unit_at(&g, "p2", 5);
+        let prey = g.unit_at("p2", 3);
+        let vanilla = g.unit_at("p2", 5);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&prey) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&prey) }));
 
         assert!(keyword_kinds(&g, &prey).contains(&"Rush".to_string()));
         g.expect_refused_with(|g| g.attack(&prey, "hero"), RUSH_NOT_HERO);
@@ -458,12 +449,12 @@ mod r171_with_the_cards_that_change_control {
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }, { "def": VANILLA, "lane": 5 }] },
         }));
         let weapons = backrow_at(&g, "p1", 1);
-        let prey = unit_at(&g, "p2", 3);
-        let target = unit_at(&g, "p2", 5);
+        let prey = g.unit_at("p2", 3);
+        let target = g.unit_at("p2", 5);
 
         g.play(VANILLA, json!({}));
-        let fresh = unit_at(&g, "p1", 1);
-        g.play(MIND_CONTROL, json!({ "targets": at(&prey) }));
+        let fresh = g.unit_at("p1", 1);
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&prey) }));
 
         // Both entered p1's side this turn, and the aura's Rush lets both attack a unit.
         for unit in [&fresh, &prey] {
@@ -473,7 +464,7 @@ mod r171_with_the_cards_that_change_control {
         }
 
         // #36 Magic Jammed on p1's own Field Spell: the aura, and the Rush it granted, are gone.
-        g.play(MAGIC_JAMMED, json!({ "targets": at(&weapons) }));
+        g.play(MAGIC_JAMMED, json!({ "targets": pick::instance(&weapons) }));
         g.expect_in_zone(&weapons, "graveyard");
 
         for unit in [&fresh, &prey] {
@@ -491,9 +482,9 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": 5 },
             "p2": { "field": [{ "def": TIMMY, "lane": 2 }, { "def": VANILLA, "lane": 4 }] },
         }));
-        let timmy = unit_at(&g, "p2", 2);
+        let timmy = g.unit_at("p2", 2);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&timmy) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&timmy) }));
 
         assert!(g.card(&timmy).radiant);
         expect_entered_now(&g, &timmy);
@@ -509,7 +500,7 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [SILAS, SILAS], "mana": 10, "field": [{ "def": SEVEN_SEVEN, "lane": 5 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }] },
         }));
-        let traveller = unit_at(&g, "p1", 5);
+        let traveller = g.unit_at("p1", 5);
         assert!(offered_attacks(&g, &traveller).contains(&"hero-p2".to_string()));
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
@@ -527,7 +518,7 @@ mod r171_with_the_cards_that_change_control {
             "p1": { "hand": [SILAS, SILAS], "mana": 10, "field": [{ "def": TIMMY, "radiant": true, "lane": 5 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }] },
         }));
-        let timmy = unit_at(&g, "p1", 5);
+        let timmy = g.unit_at("p1", 5);
         let before = hero_health(&g, PlayerId::P2);
         g.attack(&timmy, "hero");
 
@@ -551,12 +542,12 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
             "p1": { "hand": [MIND_CONTROL, SORCERER], "mana": 10, "field": [{ "def": POINTMASTER, "lane": 5 }] },
             "p2": { "hand": [VANILLA], "field": [{ "def": SAINTESS, "lane": 2 }, { "def": POINTMASTER, "lane": 4 }] },
         }));
-        let saintess = unit_at(&g, "p2", 2);
-        let mine = unit_at(&g, "p1", 5);
-        let theirs = unit_at(&g, "p2", 4);
+        let saintess = g.unit_at("p2", 2);
+        let mine = g.unit_at("p1", 5);
+        let theirs = g.unit_at("p2", 4);
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&saintess) }));
-        g.play(SORCERER, json!({ "targets": at(&saintess) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&saintess) }));
+        g.play(SORCERER, json!({ "targets": pick::instance(&saintess) }));
 
         let died: Vec<&GameEvent> = g
             .events()
@@ -601,10 +592,10 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
                 "library": LIBRARY,
             },
         }));
-        let defender = unit_at(&g, "p2", 2);
-        let first = unit_at(&g, "p2", 4);
-        let second = unit_at(&g, "p2", 5);
-        g.play(MIND_CONTROL, json!({ "targets": at(&defender) }));
+        let defender = g.unit_at("p2", 2);
+        let first = g.unit_at("p2", 4);
+        let second = g.unit_at("p2", 5);
+        g.play(MIND_CONTROL, json!({ "targets": pick::instance(&defender) }));
         g.end_turn();
 
         // p2 breaks the shield, then kills it: it dies as p1's.
@@ -648,7 +639,7 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
             },
         }));
         let silas = g.card(SILAS).clone();
-        let pointmaster = unit_at(&g, "p2", 2);
+        let pointmaster = g.unit_at("p2", 2);
 
         // Silas enters p1's lane 5 and rotates right: he crosses to p2's lane 5 (§3.1), and
         // Pointmaster steps from p2's lane 2 to p2's lane 1.
@@ -689,7 +680,7 @@ mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_oppone
             "p1": { "hand": [{ "def": SILAS, "radiant": true }, VANILLA], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
         }));
-        let inbound = unit_at(&g, "p2", 1);
+        let inbound = g.unit_at("p2", 1);
 
         // Right from p1's seat: p2's lane 1 steps to p1's lane 1. That card moves to p1, not "to the
         // opponent", so the radiant clause does not touch it and the base clause keeps it: it crosses

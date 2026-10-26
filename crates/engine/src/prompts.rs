@@ -296,7 +296,7 @@ pub fn resume_self(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, V
         def_id: ctx
             .def_id
             .clone()
-            .or_else(|| self_.map(|card| card.def_id.clone()))
+            .or_else(|| self_.map(|card| crate::subsystems::unit_text::text_def_of(card).0.to_string()))
             .unwrap_or_default(),
         step: step.to_string(),
         hook: None,
@@ -1094,6 +1094,13 @@ pub fn run_resumable_list(
 /// steps runs the text that started it. An instance that has ceased to exist resumes with
 /// `ctx.self === null`, which is why a step carries what it needs in `data`.
 pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOptions) -> bool {
+    // R1855001: a run whose caster's choices are random is random in every continuation of it too.
+    let mode = crate::random_cast::random_choices_of(resume);
+    crate::random_cast::with_cast_mode(sink, mode, |sink| run_resume_now(sink, resume, options))
+}
+
+/// `run_resume`, under whatever mode is in force.
+fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOptions) -> bool {
     let paused = paused_of(&resume.data);
     // R113: an answered step (`resumeSelf`) and a parked tail (`PausedStep`) are the run continued.
     let run = run_marks_of(&resume.data);
@@ -1212,11 +1219,13 @@ pub struct HookInstance {
 
 impl From<&CardInstance> for HookInstance {
     fn from(card: &CardInstance) -> HookInstance {
+        // R1850000: a copier's hooks are the copied text's, and their continuations name it.
+        let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
         HookInstance {
             id: card.id.clone(),
-            def_id: card.def_id.clone(),
+            def_id: def_id.to_string(),
             controller: card.controller,
-            radiant: card.radiant,
+            radiant,
         }
     }
 }
@@ -1319,6 +1328,24 @@ pub fn run_fused_into(sink: &mut EngineSink<'_>, card: &CardInstance, controller
     )
 }
 
+/// R1849001: a Unit's `evolve` hook ("Evolve: X", Stinkyscape #91), run when an effect evolves it
+/// (`effects::evolve`). Resumable like the `fusedInto` hook above. Returns true when the whole hook ran.
+pub fn run_evolve(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    // A Vanilla card carries no text (§6.3), and a card without the hook has nothing to run.
+    if crate::scripts::script_of(sink.state, card).evolve.is_none() {
+        return true;
+    }
+    run_hook_resumable(
+        sink,
+        card,
+        "evolve",
+        HookResumableOptions {
+            controller: Some(controller),
+            ..HookResumableOptions::default()
+        },
+    )
+}
+
 /// MD-B18, R925: a card's "When this enters your hand" clause, run as the card arrives in a hand —
 /// after R151's start-of-game clause (`draw::run_arrival_hooks`). An effect list like any other, so
 /// it runs the resumable way too: a question in it pauses the effects after it. Returns true when
@@ -1377,7 +1404,20 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     };
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let required = clamp(args.min.unwrap_or(1), 0, max);
-    let options: Vec<PromptOption> = if mode.target_enemies {
+    let options: Vec<PromptOption> = if mode.friends_only && args.kind == PromptKind::Target {
+        // R1850004: a cast for its caster's own side offers its targets there alone; with nothing
+        // there the question is passed, as a declaration with no legal option is.
+        let friends = crate::random_cast::friends_only(
+            sink.state,
+            args.player,
+            &args.options,
+            |option: &PromptOption| option.selection.clone(),
+        );
+        if friends.is_empty() {
+            return None;
+        }
+        friends
+    } else if mode.target_enemies {
         if args.aim == Some(TargetAim::Help) {
             crate::random_cast::prefer_friends(
                 sink.state,

@@ -109,10 +109,6 @@ mod tests {
         vec![X; n]
     }
 
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     fn must<T>(value: Option<T>, what: &str) -> T {
         match value {
             Some(found) => found,
@@ -200,7 +196,7 @@ mod tests {
             }));
             let vanilla = s.card(VANILLA).clone();
 
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
 
             s.expect_in_zone(&vanilla, "exile");
             let kinds: Vec<&str> = s
@@ -229,7 +225,7 @@ mod tests {
 
             assert_eq!(offered(&s), vec![pawn.id.clone()]);
             assert!(!serde_json::to_string(&s.view(P1)).expect("serialisable").contains(PAWN));
-            s.activate(MUTATE, json!({ "targets": at(&pawn) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&pawn) }));
 
             s.expect_in_zone(&pawn, "exile");
         }
@@ -250,7 +246,7 @@ mod tests {
             }));
 
             let well = s.card(MANA_WELL).clone();
-            s.activate(MUTATE, json!({ "targets": at(&well) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&well) }));
             assert_eq!(draws_by(s.last_events(), P1), 2);
             assert_eq!(s.card(MANA_WELL).counters.plague, None);
             s.expect_in_zone(MANA_WELL, "field");
@@ -260,7 +256,7 @@ mod tests {
                 "p2": { "hand": [FILLER] }
             }));
             let mutate = t.card(MUTATE).clone();
-            t.activate(MUTATE, json!({ "targets": at(&mutate) }));
+            t.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
             assert_eq!(draws_by(t.last_events(), P1), 2);
         }
 
@@ -273,7 +269,7 @@ mod tests {
             }));
             let vanilla = s.card(VANILLA).clone();
 
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
 
             assert_eq!(attacks_by(s.last_events(), &vanilla), ["hero-p2"]);
             s.expect_health(P2, 26);
@@ -294,7 +290,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "position": "DEF" }], "health": 30 }
                 }));
                 let menace = s.card(MENACE).clone();
-                s.activate(MUTATE, json!({ "targets": at(&menace) }));
+                s.activate(MUTATE, json!({ "targets": pick::instance(&menace) }));
                 let targets = attacks_by(s.last_events(), &menace);
                 assert_eq!(targets.len(), 1);
                 seen.insert(if targets[0] == "hero-p2" { "hero" } else { "unit" });
@@ -317,7 +313,7 @@ mod tests {
             }));
 
             let crawler = s.card(CRAWLER).clone();
-            s.activate(MUTATE, json!({ "targets": at(&crawler) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&crawler) }));
 
             assert_eq!(draws_by(s.last_events(), P1), 0);
             let changes: Vec<Value> = s
@@ -342,7 +338,7 @@ mod tests {
 
             assert!(!legal_actions(s.state(), P1).iter().any(|action| js(action)["type"] == json!("activate")));
             let menace = s.card(MENACE).clone();
-            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": at(&menace) })));
+            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&menace) })));
             let view = js(&s.view(P1))["you"]["backrow"][0].clone();
             assert!(serde_json::to_string(&view).expect("serialisable").contains("\"usable\":false"));
 
@@ -352,7 +348,7 @@ mod tests {
             }));
             assert_eq!(offered(&t), vec![t.card(VANILLA).id.clone()]);
             let menace = t.card(MENACE).clone();
-            t.expect_refused(|t| t.activate(MUTATE, json!({ "targets": at(&menace) })));
+            t.expect_refused(|t| t.activate(MUTATE, json!({ "targets": pick::instance(&menace) })));
         }
 
         /// §3.2 R13 a card dormant under a Stack pile is not offered, even with tokens
@@ -368,7 +364,7 @@ mod tests {
 
             assert!(offered(&s).is_empty());
             let vanilla = s.card(VANILLA).clone();
-            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": at(&vanilla) })));
+            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) })));
         }
 
         /// R384 once a turn: a second use that turn is refused, and it is not a play
@@ -389,16 +385,16 @@ mod tests {
             let vanilla = s.card(VANILLA).clone();
             let menace = s.card(MENACE).clone();
 
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
             s.expect_in_zone(&vanilla, "exile");
             assert!(!legal_actions(s.state(), P1).iter().any(|action| js(action)["type"] == json!("activate")));
-            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": at(&menace) })));
+            s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&menace) })));
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::CardPlayed { .. })));
             assert_eq!(s.state().players.p1.turn_log.cards_played, played);
 
             s.end_turn();
             s.end_turn();
-            s.activate(MUTATE, json!({ "targets": at(&menace) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&menace) }));
             s.expect_in_zone(&menace, "exile");
         }
 
@@ -412,7 +408,7 @@ mod tests {
             }));
 
             let vanilla = s.card(VANILLA).clone();
-            s.expect_refused_with(|s| s.activate(MUTATE, json!({ "targets": at(&vanilla) })), "not your turn");
+            s.expect_refused_with(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) })), "not your turn");
         }
 
         /// §2.4 a full hand burns the draws
@@ -428,7 +424,7 @@ mod tests {
             }));
 
             let mutate = s.card(MUTATE).clone();
-            s.activate(MUTATE, json!({ "targets": at(&mutate) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
 
             assert_eq!(
                 s.last_events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count(),
@@ -456,12 +452,12 @@ mod tests {
 
             let mut s = upgraded();
             let mutate = s.card(MUTATE).clone();
-            s.activate(MUTATE, json!({ "targets": at(&mutate) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
             assert_eq!(draws_by(s.last_events(), P1), 3);
 
             let mut t = upgraded();
             let vanilla = t.card(VANILLA).clone();
-            t.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            t.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
             assert_eq!(attacks_by(t.last_events(), t.card(VANILLA)), ["hero-p2", "hero-p2"]);
             t.expect_health(P2, 22);
         }
@@ -480,7 +476,7 @@ mod tests {
             }));
             let vanilla = s.card(VANILLA).clone();
 
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
 
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&vanilla, "exile");
@@ -505,7 +501,7 @@ mod tests {
 
             let cards = [s.card(VANILLA).clone(), s.card(MENACE).clone(), s.card(TIMMY).clone()];
             for card in &cards {
-                s.activate(MUTATE, json!({ "targets": at(card) }));
+                s.activate(MUTATE, json!({ "targets": pick::instance(card) }));
             }
 
             assert_eq!(s.pile(P2, "exile").len(), 3);
@@ -533,7 +529,7 @@ mod tests {
 
             assert!(!legal_actions(s.state(), P1).iter().any(|action| js(action)["type"] == json!("activate")));
             let vanilla = s.card(VANILLA).clone();
-            s.expect_refused_with(|s| s.activate(MUTATE, json!({ "targets": at(&vanilla) })), "100 times");
+            s.expect_refused_with(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) })), "100 times");
         }
 
         /// your backrow card draws 4
@@ -545,7 +541,7 @@ mod tests {
             }));
 
             let mutate = s.card(MUTATE).clone();
-            s.activate(MUTATE, json!({ "targets": at(&mutate) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
 
             assert_eq!(draws_by(s.last_events(), P1), 4);
         }
@@ -559,7 +555,7 @@ mod tests {
             }));
             let vanilla = s.card(VANILLA).clone();
 
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
 
             assert_eq!(attacks_by(s.last_events(), &vanilla), ["hero-p2", "hero-p2"]);
             s.expect_health(P2, 22);
@@ -576,7 +572,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MENACE], "health": 30 }
                 }));
                 let timmy = s.card(TIMMY).clone();
-                s.activate(MUTATE, json!({ "targets": at(&timmy) }));
+                s.activate(MUTATE, json!({ "targets": pick::instance(&timmy) }));
                 let targets = attacks_by(s.last_events(), &timmy);
                 if targets.first().map(String::as_str) != Some("hero-p2") {
                     died_first += 1;
@@ -607,10 +603,10 @@ mod tests {
 
             // Activate ♾️: both in one turn.
             let mutate = s.card(MUTATE).clone();
-            s.activate(MUTATE, json!({ "targets": at(&mutate) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
             assert_eq!(draws_by(s.last_events(), P1), 3);
             let vanilla = s.card(VANILLA).clone();
-            s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
             assert_eq!(attacks_by(s.last_events(), s.card(VANILLA)), ["hero-p2"]);
         }
     }
@@ -625,7 +621,7 @@ mod tests {
         let vanilla = s.card(VANILLA).clone();
         crate::stand_in_backrow(&mut s, &vanilla.id, 2);
 
-        s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+        s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) }));
 
         assert_eq!(attacks_by(s.last_events(), &vanilla), ["hero-p2"]);
         assert_eq!(draws_by(s.last_events(), P1), 0);

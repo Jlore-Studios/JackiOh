@@ -2,7 +2,8 @@
 // PackObject on the shelf, Buy pressing it and, on the answer, a copy flying into the count and the
 // wallet announced; a short wallet disabling every buy with its shortfall, a refused buy changing
 // nothing, a bought pack moving the wallet and the count; the cosmetic pack as an object above Open and
-// no odds; an opening's reveal naming every slot, with the token bars it moved; the Chase Shard bar
+// no odds; an opening's reveal naming every slot, with both token bars pinned at the top and its spent
+// slot's points flying into them (R1953000); the Chase Shard bar
 // filling from before to after and, at full, bursting and revealing the chase choice; reduce motion
 // showing every end state at once; each panel telling the page what it changed and reading again when
 // told. The tier filters live beside them as pure tests over crafted registries, since the shipped
@@ -16,10 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
-import { REVEAL_STAGGER_MS, segmentMs } from "../economy/bars.ts";
+import { DEFAULT_CARD_COSMETICS, readCardPicks, readCosmetics, resetCosmeticsForTests, writeCosmetics } from "../cards/cosmetics.ts";
+import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
-import type { BoughtPackResponse } from "../net/api.ts";
+import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
@@ -73,11 +75,10 @@ describe("#1309 the shop model", () => {
     expect(shortfallOf(100, 250)).toBe(0);
   });
 
-  it("a cosmetic slot says what it became, a spent one the bars it filled", () => {
+  it("R1953000 a cosmetic slot says what it became, a spent one the points the server gave each bar", () => {
     const [foil, , bars] = openedCosmeticPack().slots;
-    expect(cosmeticSlotOutcome(foil!)).toBe("New cosmetic: Mr. Vanilla full art");
-    expect(cosmeticSlotOutcome(bars!)).toContain("Duplicate:");
-    expect(cosmeticSlotOutcome(bars!)).toContain("card token bar");
+    expect(cosmeticSlotOutcome(foil!, 0)).toBe("New cosmetic: Mr. Vanilla full art");
+    expect(cosmeticSlotOutcome(bars!, 4)).toBe("Duplicate: +4 card token bar, +4 cosmetic token bar");
   });
 
   it("a full shard bar buys Legendary or Mythic, a chase included, and nothing below", () => {
@@ -392,32 +393,58 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.open)).toBeNull();
   });
 
-  it("an opened cosmetic pack mounts the token bars it moved in its reveal, and none it left alone", async () => {
+  it("R1953000 an opened cosmetic pack pins both token bars at the top, its spent slot's points flying in before they fill", async () => {
+    vi.useFakeTimers();
     cosmeticServer();
     render(<CosmeticPacks token={TOKEN} />);
-    await screen.findByTestId(T.unopened);
+    await flush();
     expect(screen.queryByTestId(T.openingBars)).toBeNull();
 
     fireEvent.click(screen.getByTestId(T.open));
-    await screen.findByTestId(T.reveal);
+    await flush();
 
     const bars = screen.getByTestId(T.openingBars);
-    expect(bars).toContainElement(screen.getByTestId(`${T.openingBars}-card`));
-    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("Card token bar");
-    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("7 / 12");
-    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("Cosmetic token bar");
-    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("9 / 30");
+    const card = (): HTMLElement => screen.getByTestId(`${T.openingBars}-card`);
+    const cosmetic = (): HTMLElement => screen.getByTestId(`${T.openingBars}-cosmetic`);
+    expect(bars).toHaveClass("opening-hud");
+    expect(bars).toContainElement(card());
+    expect(card()).toHaveTextContent("Card token bar");
+    expect(cosmetic()).toHaveTextContent("Cosmetic token bar");
+    // The spent slot's points, the server's, fly from it; the bars wait where the opening found them.
+    const flight = screen.getByTestId(`${T.openingBars}-flight-2`);
+    expect(flight).toHaveTextContent("+4");
+    expect(flight).toHaveAttribute("data-rarity", "Rare");
+    expect(bars.querySelectorAll(".bar-flight")).toHaveLength(1);
+    expect(card()).toHaveTextContent("3 / 12");
+    expect(cosmetic()).toHaveTextContent("5 / 30");
+    expect(text(T.slot(2))).toContain("Duplicate: +4 card token bar, +4 cosmetic token bar");
+
+    advance(flightsMs(1));
+    expect(bars.querySelector(".bar-flight")).toBeNull();
+    expect(card()).toHaveTextContent("7 / 12");
+    expect(cosmetic()).toHaveTextContent("9 / 30");
     cleanup();
 
+    // An opening that spent no slot still shows both bars, at rest, with nothing to fly.
     const still = { card: { before: 3, after: 3, size: 12, pays: 0 }, cosmetic: { before: 5, after: 5, size: 30, pays: 0 } };
+    const opened = openedCosmeticPack();
     cosmeticServer({
-      open: { status: 200, body: { ...openedCosmeticPack(), bars: { ...still, cosmeticPaid: [] } } },
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: opened.slots.slice(0, 2),
+          bars: { ...still, cosmeticPaid: [], slotPoints: [0, 0] },
+        },
+      },
     });
     render(<CosmeticPacks token={TOKEN} />);
-    await screen.findByTestId(T.unopened);
+    await flush();
     fireEvent.click(screen.getByTestId(T.open));
-    await screen.findByTestId(T.reveal);
-    expect(screen.queryByTestId(T.openingBars)).toBeNull();
+    await flush();
+    expect(screen.getByTestId(T.openingBars).querySelector(".bar-flight")).toBeNull();
+    expect(screen.getByTestId(`${T.openingBars}-card`)).toHaveTextContent("3 / 12");
+    expect(screen.getByTestId(`${T.openingBars}-cosmetic`)).toHaveTextContent("5 / 30");
   });
 
   it("an opened cosmetic pack reveals each slot, and tells the page", async () => {
@@ -860,5 +887,79 @@ describe("#1667 shop.css", () => {
     const [bad] = blocks("@keyframes x { from { transform: none } to { left: 4px; opacity: 0 } }");
     const animated = blocks(bad!.body).flatMap((stop) => properties(stop.body));
     expect(animated).toContain("left");
+  });
+});
+
+describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", () => {
+  type Slot = OpenedCosmeticPackResponse["slots"][number];
+
+  beforeEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  const cosmetic = (cosmeticId: string, cardId: string | null): Slot => ({
+    rarity: "Epic",
+    grant: { kind: "cosmetic", cosmeticId, cosmeticRarity: "Epic", cardId, cardGranted: false },
+  });
+
+  /** The panel opened to a reveal of `open`'s answer, the default fixture's when none. */
+  async function opened(slots?: Slot[]): Promise<void> {
+    cosmeticServer({ open: { status: 200, body: { ...openedCosmeticPack(), ...(slots === undefined ? {} : { slots }) } } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+  }
+
+  it("R1955000 a per-card cosmetic's Equip writes the pick of the card it was granted on, and the Collection link stays", async () => {
+    await opened([
+      cosmetic("border-filigree", "core-004"),
+      openedCosmeticPack().slots[0]!,
+      openedCosmeticPack().slots[2]!,
+    ]);
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equip");
+
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    expect(readCardPicks("core-004").border).toBe("border-filigree");
+    expect(readCosmetics().border, "the account's pick is not touched").toBe(DEFAULT_CARD_COSMETICS.border);
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(0))).toBeDisabled();
+
+    // A full art goes on the card it was granted on, which is not the first slot's.
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    expect(readCardPicks("core-008").fullArt).toBe(true);
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+
+    expect(screen.queryByTestId(T.equip(2)), "bars offer none").toBeNull();
+    expect(screen.getByTestId(T.equipLink)).toHaveAttribute("href", "/collection?section=cosmetics");
+  });
+
+  it("R1955000 an account cosmetic's Equip writes the account's pick of its kind, and a portrait offers none", async () => {
+    await opened([
+      cosmetic("table-wood", null),
+      cosmetic("field-snow", null),
+      cosmetic("card-back-tidal", null),
+      cosmetic("portrait-timmy", null),
+      openedCosmeticPack().slots[2]!,
+    ]);
+    for (const index of [0, 1, 2]) fireEvent.click(screen.getByTestId(T.equip(index)));
+    expect(readCosmetics()).toMatchObject({ table: "table-wood", field: "field-snow", cardBack: "card-back-tidal" });
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+    expect(screen.queryByTestId(T.equip(3)), "a portrait is a deck's pick").toBeNull();
+    expect(screen.queryByTestId(T.equip(4))).toBeNull();
+    expect(screen.getByTestId(T.equipLink)).toBeInTheDocument();
+  });
+
+  it("R1955000 a cosmetic the store already holds shows Equipped from the reveal", async () => {
+    writeCosmetics({ table: "table-wood" });
+    await opened();
+    expect(screen.getByTestId(T.equip(1))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(1))).toBeDisabled();
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equip");
+    expect(screen.getByTestId(T.equip(0))).toBeEnabled();
   });
 });

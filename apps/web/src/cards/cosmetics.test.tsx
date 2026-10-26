@@ -1,7 +1,9 @@
 // R1295000: the card cosmetics a player's own cards wear: the store, how a face wears them, the cap
-// on moving foils, the Collection's equip rows (R1579000), and the stylesheet's two promises — no border in the Radiant
-// gold, and every foil still under reduced motion. Vitest stubs CSS imports, so the sheets are read
-// as text (foil.test.ts does the same for cards.css).
+// on moving foils, the Collection's account tiles (R1579000), and the stylesheet's two promises — no
+// border in the Radiant gold, and every foil still under reduced motion. Vitest stubs CSS imports, so
+// the sheets are read as text (foil.test.ts does the same for cards.css). R1953001: a face wears its
+// card's own picks or its kinds' defaults, never the account's, and every chase moves wherever it is
+// drawn.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -14,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
-import { CardCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
+import { CosmeticLook } from "../collection/CosmeticLook.tsx";
 import { collectionTestid } from "../collection/collection.ts";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import { resetSettings } from "../settings/store.ts";
@@ -38,6 +40,7 @@ import {
   cosmeticsOf,
   deckCosmeticPatch,
   deckCosmeticsOf,
+  isChaseCosmetic,
   normalizeCosmetics,
   pickedDeckCosmetics,
   readCardPicks,
@@ -50,6 +53,7 @@ import {
   writeCardFullArt,
   writeCardPick,
   writeCosmetics,
+  type CardSlotKind,
   type CosmeticId,
   type CosmeticKind,
 } from "./cosmetics.ts";
@@ -109,6 +113,13 @@ function rules(css: string): { selector: string; body: string; at: number }[] {
   return out;
 }
 
+/** The rules of `css` inside its motion gates (the Collection's sheet has two). */
+function gatedRules(css: string): { selector: string; body: string }[] {
+  const gates = [...css.matchAll(/@media \(prefers-reduced-motion: no-preference\)\s*\{/g)];
+  expect(gates.length).toBeGreaterThan(0);
+  return gates.flatMap((gate) => rules(blockFrom(css, (gate.index ?? 0) + gate[0].length - 1)));
+}
+
 /** A hex colour's hue in degrees and saturation and lightness from 0 to 1. */
 function hsl(hex: string): { h: number; s: number; l: number } {
   const digits = hex.length <= 4 ? [...hex].map((digit) => digit + digit).join("") : hex;
@@ -161,6 +172,14 @@ function secondItem(kind: CosmeticKind): CosmeticId {
 
 const PICKS = { foil: firstItem("foil"), finish: firstItem("finish"), border: firstItem("border") } as const;
 
+/** R1953001: `defId`'s own pick of each kind `picks` names, which is how a card wears a foil, finish or border. */
+function wearOn(defId: string, picks: Partial<Record<CardSlotKind, CosmeticId>>): void {
+  for (const kind of CARD_SLOT_KINDS) {
+    const id = picks[kind];
+    if (id !== undefined) writeCardPick(defId, kind, id);
+  }
+}
+
 const ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
 
 function root(container: HTMLElement): HTMLElement {
@@ -204,6 +223,8 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     resetCosmeticsForTests();
     expect(readCosmetics().foil).toBe("foil-unknown");
 
+    // A card's own pick of an id this client does not know draws as the default, its known one as itself.
+    wearOn("core-004", { foil: "foil-unknown" as CosmeticId, border: PICKS.border });
     const { container } = render(<CardFace face={face("core-004")} worn />);
     expect(root(container).getAttribute("data-cosmetic-foil")).toBeNull();
     expect(root(container).getAttribute("data-frame")).toBe(PICKS.border);
@@ -223,6 +244,7 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     cleanup();
 
     writeCosmetics(PICKS);
+    wearOn("core-004", PICKS);
     const { container } = render(
       <>
         <CardFace face={face("core-004")} />
@@ -240,7 +262,7 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
   });
 
   it("R1295000 the viewer's own face wears each pick on its own axis, never data-foil", () => {
-    writeCosmetics(PICKS);
+    wearOn("core-004", PICKS);
     const { container } = render(
       <>
         <CardFace face={face("core-004")} worn />
@@ -260,7 +282,8 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
   });
 
   it("R1295000 a Mythic face wears no cosmetic foil; a Radiant face no foil, finish or border", () => {
-    writeCosmetics(PICKS);
+    wearOn("core-096", PICKS);
+    wearOn("core-004", PICKS);
     const { container } = render(
       <>
         <CardFace face={face("core-096")} worn />
@@ -280,7 +303,7 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
   });
 
   it("R1295000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, and a freed slot passes on", () => {
-    writeCosmetics({ foil: PICKS.foil });
+    wearOn("core-004", { foil: PICKS.foil });
     const count = COSMETIC_FOIL_ANIMATED_MAX + 2;
     const hand = (from: number) => (
       <>
@@ -308,28 +331,11 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
   });
 
   it("R1295000 with Animated foil off a worn foil holds still", () => {
-    writeCosmetics({ foil: PICKS.foil });
+    wearOn("core-004", { foil: PICKS.foil });
     writeCardSettings({ animatedFoil: false });
     const { container } = render(<CardFace face={face("core-004")} worn />);
     expect(root(container).getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
     expect(root(container).getAttribute("data-cosmetic-motion")).toBe("static");
-  });
-
-  it("R1295000 the collection's selects write the store and show the default for an unknown id", () => {
-    render(<CardCosmeticsControls />);
-    const foil = screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("foil"));
-    expect(foil.value).toBe(DEFAULT_CARD_COSMETICS.foil);
-    expect([...foil.options].map((option) => option.value)).toEqual(cosmeticsOf("foil").map((cosmetic) => cosmetic.id));
-
-    fireEvent.change(screen.getByTestId(collectionTestid.equip("border")), { target: { value: PICKS.border } });
-    expect(readCosmetics().border).toBe(PICKS.border);
-    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("border")).value).toBe(PICKS.border);
-
-    act(() => {
-      writeCosmetics({ finish: "finish-unknown" });
-    });
-    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("finish")).value).toBe(DEFAULT_CARD_COSMETICS.finish);
-    expect(readCosmetics().finish).toBe("finish-unknown");
   });
 });
 
@@ -593,7 +599,7 @@ describe("R1655000 the picks of each card", () => {
     expect(localStorage.getItem(COSMETICS_SETTINGS_KEY)).toBeNull();
     expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
 
-    // A new page reads them back; null clears a kind to the account's pick, and a card with none leaves the store.
+    // A new page reads them back; null clears a kind to its default, and a card with none leaves the store.
     resetCosmeticsForTests();
     expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil, border: CARD_BORDER, fullArt: true });
     writeCardPick(OWN, "foil", null);
@@ -661,7 +667,7 @@ describe("R1655000 the picks of each card", () => {
     });
   });
 
-  it("R1655000 a card wears its own picks on the board's faces while another card keeps the account's", () => {
+  it("R1655000 a card wears its own picks on the board's faces while another card draws the defaults", () => {
     writeCosmetics({ border: PICKS.border });
     writeCardPick(OWN, "foil", PICKS.foil);
     writeCardPick(OWN, "border", CARD_BORDER);
@@ -679,13 +685,14 @@ describe("R1655000 the picks of each card", () => {
       expect(element?.getAttribute("data-frame")).toBe(CARD_BORDER);
       expect(element?.getAttribute("data-finish")).toBeNull();
     }
+    // R1953001: the account's border is not worn; the card with no pick of its own draws the default.
     for (const element of [other, otherMinion]) {
       expect(element?.getAttribute("data-cosmetic-foil")).toBeNull();
-      expect(element?.getAttribute("data-frame")).toBe(PICKS.border);
+      expect(element?.getAttribute("data-frame")).toBeNull();
     }
   });
 
-  it("R1655000 a pick of a kind's default is a pick, and clearing it leaves the kind to the account, live", () => {
+  it("R1655000 a pick of a kind's default is a pick, and clearing it leaves the kind to its default, live", () => {
     writeCosmetics({ border: PICKS.border });
     writeCardPick(OWN, "border", DEFAULT_CARD_COSMETICS.border);
     const { container } = render(
@@ -695,18 +702,20 @@ describe("R1655000 the picks of each card", () => {
       </>,
     );
     const [own, other] = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(readCardPicks(OWN)).toEqual({ border: DEFAULT_CARD_COSMETICS.border });
     expect(own?.getAttribute("data-frame")).toBeNull();
-    expect(other?.getAttribute("data-frame")).toBe(PICKS.border);
+    expect(other?.getAttribute("data-frame")).toBeNull();
     // A write re-renders the faces that wear it.
-    act(() => {
-      writeCardPick(OWN, "border", null);
-    });
-    expect(own?.getAttribute("data-frame")).toBe(PICKS.border);
     act(() => {
       writeCardPick(OWN, "border", CARD_BORDER);
     });
     expect(own?.getAttribute("data-frame")).toBe(CARD_BORDER);
-    expect(other?.getAttribute("data-frame")).toBe(PICKS.border);
+    act(() => {
+      writeCardPick(OWN, "border", null);
+    });
+    expect(readCardPicks(OWN)).toEqual({});
+    expect(own?.getAttribute("data-frame")).toBeNull();
+    expect(other?.getAttribute("data-frame")).toBeNull();
   });
 
   it("R1655000 a face that is not the viewer's own draws the defaults, whatever its card's picks", () => {
@@ -745,12 +754,12 @@ describe("R1655000 the picks of each card", () => {
     for (const attribute of ATTRIBUTES) expect(radiant?.getAttribute(attribute), attribute).toBeNull();
   });
 
-  it("R1655000 a pick the viewer does not own on its card is not worn: the account's pick shows", () => {
-    const account = { ...DEFAULT_CARD_COSMETICS, border: PICKS.border };
+  it("R1655000 a pick the viewer does not own on its card is not worn: the kind's default shows", () => {
+    // A face passes the kind defaults under the card's picks (R1953001).
     const card = { border: CARD_BORDER };
-    expect(wornCosmetics(face(OWN), account, card).border).toBe(CARD_BORDER);
-    expect(wornCosmetics(face(OWN), account, card, (id) => id === CARD_BORDER).border).toBe(CARD_BORDER);
-    expect(wornCosmetics(face(OWN), account, card, (id) => id !== CARD_BORDER).border).toBe(PICKS.border);
+    expect(wornCosmetics(face(OWN), DEFAULT_CARD_COSMETICS, card).border).toBe(CARD_BORDER);
+    expect(wornCosmetics(face(OWN), DEFAULT_CARD_COSMETICS, card, (id) => id === CARD_BORDER).border).toBe(CARD_BORDER);
+    expect(wornCosmetics(face(OWN), DEFAULT_CARD_COSMETICS, card, (id) => id !== CARD_BORDER).border).toBe(DEFAULT_CARD_COSMETICS.border);
     // Not the viewer's own: the defaults, picks owned or not.
     expect(wornCosmetics(face(OWN), null, card).border).toBe(DEFAULT_CARD_COSMETICS.border);
   });
@@ -781,7 +790,7 @@ describe("R1655000 the picks of each card", () => {
     expect(frames(true)).toEqual([CARD_BORDER, CARD_BORDER, CARD_BORDER, null]);
     expect(frames(false)).toEqual([null, null, null, null]);
 
-    // Another card in the same preview wears the account's picks and none of the first card's.
+    // Another card in the same preview wears none of the first card's picks, nor the account's (R1953001).
     render(
       <OwnCopy own>
         <HoverPreview face={face(OTHER)} anchor={ANCHOR} />
@@ -789,18 +798,11 @@ describe("R1655000 the picks of each card", () => {
     );
     const preview = screen.getByTestId(INSPECT_FACE).querySelector(".cf");
     expect(preview?.getAttribute("data-frame")).toBeNull();
-    expect(preview?.getAttribute("data-finish")).toBe(PICKS.finish);
+    expect(preview?.getAttribute("data-finish")).toBeNull();
   });
 });
 
 describe("R1833000 the 36 earned cosmetics' looks", () => {
-  /** The rules of `css` inside its one motion gate. */
-  function gatedRules(css: string): { selector: string; body: string }[] {
-    const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
-    expect(gate).toBeGreaterThan(0);
-    return rules(blockFrom(css, css.indexOf("{", gate)));
-  }
-
   /** Whether some rule of `css` whose selector holds `needle` declares something. */
   function styles(css: string, needle: string): boolean {
     return rules(css).some((rule) => rule.selector.includes(needle) && /[a-z0-9-]+\s*:/.test(rule.body));
@@ -857,7 +859,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
   });
 
   it("R1833000 every new chase moves only inside its sheet's gate by transform or opacity, and MOVING_FINISHES_AND_BORDERS names the ones that move", () => {
-    const gated = [...gatedRules(cosmeticsCss), ...gatedRules(tableCss)];
+    const gated = [...gatedRules(cosmeticsCss), ...gatedRules(tableCss), ...gatedRules(collectionCss)];
     // Every moving rule waits on the settings' Reduce motion, and a card's on its motion slot.
     for (const rule of gated) {
       for (const part of selectorsOf(rule.selector)) {
@@ -888,8 +890,8 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     // The finishes and borders that move are exactly the set a face's motion slot counts.
     const moving = PICKED.filter((cosmetic) => (cosmetic.kind === "finish" || cosmetic.kind === "border") && moves(needleOf(cosmetic.id, cosmetic.kind)));
     expect(new Set(moving.map((cosmetic) => cosmetic.id))).toEqual(MOVING_FINISHES_AND_BORDERS);
-    // Every loop of either sheet moves by transform or opacity alone.
-    for (const css of [cosmeticsCss, tableCss]) {
+    // Every loop of each sheet moves by transform or opacity alone.
+    for (const css of [cosmeticsCss, tableCss, collectionCss]) {
       const frames = [...css.matchAll(/@keyframes\s+([a-z-]+)\s*\{/g)];
       expect(frames.length).toBeGreaterThan(0);
       for (const frame of frames) {
@@ -899,12 +901,17 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
         }
       }
     }
-    // Nothing in the Collection's sheet moves a mini board's mat.
-    expect(rules(collectionCss).filter((rule) => rule.selector.includes(".collection-miniboard") && /animation\s*:/.test(rule.body))).toEqual([]);
+    // R1953001: the Collection's sheet moves a chase playmat's pads on its mini board, inside its gate alone.
+    const movesMini = (rule: { selector: string; body: string }): boolean => rule.selector.includes(".collection-miniboard") && /animation\s*:/.test(rule.body);
+    const miniGated = gatedRules(collectionCss).filter(movesMini);
+    expect(rules(collectionCss).filter(movesMini).map((rule) => rule.selector)).toEqual(miniGated.map((rule) => rule.selector));
+    expect(miniGated.map((rule) => /\[data-table="([a-z-]+)"\]/.exec(rule.selector)?.[1])).toEqual(
+      PICKED.filter((cosmetic) => cosmetic.kind === "table" && cosmetic.chase).map((cosmetic) => cosmetic.id),
+    );
   });
 
   it("R1833000 a face wearing a moving finish or border claims a motion slot, and a still one claims none", () => {
-    writeCosmetics({ finish: "finish-starlit" });
+    wearOn("core-004", { finish: "finish-starlit" });
     const once = (): HTMLElement => root(render(<CardFace face={face("core-004")} worn />).container);
     let cf = once();
     expect(cf.getAttribute("data-finish")).toBe("finish-starlit");
@@ -912,17 +919,17 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     expect(cf.getAttribute("data-cosmetic-motion")).toBe("animated");
     cleanup();
 
-    writeCosmetics({ finish: "finish-velvet", border: "border-celestial" });
+    wearOn("core-004", { finish: "finish-velvet", border: "border-celestial" });
     expect(once().getAttribute("data-cosmetic-motion")).toBe("animated");
     cleanup();
-    writeCosmetics({ border: "border-runes" });
+    wearOn("core-004", { border: "border-runes" });
     cf = once();
     expect(cf.getAttribute("data-frame")).toBe("border-runes");
     expect(cf.getAttribute("data-cosmetic-motion")).toBeNull();
     cleanup();
 
     // The cap is the foils': past COSMETIC_FOIL_ANIMATED_MAX faces a moving border holds still.
-    writeCosmetics({ border: "border-filigree" });
+    wearOn("core-004", { border: "border-filigree" });
     const { container } = render(
       <>
         {Array.from({ length: COSMETIC_FOIL_ANIMATED_MAX + 1 }, (_unused, index) => (
@@ -936,7 +943,122 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
 
     // With Animated foil off it holds still too.
     writeCardSettings({ animatedFoil: false });
-    writeCosmetics({ finish: "finish-obsidian", border: DEFAULT_CARD_COSMETICS.border });
+    wearOn("core-004", { finish: "finish-obsidian", border: DEFAULT_CARD_COSMETICS.border });
     expect(once().getAttribute("data-cosmetic-motion")).toBe("static");
+  });
+});
+
+describe("R1953001 the chases move everywhere, and a card wears its own picks or the defaults", () => {
+  /** Every Legendary and Mythic entry of the registry, the starters among them, so a new one is walked too. */
+  const CHASES = COSMETICS.filter((cosmetic) => cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic");
+  /** A Common card the catalog has, which wears every cosmetic foil (no rarity foil of its own). */
+  const CARD = "core-004";
+  const GATE = ':root:not([data-reduce-motion="true"]) ';
+
+  /** Whether a rule in one of `css`'s motion gates, its selector opening with `selector`, animates. */
+  function animates(css: string, selector: string): boolean {
+    return gatedRules(css).some((rule) => rule.selector.startsWith(`${GATE}${selector}`) && /animation\s*:/.test(rule.body));
+  }
+
+  /** The `data-cosmetic-motion` of the face `element` draws. */
+  function motion(element: ReactElement): string | null {
+    const found = render(element).container.querySelector(".cf")?.getAttribute("data-cosmetic-motion") ?? null;
+    cleanup();
+    return found;
+  }
+
+  it("R1953001 every Legendary and Mythic foil, finish, border, table, card back and field moves in a game, in the Collection's samples and on its mini boards", () => {
+    // The chase mark is exactly Legendary and Mythic (R1333000), and every kind a player equips has some.
+    expect(CHASES.map((cosmetic) => cosmetic.id)).toEqual(COSMETICS.filter((cosmetic) => cosmetic.chase).map((cosmetic) => cosmetic.id));
+    expect(new Set(CHASES.map((cosmetic) => cosmetic.kind))).toEqual(new Set([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS]));
+    for (const { id } of COSMETICS) expect(isChaseCosmetic(id), id).toBe(CHASES.some((chase) => chase.id === id));
+    expect(isChaseCosmetic("no-such-cosmetic")).toBe(false);
+
+    for (const { id, kind } of CHASES) {
+      switch (kind) {
+        case "foil":
+          expect(animates(cosmeticsCss, `.cf[data-cosmetic-foil="${id}"][data-cosmetic-motion="animated"]`), id).toBe(true);
+          break;
+        case "finish":
+          expect(animates(cosmeticsCss, `.cf[data-finish="${id}"][data-cosmetic-motion="animated"]`), id).toBe(true);
+          expect(MOVING_FINISHES_AND_BORDERS.has(id), `${id} takes a motion slot`).toBe(true);
+          break;
+        case "border":
+          expect(animates(cosmeticsCss, `.cf[data-frame="${id}"][data-cosmetic-motion="animated"]`), id).toBe(true);
+          expect(MOVING_FINISHES_AND_BORDERS.has(id), `${id} takes a motion slot`).toBe(true);
+          break;
+        case "cardBack":
+          // Scoped to no screen, so the back moves in a game, on a tile and in a reveal alike.
+          expect(animates(cosmeticsCss, `.cf-back[data-card-back="${id}"] `), id).toBe(true);
+          break;
+        case "table":
+          expect(animates(tableCss, `.field[data-table="${id}"] `), `${id} in a game`).toBe(true);
+          expect(animates(collectionCss, `:is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="${id}"] `), `${id}'s mini board`).toBe(true);
+          break;
+        case "field":
+          // Scoped to no board, so the mini board's backdrop (game/Backdrop.tsx) moves as the game's does.
+          expect(animates(tableCss, `.board-backdrop[data-backdrop="${id}"] `), id).toBe(true);
+          break;
+        default:
+          throw new Error(`${id} is a chase of a kind no player equips`);
+      }
+    }
+
+    // A tile that is not the equipped one, hovered or focused holds its pads still, as it does its
+    // particles: its rule weighs what the pads' motion rules do, so it comes after them.
+    const all = rules(collectionCss);
+    const pause = all.find((rule) => rule.selector.includes(".collection-tile:not") && rule.selector.endsWith(".collection-miniboard__pads > span"));
+    expect(pause?.body).toMatch(/animation-play-state:\s*paused/);
+    const padMotions = all.filter((rule) => rule.selector.includes(".collection-miniboard[data-table=") && /animation\s*:/.test(rule.body));
+    expect(padMotions.length).toBeGreaterThan(0);
+    for (const rule of padMotions) expect(rule.at).toBeLessThan(pause?.at ?? 0);
+
+    // On a face in a game and on a sample (a reveal's, the Collection's), each chase foil, finish and
+    // border moves while Animated foil is on, and holds still while it is off.
+    for (const animatedFoil of [true, false]) {
+      writeCardSettings({ animatedFoil });
+      const expected = animatedFoil ? "animated" : "static";
+      for (const { id, kind } of CHASES) {
+        if (kind !== "foil" && kind !== "finish" && kind !== "border") continue;
+        writeCardPick(CARD, kind, id);
+        expect(motion(<CardFace face={face(CARD)} worn />), `${id} in a game`).toBe(expected);
+        writeCardPick(CARD, kind, null);
+        expect(motion(<CosmeticLook id={id} cardId={CARD} />), `${id}'s sample`).toBe(expected);
+      }
+    }
+    // A sample of what is no chase holds still.
+    writeCardSettings({ animatedFoil: true });
+    expect(motion(<CosmeticLook id="foil-holo-sweep" cardId={CARD} />)).toBe("static");
+  });
+
+  it("R1953001 a card with no pick of its own draws its kind's default though the synced settings hold another foil, finish and border", () => {
+    const synced = { foil: "foil-void-shimmer", finish: "finish-starlit", border: "border-celestial" } as const;
+    writeCosmetics(synced);
+    // The synced group keeps them, as R1655000 froze its shape.
+    expect(readCosmetics()).toMatchObject(synced);
+
+    const { container } = render(
+      <>
+        <CardFace face={face(CARD)} worn />
+        <MinionFace face={face(CARD)} unit={unit("p1", { defId: CARD })} worn />
+        <OwnCopy own>
+          <HoverPreview face={face(CARD)} anchor={{ left: 600, top: 200, width: 100, height: 140 }} />
+        </OwnCopy>
+      </>,
+    );
+    const faces = [...container.querySelectorAll<HTMLElement>(".cf"), ...screen.getByTestId(INSPECT_FACE).querySelectorAll<HTMLElement>(".cf")];
+    expect(faces.length).toBeGreaterThanOrEqual(3);
+    for (const element of faces) {
+      for (const attribute of ATTRIBUTES) expect(element.getAttribute(attribute), attribute).toBeNull();
+    }
+    cleanup();
+    closeInspect();
+
+    // A pick of one kind is worn; the kinds it has no pick of still draw their defaults.
+    writeCardPick(CARD, "border", PICKS.border);
+    const cf = root(render(<CardFace face={face(CARD)} worn />).container);
+    expect(cf.getAttribute("data-frame")).toBe(PICKS.border);
+    expect(cf.getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(cf.getAttribute("data-finish")).toBeNull();
   });
 });

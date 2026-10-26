@@ -150,6 +150,13 @@ the view carries neither: the viewer's own Resources as cards (`tray-card-<insta
 opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
 A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
 
+**The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
+a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
+Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
+the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
+priced Resource in the viewer's tray. Each is live exactly when `legal` lists its `marketBuy` or
+`marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+
 ## Commands
 
 ```
@@ -264,25 +271,30 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         between them and the hub; the page never scrolls, a section's body does. Cards is
                         the account's cards per shipped set, wallet, set tracks and quests, each panel
                         reading for itself and saying why when its read fails, each track a filling bar
-                        (economy/FillBar.tsx); Cosmetics is the only place to equip one: the defaults every
-                        card wears (three selects, collection/CosmeticsPanel.tsx) and the playmat, backdrop
-                        and card back as preview tiles (collection/AccountCosmeticTiles.tsx), on the same
-                        store and `cosmetics` settings group as before (R633), beside the owned list from
-                        GET /api/cosmetics; a card of the Cards section opens large wearing its own picks
+                        (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
+                        collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
+                        tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
+                        group as before (R633), beside the owned list from GET /api/cosmetics
+                        (collection/CosmeticsPanel.tsx), with no defaults of every card, so a card with no pick
+                        of its own wears its kind's default (R1953001); a card of the Cards section opens large
+                        wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
                         as live previews, which equip on that card alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
-                        the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles,
-                        the default selects and the deck builder's slot picker offer what the account
-                        owns, and an unowned stored pick draws as the default (R1833000); collection/
+                        the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
+                        and the deck builder's slot picker offer what the account owns, and an unowned
+                        stored pick draws as the default (R1833000); a locked tile or strip item a held
+                        Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
+                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
+                        collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
-                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the next
-                        screen read the owned cosmetics again; the page never scrolls, its body does
+                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
+                        read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
                         footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
                         /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
@@ -293,12 +305,14 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
                         to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
-                        filled bar's reward flown out one at a time; `OpeningBars.tsx`, the token bars an
-                        opening moved (its `bars`); `XpReveal.tsx` and `xp.ts`, a finished game's tracks,
+                        filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
+                        token bars pinned at the top of the screen, each spent slot's points (`slotPoints`)
+                        flying from its card into them and a full bar pulsing before its reward
+                        (R1953000); `XpReveal.tsx` and `xp.ts`, a finished game's tracks,
                         level by level with each level's rewards, and its quests, from the server's
                         `economy` answer (the match and Duos results, a paid practice game's); `bars.ts`
                         the pure stages; Reduce motion (the setting or the system's) shows every end state
-                        at once
+                        at once, and the effects' intensity off flies and pulses nothing
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
@@ -310,11 +324,12 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
                         foil wrapper with crimped seals, its set's emblem and colours, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
                         same object), and the scene that opens one (`POST /api/packs/open`), its token bars
-                        filling after (economy/OpeningBars.tsx); the pity counters and the odds are on
+                        pinned at the top from the answer and played once every card shows
+                        (economy/OpeningBars.tsx, R1953000); the pity counters and the odds are on
                         /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
                         glow, cards turned one at a time (Epic and above on a hold), what each became, a
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
-                        at once; the server decided every slot before anything animates (`packs.ts` holds the
+                        at once, and a new cosmetic's Equip (R1955000); the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
 shop/                   #1309: spending what the economy pays, on /shop (R1580000) beside the opening
                         (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, imported by
@@ -323,11 +338,11 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         flies into the held count when bought, the button disabled with the shortfall shown
                         when the wallet (`GET /api/wallet`) is short; the token picker shows both token
                         bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
-                        unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
-                        cosmetics at its tier or below with a preview on the card (`POST
-                        /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
+                        unowned cards (`POST /api/tokens/redeem-card`) and the cosmetic tokens held, with a
+                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the
+                        cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
-                        filling from the opening's `shardBefore` and, only when full, its reward moment: the
+                        with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
                         refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
@@ -690,3 +705,5 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 ## Internationalisation
 
 The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+
+The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.

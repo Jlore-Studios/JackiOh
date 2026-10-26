@@ -1175,6 +1175,22 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 slumber: defined.iter().find_map(|f| f.slumber.clone()),
                 // R1852000: a fusion the Dormant Starship is in is still its hull.
                 starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
+                immune_to_spell_damage: flags(|f| f.immune_to_spell_damage),
+                destroyed_exiled: flags(|f| f.destroyed_exiled),
+                enemy_destroyed_exiled: flags(|f| f.enemy_destroyed_exiled),
+                reflects_damage: flags(|f| f.reflects_damage),
+                reflects_to_attacker: flags(|f| f.reflects_to_attacker),
+                // R1849004: the largest cap of the ingredients' redirects, one stricter text.
+                own_turn_redirect: defined
+                    .iter()
+                    .filter_map(|f| f.own_turn_redirect)
+                    .max_by_key(|redirect| redirect.cap),
+                gauntlet: flags(|f| f.gauntlet),
+                units_never_defense: flags(|f| f.units_never_defense),
+                reveal_chance: numbers(|f| f.reveal_chance),
+                pilots_actions: numbers(|f| f.pilots_actions),
+                pilots_turn: flags(|f| f.pilots_turn),
+                hints_plays: flags(|f| f.hints_plays),
             })
         }
     }
@@ -1273,6 +1289,8 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
+        evolve: hooks(|s| s.evolve.clone(), "evolve"),
+        ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),
         plague_multiplier: None,
         echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
@@ -1287,6 +1305,9 @@ fn combine_objects(records: &[Script]) -> Script {
         cry_death_extra: None,
         // R1487000, R767000: a fusion's text works face-down when any ingredient's did.
         live_face_down: records.iter().any(|s| s.live_face_down),
+        // R1850002, R1850005: every ingredient's exile auras, and the first keyword count printed.
+        exile_auras: concat(records.iter().map(|s| s.exile_auras.clone())),
+        radiant_at_keywords: records.iter().find_map(|s| s.radiant_at_keywords),
     }
 }
 
@@ -1980,6 +2001,10 @@ fn keep_instance(
     let record = crate::scripts::ingredient_record(kept, ingredients);
     let at = ingredients.iter().position(|card| card.id == kept.id);
     if let Some(live) = find_instance_mut(state, &kept.id) {
+        // R1850000: a copier fused onto runs the fused text, its own printed text among it, and no
+        // copy any more.
+        live.memory
+            .shift_remove(crate::subsystems::unit_text::UNIT_TEXT_KEY);
         // R77, R102: the kept card's texts become ingredient `index` of the fusion, and what they
         // remembered moves with them to the path they now run at (`reroot_remembered`). (TS's
         // `findIndex` of a kept card that is no ingredient was -1; `work`'s index is a `usize`.)

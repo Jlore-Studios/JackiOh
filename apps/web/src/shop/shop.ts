@@ -14,16 +14,12 @@
 
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
-import {
-  CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  GLOBAL_PACK_NAME,
-} from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
 
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
-import type { CollectionResponse, CosmeticSlot, CosmeticTokenTier, OwnedCosmeticsResponse } from "../net/api.ts";
+import type { CollectionResponse, CosmeticSlot, OwnedCosmeticsResponse } from "../net/api.ts";
 
 /** One registry entry, structurally: what the filters read. */
 export type RegistryCosmetic = {
@@ -83,14 +79,9 @@ export const shopTestid = {
   heldRare: "token-held-rare",
   heldEpic: "token-held-epic",
   heldPack: "token-held-pack",
+  cosmeticSpend: "token-cosmetic-spend",
   cardPick: (id: string) => `token-card-pick-${id}`,
   cardNone: "token-card-none",
-  tierRare: "token-tier-rare",
-  tierEpic: "token-tier-epic",
-  cosmeticPick: (id: string) => `token-cosmetic-pick-${id}`,
-  cosmeticCards: (id: string) => `token-cosmetic-cards-${id}`,
-  cosmeticPreview: (id: string) => `token-cosmetic-preview-${id}`,
-  cosmeticNone: "token-cosmetic-none",
   packsPanel: "cosmetic-packs-panel",
   packsLoading: "cosmetic-packs-loading",
   packsLoadError: "cosmetic-packs-load-error",
@@ -107,6 +98,7 @@ export const shopTestid = {
   reveal: "cosmetic-reveal",
   equipLink: "cosmetic-packs-equip",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
+  equip: (index: number) => `cosmetic-slot-${String(index)}-equip`,
   shardBar: "shard-bar",
   shardBurst: "shard-burst",
   shardReveal: "shard-reveal",
@@ -173,29 +165,6 @@ export function ownedThere(cosmeticId: string, cardId: string | null, owned: Own
 }
 
 /**
- * The cosmetics a cosmetic token buys (R1305003): at its tier or below on the cosmetic's own
- * scale, never a chase, never a default or a starter (which §14.2 gives every account), never
- * already owned where it would go, and a per-card kind only where an owned card fits it.
- * Legendary and Mythic never appear: no token exceeds Epic. `registry` defaults to the shipped
- * one; a test passes its own.
- */
-export function redeemableCosmetics(
-  token: CosmeticTokenTier,
-  owned: OwnedCosmeticsResponse,
-  quantities: Map<string, number>,
-  registry: readonly RegistryCosmetic[] = REGISTRY,
-): RegistryCosmetic[] {
-  const cap = cosmeticTier(token);
-  return registry.filter((cosmetic) => {
-    if (cosmetic.chase || cosmetic.default || cosmetic.starter) return false;
-    if (cosmeticTier(cosmetic.rarity) > cap) return false;
-    const fits = fittingCards(cosmetic, quantities);
-    if (fits === null) return !owned.account.includes(cosmetic.id);
-    return fits.some((cardId) => !ownedThere(cosmetic.id, cardId, owned));
-  });
-}
-
-/**
  * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000), the account
  * does not own, a per-card one for a card it owns (the server's `buy_chase`). `registry`
  * defaults to the shipped one; a test passes its own.
@@ -226,24 +195,17 @@ export function nextStepWords(step: "rare" | "epic" | "cosmeticPack"): string {
   }
 }
 
-/** A cosmetic token's tier in a player's words. */
-export function tokenTierWords(token: CosmeticTokenTier): string {
-  return token === "Rare" ? t("Rare token") : t("Epic token");
-}
-
 /**
  * What a cosmetic pack slot became, as the server decided it: a new cosmetic by name, else the
- * same duplicate sentence the card packs use (R1306001 spends a slot into both token bars).
+ * same duplicate sentence the card packs use (R1306001 spends a slot into both token bars), saying
+ * `points`, the opening's `slotPoints` for the slot, which it added to each bar (R1953000).
  */
-export function cosmeticSlotOutcome(slot: CosmeticSlot): string {
+export function cosmeticSlotOutcome(slot: CosmeticSlot, points: number): string {
   switch (slot.grant.kind) {
     case "cosmetic":
       return t("New cosmetic: {name}", { name: cosmeticName(slot.grant.cosmeticId) });
     case "bars":
-      return t("Duplicate: +{card} card token bar, +{cosmetic} cosmetic token bar", {
-        card: CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-        cosmetic: COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-      });
+      return t("Duplicate: +{card} card token bar, +{cosmetic} cosmetic token bar", { card: points, cosmetic: points });
   }
 }
 

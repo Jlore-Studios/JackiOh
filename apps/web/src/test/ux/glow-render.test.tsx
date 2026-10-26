@@ -1,4 +1,5 @@
-// S6: B16 data-glow follows highlight.glow; B17 data-condition-active follows CardView.conditionActive (R195).
+// S6: B16 data-glow follows highlight.glow; B17 data-condition-active follows CardView.conditionActive (R195);
+// R1844001 data-pareto-optimal follows CardView.paretoOptimal.
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -291,5 +292,22 @@ describe("B17 data-condition-active follows the view's conditionActive", () => {
     const flagged = screen.getByTestId(testid.handCard("h1"));
     expect(flagged).toHaveAttribute("data-condition-active", "true");
     expect(flagged).not.toHaveAttribute("data-glow");
+  });
+});
+
+// R1844001: data-pareto-optimal
+
+describe("R1844001 the Pareto hint lights the hand cards the view flags", () => {
+  it("R1844001 only a flagged hand card carries data-pareto-optimal", () => {
+    const view = flaggedView();
+    const [first, ...rest] = ownHand(view);
+    if (first === undefined) throw new Error("the fixture's hand has a first card");
+    view.you.hand = [{ ...first, paretoOptimal: true }, ...rest];
+    render(<Game view={view} legal={[]} onAction={noop} />);
+
+    const flagged = [...document.querySelectorAll("[data-pareto-optimal]")].map((el) => el.getAttribute("data-testid"));
+    expect(flagged).toEqual([testid.handCard("h1")]);
+    expect(screen.getByTestId(testid.handCard("h1"))).toHaveAttribute("data-pareto-optimal", "true");
+    expect(screen.getByTestId(testid.handCard("h2"))).not.toHaveAttribute("data-pareto-optimal");
   });
 });

@@ -15,14 +15,16 @@
 //! `prompts::open_prompt`). The stack is transient: a step that pauses returns through `with_cast_mode`,
 //! which takes the mode off again, so a state at rest, a paused one included, never carries it, and the
 //! owed step puts it back when it is driven again (the run record keeps `random` and `targetEnemies`,
-//! which are JSON).
+//! which are JSON). A run whose caster's choices are all random outside any cast (a replaced board's
+//! laid Cries, R1855001) keeps its caster in its data instead (`RANDOM_CHOICES_KEY`), and each of its
+//! continuations puts the mode back as it runs (`prompts::run_resume`).
 
 use indexmap::IndexSet;
 
 use crate::config::RANDOM_CAST_CHAIN_CAP;
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::state::{CastMode, GameState, find_instance};
+use crate::state::{CastMode, GameState, Resume, find_instance};
 use crate::wire::{PlayerId, Selection, Zone, opponent_of};
 
 /// The casts whose modes are in force now, outermost first.
@@ -52,6 +54,31 @@ pub fn with_cast_mode<'a, T>(
     }
     sink.state.casts_resolving = if stack.is_empty() { None } else { Some(stack) };
     out
+}
+
+/// R1855001: where a run whose caster's choices are all random names that caster: in the card's own
+/// data, which every continuation of the run carries (`prompts::resume_self`, `work::park_work`), as
+/// `resolve::MANA_BEFORE_PLAY_KEY` rides, so the mode the stack drops at a pause comes back with the
+/// answered step and the parked tail (`random_choices_of`). A delayed effect, a run of its own, drops
+/// it (`effects::delay`).
+pub const RANDOM_CHOICES_KEY: &str = "__randomChoices";
+
+/// R1855001: the random mode a continuation runs under, or null when its run's choices are its
+/// caster's own: R452's, for the player its data names (`RANDOM_CHOICES_KEY`), as a cast that makes no
+/// cast of its own (`casts` 0).
+pub fn random_choices_of(resume: &Resume) -> Option<CastMode> {
+    let player: PlayerId = serde_json::from_value(resume.data.get(RANDOM_CHOICES_KEY)?.clone()).ok()?;
+    Some(CastMode {
+        instance_id: resume
+            .instance_id
+            .clone()
+            .unwrap_or_else(|| resume.def_id.clone()),
+        player,
+        random: true,
+        target_enemies: false,
+        casts: 0,
+        friends_only: None,
+    })
 }
 
 /// R452: the innermost random cast of this player's being driven now, or null.
@@ -94,6 +121,8 @@ pub fn count_chain_cast(state: &mut GameState, player: PlayerId) {
 pub struct CastPromptMode {
     pub random: bool,
     pub target_enemies: bool,
+    /// R1850004: its target options are the caster's own side alone (`friends_only`).
+    pub friends_only: bool,
 }
 
 /// R452: how a prompt opened for `player` is to be answered while casts are being driven: at random
@@ -108,16 +137,18 @@ pub fn cast_mode_for_prompt(
         return Some(CastPromptMode {
             random: true,
             target_enemies: random.target_enemies,
+            friends_only: random.friends_only == Some(true),
         });
     }
     let own = cast_modes_of(state).iter().find(|entry| {
         entry.player == player
-            && entry.target_enemies
+            && (entry.target_enemies || entry.friends_only == Some(true))
             && Some(entry.instance_id.as_str()) == resume_instance_id
     });
-    own.map(|_| CastPromptMode {
+    own.map(|entry| CastPromptMode {
         random: false,
-        target_enemies: true,
+        target_enemies: entry.target_enemies,
+        friends_only: entry.friends_only == Some(true),
     })
 }
 
@@ -231,6 +262,27 @@ pub fn prefer_friends<T: Clone>(
     } else {
         options.to_vec()
     }
+}
+
+/// R1850004: "cast it for yourself" — the options narrowed strictly to the chooser's own side: their
+/// hero and the cards they control on the field among the target picks (a mode or a zone option is
+/// kept as it is). Nothing else is offered, even when nothing is left.
+pub fn friends_only<T: Clone>(
+    state: &GameState,
+    chooser: PlayerId,
+    options: &[T],
+    selection_of: impl Fn(&T) -> Selection,
+) -> Vec<T> {
+    options
+        .iter()
+        .filter(|option| match selection_of(option) {
+            Selection::Hero { player } => player == chooser,
+            Selection::Instance { instance_id } => find_instance(state, &instance_id)
+                .is_some_and(|card| matches!(card.zone, Zone::Field { .. }) && card.controller == chooser),
+            _ => true,
+        })
+        .cloned()
+        .collect()
 }
 
 /// R452: a uniformly random set of between `low` and `high` of `items` (the size first, then the set),

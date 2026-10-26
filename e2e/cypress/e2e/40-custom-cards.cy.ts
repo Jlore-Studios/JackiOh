@@ -6,7 +6,7 @@
 // custom card with it, with `jackioh replay` to the same hash (R915006), as specs 01 and 13 do.
 
 import { allCardIds } from "../../support/cards.ts";
-import { accounts, constants, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   ACTION_ERROR,
   ANIMATING,
@@ -67,17 +67,9 @@ const PROMPT_BUDGET = 10;
 /** `CustomCard` as `GET /api/custom-cards` answers it, as far as this spec reads it. */
 type CustomCardBody = { id: string; version: number; frame: { name: string; text: string }; source: string };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 function customCards(account: E2EAccount): Cypress.Chainable<CustomCardBody[]> {
   return cy
-    .request<{ cards: CustomCardBody[] }>({ method: "GET", url: api("/api/custom-cards"), headers: bearer(account) })
+    .request<{ cards: CustomCardBody[] }>({ method: "GET", url: apiUrl("/api/custom-cards"), headers: bearerHeaders(account.token) })
     .then((response) => {
       expect(response.status, "GET /api/custom-cards").to.eq(200);
       return response.body.cards;
@@ -88,7 +80,7 @@ function customCards(account: E2EAccount): Cypress.Chainable<CustomCardBody[]> {
 function clearCustomCards(account: E2EAccount): void {
   customCards(account).then((cards) => {
     for (const card of cards) {
-      cy.request({ method: "DELETE", url: api(`/api/custom-cards/${card.id}`), headers: bearer(account) })
+      cy.request({ method: "DELETE", url: apiUrl(`/api/custom-cards/${card.id}`), headers: bearerHeaders(account.token) })
         .its("status")
         .should("eq", 200);
     }

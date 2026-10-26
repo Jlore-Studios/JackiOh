@@ -472,6 +472,41 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
   return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
 }
 
+// ---------------------------------------------------------------------------------------------
+// R1834000, R1834001: each card's picks on the account (R1655000). The device's copy is the one the
+// faces read (`cards/cosmetics.ts`); `cards/cardPicksSync.ts` is the only caller of these three.
+// ---------------------------------------------------------------------------------------------
+
+/** One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt` may be false. */
+export type CardPicksEntry = { cardId: string; foil?: string; finish?: string; border?: string; fullArt?: boolean };
+
+/** Every card's picks the account holds, by card id. */
+export type CardPicksResponse = { cards: CardPicksEntry[] };
+
+/** One card's change: a field absent keeps the account's pick, null clears it. */
+export type CardPickPut = {
+  cardId: string;
+  foil?: string | null;
+  finish?: string | null;
+  border?: string | null;
+  fullArt?: boolean | null;
+};
+
+/** `GET /api/card-picks` (`active`). */
+export function getCardPicks(token: string): Promise<CardPicksResponse> {
+  return apiRequest<CardPicksResponse>("/api/card-picks", { token });
+}
+
+/** `PUT /api/card-picks` (`active`): one card's change; 400 `bad_request` for an unknown card or an id of the wrong kind or not owned (R1834001). */
+export function putCardPick(token: string, change: CardPickPut): Promise<CardPicksResponse> {
+  return apiRequest<CardPicksResponse>("/api/card-picks", { method: "PUT", token, body: change });
+}
+
+/** `POST /api/card-picks/upload` (`active`): the device's picks, once; it never overwrites a card the account holds. */
+export function uploadCardPicks(token: string, cards: CardPicksEntry[]): Promise<CardPicksResponse> {
+  return apiRequest<CardPicksResponse>("/api/card-picks/upload", { method: "POST", token, body: { cards } });
+}
+
 /** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
 export type QuestView = {
   questId: string;
@@ -548,9 +583,15 @@ export type BarSettle = { before: number; after: number; size: number; pays: num
 
 /**
  * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the cycle's steps
- * the cosmetic bar paid, in order, so its length is `cosmetic.pays`.
+ * the cosmetic bar paid, in order, so its length is `cosmetic.pays`, and `slotPoints` the points
+ * each slot added to each bar, in slot order, 0 for a slot that was not spent (R1953000).
  */
-export type OpeningBarsAnswer = { card: BarSettle; cosmetic: BarSettle; cosmeticPaid: CosmeticTokenStep[] };
+export type OpeningBarsAnswer = {
+  card: BarSettle;
+  cosmetic: BarSettle;
+  cosmeticPaid: CosmeticTokenStep[];
+  slotPoints: number[];
+};
 
 /**
  * `POST /api/packs/open`: the slots in order, the pity counters after them, the packs of that kind
@@ -1179,8 +1220,19 @@ export type OnlineReplayListing = {
 /** `GET /api/replays`: one page, newest first, and where the next starts (null on the last). */
 export type OnlineReplayList = { replays: OnlineReplayListing[]; nextOffset: number | null };
 
-/** `GET /api/replays/:matchId`: steps `[from, from + steps.length)` of `total`. */
-export type OnlineReplaySteps = { matchId: string; from: number; steps: ReplayStep[]; total: number };
+/**
+ * `GET /api/replays/:matchId`: steps `[from, from + steps.length)` of `total`. R1834003: and both seats'
+ * frozen loadouts (all defaults for a match from before R1834002), with the picks of the cards this
+ * page's steps show; read as untrusted (`cards/loadouts.ts`).
+ */
+export type OnlineReplaySteps = {
+  matchId: string;
+  from: number;
+  steps: ReplayStep[];
+  total: number;
+  loadouts?: unknown;
+  cardLoadouts?: unknown;
+};
 
 export function getReplays(token: string, offset = 0): Promise<OnlineReplayList> {
   return apiRequest<OnlineReplayList>(`/api/replays?offset=${String(offset)}`, { token });
@@ -1315,6 +1367,12 @@ export type PublicStatsCardsResponse = {
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
+  /**
+   * R1973002: every patch the page can show, newest first: the window the cards share, its versions
+   * oldest first (its figures are asked for at the last), its games and its live games. Absent from
+   * a server older than it.
+   */
+  patches?: { versions: string[]; games: number; liveGames: number }[];
   summary: {
     totalGames: number;
     liveGames: number;
@@ -1386,22 +1444,6 @@ export type PlayRatesResponse = {
 
 export function getPlayRates(signal?: AbortSignal): Promise<PlayRatesResponse> {
   return apiRequest<PlayRatesResponse>("/api/stats/play-rates", { signal });
-}
-
-/** R1935000: one daily super run as `GET /api/stats/ci` lists it, with a failed run's jobs that did not pass. */
-export type CiRun = {
-  id: number;
-  url: string;
-  /** ISO 8601, as GitHub writes it. */
-  startedAt: string;
-  commit: string;
-  result: "running" | "passed" | "failed";
-  failedJobs: { name: string; url: string; conclusion: string }[];
-};
-
-/** R1935000: `GET /api/stats/ci`: the daily super run's last runs on main, newest first. */
-export function getCiRuns(signal?: AbortSignal): Promise<{ runs: CiRun[] }> {
-  return apiRequest<{ runs: CiRun[] }>("/api/stats/ci", { signal });
 }
 
 export type PlayerStatsAccountResponse = {

@@ -19,6 +19,7 @@ import type {
 } from "@jackioh/shared";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
+import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
@@ -123,6 +124,13 @@ export const testid = {
   tradeBar: "trade-bar",
   /** R1840000: a Resource in the viewer's own Resource tray (ResourceTray.tsx), played from there (R1840003). */
   trayCard: (instanceId: string): string => `tray-card-${instanceId}`,
+  /** R1853003: the Marketplace's toggle (Marketplace.tsx), and the panel it opens. */
+  marketplace: "marketplace-button",
+  marketplacePanel: "marketplace-panel",
+  /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
+  marketBuy: (offer: number): string => `market-buy-${offer}`,
+  /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
+  marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
 } as const;
 
 /**
@@ -276,4 +284,9 @@ export type BoardProps = {
    * account's on the viewer's own side. Null or absent: the account's choice applies.
    */
   deckCosmetics?: DeckCosmetics | null;
+  /**
+   * R1834004: both seats' frozen loadouts (R1834002) on an online board: a live match's, a watched
+   * game's or a replay's. Every seat but the wearer wears its own; null or absent, they draw the defaults.
+   */
+  loadouts?: SeatLoadouts | null;
 };

@@ -71,6 +71,19 @@
   scroll-behavior: auto !important;
 }
 
+/* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these */
+@media (pointer: fine) {
+  :root {
+    --cursor-glove: url("/cursors/glove.svg") 4 3, auto;
+    --cursor-glove-point: url("/cursors/glove-point.svg") 4 3, pointer;
+    --cursor-glove-grab: url("/cursors/glove-grab.svg") 10 9, grabbing;
+  }
+}
+
+html {
+  cursor: var(--cursor-glove, auto);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -100,7 +113,7 @@ button {
   border: 1px solid var(--line-bright);
   border-radius: var(--radius);
   padding: 5px 10px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 button[aria-disabled="true"],
@@ -355,7 +368,7 @@ button:disabled {
   border: none;
   padding: 0;
   color: var(--you);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   align-self: flex-start;
   font-weight: 450;
   text-decoration: underline;
@@ -468,7 +481,7 @@ button:disabled {
   padding: 0 12px;
   color: var(--text-dim);
   font-weight: 500;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   flex: 0 0 auto;
 }
 

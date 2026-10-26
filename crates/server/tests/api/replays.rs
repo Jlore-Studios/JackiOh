@@ -288,7 +288,11 @@ async fn all_steps(app: &Arc<App>, match_id: &str, token: &str) -> Vec<Value> {
         .await;
         assert_eq!(status, 200, "{body}");
         let keys: Vec<&String> = body.as_object().expect("an object").keys().collect();
-        assert_eq!(keys, vec!["from", "matchId", "steps", "total"]);
+        // R1834002, R1834003: the seats' loadouts and the page's card picks ride beside the steps.
+        assert_eq!(
+            keys,
+            vec!["cardLoadouts", "from", "loadouts", "matchId", "steps", "total"]
+        );
         assert_eq!(body["matchId"], match_id);
         assert_eq!(body["from"], steps.len());
         let page = body["steps"].as_array().expect("steps").clone();
@@ -1172,5 +1176,145 @@ mod off_the_runtime {
         assert_eq!(panicked[0].data["matchId"], "m-panics");
         let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
         assert_eq!(status, 200);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1834002, R1834003 — the loadouts on a replay's pages
+// ---------------------------------------------------------------------------------------------
+
+/// R1834002, R1834003: each page carries both seats' seat-level loadouts as the match froze them,
+/// and the own picks of the cards its steps show (a card of that seat's deck, as dealt), by the rule
+/// the live sockets keep, so a replay's viewer learns no card its views did not show. A match from
+/// before loadouts wears every default and carries no card's picks.
+mod r1834003_a_replays_pages_carry_the_loadouts {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    use jackioh_server::actor::engine::dealt_cards;
+
+    fn defaults() -> Value {
+        json!({
+            "table": "table-tavern",
+            "field": "field-none",
+            "cardBack": "card-back-standard",
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
+    fn named_cards(view: &Value) -> Vec<(String, String)> {
+        let mut named = Vec::new();
+        let mut stack = vec![view];
+        while let Some(value) = stack.pop() {
+            match value {
+                Value::Object(fields) => {
+                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
+                        (fields.get("instanceId"), fields.get("defId"))
+                    {
+                        named.push((instance.clone(), def.clone()));
+                    }
+                    stack.extend(fields.values());
+                }
+                Value::Array(entries) => stack.extend(entries),
+                _ => {}
+            }
+        }
+        named
+    }
+
+    /// One entry per distinct card of `deck`, sorted, wearing `id` as its `key`.
+    fn entries(deck: &[String], key: &str, id: &str) -> Vec<Value> {
+        deck.iter()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|card| json!({ "cardId": card, key: id }))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r1834003_a_page_carries_its_steps_picks() {
+        let (app, tokens) = app_with_players().await;
+        let played = played_game("replay-loadouts", PLAYED_ACTIONS);
+        let mut seat_a = defaults();
+        seat_a["table"] = json!("table-felt");
+        seat_a["foil"] = json!("foil-holo-sweep");
+        let loadouts = json!([
+            { "seat": seat_a, "cards": entries(&played.decks.0, "border", "border-bone") },
+            { "seat": defaults(), "cards": entries(&played.decks.1, "foil", "foil-rainbow") },
+        ]);
+        let mut finish = Finish::new("replay-dressed", &played, now_ms());
+        finish.row = json!({ "loadouts": loadouts });
+        seed_finished(&app, finish, &played).await;
+        let dealt = dealt_cards(&played.state_at(0));
+        let frozen = |seat: &str, card: &str| -> Value {
+            let at = usize::from(seat == "p2");
+            loadouts[at]["cards"]
+                .as_array()
+                .and_then(|cards| cards.iter().find(|entry| entry["cardId"] == card))
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+
+        for token in [&tokens.a, &tokens.b] {
+            let mut from = 0;
+            let mut sent: Vec<(String, String)> = Vec::new();
+            loop {
+                let (status, body) =
+                    get(&app, &format!("/api/replays/replay-dressed?from={from}"), token).await;
+                assert_eq!(status, 200, "{body}");
+                assert_eq!(body["loadouts"], json!({ "p1": seat_a, "p2": defaults() }));
+                let steps = body["steps"].as_array().cloned().unwrap_or_default();
+                let shown: BTreeSet<(String, String)> = steps
+                    .iter()
+                    .flat_map(|step| named_cards(&step["view"]))
+                    .filter_map(|(instance, def)| {
+                        let (owner, dealt_as) = dealt.get(&instance)?;
+                        (*dealt_as == def).then(|| (owner.as_str().to_string(), def))
+                    })
+                    .collect();
+                for group in body["cardLoadouts"].as_array().into_iter().flatten() {
+                    let seat = group["seat"].as_str().unwrap_or_default().to_string();
+                    for entry in group["cards"].as_array().into_iter().flatten() {
+                        let card = entry["cardId"].as_str().unwrap_or_default().to_string();
+                        // Only what this page's steps show, exactly as frozen, once a page.
+                        assert!(shown.contains(&(seat.clone(), card.clone())), "{seat}'s {card}");
+                        assert_eq!(*entry, frozen(&seat, &card));
+                        assert!(!sent.contains(&(seat.clone(), card.clone())) || from > 0);
+                        sent.push((seat.clone(), card));
+                    }
+                }
+                // Each card the page's hands show has its picks on the page.
+                for step in &steps {
+                    for card in step["view"]["you"]["hand"].as_array().into_iter().flatten() {
+                        let instance = card["instanceId"].as_str().unwrap_or_default();
+                        let def = card["defId"].as_str().unwrap_or_default();
+                        if let Some((owner, dealt_as)) = dealt.get(instance)
+                            && dealt_as == def
+                        {
+                            assert!(
+                                sent.contains(&(owner.as_str().to_string(), def.to_string())),
+                                "{def} shows in a hand and its picks are not on the page"
+                            );
+                        }
+                    }
+                }
+                from += steps.len();
+                if steps.is_empty() || from >= body["total"].as_u64().unwrap_or(0) as usize {
+                    break;
+                }
+            }
+            assert!(!sent.is_empty());
+        }
+
+        // A match from before loadouts.
+        let old = played_game("replay-loadouts-old", PLAYED_ACTIONS);
+        seed_finished(&app, Finish::new("replay-plain", &old, now_ms()), &old).await;
+        let (status, body) = get(&app, "/api/replays/replay-plain?from=0", &tokens.a).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["loadouts"], json!({ "p1": defaults(), "p2": defaults() }));
+        assert_eq!(body["cardLoadouts"], json!([]));
     }
 }

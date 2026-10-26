@@ -151,6 +151,18 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(lines()).toEqual(["You drew the curve y = 2 across the board", "Opponent drew a curve across the board"]);
   });
 
+  it("R1847001 a starscape travel reads as the node its player's map reaches", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+          { type: "starscapeTravelled", player: "p2", node: 20, reward: "edge" },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual(["Your starscape map reaches node 3", "The opponent's starscape map reaches node 20"]);
+  });
+
   it("malformed downloaded-replay curve cells keep the generic line", () => {
     render(
       <Log
@@ -506,6 +518,33 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
     rerender(<Log view={withEvents(baseView(), windowOf(events, 80))} />);
     expect(lines()).toEqual([...saidRange(1, 32), LOG_GAP_TEXT, ...saidRange(49, 80)]);
     expect(screen.getByText(LOG_GAP_TEXT)).toHaveAttribute("data-event", "gap");
+  });
+});
+
+describe("R1850003 a permanent held beneath a card", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
+
+  it("R1850003 names the card that was taken and the card it is held beneath", () => {
+    const view = fullBoardView();
+    const holder = view.you.backrow[0];
+    const taken = view.opponent.units[0];
+    if (holder === null || holder === undefined || holder.faceDown || taken === null || taken === undefined) {
+      throw new Error("the fixture has a face-up backrow card and an enemy unit");
+    }
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Log
+          view={withEvents(view, [
+            { type: "held", player: "p2", instanceId: taken.instanceId, defId: taken.defId, holderId: holder.instanceId },
+          ])}
+        />
+      </CatalogContext.Provider>,
+    );
+    const [line] = [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
+    expect(line).toMatch(/is held beneath/);
+    expect(line).toContain(nameOf(taken.defId));
+    expect(line).toContain(nameOf(holder.defId));
   });
 });
 

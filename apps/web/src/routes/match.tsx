@@ -83,7 +83,7 @@ export const matchTestid = {
   connecting: "match-connecting",
   /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
-  /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */
+  /** #1599, #1899: the sentence that stands in for a socket closed for good (a voided match): the panel's before any view, the board's notice once it is up. */
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
@@ -298,6 +298,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     [match.sendAim, relayedAim, viewer],
   );
 
+  // R1834004: the viewer's own side wears the deck slots its seat froze when the match began (R1834002),
+  // so the deck it queued with; the account's choice until the first `loadouts` frame.
+  const loadouts = match.loadouts;
+  const ownSeat = viewer === undefined || loadouts === null ? null : loadouts[viewer].seat;
+  const deckCosmetics = useMemo(
+    () => (ownSeat === null ? null : { table: ownSeat.table, field: ownSeat.field, cardBack: ownSeat.cardBack }),
+    [ownSeat],
+  );
+
   // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
   // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
@@ -409,6 +418,10 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     you: clock === null ? null : remainingMs(clock.clocks.graceDeadline[view.viewer], clock),
     opponent: clock === null ? null : remainingMs(clock.clocks.graceDeadline[opponent], clock),
   };
+  // #1899: a socket closed for good once the board is up — the server voided the match
+  // (VOIDED_CLOSE_CODE, game/net.ts; `close()` runs only as this route unmounts) — has nothing to
+  // reconnect to, so the board says the match is gone and offers the lobby.
+  const gone = match.connection === "closed";
 
   const board = (
     <Game
@@ -419,6 +432,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       aim={aim}
       trackStats
       wearCosmetics
+      deckCosmetics={deckCosmetics}
+      loadouts={loadouts}
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={
         refusedWith === null
@@ -531,7 +546,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </>
       }
       boardNotice={
-        readOnly ? (
+        gone ? (
+          <p className="board-read-only" data-testid={matchTestid.gone} role="alert">
+            {t("This match is no longer available.")}{" "}
+            <a href={paths.play} onClick={followInApp(paths.play)}>
+              {t("Back to the lobby")}
+            </a>
+          </p>
+        ) : readOnly ? (
           <p className="board-read-only" data-testid={matchTestid.missingLegal} role="alert">
             {t("Your moves can’t be sent from this board right now. Reload the page to rejoin the match.")}
           </p>

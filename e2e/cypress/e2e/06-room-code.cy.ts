@@ -5,7 +5,7 @@
 // R767 covers a guest following the room link and choosing its deck.
 
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   END_TURN,
   MANA_CRYSTAL,
@@ -26,9 +26,6 @@ import type { ActionInput, Lane, PlayerId, Row, Side } from "../../support/types
 
 // Local scaffolding; ASK items belong in `e2e/support/**`.
 
-/** ASK (support/commands.ts + support/config.ts): `cy.signIn(account)` and the session key. */
-const SESSION_STORAGE_KEY = "jackioh.e2e.session";
-
 const SEAT_TWO = "seat-two";
 const HOST = "host";
 const SEAT_ONE_ID: PlayerId = "p1";
@@ -41,14 +38,6 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 /** `handCardId("")` is the prefix, so no spec spells a testid format. */
 const HAND_CARD_PREFIX = handCardId("");
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
-
 /** The fixture's deck id out of `cy.installLoadout`'s answer (deck index 0, the default). */
 function deckOf(installed: InstalledLoadout | null): string {
   expect(installed, "cy.installLoadout has answered").to.not.eq(null);
@@ -58,14 +47,6 @@ function deckOf(installed: InstalledLoadout | null): string {
 /** The link the room ticket shares: it mirrors `roomLinkPath` in `apps/web/src/net/roomLink.ts`. */
 function inviteLink(code: string, mode: string): string {
   return `${routes.play()}?${new URLSearchParams({ room: code, mode }).toString()}`;
-}
-
-function visitAs(token: string, path: string): void {
-  cy.visit(path, {
-    onBeforeLoad(win) {
-      win.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-    },
-  });
 }
 
 // Reading seat 2's view.
@@ -173,8 +154,8 @@ describe("06 room code — a networked match between a browser and a Node client
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne.token),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed },
       }).then((created) => {
         roomCode = created.body.code;
@@ -203,8 +184,8 @@ describe("06 room code — a networked match between a browser and a Node client
     cy.then(() => {
       cy.request<{ matchId: string; seriesId: string | null; code: string; seat: string; mode: string }>({
         method: "POST",
-        url: api(`/api/rooms/${roomCode}/join`),
-        headers: bearer(seatTwo.token),
+        url: apiUrl(`/api/rooms/${roomCode}/join`),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo1", deckId: deckOf(seatTwoDecks) },
       }).then((joined) => {
         expect(joined.body.code, "the claim names the code it claimed").to.eq(roomCode);
@@ -230,7 +211,7 @@ describe("06 room code — a networked match between a browser and a Node client
         const view = asView(result.view);
         expect(view.viewer, "seat 2's view is seat 2's").to.eq(SEAT_TWO_ID);
       });
-      visitAs(seatOne.token, routes.match(matchId));
+      cy.visitAs(seatOne, routes.match(matchId));
     });
 
     // Both see the board.
@@ -358,20 +339,20 @@ describe("06 room code — a networked match between a browser and a Node client
       cy.then(() => {
         cy.request<{ profile: { status: string } }>({
           method: "GET",
-          url: api("/api/auth/me"),
-          headers: bearer(token),
+          url: apiUrl("/api/auth/me"),
+          headers: bearerHeaders(token),
         })
           .its("body.profile.status")
           .should("eq", "active");
         cy.request({
           method: "POST",
-          url: api("/api/queue"),
-          headers: bearer(token),
+          url: apiUrl("/api/queue"),
+          headers: bearerHeaders(token),
           body: { mode: "bo1", deckId: deckOf(seat.decks()) },
         })
           .its("status")
           .should("eq", 200);
-        cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(token) })
+        cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(token) })
           .its("status")
           .should("eq", 200);
       });
@@ -399,8 +380,8 @@ describe("06 room code — a networked match between a browser and a Node client
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne.token),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("06-room-link") },
       }).then((created) => {
         roomCode = created.body.code;
@@ -410,7 +391,7 @@ describe("06 room code — a networked match between a browser and a Node client
 
     // The guest link fills the form without joining.
     cy.then(() => {
-      visitAs(seatTwo.token, inviteLink(roomCode, "bo1"));
+      cy.visitAs(seatTwo, inviteLink(roomCode, "bo1"));
       cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.play());
       cy.location("search").should("eq", "");
       cy.get(ts(PLAY_JOIN_INPUT), { timeout: timeouts.view }).should("have.value", roomCode);

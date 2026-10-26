@@ -9,6 +9,8 @@
 import { CARD_NAMES, allCardIds, cardId as catalogId } from "./cards.ts";
 import {
   SESSION_STORAGE_KEY,
+  apiUrl,
+  bearerHeaders,
   constants,
   hotseatUrl,
   server,
@@ -888,14 +890,6 @@ Cypress.Commands.overwrite("visit", carrySession as never);
 // Saved decks and trios (A12) and the deck workshop (A11)
 // ---------------------------------------------------------------------------------------------
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
-
 /**
  * A12: one scenario deck, padded into a trio R253's Best of 3 will accept.
  *
@@ -973,7 +967,7 @@ export function mintIds(count: number): string[] {
 
 Cypress.Commands.add("savedDecks", (account: E2EAccount) => {
   return cy
-    .request<SavedDecksBody>({ method: "GET", url: api("/api/decks"), headers: bearer(account.token) })
+    .request<SavedDecksBody>({ method: "GET", url: apiUrl("/api/decks"), headers: bearerHeaders(account.token) })
     .then((response) => {
       expect(response.status, "GET /api/decks").to.eq(200);
       return response.body;
@@ -988,12 +982,12 @@ Cypress.Commands.add("savedDecks", (account: E2EAccount) => {
 Cypress.Commands.add("clearDecks", (account: E2EAccount) => {
   return cy.savedDecks(account).then((saved) => {
     for (const trio of saved.trios) {
-      cy.request({ method: "DELETE", url: api(`/api/trios/${trio.id}`), headers: bearer(account.token) })
+      cy.request({ method: "DELETE", url: apiUrl(`/api/trios/${trio.id}`), headers: bearerHeaders(account.token) })
         .its("status")
         .should("eq", 200);
     }
     for (const deck of saved.decks) {
-      cy.request({ method: "DELETE", url: api(`/api/decks/${deck.id}`), headers: bearer(account.token) })
+      cy.request({ method: "DELETE", url: apiUrl(`/api/decks/${deck.id}`), headers: bearerHeaders(account.token) })
         .its("status")
         .should("eq", 200);
     }
@@ -1008,8 +1002,8 @@ Cypress.Commands.add("saveDeck", (account: E2EAccount, deck: SaveDeckInput) => {
     cy
       .request({
         method: "PUT",
-        url: api(`/api/decks/${id}`),
-        headers: bearer(account.token),
+        url: apiUrl(`/api/decks/${id}`),
+        headers: bearerHeaders(account.token),
         body: { name: deck.name, cards: deck.cards, catalogVersion },
       })
       .then((response) => {
@@ -1026,8 +1020,8 @@ Cypress.Commands.add("saveTrio", (account: E2EAccount, trio: SaveTrioInput) => {
   return cy
     .request({
       method: "PUT",
-      url: api(`/api/trios/${id}`),
-      headers: bearer(account.token),
+      url: apiUrl(`/api/trios/${id}`),
+      headers: bearerHeaders(account.token),
       body: { name: trio.name, deckIds: trio.deckIds },
     })
     .then((response) => {
@@ -1131,9 +1125,9 @@ const FREE_ACCOUNT_STEPS = 8;
  * clear fails loudly here rather than as a misleading 409 later.
  */
 Cypress.Commands.add("freeAccount", (account: E2EAccount) => {
-  cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(account.token), failOnStatusCode: false });
+  cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(account.token), failOnStatusCode: false });
   const step = (left: number): void => {
-    cy.request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account.token) }).then(
+    cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).then(
       (response) => {
         const matchId = response.body.currentMatchId;
         const seriesId = response.body.currentSeriesId ?? null;
@@ -1144,16 +1138,16 @@ Cypress.Commands.add("freeAccount", (account: E2EAccount) => {
         } else if (seriesId !== null) {
           cy.request<SeriesStatusBody>({
             method: "GET",
-            url: api(`/api/series/${seriesId}`),
-            headers: bearer(account.token),
+            url: apiUrl(`/api/series/${seriesId}`),
+            headers: bearerHeaders(account.token),
             failOnStatusCode: false,
           }).then((series) => {
             if (series.status !== 200) return;
             if (series.body.status === "picking") {
               cy.request({
                 method: "POST",
-                url: api(`/api/series/${seriesId}/forfeit`),
-                headers: bearer(account.token),
+                url: apiUrl(`/api/series/${seriesId}/forfeit`),
+                headers: bearerHeaders(account.token),
                 failOnStatusCode: false,
               });
             } else if (series.body.status === "playing" && series.body.currentMatchId !== null) {

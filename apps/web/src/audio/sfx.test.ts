@@ -29,6 +29,8 @@ const UNION_ORDER: SfxId[] = [
   // Patch v0.3.X (MN03, R1345): the fourteen new emoji emotes.
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
+  // #1954: the playmat taps.
+  "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -108,6 +110,13 @@ const DURATION_MS: Record<SfxId, number> = {
   emoteGasp: 500,
   emoteSalute: 750,
   emoteParty: 850,
+  // #1954: the playmat taps, as short and quiet as sand.
+  tapWood: 160,
+  tapFelt: 140,
+  tapStone: 180,
+  tapNeon: 150,
+  tapParchment: 160,
+  tapAstral: 240,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -638,5 +647,68 @@ describe("R1345 MN03's fourteen emoji sounds", () => {
       expect(SFX[id].durationMs, id).toBeLessThanOrEqual(1000);
       expect(SFX[id].gain, id).toBe(SFX.emoteSob.gain);
     }
+  });
+});
+
+describe("#1954 the playmat taps", () => {
+  const NEW_TAPS: readonly SfxId[] = ["tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"];
+
+  it("#1954 every clause of the recipe contract holds at each variant and build", () => {
+    const runs: Run[] = [];
+    for (const id of NEW_TAPS) {
+      for (const sandVariant of [0, 1, 2, 3]) {
+        for (const sandBuild of [1, 6]) {
+          for (const variation of [0, 1]) {
+            runs.push(
+              runRecipe(`${id} ${JSON.stringify({ sandVariant, sandBuild, variation })}`, SFX[id].recipe, SFX[id].durationMs, {
+                sandVariant,
+                sandBuild,
+                variation,
+              }),
+            );
+          }
+        }
+      }
+    }
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("#1954 no two build the same graph", () => {
+    const shapes = NEW_TAPS.map((id) => {
+      const run = runRecipe(id, SFX[id].recipe, SFX[id].durationMs, {});
+      return JSON.stringify([
+        run.made.map((node) => node.kind),
+        run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null]),
+      ]);
+    });
+    expect(new Set(shapes).size).toBe(NEW_TAPS.length);
+  });
+
+  it("#1954 each is as short and as quiet as sand", () => {
+    for (const id of NEW_TAPS) {
+      expect(SFX[id].durationMs, id).toBeLessThanOrEqual(SFX.sand.durationMs);
+      expect(SFX[id].gain, id).toBe(SFX.sand.gain);
+    }
+  });
+
+  it("#1954 variation, variant and build each change the graph", () => {
+    const shapeOf = (params: SfxParams): string =>
+      JSON.stringify(
+        runRecipe("tap", SFX.tapWood.recipe, SFX.tapWood.durationMs, params).paramEvents.map(({ event }) => [
+          event.method,
+          "value" in event ? event.value : null,
+        ]),
+      );
+    const base = { sandVariant: 1, sandBuild: 2, variation: 0.5 };
+    expect(shapeOf({ ...base, variation: 0.9 })).not.toBe(shapeOf({ ...base, variation: 0.1 }));
+    expect(shapeOf({ ...base, sandVariant: 3 })).not.toBe(shapeOf({ ...base, sandVariant: 0 }));
+    expect(shapeOf({ ...base, sandBuild: 6 })).not.toBe(shapeOf({ ...base, sandBuild: 1 }));
   });
 });

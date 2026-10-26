@@ -45,9 +45,13 @@ use crate::prompts::{
     close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
     run_resume, why_answer_refused,
 };
-use crate::random_cast::{prefer_enemies, prefer_friends, random_cast_of, random_picks};
+use crate::random_cast::{
+    RANDOM_CHOICES_KEY, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode,
+};
 use crate::script::EngineSink;
-use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance};
+use crate::state::{
+    CardInstance, CastMode, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance,
+};
 use crate::state_check::state_check;
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, TargetAim, Zone};
@@ -97,6 +101,10 @@ struct CryRun {
     /// ME-ALTPLAY, R1045: Echo repeats a set Spell still owes, with fresh prompts each time.
     #[serde(default, skip_serializing_if = "is_zero")]
     repeats: u32,
+    /// R1855001: the controller's every choice is random, the Cry's own text's included, across its
+    /// pauses too (`trigger_random_cry_of`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    random: Option<bool>,
 }
 
 fn is_zero(n: &u32) -> bool {
@@ -148,6 +156,18 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
 /// (the sequence then continues in the answer), and runs the Cry once they are all made. Nothing
 /// happens for a card whose Cry cannot be triggered (`cry_place_of`).
 pub fn trigger_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId) {
+    trigger(sink, card, controller, None);
+}
+
+/// R1855001: trigger `card`'s Cry for `controller` with every choice of the controller's drawn at
+/// random, as R452's random cast draws its caster's: its declared targets and modes, and every prompt
+/// its text opens for the controller, after a pause as before one (`random_cast::RANDOM_CHOICES_KEY`).
+/// The other player's prompts are asked as usual.
+pub fn trigger_random_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId) {
+    trigger(sink, card, controller, Some(true));
+}
+
+fn trigger(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, random: Option<bool>) {
     let Some(place) = cry_place_of(sink.state, card) else {
         return;
     };
@@ -162,6 +182,7 @@ pub fn trigger_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: Pl
         mode_at: 0,
         awaiting: None,
         repeats: 0,
+        random,
     };
     continue_run(sink, run);
 }
@@ -190,6 +211,7 @@ pub fn reveal_set_spell(sink: &mut EngineSink, card: &CardInstance, controller: 
         mode_at: 0,
         awaiting: None,
         repeats,
+        random: None,
     };
     continue_run(sink, run);
 }
@@ -343,7 +365,10 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         // R452: a random cast's caster is never asked; its picks are drawn at random, each aimed by its
         // declaration when the cast targets enemies (R656), as `play_steps::cast_target_options` aims them.
         if let Some(cast) = random_cast_of(sink.state, run.controller) {
-            let pool = if cast.target_enemies {
+            let pool = if cast.friends_only == Some(true) && decl.kind == PromptKind::Target {
+                // R1850004: a cast for its caster's own side picks there alone.
+                crate::random_cast::friends_only(sink.state, run.controller, &options, Selection::clone)
+            } else if cast.target_enemies {
                 let required = decl.min.min(options.len() as i32);
                 if crate::targeting::target_aim(decl) == TargetAim::Help {
                     prefer_friends(sink.state, run.controller, &options, Selection::clone, required)
@@ -395,7 +420,21 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
 type Asker = fn(&mut EngineSink, &mut CryRun, &CardInstance) -> bool;
 
 /// Ask what is still to ask, then run the Cry; stops at a prompt, whose answer comes back here.
-fn continue_run(sink: &mut EngineSink, mut run: CryRun) {
+fn continue_run(sink: &mut EngineSink, run: CryRun) {
+    // R1855001: a random Cry's questions are drawn, as a random cast's are (R452).
+    let mode = (run.random == Some(true)).then(|| CastMode {
+        instance_id: run.instance_id.clone(),
+        player: run.controller,
+        random: true,
+        target_enemies: false,
+        casts: 0,
+        friends_only: None,
+    });
+    with_cast_mode(sink, mode, |sink| ask_and_run(sink, run));
+}
+
+/// `continue_run`, under whatever mode is in force.
+fn ask_and_run(sink: &mut EngineSink, mut run: CryRun) {
     let Some(card) = standing(sink.state, &run) else {
         return;
     };
@@ -513,6 +552,10 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
         let slices = declaration_slices(sink.state, run.controller, card, &run.targets, &run.modes);
         data.insert(DECLARATION_SLICES_KEY.to_string(), json!(slices));
     }
+    // R1855001: and a random Cry's text is random in every continuation of it.
+    if run.random == Some(true) {
+        data.insert(RANDOM_CHOICES_KEY.to_string(), json!(run.controller));
+    }
     if run.place == CryPlace::Field || run.place == CryPlace::Backrow {
         let ran = run_hook_resumable(
             sink,
@@ -539,6 +582,7 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
                 mode_at: 0,
                 awaiting: None,
                 repeats: run.repeats - 1,
+                random: run.random,
             };
             if !ran {
                 let mut repeat_data: IndexMap<String, Value> = IndexMap::new();
@@ -636,6 +680,7 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
             _ => None,
         },
         repeats: number("repeats").map_or(0, |n| n.max(0.0) as u32),
+        random: (raw.get("random").and_then(Value::as_bool) == Some(true)).then_some(true),
     })
 }
 

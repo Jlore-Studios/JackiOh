@@ -888,6 +888,21 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1853003: a card bought at the Marketplace reaches its buyer's hand (or a Resource their tray), and
+  // a Resource sold leaves the tray: the hand's edge glints as for `resourceGained`, with no effect
+  // (FX "—"); the other seat's view names no card bought.
+  marketBought: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  marketSold: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
   // R1852000: a dead piece's copy merges into its owner's Dormant Starship, which the `fused` before it
   // drew; the Starship's piece count rises with the next view.
   starshipFused: {
@@ -927,6 +942,30 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     fx: { recipe: "banner" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // R1847001 (Stinkyscape #148): a player travelled one node of their starscape map; their hero ticks
+  // as on `jadeChanged`, no fx, and the map redraws from the view.
+  starscapeTravelled: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // R1850003: a permanent goes beneath the card that holds it, fading off the board as an exiled card
+  // does. Pre-update it is still on the board; the holder's own arrival, when it is new, is `summoned`.
+  held: {
+    animation: "jk-exile-fade",
+    durationMs: 350,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // Issue #1855 (R1855000): an Anomaly replaces one side's board; the board tilts as for `swapped`,
+  // before its cards' `exiled` and `summoned` play the cards going and coming.
+  boardReplaced: {
+    animation: "jk-swap-cross",
+    durationMs: 500,
+    testid: "board",
+    target: () => testid.board,
   },
 };
 
@@ -1400,7 +1439,8 @@ export const HIDDEN_ID = "hidden";
  * zeroes its `value`, `cardAnnounced` reads a face-down card as a Trap whatever its `cardType` (R448),
  * and `radiantSet` moves its `zone` to the owner's hand. Every one of them is rewritten only when the
  * event's own `instanceId` is the one hidden. `libraryOverflow` drops the `radiant` of the card it
- * refused (R316); `burned` (R317) changes nothing but its ids, and `fatigue` (R315) is public.
+ * refused (R316), and `marketBought` the face of the card bought (R1853003); `burned` (R317) changes
+ * nothing but its ids, and `fatigue` (R315) is public.
  *
  * An event type missing here makes its two copies stop matching, `newEventsSince` finds no overlap,
  * and the runner animates the whole window again.
@@ -1420,6 +1460,7 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
   radiantSet: ["zone"],
   deradianted: ["zone"],
   libraryOverflow: ["radiant"],
+  marketBought: ["radiant"],
 };
 
 const NOTHING_REWRITTEN: readonly string[] = [];

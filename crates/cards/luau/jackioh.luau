@@ -241,6 +241,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastDef = {
@@ -255,6 +256,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastNewArgs = {
@@ -265,6 +267,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastNewDef = string | CastDef
@@ -410,6 +413,7 @@ data: {[string]: JsonValue}?,
 export type ChooseTargetWhereArgs = {
 step: string,
 scope: TargetScope?,
+where: string?,
 prompt: string?,
 data: {[string]: JsonValue}?,
 }
@@ -433,6 +437,11 @@ export type ControlHow = "steal" | "give"
 
 export type ConvertHealingArgs = {
 player: PlayerSpec?,
+}
+
+export type CopyUnitTextArgs = {
+target: TargetSpec?,
+radiant: boolean?,
 }
 
 export type CostAura = {
@@ -728,6 +737,10 @@ repeats: number,
 player: PlayerId?,
 }
 
+export type DuoRadiantArgs = {
+target: TargetSpec?,
+}
+
 export type DyingUnit = {
 instanceId: string,
 controller: PlayerId,
@@ -894,6 +907,7 @@ export type ForcedAttackerFilter = {
 side: ForcedSide?,
 defId: string?,
 summonedThisScript: boolean?,
+random: boolean?,
 }
 
 export type ForcedAttacksArgs = {
@@ -1463,6 +1477,20 @@ defId: string,
 player: PlayerId,
 value: number,
 } | {
+["type"]: "marketBought",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+credits: number,
+} | {
+["type"]: "marketSold",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+credits: number,
+} | {
 ["type"]: "starshipFused",
 player: PlayerId,
 instanceId: string,
@@ -1491,9 +1519,23 @@ ballots: {Ballot},
 ["type"]: "fled",
 player: PlayerId,
 opponent: FleeOpponent,
+} | {
+["type"]: "starscapeTravelled",
+player: PlayerId,
+node: number,
+reward: StarscapeReward,
+} | {
+["type"]: "held",
+player: PlayerId,
+instanceId: string,
+defId: string,
+holderId: string,
+} | {
+["type"]: "boardReplaced",
+player: PlayerId,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled" | "held" | "boardReplaced"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect" | "voted-out" | "both-voted-out" | "fled" | "fled-decisive"
 
@@ -1593,6 +1635,14 @@ export type HeroGuard = {
 cap: number?,
 divisor: number?,
 }
+
+export type HoldArgs = {
+target: TargetSpec?,
+release: HoldRelease?,
+holder: NewHolder?,
+}
+
+export type HoldRelease = "itsController" | "holdersController"
 
 export type InsteadDamage = "pierce"
 
@@ -1753,6 +1803,11 @@ fromTurn: number,
 ["until"]: "never",
 }
 
+export type NewHolder = {
+defId: string,
+player: PlayerSpec?,
+}
+
 export type NextTurnManaArgs = {
 amount: number,
 player: PlayerSpec?,
@@ -1777,6 +1832,11 @@ export type NumberWhich = NumberRef | string
 export type NumberedKey = "Armor" | "Lucky" | "Spell Damage" | "Brittle" | "Echo" | "Activate" | "Tribute"
 
 export type OffFieldZone = "hand" | "library" | "graveyard" | "exile"
+
+export type OwnTurnRedirect = {
+cap: number,
+multiplier: number?,
+}
 
 export type Phase = "setup" | "mulligan" | "start" | "main" | "end" | "over"
 
@@ -2251,6 +2311,8 @@ both: boolean?,
 
 export type SplitAmong = "enemies" | "enemyUnits"
 
+export type StarscapeReward = "heal" | "draw" | "mana" | "damage" | "edge"
+
 export type StatMod = {
 attack: number?,
 maxHealth: number?,
@@ -2309,6 +2371,18 @@ answersTargetedSpells: boolean?,
 embiggenGarden: number?,
 slumber: SlumberText?,
 starshipHull: boolean?,
+immuneToSpellDamage: boolean?,
+destroyedExiled: boolean?,
+enemyDestroyedExiled: boolean?,
+reflectsDamage: boolean?,
+reflectsToAttacker: boolean?,
+ownTurnRedirect: OwnTurnRedirect?,
+gauntlet: boolean?,
+unitsNeverDefense: boolean?,
+revealChance: number?,
+pilotsActions: number?,
+pilotsTurn: boolean?,
+hintsPlays: boolean?,
 }
 
 export type StealAllArgs = {
@@ -3536,6 +3610,10 @@ function J.convert_healing(args: ConvertHealingArgs): EffectCall
 	return { verb = "convert_healing", args = args :: any }
 end
 
+function J.copy_unit_text(args: CopyUnitTextArgs): EffectCall
+	return { verb = "copy_unit_text", args = args :: any }
+end
+
 function J.counter(args: CounterArgs): EffectCall
 	return { verb = "counter", args = args :: any }
 end
@@ -3674,6 +3752,10 @@ end
 
 function J.draw_while_cheap(args: DrawWhileCheapArgs): EffectCall
 	return { verb = "draw_while_cheap", args = args :: any }
+end
+
+function J.duo_radiant(args: DuoRadiantArgs): EffectCall
+	return { verb = "duo_radiant", args = args :: any }
 end
 
 function J.enchant(args: EnchantArgs): EffectCall
@@ -3860,6 +3942,10 @@ function J.heal(args: HealArgs): EffectCall
 	return { verb = "heal", args = args :: any }
 end
 
+function J.hold_beneath(args: HoldArgs): EffectCall
+	return { verb = "hold_beneath", args = args :: any }
+end
+
 function J.keep_secret(args: KeepSecretArgs): EffectCall
 	return { verb = "keep_secret", args = args :: any }
 end
@@ -4034,6 +4120,10 @@ end
 
 function J.shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs): EffectCall
 	return { verb = "shuffle_random_from_catalog", args = args :: any }
+end
+
+function J.squad_radiant(args: any?): EffectCall
+	return { verb = "squad_radiant", args = args :: any }
 end
 
 function J.steal(args: StealTarget): EffectCall

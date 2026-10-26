@@ -119,13 +119,6 @@ mod tests {
 
     const BREAD_TOKEN: &str = "core-t-bread";
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("no unit in {player} unit lane {lane}"),
-        }
-    }
-
     fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         match s.backrow(player, lane) {
             Some(found) => found,
@@ -152,7 +145,7 @@ mod tests {
 
             s.end_turn();
 
-            let token = unit_at(&s, PlayerId::P1, 1);
+            let token = s.unit_at(PlayerId::P1, 1);
             expect_bread(&mut s, &token, 2);
             s.expect_events(json!(["turnEnded", "trapFired", "summoned"]));
         }
@@ -169,7 +162,7 @@ mod tests {
             s.end_turn();
 
             // R64: lane 1 is taken, so the token takes the leftmost free zone.
-            let token = unit_at(&s, PlayerId::P1, 2);
+            let token = s.unit_at(PlayerId::P1, 2);
             expect_bread(&mut s, &token, 3);
             // R52: p2 ended the turn with the unspent mana, and gets nothing for it.
             for lane in 1..=5 {
@@ -187,7 +180,7 @@ mod tests {
 
             s.end_turn();
 
-            let token = unit_at(&s, PlayerId::P1, 1);
+            let token = s.unit_at(PlayerId::P1, 1);
             expect_bread(&mut s, &token, 4);
         }
 
@@ -223,7 +216,7 @@ mod tests {
 
             s.end_turn(); // p1 ends with 1 unspent
 
-            let first = unit_at(&s, PlayerId::P1, 1);
+            let first = s.unit_at(PlayerId::P1, 1);
             expect_bread(&mut s, &first, 1);
             s.expect_in_zone(&trap, "field");
             // R33: a Field Trap that has fired is face-up to both players from then on.
@@ -231,7 +224,7 @@ mod tests {
 
             s.end_turn(); // p2 ends, its mana refreshed to MAX_MANA and unspent
 
-            let second = unit_at(&s, PlayerId::P1, 2);
+            let second = s.unit_at(PlayerId::P1, 2);
             expect_bread(&mut s, &second, 4);
             s.expect_in_zone(&trap, "field");
             assert!(!s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.id == trap.id));
@@ -251,7 +244,7 @@ mod tests {
 
             s.end_turn();
 
-            let token = unit_at(&s, PlayerId::P1, 1);
+            let token = s.unit_at(PlayerId::P1, 1);
             expect_bread(&mut s, &token, 6);
         }
 
@@ -278,7 +271,7 @@ mod tests {
 
                 s.end_turn();
 
-                let token = unit_at(&s, PlayerId::P1, 1);
+                let token = s.unit_at(PlayerId::P1, 1);
                 expect_bread(&mut s, &token, 2 * multiplier);
             }
         }
@@ -302,7 +295,7 @@ mod tests {
 
             s.end_turn();
 
-            let token = unit_at(&s, PlayerId::P1, 2);
+            let token = s.unit_at(PlayerId::P1, 2);
             expect_bread(&mut s, &token, 3);
             for lane in 1..=5 {
                 assert!(s.unit(PlayerId::P2, lane).is_none());

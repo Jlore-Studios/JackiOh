@@ -219,8 +219,10 @@ pub fn is_player_action(body: &ActionBody) -> bool {
         | ActionBody::Emote { .. }
         | ActionBody::Concede
         | ActionBody::EndTurn
-        // R1838000: a Trade is a move the player took.
-        | ActionBody::Trade { .. } => true,
+        // R1838000: a Trade is a move the player took; R1853003: so is a buy or a sale at the Marketplace.
+        | ActionBody::Trade { .. }
+        | ActionBody::MarketBuy { .. }
+        | ActionBody::MarketSell { .. } => true,
         ActionBody::SetAutoEndTurn { .. }
         | ActionBody::Sandbox { .. }
         | ActionBody::Timeout

@@ -67,3 +67,18 @@ export const CARD_STATS_MIN_SAMPLE = 20;
 
 /** R654: how long the players tab waits after the last change to its search before it asks the server, in ms. */
 export const PLAYER_SEARCH_DEBOUNCE_MS = 300;
+
+/** R1966000: how many standard errors from 50% a card's win rate must be for the Sets tab to count it strong or weak. */
+export const SET_STATS_OUTLIER_Z = 3;
+
+/** R1966000: how many of the strongest cards, and of the weakest, the Sets tab lists. */
+export const SET_STATS_CARDS_LISTED = 10;
+
+/** R1966000: the decimal places of a set's win rates and their change, which differ by tenths of a point, and of a card's standard errors from 50%. */
+export const SET_STATS_DIGITS = 1;
+
+/** R1973002: the games, live and AI, a patch needs before the patch picker offers it. */
+export const STATS_PATCH_MIN_GAMES = 1000;
+
+/** R1973002: how many of the newest patches with `STATS_PATCH_MIN_GAMES` games the patch picker offers. */
+export const STATS_PATCHES_OFFERED = 5;

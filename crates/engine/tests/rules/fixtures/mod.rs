@@ -3,10 +3,13 @@
 //! files are part 24's.
 
 pub mod activate;
+pub mod ai_wheel;
+pub mod anomalies;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
+pub mod card_on_card;
 pub mod catalog;
 pub mod combat;
 pub mod combat_judge;
@@ -32,6 +35,7 @@ pub mod ky_competition;
 pub mod ky_test;
 pub mod last_boards;
 pub mod layered_summons;
+pub mod marketplace;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod mplus_b03;
@@ -52,7 +56,9 @@ pub mod slumber;
 pub mod spell_power;
 pub mod spell_verbs;
 pub mod staged_quests;
+pub mod starscape;
 pub mod starship;
+pub mod stinkyscape_verbs;
 pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;

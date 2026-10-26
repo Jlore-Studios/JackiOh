@@ -1,9 +1,10 @@
 // R1833000: the account's playmats, backdrops and card backs are earned, so while ownership decides
 // (`AccountCosmeticsOwned`, which ownedFullArt.ts mounts from `GET /api/cosmetics` on a gated screen)
 // the pickers offer only the defaults, the starters and what the account owns, and a stored pick it
-// does not own draws as its kind's default; the account-wide foil, finish and border offer only what
-// every account owns on every card. With nothing deciding (practice, hotseat, R1310004's builds),
-// every cosmetic counts as owned, as before.
+// does not own draws as its kind's default. With nothing deciding (practice, hotseat, R1310004's
+// builds), every cosmetic counts as owned, as before. R1953001: the account-wide foil, finish and
+// border have no picker left and no face wears them; a card's own earned one is worn where the
+// ledger lists it on that card.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -12,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
-import { CardCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
 import { collectionTestid } from "../collection/collection.ts";
 import Board from "../game/Board.tsx";
 import DeckCosmeticsPicker from "../game/deckbuilder/DeckCosmeticsPicker.tsx";
@@ -20,6 +20,7 @@ import type { DeckItem } from "../game/deckbuilder/sync.ts";
 import { DECK_COSMETICS_BUTTON } from "../game/deckbuilder/testids.ts";
 import type { OwnedCosmeticsResponse } from "../net/api.ts";
 import { fullBoardView } from "../test/fixtures.ts";
+import { CardFace } from "./CardFace.tsx";
 import {
   AccountCosmeticsOwned,
   DECK_SLOT_KINDS,
@@ -31,11 +32,12 @@ import {
   readCosmetics,
   resetCosmeticsForTests,
   useOwnsAccountCosmetic,
-  wornCosmetics,
   wornDeckCosmetics,
+  writeCardPick,
   writeCosmetics,
   type AccountOwnership,
   type DeckSlotKind,
+  type OwnedByCard,
 } from "./cosmetics.ts";
 import { FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
 import { faceModel } from "./model.ts";
@@ -148,28 +150,6 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     for (const kind of DECK_SLOT_KINDS) expect(pickerOptions(kind), kind).toEqual(["", ...cosmeticsOf(kind).map((cosmetic) => cosmetic.id)]);
   });
 
-  it("R1833000 the default foil, finish and border selects offer only defaults and starters while ownership decides", () => {
-    const options = (kind: "foil" | "finish" | "border"): string[] =>
-      [...screen.getByTestId<HTMLSelectElement>(collectionTestid.equip(kind)).options].map((option) => option.value);
-    const { rerender } = render(
-      <FullArtOwned owned={NO_FULL_ART}>
-        <CardCosmeticsControls />
-      </FullArtOwned>,
-    );
-    // #1833's are each earned on one card, so none is offered for every card.
-    for (const kind of ["foil", "finish", "border"] as const) expect(options(kind), kind).toEqual(everyAccounts(kind));
-    // Even owned on a card, a per-card cosmetic is no default for every card.
-    rerender(
-      <FullArtOwned owned={new Map([["core-004", new Set(["foil-galaxy"])]])}>
-        <CardCosmeticsControls />
-      </FullArtOwned>,
-    );
-    expect(options("foil")).toEqual(everyAccounts("foil"));
-
-    rerender(<CardCosmeticsControls />);
-    for (const kind of ["foil", "finish", "border"] as const) expect(options(kind), kind).toEqual(cosmeticsOf(kind).map((cosmetic) => cosmetic.id));
-  });
-
   it("R1833000 an unowned stored pick renders as its kind's default", () => {
     const owns = (id: string): boolean => ownsAccountCosmetic(NO_ACCOUNT_COSMETICS, id);
     const account = normalizeCosmetics({ table: ASTRAL, field: SNOW, cardBack: "card-back-lacquer" });
@@ -190,17 +170,25 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     // With nothing deciding, every pick is worn.
     expect(wornDeckCosmetics(true, decked, account)).toEqual({ table: ASTRAL, field: SNOW, cardBack: CLOCKWORK });
 
-    // An account-wide foil not owned on the card draws the default foil on that card.
+    // R1953001: an account-wide foil is worn on no card; a card's own earned foil only where the ledger lists it there.
     const def = CATALOG["core-004"];
     if (def === undefined) throw new Error("no card");
-    const face = faceModel({ defId: "core-004", def, radiant: false });
-    const foiled = normalizeCosmetics({ foil: "foil-void-shimmer", finish: "finish-linen" });
-    expect(wornCosmetics(face, foiled, {}, (id) => id !== "foil-void-shimmer")).toEqual({
-      foil: DEFAULT_CARD_COSMETICS.foil,
-      finish: "finish-linen",
-      border: DEFAULT_CARD_COSMETICS.border,
-    });
-    expect(wornCosmetics(face, foiled).foil).toBe("foil-void-shimmer");
+    const foilOf = (owned: OwnedByCard): string | null => {
+      const { container } = render(
+        <FullArtOwned owned={owned}>
+          <CardFace face={faceModel({ defId: "core-004", def, radiant: false })} worn />
+        </FullArtOwned>,
+      );
+      const found = container.querySelector(".cf")?.getAttribute("data-cosmetic-foil") ?? null;
+      cleanup();
+      return found;
+    };
+    writeCosmetics({ foil: "foil-void-shimmer" });
+    expect(foilOf(new Map([["core-004", new Set(["foil-void-shimmer"])]]))).toBeNull();
+    writeCardPick("core-004", "foil", "foil-void-shimmer");
+    expect(foilOf(NO_FULL_ART)).toBeNull();
+    expect(foilOf(new Map([["core-005", new Set(["foil-void-shimmer"])]]))).toBeNull();
+    expect(foilOf(new Map([["core-004", new Set(["foil-void-shimmer"])]]))).toBe("foil-void-shimmer");
 
     // The tiles show the default equipped, and so does the deck picker, which is what the board draws.
     writeCosmetics({ table: ASTRAL });

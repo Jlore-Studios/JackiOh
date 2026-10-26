@@ -169,10 +169,6 @@ mod tests {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    fn at_instance(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// `describe("base")`.
     mod base {
         use super::*;
@@ -250,7 +246,7 @@ mod tests {
             let mut s = played(false, 2, json!({}), json!({ "hand": [MAGIC_JAMMED, FILLER] }));
             s.end_turn();
             let id = spatula_id(&s);
-            s.play(MAGIC_JAMMED, json!({ "targets": at_instance(&id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
             s.expect_in_zone(SPATULA, "graveyard");
         }
 
@@ -264,7 +260,7 @@ mod tests {
             assert!(matches_object(&kills, &json!([{ "defId": TOKENS, "radiant": false }])));
             s.end_turn();
             let id = spatula_id(&s);
-            s.play(MAGIC_JAMMED, json!({ "targets": at_instance(&id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
             // Destroyed in the backrow: its Death fires. A fresh Me and Mr Token for p1, no Cry (no Rush Token).
             let copies: Vec<CardInstance> = (1..=5)
                 .filter_map(|lane| s.unit(P1, lane))
@@ -377,7 +373,7 @@ mod tests {
         fn r383_both_moves_keep_its_buffs() {
             let mut s = played(false, 2, json!({ "hand": [{ "def": SPATULA }, SURGERY, FILLER] }), json!({}));
             let id = spatula_id(&s);
-            s.play(SURGERY, json!({ "targets": at_instance(&id) }));
+            s.play(SURGERY, json!({ "targets": pick::id(&id) }));
             s.expect_stats(SPATULA, json!({ "attack": 10, "maxHealth": 6 }));
             s.end_turn();
             assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(spatula_id(&s)));
@@ -450,7 +446,7 @@ mod tests {
             s.attack(SPATULA, TOKENS);
             s.end_turn();
             let id = spatula_id(&s);
-            s.play(MAGIC_JAMMED, json!({ "targets": at_instance(&id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
             let copy = (1..=5).filter_map(|lane| s.unit(P1, lane)).find(|unit| unit.def_id == TOKENS);
             assert_eq!(copy.map(|unit| unit.radiant), Some(true));
         }

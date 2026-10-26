@@ -77,8 +77,9 @@ import { dropStaleSignUpConsent } from "./auth/consent.ts";
 import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
+import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
-import { initLocale, t, useLocale } from "./i18n/i18n.ts";
+import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -465,6 +466,8 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   const [screenShown] = useState(() => new Set<string>());
   // R634: an active account's game settings are kept level with this device's, on every gated screen.
   useSettingsAccountSync(account);
+  // R1834000: and its picks of each card, which live on the account, the device's being their cache.
+  useCardPicksAccountSync(account);
   const target = redirectFor(account, allowPending);
   // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
   // renders nothing by changing.
@@ -880,6 +883,8 @@ if (import.meta.env.MODE !== "test") {
   // R757000: a sign-up's held birth answer past its time leaves this browser.
   dropStaleSignUpConsent();
   // The language's dictionary is in before the first paint, so a Chinese reader never sees English flash by (#711).
+  // R1916000: one more boot on this device's language; once it has settled, the language button leaves the top bar and the board.
+  countLocaleVisit();
   const localeReady = initLocale();
   // #778: the engine's module downloads alongside; EngineGate reports a failure, and asks again, on the screens that need it.
   void loadWasm().catch(() => undefined);

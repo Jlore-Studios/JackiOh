@@ -11,8 +11,13 @@
 // R1833000: the same answer's account list is mounted as `AccountCosmeticsOwned`
 // (`ViewerAccountCosmetics`), so the playmat, backdrop and card-back pickers offer, and the viewer's
 // side wears, only what the account owns. Both read one cached answer per session.
+//
+// R1955000: an answer a Shop change dropped is read again by the mounted providers, not only the next screen's.
+//
+// R1953001: a cosmetic token spent in place (collection/TokenOffer.tsx) grants on a screen that stays
+// up, so `rereadOwnedCosmetics` drops that answer and has both providers read it again.
 
-import { createElement, useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { createElement, useEffect, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 
 import { sessionIdFromToken } from "../auth/redirect.ts";
 import { getOwnedCosmetics, type OwnedCosmeticsResponse } from "../net/api.ts";
@@ -62,6 +67,21 @@ function sessionOf(token: string): string {
 
 let cached: { session: string; read: Promise<OwnedCosmeticsResponse> } | null = null;
 
+/** R1955000: how many times the session's answer was dropped; a mounted `ViewerFullArt` or `ViewerAccountCosmetics` reads again on each. */
+let forgotten = 0;
+const forgottenListeners = new Set<() => void>();
+
+function subscribeForgotten(listener: () => void): () => void {
+  forgottenListeners.add(listener);
+  return () => {
+    forgottenListeners.delete(listener);
+  };
+}
+
+function forgottenCount(): number {
+  return forgotten;
+}
+
 /**
  * What `token`'s account owns, as `GET /api/cosmetics` answers: one read per session, kept for the
  * page (a renewed token of the same session reuses it), and read again for another session or after
@@ -99,10 +119,22 @@ export function readOwnedAccountCosmetics(
 
 /**
  * Drops the session's answer, so the next screen reads what the account owns again: called where an
- * answer may have granted a cosmetic, per-card or account (a card pack, a cosmetic pack, a token, the Chase Shard).
+ * answer may have granted a cosmetic, per-card or account (a card pack, a cosmetic pack, a token, the Chase Shard),
+ * and has every mounted `ViewerFullArt` and `ViewerAccountCosmetics` read again at once (R1955000).
  */
 export function forgetOwnedCosmetics(): void {
   cached = null;
+  forgotten += 1;
+  for (const listener of [...forgottenListeners]) listener();
+}
+
+/**
+ * R1953001: drops the session's answer and has every mounted provider read it again, as
+ * `forgetOwnedCosmetics` does: called where an answer granted a cosmetic on a screen that stays up (a
+ * cosmetic token spent in place), so the locked entry it bought shows owned.
+ */
+export function rereadOwnedCosmetics(): void {
+  forgetOwnedCosmetics();
 }
 
 /**
@@ -123,6 +155,7 @@ export function ViewerFullArt({
 }): ReactElement {
   const session = token === null ? null : sessionOf(token);
   const [owned, setOwned] = useState<{ session: string; cards: OwnedByCard } | null>(null);
+  const forgets = useSyncExternalStore(subscribeForgotten, forgottenCount, forgottenCount);
   useEffect(() => {
     if (!gated || token === null) return;
     let current = true;
@@ -137,7 +170,7 @@ export function ViewerFullArt({
     return () => {
       current = false;
     };
-  }, [gated, token, read]);
+  }, [gated, token, read, forgets]);
   // Another session's answer is never this one's.
   const cards = owned !== null && owned.session === session ? owned.cards : NO_FULL_ART;
   return createElement(FullArtOwned, { owned: gated ? cards : "every" }, children);
@@ -161,6 +194,7 @@ export function ViewerAccountCosmetics({
 }): ReactElement {
   const session = token === null ? null : sessionOf(token);
   const [owned, setOwned] = useState<{ session: string; ids: ReadonlySet<string> } | null>(null);
+  const forgets = useSyncExternalStore(subscribeForgotten, forgottenCount, forgottenCount);
   useEffect(() => {
     if (!gated || token === null) return;
     let current = true;
@@ -175,7 +209,7 @@ export function ViewerAccountCosmetics({
     return () => {
       current = false;
     };
-  }, [gated, token, read]);
+  }, [gated, token, read, forgets]);
   // Another session's answer is never this one's.
   const ids = owned !== null && owned.session === session ? owned.ids : NO_ACCOUNT_COSMETICS;
   return createElement(AccountCosmeticsOwned, { owned: gated ? ids : "every" }, children);

@@ -12,6 +12,7 @@ import type { HeroState } from "./HeroState";
 import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
+import type { StarscapeMap } from "./StarscapeMap";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
 
@@ -137,6 +138,11 @@ duos?: DuosLife,
  */
 autopilot?: Autopilot, 
 /**
+ * R1844001: the turn this player is shown the Pareto hint for (the `pareto_hint` verb); absent
+ * otherwise, so a game without it hashes as before this field existed.
+ */
+paretoHint?: number, 
+/**
  * R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).
@@ -166,4 +172,15 @@ votes?: VoteTally,
  * the game on it. Absent otherwise, so a game without one hashes as before this field existed
  * (D3).
  */
-fled?: FleeOpponent, };
+fled?: FleeOpponent, 
+/**
+ * R1847000: this player's starscape map, public. Absent until their first travel, so a game
+ * without one hashes as before this field existed (D14).
+ */
+starscape?: StarscapeMap, 
+/**
+ * R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+ * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+ * Absent until the first miss, so a game without one hashes as before this field existed (D3).
+ */
+anomalyMisses?: number, };

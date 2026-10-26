@@ -82,6 +82,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1846000: card metrics no shipped card prints yet; the Stinkyscape cards that name them bring their terms.
     "BUSTED",
     "Complicated",
+    // R1849000, R1849005: Stinkyscape's, rules only until the set's cards print them as terms.
+    "Immune to Spell Damage",
+    "Gauntlet lanes",
   ],
   "§6.2": [
     "Cry and Death",
@@ -93,6 +96,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Fatigue",
     "Attack summon",
     "In N turns",
+    // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
+    "When one of your Units is attacked",
+    "Chance to reveal",
   ],
   "§6.3": [
     "Summon",
@@ -148,16 +154,40 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
     "Gain a Resource",
     "Credits",
+    // R1853000–R1853005: Stinkyscape's Marketplace, which no shipped card reaches; the board's shop
+    // (game/Marketplace.tsx) shows it once it opens.
+    "Marketplace",
     // R1854000–R1854004: Stinkyscape's staged Quests, which no card prints until the set ships; its card
     // parts make a term of any its texts bold.
     "Quest stages",
     "Complete the current stage",
     "Hear back",
     "Steal mana crystals",
+    // R1849001: Stinkyscape's, rules only until the set's cards print it as a term.
+    "Evolve",
+    // R1844000, R1844001, R1844002: Stinkyscape's M10, which no card prints until the set's cards do.
+    "Autopilot aura",
+    "Pareto hint",
+    "Do something helpful",
     // R1845000, R1845002: engine primitives no shipped card prints yet; the Stinkyscape cards that print
     // them (#123, #77) give them glossary entries.
     "Hidden Nerf",
     "Trade offer",
+    // R1847000: the starscape map, which no card prints until Stinkyscape #148 is built (S23); that
+    // card may move it into the glossary.
+    "Starscape map",
+    // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
+    // them (#1836), which may make a term of one (Duo, Squad).
+    "Copy a Unit's text",
+    "Duo / Squad",
+    "Exile aura",
+    "Hold beneath",
+    "Cast it for yourself",
+    "Radiant at N keywords",
+    // R1855000–R1855003: engine primitives no shipped card prints yet; Stinkyscape's Anomaly Found! and
+    // Scanning Probes (S20) explain them on their own faces.
+    "Replace your board",
+    "Scan for an Anomaly",
   ],
 };
 

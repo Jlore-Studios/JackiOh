@@ -214,13 +214,6 @@ const RIGHT_HOUSE: &str = "core-003"; // Unit, 1 — 1/1 Taunt, Divine Shield, R
 const EXPERIMENTATION: &str = "core-085";
 const KEYWORD_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 fn kinds(g: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
     g.stats(&card.id).keywords.iter().map(Keyword::kind).collect()
 }
@@ -349,7 +342,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
             },
             "p2": { "hand": [JILLIAX, STOCKPILE], "library": KEYWORD_LIBRARY },
         }));
-        let kpop = unit_at(&g, P1, 1);
+        let kpop = g.unit_at(P1, 1);
         // A granted Divine Shield (#63's or #80's pool, R21) that a hit has already spent (§4.4 step 1).
         g.card_mut(&kpop.id).granted_keywords = vec![Keyword::DivineShield];
         g.card_mut(&kpop.id).divine_shield_spent = Some(true);
@@ -381,7 +374,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
             },
             "p2": { "hand": [RIGHT_HOUSE, STOCKPILE], "library": KEYWORD_LIBRARY },
         }));
-        let kpop = unit_at(&g, P1, 1);
+        let kpop = g.unit_at(P1, 1);
         // A Kpop that came back through a granted Reborn: the body has used its Reborn (§4.5 step 4).
         g.card_mut(&kpop.id).reborn_spent = Some(true);
 
@@ -431,7 +424,7 @@ fn fuse_seven_seven_onto(target: Value) -> (Scenario, CardInstance) {
         },
         "p2": { "hand": [SEVEN_SEVEN, MR_VANILLA], "library": KEYWORD_LIBRARY },
     }));
-    let kept = unit_at(&g, P1, 1);
+    let kept = g.unit_at(P1, 1);
     g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
     // The fusion happened: the target instance stands, carrying the summed stats (R77).
     assert!(
@@ -543,8 +536,8 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
 
         // Each Cube's Cry tributes one of p1's other Units (R428) and remembers it: Pointmaster for the
         // first, Midrange Menace for the second (R81, R90: one pick per declaration).
-        let pointmaster = unit_at(&s, P1, 2);
-        let menace = unit_at(&s, P1, 1);
+        let pointmaster = s.unit_at(P1, 2);
+        let menace = s.unit_at(P1, 1);
         s.play(
             &crafted.id,
             json!({
@@ -761,7 +754,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
             },
             "p2": { "hand": [SUPPRESSIVE_AURA, STOCKPILE], "library": LAYER_LIBRARY },
         }));
-        let felinor = unit_at(&g, P1, 1);
+        let felinor = g.unit_at(P1, 1);
 
         g.play(SUPPRESSIVE_AURA, json!({ "zone": 1, "embiggen": true }));
         assert!(
@@ -796,7 +789,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
             },
             "p2": { "hand": [TEMPO_TIMMY, STOCKPILE], "library": LAYER_LIBRARY },
         }));
-        let kept = unit_at(&g, P1, 1);
+        let kept = g.unit_at(P1, 1);
         g.play(TEMPO_TIMMY, json!({ "zone": 1 }));
         let fused = g.card(&kept.id).def_id.clone();
         assert!(is_fused_id(&fused, "core-011+core-065-1") || is_fused_id(&fused, "core-065-1+core-011"));
@@ -807,7 +800,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
             Some(P1)
         );
         g.answer(json!(["summon Spikey Pillow"]));
-        let pillow = unit_at(&g, P1, 2);
+        let pillow = g.unit_at(P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
         // 0 printed + 3 (Weapons) − 2 (its own base aura), and nothing from the fused radiant aura.

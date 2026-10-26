@@ -16,7 +16,7 @@ use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
 };
 use crate::wire::craft::CraftRecipe;
-use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice};
+use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice, StarscapeReward};
 use crate::wire::string_union;
 
 string_union! {
@@ -89,6 +89,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered_on_play: Option<bool>,
+    /// R1844001, §10.8: the Pareto hint (Stinkyscape #147 IN33DH3). Present, and `true`, only on the
+    /// viewer's own hand card that the judge would call optimal to play now while the viewer is shown
+    /// the hint (`pareto::pareto_hint_ids`). Absent otherwise: never `false`, never on the opponent's
+    /// cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub pareto_optimal: Option<bool>,
     /// R979000, §10.8: why the viewer's own hand card cannot be played now
     /// (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
     /// attack; R1571000: and why a card in the viewer's own graveyard that a permission admits
@@ -991,6 +998,36 @@ pub struct CreditView {
     pub used: Option<bool>,
 }
 
+/// R1847000: one node of a starscape map, its reward and the reward's amount (config
+/// `STARSCAPE_REWARDS`); the edge has none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeNodeView {
+    pub reward: StarscapeReward,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub amount: Option<i32>,
+}
+
+/// R1847000: a seat's starscape map, public on both seats: its nodes in order, the edge last, and the
+/// node the player stands on (`at`, 0 the start).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeView {
+    pub nodes: Vec<StarscapeNodeView>,
+    pub at: i32,
+}
+
 /// ME-SECRET, R860: one secret of a side, as the viewer reads it — the choice only for its owner,
 /// or for anyone once revealed (R864).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1104,6 +1141,11 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub luck: Option<i32>,
+    /// R1847000: this seat's starscape map, shown to both seats. Absent until the player first
+    /// travels, so a game without one sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starscape: Option<StarscapeView>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.
@@ -1294,6 +1336,74 @@ pub struct TradesView {
     pub left: i32,
 }
 
+/// R1853000–R1853003, §10.8: the open Marketplace as the viewer reads it (`marketplace::marketplace_view`):
+/// the lots offered to them and their own Resources' sale prices. Which buys and sales are offered stays
+/// `legal_actions`' answer.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketplaceView {
+    /// The turn the offering next re-rolls on (R1853001).
+    pub rerolls_on: i32,
+    pub offers: Vec<MarketOfferView>,
+    pub sales: Vec<MarketSaleView>,
+}
+
+/// R1853001–R1853003, R1853005: one lot offered to the viewer.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketOfferView {
+    /// Its index in the offering, which `marketBuy` names.
+    pub offer: i32,
+    pub def_id: String,
+    /// A Radiant lot. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub radiant: Option<bool>,
+    /// This turn's price, in Credits.
+    pub price: i32,
+    /// The copies the viewer may still buy this cycle (`marketplace::market_left`).
+    pub left: i32,
+    /// A lot an effect added for the rest of the game, the viewer's alone (R1853005). Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub fixed: Option<bool>,
+    /// Why the viewer may not buy it now (`marketplace::why_market_buy_refused`), only while they may
+    /// act (their turn, the main phase, no prompt open) and only on a lot `legal_actions` lists no
+    /// `marketBuy` of.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub reason: Option<String>,
+}
+
+/// R1853002, R1853003: a Resource in the viewer's own tray and what it sells for this turn.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketSaleView {
+    pub instance_id: String,
+    pub def_id: String,
+    /// A Radiant Resource, sold at its Radiant face's quote. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub radiant: Option<bool>,
+    pub credits: i32,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1365,6 +1475,12 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub trades: Option<TradesView>,
+    /// R1853000, R1853003: the Marketplace as the viewer reads it, once it is open: the offering and
+    /// its prices, which are public, and the viewer's own stock and sales (CLAUDE.md rule 7). Absent
+    /// while it is closed, so a game without one sends the view it did before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub marketplace: Option<MarketplaceView>,
 }
 
 #[cfg(test)]

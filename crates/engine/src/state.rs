@@ -23,7 +23,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
     GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -455,6 +455,11 @@ pub struct CastMode {
     pub random: bool,
     pub target_enemies: bool,
     pub casts: i32,
+    /// R1850004: its target picks are narrowed to its caster's own hero and permanents, strictly: a
+    /// declaration with none of those is passed. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub friends_only: Option<bool>,
 }
 
 /// A unit zone holds a Stack pile, top card first (§3.2).
@@ -1085,10 +1090,71 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// R1853000–R1853005: Stinkyscape's Marketplace (`marketplace.rs`), one for both players: the offering
+/// rolled `rolled_turn` and the quotes the tray's Resources sell for this turn.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Marketplace {
+    /// R1853001: the turn the offering was last rolled (`GameState.turn`).
+    pub rolled_turn: i32,
+    /// The lots on offer, rolled lots in table order then the lots effects added, by their index.
+    pub offers: Vec<MarketOffer>,
+    /// R1853002: what each of the catalog's Resources sells for this turn. Absent while the catalog
+    /// holds none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<ResourceQuote>>", optional))]
+    pub quotes: Vec<ResourceQuote>,
+}
+
+/// R1853001, R1853005: one lot at the Marketplace: a card of `def_id`, at `price` Credits this turn
+/// (`base` before it moved), `stock` of it for each player this cycle and the copies each has bought.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketOffer {
+    pub def_id: String,
+    /// R1853001: a Radiant lot, sold on its Radiant face. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub radiant: Option<bool>,
+    pub base: i32,
+    pub price: i32,
+    pub stock: i32,
+    pub bought: PerPlayer<i32>,
+    /// R1853005: the one player a lot an effect added is offered to; absent on a rolled lot, which is
+    /// both players'.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub owner: Option<PlayerId>,
+}
+
+/// R1853002: what a Resource of `def_id` sells for at the Marketplace this turn, on each face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceQuote {
+    pub def_id: String,
+    pub base: i32,
+    pub radiant: i32,
+}
+
 /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
 /// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
-/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
-/// turn's cleanup.
+/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, or by an autopilot
+/// aura as its controller's turn begins (R1844000), cleared at that turn's cleanup.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -1099,6 +1165,11 @@ pub struct DrawCount {
 pub struct Autopilot {
     pub turn: i32,
     pub actions: i32,
+    /// R1844000: the R456 actions taken on a turn an autopilot aura engaged, read against the aura's
+    /// count; absent for Cognitive Offloading's whole turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub aura_actions: Option<i32>,
 }
 
 /// R1180006: the answering card last named for a player (R1180005) and the answers before it in that
@@ -1113,6 +1184,23 @@ pub struct Autopilot {
 pub struct AnswerChain {
     pub by: String,
     pub depth: i32,
+}
+
+/// R1847000 (Stinkyscape #148 Alteran Reach): a player's starscape map (`subsystems::starscape`), charted
+/// from the match rng at their first travel. `nodes` is the map, node n at `nodes[n - 1]` and the edge
+/// last; `at` is the node they stand on, 0 the start; `travelled_on` is the `GameState.turn` of their
+/// last travel (R1847002).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeMap {
+    pub nodes: Vec<StarscapeReward>,
+    pub at: i32,
+    pub travelled_on: i32,
 }
 
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
@@ -1270,6 +1358,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub autopilot: Option<Autopilot>,
+    /// R1844001: the turn this player is shown the Pareto hint for (the `pareto_hint` verb); absent
+    /// otherwise, so a game without it hashes as before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub pareto_hint: Option<i32>,
     /// R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
     /// player's Spells and how many answers led to it. Absent but while one is, so a game without an
     /// answering card hashes as before this field existed (D9).
@@ -1302,6 +1395,17 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fled: Option<crate::wire::FleeOpponent>,
+    /// R1847000: this player's starscape map, public. Absent until their first travel, so a game
+    /// without one hashes as before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starscape: Option<StarscapeMap>,
+    /// R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+    /// scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+    /// Absent until the first miss, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub anomaly_misses: Option<i32>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -1533,6 +1637,18 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CardDef>>", optional))]
     pub custom_defs: IndexMap<String, CardDef>,
+    /// R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
+    /// order they were taken. D14: absent until the first is held, so a game that never holds one
+    /// hashes exactly as before this field existed. Never in a view: the view sees `held` events.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub held: Option<Vec<HeldCard>>,
+    /// R1853000: Stinkyscape's Marketplace, opened for both players by the first Resource or Credits
+    /// either gains (`marketplace.rs`). Absent until then, so a game without either hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub marketplace: Option<Marketplace>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1767,6 +1883,23 @@ pub struct AnnounceRecord {
     pub countered: Option<bool>,
 }
 
+/// R1850003: a permanent held beneath another card (`holder_id`) until that card leaves the field
+/// after `holder_mark` (`stays::exit_mark` as it was taken), then summoned for `to`. `card` is the
+/// card as it left the field, reset as R78 resets a card that leaves it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HeldCard {
+    pub holder_id: String,
+    pub holder_mark: u32,
+    pub to: PlayerId,
+    pub card: CardInstance,
+}
+
 /// B5 E4: a card as a play record names it — the definition and the face it was played with.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -1877,6 +2010,7 @@ pub fn create_player_state() -> PlayerState {
         won_by_effect: None,
         duos: None,
         autopilot: None,
+        pareto_hint: None,
         answer_chain: None,
         trades: None,
         trades_per_turn: None,
@@ -1884,6 +2018,8 @@ pub fn create_player_state() -> PlayerState {
         market_credits: None,
         votes: None,
         fled: None,
+        starscape: None,
+        anomaly_misses: None,
     }
 }
 
@@ -2344,6 +2480,8 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         sandbox: options.sandbox.filter(|sandbox| *sandbox),
         custom_cards,
         custom_defs,
+        held: None,
+        marketplace: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -2513,13 +2651,17 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
 }
 
 /// R1845000: no seat reads a hidden Nerf, the card's own owner included, so a copy of the state made
-/// for a seat holds none: on any card of either side, nor in Rollback's snapshots (R419). The AI's
-/// `redact` (R185) and the dry run's `concealed_copy` (R222) both end with it.
+/// for a seat holds none: on any card of either side, beneath a card that holds it (R1850003), nor in
+/// Rollback's snapshots (R419). The AI's `redact` (R185) and the dry run's `concealed_copy` (R222) both
+/// end with it.
 pub fn forget_hidden_nerfs(state: &mut GameState) {
     for player in PLAYER_IDS {
         for card in side_cards_mut(&mut state.players[player]) {
             card.hidden_nerfs = None;
         }
+    }
+    for held in state.held.iter_mut().flatten() {
+        held.card.hidden_nerfs = None;
     }
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {

@@ -11,11 +11,7 @@
 // `CardShowcase` and `FxLayer` read a game's `PlayerView`, and a pack has none, so the scene draws
 // `CardFace` itself and mounts the fx director itself (`PackOpening.tsx`), over the cues built here.
 
-import {
-  CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  GLOBAL_PACK_NAME,
-} from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 import type { PrintedRarity } from "@jackioh/shared";
 
 import { getAudioEngine } from "../audio/engine.ts";
@@ -98,6 +94,7 @@ export const packTestid = {
   slot: (index: number) => `pack-slot-${String(index)}`,
   flip: (index: number) => `pack-slot-${String(index)}-flip`,
   outcome: (index: number) => `pack-slot-${String(index)}-outcome`,
+  equip: (index: number) => `pack-slot-${String(index)}-equip`,
 } as const;
 
 /** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros: 0.29 is "29%", 0.082 "8.2%". */
@@ -141,18 +138,18 @@ export function cosmeticName(id: string): string {
   return COSMETICS.find((cosmetic) => cosmetic.id === id)?.name ?? id;
 }
 
-/** What a slot became, as the server decided it (R1301002). */
-export function slotOutcome(slot: PackSlot): string {
+/**
+ * What a slot became, as the server decided it (R1301002): a spent duplicate says `points`, the
+ * opening's `slotPoints` for the slot, which it added to each bar (R1953000).
+ */
+export function slotOutcome(slot: PackSlot, points: number): string {
   switch (slot.grant.kind) {
     case "card":
       return t("New card");
     case "cosmetic":
       return t("New cosmetic: {name}", { name: cosmeticName(slot.grant.cosmeticId) });
     case "bars":
-      return t("Duplicate: +{card} card token bar, +{cosmetic} cosmetic token bar", {
-        card: CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-        cosmetic: COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-      });
+      return t("Duplicate: +{card} card token bar, +{cosmetic} cosmetic token bar", { card: points, cosmetic: points });
   }
 }
 

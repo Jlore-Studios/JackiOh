@@ -9,7 +9,7 @@ import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSett
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
-import { LOCALES, parseLocale, setLocale, t, useLocale } from "../i18n/i18n.ts";
+import { LOCALES, parseLocale, setLocale, t, useLocale, useLocaleSettled } from "../i18n/i18n.ts";
 
 /** Every intensity the effects layer knows, in the order the picker lists them. */
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
@@ -149,7 +149,7 @@ export function FxControls(): ReactElement {
 }
 
 /** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
-function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" }): ReactElement {
+function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" }): ReactElement {
   const settings = useCardSettings();
   const hintId = useId();
   const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === setting);
@@ -188,6 +188,11 @@ export function FullArtSwitch(): ReactElement {
   return <CardSettingSwitch setting="fullArt" />;
 }
 
+/** R1834004: the other seats' cards and side wearing what they equipped, or drawn plain. */
+export function OpponentCosmeticsSwitch(): ReactElement {
+  return <CardSettingSwitch setting="opponentCosmetics" />;
+}
+
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */
 export function VibrationSwitch(): ReactElement {
   const settings = useHapticsSettings();
@@ -215,16 +220,21 @@ export function VibrationSwitch(): ReactElement {
   );
 }
 
-/** R711000: the reader's language, each named in its own words; the button at the top switches it too. */
+/** R711000: the reader's language, each named in its own words; the button at the top switches it too, until the device settles (R1916000). */
 const LANGUAGE_OPTIONS = Object.entries(LOCALES).map(([value, spec]) => ({ value, label: spec.name }));
 
-/** R711000: the language every screen and card reads in, on this device. */
+/** R711000: the language every screen and card reads in, on this device; the one control left once the device has settled (R1916000). */
 export function LanguageSelect(): ReactElement {
   const locale = useLocale();
+  const settled = useLocaleSettled();
   return (
     <SelectRow
       label={t("Language")}
-      hint={t("The screens and the cards read in this language. The button at the top of every screen switches it too.")}
+      hint={t(
+        settled
+          ? "The screens and the cards read in this language."
+          : "The screens and the cards read in this language. The button at the top of every screen switches it too.",
+      )}
       testId="setting-language"
       value={locale}
       options={LANGUAGE_OPTIONS}

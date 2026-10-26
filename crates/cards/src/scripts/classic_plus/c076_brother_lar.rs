@@ -55,10 +55,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    fn target(s: &Scenario, card: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": s.card(card).id }])
-    }
-
     fn pings(s: &Scenario) -> Vec<CardInstance> {
         (1..=5)
             .filter_map(|lane| s.unit(P1, lane))
@@ -97,7 +93,7 @@ mod tests {
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": LAR, "lane": 3 }] },
                     "p2": { "hand": [FILLER] },
                 }));
-                let targets = target(&s, LAR);
+                let targets = pick::card(&s, LAR);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(PING.to_string()));
                 assert!(s.unit(P1, 3).is_none());
@@ -107,7 +103,7 @@ mod tests {
             fn r1_ping_is_summoned_so_it_fires_no_cry_and_is_not_a_play() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
-                let targets = target(&s, LAR);
+                let targets = pick::card(&s, LAR);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 let played: Vec<String> = s
                     .last_events()
@@ -125,7 +121,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 s.card_mut(LAR).granted_keywords = reborn();
-                let targets = target(&s, LAR);
+                let targets = pick::card(&s, LAR);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(PING.to_string()));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(LAR.to_string()));
@@ -150,7 +146,7 @@ mod tests {
                     "p1": { "hand": [COLLATERAL, FILLER], "field": [LAR] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
                 }));
-                let targets = target(&s, LAR);
+                let targets = pick::card(&s, LAR);
                 s.play(COLLATERAL, json!({ "targets": targets }));
                 s.expect_in_zone(LAR, "exile");
                 assert!(pings(&s).is_empty());
@@ -191,7 +187,7 @@ mod tests {
                     "p1": { "hand": [COLLATERAL, FILLER], "field": [{ "def": LAR, "radiant": true }] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
                 }));
-                let targets = target(&s, LAR);
+                let targets = pick::card(&s, LAR);
                 s.play(COLLATERAL, json!({ "targets": targets }));
                 assert!(pings(&s).is_empty());
             }

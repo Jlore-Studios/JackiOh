@@ -134,6 +134,7 @@ export default function Zone(props: ZoneProps): ReactElement {
         <Backrow
           entry={backrow}
           side={side}
+          seat={seat.player}
           lane={lane}
           touchHold={touchHoldMode(view)}
           highlight={props.highlight}

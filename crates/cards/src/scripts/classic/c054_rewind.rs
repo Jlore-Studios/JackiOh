@@ -76,10 +76,6 @@ mod tests {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
     }
 
-    fn pick(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// The instance ids `legalActions` offers as Rewind's target.
     fn offered(s: &Scenario, player: PlayerId) -> Vec<String> {
         let rewind = s
@@ -121,7 +117,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [GARY] }, "p2": { "hand": [FILLER] } }));
                 let gary = s.card(GARY).clone();
-                s.play(REWIND, json!({ "targets": pick(&gary.id) }));
+                s.play(REWIND, json!({ "targets": pick::id(&gary.id) }));
                 let stats = s.stats(&gary);
                 // Five coins, one point each, split between attack and health.
                 assert_eq!(stats.attack + stats.max_health, 1 + 1 + 5);
@@ -133,7 +129,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "graveyard": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 1);
                 s.expect_in_zone(MR_TOKEN, "graveyard");
             }
@@ -150,9 +146,9 @@ mod tests {
                     panic!("two Rewinds should be in hand");
                 };
                 let gary = s.card(GARY).id.clone();
-                s.play(&first, json!({ "targets": pick(&gary) }));
+                s.play(&first, json!({ "targets": pick::id(&gary) }));
                 let duplicating = s.card(DUPLICATING).id.clone();
-                s.play(&second, json!({ "targets": pick(&duplicating) }));
+                s.play(&second, json!({ "targets": pick::id(&duplicating) }));
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "buffed" || event["type"] == "summoned"));
                 assert_eq!(units(&s, P1), vec![None, None, None, None, None]);
             }
@@ -165,7 +161,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [VANILLA, DUPLICATING, MENACE] },
                 }));
                 let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&bigot) }));
+                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["playerId"], "p1");
                 let selections: Vec<Value> = pending["options"]
@@ -190,7 +186,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(cards_played_this_turn(s.state(), P1), 1);
                 let played: Vec<Value> = s
                     .events()
@@ -237,8 +233,8 @@ mod tests {
                 );
                 let sorcerer = s.card(SORCERER).id.clone();
                 let bigot = s.card(BIGOT).id.clone();
-                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick(&sorcerer) })));
-                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick(&bigot) })));
+                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&sorcerer) })));
+                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&bigot) })));
                 s.expect_in_zone(REWIND, "hand");
             }
 
@@ -251,7 +247,7 @@ mod tests {
                 }));
                 assert_eq!(offered(&s, P1), Vec::<String>::new());
                 let gary = s.card(GARY).id.clone();
-                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick(&gary) })));
+                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&gary) })));
             }
 
             #[test]
@@ -259,7 +255,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [BIGOT] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
                 let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&bigot) }));
+                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
                 let pending = s.state().pending.clone();
                 assert!(pending.is_some());
                 let thawed = round_trip(s.state());
@@ -267,7 +263,7 @@ mod tests {
                 let answer: Action = json_as(json!({
                     "type": "answer",
                     "choiceId": pending.as_ref().map(|choice| choice.id.clone()).unwrap_or_default(),
-                    "selection": pick(&s.card(MENACE).id),
+                    "selection": pick::id(&s.card(MENACE).id),
                     "playerId": "p1",
                     "nonce": "rewind-roundtrip",
                 }));
@@ -290,7 +286,7 @@ mod tests {
                 assert!(!changes(&s, REWIND, TuneDirection::Degrade).contains(&json!("number")));
                 step_param(s.card_mut(REWIND), "repeats", 1);
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 1);
             }
         }
@@ -306,7 +302,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MR_TOKEN] },
                 }));
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 2);
                 assert_eq!(tokens_of(&s, P2), 0);
             }
@@ -323,7 +319,7 @@ mod tests {
                     BTreeSet::from([s.card(GARY).id.clone(), s.card(MR_TOKEN).id.clone()]),
                 );
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 2);
             }
 
@@ -335,7 +331,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 let sorcerer = s.card(SORCERER).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&sorcerer) }));
+                s.play(REWIND, json!({ "targets": pick::id(&sorcerer) }));
                 assert_eq!(js(&s.state().pending)["playerId"], "p1");
                 let menace = s.card(MENACE).id.clone();
                 s.answer(json!(menace));
@@ -353,7 +349,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 let sorcerer = s.card(SORCERER).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&sorcerer) }));
+                s.play(REWIND, json!({ "targets": pick::id(&sorcerer) }));
                 let menace = s.card(MENACE).id.clone();
                 s.answer(json!(menace));
                 let pending = s.state().pending.clone();
@@ -393,7 +389,7 @@ mod tests {
                 assert!(changes(&s, REWIND, TuneDirection::Degrade).contains(&json!("number")));
                 step_param(s.card_mut(REWIND), "repeats", -1);
                 let mr_token = s.card(MR_TOKEN).id.clone();
-                s.play(REWIND, json!({ "targets": pick(&mr_token) }));
+                s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 1);
             }
         }

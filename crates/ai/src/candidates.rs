@@ -308,14 +308,14 @@ fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: 
     4
 }
 
-/// #1779: what an attack on a unit is worth when it kills its target at an even trade or better by the
-/// opponent model's static read (`trade_value`: the target's worth, less the attacker's when it dies
-/// too), else `None`. Each attacker's best one goes just after the winning trades (`in_move_order`).
-/// Its screen, 400 games of improve-dev against the parent (`496b5cd87`), read 199-201, edge -0.005
-/// (-0.034 to 0.024).
+/// #1779: what an attack on a unit is worth when it kills its target, or with Cleave a neighbour
+/// (#1821), at an even trade or better by the opponent model's static read (`trade_value`: the
+/// target's worth, less the attacker's when it dies too), else `None`. Each attacker's best one goes
+/// just after the winning trades (`in_move_order`). Its screen, 400 games of improve-dev against the
+/// parent (`496b5cd87`), read 199-201, edge -0.005 (-0.034 to 0.024).
 fn even_trade(state: &GameState, attacker_id: &str, target_id: &str) -> Option<f64> {
     let trade = trade_value(state, find_instance(state, attacker_id)?, target_id);
-    (trade.kills && trade.value >= 0.0).then_some(trade.value)
+    ((trade.kills || trade.splash_kills) && trade.value >= 0.0).then_some(trade.value)
 }
 
 /// Tier 2's actions: a play, Heroic Power's power (R43) and any card's Activate ability (B3.2, R384).
@@ -776,8 +776,8 @@ pub fn root_candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBo
 }
 
 /// The candidates `actions` in move order: hero attacks, winning trades, even trades (each attacker's
-/// best, #1779), plays round-robin, answers, Trades of Tradable hand cards (R1838000), other attacks,
-/// position switches, endTurn.
+/// best, #1779), plays round-robin, answers, Trades of Tradable hand cards (R1838000), buys and sales at
+/// the Marketplace (R1853004), other attacks, position switches, endTurn.
 fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();
@@ -786,6 +786,9 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
     // R1838000: a hand card into the deck for a draw. The search tries it on its determinized worlds,
     // whose libraries are resampled (R185), so the card it would draw never steers it.
     let mut hand_trades: Vec<ActionBody> = Vec::new();
+    // R1853004: a buy or a sale at the Marketplace, for Credits and no mana. A purchase of the opponent's
+    // is hidden from the seat (`observe::redact`), so it never steers the decision.
+    let mut market_deals: Vec<ActionBody> = Vec::new();
     // Tier 4, each with `even_trade`'s value.
     let mut late_attacks: Vec<(ActionBody, Option<f64>)> = Vec::new();
     let mut switches: Vec<ActionBody> = Vec::new();
@@ -812,6 +815,7 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
             }
             ActionBody::Answer { .. } => answers.push(action),
             ActionBody::Trade { .. } => hand_trades.push(action),
+            ActionBody::MarketBuy { .. } | ActionBody::MarketSell { .. } => market_deals.push(action),
             ActionBody::EndTurn => ends.push(action),
             _ => switches.push(action),
         }
@@ -840,6 +844,7 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
     out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
     out.extend(hand_trades);
+    out.extend(market_deals);
     out.extend(other_attacks.into_iter().map(|(_, action)| action));
     out.extend(switches);
     out.extend(ends);
@@ -859,4 +864,52 @@ pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
         && active_units_of(state, unit.controller.opponent())
             .into_iter()
             .any(|enemy| kills_and_survives(state, enemy, unit))
+}
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::{Scenario, Value, json, scenario};
+
+    use super::*;
+
+    /// Classic #73 Nurse Cleaver, a 3/6 with Rush, Cleave and Lifesteal.
+    const CLEAVER: &str = "classic-073";
+    /// #67 Zoomerbin Oomen, a 1/2.
+    const OOMEN: &str = "core-067";
+    /// #53 Reno, a 4/6.
+    const RENO: &str = "core-053";
+
+    /// p1's Nurse Cleaver facing p2's `field`.
+    fn facing(field: Value) -> Scenario {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "p1": { "field": [CLEAVER] },
+            "p2": { "field": field },
+        }))
+    }
+
+    #[test]
+    fn a_cleave_attack_whose_only_kills_are_its_splash_is_an_even_trade() {
+        // The 3 leaves Reno at 3 and its 4 back leaves the Cleaver at 2, but the splash of 3 kills
+        // both Oomens beside it.
+        let s = facing(json!([
+            { "def": OOMEN, "lane": 1 },
+            { "def": RENO, "lane": 2 },
+            { "def": OOMEN, "lane": 3 },
+        ]));
+        let (cleaver, reno) = (s.card(CLEAVER), s.card(RENO));
+        let trade = trade_value(s.state(), cleaver, &reno.id);
+        assert!(!trade.kills && trade.splash_kills);
+        assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id), Some(trade.value));
+    }
+
+    #[test]
+    fn a_cleave_attack_that_kills_nothing_is_no_even_trade() {
+        // The same hit on Reno with no neighbour to splash: a chip worth more than 0, and no kill.
+        let s = facing(json!([{ "def": RENO, "lane": 2 }]));
+        let (cleaver, reno) = (s.card(CLEAVER), s.card(RENO));
+        let trade = trade_value(s.state(), cleaver, &reno.id);
+        assert!(!trade.kills && !trade.splash_kills && trade.value > 0.0);
+        assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id), None);
+    }
 }

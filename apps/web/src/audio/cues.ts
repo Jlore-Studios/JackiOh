@@ -691,6 +691,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   resourceDiscarded: { sfx: "draw", cues: () => [sfx("draw")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.
   marketCreditsChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  // R1853003: a card bought at the Marketplace arrives as a card drawn does, and a Resource sold
+  // clicks as a counter does; neither sound names a card, so both seats hear the same (R203).
+  marketBought: { sfx: "draw", cues: () => [sfx("draw")] },
+  marketSold: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   // R1852000: a dead piece's copy docks into its owner's Dormant Starship, which grows by it (the
   // `fused` before it plays the fuse itself).
   starshipFused: { sfx: "buff", cues: () => [sfx("buff")] },
@@ -703,6 +707,15 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   voteCast: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
+  // R1847001: a starscape travel sweeps one node on.
+  starscapeTravelled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R1850003: a permanent held beneath a card leaves the board as an exiled card does.
+  held: { sfx: "poof", cues: () => [sfx("poof")] },
+
+  // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
+  // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
+  boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */
