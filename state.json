@@ -2222,9 +2222,12 @@
         "sha": "c8fce509515de4d473e534b4eaa3e1362b352957"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T05:06:46Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1954,
       "kind": "review",
       "pending_request": false,
