@@ -471,6 +471,7 @@
     "1849": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-26T01:51:48Z",
         "family": "claude",
@@ -488,13 +489,15 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
+      "pr": 1961,
       "provider": "claude-1",
+      "question": "",
       "round_tier": "strong",
       "run_id": "40257240434",
       "started_at": "2026-10-26T02:03:50Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1850": {
       "action": "build",
