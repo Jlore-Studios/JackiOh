@@ -1844,21 +1844,27 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "apps/web/src/game/animations.fx.test.ts",
+            "apps/web/src/game/animations.test.ts",
+            "apps/web/src/wire/generated/GameEvent.ts",
+            "apps/web/src/wire/generated/GameEventType.ts",
+            "crates/cards/luau/jackioh.luau",
+            "crates/engine/src/effects/tray.rs",
+            "crates/engine/src/wire/events.rs",
+            "spec/10-engine-guide.md"
           ],
-          "from": "fe2d1e32c58e6d2c7969e787c97d84a7a767186c",
-          "main": "bab4ac25453f2c9d52beae9c0cbb911b2294ff06"
+          "from": "944246a74a7e82f89434bd543c35684f5c31b070",
+          "main": "9543ef3aafeb14dc07c0b38e021222163475b593"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40308008005",
+            "run": "40315748206",
             "tier": "strong"
           }
         ],
-        "sha": "944246a74a7e82f89434bd543c35684f5c31b070",
+        "sha": "60436696eb8d172c0e55a575a14c16bc0d216d25",
         "tiers": {
           "claude": "strong"
         }
