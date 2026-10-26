@@ -2223,11 +2223,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-26T13:41:01Z",
+        "at": "2026-10-26T14:18:51Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Line 5 of the easy rule fails and I can tell: it needs database migration 0062, so it is hard by definition, not a judgment call."
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "a database migration plus engine, server and web work across ~35 files: the hard rule's migration and cross-crate design lines both hold"
       },
       "failures": 0,
       "forced": false,
