@@ -1,10 +1,11 @@
 // The language button (#711, R711000): the top bar's control beside the settings gear, and the
 // board's, in the same corner. It shows the current language's short name ("EN", "中文") and one
 // click switches to the next of LOCALES, live: the store notifies and the screen redraws in it.
+// It stays only until the device has settled on its language (R1916000); settings' Language row is always there.
 
 import type { ReactElement } from "react";
 
-import { LOCALES, nextLocale, setLocale, t, useLocale } from "./i18n.ts";
+import { LOCALES, nextLocale, setLocale, t, useLocale, useLocaleSettled } from "./i18n.ts";
 import "./language.css";
 
 export type LanguageButtonProps = {
@@ -12,8 +13,10 @@ export type LanguageButtonProps = {
   placement: "game" | "nav";
 };
 
-export default function LanguageButton({ placement }: LanguageButtonProps): ReactElement {
+export default function LanguageButton({ placement }: LanguageButtonProps): ReactElement | null {
   const locale = useLocale();
+  const settled = useLocaleSettled();
+  if (settled) return null;
   const next = nextLocale(locale);
   return (
     <button
