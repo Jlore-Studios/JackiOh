@@ -56,7 +56,9 @@
   margin-left: auto;
 }
 
-.screen-nav__extra + .settings-gear {
+.screen-nav__extra + .settings-gear,
+/* Settled (R1916000): the language button is gone, so the gear follows the friends button. */
+.screen-nav .friends-button + .settings-gear {
   margin-left: 0;
 }
 
