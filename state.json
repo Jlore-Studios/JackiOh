@@ -3100,6 +3100,7 @@
     "2026": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-10-26T21:49:27Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -3108,6 +3109,7 @@
       "interruptions": 0,
       "issue": 2010,
       "kind": "review",
+      "merged": false,
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-26T21:39:37Z",
