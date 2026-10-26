@@ -51,8 +51,8 @@ describe("B33 B34 co-op rooms", () => {
     expect(result).toEqual({ code: "HJK234" });
   });
 
-  it("B33 createDuosRoom sends a random-deck room as {difficulty, random: true}, untouched", async () => {
-    const body = { difficulty: "easy" as const, random: true, leanNewest: true };
+  it("B33 R2031000 createDuosRoom sends a random-deck room as {difficulty, random: true, leanSet}, untouched", async () => {
+    const body = { difficulty: "easy" as const, random: true, leanSet: "Classic" as const };
     const { call } = await sent(() => createDuosRoom(body), { status: 201, body: { code: "MNP567" } });
     expect(call.body).toEqual(body);
   });

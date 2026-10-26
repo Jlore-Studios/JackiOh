@@ -23,6 +23,7 @@ export const duosTestid = {
 
   // The panel's own: the deck choice, the lean, the open room's controls, its status and refusals.
   coopDeck: "coop-deck",
+  /** R2031000: beside the Random deck only, "More cards from" (R924000), a select. */
   coopLeanNewest: "coop-lean-newest",
   coopCancel: "coop-cancel",
   coopInviteFriend: "coop-invite-friend",

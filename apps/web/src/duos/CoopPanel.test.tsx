@@ -3,11 +3,15 @@
 // friend by sending them the code in chat, joins a room by code, and takes both players to
 // `/duos/:matchId` once the guest has joined: the guest from the join's answer, the host once the
 // server says the room has its match. A refusal (B33: full, own room, no such room) is shown in the
-// server's words and moves nobody.
+// server's words and moves nobody. R2031000: the Random deck offers "More cards from" on the
+// device's online pick, sent as `leanSet` on the create and the join.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LEAN_NEWEST } from "@jackioh/shared";
+
+import { PLAY_LEAN_SET_KEY, leanLabel, readPlayLean } from "../game/LeanNewest.tsx";
 import type { Friend } from "../net/social.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CoopPanel } from "./CoopPanel.tsx";
@@ -359,6 +363,57 @@ describe("B60 the deck choice", () => {
     }, SLOW);
     expect(reads).toBe(2);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("R2031000 the Random deck's more cards from", () => {
+  it("R2031000 the picker is the Random deck's alone and starts on the device's online pick", async () => {
+    window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    const picker = screen.getByTestId<HTMLSelectElement>("coop-lean-newest");
+    expect(picker.value).toBe("Classic");
+    expect(picker.closest("label")).toHaveTextContent(leanLabel());
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    fireEvent.change(screen.getByTestId("coop-deck"), { target: { value: "d-aggro" } });
+    expect(screen.queryByTestId("coop-lean-newest")).toBeNull();
+  });
+
+  it("R2031000 with a pick the create sends leanSet, and the device keeps the pick", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    const picker = screen.getByTestId<HTMLSelectElement>("coop-lean-newest");
+    expect(picker.value).toBe("");
+    fireEvent.change(picker, { target: { value: LEAN_NEWEST } });
+    expect(readPlayLean()).toBe(LEAN_NEWEST);
+    await createRoom(server);
+    expect(await created(server)).toEqual({ difficulty: "easy", random: true, leanSet: LEAN_NEWEST });
+  });
+
+  it("R2031000 with none picked the create sends no lean at all", async () => {
+    window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    fireEvent.change(screen.getByTestId("coop-lean-newest"), { target: { value: "" } });
+    expect(readPlayLean()).toBeNull();
+    await createRoom(server);
+    expect(await created(server)).toEqual({ difficulty: "easy", random: true });
+  });
+
+  it("R2031000 a join on the Random deck sends the pick as leanSet", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    fireEvent.change(screen.getByTestId("coop-lean-newest"), { target: { value: "Classic" } });
+    await join(OTHER_CODE);
+    await waitFor(() => {
+      expect(server.to("POST", `/api/duos/rooms/${OTHER_CODE}/join`)).toHaveLength(1);
+    }, SLOW);
+    expect(must(server.to("POST", `/api/duos/rooms/${OTHER_CODE}/join`)[0], "the join").body).toEqual({
+      random: true,
+      leanSet: "Classic",
+    });
   });
 });
 

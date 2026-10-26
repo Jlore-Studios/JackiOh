@@ -5,11 +5,15 @@
 // challenge.
 //
 // SPEC S8 names no test id for the toast, so its buttons are found by their role and name, or by
-// the ids #1831 gave its Accept, deck picker and lobby link.
+// the ids #1831 gave its Accept, deck picker and lobby link. R2031000: an All Random challenge's
+// toast offers "More cards from" on the device's online pick, and Accept joins with it.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LEAN_NEWEST } from "@jackioh/shared";
+
+import { PLAY_LEAN_SET_KEY, readPlayLean } from "../game/LeanNewest.tsx";
 import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
@@ -418,6 +422,72 @@ describe("B57 the challenge toast", () => {
       } finally {
         release();
       }
+    },
+    TEST_MS,
+  );
+});
+
+describe("R2031000 an All Random challenge's more cards from", () => {
+  it(
+    "R2031000 the toast starts on the device's online pick, and Accept joins with the pick as leanSet",
+    async () => {
+      window.localStorage.setItem(PLAY_LEAN_SET_KEY, LEAN_NEWEST);
+      signIn("tok-toast");
+      const server = serve({ incoming: [{ ...INCOMING, mode: "random" }], outgoing: [] });
+      render(<ChallengeToast />);
+      const picker = await screen.findByTestId<HTMLSelectElement>(challengeToastTestid.lean, undefined, SOON);
+      expect(picker.value).toBe(LEAN_NEWEST);
+      fireEvent.change(picker, { target: { value: "Classic" } });
+      expect(readPlayLean()).toBe("Classic");
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "random", leanSet: "Classic" });
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R2031000 a challenge that arrives after the pick changed elsewhere starts on the new pick",
+    async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+      signIn("tok-toast");
+      const challenges: Challenges = { incoming: [], outgoing: [] };
+      const server = serve(challenges);
+      render(<ChallengeToast />);
+      await waitFor(() => {
+        expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
+      }, SOON);
+      expect(screen.queryByTestId(challengeToastTestid.lean)).toBeNull();
+
+      // The lobby (or any other door) writes the device's pick while the shell is up.
+      window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
+      challenges.incoming = [{ ...INCOMING, mode: "random" }];
+      await settle(SOCIAL_POLL_MS + 1);
+      await waitFor(() => {
+        expect(screen.getByTestId<HTMLSelectElement>(challengeToastTestid.lean).value).toBe("Classic");
+      }, SOON);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R2031000 a Best of 1 challenge offers no pick and joins with its deck alone",
+    async () => {
+      window.localStorage.setItem(PLAY_LEAN_SET_KEY, LEAN_NEWEST);
+      signIn("tok-toast");
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
+      render(<ChallengeToast />);
+      await screen.findByTestId(challengeToastTestid.deck, undefined, SOON);
+      expect(screen.queryByTestId(challengeToastTestid.lean)).toBeNull();
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo1", deckId: "d-aggro" });
     },
     TEST_MS,
   );
