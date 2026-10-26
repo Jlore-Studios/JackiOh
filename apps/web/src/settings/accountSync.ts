@@ -374,7 +374,9 @@ function attach(profileId: string, token: () => string, api: () => SettingsAccou
     mine.users -= 1;
     if (mine.users > 0 || shared !== mine) return;
     mine.stopTimer = setTimeout(() => {
-      if (shared !== mine || mine.users > 0) return;
+      // A page gone by then has no listener left to remove. Only a test file's jsdom can go first,
+      // and a stop would reach for its `window` (#1969).
+      if (typeof window === "undefined" || shared !== mine || mine.users > 0) return;
       mine.sync.stop();
       shared = null;
       activeSync = null;

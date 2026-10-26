@@ -3,17 +3,25 @@
 //! mulligans (§10.6, R265) or a game over each excuse what is still owed.
 //!
 //! And its I9 (#1719): each `turnStarted`, `turnEnded`, `turnAutoEnded`, `gameOver` and `manaChanged`
-//! an action announces says what the state it left holds. Each check is proved by tampering with one
-//! payload of a real action's events; the untampered events are clean.
+//! an action announces says what the state it left holds. Each `fatigue` is its seat's next fatigue draw
+//! at `FATIGUE_DAMAGE` of its count, and each seat's `fatigue_count` moves only with one (§2.4, R3, R315;
+//! #1902). Each check is proved by tampering with one payload of a real action's events; the untampered
+//! events are clean.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::new_game;
+use crate::rules::fixtures::catalog::vanilla_deck;
+use crate::rules::fixtures::harness::{new_game, setup_catalog};
 
 /// Past both mulligans, in the main phase of p1's first turn: nothing owed, no prompt open.
 fn playing(seed: &str) -> GameState {
-    let mut state = begin_game(&new_game(seed, None)).state;
+    past_mulligans(&new_game(seed, None))
+}
+
+/// `game` begun and both mulligans kept whole.
+fn past_mulligans(game: &GameState) -> GameState {
+    let mut state = begin_game(game).state;
     for player in [P1, P2] {
         let keep: Vec<String> = state.players[player]
             .hand
@@ -254,4 +262,184 @@ fn i9_a_game_over_that_is_not_the_result_is_flagged() {
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].starts_with("I9 wrong game over"), "{}", found[0]);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// I9: each fatigue draw is the seat's next, at its damage (#1902)
+// ---------------------------------------------------------------------------------------------
+
+/// p1 ends their first turn into p2's draw from an empty library, p2 having taken `taken` fatigue
+/// draws before it: one `fatigue` for p2's draw `taken + 1` (§2.4, R3, R315).
+fn fatigued(seed: &str, taken: i32) -> (GameState, ReduceResult) {
+    let mut start = playing(seed);
+    start.players[P2].library.clear();
+    start.players[P2].fatigue_count = taken;
+    let result = reduce(&start, &Action::new(ActionBody::EndTurn, P1, "i9-fatigue"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    (start, result)
+}
+
+fn fatigue(player: PlayerId, count: i32, amount: i32) -> GameEvent {
+    GameEvent::Fatigue {
+        player,
+        count,
+        amount,
+    }
+}
+
+#[test]
+fn i9_a_fatigue_draw_s_announcement_is_the_seat_s_next_count_at_its_damage() {
+    let (start, result) = fatigued("i9-fatigue", 2);
+    let announced: Vec<&GameEvent> = result
+        .events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Fatigue { .. }))
+        .collect();
+    assert_eq!(announced, vec![&fatigue(P2, 3, FATIGUE_DAMAGE(3))]);
+    assert_eq!(result.state.players[P2].fatigue_count, 3);
+    assert_eq!(
+        wire_findings(&start, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn i9_a_fatigue_that_repeats_or_skips_a_count_is_flagged() {
+    let (start, result) = fatigued("i9-fatigue-count", 2);
+    for count in [2, 4] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::Fatigue { player, .. } => Some(fatigue(*player, count, FATIGUE_DAMAGE(count))),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong fatigue count"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_fatigue_whose_amount_is_not_fatigue_damage_of_its_count_is_flagged() {
+    let (start, result) = fatigued("i9-fatigue-damage", 2);
+    for amount in [FATIGUE_DAMAGE(3) - 1, FATIGUE_DAMAGE(3) + 1] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::Fatigue { player, count, .. } => Some(fatigue(*player, *count, amount)),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong fatigue damage"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_fatigue_count_that_moves_without_its_event_or_an_event_without_its_move_is_flagged() {
+    let (start, result) = fatigued("i9-fatigue-silent", 2);
+    let unannounced: Vec<GameEvent> = result
+        .events
+        .iter()
+        .filter(|event| !matches!(event, GameEvent::Fatigue { .. }))
+        .cloned()
+        .collect();
+    let mut unmoved = result.state.clone();
+    unmoved.players[P2].fatigue_count -= 1;
+    let mut other = result.state.clone();
+    other.players[P1].fatigue_count += 1;
+    for (events, state, seat) in [
+        (&unannounced, &result.state, P2),
+        (&result.events, &unmoved, P2),
+        (&result.events, &other, P1),
+    ] {
+        let found = wire_findings(&start, events, state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with(&format!("I9 silent fatigue: {seat}")),
+            "{}",
+            found[0]
+        );
+    }
+}
+
+#[test]
+fn i9_a_hard_seat_s_two_fatigue_draws_in_one_turn_are_its_next_two() {
+    // R183: a Hard seat's start-of-turn draws are two fatigue steps from an empty library, N and then
+    // N + 1, inside p1's one endTurn (handicap.rs's fatigue case, through the reducer and the monitor).
+    setup_catalog();
+    let mut start = past_mulligans(&create_game(&CreateGameOptions {
+        seed: "i9-fatigue-hard".to_string(),
+        decks: (
+            vanilla_deck(DECK_SIZE, 1),
+            vanilla_deck(AI_DIFFICULTY.hard.deck_size, 1),
+        ),
+        handicaps: Some(PerPlayerOpt {
+            p1: None,
+            p2: Some(AI_DIFFICULTY.hard),
+        }),
+        ..CreateGameOptions::default()
+    }));
+    assert_eq!(start.active, P1);
+    start.players[P2].library.clear();
+    start.players[P2].fatigue_count = 2;
+    let result = reduce(&start, &Action::new(ActionBody::EndTurn, P1, "i9-fatigue-hard"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    let announced: Vec<&GameEvent> = result
+        .events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Fatigue { .. }))
+        .collect();
+    assert_eq!(
+        announced,
+        vec![
+            &fatigue(P2, 3, FATIGUE_DAMAGE(3)),
+            &fatigue(P2, 4, FATIGUE_DAMAGE(4))
+        ]
+    );
+    assert_eq!(result.state.players[P2].fatigue_count, 4);
+    assert_eq!(
+        wire_findings(&start, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn i9_each_seat_counts_its_own_fatigue_draws_on_from_the_last_within_one_action() {
+    // Two seats' fatigue draws in one action, interleaved, are each counted on from that seat's last.
+    let start = playing("i9-fatigue-two");
+    let mut state = start.clone();
+    state.players[P1].fatigue_count = 2;
+    state.players[P2].fatigue_count = 1;
+    let events = [
+        fatigue(P1, 1, FATIGUE_DAMAGE(1)),
+        fatigue(P2, 1, FATIGUE_DAMAGE(1)),
+        fatigue(P1, 2, FATIGUE_DAMAGE(2)),
+    ];
+    assert_eq!(wire_findings(&start, &events, &state), Vec::<String>::new());
+}
+
+#[test]
+fn i9_a_glitch_reset_starts_the_fatigue_count_again() {
+    let i9 = |found: Vec<String>| -> Vec<String> {
+        found
+            .into_iter()
+            .filter(|finding| finding.starts_with("I9"))
+            .collect()
+    };
+    let mut late = playing("i9-fatigue-reset");
+    late.players[P1].fatigue_count = 3;
+    let mut monitor = create_invariant_monitor(&late);
+    // R676: the reset deals a new game, whose counts start at 0.
+    let mut reset = playing("i9-fatigue-reset");
+    reset.resets = Some(late.resets.unwrap_or(0) + 1);
+    assert_eq!(reset.players[P1].fatigue_count, 0);
+    assert_eq!(i9(monitor.after(&[], &reset)), Vec::<String>::new());
+    // The new game's first fatigue draw is draw 1: the shadow started again.
+    let mut next = reset.clone();
+    next.players[P1].fatigue_count = 1;
+    assert_eq!(
+        i9(monitor.after(&[fatigue(P1, 1, FATIGUE_DAMAGE(1))], &next)),
+        Vec::<String>::new()
+    );
+    // The control: with `resets` unmoved, the same drop to 0 is a silent move.
+    let found = i9(create_invariant_monitor(&late).after(&[], &playing("i9-fatigue-reset")));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].starts_with("I9 silent fatigue"), "{}", found[0]);
 }
