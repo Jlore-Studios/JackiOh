@@ -6,6 +6,7 @@
 //! enemy Unit to take, and the Radiant face's Discover pauses its list for the AI to answer. Supply
 //! Drop's two modes come at both prices (R1181001), and Mountaintop Garden's dearer choice (R1181002)
 //! is weighed at the normal price plus the premium.
+//! Supply Drop's countdown is a payoff and a threat past the opponent's reply (#1995).
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -341,4 +342,154 @@ fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the
             assert_eq!(result.state.players[AI].hand.len(), 6, "played Radiant");
         }
     }
+}
+
+// M+ #4 Supply Drop: the countdown weighed past the reply (#1995)
+
+/// Core #77 Professor Curvature: a (2) 3/3 whose text is a Cry, so on the field a plain 3-health body.
+const CURVATURE: &str = "core-077";
+
+#[test]
+fn the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units() {
+    let _preview = preview_sets(&[SetName::MeditativePlus]);
+    register_cards();
+    let state = scenario(json!({
+        "seed": "ai-supply-drop-combat",
+        "p1": { "hand": [SUPPLY_DROP], "mana": 2, "library": library() },
+        "p2": {
+            "hand": [VANILLA],
+            "field": [
+                { "def": CURVATURE, "lane": 1 },
+                { "def": CURVATURE, "lane": 2 },
+                { "def": CURVATURE, "lane": 3 },
+            ],
+            "library": library(),
+        },
+    }))
+    .state()
+    .clone();
+    let drop = in_hand(&state, SUPPLY_DROP);
+    let decision = decide_at(&state, "ai-supply-drop-combat");
+    assert!(
+        matches!(&decision.action, ActionBody::Play { instance_id, modes: Some(modes), .. }
+            if *instance_id == drop && *modes == ["combat"]),
+        "{:?}",
+        decision.action
+    );
+}
+
+/// The AI's turn after p2 cast Supply Drop in Combat mode (the cast ends p2's turn: nothing is left
+/// to do), the AI's Curvature on its field (`on_field`) or in its hand. `left` is the countdown's
+/// badge count on the AI's turn, the p2 turn starts until it comes due; `None` drops the entry.
+fn facing_a_countdown(seed: &str, left: Option<i32>, on_field: bool) -> GameState {
+    register_cards();
+    let mut p1 = json!({ "library": library() });
+    if on_field {
+        p1["field"] = json!([{ "def": CURVATURE, "lane": 2 }]);
+    } else {
+        p1["hand"] = json!([CURVATURE]);
+    }
+    let mut s = scenario(json!({
+        "seed": seed,
+        "active": "p2",
+        "p1": p1,
+        "p2": { "hand": [SUPPLY_DROP], "mana": 2, "library": library() },
+    }));
+    s.play(SUPPLY_DROP, json!({ "modes": ["combat"] }));
+    let mut state = s.state().clone();
+    assert_eq!(state.active, AI);
+    let started = state.players[HUMAN].turns_started;
+    match left {
+        Some(left) => {
+            let entry = state
+                .delayed
+                .iter_mut()
+                .find(|entry| has_countdown(entry))
+                .expect("p2's countdown");
+            entry.due_own_turn = Some(started + left);
+        }
+        None => state.delayed.clear(),
+    }
+    state
+}
+
+/// `reply_score` of the AI ending its turn at `state`.
+fn scored_after_ending(state: &GameState) -> f64 {
+    let ended = act(state, AI, &ActionBody::EndTurn);
+    let counter = create_node_counter(AI_BUDGET.nodes, None);
+    reply_score(&ended, AI, state.turn, &counter, &hidden_card_ids(&ended, AI)).expect("a score")
+}
+
+/// Due in 1, the blast lands as the AI ends its turn, which the search priced before #1995; due in 2,
+/// it lands past the reply, right after the AI's next turn, and counts in full.
+#[test]
+fn an_enemy_countdown_scores_a_3_health_unit_on_the_field_below_one_held() {
+    let _preview = preview_sets(&[SetName::MeditativePlus]);
+    let field = scored_after_ending(&facing_a_countdown("ai-countdown-threat", None, true));
+    let hand = scored_after_ending(&facing_a_countdown("ai-countdown-threat", None, false));
+    assert!(
+        field > hand,
+        "with no countdown the unit is worth more on the field: {field} {hand}"
+    );
+    for left in [1, 2] {
+        let field = scored_after_ending(&facing_a_countdown("ai-countdown-threat", Some(left), true));
+        let hand = scored_after_ending(&facing_a_countdown("ai-countdown-threat", Some(left), false));
+        assert!(field < hand, "due in {left}: {field} {hand}");
+    }
+}
+
+#[test]
+fn the_ais_own_countdown_is_blended_in_at_its_share_per_turn_it_still_waits() {
+    let _preview = preview_sets(&[SetName::MeditativePlus]);
+    register_cards();
+    let mut s = scenario(json!({
+        "seed": "ai-countdown-payoff",
+        "p1": { "hand": [SUPPLY_DROP], "mana": 2, "library": library() },
+        "p2": {
+            "hand": [VANILLA],
+            "field": [{ "def": CURVATURE, "lane": 1 }, { "def": CURVATURE, "lane": 2 }],
+            "library": library(),
+        },
+    }));
+    let turn = s.state().turn;
+    s.play(SUPPLY_DROP, json!({ "modes": ["combat"] }));
+    let ended = s.state().clone();
+    assert_eq!(
+        ended.active, HUMAN,
+        "with nothing left to do, the cast ends the AI's turn"
+    );
+    let score = |end: &GameState| {
+        reply_score(
+            end,
+            AI,
+            turn,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            &hidden_card_ids(end, AI),
+        )
+        .expect("a score")
+    };
+    // Unarmed: no countdown, one reply. Fired: the countdown due at the AI's next turn start, inside
+    // the reply. Cast "in 3 turns", it still waits one turn past the next, so it counts at the share once.
+    let mut unarmed = ended.clone();
+    unarmed.delayed.clear();
+    let mut fired = ended.clone();
+    let next_start = fired.players[AI].turns_started + 1;
+    let entry = fired
+        .delayed
+        .iter_mut()
+        .find(|entry| has_countdown(entry))
+        .expect("the countdown");
+    entry.at = DelayedAt {
+        phase: Phase::Start,
+        player: AI,
+    };
+    entry.due_own_turn = Some(next_start);
+    let (first, second) = (score(&unarmed), score(&fired));
+    assert!(second > first, "the blast is a payoff: {second} {first}");
+    let blended = first + AI_REPLY.countdown_share * (second - first);
+    assert!(
+        (score(&ended) - blended).abs() < 1e-9,
+        "{} {blended}",
+        score(&ended)
+    );
 }

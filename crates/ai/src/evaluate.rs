@@ -307,9 +307,10 @@ pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
 /// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
 /// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
-/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff; the engine's own
-/// discard of a hand is priced on that hand (`discards_hand`). Nor does a delayed destroy's mark on a
-/// unit that is Indestructible now, which the destroy spares (Classic #20, R46).
+/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff, and a countdown is
+/// weighed past the reply instead (`reply_score`, #1995); the engine's own discard of a hand is priced
+/// on that hand (`discards_hand`). Nor does a delayed destroy's mark on a unit that is Indestructible
+/// now, which the destroy spares (Classic #20, R46).
 fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     let Some(marks) = &state.marks else {
         return 0.0;
