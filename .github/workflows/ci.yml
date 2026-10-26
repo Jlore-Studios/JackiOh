@@ -305,10 +305,28 @@ jobs:
             cache: luau
             test: -p jackioh-luau --features ts
             luau: true
+          # The tools' unit tests, the `jackioh` binary's (about 160 s of games on four threads),
+          # in three groups by test name, all on the `rust_tools_wasm` line and sharing one cache,
+          # as `ai slow` shares `ai`'s: in one group they took the job past seven minutes (#1929).
+          # A name filter matches anywhere in a test's path, so `tools, wasm` skips exactly what the
+          # other two run (`fuzz::` matches `duos_fuzz::` too). Those two run the binary alone, so a
+          # test elsewhere (an integration test, a doc test) whose path held `fuzz::`, `selfplay::`
+          # or `positions::` would run in no group: name none so. No card script is Luau, so only
+          # `tools, wasm`'s few custom-card tests reach the Luau host, and each group builds
+          # jackioh-luau at opt-level 0 (about 25 s less compiling; mlua stays at Cargo.toml's 2).
+          # Each `test` is quoted, or YAML reads a `:` before a space or a line's end as a key.
+          - group: tools fuzz
+            scope: tools_wasm
+            cache: tools-wasm
+            test: '-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- fuzz:: positions:: --skip duos_fuzz::'
+          - group: tools duos, selfplay
+            scope: tools_wasm
+            cache: tools-wasm
+            test: '-p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- duos_fuzz:: selfplay::'
           - group: tools, wasm
             scope: tools_wasm
             cache: tools-wasm
-            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau
+            test: '--workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau --config profile.test.package.jackioh-luau.opt-level=0 -- --skip fuzz:: --skip selfplay:: --skip positions::'
     steps:
       # Anything but an exact `false` runs the group, so an empty line (a doubt) never skips it.
       - id: scope

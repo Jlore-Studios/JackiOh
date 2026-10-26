@@ -8,12 +8,13 @@
 //! summon (`replacements`), a Flicker (`effects/flicker`) and a Cloaked Unit's reveal (`alt_play`) —
 //! each of which calls `lock_on_arrival` right after the event that put it there, so the zone is
 //! Locked before its Cry. A control change, a board swap, a rotation, an animation, a Transform and a
-//! restored board move a card that is already on the field and are no arrival. Crater on a Spell or a
-//! Field Spell does nothing.
+//! restored board move a card that is already on the field and are no arrival. Crater on a Spell does
+//! nothing; a Field Spell with it Locks its backrow zone as it enters, through the same calls
+//! (R1850006).
 
 use crate::script::EngineSink;
-use crate::state::{CardInstance, find_instance};
-use crate::wire::{CardType, GameEvent, KeywordKind, Row};
+use crate::state::{CardInstance, GameState, find_instance};
+use crate::wire::{CardType, GameEvent, KeywordKind, Row, Zone};
 use crate::zones::{ZoneSlot, is_locked, lock_zone, slot_of};
 
 /// Lock one zone, reported as every Lock is (`locked`); a zone Locked already stays as it is.
@@ -31,11 +32,20 @@ fn lock(sink: &mut EngineSink<'_>, slot: ZoneSlot) {
 
 /// R783010: the card of this id, standing in a unit zone with Crater (read through the layers, §10.4),
 /// Locks that zone. Called as it arrives on the field, before its Cry. A Flying Unit standing in a
-/// backrow zone Locks that one (R1081000).
+/// backrow zone Locks that one (R1081000), and so does a face-up Field Spell entering a backrow zone
+/// (R1850006).
 pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
     let Some(card) = find_instance(sink.state, id) else {
         return;
     };
+    if field_spell_in_backrow(sink.state, card) {
+        if crate::layers::unit_has(sink.state, card, KeywordKind::Crater)
+            && let Some(at) = slot_of(sink.state, card)
+        {
+            lock(sink, at);
+        }
+        return;
+    }
     if !crate::zones::in_units_row_or_standing(sink.state, card) {
         return;
     }
@@ -46,6 +56,19 @@ pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
         return;
     };
     lock(sink, at);
+}
+
+/// R1850006: a face-up Field Spell in a backrow zone of its own, not a Unit standing there.
+fn field_spell_in_backrow(state: &GameState, card: &CardInstance) -> bool {
+    matches!(
+        card.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && !crate::zones::stands_in_backrow(state, card)
+        && !crate::preview::is_face_down(state, card)
+        && crate::faces::card_type_of(state, card) == CardType::FieldSpell
 }
 
 /// R783011: a Trap or Field Trap with Crater Locks the backrow zone it stood in as it is revealed —

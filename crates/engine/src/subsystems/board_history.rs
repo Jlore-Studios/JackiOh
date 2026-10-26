@@ -269,6 +269,18 @@ pub fn restore_board(
             }
         }
     }
+    // R1850003: a card held beneath another is moved from there as from anywhere else (R419), so it is
+    // held no longer, and its holder's leaving later summons nothing.
+    if let Some(held) = sink.state.held.as_mut() {
+        held.retain(|entry| {
+            !placements
+                .iter()
+                .any(|placement| placement.card.id == entry.card.id)
+        });
+        if held.is_empty() {
+            sink.state.held = None;
+        }
+    }
     for placement in &placements {
         let Some(live) = &placement.live else {
             continue;

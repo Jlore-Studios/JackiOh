@@ -162,6 +162,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Steal mana crystals",
     // R1849001: Stinkyscape's, rules only until the set's cards print it as a term.
     "Evolve",
+    // R1844000, R1844001, R1844002: Stinkyscape's M10, which no card prints until the set's cards do.
+    "Autopilot aura",
+    "Pareto hint",
+    "Do something helpful",
     // R1845000, R1845002: engine primitives no shipped card prints yet; the Stinkyscape cards that print
     // them (#123, #77) give them glossary entries.
     "Hidden Nerf",
@@ -169,6 +173,14 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1847000: the starscape map, which no card prints until Stinkyscape #148 is built (S23); that
     // card may move it into the glossary.
     "Starscape map",
+    // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
+    // them (#1836), which may make a term of one (Duo, Squad).
+    "Copy a Unit's text",
+    "Duo / Squad",
+    "Exile aura",
+    "Hold beneath",
+    "Cast it for yourself",
+    "Radiant at N keywords",
   ],
 };
 
