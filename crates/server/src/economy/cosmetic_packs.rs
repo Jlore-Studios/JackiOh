@@ -40,13 +40,13 @@ use crate::config::{
     PACK_FLOORED_SLOT,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
-use crate::economy::packs::{BarsSettled, bar_before, delta_of, grant_counter, grant_unlocked, settle_bars};
+use crate::economy::packs::{BarsSettled, bar_before, grant_counter, grant_unlocked, settle_bars};
 use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
 use crate::economy::tiers::{TierOdds, cosmetic_odds, cosmetic_tier};
-use crate::economy::tokens::{BarState, choice_of, conflict, held};
+use crate::economy::tokens::{BarState, choice_of, conflict, cosmetic_bar_points, held};
 
 // A cosmetic pack holds a slot, and a full Chase Shard bar holds a pack.
 const _: () = assert!(COSMETIC_PACK_SLOTS >= 1);
@@ -99,8 +99,8 @@ pub enum CosmeticSlotGrant {
         card_id: Option<String>,
         card_granted: bool,
     },
-    /// A spent slot: nothing at all was left to own, so it pays both token bars' points per
-    /// duplicate (R1306001).
+    /// A spent slot: nothing at all was left to own, so it pays both token bars the points of the
+    /// cosmetic rarity it rolled (R1306001, R1953000).
     Bars,
 }
 
@@ -345,7 +345,7 @@ fn no_pack_held() -> ApiError {
 /// opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool) and writes every
 /// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the
 /// cosmetics, the Chase Shard bar's one unless it is full (R1306002), and both token bars' points
-/// for the spent slots, each bar that reached its size paying its tokens with the overflow kept
+/// for the spent slots, each its rolled cosmetic rarity's (R1953000), each bar that reached its size paying its tokens with the overflow kept
 /// (R1305000, R1306001). Every economy row's `ref` is the opening's log; the collection's rows
 /// have no `ref` and share the opening's `at`. No pack held is 409. Every refusal and failure
 /// returns before the commit, so it writes nothing.
@@ -446,14 +446,17 @@ pub async fn open_cosmetic_pack(
         shard += 1;
     }
 
-    let spent = delta_of(
-        opening
-            .slots
-            .iter()
-            .filter(|slot| slot.grant == CosmeticSlotGrant::Bars)
-            .count(),
-    )?;
-    let bars = settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
+    // A spent slot's points are its rolled cosmetic rarity's (R1306001, R1953000).
+    let slot_points: Vec<i64> = opening
+        .slots
+        .iter()
+        .map(|slot| match slot.grant {
+            CosmeticSlotGrant::Bars => cosmetic_bar_points(slot.rarity),
+            CosmeticSlotGrant::Cosmetic { .. } => 0,
+        })
+        .collect();
+    let spent = slot_points.iter().filter(|points| **points > 0).count();
+    let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
 
     tx.commit().await?;
     tracing::info!(

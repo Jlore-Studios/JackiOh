@@ -144,12 +144,12 @@ pub fn level_span_xp(total_xp: i64) -> i64 {
 mod tests {
     use super::*;
     use crate::config::{
-        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE,
-        CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE,
-        COSMETIC_TOKEN_BAR_TARGET_PACKS, TIER_WEIGHT_TOTAL,
+        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_SIZE,
+        COSMETIC_TOKEN_BAR_TARGET_PACKS, PACK_FLOOR_RARITY, TIER_WEIGHT_TOTAL,
     };
     use crate::economy::roll::slot_tiers;
-    use crate::economy::tiers::RATE_TOLERANCE;
+    use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds};
+    use crate::economy::tokens::card_bar_points;
     use jackioh_engine::rng::Rng;
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 
@@ -391,21 +391,35 @@ mod tests {
         }
     }
 
-    /// The bar sizes as the simulation's collection assumes it (SPEC §14.5): a complete
-    /// collection, every slot a spent duplicate, which is the stated approximation of §14.5's
-    /// mostly-owned collection. Then each bar fills exactly at its target pack count: points
-    /// per duplicate times slots per pack times target packs equals the bar's size.
+    /// The bar sizes as §14.5 states them (R1953000): on a complete collection, every slot a spent
+    /// duplicate, which is the stated approximation of §14.5's mostly-owned collection, and before
+    /// pity, which only ever lifts a slot's rarity, a pack's mean points are its slots' rarity odds
+    /// (`card_odds`, the fallback included) weighted by each rarity's points: `PACK_SLOTS - 1`
+    /// slots at 1.61 and the floored one at 2.21, so 8.65. Each bar then fills once every its
+    /// target packs on average: its size over that mean, rounded.
     #[test]
-    fn bar_points_fill_bars_at_target_packs() {
-        assert_eq!(
-            CARD_TOKEN_BAR_POINTS_PER_DUPLICATE * PACK_SLOTS as i64 * CARD_TOKEN_BAR_TARGET_PACKS as i64,
-            CARD_TOKEN_BAR_SIZE
-        );
-        assert_eq!(
-            COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE
-                * PACK_SLOTS as i64
-                * COSMETIC_TOKEN_BAR_TARGET_PACKS as i64,
-            COSMETIC_TOKEN_BAR_SIZE
-        );
+    fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
+        let mean = |odds: TierOdds| {
+            [
+                (odds.common, Common),
+                (odds.rare, Rare),
+                (odds.epic, Epic),
+                (odds.legendary, Legendary),
+                (odds.mythic, Mythic),
+            ]
+            .into_iter()
+            .map(|(share, rarity)| share * card_bar_points(rarity) as f64)
+            .sum::<f64>()
+        };
+        let per_pack =
+            mean(card_odds(Some(PACK_FLOOR_RARITY))) + (PACK_SLOTS - 1) as f64 * mean(card_odds(None));
+        assert!((per_pack - 8.65).abs() < 1e-9, "{per_pack} points a pack");
+        for (size, target) in [
+            (CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS),
+            (COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_TARGET_PACKS),
+        ] {
+            let packs = size as f64 / per_pack;
+            assert_eq!(packs.round() as usize, target, "{size} points fill in {packs} packs");
+        }
     }
 }
