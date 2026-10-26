@@ -149,10 +149,6 @@ mod tests {
         }))
     }
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        json!([{ "pick": "instance", "instanceId": s.unit(player, lane).map(|unit| unit.id).unwrap_or_default() }])
-    }
-
     fn p1_hero() -> Value {
         json!([{ "pick": "hero", "player": "p1" }])
     }
@@ -191,7 +187,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), false);
                 let menace = s.unit(P1, 1).map(|unit| unit.id).unwrap_or_default();
                 let hit_job = s.card(HIT_JOB).clone();
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
 
                 s.expect_in_zone(&hit_job, "graveyard");
@@ -207,7 +203,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), false);
                 let turn = s.state().players.p2.turn_log.cards_played;
                 let game = s.state().counters.played;
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.state().players.p2.turn_log.cards_played, turn);
                 assert_eq!(s.state().counters.played, game);
@@ -217,7 +213,7 @@ mod tests {
             #[test]
             fn r448_a_countered_spell_makes_no_echo_repeats() {
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(count(s.last_events(), "cardResolved"), 0);
                 assert_eq!(count(s.last_events(), "destroyed"), 0);
@@ -227,7 +223,7 @@ mod tests {
             fn r33_hidden_until_it_fires_countered_is_public_to_both_players() {
                 let mut s = setup(json!({}), json!({}), false);
                 assert!(!view_text(&s, P2).contains(REFUSAL));
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 for player in [P1, P2] {
                     let countered: Vec<Value> = js(&s.view(player))["events"]
@@ -248,7 +244,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), false);
                 s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
                 s.expect_health(P1, 26);
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert!(s.unit(P2, 1).is_none());
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
@@ -283,7 +279,7 @@ mod tests {
                     "p1": { "hand": [HIT_JOB, VANILLA], "field": [MENACE], "backrow": [refusal(false, 2)], "library": [VANILLA], "mana": 8 },
                     "p2": { "hand": [VANILLA], "library": [VANILLA] },
                 }));
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert!(s.unit(P1, 1).is_none());
                 assert_eq!(count(s.events(), "countered"), 0);
@@ -295,7 +291,7 @@ mod tests {
                 let flame = s.card(FLAME).id.clone();
                 s.play(SCEPTER, json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": flame }] }));
                 s.activate(SCEPTER, json!({}));
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.answer(targets);
                 assert_eq!(count(s.events(), "countered"), 1);
                 s.expect_in_zone(REFUSAL, "graveyard");
@@ -309,7 +305,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
                 s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P2));
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.answer(targets);
                 assert_eq!(count(s.events(), "countered"), 0);
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
@@ -320,7 +316,7 @@ mod tests {
             #[test]
             fn r448_with_two_refusals_the_first_cancels_the_spell_and_the_second_stays_set() {
                 let mut s = setup(json!({ "backrow": [refusal(false, 2), refusal(false, 3)] }), json!({}), false);
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(count(s.events(), "countered"), 1);
                 assert_eq!(count(s.events(), "trapFired"), 1);
@@ -374,7 +370,7 @@ mod tests {
             #[test]
             fn r448_still_counters_a_spell_that_targets_one_of_your_units() {
                 let mut s = setup(json!({}), json!({}), true);
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(MENACE.to_string()));
                 assert_eq!(count(s.events(), "countered"), 1);
@@ -384,7 +380,7 @@ mod tests {
             fn a_spell_aimed_only_at_their_own_side_leaves_it_set_and_nobody_draws() {
                 let mut s = setup(json!({}), json!({}), true);
                 let hand = s.hand(P1).len();
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(count(s.events(), "countered"), 0);
                 assert_eq!(s.hand(P1).len(), hand);

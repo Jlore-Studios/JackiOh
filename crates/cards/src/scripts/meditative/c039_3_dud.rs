@@ -46,13 +46,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const FILLER: &str = "core-008";
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {player:?} lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     #[test]
     fn declares_one_target_and_runs_one_script_on_both_faces() {
         // One target is declared: played with none, the play is refused.
@@ -79,7 +72,7 @@ mod tests {
         let prey_id = s.unit(P2, 2).expect("p2's menace").id.clone();
 
         // A declared enemy unit takes one hit of 2.
-        s.play(ID, json!({ "targets": at(&s, P2, 2) }));
+        s.play(ID, json!({ "targets": pick::unit_at(&s, P2, 2) }));
         s.expect_stats(&prey_id, json!({ "attack": 9, "health": 7 }));
 
         // …and so does the enemy hero.
@@ -96,7 +89,7 @@ mod tests {
         }));
         let prey_id = s.unit(P2, 2).expect("p2's menace").id.clone();
 
-        s.play(ID, json!({ "targets": at(&s, P2, 2) }));
+        s.play(ID, json!({ "targets": pick::unit_at(&s, P2, 2) }));
 
         s.expect_stats(&prey_id, json!({ "attack": 9, "health": 5 }));
     }

@@ -63,16 +63,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// A unit that must be on the board, so a test can name it in `tributes`.
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(unit) => unit,
-            None => panic!("no unit in {player}'s lane {lane}"),
-        }
-    }
-
     fn ids_at(s: &Scenario, player: PlayerId, lanes: &[i32]) -> Vec<String> {
-        lanes.iter().map(|&lane| unit_at(s, player, lane).id).collect()
+        lanes.iter().map(|&lane| s.unit_at(player, lane).id).collect()
     }
 
     /// Three of an inert 4/6 unit: keywords none, a Cry that never fires because it is placed, not played.
@@ -143,7 +135,7 @@ mod tests {
         fn r90_the_same_unit_cannot_pay_twice() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": fodder() } }));
-            let one = unit_at(&s, P1, 1).id;
+            let one = s.unit_at(P1, 1).id;
 
             s.expect_refused_with(
                 |s| s.play("core-055", json!({ "tributes": [one, one, one] })),
@@ -172,8 +164,8 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
             }));
-            let sheep = unit_at(&s, P1, 1).id;
-            let other = unit_at(&s, P1, 2).id;
+            let sheep = s.unit_at(P1, 1).id;
+            let other = s.unit_at(P1, 2).id;
 
             s.play("core-055", json!({ "tributes": [sheep, other] }));
 
@@ -236,7 +228,7 @@ mod tests {
                 "p2": { "field": [{ "def": "core-066", "lane": 1 }] },
             }));
             let mine = ids_at(&s, P1, &[1, 2]);
-            let theirs = unit_at(&s, P2, 1).id;
+            let theirs = s.unit_at(P2, 1).id;
             let mut tributes = mine.clone();
             tributes.push(theirs.clone());
 
@@ -274,7 +266,7 @@ mod tests {
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-t-sheep", "lane": 1 }] },
             }));
-            let tributes = [unit_at(&s, P1, 1).id, unit_at(&s, P2, 1).id];
+            let tributes = [s.unit_at(P1, 1).id, s.unit_at(P2, 1).id];
 
             s.play("core-055", json!({ "tributes": tributes }));
 
@@ -295,7 +287,7 @@ mod tests {
 
             let turn = s.state().turn;
             let mut tributes = ids_at(&s, P1, &[1, 2]);
-            tributes.push(unit_at(&s, P2, 1).id);
+            tributes.push(s.unit_at(P2, 1).id);
             s.play("core-055", json!({ "zone": 3, "tributes": tributes }));
 
             let golem = s.card("core-055").clone();
@@ -326,7 +318,7 @@ mod tests {
             let golem = s.card("core-055").id.clone();
             crate::give_flying(&mut s, &golem);
             let mut tributes = ids_at(&s, P1, &[1, 2]);
-            tributes.push(unit_at(&s, P2, 1).id);
+            tributes.push(s.unit_at(P2, 1).id);
 
             s.play("core-055", json!({ "row": "backrow", "zone": 3, "tributes": tributes }));
 

@@ -43,15 +43,6 @@ fn setup(opts: Value) -> Scenario {
     scenario(opts)
 }
 
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
-    g.unit(player, lane)
-        .unwrap_or_else(|| panic!("setup: {player} should hold a unit in lane {lane}"))
-}
-
 fn count(events: &[GameEvent], type_: GameEventType) -> usize {
     events.iter().filter(|event| event.event_type() == type_).count()
 }
@@ -158,7 +149,7 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
                 "library": LIBRARY,
             },
         }));
-        let timmy = unit_at(&g, "p2", 1);
+        let timmy = g.unit_at("p2", 1);
 
         g.play(BIG_FELINOR, json!({ "zone": 1 }));
 
@@ -179,11 +170,11 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
                 "library": LIBRARY,
             },
         }));
-        let victim = unit_at(&g, "p2", 3);
+        let victim = g.unit_at("p2", 3);
 
         // 3 damage kills the lane-3 Mr. Vanilla as the spell ends, so its zone is empty by step 7:
         // "summon 2 Rush Tokens" takes that one zone and the second summon fails in silence (§3.2).
-        g.play(LUNAR_ECLIPSE, json!({ "targets": at(&victim) }));
+        g.play(LUNAR_ECLIPSE, json!({ "targets": pick::instance(&victim) }));
 
         g.expect_in_zone(&victim, "graveyard");
         assert_eq!(count(g.events(), GameEventType::TrapFired), 1);
@@ -263,13 +254,13 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
             "p1": { "hand": [BIGOT, STOCKPILE], "backrow": [{ "def": SUPPRESSIVE_AURA, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
         }));
-        let prey = unit_at(&g, "p2", 1);
+        let prey = g.unit_at("p2", 1);
         let bigot = g.card(BIGOT).clone();
 
         // Bigot is 6/1 printed, 4/-1 under the aura. No trap answered it and nothing took it off the
         // field at step 4, so step 5 resolves its Cry (R118: the Cry is lost only where a trap has taken
         // the card off the field), and the check after the play collects it (§4.5).
-        g.play(BIGOT, json!({ "targets": at(&prey) }));
+        g.play(BIGOT, json!({ "targets": pick::instance(&prey) }));
         g.expect_in_zone(&prey, "graveyard");
         g.expect_in_zone(&bigot, "graveyard");
     }
@@ -507,9 +498,9 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
             json!({}),
         );
         face_down_trap(s.state_mut(), "edge-r7-wipe", PlayerId::P2, 5);
-        let target = unit_at(&s, "p2", 1);
+        let target = s.unit_at("p2", 1);
 
-        s.play(PLASTIC_SURGERY, json!({ "targets": at(&target) }));
+        s.play(PLASTIC_SURGERY, json!({ "targets": pick::instance(&target) }));
 
         // The trap fired at step 4 and its check collected the Pointmaster (§4.5, R17).
         assert!(s.last_events().iter().any(
@@ -554,9 +545,9 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
             json!({}),
         );
         face_down_trap(s.state_mut(), "edge-r7-wipe", PlayerId::P2, 5);
-        let target = unit_at(&s, "p2", 1);
+        let target = s.unit_at("p2", 1);
 
-        s.play(COLLATERAL_DAMAGE, json!({ "targets": at(&target) }));
+        s.play(COLLATERAL_DAMAGE, json!({ "targets": pick::instance(&target) }));
 
         // The trap's wipe put the Pointmaster in its owner's graveyard (§4.5, R17), and there it stays:
         // the permanent the spell named is gone, so only the library half of its text resolves.

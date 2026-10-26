@@ -8,12 +8,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{dealt_game, trap_pool};
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
+use super::support::{dealt_game, det, trap_pool};
 
 /// TS's module constant `FIELD_SPELL`: the first Core Field Spell, in `query`'s order.
 fn field_spell() -> String {

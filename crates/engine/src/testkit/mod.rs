@@ -16,6 +16,9 @@
 //! `golden.rs` is the golden replay's pure half (§13.3, #1641), which the engine's `tests/golden.rs` and
 //! `cargo jackioh golden check` share. It is not globbed in: a caller names `golden::<item>`.
 //!
+//! `pick.rs` holds the one-instance pick builders and `scenario.rs` the panicking `Scenario::unit_at`
+//! (#1826); like `golden`, callers name the module (`pick::<builder>`).
+//!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.
 
@@ -23,6 +26,7 @@ pub mod duos_scenario;
 pub mod glow;
 pub mod golden;
 pub mod invariants;
+pub mod pick;
 pub mod preview;
 pub mod scenario;
 pub mod seams;
