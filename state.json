@@ -899,10 +899,8 @@
       "taken_asks": []
     },
     "1903": {
-      "action": "plan",
-      "asks": [
-        "c:6398740340"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-25T14:59:14Z",
         "difficulty": "medium",
@@ -928,14 +926,16 @@
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "claude-3",
       "queued_at": "2026-10-25T14:15:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40203440382",
-      "started_at": "2026-10-25T14:41:42Z",
+      "run_id": "pending:ffd32e38-1793000556",
+      "started_at": "2026-10-26T07:43:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6398740340"
+      ]
     },
     "1904": {
       "action": "build",
@@ -2449,9 +2449,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T07:42:26Z",
+    "at": "2026-10-26T07:43:14Z",
     "url": "",
-    "what": "build #1956 on claude-6"
+    "what": "build #1903 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-26T07:29:04Z",
