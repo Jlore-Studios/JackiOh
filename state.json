@@ -329,7 +329,9 @@
     "1834": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-25T22:30:40Z",
         "family": "claude",
@@ -339,7 +341,7 @@
         "reason": "`claude-7` stops mid-call: 5-hour usage is 51%, at or over its 50% cap outside its hours; it resets at 2026-10-26T00:00:00Z",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -80; git log --oneline -3\"}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- review pass 2 (opus): 3 blocking findings: (1) wardrobe re-rolls each aging -> ownership grows 1-(1-p)^k; (2) slot draw double-counts ownership; (3) cardP\u2026\n- Bash: {\"command\": \"sed -n 330,584p crates/server/src/bots/cosmetics.rs\"}\n- Bash: {\"command\": \"grep -n \\\"cosmetic\\\\|new_seed\\\\|seed\\\" crates/server/src/bots/pool.rs | head -60; grep -n \\\"pub struct BotRow\\\" -A30 crates/server/src/db/store.rs\"}\n- Bash: {\"command\": \"sed -n 60,200p crates/server/src/cli/cosmetics_fit.rs; grep -n \\\"BOT_COSMETIC\\\" -B2 -A12 crates/server/src/config.rs | sed -n 1,200p\"}\n- Bash: {\"command\": \"grep -n \\\"fn \\\\|chance\\\\|draw_wardrobe\\\\|draw_account\\\\|draw_slots\\\\|redraw(\\\" crates/server/tests/bots/cosmetics.rs | head -80; grep -n \\\"pub fn chance\\\" -A8 crates/engine/src/rng.rs 2>\u2026\n- Bash: {\"command\": \"sed -n 440,830p crates/server/tests/bots/cosmetics.rs\"}"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
