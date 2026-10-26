@@ -35,19 +35,7 @@ const FAUCI: &str = "core-091";
 const FIENDER: &str = "core-092";
 const LIBRARY: [&str; 10] = [VANILLA; 10];
 
-use super::scenario;
-
-/// The one-instance target list a play sends.
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
+use super::{fixture, in_hand, scenario};
 
 fn keywords_of(g: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
     g.stats(&card.id).keywords.iter().map(Keyword::kind).collect()
@@ -93,7 +81,7 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
             "p1": { "hand": [{ "def": HIT_JOB, "radiant": true }, CORPSE_EATER, HINDER], "library": LIBRARY },
             "p2": { "hand": [HINDER], "field": [{ "def": PILLOW, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "library": LIBRARY },
         }));
-        let vanilla = unit_at(&g, P2, 2);
+        let vanilla = g.unit_at(P2, 2);
         assert_eq!(vanilla.def_id, VANILLA);
         // Before: the Pillow's aura drains p2's Mr. Vanilla to 2 attack (§10.4 layer 5).
         assert_eq!(g.stats(&vanilla.id).attack, 2);
@@ -101,7 +89,7 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
 
         // Radiant Hit Job on the Vanilla also destroys the Pillow beside it: both are collected in one
         // pass and moved "all … at once" (§4.5 step 1).
-        g.play(HIT_JOB, json!({ "targets": at(&vanilla) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&vanilla) }));
         g.expect_in_zone(&vanilla.id, "graveyard");
 
         // R89: the event carries what the unit was as it died — with the Pillow still beside it.
@@ -120,13 +108,13 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
             "p1": { "hand": [{ "def": HIT_JOB, "radiant": true }, CORPSE_EATER, HINDER], "library": LIBRARY },
             "p2": { "hand": [HINDER], "field": [{ "def": BIG_FELINOR, "lane": 1 }, { "def": FIENDER, "lane": 2 }], "library": LIBRARY },
         }));
-        let fiender = unit_at(&g, P2, 2);
+        let fiender = g.unit_at(P2, 2);
         assert_eq!(fiender.def_id, FIENDER);
         // 5/7 printed, plus Big Felinor's 3/10.
         assert_eq!(g.stats(&fiender.id).attack, 8);
         assert_eq!(g.stats(&fiender.id).max_health, 17);
 
-        g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         g.expect_in_zone(&fiender.id, "graveyard");
         let felinor = g.card(BIG_FELINOR).id.clone();
         g.expect_in_zone(&felinor, "graveyard");
@@ -205,15 +193,15 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         // and every keyword added to it moves the roll: search for a seed where the Fauci's is Reborn.
         let seed = seed_where("surgery-reborn-fauci", |seed| {
             let (mut g, fauci) = setup(seed);
-            g.play(SURGERY, json!({ "targets": at(&fauci) }));
+            g.play(SURGERY, json!({ "targets": pick::instance(&fauci) }));
             keywords_of(&g, &fauci).contains(&KeywordKind::Reborn)
         });
         let (mut g, fauci) = setup(&seed);
-        g.play(SURGERY, json!({ "targets": at(&fauci) }));
+        g.play(SURGERY, json!({ "targets": pick::instance(&fauci) }));
         assert!(keywords_of(&g, &fauci).contains(&KeywordKind::Reborn));
 
         // A 4/9 with 5 damage: True Strike's 4 is lethal, and Reborn brings the same instance back.
-        g.play(TRUE_STRIKE, json!({ "targets": at(&fauci) }));
+        g.play(TRUE_STRIKE, json!({ "targets": pick::instance(&fauci) }));
         assert!(was_destroyed(g.events(), &fauci.id));
         g.expect_in_zone(&fauci.id, "field");
         assert_eq!(g.card(&fauci.id).reborn_spent, Some(true));
@@ -242,11 +230,11 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         // scenario's roll is not the Fauci's: search for a seed where the Gravedigger's is Reborn.
         let seed = seed_where("surgery-reborn-digger", |seed| {
             let (mut g, digger) = setup(seed);
-            g.play(SURGERY, json!({ "targets": at(&digger) }));
+            g.play(SURGERY, json!({ "targets": pick::instance(&digger) }));
             keywords_of(&g, &digger).contains(&KeywordKind::Reborn)
         });
         let (mut g, digger) = setup(&seed);
-        g.play(SURGERY, json!({ "targets": at(&digger) }));
+        g.play(SURGERY, json!({ "targets": pick::instance(&digger) }));
         assert!(keywords_of(&g, &digger).contains(&KeywordKind::Reborn));
         g.end_turn(); // p2's turn
         g.end_turn(); // p1's start of turn: Moths (lane 1) then Gravedigger (lane 2) are queued (R68)
@@ -287,8 +275,8 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
                 "library": LIBRARY,
             },
         }));
-        let fiender = unit_at(&g, P2, 1);
-        let felinor = unit_at(&g, P2, 2);
+        let fiender = g.unit_at(P2, 1);
+        let felinor = g.unit_at(P2, 2);
         if let Some(card) = g.state_mut().players.p2.units[0]
             .as_mut()
             .and_then(|pile| pile.first_mut())
@@ -337,39 +325,6 @@ fn must<T>(value: Option<T>, what: &str) -> T {
         Some(value) => value,
         None => panic!("missing: {what}"),
     }
-}
-
-/// A fixture card: a transient def in the match state and its script in the registry.
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
-    let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
-    let face = if type_ == CardType::Unit {
-        json!({ "attack": stats.attack, "health": stats.health, "keywords": [], "text": id })
-    } else {
-        json!({ "keywords": [], "text": id })
-    };
-    let def: CardDef = json_as(json!({
-        "id": id,
-        "index": id,
-        "name": id,
-        "set": "Core",
-        "type": type_,
-        "tags": [],
-        "rarity": "Common",
-        "token": false,
-        "cost": 0,
-        "base": face.clone(),
-        "radiant": face,
-    }));
-    s.state_mut().transient_defs.insert(id.to_string(), def);
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
 }
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
@@ -492,12 +447,6 @@ fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth,
         },
     );
     register_scripts(scripts);
-}
-
-fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
-    let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    s.state_mut().players[player].hand.push(card.clone());
-    card
 }
 
 fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {

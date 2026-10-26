@@ -67,10 +67,6 @@ mod tests {
         }))
     }
 
-    fn unit_at(s: &Scenario, player: PlayerId) -> Value {
-        json!([{ "pick": "instance", "instanceId": s.unit(player, 1).map(|unit| unit.id).unwrap_or_default() }])
-    }
-
     mod base {
         use super::*;
 
@@ -78,7 +74,7 @@ mod tests {
         fn an_enemy_unit_takes_6_damage() {
             crate::register_all();
             let mut s = boil(false, json!({}), json!({}));
-            let targets = unit_at(&s, P2);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOIL, json!({ "targets": targets }));
             s.expect_stats(MENACE, json!({ "health": 3 }));
         }
@@ -95,11 +91,11 @@ mod tests {
         fn your_own_unit_is_healed_6_never_past_its_max_health() {
             crate::register_all();
             let mut s = boil(false, json!({ "field": [{ "def": MENACE, "damage": 8 }] }), json!({ "field": [] }));
-            let targets = unit_at(&s, P1);
+            let targets = pick::unit_at(&s, P1, 1);
             s.play(BOIL, json!({ "targets": targets }));
             s.expect_stats(MENACE, json!({ "health": 7, "maxHealth": 9 }));
             let mut full = boil(false, json!({ "field": [{ "def": MENACE, "damage": 2 }] }), json!({ "field": [] }));
-            let targets = unit_at(&full, P1);
+            let targets = pick::unit_at(&full, P1, 1);
             full.play(BOIL, json!({ "targets": targets }));
             full.expect_stats(MENACE, json!({ "health": 9 }));
         }

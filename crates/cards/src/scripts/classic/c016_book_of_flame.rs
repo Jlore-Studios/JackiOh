@@ -54,13 +54,6 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const FILLER: &str = "core-005";
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {player:?} lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     /// Each `damage` event's `{ targetId, amount }`.
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.events()
@@ -102,7 +95,7 @@ mod tests {
         fn deals_4_to_an_enemy_unit_in_one_hit() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 5, "maxHealth": 9 }));
@@ -113,7 +106,7 @@ mod tests {
         fn deals_4_to_your_own_unit_either_side_is_legal() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "field": [MENACE] }, "p2": { "hand": [FILLER] } }));
 
-            let targets = at(&s, P1, 1);
+            let targets = pick::unit_at(&s, P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 5 }));
@@ -137,7 +130,7 @@ mod tests {
         fn sec4_4_the_hit_goes_through_the_pipeline_armor_7_takes_all_4() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [ARMORED] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(ARMORED, json!({ "health": 7 }));
@@ -167,7 +160,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [MENACE] },
             }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 1, "maxHealth": 9 }));

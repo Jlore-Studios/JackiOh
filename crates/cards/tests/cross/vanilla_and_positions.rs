@@ -27,17 +27,6 @@ const LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
 
 use super::scenario;
 
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match s.unit(player, lane) {
-        Some(card) => card,
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 fn offers_switch(s: &Scenario, card: &CardInstance) -> bool {
     let live = s.card(card);
     legal_actions(s.state(), live.controller)
@@ -71,8 +60,8 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
             "p2": { "hand": [HINDER], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
         }));
         let duelist = s.card(DUELIST).clone();
-        s.play(POSTDOC, json!({ "zone": 2, "targets": at(&duelist) }));
-        let copy = unit_at(&s, PlayerId::P1, 3);
+        s.play(POSTDOC, json!({ "zone": 2, "targets": pick::instance(&duelist) }));
+        let copy = s.unit_at(PlayerId::P1, 3);
         assert_eq!(copy.def_id, DUELIST);
         assert!(copy.vanilla);
 
@@ -99,8 +88,8 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
             "p2": { "hand": [HINDER], "library": LIBRARY },
         }));
         let pillow = s.card(PILLOW).clone();
-        s.play(POSTDOC, json!({ "zone": 2, "targets": at(&pillow) }));
-        let copy = unit_at(&s, PlayerId::P1, 3);
+        s.play(POSTDOC, json!({ "zone": 2, "targets": pick::instance(&pillow) }));
+        let copy = s.unit_at(PlayerId::P1, 3);
         assert_eq!(copy.def_id, PILLOW);
         assert!(copy.vanilla);
 
@@ -123,12 +112,12 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
             "p2": { "library": LIBRARY },
         }));
         let fauci = s.card(FAUCI).clone();
-        s.play(POSTDOC, json!({ "zone": 2, "targets": at(&fauci) }));
-        let copy = unit_at(&s, PlayerId::P1, 3);
+        s.play(POSTDOC, json!({ "zone": 2, "targets": pick::instance(&fauci) }));
+        let copy = s.unit_at(PlayerId::P1, 3);
         assert_eq!(copy.def_id, FAUCI);
         assert!(copy.vanilla);
 
-        s.play(TRUE_STRIKE, json!({ "targets": at(&copy) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&copy) }));
         assert_eq!(s.card(&copy).damage, 4);
         assert_eq!(s.card(&copy).counters.plague.unwrap_or(0), 0);
     }
@@ -145,13 +134,16 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
             "p2": { "library": LIBRARY },
         }));
         let original = s.card(RIGHT_HOUSE).clone();
-        s.play(POSTDOC, json!({ "zone": 2, "targets": at(&original) }));
-        let copy = unit_at(&s, PlayerId::P1, 3);
+        s.play(
+            POSTDOC,
+            json!({ "zone": 2, "targets": pick::instance(&original) }),
+        );
+        let copy = s.unit_at(PlayerId::P1, 3);
         assert_eq!(copy.def_id, RIGHT_HOUSE);
         assert!(copy.vanilla);
         assert!(copy.radiant);
 
-        s.play(TRUE_STRIKE, json!({ "targets": at(&copy) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&copy) }));
         s.expect_in_zone(&copy, "graveyard");
         // Nothing came back into the copy's lane or anywhere else: only the original stands.
         let right_houses: Vec<String> = s
@@ -179,7 +171,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
         }));
         let rock = s.card(ROCK).clone();
-        s.play(HIT_JOB, json!({ "targets": at(&rock) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
 
         // R46 still happened: on the field, in Attack Position, its Taunt suppressed for the turn.
         s.expect_in_zone(&rock, "field");
@@ -201,7 +193,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }], "library": LIBRARY },
         }));
         let rock = s.card(ROCK).clone();
-        s.play(HIT_JOB, json!({ "targets": at(&rock) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
 
         assert_eq!(s.card(&rock).position, Some(Position::Atk));
         assert!(s.last_events().contains(&GameEvent::PositionSwitched {
@@ -235,7 +227,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
         // #16 Hit Job: "Destroy target unit". R46: an Indestructible unit that would be destroyed
         // switches to Attack Position (it already is in it).
-        s.play(HIT_JOB, json!({ "targets": at(&rock) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
 
         s.expect_in_zone(&rock, "field");
         assert!(!kinds(&s.stats(&rock).keywords).contains(&"Taunt".to_string()));
@@ -258,7 +250,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         }));
         let rock = s.card(ROCK).clone();
         assert!(!kinds(&s.stats(&rock).keywords).contains(&"Taunt".to_string()));
-        s.play(HIT_JOB, json!({ "targets": at(&rock) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
         assert_eq!(
             last_of_type(&s, GameEventType::KeywordGranted),
             Vec::<GameEvent>::new()
@@ -327,8 +319,8 @@ mod r243_r115_a_vanilla_units_view_says_its_text_is_gone_s6_3_vanilla_s10_8 {
             "p2": { "hand": [HINDER], "library": LIBRARY },
         }));
         let fauci = s.card(FAUCI).clone();
-        s.play(POSTDOC, json!({ "zone": 2, "targets": at(&fauci) }));
-        let copy = unit_at(&s, PlayerId::P1, 3);
+        s.play(POSTDOC, json!({ "zone": 2, "targets": pick::instance(&fauci) }));
+        let copy = s.unit_at(PlayerId::P1, 3);
         assert_eq!(copy.def_id, FAUCI);
         assert!(copy.vanilla);
 

@@ -34,7 +34,7 @@ const MC_TECH: &str = "classic-040"; // Radiant: "Cry: … steal one of your cho
 const CHAOS_GOLEM: &str = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY: [&str; 5] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-use super::scenario;
+use super::{fixture, in_hand, scenario, targets_of, tributes_of};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
@@ -601,68 +601,12 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
 
 const EDGE_VANILLA: &str = "core-008";
 
-fn register_fixture_script(id: &str, script: Script) {
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
-
-/// A test-only card, registered the way the other hunt cases register theirs.
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script) {
-    let face = if type_ == CardType::Unit {
-        json!({ "attack": 2, "health": 2, "keywords": [], "text": id })
-    } else {
-        json!({ "keywords": [], "text": id })
-    };
-    let def: CardDef = json_as(json!({
-        "id": id,
-        "index": id,
-        "name": id,
-        "set": "Core",
-        "type": type_,
-        "tags": [],
-        "rarity": "Common",
-        "token": false,
-        "cost": 0,
-        "base": face.clone(),
-        "radiant": face,
-    }));
-    s.state_mut().transient_defs.insert(id.to_string(), def);
-    register_fixture_script(id, script);
-}
-
-fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
-    let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    s.state_mut().players[player].hand.push(card.clone());
-    card
-}
-
 /// The plays `legalActions` offers for `card`.
 fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(s.state(), player)
         .into_iter()
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
         .collect()
-}
-
-fn targets_of(play: &ActionBody) -> Vec<Selection> {
-    match play {
-        ActionBody::Play { targets, .. } => targets.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
-
-fn tributes_of(play: &ActionBody) -> Vec<String> {
-    match play {
-        ActionBody::Play { tributes, .. } => tributes.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
 }
 
 mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
@@ -688,6 +632,7 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
                 )],
                 ..Script::default()
             },
+            None,
         );
         let devourer = in_hand(&mut s, "edge-r8-devourer", PlayerId::P1);
         let a = must(s.unit(PlayerId::P1, 1), "p1's first unit");
@@ -783,6 +728,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
                 })),
                 ..Script::default()
             },
+            None,
         );
         let spell = in_hand(&mut s, "edge-r8-exile-two", PlayerId::P1);
         let a = must(s.unit(PlayerId::P2, 1), "p2's lane-1 unit");

@@ -81,10 +81,6 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    fn at(instance_id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": instance_id }])
-    }
-
     /// The `activate`/`activatePower` actions `legalActions` lists for `player` on that card, as JSON.
     fn listed(s: &Scenario, player: PlayerId, instance_id: &str) -> Vec<Value> {
         legal_actions(s.state(), player)
@@ -121,7 +117,7 @@ mod tests {
             fn r384_activating_deals_1_damage_to_the_target_the_action_declares_activated_is_public() {
                 let mut s = setup(false, &[], &[MENACE]);
                 let menace = s.card(MENACE).id.clone();
-                s.activate(PING, json!({ "targets": at(&menace) }));
+                s.activate(PING, json!({ "targets": pick::id(&menace) }));
                 s.expect_stats(MENACE, json!({ "health": 8 }));
                 let theirs: Vec<Value> = js(&s.view(P2))["events"]
                     .as_array()
@@ -147,7 +143,7 @@ mod tests {
                 s.expect_health(P1, 29);
                 s.end_turn().end_turn();
                 let menace = s.card(MENACE).id.clone();
-                s.activate(PING, json!({ "targets": at(&menace) }));
+                s.activate(PING, json!({ "targets": pick::id(&menace) }));
                 s.expect_stats(MENACE, json!({ "health": 8 }));
             }
 
@@ -155,7 +151,7 @@ mod tests {
             fn r346_the_hit_has_pierce_armor_7_takes_none_of_it() {
                 let mut s = setup(false, &[], &[ARMORED]);
                 let armored = s.card(ARMORED).id.clone();
-                s.activate(PING, json!({ "targets": at(&armored) }));
+                s.activate(PING, json!({ "targets": pick::id(&armored) }));
                 s.expect_stats(ARMORED, json!({ "health": 6 }));
             }
 
@@ -171,7 +167,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 let lar = s.card(LAR).id.clone();
-                s.play(HIT_JOB, json!({ "targets": at(&lar) }));
+                s.play(HIT_JOB, json!({ "targets": pick::id(&lar) }));
                 let ping = match s.unit(P1, 1) {
                     Some(ping) => ping,
                     None => panic!("no Ping"),
@@ -230,7 +226,7 @@ mod tests {
                 let ping = s.card(PING).id.clone();
                 assert!(listed(&s, P1, &ping).is_empty());
                 let target = s.unit(P1, 1).expect("Ping on the field").id;
-                s.play(HIT_JOB, json!({ "targets": at(&target) }));
+                s.play(HIT_JOB, json!({ "targets": pick::id(&target) }));
                 let back = s.unit(P1, 1);
                 assert_eq!(back.as_ref().map(|card| card.def_id.clone()), Some(PING.to_string()));
                 let back = back.expect("Ping back on the field");
@@ -258,7 +254,7 @@ mod tests {
                 let targets: Vec<String> =
                     listed(&s, P1, &s.card(PING).id).iter().map(|action| action["targets"].to_string()).collect();
                 assert!(targets.contains(&enemy_hero().to_string()));
-                assert!(targets.contains(&at(&s.card(MENACE).id).to_string()));
+                assert!(targets.contains(&pick::id(&s.card(MENACE).id).to_string()));
             }
 
             #[test]
@@ -310,7 +306,7 @@ mod tests {
             #[test]
             fn r346_the_radiant_hits_pierce_too() {
                 let mut s = setup(true, &[], &[ARMORED]);
-                let armored = at(&s.card(ARMORED).id);
+                let armored = pick::id(&s.card(ARMORED).id);
                 s.activate(PING, json!({ "targets": armored.clone() }))
                     .activate(PING, json!({ "targets": armored }));
                 s.expect_stats(ARMORED, json!({ "health": 5 }));

@@ -152,10 +152,6 @@ mod tests {
         }))
     }
 
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// Activate the card in that mode, with those targets.
     fn activate_punish<'a>(s: &'a mut Scenario, mode: &str, targets: Option<Value>) -> &'a mut Scenario {
         let mut options = json!({ "modes": [mode] });
@@ -239,7 +235,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [VANILLA] }), json!({ "field": [POINTMASTER] }), false);
                 let point = s.card(POINTMASTER).clone();
 
-                activate_punish(&mut s, DAMAGE, Some(at(&point)));
+                activate_punish(&mut s, DAMAGE, Some(pick::instance(&point)));
 
                 s.expect_in_zone(&point, "graveyard");
                 let punish_id = s.card(PUNISH).id.clone();
@@ -329,7 +325,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({ "field": [VANILLA] }), false);
                 let vanilla = s.card(VANILLA).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&vanilla)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&vanilla)));
                 s.end_turn();
                 s.expect_in_zone(&vanilla, "field");
                 s.end_turn();
@@ -356,7 +352,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [VANILLA] }), json!({}), false);
                 let vanilla = s.card(VANILLA).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&vanilla)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&vanilla)));
                 to_next_turn(&mut s);
 
                 s.expect_in_zone(&vanilla, "graveyard");
@@ -368,7 +364,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({ "field": [VANILLA] }), false);
                 let vanilla = s.card(VANILLA).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&vanilla)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&vanilla)));
 
                 assert!(s.events().iter().any(|event| matches!(
                     event,
@@ -402,7 +398,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({ "field": [ROCK] }), false);
                 let rock = s.card(ROCK).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&rock)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&rock)));
                 to_next_turn(&mut s);
 
                 s.expect_in_zone(&rock, "field");
@@ -414,9 +410,9 @@ mod tests {
                 let mut s = setup(json!({ "hand": [CUBE, FILLER], "field": [{ "def": BIG, "radiant": true }] }), json!({}), false);
                 let big = s.card(BIG).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&big)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&big)));
                 // The Cube's Cry tributes the 7/7, whose Reborn brings it back: a new stay (R83).
-                s.play(CUBE, json!({ "targets": at(&big) }));
+                s.play(CUBE, json!({ "targets": pick::instance(&big) }));
                 s.expect_in_zone(&big, "field");
                 to_next_turn(&mut s);
 
@@ -431,9 +427,9 @@ mod tests {
                 let vanilla = s.card(VANILLA).clone();
                 let card = s.card(PUNISH).clone();
 
-                activate_punish(&mut s, DOOM, Some(at(&vanilla)));
+                activate_punish(&mut s, DOOM, Some(pick::instance(&vanilla)));
                 s.end_turn();
-                s.play(COLLATERAL, json!({ "targets": at(&card) }));
+                s.play(COLLATERAL, json!({ "targets": pick::instance(&card) }));
                 s.expect_in_zone(&card, "exile");
                 s.end_turn();
 
@@ -537,7 +533,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "field": [VANILLA] }), true);
                 let vanilla = s.card(VANILLA).clone();
-                s.expect_refused(|s| activate_punish(s, DOOM_ALL, Some(at(&vanilla))));
+                s.expect_refused(|s| activate_punish(s, DOOM_ALL, Some(pick::instance(&vanilla))));
             }
 
             #[test]
@@ -582,7 +578,7 @@ mod tests {
                     assert_eq!(marks_in(&s, seat, &menace.id), json!([]));
                 }
                 // One that leaves the field is not one it will destroy, and loses its mark.
-                s.play(COLLATERAL, json!({ "targets": at(&pointmaster) }));
+                s.play(COLLATERAL, json!({ "targets": pick::instance(&pointmaster) }));
                 s.expect_in_zone(&pointmaster, "exile");
                 assert_eq!(marked(s.last_events(), false), vec![pointmaster.id.clone()]);
                 assert_eq!(marked(s.last_events(), true), Vec::<String>::new());

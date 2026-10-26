@@ -74,10 +74,6 @@ mod tests {
 
     use crate::js;
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        s.unit(player, lane).unwrap_or_else(|| panic!("no unit in {player:?}'s lane {lane}"))
-    }
-
     /// The card's position as a JSON literal ("ATK" | "DEF").
     fn position(s: &Scenario, card: &CardInstance) -> Value {
         js(&s.stats(card).position)
@@ -102,11 +98,11 @@ mod tests {
                 }));
                 s.play(FEELER, json!({}));
                 for lane in [1, 2] {
-                    let unit = unit_at(&s, P2, lane);
+                    let unit = s.unit_at(P2, lane);
                     assert_eq!(position(&s, &unit), "DEF");
                     assert!(!s.card(&unit).exertion.switched);
                 }
-                assert_eq!(position(&s, &unit_at(&s, P1, 1)), "ATK");
+                assert_eq!(position(&s, &s.unit_at(P1, 1)), "ATK");
                 assert_eq!(switches(&s), 2);
             }
 
@@ -118,8 +114,8 @@ mod tests {
                     "p2": with_spare(json!({ "field": [{ "def": VANILLA, "position": "DEF" }, TIMMY] })),
                 }));
                 s.play(FEELER, json!({}));
-                assert_eq!(position(&s, &unit_at(&s, P2, 1)), "DEF");
-                assert_eq!(position(&s, &unit_at(&s, P2, 2)), "DEF");
+                assert_eq!(position(&s, &s.unit_at(P2, 1)), "DEF");
+                assert_eq!(position(&s, &s.unit_at(P2, 2)), "DEF");
                 let switched: Vec<String> = s
                     .last_events()
                     .iter()
@@ -128,7 +124,7 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                assert_eq!(switched, vec![unit_at(&s, P2, 2).id]);
+                assert_eq!(switched, vec![s.unit_at(P2, 2).id]);
             }
 
             #[test]
@@ -139,8 +135,8 @@ mod tests {
                     "p2": with_spare(json!({ "field": [PILLOW, VANILLA] })),
                 }));
                 s.play(FEELER, json!({}));
-                assert_eq!(position(&s, &unit_at(&s, P2, 1)), "ATK");
-                assert_eq!(position(&s, &unit_at(&s, P2, 2)), "DEF");
+                assert_eq!(position(&s, &s.unit_at(P2, 1)), "ATK");
+                assert_eq!(position(&s, &s.unit_at(P2, 2)), "DEF");
             }
 
             #[test]
@@ -192,7 +188,7 @@ mod tests {
                 let dormant = beneath_at(s.state(), slot).first().cloned().expect("a card beneath the Fiender");
                 assert_eq!(dormant.def_id, VANILLA);
                 s.play(FEELER, json!({}));
-                assert_eq!(position(&s, &unit_at(&s, P2, 1)), "DEF");
+                assert_eq!(position(&s, &s.unit_at(P2, 1)), "DEF");
                 assert_eq!(js(&s.card(&dormant).position), "ATK");
                 assert_eq!(switches(&s), 1);
             }
@@ -222,9 +218,9 @@ mod tests {
                 }));
                 s.play(FEELER, json!({}));
                 s.expect_stats(FEELER, json!({ "attack": 4, "health": 8 }));
-                assert_eq!(position(&s, &unit_at(&s, P2, 1)), "DEF");
-                assert_eq!(position(&s, &unit_at(&s, P2, 2)), "ATK");
-                let foe = unit_at(&s, P2, 1);
+                assert_eq!(position(&s, &s.unit_at(P2, 1)), "DEF");
+                assert_eq!(position(&s, &s.unit_at(P2, 2)), "ATK");
+                let foe = s.unit_at(P2, 1);
                 s.attack(FEELER, &foe);
                 // 4 into the Vanilla's Defense Armor 1: Pierce lands all 4.
                 s.expect_in_zone(&foe, "graveyard");

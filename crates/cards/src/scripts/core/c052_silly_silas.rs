@@ -89,12 +89,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        s.unit(player, lane)
-            .unwrap_or_else(|| panic!("no unit in {}'s lane {lane}", player.as_str()))
-            .clone()
-    }
-
     fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         s.backrow(player, lane)
             .unwrap_or_else(|| panic!("no backrow card in {}'s lane {lane}", player.as_str()))
@@ -138,15 +132,15 @@ mod tests {
                     "backrow": [{ "def": "core-071", "lane": 1 }],
                 },
             }));
-            let reno = unit_at(&s, P1, 5).id;
-            let felinor = unit_at(&s, P2, 1).id;
+            let reno = s.unit_at(P1, 5).id;
+            let felinor = s.unit_at(P2, 1).id;
             let farm = backrow_at(&s, P1, 1).id;
             let stimmy = backrow_at(&s, P2, 1).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
             // The Engine cell's "Silas rotates too": he is on the field for his own Cry (§10.5 step 4).
-            assert_eq!(unit_at(&s, P1, 2).def_id, "core-052");
+            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             // The unit ring: p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
             assert_eq!(slot_of(s.card(&reno)), "p2 units 5");
             assert_eq!(slot_of(s.card(&felinor)), "p1 units 1");
@@ -163,8 +157,8 @@ mod tests {
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5 }] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 1 }] },
             }));
-            let reno = unit_at(&s, P1, 5).id;
-            let felinor = unit_at(&s, P2, 1).id;
+            let reno = s.unit_at(P1, 5).id;
+            let felinor = s.unit_at(P2, 1).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
@@ -182,7 +176,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2, "position": "DEF" }] },
             }));
-            let reno = unit_at(&s, P1, 5).id;
+            let reno = s.unit_at(P1, 5).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
@@ -223,14 +217,14 @@ mod tests {
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
-            let reno = unit_at(&s, P1, 1).id;
-            let felinor = unit_at(&s, P2, 5).id;
+            let reno = s.unit_at(P1, 1).id;
+            let felinor = s.unit_at(P2, 5).id;
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
 
             // One step back along the ring: p1 lane 3 → p1 lane 2, p1 lane 1 → p2 lane 1 (crossing),
             // p2 lane 5 → p1 lane 5 (crossing the other way).
-            assert_eq!(unit_at(&s, P1, 2).def_id, "core-052");
+            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             assert_eq!(slot_of(s.card(&reno)), "p2 units 1");
             assert_eq!(s.card(&reno).controller, P2);
             assert_eq!(slot_of(s.card(&felinor)), "p1 units 5");
@@ -244,7 +238,7 @@ mod tests {
                 "p1": { "hand": ["core-052"] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
-            let felinor = unit_at(&s, P2, 5).id;
+            let felinor = s.unit_at(P2, 5).id;
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
 
@@ -262,19 +256,19 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2, "position": "DEF" }] },
             }));
-            let reno = unit_at(&s, P1, 5).id;
+            let reno = s.unit_at(P1, 5).id;
             // §3.2 Lock, the destination of p1 lane 5 under a rightward rotation.
             lock_unit_zone(&mut s, P2, 5);
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
             // Patch v0.3.10 (#831): the Lock no longer stops the rotation; it bounced the card before.
-            assert_eq!(unit_at(&s, P2, 5).id, reno);
+            assert_eq!(s.unit_at(P2, 5).id, reno);
             assert_eq!(s.card(&reno).controller, P2);
             assert_eq!(s.card(&reno).owner, P1);
             assert_eq!(s.card(&reno).damage, 2);
             s.expect_events(json!(["rotated", "controlChanged"]));
-            assert_eq!(unit_at(&s, P1, 2).def_id, "core-052");
+            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
         }
 
         #[test]
@@ -283,13 +277,13 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
-            let felinor = unit_at(&s, P1, 5).id;
+            let felinor = s.unit_at(P1, 5).id;
             lock_unit_zone(&mut s, P2, 5);
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
             s.expect_in_zone(&felinor, "field");
-            assert_eq!(unit_at(&s, P2, 5).id, felinor);
+            assert_eq!(s.unit_at(P2, 5).id, felinor);
         }
     }
 
@@ -307,8 +301,8 @@ mod tests {
             // HARNESS GAP (reported): `SideSetup.hand` takes no `{ def, radiant }` form, and a radiant Cry
             // only fires if the card is PLAYED, so the flag goes on the hand instance (§5.2).
             s.card_mut("core-052").radiant = true;
-            let reno = unit_at(&s, P1, 5).id;
-            let menace = unit_at(&s, P2, 1).id;
+            let reno = s.unit_at(P1, 5).id;
+            let menace = s.unit_at(P2, 1).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
@@ -320,7 +314,7 @@ mod tests {
             // Midrange Menace moves from p2's lane 1 to p1's — to Silas's controller, not to the opponent —
             // so the radiant clause leaves it alone and the base clause holds: it crosses and changes
             // control, still owned by p2 and at its printed cost (§8 Conventions, R14, R171).
-            assert_eq!(unit_at(&s, P1, 1).id, menace);
+            assert_eq!(s.unit_at(P1, 1).id, menace);
             assert_eq!(s.card(&menace).controller, P1);
             assert_eq!(s.card(&menace).owner, P2);
             assert!(s.card(&menace).cost_override.is_none());
@@ -346,8 +340,8 @@ mod tests {
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
             // Neither card crosses, so the radiant clause never applies and both simply step one lane.
-            assert_eq!(unit_at(&s, P1, 2).def_id, "core-052");
-            assert_eq!(unit_at(&s, P1, 4).def_id, "core-053");
+            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
+            assert_eq!(s.unit_at(P1, 4).def_id, "core-053");
             s.expect_stats("core-052", json!({ "attack": 8, "maxHealth": 8 }));
         }
 
@@ -358,7 +352,7 @@ mod tests {
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
             s.card_mut("core-052").radiant = true;
-            let felinor = unit_at(&s, P1, 5).id;
+            let felinor = s.unit_at(P1, 5).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
@@ -372,7 +366,7 @@ mod tests {
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 1 }] },
             }));
             s.card_mut("core-052").radiant = true;
-            let reno = unit_at(&s, P1, 1).id;
+            let reno = s.unit_at(P1, 1).id;
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
 

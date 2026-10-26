@@ -72,10 +72,6 @@ mod tests {
         scenario(opts)
     }
 
-    fn pick(instance_id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": instance_id }])
-    }
-
     fn view_json(s: &Scenario, seat: &str) -> Value {
         js(&s.view(seat))
     }
@@ -113,7 +109,7 @@ mod tests {
                 .backrow("p2", 3)
                 .expect("setup should have put Mana Well in p2's backrow lane 3");
 
-            s.play(MAGIC_JAMMED, json!({ "targets": pick(&target.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) }));
 
             s.expect_in_zone(&target, "graveyard");
             assert!(s.backrow("p2", 3).is_none());
@@ -133,7 +129,7 @@ mod tests {
             let unit = s.unit("p2", 1).expect("a Unit in lane 1").id;
             crate::stand_in_backrow(&mut s, &unit, 3);
 
-            s.expect_refused(|s| s.play(MAGIC_JAMMED, json!({ "targets": pick(&unit) })));
+            s.expect_refused(|s| s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&unit) })));
 
             s.expect_in_zone(unit.as_str(), "field");
         }
@@ -150,7 +146,7 @@ mod tests {
             }));
             let target = s.backrow("p2", 3).expect("Mana Well in p2's backrow lane 3");
 
-            s.play(MAGIC_JAMMED, json!({ "targets": pick(&target.id) })).end_turn();
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) })).end_turn();
 
             // p2 is active now and holds a Field Spell; lane 3 is the zone Magic Jammed locked.
             s.expect_refused_with(|s| s.play(MANA_WELL, json!({ "zone": 3 })), "not open");
@@ -167,7 +163,7 @@ mod tests {
             }));
             let target = s.backrow("p2", 2).expect("Sheepish in p2's backrow lane 2");
 
-            s.play(MAGIC_JAMMED, json!({ "targets": pick(&target.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) }));
 
             // R15: the same lane on the thief's side, because it was free.
             assert_eq!(s.backrow("p1", 2).map(|card| card.id), Some(target.id.clone()));
@@ -197,7 +193,7 @@ mod tests {
             }));
             let target = s.backrow("p2", 2).expect("Sheepish in p2's backrow lane 2");
 
-            s.play(MAGIC_JAMMED, json!({ "targets": pick(&target.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) }));
 
             // Lane 2 is occupied on p1's side, so R15 falls through to the leftmost free zone.
             assert_eq!(s.backrow("p1", 3).map(|card| card.id), Some(target.id.clone()));
@@ -219,7 +215,7 @@ mod tests {
             );
             assert_eq!(view_json(&s, "p1")["opponent"]["backrow"][1], json!({ "faceDown": true, "cost": 1 }));
 
-            s.play(MAGIC_JAMMED, json!({ "targets": pick(&target.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) }));
 
             // After: R33 keys readability on the CONTROLLER, so the thief reads it even though p2 owns it.
             assert_matches_object(

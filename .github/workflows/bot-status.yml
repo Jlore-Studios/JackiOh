@@ -9,6 +9,10 @@
 # A tick costs a few dozen GitHub calls (a count of the statistics, a few hundred, comes only
 # every 30 minutes), and the loop's one runner is busy either way, so five minutes costs no
 # more runner time than ten.
+# Between the rewrites the loop redraws the issue's runners section alone every two minutes
+# (`dashboard.refresh_runners`): what every runner is doing, read from the runs going and queued
+# and their jobs. It costs a few calls and one a run, and a run's jobs read again unchanged cost no
+# rate limit (a conditional request, `gh._CACHED`).
 # The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
 # loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
@@ -44,6 +48,7 @@ env:
   PYTHONUTF8: "1"
   PYTHONDONTWRITEBYTECODE: "1"
   EVERY_SECONDS: "300"
+  RUNNERS_EVERY_SECONDS: "120"
   LOOP_SECONDS: "19800"
 
 jobs:
@@ -67,7 +72,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Sweep and rewrite the status issue every five minutes
+      - name: Sweep and rewrite the status issue every five minutes, its runners every two
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
@@ -90,7 +95,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           python -m harness dashboard --sweep --stats --companions --controller \
-            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
+            --every "${EVERY_SECONDS}" --runners-every "${RUNNERS_EVERY_SECONDS}" \
+            --for "${LOOP_SECONDS}"
 
       # Not after a cancellation, so a person can stop the loop.
       - name: Start the next loop

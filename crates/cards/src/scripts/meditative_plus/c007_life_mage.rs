@@ -90,10 +90,6 @@ mod tests {
         json!([{ "pick": "hero", "player": player.as_str() }])
     }
 
-    fn instance(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// `amount` damage to p2's hero with p1's face-up Trap in backrow zone 1 as the running card, then
     /// the state check.
     fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
@@ -140,7 +136,7 @@ mod tests {
         );
         s.end_turn();
         let mage = s.unit(P1, 1).expect("the mage");
-        s.play(TRUE_STRIKE, json!({ "targets": instance(&mage) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&mage) }));
         assert_eq!(s.card(&mage.id).damage, 0);
         s.expect_in_zone(mage.id.as_str(), "field");
     }
@@ -232,7 +228,7 @@ mod tests {
             json!({}),
         );
         let mage = s.unit(P1, 1).expect("the mage");
-        s.play(HIT_JOB, json!({ "targets": instance(&mage) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&mage) }));
         s.expect_in_zone(mage.id.as_str(), "graveyard");
         s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
         assert_eq!(health(&s, P1), 20);
@@ -282,7 +278,7 @@ mod tests {
             json!({}),
         );
         let big = s.unit(P1, 2).expect("the 14/14");
-        s.play(BOOK_OF_HEAL, json!({ "targets": instance(&big) }));
+        s.play(BOOK_OF_HEAL, json!({ "targets": pick::instance(&big) }));
         // 9 doubled is 18: every point of its 13 damage, where 9 would have left 4.
         assert_eq!(s.card(&big.id).damage, 0);
     }

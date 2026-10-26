@@ -45,11 +45,6 @@ mod tests {
         }))
     }
 
-    fn unit_at(s: &Scenario, lane: i32) -> CardInstance {
-        s.unit(P1, lane)
-            .unwrap_or_else(|| panic!("expected a p1 unit in lane {lane}"))
-    }
-
     fn row_defs(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id))
@@ -96,13 +91,13 @@ mod tests {
             #[test]
             fn s4_1_it_can_never_switch_to_defense_position() {
                 let mut s = game(json!([ID, VANILLA]), 0);
-                let card = unit_at(&s, 1);
+                let card = s.unit_at(P1, 1);
                 s.expect_stats(&card, json!({ "attack": 4, "maxHealth": 4 }));
                 assert!(keywords_of(s.state(), &card).is_empty());
                 s.expect_refused_with(|s| s.switch_position(&card), "Defense Position");
                 assert_eq!(s.card(&card).position.unwrap_or(Position::Atk), Position::Atk);
                 // The flag is the card's alone: the Vanilla beside it still switches.
-                let vanilla = unit_at(&s, 2);
+                let vanilla = s.unit_at(P1, 2);
                 s.switch_position(&vanilla);
                 assert_eq!(s.card(&vanilla).position, Some(Position::Def));
             }
@@ -110,7 +105,7 @@ mod tests {
             #[test]
             fn r1180_r11_it_vanishes_and_summons_nothing_ending_the_chain() {
                 let mut s = game(json!([{ "def": ID, "lane": 3 }]), 1);
-                let dying = unit_at(&s, 3);
+                let dying = s.unit_at(P1, 3);
                 hit(&mut s, &dying.id);
                 s.expect_in_zone(&dying.id, "gone");
                 assert_eq!(row_defs(&s), vec![None, None, None, None, None]);
@@ -123,7 +118,7 @@ mod tests {
             #[test]
             fn s4_1_the_radiant_face_cannot_switch_to_defense_either() {
                 let mut s = game(json!([{ "def": ID, "radiant": true }]), 0);
-                let card = unit_at(&s, 1);
+                let card = s.unit_at(P1, 1);
                 s.expect_stats(&card, json!({ "attack": 8, "maxHealth": 8 }));
                 assert_eq!(
                     keywords_of(s.state(), &card),
@@ -135,7 +130,7 @@ mod tests {
             #[test]
             fn r1180_it_summons_nothing_either() {
                 let mut s = game(json!([{ "def": ID, "radiant": true, "lane": 3 }]), 1);
-                let dying = unit_at(&s, 3);
+                let dying = s.unit_at(P1, 3);
                 hit(&mut s, &dying.id);
                 s.expect_in_zone(&dying.id, "gone");
                 assert_eq!(row_defs(&s), vec![None, None, None, None, None]);

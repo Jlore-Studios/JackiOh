@@ -23,6 +23,12 @@ API = "https://api.github.com"
 USER_AGENT = f"jackioh-night-bot/{__version__}"
 RETRIES = 3
 BACKOFF_SECONDS = 2.0
+#: The answers to conditional GETs (`request`'s `cached`), by token and URL: GitHub answers one
+#: whose ETag still matches with 304 Not Modified, which costs no rate limit, so the status
+#: loop's read of every running job every two minutes costs a call only for jobs that changed.
+#: Kept for the process, since the loop builds a client each tick; the newest `CACHED_KEEP`.
+_CACHED: dict[tuple[str, str], tuple[str, str]] = {}
+CACHED_KEEP = 200
 
 
 def with_marker(body: str) -> str:
@@ -31,6 +37,12 @@ def with_marker(body: str) -> str:
     if MARKER in text:
         return text
     return f"{text}\n\n{MARKER}" if text.strip() else MARKER
+
+
+def _parsed(text: str, raw: bool) -> Any:
+    if raw:
+        return text
+    return json.loads(text) if text.strip() else {}
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -86,8 +98,11 @@ class GitHub:
         *,
         accept: str | None = None,
         raw: bool = False,
+        cached: bool = False,
     ) -> Any:
-        """One request, retried on 5xx, connection errors and secondary rate limits."""
+        """One request, retried on 5xx, connection errors and secondary rate limits. A `cached`
+        GET is conditional: its last answer is kept, and given again when GitHub says it has
+        not changed (`_CACHED`)."""
         if method != "GET" and self.dry_run:
             self.writes.append({"method": method, "path": path, "body": body})
             return {}
@@ -98,14 +113,23 @@ class GitHub:
             req = urllib.request.Request(url, data=data, method=method, headers=self._headers(accept))
             if data is not None:
                 req.add_header("Content-Type", "application/json")
+            key = (self.token, url)
+            if cached and key in _CACHED:
+                req.add_header("If-None-Match", _CACHED[key][0])
             try:
                 with self._open(req, timeout=60) as resp:
                     payload = resp.read()
                     text = payload.decode("utf-8", "replace") if isinstance(payload, bytes) else str(payload)
-                    if raw:
-                        return text
-                    return json.loads(text) if text.strip() else {}
+                    etag = (getattr(resp, "headers", None) or {}).get("ETag")
+                    if cached and etag:
+                        _CACHED.pop(key, None)
+                        _CACHED[key] = (etag, text)
+                        while len(_CACHED) > CACHED_KEEP:
+                            del _CACHED[next(iter(_CACHED))]
+                    return _parsed(text, raw)
             except urllib.error.HTTPError as exc:
+                if exc.code == 304 and cached and key in _CACHED:
+                    return _parsed(_CACHED[key][1], raw)
                 detail = exc.read().decode("utf-8", "replace") if exc.fp else ""
                 if exc.code == 401 and self.fallback_token and self.token != self.fallback_token:
                     self.token = self.fallback_token
@@ -140,15 +164,15 @@ class GitHub:
         raise GitHubError(f"{method} {path}: {redact(str(last))}", 0)
 
     def paginate(self, path: str, params: dict[str, Any] | None = None, *, key: str | None = None,
-                 limit: int = 1000) -> list[Any]:
-        """Every item of a paged list, up to `limit`."""
+                 limit: int = 1000, cached: bool = False) -> list[Any]:
+        """Every item of a paged list, up to `limit` (each page a conditional GET if `cached`)."""
         query = dict(params or {})
         query.setdefault("per_page", 100)
         items: list[Any] = []
         page = 1
         while len(items) < limit:
             query["page"] = page
-            chunk = self.request("GET", f"{path}?{urllib.parse.urlencode(query)}")
+            chunk = self.request("GET", f"{path}?{urllib.parse.urlencode(query)}", cached=cached)
             if key is not None and isinstance(chunk, dict):
                 chunk = chunk.get(key, [])
             if not isinstance(chunk, list) or not chunk:
@@ -562,6 +586,11 @@ class GitHub:
             f"{self._r}/actions/workflows/{workflow}/runs", params, key="workflow_runs", limit=limit
         )
 
+    def list_repo_runs(self, *, status: str, limit: int = 100, cached: bool = False) -> list[dict]:
+        """The runs of every workflow with `status` (`in_progress`, `queued`), newest first."""
+        return self.paginate(f"{self._r}/actions/runs", {"status": status}, key="workflow_runs",
+                             limit=limit, cached=cached)
+
     def list_commits(self, *, author: str = "", limit: int = 1000) -> list[dict]:
         """Commits on the default branch, newest first, by `author` when given."""
         params: dict[str, Any] = {"author": author} if author else {}
@@ -574,8 +603,8 @@ class GitHub:
     def rerun_failed_jobs(self, run_id: int | str) -> None:
         self.request("POST", f"{self._r}/actions/runs/{run_id}/rerun-failed-jobs")
 
-    def list_jobs(self, run_id: int | str) -> list[dict]:
-        return self.paginate(f"{self._r}/actions/runs/{run_id}/jobs", key="jobs")
+    def list_jobs(self, run_id: int | str, *, cached: bool = False) -> list[dict]:
+        return self.paginate(f"{self._r}/actions/runs/{run_id}/jobs", key="jobs", cached=cached)
 
     def job_log(self, job_id: int | str, tail_chars: int = 6000) -> str:
         """The last `tail_chars` of a job's log. The redirect is followed without the token."""
