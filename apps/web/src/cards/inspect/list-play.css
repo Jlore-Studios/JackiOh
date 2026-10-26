@@ -18,7 +18,7 @@
   color: #dcfce7;
   font: inherit;
   font-weight: 700;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .inspect-list-play[data-glow="ready"] {

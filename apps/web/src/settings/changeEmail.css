@@ -50,7 +50,7 @@
   font: inherit;
   font-weight: 600;
   text-decoration: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .settings-account__action:hover {

@@ -29,8 +29,9 @@ use std::rc::Rc;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
-    attacks_per_turn, can_attack, effective_life, find_instance, has_exertion, legal_actions, unit_view,
+    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, KeywordKind, Phase, PlayerId,
+    active_units_of, attack_restriction, attacks_per_turn, can_attack, effective_life, find_instance,
+    has_exertion, is_sick, legal_actions, unit_has, unit_view,
 };
 
 use crate::candidates::candidate_actions;
@@ -159,6 +160,19 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     })
 }
 
+/// Whether `unit`, which `has_attack`, may hit the enemy hero once no Taunt walls it: what
+/// `combat::why_cannot_attack` asks of a hero target before the Taunt wall (§4.2 step 3), which it
+/// tests last. Not `can_attack` on the hero, which refuses every attacker a Taunt wall binds. The unit
+/// restrictions refuse the hero inside the Gauntlet (R1849005), and §6.1 lets a unit on its summon
+/// turn hit the hero only with Charge, Rush lifting summoning sickness for unit targets alone.
+fn may_hit_hero(state: &GameState, unit: &CardInstance) -> bool {
+    let hero = AttackTarget::Hero {
+        player: unit.controller.opponent(),
+    };
+    attack_restriction(state, unit, &hero).is_ok()
+        && (!is_sick(state, unit) || unit_has(state, unit, KeywordKind::Charge))
+}
+
 /// R636: the attacks `unit` may still declare this turn, `attacks_per_turn` less those it has declared
 /// (`exertion.attacks`, or 1 when it has only `attacked`): two for a fresh Windfury unit, one after
 /// its first swing.
@@ -173,8 +187,10 @@ fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
 /// How far the seat stands from lethal this turn: the enemy hero's life (`effective_life`: in a Duos
 /// duel its own HP and its team's pool, R964000) less what the units that may still attack (those
 /// `legal_actions` lists an attack for) would deal it past the enemy's Taunts, counted as
-/// `face_threat` counts it. Zero or less means the attacks left could end the game. It only orders
-/// the search; a lethal is always proved by playing it through `reduce`.
+/// `face_threat` counts it. A unit that may attack units only (`may_hit_hero`: a Rush unit on its
+/// summon turn, or one in the Gauntlet) still binds a Taunt but deals the hero nothing past them
+/// (#1823). Zero or less means the attacks left could end the game. It only orders the search; a
+/// lethal is always proved by playing it through `reduce`.
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = &state.result {
         return if result.winner.player() == Some(seat) {
@@ -192,12 +208,13 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
     // were this state's own before its layers were read. Rust builds fused scripts from the state on
     // every lookup (SURFACE §6.6), so there is nothing to sync.
-    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
         if attack > 0 && has_attack(state, unit) {
+            let hits_hero = may_hit_hero(state, unit);
             for _ in 0..attacks_left(state, unit) {
-                attacks.push((unit, attack));
+                attacks.push((unit, attack, hits_hero));
             }
         }
     }

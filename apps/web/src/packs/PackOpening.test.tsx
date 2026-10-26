@@ -18,6 +18,14 @@ import {
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
+import {
+  DEFAULT_CARD_COSMETICS,
+  readCardPicks,
+  readCosmetics,
+  resetCosmeticsForTests,
+  writeCardPick,
+  writeCosmetics,
+} from "../cards/cosmetics.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -868,5 +876,109 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
 
     expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
     expect(screen.getByTestId(T.scene)).toHaveFocus();
+  });
+});
+
+describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  /** The opened fixture with `grants` in place of slots 2 and 3's: slot 2 is `core-004`, slot 3 is `core-007`. */
+  function granting(...grants: OpenedPackResponse["slots"][number]["grant"][]): OpenedPackResponse {
+    const opened = openedPack();
+    return { ...opened, slots: opened.slots.map((slot, index) => (grants[index - 2] === undefined ? slot : { ...slot, grant: grants[index - 2]! })) };
+  }
+
+  it("R1955000 a per-card cosmetic's Equip shows once its slot is turned and writes that card's pick", () => {
+    torn({ opened: granting({ kind: "cosmetic", cosmeticId: "border-stone", cosmeticRarity: "Common" }) });
+    expect(screen.queryByTestId(T.equip(2)), "face down").toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    const equip = screen.getByTestId(T.equip(2));
+    expect(equip).toHaveTextContent("Equip");
+    expect(equip).toBeEnabled();
+
+    fireEvent.click(equip);
+    expect(readCardPicks("core-004").border).toBe("border-stone");
+    expect(readCosmetics().border, "the account's pick is not touched").toBe(DEFAULT_CARD_COSMETICS.border);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R1955000 a full art's Equip turns that card's full art on", () => {
+    torn();
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCardPicks("core-004").fullArt).toBe(true);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R1955000 skip-all shows every Equip at once; an account cosmetic writes the account's pick, a portrait, a card and bars offer none", () => {
+    const opened = openedPack();
+    const account = (cosmeticId: string): OpenedPackResponse["slots"][number] => ({
+      rarity: "Common",
+      cardId: "core-002",
+      grant: { kind: "cosmetic", cosmeticId, cosmeticRarity: "Epic" },
+    });
+    render(
+      <PackScene
+        {...props({
+          opened: {
+            ...opened,
+            slots: [
+              account("table-marble"),
+              account("field-snow"),
+              account("card-back-tidal"),
+              account("portrait-gary"),
+              opened.slots[3]!,
+              opened.slots[4]!,
+            ],
+          },
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByTestId(T.skipAll));
+
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equip");
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCosmetics()).toMatchObject({ table: "table-marble", field: "field-snow", cardBack: "card-back-tidal" });
+    expect(readCardPicks("core-002"), "an account cosmetic is no card's pick").toEqual({});
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+    for (const index of [3, 4, 5]) expect(screen.queryByTestId(T.equip(index))).toBeNull();
+  });
+
+  it("R1955000 a cosmetic the store already holds shows Equipped when revealed", () => {
+    writeCardPick("core-004", "border", "border-stone");
+    writeCosmetics({ cardBack: "card-back-tidal" });
+    torn({
+      opened: granting(
+        { kind: "cosmetic", cosmeticId: "border-stone", cosmeticRarity: "Common" },
+        { kind: "cosmetic", cosmeticId: "card-back-tidal", cosmeticRarity: "Epic" },
+      ),
+    });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    fireEvent.click(screen.getByTestId(T.flip(3)));
+    for (const index of [2, 3]) {
+      expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+      expect(screen.getByTestId(T.equip(index))).toBeDisabled();
+    }
+  });
+
+  it("R1955000 under reduced motion the Equip shows with the results at once", () => {
+    writeSettings({ reduceMotion: true });
+    render(<PackScene {...props({ opened: openedPack() })} />);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equip");
+    for (const index of [0, 1, 3, 4]) expect(screen.queryByTestId(T.equip(index))).toBeNull();
   });
 });

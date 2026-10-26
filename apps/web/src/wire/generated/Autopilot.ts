@@ -3,7 +3,12 @@
 /**
  * R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
  * `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
- * `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
- * turn's cleanup.
+ * `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, or by an autopilot
+ * aura as its controller's turn begins (R1844000), cleared at that turn's cleanup.
  */
-export type Autopilot = { turn: number, actions: number, };
+export type Autopilot = { turn: number, actions: number, 
+/**
+ * R1844000: the R456 actions taken on a turn an autopilot aura engaged, read against the aura's
+ * count; absent for Cognitive Offloading's whole turn.
+ */
+auraActions?: number, };

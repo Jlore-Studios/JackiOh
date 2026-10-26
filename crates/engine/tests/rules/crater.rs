@@ -1,5 +1,6 @@
-//! Crater (#783, R783010, R783011): a Unit Locks its own zone as it arrives on the field, every way it
-//! arrives, before its Cry; a Trap Locks its backrow zone as it is revealed. The Lock is R688's: it
+//! Crater (#783, R783010, R783011, R1850006): a Unit Locks its own zone as it arrives on the field, every
+//! way it arrives, before its Cry; a Trap Locks its backrow zone as it is revealed, and a Field Spell as
+//! it enters. The Lock is R688's: it
 //! refuses plays, a Stack play included, and outlasts the card. The fixtures in
 //! `fixtures/keywords_783.rs` stand in for the cards #781 prints.
 
@@ -9,7 +10,7 @@ use jackioh_engine::zones::is_locked;
 use super::fixtures::harness::{events_of_type, put, set_library, slot};
 use super::fixtures::keywords_783::{
     crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell, crater_trap, crater_unit,
-    flicker_all, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
+    flicker_all, plague_field, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
 };
 use super::fixtures::play_pipeline_b::{pb_reduce, plays_of};
 use super::fixtures::prompt_harness::{act, board, cast_now, must};
@@ -292,21 +293,78 @@ mod r783011_crater_traps {
         assert!(is_locked(&moon, slot(P2, Row::Backrow, 4)));
         assert_eq!(locked_count(&moon), 1);
 
-        // Crater on a Spell or a Field Spell does nothing.
+        // Crater on a Spell does nothing (a Field Spell's is R1850006's).
         let mut spells = playing("r783011-spell");
         let spell = in_hand(&mut spells, &crater_spell().id, P1);
-        let field = in_hand(&mut spells, &crater_field().id, P1);
-        spells = act(
+        // A card still to play, so the turn does not end by itself.
+        in_hand(&mut spells, &plain_unit().id, P1);
+        let spells = act(
             &spells,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
             None,
         );
-        let spells = act(
-            &spells,
+        assert_eq!(spells.players.p1.graveyard.len(), 1);
+        assert_eq!(locked_count(&spells), 0);
+    }
+}
+
+mod r1850006_crater_field_spells {
+    use super::*;
+
+    fn backrow_zone(lane: i32) -> ZoneSlot {
+        slot(P1, Row::Backrow, lane)
+    }
+
+    #[test]
+    fn r1850006_a_crater_field_spell_locks_its_backrow_zone_played_summoned_or_flickered() {
+        // Played into a backrow zone: that zone is Locked, and only it.
+        let mut played = playing("r1850006-played");
+        let field = in_hand(&mut played, &crater_field().id, P1);
+        in_hand(&mut played, &plain_unit().id, P1);
+        let played = act(
+            &played,
             json!({ "type": "play", "instanceId": field.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" }),
             None,
         );
-        assert!(spells.players.p1.backrow[1].is_some());
-        assert_eq!(locked_count(&spells), 0);
+        assert!(played.players.p1.backrow[1].is_some());
+        assert!(is_locked(&played, backrow_zone(2)));
+        assert_eq!(locked_count(&played), 1);
+
+        // Summoned by an effect.
+        let mut summoned = playing("r1850006-summoned");
+        apply_now(
+            &mut summoned,
+            jackioh_engine::effects::summon(json_as(json!({ "defId": crater_field().id }))),
+        );
+        let lane = must(
+            summoned.players.p1.backrow.iter().position(Option::is_some),
+            "the summoned Field Spell",
+        );
+        let lane = i32::try_from(lane).expect("a lane") + 1;
+        assert!(is_locked(&summoned, backrow_zone(lane)));
+        assert_eq!(locked_count(&summoned), 1);
+
+        // Flickered: it re-enters its zone.
+        let mut flickered = playing("r1850006-flickered");
+        let card = put(&mut flickered, &crater_field().id, backrow_zone(4), json!({}));
+        assert!(!is_locked(&flickered, backrow_zone(4)));
+        apply_now(
+            &mut flickered,
+            jackioh_engine::effects::flicker::flicker(json_as(
+                json!({ "target": { "of": "instance", "instanceId": card.id } }),
+            )),
+        );
+        assert!(flickered.players.p1.backrow[3].is_some());
+        assert!(is_locked(&flickered, backrow_zone(4)));
+        assert_eq!(locked_count(&flickered), 1);
+
+        // A Field Spell without Crater locks nothing.
+        let mut plain = playing("r1850006-plain");
+        apply_now(
+            &mut plain,
+            jackioh_engine::effects::summon(json_as(json!({ "defId": plague_field().id }))),
+        );
+        assert!(plain.players.p1.backrow.iter().any(Option::is_some));
+        assert_eq!(locked_count(&plain), 0);
     }
 }

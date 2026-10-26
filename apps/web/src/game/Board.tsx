@@ -703,7 +703,7 @@ export default function Board({
         <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label={t("Field")} data-table={table} ref={field}>
-          <SandSurface field={field} disabled={sandDisabled} />
+          <SandSurface field={field} disabled={sandDisabled} table={table} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
               {FIELD_ROWS.map((slot) => (

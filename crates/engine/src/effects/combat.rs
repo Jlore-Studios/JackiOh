@@ -417,6 +417,20 @@ pub fn autopilot() -> Effect {
     })
 }
 
+/// R1844001 (Stinkyscape #147 IN33DH3): "for the rest of your turn an AI will help you make the
+/// Pareto Optimal decisions". The caster is shown the Pareto hint for the turn running
+/// (`PlayerState.pareto_hint`, read by `subsystems::pareto::pareto_hint_ids`) — on their own turn
+/// only, so on the opponent's it does nothing — until that turn's cleanup.
+pub fn pareto_hint() -> Effect {
+    Effect::new("paretoHint", move |ctx| {
+        if ctx.sink.state.result.is_some() || ctx.sink.state.active != ctx.controller {
+            return;
+        }
+        let turn = ctx.sink.state.turn;
+        ctx.sink.state.players[ctx.controller].pareto_hint = Some(turn);
+    })
+}
+
 /// R283: what the list before an AI turn has done, settled before the AI acts — the state check, the
 /// traps' answers to its events, and the ordinary triggers those events woke, each followed by the
 /// check again (§10.3, §4.5, R59) — as the loop settles between two actions of a turn, which the AI's

@@ -165,7 +165,7 @@
   background: rgba(18, 11, 7, 0.65);
   color: var(--tavern-gold-pale);
   box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: background-color 140ms, border-color 140ms, box-shadow 140ms;
 }
 
@@ -347,7 +347,7 @@
 
 /* R639: a face is a control — a click or a tap opens the card at full size. */
 .landing .landing-fan-card--face {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .landing .landing-fan-card--face:focus-visible {
@@ -918,7 +918,7 @@
 }
 
 .landing .landing-showcase[role="button"] {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   touch-action: manipulation;
 }
 

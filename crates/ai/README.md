@@ -65,8 +65,9 @@ one redaction (R1184002).
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
-less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
-its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
+less the body it comes back as, #1796; plus a Trample attacker's excess on the hero and a Lifesteal
+attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
+evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Neither walk of the lethal solver goes on from a replay for nothing, a play
 of a card already played this turn that leaves the seat's mana and `ready_gap` as they were (a (0) Spell
 back from the graveyard under In Too Deep's reward L, R454): it could be made again without end, and since
