@@ -14,15 +14,17 @@
 //! catalog, or the ids a card names ("only gives Narcor and Red Narcor").
 //!
 //! Credits (`PlayerState.market_credits`) are a public count per player, absent until first gained
-//! (R1840005), and named apart from Jlarna's credit line (R1223). The verbs a card script composes are
-//! `effects::tray`'s; this module is the rule they share.
+//! (R1840005), and named apart from Jlarna's credit line (R1223), and spent at the Marketplace
+//! (`marketplace.rs`, #1853), which the first Resource or Credits either player gains opens
+//! (R1853000); while it is open a sale fetches its quote (R1853002). The verbs a card script composes
+//! are `effects::tray`'s; this module is the rule they share.
 
 use crate::catalog::{find_def, registered_catalog};
 use crate::config::{RESOURCE_RARITY_ODDS, RESOURCE_TRAY_CAP};
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, new_instance};
-use crate::wire::{GameEvent, PlayerId, PrintedRarity, Zone};
+use crate::wire::{GameEvent, PlayerId, PrintedRarity, ResourcePrice, Zone};
 
 /// R1840000: put `card` in its owner's Resource tray, last, as the newest Resource there.
 pub fn put_in_tray(state: &mut GameState, card: &mut CardInstance) {
@@ -86,10 +88,18 @@ pub fn roll_resource(state: &GameState, rng: &mut Rng, pool: Option<&[String]>) 
     rng.pick(&of_rarity).map(|id| (*id).clone())
 }
 
-/// R1840001: what a sale of this Resource fetches now: a whole number drawn uniformly in its face's
-/// sell range, the Radiant face's for a Radiant Resource. 0 for a card that is no Resource, with no
-/// draw. The Marketplace (#1853) will price it later.
+/// R1840001, R1853002: a whole number drawn uniformly in one face's sell range.
+pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
+    price.sell_min + rng.int(price.sell_max.max(price.sell_min) - price.sell_min + 1)
+}
+
+/// R1840001: what a sale of this Resource fetches now: while the Marketplace is open, its quote this
+/// turn with no draw (R1853002); otherwise a whole number drawn uniformly in its face's sell range, the
+/// Radiant face's for a Radiant Resource. 0 for a card that is no Resource, with no draw.
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
+    if let Some(quote) = crate::marketplace::sell_quote(state, card) {
+        return quote;
+    }
     let Some(resource) = find_def(Some(state), &card.def_id).and_then(|def| def.resource) else {
         return 0;
     };
@@ -98,33 +108,50 @@ pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 
     } else {
         resource.base
     };
-    price.sell_min + rng.int(price.sell_max.max(price.sell_min) - price.sell_min + 1)
+    draw_sell_price(rng, price)
 }
 
 /// R1840005: raise `player`'s Credits by `amount` and report the new count with the public
 /// `marketCreditsChanged`. A gain of 0 or less changes and reports nothing, so Credits stay absent
-/// until first gained.
+/// until first gained; a first gain opens the Marketplace (R1853000).
 pub fn add_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32) {
     if amount <= 0 {
         return;
     }
+    crate::marketplace::open_marketplace(sink);
     let value = sink.state.players[player].market_credits.unwrap_or(0) + amount;
     sink.state.players[player].market_credits = Some(value);
     sink.events
         .push(GameEvent::MarketCreditsChanged { player, value });
 }
 
-/// R1840000, R1840001: `player` gains a fresh Resource of `def_id`, Radiant when `radiant` says so.
-/// Into their tray with `resourceGained`; into a full one it is sold at once instead, ceasing to exist,
-/// with `resourceSold` and the Credits it fetched.
+/// R1853003: `player`'s Credits fall by `amount`, a price the Marketplace refused unless they held it,
+/// and the public `marketCreditsChanged` reports the new count.
+pub fn spend_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32) {
+    let value = sink.state.players[player].market_credits.unwrap_or(0) - amount;
+    sink.state.players[player].market_credits = Some(value);
+    sink.events
+        .push(GameEvent::MarketCreditsChanged { player, value });
+}
+
+/// R1840000, R1840001: `player` gains a fresh Resource of `def_id`, Radiant when `radiant` says so,
+/// opening the Marketplace first if it is closed (R1853000), and receives it (`receive_resource`).
 pub fn gain_resource(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str, radiant: bool) {
+    crate::marketplace::open_marketplace(sink);
     let mut card = new_instance(&mut *sink.state, def_id, player, Zone::Tray { player });
     card.radiant = radiant;
+    receive_resource(sink, player, card);
+}
+
+/// R1840000, R1840001, R1853003: a fresh Resource `card` reaches `player`: into their tray with
+/// `resourceGained`; into a full one it is sold at once instead, ceasing to exist, with `resourceSold`
+/// and the Credits it fetched.
+pub fn receive_resource(sink: &mut EngineSink<'_>, player: PlayerId, mut card: CardInstance) {
     let held = sink.state.players[player]
         .resource_tray
         .as_ref()
         .map_or(0, Vec::len) as i32;
-    let flag = radiant.then_some(true);
+    let flag = card.radiant.then_some(true);
     if held >= RESOURCE_TRAY_CAP {
         let credits = sell_price(sink.state, sink.rng, &card);
         card.zone = Zone::Gone { player };

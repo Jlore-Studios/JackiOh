@@ -397,8 +397,9 @@ fn scrub_event_value(state: &GameState, seat: PlayerId, event: &mut Value, hidde
                 copy.remove("radiant");
             }
         }
-        // The face a hidden card had is the card's too.
-        "destroyed" | "libraryOverflow" => {
+        // The face a hidden card had is the card's too; R1853003: a card bought at the Marketplace is
+        // named as a card added to a hand is.
+        "destroyed" | "libraryOverflow" | "marketBought" => {
             if instance_hidden {
                 copy.remove("radiant");
             }
@@ -608,6 +609,13 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
                 card.cost_override = Some(shown);
             }
             card.counters.plague = plague;
+        }
+    }
+    // R1853003: what the opponent bought at the Marketplace this cycle is theirs alone (its view sends
+    // only the viewer's own stock), so the seat reads none of it.
+    if let Some(market) = next.marketplace.as_mut() {
+        for offer in market.offers.iter_mut() {
+            offer.bought[opp] = 0;
         }
     }
     // R1845000: no seat reads a hidden Nerf, the card's own owner included, and the seat's own hand is

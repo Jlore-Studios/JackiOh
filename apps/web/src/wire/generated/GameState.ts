@@ -16,6 +16,7 @@ import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { MarkRecord } from "./MarkRecord";
+import type { Marketplace } from "./Marketplace";
 import type { MulliganSeat } from "./MulliganSeat";
 import type { OpeningRecord } from "./OpeningRecord";
 import type { PendingChoice } from "./PendingChoice";
@@ -214,6 +215,12 @@ customDefs?: { [key in string]: CardDef },
  * hashes exactly as before this field existed. Never in a view: the view sees `held` events.
  */
 held?: Array<HeldCard>, 
+/**
+ * R1853000: Stinkyscape's Marketplace, opened for both players by the first Resource or Credits
+ * either gains (`marketplace.rs`). Absent until then, so a game without either hashes as it did
+ * before this field existed (D14).
+ */
+marketplace?: Marketplace, 
 /**
  * R1956001: each Created card's generator by instance id: the catalog id of the card whose
  * script minted it, or that card's own generator when it was Created too

@@ -187,6 +187,8 @@ thread_local! {
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
     static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
+    static MARKETPLACE_TABLE_OVERRIDE: Cell<Option<&'static [crate::config::MarketLot]>> =
+        const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -303,6 +305,17 @@ pub fn card_metrics_override() -> Option<crate::catalog::CardMetrics> {
     CARD_METRICS_OVERRIDE.with(Cell::get)
 }
 
+/// R1853001: the Marketplace's table of lots for this thread, in place of `MARKETPLACE_TABLE`
+/// (`marketplace::marketplace_table`), until the thread ends or `clear_overrides()` runs.
+pub fn register_marketplace_table(table: &'static [crate::config::MarketLot]) {
+    MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(Some(table)));
+}
+
+/// The Marketplace table this thread registered, if any.
+pub fn marketplace_table_override() -> Option<&'static [crate::config::MarketLot]> {
+    MARKETPLACE_TABLE_OVERRIDE.with(Cell::get)
+}
+
 /// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
 /// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
 /// leaked `&'static` the override already holds: nothing is copied.
@@ -315,6 +328,7 @@ pub struct ThreadOverrides {
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
     card_metrics: Option<crate::catalog::CardMetrics>,
+    marketplace_table: Option<&'static [crate::config::MarketLot]>,
 }
 
 impl ThreadOverrides {
@@ -328,6 +342,7 @@ impl ThreadOverrides {
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
         CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
+        MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(self.marketplace_table));
     }
 }
 
@@ -341,6 +356,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
         card_metrics: card_metrics_override(),
+        marketplace_table: marketplace_table_override(),
     }
 }
 
@@ -354,6 +370,7 @@ pub fn clear_overrides() {
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
+    MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------

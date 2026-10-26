@@ -32,6 +32,10 @@
 //!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
 //!   trade            → `trade.apply_trade`, listed and refused by `trade.why_trade_refused` (R1838000)
+//!   marketBuy        → `marketplace.apply_market_buy`, listed and refused by
+//!                      `marketplace.why_market_buy_refused` (R1853003)
+//!   marketSell       → `marketplace.apply_market_sell`, listed and refused by
+//!                      `marketplace.why_market_sell_refused` (R1853003)
 //!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
 //!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
 //!                      only by a sandbox game and never listed (R923000–R923003)
@@ -372,6 +376,14 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
         }
         // R1838000: `trade.rs` owns the rule; its refusal is the one `legal_actions` and the view read.
         ActionBody::Trade { instance_id } => crate::trade::apply_trade(sink, action.player_id, instance_id),
+        // R1853003: `marketplace.rs` owns the rule; its refusals are the ones `legal_actions` and the view
+        // read.
+        ActionBody::MarketBuy { offer } => {
+            crate::marketplace::apply_market_buy(sink, action.player_id, *offer)
+        }
+        ActionBody::MarketSell { instance_id } => {
+            crate::marketplace::apply_market_sell(sink, action.player_id, instance_id)
+        }
         ActionBody::SetAutoEndTurn { enabled } => {
             // R345: a preference, not a move. It emits nothing, and `maybeAutoEndTurn` reads it after
             // this reduction as after every other, so turning it back on with nothing left to do ends the
@@ -1018,6 +1030,23 @@ pub(crate) fn each_legal_action(
             visit(ActionBody::Trade {
                 instance_id: card.id.clone(),
             })?;
+        }
+    }
+    // R1853003: a buy of each Marketplace lot, in offer order, then a sale of each tray Resource, in
+    // tray order, while `marketplace.rs`'s refusals pass them — the refusals the reducer gives and the
+    // view's `reason` reads. A closed Marketplace lists neither.
+    if let Some(market) = &state.marketplace {
+        for offer in 0..market.offers.len() as i32 {
+            if crate::marketplace::why_market_buy_refused(state, player, offer).is_ok() {
+                visit(ActionBody::MarketBuy { offer })?;
+            }
+        }
+        for card in side.resource_tray.iter().flatten() {
+            if crate::marketplace::why_market_sell_refused(state, player, &card.id).is_ok() {
+                visit(ActionBody::MarketSell {
+                    instance_id: card.id.clone(),
+                })?;
+            }
         }
     }
 

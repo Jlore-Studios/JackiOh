@@ -159,6 +159,7 @@ pub mod lethal;
 pub mod library_copies;
 pub mod mana;
 pub mod mana_before_play;
+pub mod marketplace;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod modifiers;
