@@ -290,7 +290,6 @@ describe("B37 the corner slot", () => {
     const play = within(ctas).getByTestId(landingTestid.play);
     expect(play.closest("a")?.getAttribute("href")).toBe(paths.play);
     expect(paths.play).toBe("/play");
-    expect(within(ctas).getByText("Online first: every way to play, from one screen.")).toBeInTheDocument();
     // The hub, not the landing, takes the account promise back: nothing here says none is needed.
     expect(within(ctas).queryByText(/No account needed/)).toBeNull();
   });
@@ -675,7 +674,7 @@ describe("R639 your table", () => {
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });
 
-  it("R639 R1584000 R1743000 the floor shows the device's stats one at a time in a random order, a click moving on, and Clear forgets them", async () => {
+  it("R639 R1584000 R1743000 the floor shows the device's stats one at a time in a random order, a click moving on", async () => {
     withGames(4, { "core-004": { seen: 4, played: 9 } });
     render(<LandingRoute random={seeded(5)} />);
     await act(async () => {
@@ -702,8 +701,18 @@ describe("R639 your table", () => {
     // Five clicks showed six different stats: each of them once, none repeated before all were shown.
     expect([...seen].sort()).toEqual(Object.keys(lines).sort());
     expect(table.querySelector("button[data-testid^='landing-showcase']")).toBeNull();
-    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
-    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+  });
+
+  it("R2000000 the floor has no note and no Clear", async () => {
+    withGames(4, { "core-004": { seen: 4, played: 9 } });
+    render(<LandingRoute random={seeded(5)} />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
+    const table = screen.getByTestId(landingTestid.stats);
+    expect(table.querySelector(".landing-stats-note")).toBeNull();
+    expect(within(table).queryByRole("button", { name: "Clear" })).toBeNull();
+    expect(table).not.toHaveTextContent(/this device/u);
   });
 
   it("R1584000 the record alone shows while the device holds no card to show", () => {

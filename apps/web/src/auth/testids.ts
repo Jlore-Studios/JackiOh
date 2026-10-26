@@ -21,7 +21,6 @@ export const landingTestid = {
   hotseat: "landing-hotseat",
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
-  statsClear: "landing-stats-clear",
   /** R1584000: the floor's stat showcase. */
   showcase: "landing-showcase",
   showcaseTitle: "landing-showcase-title",

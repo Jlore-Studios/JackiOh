@@ -223,13 +223,14 @@ describe("44 watching a friend's live game", () => {
     });
 
     // An unranked match: `one` hosts the room (seat p1), `pending` joins it (p2). No deck to bring:
-    // the server deals both seats one (R257). The seed fixes the deal (R143).
+    // the server deals both seats one (R257). The seed fixes the deal (R143), and R1989000 pins the
+    // host to p1 beside it, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(one.token),
-        body: { mode: "random", seed: SEED },
+        body: { mode: "random", seed: SEED, seat: HOST_SEAT },
       }).then((created) => {
         joinRequestedAt = Date.now();
         cy.request<JoinBody>({

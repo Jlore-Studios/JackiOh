@@ -331,7 +331,6 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     <div className="app-shell replays one-screen" data-testid={replaysTestid.root}>
       <BackLink />
       <h1>{t("Replays")}</h1>
-      <p className="auth-hint">{t("Watch your recent games again, step by step, and share a turn as a GIF.")}</p>
       <div className="one-screen__body one-screen__stack">
         <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
 

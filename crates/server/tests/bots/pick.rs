@@ -25,7 +25,7 @@ const MS_PER_SECOND: i64 = 1000;
 /// When the series is made, in epoch ms.
 const NOW: i64 = 1_800_000_000_000;
 
-/// The person is series p1, as the fallback seats them (R335, R1453); the bot is p2.
+/// The person is series p1 and the bot p2, one of the two seatings R1989000's coin gives the fallback (R335).
 const PERSON: &str = "person";
 const BOT: &str = "bot";
 const BOT_SEAT: PlayerId = PlayerId::P2;
