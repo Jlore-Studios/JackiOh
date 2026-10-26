@@ -1795,12 +1795,12 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "claude-6",
+      "provider": "claude-7",
       "queued_at": "2026-10-26T00:25:00Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "40256373387",
-      "started_at": "2026-10-26T01:53:06Z",
+      "run_id": "pending:71f149b8-1792980243",
+      "started_at": "2026-10-26T02:04:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -1901,9 +1901,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T02:03:50Z",
+    "at": "2026-10-26T02:04:52Z",
     "url": "",
-    "what": "build #1849 on claude-1"
+    "what": "build #1953 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T01:49:01Z",
