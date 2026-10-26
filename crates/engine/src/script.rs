@@ -682,6 +682,36 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
+    // ---- Stinkyscape's mechanic (issue #1839) ----
+    /// R1839000: "Dormant" (SPEC §6.1): this Unit enters the field Dormant — from a hand, a deck, a
+    /// graveyard or the resolving zone, any way it arrives — and is reached by nothing but an awakening
+    /// until it awakens (`slumber.rs`). What it prints is a `SlumberText`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slumber: Option<SlumberText>,
+    // ---- Stinkyscape's Starship (issue #1852) ----
+    /// R1852000, R1852003: this is a Starship's hull — the Dormant Starship (`DORMANT_STARSHIP_DEF_ID`),
+    /// and every fusion it keeps. Entering the field from off it as a Unit, the card starts a Starship's
+    /// memory (`CardInstance.starship`); while it is Dormant its one ability is the engine's launch
+    /// (`starship::launch_decl`), a Stack card played onto it is exiled before it resolves (R1852007),
+    /// and its awakening launches it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starship_hull: Option<bool>,
+}
+
+/// R1839000–R1839002: what a card's "Dormant" prints (`StaticFlags.slumber`). `turns` is "Dormant for
+/// N turns", the countdown it enters with (R1839001); absent, it is Dormant until an effect awakens it.
+/// `wakesBy` names the one Activate ability the card keeps while it is Dormant (the Dormant Starship's
+/// "pay (3) to awaken", whose effect is `effects::awaken` on itself, R1839002); its other abilities,
+/// like the rest of its text, are off until it awakens. Named apart from the "dormant" of a card
+/// beneath a Stack pile (§3.2, R13).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SlumberText {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wakes_by: Option<String>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the
@@ -903,6 +933,16 @@ pub fn mode_allowed_hook(
     Arc::new(f)
 }
 
+/// R1851000, `Script.play_allowed`: whether this player may play the card now.
+pub type PlayAllowedHook = Arc<dyn Fn(&GameState, PlayerId) -> bool + Send + Sync>;
+
+/// Builds a `PlayAllowedHook`.
+pub fn play_allowed_hook(
+    f: impl Fn(&GameState, PlayerId) -> bool + Send + Sync + 'static,
+) -> PlayAllowedHook {
+    Arc::new(f)
+}
+
 /// `ActivationDecl.has`: whether the card has this ability now.
 pub type HasHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -946,6 +986,14 @@ pub struct Script {
     /// the board, asked by `legalActions`, the play's refusal and a cast's own pick alike
     /// (Meditative #98 Showdown: only an empty lane). Absent allows every option.
     pub mode_allowed: Option<ModeAllowedHook>,
+    /// R1851000: whether the card may be played now, for a card whose play needs something on the
+    /// board to act on though it declares no target its play needs (R703; Meditative #53 Prestige's
+    /// Radiant face: a Radiant enemy card on the field). A pure read of what its player may see
+    /// (§9.1), asked off the face the play resolves (R214, R399) by `legalActions`, the play's refusal
+    /// and the view's `playReason` through one check (`play_choices::play_allowed`), and by a set
+    /// Spell's Reveal (R783006); never by a cast, an Echo repeat or a random cast (R70, R1851001). A
+    /// fusion holds every ingredient's (R1851002). Absent allows the play.
+    pub play_allowed: Option<PlayAllowedHook>,
     /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
     /// play's events, and blanked from an in-flight play the other seat reads.
     pub secret_modes: bool,
@@ -1053,6 +1101,10 @@ pub struct Script {
     /// (`memory.quest`), opens the first quest as the card enters the field and reports each completion
     /// (`questCompleted`), which the card's own trigger answers with its rewards.
     pub quests: Option<QuestBook>,
+    /// R1854000: a staged quest's stages, in order (Stinkyscape #7 The Greatest Heist, #112 Job
+    /// Application), for a card that declares no `quests`: its line runs on `staged_book(stages)`, one
+    /// stage open at a time, the first as the card enters; the current stage is public on the card.
+    pub stages: Vec<QuestStage>,
     // ---- v0.2.0 script hooks, by workstream: Classic #46–#90 (card-specific, cards-classic-b) ----
     /// Classic #88 Siphon Squad, R403: "When …, Tribute this" — a condition on the card's own text that
     /// every state check reads (§4.5), the one right after the card arrives included; while it holds, the
@@ -1539,19 +1591,77 @@ pub type TargetedReplacement = ReplacementDef;
 /// - board: `permanentsControlled` (the tops of your unit piles and your backrow cards, this one
 ///   included), `unitTotals` (your Units' total attack and total health both at least `total`),
 ///   `unitsInGraveyard` (Units in your graveyard).
+///
+/// R1854002, the staged quests' goals (Stinkyscape #7 The Greatest Heist, #112 Job Application):
+///
+/// - `unitsMadeRadiant`: Units of yours with `tag` (any Unit when absent) made Radiant, wherever they
+///   are: each `radiantSet` reported on one.
+/// - `unitsDied`: Units with `tag` (any when absent) that died under your control (R172).
+/// - `cardsStolen`: enemy cards you stole, into your hand or onto your side of the field.
+/// - `playCosting`: a card of yours played whose cost paid (R56, a cast's 0 included, R70) is `cost`,
+///   or the number the quest card remembers under `remembered` while it holds one (goal 1).
+/// - `differentCostsInTurn`: cards of yours played in one turn at `count` different costs paid.
+/// - `damageInstance`: one damage instance of at least `amount` that your hero took or a card or hero
+///   of yours dealt (goal 1).
+/// - `byEffect`: nothing counts it; only an effect completes it (R1854001: the card's own text, or
+///   "complete the current stage on all your Quests"), goal 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum QuestGoal {
-    Draws { count: i32 },
-    EnemyPermanentsDestroyed { count: i32 },
-    UnspentManaAtTurnEnd { mana: i32 },
-    DamageToEnemies { amount: i32 },
-    CardsExiled { count: i32 },
+    Draws {
+        count: i32,
+    },
+    EnemyPermanentsDestroyed {
+        count: i32,
+    },
+    UnspentManaAtTurnEnd {
+        mana: i32,
+    },
+    DamageToEnemies {
+        amount: i32,
+    },
+    CardsExiled {
+        count: i32,
+    },
     DeckEmptiedByDraw,
-    PermanentsControlled { count: i32 },
-    UnitTotals { total: i32 },
-    UnitsInGraveyard { count: i32 },
+    PermanentsControlled {
+        count: i32,
+    },
+    UnitTotals {
+        total: i32,
+    },
+    UnitsInGraveyard {
+        count: i32,
+    },
+    UnitsMadeRadiant {
+        count: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        tag: Option<Tag>,
+    },
+    UnitsDied {
+        count: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        tag: Option<Tag>,
+    },
+    CardsStolen {
+        count: i32,
+    },
+    PlayCosting {
+        cost: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        remembered: Option<String>,
+    },
+    DifferentCostsInTurn {
+        count: i32,
+    },
+    DamageInstance {
+        amount: i32,
+    },
+    ByEffect,
 }
 
 /// One quest: its text as the view shows it, what completes it, and the rewards it offers, in order.
@@ -1583,6 +1693,70 @@ pub struct QuestBook {
     pub first: String,
     pub quests: Vec<QuestDef>,
     pub rewards: Vec<QuestRewardDef>,
+}
+
+/// R1854000: one stage of a staged quest (`Script.stages`; Stinkyscape #7 The Greatest Heist, #112 Job
+/// Application): its name, its goals and its reward. A stage of one goal opens that goal; a stage of
+/// several draws one of them from the match rng as it opens (Job Application's Interview). The reward
+/// is the card's own effects, which its trigger on its own `questCompleted` returns
+/// (`subsystems::completed_stage_of` names the stage); `reward.text` is what the view shows of it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestStage {
+    pub name: String,
+    pub goals: Vec<QuestStageGoal>,
+    pub reward: QuestStageReward,
+}
+
+/// R1854000: one goal a stage may set: its quest id (unique in the card's stages), its text as the
+/// view shows it and what completes it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestStageGoal {
+    pub id: String,
+    pub text: String,
+    pub goal: QuestGoal,
+}
+
+/// R1854000: a stage's reward as the view shows it: an id and its text.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestStageReward {
+    pub id: String,
+    pub text: String,
+}
+
+/// R1854000: the quest book a staged quest's line runs on: every stage's goals as its quests, each
+/// offering its stage's reward, and no reward naming a next quest, since the card's reward effects
+/// move the line on (`effects::next_stage`, `effects::hear_back`, `effects::open_stage`). `first` is
+/// the first stage's first goal.
+pub fn staged_book(stages: &[QuestStage]) -> QuestBook {
+    QuestBook {
+        first: stages
+            .first()
+            .and_then(|stage| stage.goals.first())
+            .map(|goal| goal.id.clone())
+            .unwrap_or_default(),
+        quests: stages
+            .iter()
+            .flat_map(|stage| {
+                stage.goals.iter().map(|goal| QuestDef {
+                    id: goal.id.clone(),
+                    text: goal.text.clone(),
+                    goal: goal.goal.clone(),
+                    rewards: vec![stage.reward.id.clone()],
+                })
+            })
+            .collect(),
+        rewards: stages
+            .iter()
+            .map(|stage| QuestRewardDef {
+                id: stage.reward.id.clone(),
+                text: stage.reward.text.clone(),
+                next: None,
+            })
+            .collect(),
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

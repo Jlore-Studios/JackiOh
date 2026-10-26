@@ -4,7 +4,8 @@
 //! A profile keeps up to `MAX_SAVED_DECKS` named decks and `MAX_SAVED_TRIOS` trios, both DRAFTS
 //! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641,
 //! and on top of it the portrait must be one the account owns, R1827000; its playmat, backdrop and
-//! card back are checked against the cosmetics registry, R1297000),
+//! card back are checked against the cosmetics registry, R1297000, and must be ones the account
+//! owns, R1833000),
 //! T1–T3 for a trio — and legality is judged at queue (R253). The save routes never call the L1–L6
 //! validator; the queue-time helpers at the bottom always do.
 //!
@@ -469,7 +470,8 @@ pub async fn list_decks(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `PUT /api/decks/:id`. R250, R256: create or replace one deck. D1–D5 only: a draft may be
-/// incomplete or unowned, though its portrait must be owned (R1827000).
+/// incomplete or unowned, though its portrait must be owned (R1827000), and so must its playmat,
+/// backdrop and card back (R1833000).
 pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
@@ -490,16 +492,33 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
 
     let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
-    // R1827000: on top of D5, a portrait the account does not own is refused, in D5's shape.
-    if let Some(picked) = portrait.as_deref() {
+    let picks = [
+        ("tableCosmetic", &table_cosmetic),
+        ("fieldCosmetic", &field_cosmetic),
+        ("cardBackCosmetic", &card_back_cosmetic),
+    ];
+    if portrait.is_some() || picks.iter().any(|(_, pick)| pick.is_some()) {
         let owned = tx.economy_cosmetics_get(&profile.id).await?;
-        if !cosmetics::owns_portrait(portrait_or_default(Some(picked)), &owned.account) {
+        // R1827000: on top of D5, a portrait the account does not own is refused, in D5's shape.
+        if let Some(picked) = portrait.as_deref()
+            && !cosmetics::owns_portrait(portrait_or_default(Some(picked)), &owned.account)
+        {
             let issues = issues_json(&[validator::DraftIssue {
                 rule: validator::DraftRule::D5,
                 message: UNOWNED_PORTRAIT.to_string(),
                 card_id: None,
             }])?;
             return Err(draft_refused(UNOWNED_PORTRAIT, &issues));
+        }
+        // R1833000: so is a playmat, backdrop or card back it does not own, as a malformed pick is.
+        for (key, pick) in picks {
+            if let Some(id) = pick.as_deref()
+                && !cosmetics::owns_account_cosmetic(id, &owned.account)
+            {
+                return Err(bad_request(format!(
+                    "\"{key}\" is a cosmetic this account does not own"
+                )));
+            }
         }
     }
     // `created_at` is only read on a create; an update keeps the stored one (the store's contract).

@@ -395,11 +395,13 @@ fn defense_switch(
     best_try(state, seat.opponent(), &tries, counter)
 }
 
-/// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
+/// The ids of the cards the opponent holds unseen: its hand, its Resource tray (R1840000) and its
+/// library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
     side.hand
         .iter()
+        .chain(side.resource_tray.iter().flatten())
         .chain(side.library.iter())
         .map(|card| card.id.clone())
         .collect()

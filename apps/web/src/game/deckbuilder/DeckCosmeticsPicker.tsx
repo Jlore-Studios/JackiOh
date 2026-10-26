@@ -2,10 +2,13 @@
 // inline selects in the sidebar push the verdict and the pool's first row off the first screen
 // (BUILD M5-T1), so the picks live in a popover like the settings gear's (SettingsButton.tsx):
 // a button in the header row, an absolutely-positioned panel, outside-press and Escape close.
+// R1833000: each select offers the starters and the account cosmetics the account owns while
+// ownership decides (`useOwnsAccountCosmetic`), and a stored pick it does not own shows as the
+// kind's default, which is what the board draws.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-import { cosmeticsOf, resolveCosmetic, type DeckSlotKind } from "../../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf, resolveCosmetic, useOwnsAccountCosmetic, type DeckSlotKind } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_COSMETICS_BUTTON } from "./testids.ts";
 import type { DeckItem } from "./sync.ts";
@@ -30,6 +33,7 @@ export default function DeckCosmeticsPicker({
   onCosmetic: (kind: DeckSlotKind, id: string | null) => void;
 }): ReactElement {
   useLocale();
+  const owns = useOwnsAccountCosmetic();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -86,23 +90,26 @@ export default function DeckCosmeticsPicker({
               the default. */}
           {DECK_COSMETIC_FIELDS.map((slot) => {
             const pick = deck[slot.key] ?? null;
+            const resolved = pick === null ? null : resolveCosmetic(slot.kind, pick);
             return (
               <label className="ws-compare-pick" key={slot.kind}>
                 <span className="ws-field-label">{t(slot.label)}</span>
                 <select
                   className="ws-select"
                   data-testid={`deck-cosmetic-${slot.kind}`}
-                  value={pick === null ? "" : resolveCosmetic(slot.kind, pick)}
+                  value={resolved === null ? "" : owns(resolved) ? resolved : DEFAULT_CARD_COSMETICS[slot.kind]}
                   onChange={(event) => {
                     onCosmetic(slot.kind, event.target.value === "" ? null : event.target.value);
                   }}
                 >
                   <option value="">{t("As equipped in Collection")}</option>
-                  {cosmeticsOf(slot.kind).map((cosmetic) => (
-                    <option key={cosmetic.id} value={cosmetic.id}>
-                      {t(cosmetic.name)}
-                    </option>
-                  ))}
+                  {cosmeticsOf(slot.kind)
+                    .filter((cosmetic) => owns(cosmetic.id))
+                    .map((cosmetic) => (
+                      <option key={cosmetic.id} value={cosmetic.id}>
+                        {t(cosmetic.name)}
+                      </option>
+                    ))}
                 </select>
               </label>
             );

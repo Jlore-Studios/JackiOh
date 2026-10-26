@@ -140,6 +140,11 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Cloaked" },
   { kind: "Crater" },
   { kind: "Flashback" },
+  // Issue #1838's keyword (R1838000).
+  { kind: "Tradable" },
+  // Stinkyscape's Starship keywords (R1852000, R1852003).
+  { kind: "Starship Piece" },
+  { kind: "Starship" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {
@@ -203,7 +208,7 @@ export function fullBoardView(over: Partial<PlayerView> = {}): PlayerView {
       counters: { plague: 2, grade: 3 },
     }),
     unit("p1", { defId: "core-017", position: "DEF", attack: 1, maxHealth: 6, health: 6 }),
-    // A Stack pile: three cards buried under the top one (§3.2), face-down and dormant.
+    // A Stack pile: three cards buried under the top one (§3.2), face-down beneath it.
     unit("p1", { defId: "core-034", keywords: [{ kind: "Stack" }], buried: 3, attack: 5, maxHealth: 5, health: 4 }),
     unit("p1", { defId: "core-051", attack: 0, maxHealth: 1, health: 1, canAct: false, cost: 0 }),
   ];

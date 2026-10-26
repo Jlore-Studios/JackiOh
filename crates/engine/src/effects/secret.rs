@@ -118,6 +118,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 lucky: None,
                 copy_of: None,
                 memory: Some(memory),
+                fixed_x: None,
             })
             .apply)(ctx);
         }

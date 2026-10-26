@@ -1,11 +1,13 @@
-//! C+ #68 Organic Produce (SPEC §8.7 row 68; BUILD M9 row C+ 68). (4) Field Spell, Fruit, Epic.
+//! C+ #68 Organic Produce (SPEC §8.7 row 68; BUILD M9 row C+ 68). (4) Field Spell, Epic (a Fruit until
+//! #1837, R1837000).
 //!   Base:    "Cry: Add {fruits|random Fruit|random Fruits} to your hand. / Aura: Fruits you play are Radiant." — fruits 1
 //!   Radiant: "Cry: Add {fruits|…} to your hand. Each costs (0). / (the same aura)" — fruits 2
 //!
 //! The Cry's pool is the Fruit pool (R382: the non-token Fruits and the five Grapes), never Organic
 //! Produce itself (R387: `addRandomFromCatalog` leaves out the running card's id), repeats allowed
-//! (R60). The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214):
-//! every Fruit its controller plays, casts included, resolves on its Radiant face.
+//! (R60); since #1837 neither it nor C+ #63 Fruit Tree is a Fruit, so the pool holds neither (R1837000).
+//! The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214): every Fruit
+//! its controller plays, casts included, resolves on its Radiant face.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -46,7 +48,8 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #68 Organic Produce — SPEC §8.7 row 68, BUILD M9 row C+ 68: a Field Spell whose Cry adds a random
-// card of the Fruit pool (R382), never Organic Produce (R387); its aura makes every Fruit-tagged card its
+// card of the Fruit pool (R382), never Organic Produce (R387) nor Fruit Tree, the two no Fruits since
+// #1837 (R1837000), so the aura leaves both on their base faces; its aura makes every Fruit-tagged card its
 // controller plays Radiant at §10.5 step 3 (R213, R214), so it resolves on its Radiant face; the
 // opponent's Fruits are untouched; a Fruit Trap set face-down is made Radiant unread by the opponent
 // (R177); the count reads through `param()`; radiant its Cry adds 2 Fruits that cost (0).
@@ -59,6 +62,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PRODUCE: &str = "classicplus-068";
+    const TREE: &str = "classicplus-063"; // Fruit Tree: (3) Field Spell, no Fruit since #1837 (R1837000).
     const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20." / Radiant 40.
     const TRAP: &str = "core-041"; // Sheepish, a Trap with no Fruit tag.
     const FILLER: &str = "core-005";
@@ -220,7 +224,7 @@ mod tests {
         }
 
         #[test]
-        fn r119_it_never_catches_its_own_play_but_a_second_organic_produce_is_a_fruit_radiant_its_cry_adds_2_that_cost_0() {
+        fn r119_r1837000_it_never_catches_its_own_play_and_a_second_organic_produce_is_no_fruit_its_base_cry_adds_1() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, PRODUCE, FILLER], "mana": 8 }, "p2": { "hand": [FILLER] } }));
             let hand = s.hand(P1);
@@ -229,14 +233,38 @@ mod tests {
             assert!(!s.card(&first).radiant);
             let before = hand_ids(&s);
             s.play(&second, json!({ "zone": 2 }));
-            assert!(s.card(&second).radiant);
+            // Until #1837 the second was a Fruit, made Radiant, and added two that cost (0).
+            assert!(!s.card(&second).radiant);
             let fruits: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
-            assert_eq!(fruits.len(), 2);
-            let costs: Vec<i32> = fruits
-                .iter()
-                .map(|card| jackioh_engine::mana::effective_cost(s.state(), card, Default::default()))
-                .collect();
-            assert_eq!(costs, vec![0, 0]);
+            assert_eq!(fruits.len(), 1);
+            assert_eq!(fruits[0].cost_override, None);
+            assert!(!s.events().iter().any(|event| matches!(event, GameEvent::RadiantSet { .. })));
+        }
+
+        #[test]
+        fn r1837000_its_cry_never_adds_fruit_tree_and_the_aura_leaves_a_fruit_tree_on_its_base_face() {
+            crate::register_all();
+            let pool = fruit_pool();
+            assert!(!pool.iter().any(|id| id == TREE));
+            let mut seen: IndexSet<String> = IndexSet::new();
+            for n in 0..40 {
+                let mut s = scenario(json!({
+                    "seed": format!("produce-1837-{n}"),
+                    "p1": { "hand": [PRODUCE, FILLER] },
+                    "p2": { "hand": [FILLER] }
+                }));
+                for id in play_produce(&mut s) {
+                    seen.insert(id);
+                }
+            }
+            assert!(!seen.contains(TREE));
+            let mut s = scenario(json!({
+                "p1": { "hand": [TREE, FILLER], "backrow": [PRODUCE], "mana": 10 },
+                "p2": { "hand": [FILLER] }
+            }));
+            s.play(TREE, json!({ "zone": 2 }));
+            assert!(!s.card(TREE).radiant);
+            assert!(!s.events().iter().any(|event| matches!(event, GameEvent::RadiantSet { .. })));
         }
 
         #[test]
@@ -326,6 +354,34 @@ mod tests {
             }));
             heal_hero(&mut s, P1);
             s.expect_health(P1, 50);
+        }
+
+        #[test]
+        fn r1837000_its_cry_never_adds_fruit_tree_and_its_aura_leaves_fruit_tree_and_a_second_organic_produce_base() {
+            crate::register_all();
+            let mut seen: IndexSet<String> = IndexSet::new();
+            for n in 0..20 {
+                let mut s = scenario(json!({
+                    "seed": format!("rproduce-1837-{n}"),
+                    "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] },
+                    "p2": { "hand": [FILLER] }
+                }));
+                for id in play_produce(&mut s) {
+                    seen.insert(id);
+                }
+            }
+            assert!(!seen.contains(TREE));
+            assert!(!seen.contains(PRODUCE));
+            let mut s = scenario(json!({
+                "p1": { "hand": [TREE, PRODUCE, FILLER], "backrow": [{ "def": PRODUCE, "radiant": true }], "mana": 10 },
+                "p2": { "hand": [FILLER] }
+            }));
+            let tree = s.card(TREE).id.clone();
+            let produce = s.hand(P1).into_iter().find(|card| card.def_id == PRODUCE).map(|card| card.id).unwrap_or_default();
+            s.play(&tree, json!({ "zone": 2 }));
+            s.play(&produce, json!({ "zone": 3 }));
+            assert!(!s.card(&tree).radiant);
+            assert!(!s.card(&produce).radiant);
         }
 
         #[test]

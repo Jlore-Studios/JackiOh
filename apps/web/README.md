@@ -131,10 +131,24 @@ cost) ask for them after the target, in the `hand` picker; plays that differ by 
 Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
 zone is picked by clicking the unit or its zone.
 
+**The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
+for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
+(`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
+`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
+reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+Game's own bar is off (`tradeBar={false}`).
+
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
 graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Play"
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
+
+**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
+each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
+the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
+opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
+A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
 
 ## Commands
 
@@ -258,9 +272,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
                         as live previews, which equip on that card alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
-                        the account owns them (cards/ownedFullArt.ts); collection/ holds the panels
-                        (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel) and their model; every one
-                        renders the server's answers and decides nothing (rule 7)
+                        the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles,
+                        the default selects and the deck builder's slot picker offer what the account
+                        owns, and an unowned stored pick draws as the default (R1833000); collection/
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
+                        every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot

@@ -1,8 +1,9 @@
-//! C+ #63 Fruit Tree (SPEC §8.7 row 63). (3) Field Spell, Fruit, Rare.
+//! C+ #63 Fruit Tree (SPEC §8.7 row 63). (3) Field Spell, Rare (a Fruit until #1837, R1837000).
 //!   Base:    "Start of Turn: Add a random Fruit to your hand. It costs (0)."
 //!   Radiant: "Start of Turn: Add a random Radiant Fruit to your hand. It costs (0)."
-//!   Engine:  "Its controller's start of turn (R62). The Fruit pool (R382) but Fruit Tree (R387);
-//!            `costOverride` 0; the hand cap burns it (§2.4). Tunes: none."
+//!   Engine:  "Its controller's start of turn (R62). The Fruit pool (R382), which holds no Fruit
+//!            Tree: it and C+ #68 Organic Produce, the two Field Spells that make Fruit, lost the Fruit
+//!            tag in #1837 (R1837000); `costOverride` 0; the hand cap burns it (§2.4). Tunes: none."
 //!
 //! `startOfTurn` fires for the controller alone, on their own turn (`turn.startTurn` asks
 //! `triggerOrder` for that one player, §2.2, R62), so the opponent's start of turn adds nothing. The
@@ -51,6 +52,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const TREE: &str = "classicplus-063";
+    const PRODUCE: &str = "classicplus-068"; // Organic Produce: no Fruit since #1837 (R1837000).
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a hand card so turns do not auto-end, and deck filler.
     const GRAPES: [&str; 5] = [
         "classicplus-065-1",
@@ -144,7 +146,7 @@ mod tests {
         }
 
         #[test]
-        fn r382_r387_over_many_seeds_it_hands_out_only_the_fruit_pool_grapes_included_and_never_fruit_tree() {
+        fn r382_r387_r1837000_over_many_seeds_it_hands_out_only_the_fruit_pool_grapes_included_never_fruit_tree_or_organic_produce() {
             let mut seen: IndexSet<String> = IndexSet::new();
             for i in 0..120 {
                 let mut s = grown(false, Some(&format!("tree-{i}")), None);
@@ -154,9 +156,13 @@ mod tests {
                 }
             }
             assert!(!seen.contains(TREE));
+            assert!(!seen.contains(PRODUCE));
             let fresh = grown(false, None, None);
             for id in &seen {
-                assert!(def_of(Some(fresh.state()), id).tags.contains(&Tag::Fruit));
+                let fruit = def_of(Some(fresh.state()), id);
+                assert!(fruit.tags.contains(&Tag::Fruit));
+                // R1837000: every Fruit is a Spell, the two Field Spells that make Fruit being none.
+                assert_eq!(fruit.type_, CardType::Spell, "{id}");
             }
             assert!(seen.iter().any(|id| is_grape(id)));
             assert!(seen.iter().any(|id| !is_grape(id)));
@@ -250,7 +256,7 @@ mod tests {
         }
 
         #[test]
-        fn r387_never_fruit_tree_either_and_a_grape_comes_radiant_too() {
+        fn r387_r1837000_never_fruit_tree_or_organic_produce_either_and_a_grape_comes_radiant_too() {
             let mut seen: Vec<(String, bool)> = Vec::new();
             for i in 0..80 {
                 let mut s = grown(true, Some(&format!("rtree-{i}")), None);
@@ -260,7 +266,7 @@ mod tests {
                     seen.push((def_id, radiant));
                 }
             }
-            assert!(!seen.iter().any(|entry| entry.0 == TREE));
+            assert!(!seen.iter().any(|entry| entry.0 == TREE || entry.0 == PRODUCE));
             assert!(seen.iter().all(|entry| entry.1));
             assert!(seen.iter().any(|entry| is_grape(&entry.0)));
         }

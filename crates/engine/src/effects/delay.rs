@@ -423,6 +423,8 @@ pub fn allure_enemy_units() -> Effect {
                 .into_iter()
                 .cloned(),
         );
+        // R1839000: a Dormant card is marked by nothing, so Allure passes it by.
+        units.retain(|unit| !crate::slumber::is_slumbering(unit));
         for unit in units {
             let mut data: IndexMap<String, Value> = IndexMap::new();
             data.insert("instanceId".to_string(), Value::String(unit.id.clone()));

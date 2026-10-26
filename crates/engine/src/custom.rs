@@ -384,6 +384,7 @@ pub fn custom_def(card: &CustomCard) -> CardDef {
         params: if params.is_empty() { None } else { Some(params) },
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc: None,
         radiant_fallback: None,
         ingredients: None,

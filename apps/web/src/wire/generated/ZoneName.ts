@@ -3,4 +3,4 @@
 /**
  * `Zone["z"]`: the name of a zone, without its side, row or lane.
  */
-export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone";
+export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone" | "tray";

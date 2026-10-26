@@ -1190,25 +1190,28 @@ async fn r1661001_an_account_cosmetic_a_duplicate_drops_is_owned_on_no_card_and_
 }
 
 #[tokio::test]
-async fn r1827000_a_duplicate_drops_a_portrait_on_no_card_until_all_five_are_owned() {
+async fn r1827000_r1833000_a_duplicate_drops_each_account_cosmetic_on_no_card_until_all_are_owned() {
     let (app, token) = setup().await;
     grant_entire_catalog(&app, PROFILE, None)
         .await
         .expect("R111's grant");
-    // The shipped registry, whose global roll drops the five portraits but vanilla: every slot a
-    // duplicate, so each takes the global draw while one is left unowned.
+    // The shipped registry, whose global roll drops the five portraits but vanilla (R1827000) and
+    // #1833's six playmats, six backdrops and six card backs (R1833000): every slot a duplicate, so
+    // each takes the global draw while one is left unowned.
     let registry = shipped().expect("the registry");
-    let portraits: Vec<String> = global_cosmetics(&registry)
+    let global: Vec<String> = global_cosmetics(&registry)
         .into_iter()
         .map(|cosmetic| cosmetic.id)
         .collect();
-    assert_eq!(portraits.len(), 5);
-    assert!(portraits.iter().all(|id| portrait_of(id).is_some()));
+    assert_eq!(global.len(), 5 + 18);
+    assert_eq!(global.iter().filter(|id| portrait_of(id).is_some()).count(), 5);
     let pool = pack_pool(defs(&app), PackKind::Set(SetName::Core));
     let mut dropped = 0;
-    for at in 0..100 {
+    // A duplicate's global roll hits GLOBAL_COSMETIC_ROLL_WEIGHT times in TIER_WEIGHT_TOTAL, so a
+    // few dozen openings own them all.
+    for at in 0..400 {
         let before = holdings(&app).await;
-        if portraits.iter().all(|id| before.account_cosmetics.contains(id)) {
+        if global.iter().all(|id| before.account_cosmetics.contains(id)) {
             break;
         }
         buy(&app, &token, "Core").await;
@@ -1234,12 +1237,17 @@ async fn r1827000_a_duplicate_drops_a_portrait_on_no_card_until_all_five_are_own
             else {
                 continue;
             };
-            if portrait_of(cosmetic_id).is_none() {
+            let Some(entry) = registry
+                .iter()
+                .find(|cosmetic| cosmetic.id == *cosmetic_id && !cosmetic.kind.is_per_card())
+            else {
                 continue;
-            }
-            // An Epic portrait, owned on the account and on no card.
+            };
+            // An account cosmetic at the floor or above, at its own rarity, owned on the account
+            // and on no card.
             dropped += 1;
-            assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic, "{slot:?}");
+            assert_eq!(*cosmetic_rarity, entry.rarity, "{slot:?}");
+            assert!(*cosmetic_rarity >= GLOBAL_COSMETIC_FLOOR_RARITY, "{slot:?}");
             assert!(after.account_cosmetics.contains(cosmetic_id), "{slot:?}");
             assert!(
                 !before.account_cosmetics.contains(cosmetic_id),
@@ -1254,23 +1262,19 @@ async fn r1827000_a_duplicate_drops_a_portrait_on_no_card_until_all_five_are_own
             );
         }
     }
-    assert_eq!(dropped, portraits.len());
+    assert_eq!(dropped, global.len());
 
-    // All five owned, each by one `pack_open` row on no card.
+    // All of them owned, each by one `pack_open` row on no card.
     let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
     let cosmetics = tx.economy_cosmetics_get(PROFILE).await.expect("the cosmetics");
     let ledger = tx.economy_ledger_get(PROFILE).await.expect("the ledger");
     tx.commit().await.expect("the commit");
-    let mut owned: Vec<&String> = cosmetics
-        .account
-        .iter()
-        .filter(|id| portrait_of(id).is_some())
-        .collect();
+    let mut owned: Vec<&String> = cosmetics.account.iter().collect();
     owned.sort();
-    let mut expected: Vec<&String> = portraits.iter().collect();
+    let mut expected: Vec<&String> = global.iter().collect();
     expected.sort();
     assert_eq!(owned, expected);
-    for id in &portraits {
+    for id in &global {
         let rows: Vec<_> = ledger
             .cosmetics
             .iter()
