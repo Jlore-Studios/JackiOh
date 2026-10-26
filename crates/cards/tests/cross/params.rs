@@ -390,8 +390,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // only": M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks.
         // The Meditative+ set, held until it ships (R1178000), joins batch by batch (M+ #4's
         // `embiggenedCards`); each of its numbers is held to the rule above, and the pinned lists are
-        // the shipped sets'.
-        base_only.retain(|entry| !entry.starts_with("meditativeplus-"));
+        // the shipped sets'. So is the held Stinkyscape set's (R1857000), until its release re-pins them.
+        base_only.retain(|entry| !entry.starts_with("meditativeplus-") && !entry.starts_with("stinkyscape-"));
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
@@ -468,10 +468,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
         // The Meditative+ set, held until it ships (R1178000), joins the count batch by batch; each
-        // of its numbers is held to the rule above, and the pinned counts are the shipped sets'.
+        // of its numbers is held to the rule above, and the pinned counts are the shipped sets'. So
+        // does the held Stinkyscape set (R1857000).
         let held = radiant_only
             .iter()
-            .filter(|entry| entry.starts_with("meditativeplus-"))
+            .filter(|entry| entry.starts_with("meditativeplus-") || entry.starts_with("stinkyscape-"))
             .count();
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
@@ -545,6 +546,9 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     const AI_PRINTED: &str = "an AI generated card's printed number (R482)";
     /// An Immutable card's number: neither a Buff nor a Nerf reaches it (R386).
     const IMMUTABLE: &str = "an Immutable card's number, which nothing tunes";
+    /// A digit in the name of a card the text names (the held Stinkyscape set's Siva 1, Paragon Mk1,
+    /// Scanning Probe Mk1, Shockwave447, RR-5000, Trila 3, 1v1 Final Destination), which is no amount.
+    const CARD_NAME: &str = "a digit in a card name the text names";
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
@@ -669,5 +673,12 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
             "a card here that prints no number any more"
         );
         assert!(FIXED.iter().all(|(_, reason)| !reason.is_empty()));
+        // Each reason says a why of its own.
+        let reasons = [
+            KEYWORD, PRICE, ENGINE, FORMULA, STRUCTURE, TARGETS, EITHER_WAY, AI_PRINTED, IMMUTABLE, CARD_NAME,
+        ];
+        let distinct: IndexSet<&str> = reasons.iter().copied().collect();
+        assert_eq!(distinct.len(), reasons.len());
+        assert!(FIXED.iter().all(|(_, reason)| distinct.contains(reason)));
     }
 }

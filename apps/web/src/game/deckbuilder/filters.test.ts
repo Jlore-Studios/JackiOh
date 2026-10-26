@@ -802,6 +802,23 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...shippedTags(["Human", "Potion"], [fixture("c-1", "Core", ["Potion"])])]).toEqual(["Potion"]);
   });
 
+  it("R1857000 the Stinkyscape set has no chip and lends no tag, its four own included, until it ships", () => {
+    // The third held set (issue #1836), sixth in the catalog order, until its release (#1884).
+    expect(setShips("Stinkyscape")).toBe(false);
+    expect(FILTER_SETS.includes("Stinkyscape")).toBe(setShips("Stinkyscape"));
+    expect(filterSetId("Stinkyscape")).toBe("db-filter-set-stinkyscape");
+    const four: Tag[] = ["Drone Core", "Weapon", "War Doctrine", "Swarm"];
+    const drone = fixture("s-27", "Stinkyscape", ["Drone Core", "Human"]);
+    expect([...shippedTags(["Human", ...four], [drone])]).toEqual(setShips("Stinkyscape") ? ["Human", "Drone Core"] : []);
+    // A shipped card's would lend their chips: the four are tags like any other.
+    expect([...shippedTags(["Human", ...four], [fixture("c-1", "Core", four)])]).toEqual(four);
+    // So no chip of the bundled catalog's is one of them while the set is held, whatever has landed.
+    for (const tag of four) {
+      expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(false);
+      expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(false);
+    }
+  });
+
   it("R1381 a tag chip shows while a card that ships carries it", () => {
     expect([...shippedTags(FILTER_TAGS, [fixture("c-1", "Core", ["Wincon", "Human"])])]).toEqual(["Human", "Wincon"]);
     // A set that has not shipped lends no tag; once it ships its tag gets its chip.
