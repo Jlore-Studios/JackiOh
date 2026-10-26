@@ -2202,20 +2202,29 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/11-rulings.md",
+            "spec/INDEX.md"
+          ],
+          "from": "8080406807b97ee0e3ecb620a6260cae2f47ad95",
+          "main": "764d9104b1fba5af23cb835002dfc1fbf946b182"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "40274730725",
-            "tier": "strong"
+            "family": "muse",
+            "run": "40282662150",
+            "tier": "medium"
           }
         ],
-        "sha": "8080406807b97ee0e3ecb620a6260cae2f47ad95",
+        "sha": "5a8b5e3e303334be3040da54a46d0938aaaa8d7b",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
