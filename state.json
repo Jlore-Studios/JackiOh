@@ -2199,6 +2199,7 @@
     "1991": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-26T13:41:35Z",
         "difficulty": "medium",
