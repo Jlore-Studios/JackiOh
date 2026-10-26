@@ -1988,7 +1988,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-26T03:31:24Z",
-      "run_id": "pending:e6d0816b-1792988518",
+      "run_id": "40268780669",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-26T04:22:51Z",
