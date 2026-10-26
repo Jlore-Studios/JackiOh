@@ -500,6 +500,42 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
   });
 });
 
+// #1831: the Friends button in the control bar on a phone
+
+describe("#1831 the Friends button in the board's phone bars", () => {
+  it("#1831 board.css places the Friends button in the phone bars", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (max-width: 600px) {");
+    const portrait = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    // A button of the bar at its natural size, as the language button is.
+    expect(text).toMatch(/\.board \.control-bar \.friends-button--game\s*\{\s*flex:\s*0 0 auto;/);
+    // An online match's rail row holds it at its end: the rail gives up 50px (its 44px button and a gap).
+    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.board-rail\s*\{\s*order:\s*-2;\s*flex-basis:\s*calc\(100% - 50px\);/);
+    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.friends-button--game\s*\{\s*order:\s*-1;/);
+    // Any other bar tightens, as the narrow phone's does, to take one more 44px button.
+    const bar = String.raw`\.board \.control-bar:has\(> \.friends-button--game\):not\(:has\(> \.board-rail\)\)`;
+    expect(portrait).toMatch(new RegExp(`${bar}\\s*\\{\\s*gap:\\s*4px;`));
+    expect(portrait).toMatch(new RegExp(`${bar} \\.control\\s*\\{\\s*padding-inline:\\s*6px;`));
+    expect(portrait).toMatch(new RegExp(`${bar} \\[data-testid="settings-open-game"\\]\\s*\\{\\s*padding-inline:\\s*10px;`));
+    expect(portrait).toMatch(
+      new RegExp(`${bar} \\.control-offer-draw,\\s*${bar} \\.control-concede\\s*\\{[^}]*flex-shrink:\\s*1;[^}]*white-space:\\s*normal;`),
+    );
+  });
+
+  it("#1831 board.css hides the button in the dev hotseat's bar at 380px, where it has no room", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (max-width: 380px) {");
+    const narrow = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    expect(narrow).toMatch(
+      /:not\(\.practice-table\) > \.game > \.board > \.control-bar:not\(:has\(> \.board-rail\)\) > \.friends-button--game\s*\{\s*display:\s*none;/,
+    );
+  });
+});
+
 // #990: an online match's rail (Back, chat, the ranks) on a phone
 
 describe("#990 an online match's rail on a phone", () => {
