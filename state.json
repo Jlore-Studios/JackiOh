@@ -1744,8 +1744,11 @@
     "what": "build #1850 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-26T00:21:15Z",
-    "notes": [],
+    "at": "2026-10-26T00:33:18Z",
+    "notes": [
+      "#1953 needs a plan",
+      "#1954 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -2422,7 +2425,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T00:21:15Z",
+  "loop_tick": "2026-10-26T00:33:18Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-25T20:07:06Z",
