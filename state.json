@@ -665,6 +665,7 @@
     "1858": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-27T01:33:56Z",
         "family": "claude",
@@ -682,14 +683,16 @@
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_by_id": "claude-2",
       "planned_tier": "strong",
+      "pr": 2055,
       "provider": "claude-4",
+      "question": "",
       "round_tier": "strong",
       "run_id": "40450885992",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T04:38:53Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1859": {
       "action": "build",
