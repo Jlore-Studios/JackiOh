@@ -130,6 +130,10 @@ pub const LANE_WATCH: &str = "@laneWatch";
 /// the first resolved play of a card it names (Stinkyscape #44).
 pub const PLAY_WATCH: &str = "@playWatch";
 
+/// R1882004: the `hook` of a death watcher's queue entry — Call to Chaos (Stinky Edition)'s rest-of-game
+/// rule answering the death of a card that prints its tag (Stinkyscape #150, entry 8).
+pub const DEATH_WATCH: &str = "@deathWatch";
+
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something — a dispatch, owed work, a check or one queued trigger — so the cap has to hold every
 /// trigger one legal action can set off, and R58 bounds that from the rules: "draw your whole
@@ -948,6 +952,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     queued.extend(offer_to_lane_watches(sink, event));
     // R1863000: and Great Replacement Theory's, a resolved play's first of each card they name.
     queued.extend(offer_to_play_watches(sink, event));
+    // R1882004: and Call to Chaos (Stinky Edition)'s, a death of a card printing their tag.
+    queued.extend(offer_to_death_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
     queued
@@ -1080,6 +1086,58 @@ fn offer_to_play_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
     queued
 }
 
+/// R1882004: offer one event to every death watcher (`ModifierKind::DeathWatch`). A watch matches a
+/// `destroyed` of a card whose definition prints its tag, on either side, and answers it for the
+/// player who controlled the card as it died (R172): each match queues one `DEATH_WATCH` entry carrying
+/// the stored resume with that player (`watcher`) and the dead card (`instanceId`) in its data, in
+/// R68's order (the active player's watchers first, each player's in the order they were made).
+fn offer_to_death_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    let GameEvent::Destroyed {
+        instance_id,
+        def_id,
+        controller,
+        ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    let Some(tags) = crate::catalog::find_def(Some(&*sink.state), def_id).map(|def| def.tags.clone()) else {
+        return Vec::new();
+    };
+    let order: [PlayerId; 2] = if sink.state.active == PLAYER_IDS[0] {
+        [PLAYER_IDS[0], PLAYER_IDS[1]]
+    } else {
+        [PLAYER_IDS[1], PLAYER_IDS[0]]
+    };
+    let mut answers: Vec<(String, Resume)> = Vec::new();
+    for holder in order {
+        for modifier in &sink.state.players[holder].mods {
+            if let crate::state::ModifierKind::DeathWatch { tag, resume, .. } = &modifier.kind
+                && tags.contains(tag)
+            {
+                answers.push((modifier.id.clone(), resume.clone()));
+            }
+        }
+    }
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for (id, resume) in answers {
+        let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+        let mut data = resume.data.clone();
+        data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+        data.insert("watcher".to_string(), Value::String(controller.as_str().to_string()));
+        let entry = QueuedTrigger {
+            id: entry_id,
+            seq,
+            instance_id: id,
+            hook: DEATH_WATCH.to_string(),
+            resume: Resume { data, ..resume },
+        };
+        sink.state.trigger_queue.push(entry.clone());
+        queued.push(entry);
+    }
+    queued
+}
+
 // ---------------------------------------------------------------------------
 // 3. The loop.
 // ---------------------------------------------------------------------------
@@ -1100,8 +1158,8 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         return;
     }
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
-    // watcher's the same.
-    if entry.hook == LANE_WATCH || entry.hook == PLAY_WATCH {
+    // watcher's the same, and R1882004: a death watcher's, as the dead card's controller.
+    if entry.hook == LANE_WATCH || entry.hook == PLAY_WATCH || entry.hook == DEATH_WATCH {
         let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
         let owner = PLAYER_IDS
             .into_iter()
