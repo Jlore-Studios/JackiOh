@@ -5636,10 +5636,14 @@
       "votes": {
         "approvals": [],
         "builder": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "a4dc7c8ddc94b775f42cf2ca796056c6fecaea21",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2132": {
