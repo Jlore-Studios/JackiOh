@@ -422,6 +422,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // (VOIDED_CLOSE_CODE, game/net.ts; `close()` runs only as this route unmounts) — has nothing to
   // reconnect to, so the board says the match is gone and offers the lobby.
   const gone = match.connection === "closed";
+  // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
+  const voided = view.result?.reason === "voided";
 
   const board = (
     <Game
@@ -455,12 +457,16 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
-          <button type="button" data-testid={matchTestid.watchReplay} onClick={() => setWatching({ share: false })}>
-            {t("Watch the replay")}
-          </button>
-          <button type="button" data-testid={matchTestid.shareLastTurn} onClick={() => setWatching({ share: true })}>
-            {t("Share the last turn")}
-          </button>
+          {voided ? null : (
+            <>
+              <button type="button" data-testid={matchTestid.watchReplay} onClick={() => setWatching({ share: false })}>
+                {t("Watch the replay")}
+              </button>
+              <button type="button" data-testid={matchTestid.shareLastTurn} onClick={() => setWatching({ share: true })}>
+                {t("Share the last turn")}
+              </button>
+            </>
+          )}
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
             {t("Back to lobby")}
           </button>

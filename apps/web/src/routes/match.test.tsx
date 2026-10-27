@@ -1279,4 +1279,13 @@ describe("R768000 a finished match's replay from its result panel", () => {
     expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
     expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
   });
+
+  it("a voided match's result offers neither, since the server keeps no record of it", async () => {
+    stubReplayFetch();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: baseView({ viewer: "p1", active: "p1", phase: "over", result: { winner: "draw", reason: "voided" } }) });
+    expect(await screen.findByTestId("result-back")).toBeInTheDocument();
+    expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
+    expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
+  });
 });

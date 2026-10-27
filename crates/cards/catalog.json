@@ -17917,7 +17917,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Discover a Terminus card. If your deck is empty, it costs (0)."
@@ -17942,7 +17942,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Exile all permanents and every card in both graveyards."
@@ -17979,7 +17979,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Solve an impossible problem. If you get it right, deal {damage} damage to the enemy hero, and this gains Echo +1."
@@ -18004,7 +18004,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Take an extra turn after this one."
@@ -18040,7 +18040,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 68,
     "base": {
       "keywords": [],
       "text": "Reveals when your hero would take lethal damage: Prevent it and end the turn. The next turn is yours: your Units have Charge during it, and you lose the game at its end."
@@ -18068,7 +18068,7 @@
     "refs": [
       "classicplus-071"
     ],
-    "loc": 6,
+    "loc": 61,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent's turn ends: Lock every lane but one, picked at random. Set each hero's health to 1. Both players discard every Spell in their hand."
@@ -18100,7 +18100,7 @@
       "stinkyscape-150",
       "stinkyscape-151"
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Cast one of each Call to Chaos."
@@ -18158,7 +18158,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 16,
+    "loc": 27,
     "base": {
       "attack": 6,
       "health": 4,
@@ -22117,7 +22117,7 @@
       "stinkyscape-103",
       "stinkyscape-115"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
@@ -24648,7 +24648,7 @@
       "base": 0,
       "embiggen": 1
     },
-    "loc": 6,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
@@ -24811,7 +24811,7 @@
       "stinkyscape-110",
       "stinkyscape-111"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
@@ -24838,7 +24838,7 @@
       "stinkyscape-073",
       "stinkyscape-074"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand."
@@ -24865,7 +24865,7 @@
       "stinkyscape-114",
       "stinkyscape-123"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
@@ -24893,7 +24893,7 @@
       "stinkyscape-079",
       "stinkyscape-080"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
@@ -24921,7 +24921,7 @@
       "stinkyscape-161",
       "stinkyscape-162"
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [],
       "text": "Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is."
