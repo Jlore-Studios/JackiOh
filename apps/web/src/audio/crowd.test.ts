@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CROWD_FEEL } from "../game/damageFeel.ts";
-import { createCrowdDirector } from "./crowd.ts";
-import { createAudioEngine } from "./engine.ts";
-import { fakeContextFactory } from "./test/fakeAudio.ts";
+import { createCrowdDirector, type CrowdDirector } from "./crowd.ts";
+import { createAudioEngine, type MatchFeelAudioEngine } from "./engine.ts";
+import { fakeContextFactory, settle, type FakeAudio, type FakeContextFactory, type FakeNode } from "./test/fakeAudio.ts";
 import type { AudioEngine } from "./types.ts";
 
 type Scheduled = { ms: number; run: () => void; cancelled: boolean };
@@ -98,5 +98,102 @@ describe("issue #57 crowd director", () => {
     const output = engine.crowdOutput();
     if (output === null) throw new Error("unlocked engine must expose its crowd output");
     expect(Object.keys(output).sort()).toEqual(["context", "crowd"]);
+  });
+});
+
+describe("background: the page hides mid-game and comes back (issue #2034)", () => {
+  type Task = Scheduled & { ran: boolean };
+
+  /** A running engine, its started crowd and the crowd's timers. */
+  function rig(): { factory: FakeContextFactory; engine: MatchFeelAudioEngine; crowd: CrowdDirector; tasks: Task[] } {
+    const factory = fakeContextFactory({ state: "running" });
+    const engine = createAudioEngine({ createContext: factory.create, lifecycle: null, speech: null });
+    engines.push(engine);
+    engine.unlock();
+    const tasks: Task[] = [];
+    const crowd = createCrowdDirector({
+      engine,
+      later: (ms, run) => {
+        const task = { ms, run, cancelled: false, ran: false };
+        tasks.push(task);
+        return () => {
+          task.cancelled = true;
+        };
+      },
+    });
+    crowd.start();
+    return { factory, engine, crowd, tasks };
+  }
+
+  /** Fires every timer now due (the ones it schedules wait for the next call). */
+  function due(tasks: Task[]): void {
+    for (const task of tasks.filter((t) => !t.cancelled && !t.ran)) {
+      task.ran = true;
+      task.run();
+    }
+  }
+
+  /** The crowd's sounds on `audio`: its started sources that reach the crowd bus. */
+  function heard(audio: FakeAudio, crowdBus: FakeNode): FakeNode[] {
+    return audio.startedSources().filter((n) => audio.reaches(n, crowdBus));
+  }
+
+  function crowdBusOf(engine: MatchFeelAudioEngine, audio: FakeAudio): FakeNode {
+    const output = engine.crowdOutput();
+    if (output === null) throw new Error("an unlocked engine exposes its crowd output");
+    return audio.nodeOf(output.crowd);
+  }
+
+  it("background: patrons and reactions that come due on a suspended or interrupted context are dropped, never saved up for the resume", async () => {
+    const r = rig();
+    const audio = r.factory.last();
+    const bus = crowdBusOf(r.engine, audio);
+    // A GIGA hit lands, then the page hides and the OS stops the context inside its quiet period.
+    r.crowd.observeDamage(25);
+    for (const state of ["suspended", "interrupted"] as const) {
+      audio.state = state;
+      // The patron and the roar come due on the stopped clock and are dropped …
+      due(r.tasks);
+      // … and a hit asked for now draws nothing, not even a quiet period.
+      const before = r.tasks.length;
+      r.crowd.observeDamage(25);
+      expect(r.tasks).toHaveLength(before);
+    }
+    expect(heard(audio, bus)).toEqual([]);
+    // The murmurs keep their rhythm for when sound comes back.
+    expect(r.tasks.filter((t) => t.ms >= CROWD_FEEL.patronMinMs && !t.cancelled && !t.ran)).toHaveLength(1);
+
+    // The next tap resumes the context: nothing held back plays as a burst …
+    r.engine.unlock();
+    await settle();
+    expect(r.engine.state()).toBe("running");
+    due(r.tasks);
+    // … only the one patron now due murmurs.
+    expect(heard(audio, bus)).toHaveLength(1);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("background: after the OS closed the context and the tap rebuilt it, the crowd plays on the new context", async () => {
+    const r = rig();
+    const closed = r.factory.last();
+    const oldBus = crowdBusOf(r.engine, closed);
+    closed.state = "closed";
+    due(r.tasks);
+
+    r.engine.unlock();
+    await settle();
+    const audio = r.factory.last();
+    expect(audio).not.toBe(closed);
+    const bus = crowdBusOf(r.engine, audio);
+    // The next patron murmurs on the rebuilt context …
+    due(r.tasks);
+    expect(heard(audio, bus)).toHaveLength(1);
+    // … and so do a hit's roar and the patron after it, none of them on the dead one.
+    r.crowd.observeDamage(25);
+    due(r.tasks);
+    expect(heard(audio, bus)).toHaveLength(3);
+    expect(heard(closed, oldBus)).toEqual([]);
+    expect(audio.violations).toEqual([]);
+    expect(closed.violations).toEqual([]);
   });
 });
