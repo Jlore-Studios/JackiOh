@@ -1,9 +1,9 @@
 """#317 part 1: a model call that fails in seconds is the subscription's failure, not the item's.
 
-Devin's CLI failed every call in seconds from 2026-10-05 07:30Z. Each failed builder call was
-committed as a pass, checked, self-checked and delivered as "Revision done", and each failed review
-call was read as an unreadable answer, so the items were charged and blocked while the broken
-subscription kept getting work.
+A weak subscription's CLI failed every call in seconds from 2026-10-05 07:30Z. Each failed builder
+call was committed as a pass, checked, self-checked and delivered as "Revision done", and each
+failed review call was read as an unreadable answer, so the items were charged and blocked while the
+broken subscription kept getting work.
 """
 
 from __future__ import annotations
@@ -102,7 +102,7 @@ class StderrTests(unittest.TestCase):
         stderr = "\n".join(f"line {n}" for n in range(30))
         found = stderr_error(stderr, "x")
         self.assertTrue(found.startswith("line 10\n") and found.endswith("line 29"))
-        self.assertEqual(stderr_error("  \n", "devin exited 1"), "devin exited 1")
+        self.assertEqual(stderr_error("  \n", "lite exited 1"), "lite exited 1")
 
 
 if __name__ == "__main__":

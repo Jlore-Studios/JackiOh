@@ -5,7 +5,7 @@
 # The night box: the ids of the subscriptions that run there (providers.json entries whose
 # runs_on is night-vm-<id>):
 #
-#   bash setup.sh gpt agy muse devin
+#   bash setup.sh gpt agy muse
 #
 # Each subscription gets a Linux user of its own, agent-<id>, with a home no other user can read,
 # where its CLI login lives, its Rust toolchain for the light checks, and its GitHub runner
@@ -30,7 +30,7 @@ if [ "${1:-}" = --training ]; then
   [ "$#" = 0 ] || { echo "setup.sh --training takes no subscription ids" >&2; exit 2; }
 fi
 # The Claude accounts log in from secrets and run on GitHub's runners, so none has a user here.
-[ -n "$training" ] || [ "$#" -gt 0 ] || set -- gpt agy muse devin
+[ -n "$training" ] || [ "$#" -gt 0 ] || set -- gpt agy muse
 export DEBIAN_FRONTEND=noninteractive HOME=/root
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The version rust-toolchain.toml pins (with its components and target), installed for every user
@@ -96,29 +96,6 @@ install_rust() {
   fi
 }
 
-# Devin's CLI: the steps of cli.devin.ai/install.sh (its manifest, the bundle, the bundle's
-# checksum), into a shared directory instead of root's home, and without the per-user
-# `devin setup` it ends with. Each user's own login stays in that user's home.
-install_devin() {
-  local manifest version dir
-  manifest="$(curl -fsSL https://static.devin.ai/cli/current/manifest.json)"
-  version="$(jq -r .version <<<"$manifest")"
-  dir="/usr/local/lib/devin/$version"
-  if [ ! -x "$dir/bin/devin" ]; then
-    curl -fsSL -o "$work/devin.tgz" \
-      "$(jq -r '.platforms["x86_64-unknown-linux"].url' <<<"$manifest")"
-    echo "$(jq -r '.platforms["x86_64-unknown-linux"].sha256' <<<"$manifest")  $work/devin.tgz" \
-      | sha256sum -c --quiet -
-    rm -rf "$dir.tmp" && mkdir -p "$dir.tmp"
-    tar xzf "$work/devin.tgz" -C "$dir.tmp"
-    rm -rf "$dir" && mv "$dir.tmp" "$dir"
-  fi
-  echo curl-bash > "$dir/distribution"
-  ln -sfn "$version" /usr/local/lib/devin/current
-  ln -sf /usr/local/lib/devin/current/bin/devin /usr/local/bin/devin
-  chmod -R a+rX /usr/local/lib/devin
-}
-
 # Meta's Muse Code CLI, into a shared directory, never updating itself: a run of this updates it.
 # Each user's own login (`muse login`) stays in that user's home.
 install_muse() {
@@ -153,8 +130,8 @@ if [ -n "$training" ]; then
   apt-get install -y -qq gh >/dev/null
   install_muse
 
-  # The box is always on. A box set up before as a night box (or by the old `setup.sh
-  # devin-train`) has the idle stop: it goes.
+  # The box is always on. A box set up before as a night box (or by an older training setup)
+  # has the idle stop: it goes.
   systemctl disable --now night-vm-idle-stop.timer >/dev/null 2>&1 || true
   rm -f /etc/systemd/system/night-vm-idle-stop.timer /etc/systemd/system/night-vm-idle-stop.service
 
@@ -251,7 +228,6 @@ curl -fsSL https://antigravity.google/cli/install.sh -o "$work/agy-install.sh"
 bash "$work/agy-install.sh" >/dev/null 2>&1
 install -m 755 /root/.local/bin/agy /usr/local/bin/agy
 install_muse
-install_devin
 
 # The disk's clean-up (clean.sh, beside this script: on-machine.sh ships the folder), run as each
 # user: after every job by the runners' job-completed hook, and every ten minutes by the disk
@@ -432,7 +408,7 @@ EOF
 fi
 apt-get clean
 
-for cli in claude codex agy muse devin; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done
+for cli in claude codex agy muse; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done
 for id in "$@"; do
   printf '%-7s rustc %s\n' "$id" \
     "$(cd "/home/agent-$id" && sudo -u "agent-$id" -H "/home/agent-$id/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')"
