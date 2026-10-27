@@ -179,7 +179,7 @@ def capped_text(ctx: Context, provider: Provider, entry: dict[str, Any],
         return f"refused a call<br/>until {_clock(ctx, until)}"
     usage = providers_mod.current_usage(provider, entry)
     again = f"<br/>starts again {_clock(ctx, frees)}" if frees else ""
-    for window, cap in provider.caps_at(now, ctx.cfg.timezone).items():
+    for window, cap in provider.caps_at(now, ctx.cfg.timezone, usage).items():
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue

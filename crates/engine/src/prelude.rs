@@ -56,6 +56,8 @@ pub use crate::starship::{
 };
 pub use crate::state::*;
 pub use crate::times_played::*;
+// R1864002, R1864003: the trade cards' hand aura and the card a Trade put into the deck.
+pub use crate::trade::{tradable_hand_aura, traded_card_of};
 pub use crate::traps::*;
 pub use crate::tuning::*;
 pub use crate::win_rates::*;
