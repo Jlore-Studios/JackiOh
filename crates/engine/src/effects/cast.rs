@@ -431,6 +431,18 @@ pub struct CastRandomArgs {
 /// `targetEnemies` and, on its Radiant face, `radiant`. The casts are parts of the list read once as it
 /// reaches them, so one the other player's prompt pauses is followed by the rest when it is answered.
 pub fn cast_random(args: CastRandomArgs) -> Effect {
+    cast_random_with(args, None)
+}
+
+/// R1862004: `castRandom` with every cast aimed (`CastHow.aimAt`, R946): each takes `aim_at` (an
+/// instance id or a `prompts::option_key`) for its first target declaration where it is legal, else
+/// makes that pick at random (Stinkyscape #141 Fruit Launcher, #143 Book Launcher: "cast a random …
+/// on it").
+pub fn cast_random_at(args: CastRandomArgs, aim_at: String) -> Effect {
+    cast_random_with(args, Some(aim_at))
+}
+
+fn cast_random_with(args: CastRandomArgs, aim_at: Option<String>) -> Effect {
     lazy_part("castRandom", move |ctx, memo| {
         let count = match memo.as_ref().and_then(Value::as_i64) {
             Some(remembered) => remembered as i32,
@@ -451,7 +463,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
             random: None,
             target_enemies: args.target_enemies,
             afterward: args.afterward,
-            aim_at: None,
+            aim_at: aim_at.clone(),
             aim_only: None,
             friends_only: None,
         };
