@@ -867,9 +867,10 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
 #: the lane's pull request and its runs.
 LEARN_WORKFLOW = "learn.yml"
 LEARN_BRANCH = "ai/learn"
-#: learn.yml's schedule, "23 6 * * *": every day at 06:23 UTC. Each run starts the next as it ends
-#: (its `next` job), so the schedule only starts the lane again when that chain stops.
-LEARN_SCHEDULE = (6, 23)
+#: learn.yml's schedule, "23 6,18 * * *": twice a day, at 06:23 and 18:23 UTC. Each run starts the
+#: next as it ends (its `next` job), so the schedule only starts the lane again when that chain
+#: stops.
+LEARN_SCHEDULE = ((6, 23), (18, 23))
 #: learn.yml's LEARN_PR_STALE_HOURS: a lane pull request open this long is closed by the next run.
 LEARN_PR_STALE = timedelta(hours=48)
 LEARN_ROWS = 5
@@ -877,9 +878,10 @@ LEARN_ROWS = 5
 
 def next_learn_run(now: datetime) -> datetime:
     """When learn.yml's schedule next fires (GitHub fires schedules late; never early)."""
-    hour, minute = LEARN_SCHEDULE
-    at = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
-    return at if at > now else at + timedelta(days=1)
+    day = now.astimezone(timezone.utc).replace(second=0, microsecond=0)
+    times = [day.replace(hour=hour, minute=minute) + timedelta(days=ahead)
+             for ahead in (0, 1) for hour, minute in LEARN_SCHEDULE]
+    return min(at for at in times if at > now)
 
 
 #: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
@@ -980,13 +982,20 @@ def learn_lane(ctx: Context, found: Found | None = None) -> list[str]:
     lines += [f"- **The owner's PC:** {pc}.", ""]
     try:
         runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
-                if r.get("event") != "workflow_run"][:LEARN_ROWS]
+                if r.get("event") != "workflow_run"]
     except GitHubError:
         return lines + ["Its runs could not be read."]
     rows = []
     for run in runs:
+        if len(rows) == LEARN_ROWS:
+            break
         try:
             jobs = ctx.gh.list_jobs(run["id"]) if run.get("status") == "completed" else []
+            # A scheduled run queued behind a running one is cancelled by GitHub when the next
+            # schedule queues another (the `learn` concurrency group holds one waiting): it never
+            # ran, so it is no row.
+            if run.get("conclusion") == "cancelled" and not any(j.get("runner_name") for j in jobs):
+                continue
             result = learn_outcome(run, jobs)
         except (GitHubError, KeyError):
             result = RESULT.get(str(run.get("conclusion")), str(run.get("conclusion")))

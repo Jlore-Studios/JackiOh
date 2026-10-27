@@ -180,14 +180,17 @@ class LearnLaneTests(unittest.TestCase):
                                                  "conclusion": "skipped"}], "cancelled"),
                          "⏹️ cancelled")
 
-    def test_the_next_scheduled_run_is_the_next_0623_utc(self):
-        """Each run starts the next as it ends (#1976); the daily schedule starts the lane again."""
+    def test_the_next_scheduled_run_is_the_next_0623_or_1823_utc(self):
+        """Each run starts the next as it ends (#1976); the schedule, twice a day, starts the lane
+        again."""
         before = NIGHT  # 2026-09-30 03:00 UTC
         self.assertEqual(dashboard.next_learn_run(before).isoformat(), "2026-09-30T06:23:00+00:00")
         after = NIGHT.replace(hour=7)
-        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-10-01T06:23:00+00:00")
+        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-09-30T18:23:00+00:00")
         at = NIGHT.replace(hour=6, minute=23)
-        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-10-01T06:23:00+00:00")
+        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-09-30T18:23:00+00:00")
+        evening = NIGHT.replace(hour=18, minute=23)
+        self.assertEqual(dashboard.next_learn_run(evening).isoformat(), "2026-10-01T06:23:00+00:00")
 
     def test_the_section_says_what_is_on_main_its_pull_request_and_its_runs(self):
         gh = FakeGitHub()
@@ -210,6 +213,28 @@ class LearnLaneTests(unittest.TestCase):
         self.assertIn("| 🔄 running | [22]", body)
         # A watch run (CI on the lane's pull request) is not one of the lane's runs.
         self.assertNotIn("[21]", body)
+
+    def test_a_scheduled_run_cancelled_before_it_ran_is_left_out(self):
+        """A scheduled run queued behind a running one is cancelled when the next schedule queues
+        another (the `learn` concurrency group holds one waiting): it never ran, so it is no row,
+        and the table still shows `LEARN_ROWS` runs. One cancelled after a job began is a row."""
+        gh = FakeGitHub()
+        for n in range(dashboard.LEARN_ROWS):
+            self.run_with(gh, 40 + n, number=10 + n)
+        for n in range(3):
+            self.run_with(gh, 50 + n, number=20 + n)
+            gh.runs[str(50 + n)]["conclusion"] = "cancelled"
+        self.run_with(gh, 60, number=30, jobs=[{"name": "plan", "conclusion": "cancelled",
+                                                 "runner_name": "pc-selfplay-1"}])
+        gh.runs["60"]["conclusion"] = "cancelled"
+        # Newest first, as GitHub lists them.
+        gh.runs = dict(sorted(gh.runs.items(), key=lambda item: -int(item[0])))
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("| ⏹️ cancelled | [30]", body)
+        for number in (20, 21, 22):
+            self.assertNotIn(f"[{number}]", body)
+        shown = [n for n in range(10, 10 + dashboard.LEARN_ROWS) if f"[{n}]" in body]
+        self.assertEqual(len(shown), dashboard.LEARN_ROWS - 1)
 
     def test_a_promotion_open_too_long_is_one_the_next_run_closes(self):
         gh = FakeGitHub()
