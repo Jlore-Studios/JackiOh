@@ -932,14 +932,19 @@
       "action": "build",
       "asks": [],
       "died": 1,
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T06:09:40Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 2044,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-26T23:07:39Z",
+      "round_tier": "medium",
       "run_id": "40440079357",
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T02:43:22Z",
@@ -948,7 +953,8 @@
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 2
     },
     "1868": {
       "action": "plan",
