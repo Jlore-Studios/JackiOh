@@ -18131,7 +18131,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when you take damage on your turn: Redirect all damage you take on your turn to your opponent, up to {cap} each turn."
@@ -18286,7 +18286,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [
         {
@@ -19205,7 +19205,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "keywords": [],
       "text": "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
@@ -19236,7 +19236,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 88,
     "base": {
       "keywords": [
         {
@@ -19283,7 +19283,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 88,
     "base": {
       "keywords": [
         {
@@ -23645,7 +23645,7 @@
     "refs": [
       "stinkyscape-135-1"
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: After it resolves, stuff it into a Sack they control."
@@ -23924,7 +23924,7 @@
     "refs": [
       "meditative-036"
     ],
-    "loc": 6,
+    "loc": 66,
     "base": {
       "keywords": [],
       "text": "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
@@ -23945,7 +23945,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell aimed only at their hero or permanents they control: Counter it and cast it for yourself, aimed only at your hero or permanents you control."
@@ -25403,7 +25403,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "{chance}% chance to reveal when an enemy Unit attacks: Summon a Warp Disruptor, then {paragons|Paragon Mk1|Paragon Mk1s}. The attack goes on."
