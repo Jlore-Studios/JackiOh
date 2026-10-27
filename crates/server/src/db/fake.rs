@@ -3680,11 +3680,35 @@ pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Resu
 /// marked `bot`.
 pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standings")?;
-    let tables = f.tables();
+    Ok(season_standings(f.tables(), season_id, |_| true))
+}
+
+/// `ranked_standings` cut to `profile_ids`' rows and every row from `min_ladder` up (#2022), as
+/// Postgres's filter reads it.
+pub fn ranked_standings_subset(
+    f: &mut FakeTx<'_>,
+    season_id: &str,
+    profile_ids: &[String],
+    min_ladder: i32,
+) -> Result<Vec<SeasonStanding>, StoreError> {
+    call(f, "ranked.standingsSubset")?;
+    Ok(season_standings(f.tables(), season_id, |row| {
+        profile_ids.contains(&row.profile_id) || row.ladder.is_some_and(|ladder| ladder >= min_ladder)
+    }))
+}
+
+/// The season's rows that `keep` keeps, each with its player's rating and `bot` flag, in profile-id
+/// order: what both standings reads answer.
+fn season_standings(
+    tables: &FakeTables,
+    season_id: &str,
+    keep: impl Fn(&SeasonRank) -> bool,
+) -> Vec<SeasonStanding> {
     let mut rows: Vec<SeasonStanding> = tables
         .season_ranks
         .iter()
         .filter(|row| row.season_id == season_id)
+        .filter(|row| keep(row))
         .filter_map(|row| {
             let profile = tables.profiles.iter().find(|p| p.id == row.profile_id)?;
             let bot = profile.kind == ProfileKind::Bot;
@@ -3699,7 +3723,7 @@ pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<Seaso
         })
         .collect();
     rows.sort_by(|a, b| by_profile_id(&a.rank.profile_id, &b.rank.profile_id));
-    Ok(rows)
+    rows
 }
 
 pub fn ranked_rank(
