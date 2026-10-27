@@ -5860,8 +5860,10 @@
       "feedback_since": "2026-10-27T22:36:16Z",
       "issue": 2099,
       "kind": "revise",
-      "queued_at": "2026-10-27T23:47:50Z",
+      "queued_at": "2026-10-27T23:48:32Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
