@@ -1539,7 +1539,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: The AI plays the first 3 actions of each of your turns. / End of turn: Summon a Drone Interceptor.
 - **Radiant:** Aura: The AI plays the first 3 actions of each of your turns. / End of turn: Summon a Radiant Drone Interceptor.
 - **Engine:** The autopilot as an aura ([[R1844000]]): `pilotsActions: 3`, so each of its controller's turns engages [[R1183002]]'s autopilot as it begins (`autopilotEngaged`), the start's prompts included, and [[R456]]'s first three actions, plays and attacks, are the engine's (an answer belongs to the action that asked), then the turn is the player's for good; ending the turn spends the rest. End of turn: `summon` of the Drone Interceptor token (`stinkyscape-t-drone-interceptor`, [[R64]]); Radiant: a Radiant one.
-- **Rulings:** ST-S12-1: the three actions are every one of your turns while it stands (ST9); a card that arrives mid-turn waits for the next (R1844000). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-1 is [[R1844000]]: the three actions are every one of your turns while it stands (ST9), and a card that arrives mid-turn waits for the next.
 - **Numbers:** none: the 3 is the aura's printed count, which no Nerf or Buff moves (R1844000, R386; `FIXED` STRUCTURE).
 - **Check:** D6: "Stinkscape" is Stinkyscape. ST9 (every turn). R275: a Radiant Drone Interceptor each turn.
 - **Class:** C (the AI at the wheel, M10).
@@ -1552,7 +1552,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Brittle 5 / Aura: The AI plays each of your turns. / End of turn: Summon a Drone Corvette.
 - **Radiant:** Brittle 5 / Aura: The AI plays each of your turns. / End of turn: Summon a Radiant Drone Corvette.
 - **Engine:** Brittle 5 ([[§6.1]], a count started as it enters). The autopilot as an aura ([[R1844000]]): `pilotsTurn`, each of its controller's turns played by [[R1183002]]'s autopilot from its start, `AUTOPILOT_MAX_ACTIONS` and the timeout included ([[R1183003]]). End of turn: `summon` of the Drone Corvette token (`stinkyscape-t-drone-corvette`, [[R64]]); Radiant: a Radiant one.
-- **Rulings:** ST-S12-2: a whole turn beats any count (#46's included) and the turn is the autopilot's from its start, its first prompts too (R1844000). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-2 is [[R1844000]]: a whole turn beats any count (#46's included) and the turn is the autopilot's from its start, its first prompts too; one that crumbles as a turn begins leaves that turn to its player, the aura read again before every step.
 - **Numbers:** none (Brittle 5 is a numbered keyword, `FIXED` KEYWORD).
 - **Check:** D6: "Stinkscape" is Stinkyscape. R275: a Radiant Drone Corvette each turn.
 - **Class:** C (the AI at the wheel, M10).
@@ -2943,7 +2943,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions. / Death: Shuffle an IN33DH3 Prime into your deck.
 - **Radiant:** Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions. / Death: Shuffle a Radiant IN33DH3 Prime into your deck.
 - **Engine:** Cry ([[R1]]): `pareto_hint` ([[R1844001]]): on its caster's own turn, until that turn's cleanup, their own view marks each hand card ME-PARETO's judge ([[R1125]]) would call optimal to play now (`paretoOptimal: true`), plays only, scored on their concealed copy ([[R222]]); on the opponent's turn nothing. Catalyst: Death shuffles S #147.1 IN33DH3 Prime into its owner's deck (C+ #38's shape, [[R1421]]), a Radiant one on its Radiant face.
-- **Rulings:** ST-S12-3: "For the rest of your turn" is the caster's own turn only (R1844001); a hint never lights an attack, an activation or End turn. These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-3 is [[R1844001]]: "For the rest of your turn" is the caster's own turn only, and a hint never lights an attack, an activation or End turn.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and the Prime Radiant.
 - **Class:** C (the Pareto hint, M10).
@@ -2956,7 +2956,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Summon a Wardrum Blob.
 - **Radiant:** Cry: Summon a Radiant Wardrum Blob.
 - **Engine:** Cry ([[R1]]): `summon { defId: stinkyscape-147-2 }`, S #147.2 Wardrum Blob, into its controller's leftmost open backrow zone ([[R64]]); none with no zone. Radiant: a Radiant one. A Prime: S #147's Death puts it in the deck; once the set ships ([[R1420]]), any Prime pool ([[R1421]]).
-- **Rulings:** ST-S12-4: the Blob is a Field Spell, summoned into the backrow, as M #71's The Cane is. These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-4 is [[R64]]'s summon by type: the Blob is a Field Spell, summoned into the leftmost open backrow zone as M #71's The Cane is, by a cast Prime's Cry too ([[R70]]).
 - **Numbers:** none.
 - **Check:** R275: stats doubled and the Blob Radiant.
 - **Class:** A (one summon).
@@ -2969,7 +2969,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: An AI always helps you make the Pareto Optimal decisions. / Start of turn: Do something helpful.
 - **Radiant:** Aura: An AI always helps you make the Pareto Optimal decisions. / Start of turn: Do something REALLY helpful.
 - **Engine:** `hintsPlays` ([[R1844001]]): during each of its controller's turns while it acts on their field, their own view marks the hand cards the judge calls optimal. Start of turn ([[R62]]): `helpful_cast` ([[R1844002]]): the perfect pool, every non-token card of every set that ships but its own ids ([[R1446]], [[R387]]), ranked for its caster as C+ #27 ranks a hand ([[R416]]), its top card cast free as a new card ([[R70]]), its choices its caster's. Radiant: `radiant: true`, the pool ranked by its Radiant faces and the pick cast Radiant.
-- **Rulings:** ST-S12-5: "REALLY helpful" is `radiant: true` (M10's open question 3); one cast, not two (R1844002). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-5 is [[R1844002]]: "REALLY helpful" is `radiant: true` (M10's open question 3), one cast, not two.
 - **Numbers:** none.
 - **Check:** The designer's {quasi zeph} note is R1844002's `helpful_cast`. R275: the free cast Radiant.
 - **Class:** C (the AI at the wheel, M10).

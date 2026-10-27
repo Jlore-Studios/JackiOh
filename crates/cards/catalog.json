@@ -20051,7 +20051,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon a Drone Interceptor."
@@ -20075,7 +20075,7 @@
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [
         {
@@ -24254,7 +24254,7 @@
       "stinkyscape-147",
       "stinkyscape-147-1"
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 1,
       "health": 2,
@@ -24288,7 +24288,7 @@
       "classicplus-037",
       "stinkyscape-147-2"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 9,
       "health": 5,
@@ -24316,7 +24316,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: An AI always helps you make the Pareto Optimal decisions.\nStart of turn: Do something helpful."
