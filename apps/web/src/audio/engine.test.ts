@@ -115,6 +115,7 @@ type Rig = {
   speech: FakeSpeech;
   clock: FakeClock;
   page: { visibility: DocumentVisibilityState };
+  life: { visible: boolean; fire(): void };
 };
 
 const engines: AudioEngine[] = [];
@@ -125,18 +126,34 @@ function rig(options: { factory?: FakeContextFactory; engine?: Partial<AudioEngi
   const speech = fakeSpeech();
   const clock = new FakeClock(10_000);
   const page: { visibility: DocumentVisibilityState } = { visibility: "visible" };
+  const listeners = new Set<() => void>();
+  const life = {
+    visible: true,
+    fire(): void {
+      for (const listener of [...listeners]) listener();
+    },
+  };
   const engine = createAudioEngine({
     createContext: factory.create,
+    lifecycle: {
+      visible: () => life.visible,
+      subscribe: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    },
     speech: speech.port,
     fetchBytes: fetch.fetchBytes,
     now: clock.now,
-    visibility: () => page.visibility,
+    visibility: () => (page.visibility === "hidden" || !life.visible ? "hidden" : "visible"),
     lines: LINES,
     manifest: MANIFEST,
     ...options.engine,
   });
   engines.push(engine);
-  return { engine, factory, fetch, speech, clock, page };
+  return { engine, factory, fetch, speech, clock, page, life };
 }
 
 /** Unlocks and hands back the one context it built. */
@@ -1754,6 +1771,106 @@ describe("R669 the mix's panning, ducking and reverb", () => {
     expect(levels).toEqual([REVERB_VOICE_SEND, REVERB_SFX_SEND].sort());
     expect(sends.some((n) => audio.inputsOf(n).includes(bus.sfxDuck))).toBe(true);
     expect(sends.some((n) => audio.inputsOf(n).includes(bus.voice))).toBe(true);
+    expect(audio.violations).toEqual([]);
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * Backgrounding: the page goes hidden mid-game and comes back (issue #2034)
+ * --------------------------------------------------------------------------------------------- */
+
+describe("background: the page hides mid-game and comes back", () => {
+  it("background: unlock() after the OS closed the context builds a new context, mix and settings subscription", async () => {
+    const r = rig();
+    const closed = unlocked(r);
+    expect(r.engine.contextsCreated()).toBe(1);
+
+    closed.state = "closed";
+    expect(r.engine.state()).toBe("closed");
+
+    r.engine.unlock();
+    expect(r.factory.create).toHaveBeenCalledTimes(2);
+    expect(r.engine.contextsCreated()).toBe(2);
+    expect(r.engine.state()).toBe("running");
+
+    const audio = r.factory.last();
+    expect(audio).not.toBe(closed);
+    // The new mix hears a later settings write …
+    writeAudioSettings({ ...LEVELS, muted: false, voiceOn: true, master: 0.9 });
+    expect(buses(audio).master.param("gain").targets().at(-1)?.value).toBeCloseTo(0.9, 9);
+    // … and cues play again through it.
+    expect(r.engine.playSfx("draw")).toBe(true);
+    await settle();
+    expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", id: "draw" });
+    expect(audio.startedSources().some((n) => audio.reaches(n, buses(audio).sfx))).toBe(true);
+    expect(audio.violations).toEqual([]);
+    expect(closed.violations).toEqual([]);
+  });
+
+  it("background: an interrupted context reads suspended and resumes on the next gesture", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    expect(r.engine.state()).toBe("running");
+
+    audio.state = "interrupted";
+    expect(r.engine.state()).toBe("suspended");
+    expect(r.engine.playSfx("draw")).toBe(true);
+    expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", suspended: true });
+
+    r.engine.unlock();
+    expect(r.engine.state()).toBe("running");
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("background: cues requested while hidden are refused and timers that fire while hidden never take the channel", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+
+    // A line whose file never arrives holds the channel in loading …
+    r.fetch.mode = "hang";
+    expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+
+    // … then the page hides: the line is cut and nothing new is accepted.
+    r.life.visible = false;
+    r.life.fire();
+    r.engine.clearLog();
+    expect(r.engine.playSfx("draw")).toBe(false);
+    expect(r.engine.playVoice("core-004", "play")).toBe(false);
+    await elapse(r, 500);
+    expect(r.engine.log()).toEqual([]);
+
+    // The hanging fetch resolving while hidden starts nothing and holds nothing.
+    const startedBefore = audio.startedSources().length;
+    r.fetch.release();
+    await elapse(r, VOICE_LATE_MS + 500);
+    expect(audio.startedSources()).toHaveLength(startedBefore);
+    expect(audio.startedSources().filter((n) => audio.reaches(n, bus.voice))).toEqual([]);
+    expect(r.engine.speaking()).toBe(false);
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("background: after visible again the next gesture resumes and playSfx plays through the sfx bus", async () => {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    expect(r.engine.state()).toBe("running");
+
+    // The OS suspends the context while the page is hidden.
+    audio.state = "suspended";
+    r.life.visible = false;
+    r.life.fire();
+    expect(r.engine.state()).toBe("suspended");
+
+    r.life.visible = true;
+    r.life.fire();
+    r.engine.unlock();
+    expect(r.engine.state()).toBe("running");
+
+    expect(r.engine.playSfx("draw")).toBe(true);
+    await settle();
+    const heard = audio.startedSources().filter((n) => audio.reaches(n, bus.sfx));
+    expect(heard.length).toBeGreaterThan(0);
     expect(audio.violations).toEqual([]);
   });
 });

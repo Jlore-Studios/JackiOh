@@ -317,7 +317,7 @@ export type AudioEngine = SoundSink & {
   /** Accepted cues, oldest first, at most LOG_LIMIT. */
   log(): readonly PlayedCue[];
   clearLog(): void;
-  /** How many AudioContexts this engine has constructed (0 or 1). */
+  /** How many AudioContexts this engine has constructed (grows when a closed one is rebuilt). */
   contextsCreated(): number;
   /**
    * true while a voice line holds the one voice channel: from the moment it takes the channel

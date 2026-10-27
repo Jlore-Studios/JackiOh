@@ -217,11 +217,14 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     const out = engine().musicOutput();
     if (out === null) return null;
     if (graph !== null && graph.ctx === out.context) return graph;
-    // A new context (a test swapped the engine): the old one's voices went with it.
+    // A new context (a test swapped the engine): the old one's voices went with it, and buffers
+    // decoded by the dead context must be re-decoded on the new one.
+    const rebuilt = graph !== null;
     voices = [];
     clip = null;
     pendingIntro = null;
     introDecoded.clear();
+    decoded.clear();
     const ctx = out.context;
     const bed = ctx.createGain();
     const filter = ctx.createBiquadFilter();
@@ -237,7 +240,9 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     focus.connect(out.input);
     graph = { ctx, bed, filter, turn, focus };
     appliedTurn = opponent;
-    appliedFocus = focus.gain.value;
+    // A rebuilt graph re-issues the focus ramp on the next sync even when the wanted level equals
+    // the cached one; a first graph starts at its level with no ramp to issue.
+    appliedFocus = rebuilt ? null : focus.gain.value;
     return graph;
   }
 
@@ -256,7 +261,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     const target = focusTarget();
     if (target === appliedFocus) return;
     appliedFocus = target;
-    graph.focus.gain.setTargetAtTime(target, graph.ctx.currentTime, MUSIC_FOCUS_TC_S);
+    // The resume is always a ramp from silence over MUSIC_FOCUS_TC_S: cancel first so nothing
+    // scheduled while hidden jumps or tears on return, and never jump straight to the target.
+    const now = graph.ctx.currentTime;
+    graph.focus.gain.cancelScheduledValues(now);
+    graph.focus.gain.setTargetAtTime(target, now, MUSIC_FOCUS_TC_S);
   }
 
   /** Ramps the turn mix to where it should be, once the context runs (`sync` calls it again after a resume). */

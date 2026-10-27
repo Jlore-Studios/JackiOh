@@ -108,9 +108,32 @@ export function browserSpeechPort(): SpeechPort | null {
   };
 }
 
+/** Where the page's visibility comes from: the document and the page's hide/show events, or a test's. */
+export type LifecyclePort = { visible(): boolean; subscribe(listener: () => void): () => void };
+
+/** The page's lifecycle, or null when `document`/`window` are missing (jsdom without a harness). */
+export function browserLifecycle(): LifecyclePort | null {
+  if (typeof document === "undefined" || typeof window === "undefined") return null;
+  return {
+    visible: () => document.visibilityState !== "hidden",
+    subscribe(listener) {
+      document.addEventListener("visibilitychange", listener);
+      window.addEventListener("pagehide", listener);
+      window.addEventListener("pageshow", listener);
+      return () => {
+        document.removeEventListener("visibilitychange", listener);
+        window.removeEventListener("pagehide", listener);
+        window.removeEventListener("pageshow", listener);
+      };
+    },
+  };
+}
+
 export type AudioEngineOptions = {
   /** null = unsupported. Default: window.AudioContext ?? window.webkitAudioContext, else null. */
   createContext?: (() => AudioContext) | null;
+  /** null = no lifecycle tracking. Default: browserLifecycle(). */
+  lifecycle?: LifecyclePort | null;
   speech?: SpeechPort | null;                          // default browserSpeechPort()
   fetchBytes?: (url: string) => Promise<ArrayBuffer>;  // default fetch; rejects on !ok
   now?: () => number;                                  // ms; default performance.now()
@@ -227,6 +250,7 @@ export type MatchFeelAudioEngine = AudioEngine & {
 
 export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAudioEngine {
   const factory = options.createContext === undefined ? defaultContextFactory() : options.createContext;
+  const lifecycle = options.lifecycle === undefined ? browserLifecycle() : options.lifecycle;
   const speech = options.speech === undefined ? browserSpeechPort() : options.speech;
   const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
   const now = options.now ?? defaultNow;
@@ -348,27 +372,67 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
+  /** Builds a new context, mix and settings subscription, after there is none. */
+  function createFresh(): void {
+    const make = factory;
+    if (make === null) return;
+    try {
+      ctx = make();
+    } catch {
+      broken = true;
+      ctx = null;
+      return;
+    }
+    created += 1;
+    buses = buildMix(ctx, readAudioSettings());
+    unsubscribe = subscribeAudioSettings(applySettings);
+    notifyState();
+  }
+
+  /** Tears down a context the OS closed while the page was hidden, ready for a rebuild. */
+  function teardownClosed(): void {
+    unsubscribe?.();
+    unsubscribe = null;
+    silenceVoice();
+    duckUntil = 0;
+    sfxDuckUntil = 0;
+    sfxEnds = [];
+    // The decoded voice buffers belong to the dead context; the compressed bytes stay cached.
+    decoded.clear();
+    ctx = null;
+    buses = null;
+  }
+
   function unlock(): void {
     if (factory === null || broken || disposed) return;
-    if (ctx === null) {
-      try {
-        ctx = factory();
-      } catch {
-        broken = true;
-        return;
-      }
-      created += 1;
-      buses = buildMix(ctx, readAudioSettings());
-      unsubscribe = subscribeAudioSettings(applySettings);
-      notifyState();
-    }
-    if (ctx.state === "running") return;
+    if (ctx !== null && ctx.state === "closed") teardownClosed();
+    if (ctx === null) createFresh();
+    if (ctx === null || ctx.state === "running") return;
     try {
       void ctx.resume().then(notifyState, () => {});
     } catch {
       // resume() on a closed context throws in some browsers; the gesture carries on.
     }
     playSilentFrame(ctx);
+  }
+
+  /** The page went hidden or came back: cut the voice while hidden; rebuild and pump on return. */
+  function onLifecycle(): void {
+    try {
+      if (disposed) return;
+      if (lifecycle === null || !lifecycle.visible()) {
+        silenceVoice();
+        return;
+      }
+      if (factory !== null && ctx !== null && ctx.state === "closed") {
+        teardownClosed();
+        createFresh();
+      }
+      startNext();
+      notifyState();
+    } catch {
+      // A lifecycle callback must never throw into the page.
+    }
   }
 
   /**
@@ -733,6 +797,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /** The waiting line to start next: the most important, then the oldest; stale ones are dropped. */
   function startNext(): void {
+    // A timer that fires while the page is hidden must not take the channel; the visible pass
+    // pumps the queue again.
+    if (!accepting()) return;
     if (channel !== null || waiting.length === 0) return;
     const t = now();
     const fresh: VoiceLine[] = [];
@@ -748,6 +815,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   function speakNow(ch: VoiceChannel): void {
     if (channel !== ch || disposed) return;
+    // The context stopped since the line was asked for: drop it instead of speaking or ducking
+    // on a frozen clock.
+    if (!running()) {
+      finish(ch, "suspended");
+      return;
+    }
     const settings = readAudioSettings();
     const spoken = ch.line.spoken;
     if (spoken === null || speech === null || settings.muted || !settings.voiceOn) {
@@ -825,6 +898,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   function onLoaded(ch: VoiceChannel, buffer: AudioBuffer | null): void {
     if (channel !== ch || ch.phase !== "loading" || disposed) return;
+    // A fetch that resolves while the context is stopped never starts: its samples would play
+    // as one backlog burst on resume.
+    if (!running()) {
+      finish(ch, "suspended");
+      return;
+    }
     const elapsed = now() - ch.since;
     if (elapsed > VOICE_LATE_MS) {
       finish(ch, "late");
@@ -839,6 +918,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /** Gives the channel to `line`. */
   function begin(line: VoiceLine): void {
+    // A timer that fires while the page is hidden must not take the channel.
+    if (!accepting()) return;
     const ch: VoiceChannel = {
       line,
       phase: line.hasFile ? "loading" : "waiting",
@@ -971,6 +1052,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     disposed = true;
     for (const id of timers) clearTimeout(id);
     timers.clear();
+    unsubscribeLifecycle?.();
     unsubscribe?.();
     unsubscribe = null;
     if (channel?.phase === "speaking") {
@@ -994,6 +1076,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       }
     }
   }
+
+  const unsubscribeLifecycle = lifecycle?.subscribe(onLifecycle) ?? null;
 
   return {
     state,
