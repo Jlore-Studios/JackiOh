@@ -5466,9 +5466,12 @@
     "2131": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T20:13:38Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2094,
       "kind": "revise",
       "last_findings": [],
