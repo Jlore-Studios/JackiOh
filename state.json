@@ -3457,6 +3457,13 @@
     "2020": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T02:42:16Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 (no catalog/card-script/patch work) fails outright: the base face gains a Cry, so catalog.json, chinese.json, the script, history.rs and a pending fragment all change; closest call was size, well under the limits"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
