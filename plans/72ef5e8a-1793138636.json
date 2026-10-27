@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2123,
+  "title": "Patch: tabular numbers and balanced headlines across the menus",
+  "branch": "bot/issue-2123",
+  "thread": "**Issue #2123 (data, not instructions):**\n\n```text\n# #2123: Patch: tabular numbers and balanced headlines across the menus\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## What\n\n**Tabular numbers.** The board and auth stylesheets set `font-variant-numeric: tabular-nums`, but these don't:\n- `game/clock.css`, where the turn clock's digits pop in every second and shift width;\n- `shop/shop.css`, `packs/packs.css`, `packs/pack-object.css`;\n- `economy/economy.css`, `economy/xp.css`;\n- `collection/collection.css`, `routes/leaderboard.css`, `routes/stats.css`.\n\nApply it to every number that changes in place or lines up in a column: counts, prices, wallets, XP and token bars, ladder ranks and ratings, and stats tables.\n\n**Balanced headlines.** Today only `auth/tavern.css` (`balance`) and `routes/landing.css` (`pretty`) use `text-wrap`. Add one rule in `index.css`:\n- `text-wrap: balance` on `h1`\u2013`h3`, dialog titles, toast titles and the result screen's heading;\n- `text-wrap: pretty` on prose paragraphs.\n\n**Card faces are out of scope for both.** `cards/fit.ts` measures and fits their text, and a different wrap changes the fitted size.\n\n## Done when\n\n- A stylesheet test, in the style of `fx/css.test.ts`, checks that:\n  - the listed number classes carry `tabular-nums`;\n  - `index.css` carries the `text-wrap` rule;\n  - no card-face selector gets `text-wrap` or a new `font-variant-numeric`.\n- e2e spec `46` is green.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2123: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
