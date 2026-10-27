@@ -3574,18 +3574,24 @@
       "verdict_rounds": 1
     },
     "2021": {
-      "asks": [
-        "c:6429255343"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-10-26T22:54:58Z",
       "requested_by": "jgoetzmann",
+      "run_id": "pending:23fa08e8-1793073693",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-27T04:02:13Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6429255343"
+      ]
     },
     "2022": {
       "action": "plan",
@@ -3867,9 +3873,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-27T03:51:53Z",
+    "at": "2026-10-27T04:02:13Z",
     "url": "",
-    "what": "plan #2035 on claude-8"
+    "what": "plan #2021 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-27T03:49:53Z",
