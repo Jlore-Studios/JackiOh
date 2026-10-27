@@ -336,7 +336,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={packTestid.error}>
-          {error}
+          {t(error)}
         </p>
       )}
 
@@ -482,7 +482,7 @@ export default function PackOpening({
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={packTestid.loadError}>
-            {loadError}
+            {t(loadError)}
           </p>
           <div className="account-actions">
             <button

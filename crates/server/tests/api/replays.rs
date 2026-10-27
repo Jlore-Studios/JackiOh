@@ -604,6 +604,7 @@ mod r768_the_refusals {
 
 mod r768_the_list {
     use super::*;
+    use std::sync::Mutex;
 
     #[tokio::test]
     async fn r768_lists_newest_first_with_seat_result_portraits_and_opponent() {
@@ -869,6 +870,55 @@ mod r768_the_list {
             .collect();
         let expected: Vec<(&str, &str)> = cases.iter().map(|(id, _, result)| (*id, *result)).collect();
         assert_eq!(listed, expected);
+    }
+
+    /// A page costs one list read plus the one batched opponent read, however many rows it holds:
+    /// the per-row mode, result and log reads are gone.
+    #[tokio::test]
+    async fn r768_the_list_reads_a_page_in_a_constant_number_of_store_calls() {
+        let (app, tokens) = app_with_players().await;
+        let played = played_game("replay-route-11", 6);
+        let now = now_ms();
+        for id in ["m-cost-0", "m-cost-1"] {
+            seed_finished(&app, Finish::new(id, &played, now), &played).await;
+        }
+        let calls = Arc::new(Mutex::new(Vec::<String>::new()));
+        let seen = calls.clone();
+        fake_lock(&app).await.on_call = Some(Arc::new(move |called: &str| {
+            seen.lock().expect("call log").push(called.to_string());
+            Ok(())
+        }));
+
+        let (status, _) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(status, 200);
+        let mut first = calls.lock().expect("call log").clone();
+        first.sort();
+
+        for id in ["m-cost-2", "m-cost-3", "m-cost-4"] {
+            seed_finished(&app, Finish::new(id, &played, now), &played).await;
+        }
+        calls.lock().expect("call log").clear();
+        let (status, _) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(status, 200);
+        let mut second = calls.lock().expect("call log").clone();
+        second.sort();
+
+        fake_lock(&app).await.on_call = None;
+
+        assert_eq!(
+            first, second,
+            "the page costs the same calls however many rows it holds"
+        );
+        // `profiles.getByUserId` is the request's own sign-in, not the page: the page itself is
+        // the batched list read plus the batched opponent read, whatever it holds.
+        assert_eq!(
+            first,
+            vec![
+                "profiles.getByUserId".to_string(),
+                "profiles.getMany".to_string(),
+                "replays.listWithModes".to_string(),
+            ]
+        );
     }
 }
 

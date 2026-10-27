@@ -838,6 +838,7 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
                        "Central",
+    "db-size.yml": "twice a day: an issue once production's database nears its Supabase plan's cap",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
     "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",
@@ -1038,12 +1039,20 @@ def _where(job: dict[str, Any]) -> tuple[int, str]:
     return (0, "GitHub's") if providers_mod.hosted(label) else (4, "unknown box")
 
 
+#: Steps whose names say less than they seem to: bot-night's model step is named one way on the
+#: shared Claude account and the other on every other subscription, for the partner bot's sake
+#: (bot-night.yml), and both build, check and review.
+STEP_WORDS = {"Build, check and review": "build, check and review",
+              "Work on another subscription (build, check and review)": "build, check and review"}
+
+
 def _step(job: dict[str, Any], limit: int = 45) -> str:
     """The step a running job is on, or the last it finished."""
     steps = job.get("steps") or []
     going = next((s for s in steps if s.get("status") == "in_progress"), None)
     if going is not None:
-        return _cell(going.get("name"), limit)
+        name = str(going.get("name") or "")
+        return _cell(STEP_WORDS.get(name, name), limit)
     done = [s for s in steps if s.get("status") == "completed"]
     return f"after {_cell(done[-1].get('name'), limit - 6)}" if done else "setting up"
 
@@ -1094,6 +1103,9 @@ def _text(value: Any, limit: int = 34) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
+#: The runner boxes' lines wrap at 280 pixels rather than Mermaid's 200, so a box's few lines
+#: (`_text` clips each at 34 characters) stay one row each.
+RUNNER_WRAP = '%%{init: {"flowchart": {"wrappingWidth": 280}}}%%'
 #: An invisible box, which pads a short last row of boxes so that it starts at the left: Mermaid
 #: lines up rows of unequal length at their right ends.
 GHOST_STYLE = "    classDef ghost fill:transparent,stroke:transparent,color:transparent"
@@ -1181,6 +1193,69 @@ def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tupl
     return [title, f"❌ its last run: {_text(last.get('conclusion'), 12)}", when], "broken"
 
 
+#: Each AWS box as its slots, as register-runners.sh lays the runners out (its header, and
+#: bot/machine/README.md, The Muse box; #2069): the place `_where` names it, the subscription whose
+#: lane each slot is, and the subscriptions whose runners there take no slot of their own (Devin's,
+#: until its plan ends), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
+#: the slot of a subscription it fills while that one has no job in it. Change it with the boxes.
+BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ("devin",)),
+             ("Muse box", ("muse", "muse", "muse"), ()))
+_PLACE_ORDER = {"night box": 1, "Muse box": 2}
+
+
+def _box_slots(ctx: Context, state: dict[str, Any], items: dict[str, int], place: str,
+               owners: tuple[str, ...], extras: tuple[str, ...],
+               jobs: list[tuple[dict[str, Any], dict[str, Any]]],
+               asked: dict[str, int]) -> tuple[str, list[tuple[list[str], str]]]:
+    """One AWS box as its slots: each the lane of a subscription, holding its job, a fill-in's
+    job, or nothing (free, or a job queued for it); then its other runners' jobs. The box's
+    title says how many slots are busy, or that it holds no job (idle, or switched off)."""
+    pool = ctx.cfg.pool
+    label = {p.id: p.runs_on for p in pool.ordered()}
+    filler = {owner: (p.id, p.fill_in.runs_on) for p in pool.ordered() if p.fill_in
+              for owner in p.fill_in.of}
+    left = list(jobs)
+
+    def take(wanted: str) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        found = next((pair for pair in left if wanted in (pair[1].get("labels") or [])), None)
+        if found is not None:
+            left.remove(found)
+        return found
+
+    def working(pair: tuple[dict[str, Any], dict[str, Any]]) -> list[str]:
+        run, job = pair
+        since = parse_iso(job.get("started_at"))
+        return [_text(_run_for(state, items, run)), _text(_step(job)),
+                human_delta(ctx.now() - since) if since else "?"]
+
+    slots: list[tuple[list[str], str]] = []
+    for n, owner in enumerate(owners, 1):
+        head = f"<b>Slot {n} · {_text(owner)}'s lane</b>"
+        own = take(label.get(owner, ""))
+        fill = filler.get(owner)
+        borrowed = take(fill[1]) if own is None and fill else None
+        if own is not None:
+            slots.append(([head, f"🟢 {_text(owner)}", *working(own)], "busy"))
+        elif borrowed is not None:
+            slots.append(([head, f"🟢 {_text(fill[0])} fills it", *working(borrowed)], "busy"))
+        elif asked.get(label.get(owner, "")):
+            slots.append(([head, f"⏳ a {_text(owner)} job is queued", "its box is starting, or full"],
+                          "next"))
+        else:
+            slots.append(([head, "⚪ free", f"{_text(fill[0])} may fill it" if fill else ""],
+                          "idle"))
+    busy = sum(1 for _, style in slots if style == "busy")
+    for pair in left:  # its other runners' jobs (Devin's), and any no slot names
+        run, job = pair
+        slots.append(([f"<b>{_text(job.get('runner_name'))}</b>",
+                       f"🟢 {_text(_job_name(run, job))}", *working(pair)], "busy"))
+    name = "The night box" if place == "night box" else f"The {place}"
+    if not jobs:
+        return f"{name} (AWS): no job, so idle or switched off", slots
+    others = f" · {len(left)} more on its other runners" if left else ""
+    return f"{name} (AWS): {busy} of {len(owners)} slots busy{others}", slots
+
+
 def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int) -> list[str]:
     """The runners as boxes, as the subscriptions are drawn: GitHub's runners (at most `boxes`
     of them), the night box's and the Muse box's, the owner's PC with its heartbeat and the gather
@@ -1203,7 +1278,7 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
     by_place: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     for run, job in found.busy:
         by_place.setdefault(_where(job)[0], []).append((run, job))
-    lines = ["```mermaid", "flowchart TB"]
+    lines = ["```mermaid", RUNNER_WRAP, "flowchart TB"]
     groups: list[str] = []
     hosted = by_place.get(0, [])
     if hosted:
@@ -1220,24 +1295,22 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
     for _, job in found.queued:
         for label in job.get("labels") or []:
             asked[str(label)] = asked.get(str(label), 0) + 1
-    if by_place.get(1):
-        lines += _boxes("nb", f"The night box (AWS): {len(by_place[1])} busy",
-                        [busy_box(run, job, True) for run, job in by_place[1]])
-        groups.append("nb")
-    if by_place.get(2):
-        lines += _boxes("mb", f"The Muse box (AWS): {len(by_place[2])} busy",
-                        [busy_box(run, job, True) for run, job in by_place[2]])
-        groups.append("mb")
-    # The machine's labels no job holds, its fill-in ones (`FillIn`) among them, apart from the
-    # boxes: which box a label's runners are on is register-runners.sh's to say, not the pool's.
-    labels = [label for p in pool.ordered() if pool.on_machine(p.id)
+    placed: set[str] = set()
+    for sid, (place, owners, extras) in zip(("nb", "mb"), BOX_SLOTS):
+        title, boxes_here = _box_slots(ctx, state, items, place, owners, extras,
+                                       by_place.get(_PLACE_ORDER[place], []), asked)
+        lines += _boxes(sid, title, boxes_here)
+        groups.append(sid)
+        placed.update(owners + extras)
+    # A machine subscription no box's slots name (one added since `BOX_SLOTS` was written).
+    labels = [label for p in pool.ordered() if pool.on_machine(p.id) and p.id not in placed
               for label in (p.runs_on, *((p.fill_in.runs_on,) if p.fill_in else ()))]
     idle = [([f"<b>{_text(label)}</b>", f"⏳ {asked[label]} queued for it",
               "its box is starting, or full"], "next") if asked.get(label)
             else ([f"<b>{_text(label)}</b>", "💤 no job", "idle, or its box is off"], "closed")
             for label in dict.fromkeys(labels) if label not in held]
     if idle:
-        lines += _boxes("nj", "The AWS boxes' labels with no job", idle)
+        lines += _boxes("nj", "Other AWS labels with no job", idle)
         groups.append("nj")
     pc_jobs = by_place.get(3, [])
     pc = [busy_box(run, job, True) for run, job in pc_jobs]
@@ -1421,8 +1494,11 @@ def section(ctx: Context) -> str:
         lines += ["### Its trees", ""] + trees_table(ctx, state) + [""]
     lines += [f"### Last {BOT_TITLE} runs", ""] + view.runs + [""]
     lines += [f"<details><summary>{BOT_TITLE}'s full status</summary>", "",
-              view.report, "", "</details>", "", SECTION_END]
-    return "\n".join(lines)
+              view.report, "", "</details>"]
+    head = lines.index(f"## 🫧 {BOT_TITLE}") + 2
+    lines[head:] = fold(f"What {BOT_TITLE} is working on, its queue, account and last runs",
+                        lines[head:])
+    return "\n".join(lines + [SECTION_END])
 
 
 SECTION_START = "<!-- jackioh-bot:section -->"
@@ -1430,6 +1506,12 @@ SECTION_END = "<!-- /jackioh-bot:section -->"
 
 
 # ------------------------------------------------------------------ the issue
+
+def fold(summary: str, lines: list[str]) -> list[str]:
+    """`lines` in a dropdown under the heading before them, so a reader can fold the section
+    away. It starts open: GitHub can draw a chart blank that sat in a closed one."""
+    return [f"<details open><summary>{summary}</summary>", "", *lines, "", "</details>", ""]
+
 
 def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
            view: View | None = None) -> str:
@@ -1452,22 +1534,24 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
               f"to see how long it ran. `{SLASH} status` gives the same facts on demand.</sub>", "",
               "## ⚡ Running now", ""]
     running = running_table(ctx, state, live, issues)
-    lines += (running + [""] if running else [])
-    lines += timeline(ctx, state, live) + [""]
-    lines += lanes_boxes(ctx, state, live, explained.now) + [""]
-    lines += ["## 📋 Queue", "", difficulty_legend(ctx.cfg.pool), ""]
-    lines += queue_table(ctx, explained, issues) + [""]
+    lines += fold("What each lane is doing, the runs going on a timeline, and every subscription",
+                  (running + [""] if running else []) + timeline(ctx, state, live) + [""]
+                  + lanes_boxes(ctx, state, live, explained.now))
     people = waiting_for_people(issues)
-    lines += [people, ""] if people else []
-    lines += ["## 🔋 Subscriptions", ""]
-    lines += subscription_table(ctx, state, live, explained.now) + [""]
-    lines += usage_charts(ctx, state)
-    disk_line = disk_mod.line(state)
-    lines += [disk_line, ""] if disk_line else []
-    memory_line = memory_mod.line(state, ctx.now())
-    lines += [memory_line, ""] if memory_line else []
-    lines += ["## 🏃 Last night-bot runs", ""] + view.runs + [""]
-    lines += (view.learn if view.learn is not None else learn_lane(ctx)) + [""]
+    lines += ["## 📋 Queue", ""] + fold(
+        "What each queued item waits for, in the order the planner takes them",
+        [difficulty_legend(ctx.cfg.pool), "", *queue_table(ctx, explained, issues)]
+        + (["", people] if people else []))
+    disk_line, memory_line = disk_mod.line(state), memory_mod.line(state, ctx.now())
+    lines += ["## 🔋 Subscriptions", ""] + fold(
+        "Each subscription's usage against its caps, and the machine's disk and memory",
+        subscription_table(ctx, state, live, explained.now) + [""] + usage_charts(ctx, state)
+        + ([disk_line, ""] if disk_line else []) + ([memory_line] if memory_line else []))
+    lines += ["## 🏃 Last night-bot runs", ""] + fold(f"bot-night.yml's last {RUN_ROWS} runs",
+                                                      view.runs)
+    learn = view.learn if view.learn is not None else learn_lane(ctx)
+    lines += learn[:2] + fold("The AI on main, the lane's pull request and its last runs",
+                              learn[2:])
     if statistics:
         lines += [statistics.strip(), ""]
     for part in extra:

@@ -190,6 +190,10 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
     let at = now_ms();
     let max_copies = i64::from(MAX_COPIES);
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // [[R1301003]]: the account's economy lock, as every pack opening takes: the quantities are
+    // read and written back whole, so a pack opened at the same time takes its turn and no card
+    // it grants is lost.
+    tx.economy_lock_account(&profile.id).await?;
 
     let owned = owned_in(&mut tx, &profile.id).await?;
     let mut quantities: Vec<CollectionEntry> = Vec::new();
@@ -278,6 +282,10 @@ pub async fn clear(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let at = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // [[R1301003]]: the account's economy lock, as every pack opening takes, held across every
+    // part: each holding is read and offset to 0, so a pack opened or a game paid at the same
+    // time takes its turn and none of its grants is wiped without its offsetting row.
+    tx.economy_lock_account(&profile.id).await?;
     let mut written = 0;
     for holding in holdings {
         written += match holding {
