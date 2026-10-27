@@ -198,6 +198,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
+| `GET`, `POST` | `/api/decks/:id/versions`, `/api/decks/:id/versions/:versionId/restore` | active | the caller's deck's earlier versions, newest first, `{ versions }`, each `{ id, name, cards, savedAt }`, which every save keeps (R2100000); a restore, `{ catalogVersion }`, saves one's name and cards as the deck's, checked as a `PUT` is, and as a new version, answering `{ deck, versions }`; another account's deck is 404 `not_found`, as a missing one |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
@@ -939,6 +940,14 @@ takes a season's rows for the profiles shown plus every row from `ladder::jlorio
 from the ladder code so the index is not partial. `tests/sql/01_schema_invariants.sql` CHECK 21 plans
 it with sequential scans off, and fails when the Mythic range is filtered rather than read through
 the index.
+
+Migration 0065 adds `deck_versions` (R2100000) and only adds objects and rows: one row per version of
+a saved deck, its name and cards as one save wrote them and `saved_at`, read newest first through
+`deck_versions_deck_saved_idx`. Its composite foreign key on `(profile_id, deck_id)` names only a deck
+of the same profile and cascades, so a deck's delete and its account's take its versions. What a save
+keeps (`DECK_VERSION_DEBOUNCE_MS`, `DECK_VERSIONS_KEPT`, a restore) is `store::deck_version_step`'s,
+which both stores call. RLS is on with one select-own policy, as `decks`; the server alone writes.
+A deck saved before 0065 starts with one version, itself as last saved.
 
 ## Tests
 

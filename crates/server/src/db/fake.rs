@@ -63,6 +63,9 @@
 //!  - `trios_upsert` refuses a slot naming a deck that is not this profile's (`unknown_deck`, the
 //!    composite foreign key) and one deck in two slots (the check constraint);
 //!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
+//!  - `deck_versions_keep` answers `missing` for a deck that is not the profile's (the composite
+//!    foreign key), and a deck's delete and its account's take its versions (`on delete cascade`;
+//!    0065, R2100000);
 //!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
 //!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
 //!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
@@ -109,17 +112,18 @@ use crate::config::{
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult,
     CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
-    CustomCardWrite, Db, EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery,
-    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot,
-    PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus,
-    SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
-    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    CustomCardWrite, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow, FavouriteCard, FoldedRecords,
+    FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode, LastBoardEntry, LastBoardKind,
+    LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
+    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow,
+    ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -227,6 +231,8 @@ pub struct FakeTables {
     // DeckTables
     pub decks: Vec<SavedDeck>,
     pub trios: Vec<SavedTrio>,
+    // R2100000: migration 0065's `public.deck_versions`, a deck's earlier versions.
+    pub deck_versions: Vec<DeckVersion>,
     // CustomCardTables: the table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
     pub custom_cards: Vec<SavedCustomCard>,
     pub series: Vec<SeriesRow>,
@@ -2164,6 +2170,8 @@ pub fn decks_remove(f: &mut FakeTx<'_>, profile_id: &str, deck_id: &str) -> Resu
         return Ok(false);
     };
     t.decks.remove(at);
+    // 0065, R2100000: `on delete cascade`: the deck's versions go with it.
+    t.deck_versions.retain(|version| version.deck_id != deck_id);
     // `on delete set null (deckN_id)`: the trio keeps its other slots and its place.
     for trio in t.trios.iter_mut() {
         if trio.profile_id != profile_id {
@@ -2264,6 +2272,93 @@ pub fn trios_remove(f: &mut FakeTx<'_>, profile_id: &str, trio_id: &str) -> Resu
     };
     t.trios.remove(at);
     Ok(true)
+}
+
+// ---------------------------------------------------------------------------
+// A deck's earlier versions (R2100000, migration 0065)
+// ---------------------------------------------------------------------------
+
+/// Newest first: `saved_at` descending, then `id` descending, as Postgres's index orders them.
+fn newest_first(a: &DeckVersion, b: &DeckVersion) -> std::cmp::Ordering {
+    b.saved_at.cmp(&a.saved_at).then_with(|| b.id.cmp(&a.id))
+}
+
+/// The profile's own deck's versions, newest first.
+pub fn deck_versions_list(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    deck_id: &str,
+) -> Result<Vec<DeckVersion>, StoreError> {
+    call(f, "deckVersions.list")?;
+    let mut rows: Vec<DeckVersion> = f
+        .tables()
+        .deck_versions
+        .iter()
+        .filter(|version| version.profile_id == profile_id && version.deck_id == deck_id)
+        .cloned()
+        .collect();
+    rows.sort_by(newest_first);
+    Ok(rows)
+}
+
+/// Keeps `save` as its deck's newest version, by `deck_version_step`; `missing` when the profile
+/// has no such deck (the composite foreign key).
+pub fn deck_versions_keep(
+    f: &mut FakeTx<'_>,
+    save: &DeckVersion,
+    debounce_ms: Option<i64>,
+    max_versions: i64,
+) -> Result<DeckVersionOutcome, StoreError> {
+    let max_versions = usize::try_from(max_versions).unwrap_or(0);
+    call(f, "deckVersions.keep")?;
+    let t = f.tables();
+    if !t
+        .decks
+        .iter()
+        .any(|deck| deck.id == save.deck_id && deck.profile_id == save.profile_id)
+    {
+        return Ok(DeckVersionOutcome::Missing);
+    }
+    let of_deck =
+        |version: &DeckVersion| version.profile_id == save.profile_id && version.deck_id == save.deck_id;
+    let mut held: Vec<&DeckVersion> = t
+        .deck_versions
+        .iter()
+        .filter(|version| of_deck(version))
+        .collect();
+    held.sort_by(|a, b| newest_first(a, b));
+    let newest_id = held.first().map(|version| version.id.clone());
+    let outcome = deck_version_step(held.first().copied(), save, debounce_ms);
+    match outcome {
+        DeckVersionOutcome::Merged => {
+            if let Some(newest) = t
+                .deck_versions
+                .iter_mut()
+                .find(|version| Some(&version.id) == newest_id.as_ref())
+            {
+                newest.name = save.name.clone();
+                newest.cards = save.cards.clone();
+                newest.saved_at = save.saved_at;
+            }
+        }
+        DeckVersionOutcome::Added => {
+            t.deck_versions.push(save.clone());
+            let mut kept: Vec<&DeckVersion> = t
+                .deck_versions
+                .iter()
+                .filter(|version| of_deck(version))
+                .collect();
+            kept.sort_by(|a, b| newest_first(a, b));
+            let dropped: IndexSet<String> = kept
+                .iter()
+                .skip(max_versions)
+                .map(|version| version.id.clone())
+                .collect();
+            t.deck_versions.retain(|version| !dropped.contains(&version.id));
+        }
+        DeckVersionOutcome::Unchanged | DeckVersionOutcome::Missing => {}
+    }
+    Ok(outcome)
 }
 
 // ---------------------------------------------------------------------------
@@ -3479,6 +3574,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.grants, |row| row.profile_id != profile_id);
     keep_only(&mut tables.decks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.trios, |row| row.profile_id != profile_id);
+    // 0065, R2100000: a deck's versions cascade with the deck.
+    keep_only(&mut tables.deck_versions, |row| row.profile_id != profile_id);
     // 0037, R915008: a profile's custom cards cascade with it.
     keep_only(&mut tables.custom_cards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tutorial, |row| row.profile_id != profile_id);

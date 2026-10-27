@@ -106,6 +106,11 @@ export type DeckEditorProps = {
   onDelete: () => void;
   onSaveNow: () => void;
   onBack: () => void;
+  /**
+   * R2100000: the deck's History popover (DeckHistory.tsx), in the head after the name: the top bar
+   * has no room left for another button on a phone's first screen (BUILD M5-T1).
+   */
+  history: ReactElement;
 };
 
 function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): string | null {
@@ -123,7 +128,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
-  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack, history } = props;
 
   useLocale();
   const label = deckLabel(deck, limits.nameLength);
@@ -379,6 +384,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           }}
         />
       </label>
+      {history}
       {refusal === null ? null : (
         <p className="notice ws-save-error" data-testid={DECK_SAVE_ERROR} role="alert">
           {t(refusal)}

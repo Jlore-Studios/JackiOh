@@ -75,18 +75,18 @@ use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_STAR
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
-    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow,
-    FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow,
-    NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
-    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
-    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
-    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, DeckVersion,
+    DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster,
+    InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow,
+    MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
+    ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -1063,6 +1063,25 @@ fn to_deck(row: DeckRow) -> Result<SavedDeck, StoreError> {
         catalog_version: row.catalog_version,
         created_at: ms_of(row.created_at),
         updated_at: ms_of(row.updated_at),
+    })
+}
+
+/// R2100000: a deck version's columns (migration 0065), as `deck_version_of` reads them.
+macro_rules! deck_version_columns {
+    () => {
+        "id, profile_id, deck_id, name, cards, saved_at"
+    };
+}
+
+fn deck_version_of(row: &PgRow) -> Result<DeckVersion, StoreError> {
+    Ok(DeckVersion {
+        id: uuid_text(row, "id")?,
+        deck_id: uuid_text(row, "deck_id")?,
+        profile_id: uuid_text(row, "profile_id")?,
+        name: get(row, "name")?,
+        // In the order the save wrote them, as a deck's (R250).
+        cards: card_list_of(&get::<Value>(row, "cards")?)?,
+        saved_at: ms_of(get(row, "saved_at")?),
     })
 }
 
@@ -2778,6 +2797,125 @@ pub async fn decks_remove(t: &mut PgTx<'_>, profile_id: &str, deck_id: &str) -> 
         .await
         .map_err(db_error)?;
     Ok(done.rows_affected() == 1)
+}
+
+// ---------------------------------------------------------------------------
+// A deck's earlier versions (R2100000, migration 0065)
+//
+// Not `app.*` functions: what a save keeps is `deck_version_step`'s, in Rust, so both stores decide
+// it by the same code. Every statement names the profile and the deck, so a profile reaches only
+// its own deck's versions, and the deck's row lock orders two saves of one deck.
+// ---------------------------------------------------------------------------
+
+/// Newest first, ties on id descending: the order `deck_versions_deck_saved_idx` holds.
+pub async fn deck_versions_list(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    deck_id: &str,
+) -> Result<Vec<DeckVersion>, StoreError> {
+    if !is_uuid(deck_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        deck_version_columns!(),
+        " from public.deck_versions where profile_id = $1::uuid and deck_id = $2::uuid
+          order by saved_at desc, id desc"
+    ))
+    .bind(profile_id)
+    .bind(deck_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(deck_version_of).collect()
+}
+
+/// R2100000: locks the profile's deck row (`missing` without one), reads its newest version, and
+/// does what `deck_version_step` says: replaces the newest, or adds `save` and drops every version
+/// past `max_versions`, or nothing.
+pub async fn deck_versions_keep(
+    t: &mut PgTx<'_>,
+    save: &DeckVersion,
+    debounce_ms: Option<i64>,
+    max_versions: i64,
+) -> Result<DeckVersionOutcome, StoreError> {
+    if !is_uuid(&save.deck_id) {
+        return Ok(DeckVersionOutcome::Missing);
+    }
+    run_as(t, Some(save.profile_id.as_str())).await?;
+    // A second save of this deck waits here until this transaction ends, so the newest version it
+    // reads is the one this save left.
+    let deck =
+        sqlx::query("select 1 from public.decks where id = $1::uuid and profile_id = $2::uuid for update")
+            .bind(save.deck_id.as_str())
+            .bind(save.profile_id.as_str())
+            .fetch_optional(&mut **t)
+            .await
+            .map_err(db_error)?;
+    if deck.is_none() {
+        return Ok(DeckVersionOutcome::Missing);
+    }
+    let newest = sqlx::query(concat!(
+        "select ",
+        deck_version_columns!(),
+        " from public.deck_versions where profile_id = $1::uuid and deck_id = $2::uuid
+          order by saved_at desc, id desc limit 1"
+    ))
+    .bind(save.profile_id.as_str())
+    .bind(save.deck_id.as_str())
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?
+    .map(|row| deck_version_of(&row))
+    .transpose()?;
+    let outcome = deck_version_step(newest.as_ref(), save, debounce_ms);
+    match (outcome, newest) {
+        (DeckVersionOutcome::Merged, Some(newest)) => {
+            sqlx::query(concat!(
+                "update public.deck_versions set name = $2::text, cards = $3::jsonb, saved_at = ",
+                ts!("$4"),
+                " where id = $1::uuid"
+            ))
+            .bind(newest.id.as_str())
+            .bind(save.name.as_str())
+            .bind(json(&save.cards)?)
+            .bind(save.saved_at)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+        }
+        (DeckVersionOutcome::Added, _) => {
+            sqlx::query(concat!(
+                "insert into public.deck_versions (id, profile_id, deck_id, name, cards, saved_at)
+                 values ($1::uuid, $2::uuid, $3::uuid, $4::text, $5::jsonb, ",
+                ts!("$6"),
+                ")"
+            ))
+            .bind(save.id.as_str())
+            .bind(save.profile_id.as_str())
+            .bind(save.deck_id.as_str())
+            .bind(save.name.as_str())
+            .bind(json(&save.cards)?)
+            .bind(save.saved_at)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+            sqlx::query(
+                "delete from public.deck_versions where id in (
+                   select id from public.deck_versions where profile_id = $1::uuid and deck_id = $2::uuid
+                    order by saved_at desc, id desc offset $3::bigint)",
+            )
+            .bind(save.profile_id.as_str())
+            .bind(save.deck_id.as_str())
+            .bind(max_versions.max(0))
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+        }
+        _ => {}
+    }
+    Ok(outcome)
 }
 
 // ---------------------------------------------------------------------------

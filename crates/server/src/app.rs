@@ -452,6 +452,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::decks::delete_deck),
     ),
+    // R2100000: a deck's earlier versions, and the restore of one.
+    (
+        "GET",
+        "/api/decks/:id/versions",
+        AuthLevel::Active,
+        h!(api::decks::list_deck_versions),
+    ),
+    (
+        "POST",
+        "/api/decks/:id/versions/:versionId/restore",
+        AuthLevel::Active,
+        h!(api::decks::restore_deck_version),
+    ),
     (
         "PUT",
         "/api/trios/:id",

@@ -761,6 +761,15 @@ pub const DECK_CODE_MAX_INPUT_LENGTH: usize = 512;
 pub const DECK_AUTOSAVE_DEBOUNCE_MS: i64 = 800;
 /// SPEC §11 R256: how long the builder waits before it tries a failed save again.
 pub const DECK_AUTOSAVE_RETRY_SECONDS: i64 = 5;
+/// SPEC §11 R2100000: how many earlier versions the account keeps of one deck. A save past it drops
+/// the oldest. Twenty covers an evening's tinkering many times over and keeps a deck's history
+/// under a few kilobytes per deck.
+pub const DECK_VERSIONS_KEPT: usize = 20;
+/// SPEC §11 R2100000: a save this soon after the deck's newest version replaces that version rather
+/// than keeping another, so a burst of edits (the builder saves `DECK_AUTOSAVE_DEBOUNCE_MS` after
+/// each pause) is one version. The window runs from the newest version's own save, which each
+/// replacing save moves on.
+pub const DECK_VERSION_DEBOUNCE_MS: i64 = 60_000;
 /// SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
 /// does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
 /// `TRIO_CODE_CORE_ONLY_VERSION` is refused.

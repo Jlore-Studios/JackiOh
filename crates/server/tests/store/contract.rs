@@ -47,12 +47,14 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
-use jackioh_server::config::{JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
+use jackioh_server::config::{
+    DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS,
+};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
-    Db, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
+    Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
     RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
@@ -526,7 +528,7 @@ pub const TRUNCATE: &str = "truncate
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
   public.matches,
-  public.trios, public.decks, public.custom_cards,
+  public.deck_versions, public.trios, public.decks, public.custom_cards,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
   public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
@@ -2327,6 +2329,187 @@ mod trios {
         r252_refuses_a_slot_naming_a_deck_that_is_not_this_profile_s,
         r252_refuses_one_deck_in_two_slots,
         r252_refuses_a_create_past_the_cap_and_another_profile_s_trio,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// A deck's earlier versions (R2100000; migration 0065)
+// ---------------------------------------------------------------------------
+
+mod deck_versions {
+    use super::*;
+
+    const WINDOW: Option<i64> = Some(DECK_VERSION_DEBOUNCE_MS);
+    const KEPT: i64 = DECK_VERSIONS_KEPT as i64;
+
+    /// The version a save of `deck` keeps, as the handler builds it: the deck's name and cards at
+    /// its `updatedAt`, under a fresh id; `over` replaces any of it.
+    fn deck_version(deck: &SavedDeck, over: Value) -> DeckVersion {
+        from(spread(
+            json!({
+                "id": id(),
+                "deckId": deck.id,
+                "profileId": deck.profile_id,
+                "name": deck.name,
+                "cards": deck.cards,
+                "savedAt": deck.updated_at,
+            }),
+            over,
+        ))
+    }
+
+    async fn saved(harness: &StoreHarness, profile_id: &str) -> SavedDeck {
+        let deck = saved_deck(harness, profile_id, json!({}));
+        q!(harness, t => t.decks_upsert(&deck, 10));
+        deck
+    }
+
+    async fn r2100000_keeps_a_version_per_save_and_lists_them_newest_first(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let deck = saved(harness, &profile.id).await;
+        let first = deck_version(&deck, json!({}));
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&first, WINDOW, KEPT))),
+            "added"
+        );
+        let second = deck_version(
+            &deck,
+            json!({ "cards": deck_of(harness, 1)[..5].to_vec(), "savedAt": deck.updated_at + DECK_VERSION_DEBOUNCE_MS }),
+        );
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&second, WINDOW, KEPT))),
+            "added"
+        );
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![second, first]
+        );
+        assert!(q!(harness, t => t.deck_versions_list(&other.id, &deck.id)).is_empty());
+    }
+
+    async fn r2100000_a_save_within_the_debounce_replaces_the_newest(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let deck = saved(harness, &profile.id).await;
+        let first = deck_version(&deck, json!({}));
+        q!(harness, t => t.deck_versions_keep(&first, WINDOW, KEPT));
+        let edited_at = deck.updated_at + DECK_VERSION_DEBOUNCE_MS - 1;
+        let edit = deck_version(
+            &deck,
+            json!({ "name": "Aggro II", "cards": deck_of(harness, 1)[..3].to_vec(), "savedAt": edited_at }),
+        );
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&edit, WINDOW, KEPT))),
+            "merged"
+        );
+        // The newest keeps its id and takes the save's name, cards and time.
+        let merged: DeckVersion = from(spread(j(&edit), json!({ "id": first.id })));
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![merged.clone()]
+        );
+
+        // Past the window, the same name and cards keep nothing.
+        let same = deck_version(
+            &deck,
+            json!({ "name": "Aggro II", "cards": edit.cards, "savedAt": edited_at * 2 }),
+        );
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&same, WINDOW, KEPT))),
+            "unchanged"
+        );
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![merged.clone()]
+        );
+
+        // No window (a restore) adds a version even within one.
+        let restored = deck_version(&deck, json!({ "savedAt": edited_at + 1 }));
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&restored, None, KEPT))),
+            "added"
+        );
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![restored, merged]
+        );
+    }
+
+    async fn r2100000_drops_the_oldest_past_the_cap(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let deck = saved(harness, &profile.id).await;
+        let versions: Vec<DeckVersion> = (0..4_i64)
+            .map(|n| {
+                deck_version(
+                    &deck,
+                    json!({
+                        "cards": deck_of(harness, 0)[..usize::try_from(n + 1).expect("a count")].to_vec(),
+                        "savedAt": deck.updated_at + n * DECK_VERSION_DEBOUNCE_MS,
+                    }),
+                )
+            })
+            .collect();
+        for version in &versions {
+            assert_eq!(
+                lit(&q!(harness, t => t.deck_versions_keep(version, WINDOW, 3))),
+                "added"
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![versions[3].clone(), versions[2].clone(), versions[1].clone()]
+        );
+    }
+
+    async fn r2100000_keeps_nothing_for_a_deck_that_is_not_the_profile_s(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let deck = saved(harness, &owner.id).await;
+        let borrowed = deck_version(&deck, json!({ "profileId": other.id }));
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&borrowed, WINDOW, KEPT))),
+            "missing"
+        );
+        let unsaved = deck_version(&deck, json!({ "deckId": id() }));
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&unsaved, WINDOW, KEPT))),
+            "missing"
+        );
+        assert!(q!(harness, t => t.deck_versions_list(&owner.id, &deck.id)).is_empty());
+        assert!(q!(harness, t => t.deck_versions_list(&other.id, &deck.id)).is_empty());
+    }
+
+    async fn r2100000_deleting_a_deck_or_its_account_deletes_its_versions(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let dropped = saved(harness, &gone.id).await;
+        let kept = saved(harness, &gone.id).await;
+        let theirs = saved(harness, &other.id).await;
+        for deck in [&dropped, &kept, &theirs] {
+            q!(harness, t => t.deck_versions_keep(&deck_version(deck, json!({})), WINDOW, KEPT));
+        }
+
+        assert!(q!(harness, t => t.decks_remove(&gone.id, &dropped.id)));
+        assert!(q!(harness, t => t.deck_versions_list(&gone.id, &dropped.id)).is_empty());
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&gone.id, &kept.id)).len(),
+            1
+        );
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert!(q!(harness, t => t.deck_versions_list(&gone.id, &kept.id)).is_empty());
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&other.id, &theirs.id)).len(),
+            1
+        );
+    }
+
+    both_stores!(
+        r2100000_keeps_a_version_per_save_and_lists_them_newest_first,
+        r2100000_a_save_within_the_debounce_replaces_the_newest,
+        r2100000_drops_the_oldest_past_the_cap,
+        r2100000_keeps_nothing_for_a_deck_that_is_not_the_profile_s,
+        r2100000_deleting_a_deck_or_its_account_deletes_its_versions,
     );
 }
 

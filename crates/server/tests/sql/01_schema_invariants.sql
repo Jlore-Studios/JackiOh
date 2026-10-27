@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 66 tables of migrations 0001-0063 ==='
+\echo '=== CHECK 2: the 67 tables of migrations 0001-0065 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -83,11 +83,12 @@ declare
   -- quest_schedules, quest_grants, cosmetics, card_cosmetics, account_cosmetics and cosmetic_grants
   -- (0045, SPEC §14.11, #1299), practice earning's practice_seeds (0047, #1303), the files
   -- stats-import --totals-only folded, game_record_batches (0060, R1976000), the account's
-  -- per-card picks, card_cosmetic_picks (0061, R1834000), and each patch's whole games,
-  -- game_totals (0063, R1994000).
+  -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
+  -- game_totals (0063, R1994000), and a saved deck's earlier versions, deck_versions (0065,
+  -- R2100000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
-  -- 0055, 0056, 0057, 0058, 0059 and 0062 add no table.
+  -- 0055, 0056, 0057, 0058, 0059, 0062 and 0064 add no table.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -95,7 +96,7 @@ declare
     'card_cosmetics', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
     'cosmetics', 'custom_cards',
-    'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
+    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
     'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'held_quests', 'inventory',
     'inventory_grants',

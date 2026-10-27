@@ -13,6 +13,7 @@ import { faceText } from "../../../apps/web/src/cards/CardFace.tsx";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
+import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL } from "../../../apps/web/src/game/deckbuilder/testids.ts";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -84,6 +85,8 @@ function mountWorkshop(decks: readonly (readonly string[])[]): void {
     putTrio: cy.stub().resolves({}),
     deleteTrio: cy.stub().resolves({}),
     importTrio: cy.stub().resolves({}),
+    getDeckVersions: cy.stub().resolves({ versions: [] }),
+    restoreDeckVersion: cy.stub().resolves({}),
   };
   cy.mount(
     <DeckWorkshop
@@ -374,6 +377,36 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
       expect(box.height, "its height").to.be.at.least(TOUCH_PX);
     });
   });
+
+  // R2100000: the deck's history button sits in the editor's head, the top bar having no room left
+  // on the first screen above, and takes a finger as the cosmetics button does.
+  it(`R2100000 at 390x844 the deck history button is at least ${String(TOUCH_PX)} px square`, () => {
+    cy.viewport(390, 844);
+    cy.get(`${ts(DB_SIDEBAR)} ${ts(DECK_HISTORY_BUTTON)}`).should(($button) => {
+      const box = ($button[0] as HTMLElement).getBoundingClientRect();
+      expect(box.width, "its width").to.be.at.least(TOUCH_PX);
+      expect(box.height, "its height").to.be.at.least(TOUCH_PX);
+    });
+  });
+
+  // R2100000: the sidebar scrolls, so it clips what passes its sides; the history panel stays inside it.
+  for (const viewport of VIEWPORTS) {
+    const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
+    it(`R2100000 at ${where} the deck history panel opens inside the sidebar`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      cy.get(ts(DECK_HISTORY_BUTTON)).click();
+      cy.get(ts(DECK_HISTORY_PANEL)).should("contain.text", "No versions kept yet");
+      cy.document().should((doc) => {
+        const panel = doc.querySelector(ts(DECK_HISTORY_PANEL))?.getBoundingClientRect();
+        const sidebar = doc.querySelector(ts(DB_SIDEBAR))?.getBoundingClientRect();
+        expect(panel, "the panel").to.not.eq(undefined);
+        expect(sidebar, "the sidebar").to.not.eq(undefined);
+        if (panel === undefined || sidebar === undefined) return;
+        expect(Math.floor(panel.left), `the panel starts inside the sidebar at ${where}`).to.be.at.least(Math.floor(sidebar.left));
+        expect(Math.ceil(panel.right), `the panel ends inside the sidebar at ${where}`).to.be.at.most(Math.ceil(sidebar.right));
+      });
+    });
+  }
 
   it("B39 shows at least two pool columns at 390 px", () => {
     cy.viewport(390, 844);

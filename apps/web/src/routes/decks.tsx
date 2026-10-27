@@ -1,4 +1,4 @@
-// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341).
+// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341, R2100000's history and restore).
 // Redirecting pending accounts is UX; active-only endpoints enforce the gate.
 // Reads run once per profile, and again on Try again; writes use the current token only while it remains that profile (R194, R256).
 // The collection is optional: without L5 quantities, ownership is unknown.
@@ -28,11 +28,13 @@ import {
   deleteDeck,
   deleteTrio,
   getCollection,
+  getDeckVersions,
   getDecks,
   getOwnedCosmetics,
   importTrio,
   putDeck,
   putTrio,
+  restoreDeckVersion,
   type DecksResponse,
 } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
@@ -124,6 +126,8 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
       putTrio: async (id, input) => putTrio(await current(), id, input),
       deleteTrio: async (id) => deleteTrio(await current(), id),
       importTrio: async (input) => importTrio(await current(), input),
+      getDeckVersions: async (id) => getDeckVersions(await current(), id),
+      restoreDeckVersion: async (id, versionId, catalogVersion) => restoreDeckVersion(await current(), id, versionId, catalogVersion),
     };
   }, [workshopProfile]);
 

@@ -16,6 +16,7 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckVersion,
   type SavedDeck,
   type SavedTrio,
   type TrioImportInput,
@@ -24,8 +25,11 @@ import {
 } from "../../net/api.ts";
 import { fixtureCardId } from "./fixtures.ts";
 import {
+  HISTORY_OFFLINE_MESSAGE,
   IMPORT_OFFLINE_MESSAGE,
   IMPORT_UNSAVED_MESSAGE,
+  RESTORE_OFFLINE_MESSAGE,
+  RESTORE_UNSAVED_MESSAGE,
   UNTITLED_DECK,
   UNTITLED_TRIO,
   browserStorage,
@@ -43,6 +47,8 @@ import {
 const PROFILE = "profile-1";
 const CATALOG_VERSION = "test-catalog-1";
 const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * 1000;
+/** When the fake server says a restore was saved (R2100000). */
+const RESTORED_AT = 9_000;
 
 // Fakes
 
@@ -113,15 +119,22 @@ function brokenStorage(): StorageLike {
 }
 
 type Call = {
-  op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio";
+  op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio" | "getDeckVersions" | "restoreDeckVersion";
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
+  versionId?: string;
 };
+
+function notFound(what: "deck" | "version"): ApiRequestError {
+  return new ApiRequestError(404, { code: "not_found", message: `There is no such ${what}.` });
+}
 
 /** Mirrors deck/trio refusals from `crates/server/src/api/decks.rs`. */
 function fakeServer() {
   const decks = new Map<string, DeckInput>();
   const trios = new Map<string, TrioInput>();
+  /** R2100000: each deck's kept versions, newest first, as a test seeds them (a save keeps none here). */
+  const versions = new Map<string, DeckVersion[]>();
   const calls: Call[] = [];
   const state = {
     offline: false,
@@ -185,6 +198,25 @@ function fakeServer() {
         trio: savedTrio(input.trio.id, input.trio.name, input.slots.map((deck) => deck?.id ?? null) as TrioSlots, 5_000),
       };
     },
+    async getDeckVersions(id: string) {
+      await gate({ op: "getDeckVersions", id });
+      if (!decks.has(id)) throw notFound("deck");
+      return { versions: versions.get(id) ?? [] };
+    },
+    /** R2100000: the version's name and cards become the deck's, its portrait kept, and a new version heads the list. */
+    async restoreDeckVersion(id: string, versionId: string, catalogVersion: string) {
+      await gate({ op: "restoreDeckVersion", id, versionId });
+      const deck = decks.get(id);
+      if (deck === undefined) throw notFound("deck");
+      const kept = versions.get(id) ?? [];
+      const version = kept.find((entry) => entry.id === versionId);
+      if (version === undefined) throw notFound("version");
+      decks.set(id, { ...deck, name: version.name, cards: [...version.cards], catalogVersion });
+      const listed = [{ ...version, id: `${versionId}-restored`, savedAt: RESTORED_AT }, ...kept];
+      versions.set(id, listed);
+      const saved = { ...savedDeck(id, version.name, [...version.cards], 1), portrait: deck.portrait ?? null, updatedAt: RESTORED_AT };
+      return { deck: saved, versions: listed };
+    },
   };
 
   function holdRequests(): () => void {
@@ -199,7 +231,7 @@ function fakeServer() {
     };
   }
 
-  return { api, calls, decks, trios, state, holdRequests };
+  return { api, calls, decks, trios, versions, state, holdRequests };
 }
 
 function savedDeck(id: string, name: string, cards: string[], createdAt: number): SavedDeck {
@@ -1020,5 +1052,128 @@ describe("the deck's portrait (R641)", () => {
     });
     expect(result.ok).toBe(true);
     expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
+  });
+});
+
+// A deck's kept versions (R2100000)
+
+describe("a deck's kept versions (R2100000)", () => {
+  const AGGRO = [fixtureCardId(1), fixtureCardId(2)];
+
+  function kept(): DeckVersion[] {
+    return [
+      { id: "v2", name: "Aggro", cards: [...AGGRO], savedAt: 2_000 },
+      { id: "v1", name: "First", cards: [fixtureCardId(3)], savedAt: 1_000 },
+    ];
+  }
+
+  /** A store over the one deck the server holds, "Aggro" with a portrait, and its two kept versions. */
+  function seeded(server: ReturnType<typeof fakeServer>, clock = manualClock()): DeckStore {
+    server.decks.set("d1", { name: "Aggro", cards: [...AGGRO], catalogVersion: CATALOG_VERSION, portrait: "gary" });
+    server.versions.set("d1", kept());
+    return open({ api: server.api, clock, server: response([{ ...savedDeck("d1", "Aggro", [...AGGRO], 1), portrait: "gary" }]) });
+  }
+
+  it("R2100000 a restore sends the deck's unsaved edit first, then takes the server's deck as saved", async () => {
+    const server = fakeServer();
+    const clock = manualClock();
+    const store = seeded(server, clock);
+    store.updateDeck("d1", { cards: [...AGGRO, fixtureCardId(4)] });
+
+    const result = await store.restoreDeckVersion("d1", "v1");
+    expect(server.calls.map((call) => `${call.op} ${call.versionId ?? call.id}`)).toEqual(["putDeck d1", "restoreDeckVersion v1"]);
+    expect(server.decks.get("d1")).toMatchObject({ name: "First", cards: [fixtureCardId(3)], catalogVersion: CATALOG_VERSION });
+    expect(result).toEqual({ ok: true, versions: [{ ...kept()[1], id: "v1-restored", savedAt: RESTORED_AT }, ...kept()] });
+    // The server's deck, as saved: the version's name and cards, the deck's portrait, the restore's time.
+    expect(store.getSnapshot().decks[0]).toMatchObject({ id: "d1", name: "First", cards: [fixtureCardId(3)], portrait: "gary", updatedAt: RESTORED_AT });
+    expect(store.getSnapshot().unsynced.has("d1")).toBe(false);
+    expect(store.getSnapshot().status.state).toBe("saved");
+
+    // The restore is no edit, so the autosave has nothing to send.
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS * 2);
+    expect(server.calls).toHaveLength(2);
+  });
+
+  it("R2100000 an edit made while a restore is on its way stays, and saves over it", async () => {
+    const server = fakeServer();
+    const clock = manualClock();
+    const store = seeded(server, clock);
+    const release = server.holdRequests();
+    const restoring = store.restoreDeckVersion("d1", "v1");
+    await settle();
+    expect(server.calls.map((call) => call.op)).toEqual(["restoreDeckVersion"]);
+
+    store.updateDeck("d1", { name: "Aggro, edited" });
+    release();
+    expect((await restoring).ok).toBe(true);
+    expect(store.getSnapshot().decks[0]).toMatchObject({ name: "Aggro, edited", cards: AGGRO });
+    expect(store.getSnapshot().unsynced.has("d1")).toBe(true);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")).toMatchObject({ name: "Aggro, edited", cards: AGGRO });
+  });
+
+  it("R2100000 offline, a restore restores nothing and says so", async () => {
+    // An edit the server could not take stays unsaved, and the restore would save over it.
+    const server = fakeServer();
+    const store = seeded(server);
+    server.state.offline = true;
+    store.updateDeck("d1", { name: "Aggro, on the train" });
+    expect(await store.restoreDeckVersion("d1", "v1")).toEqual({ ok: false, message: RESTORE_OFFLINE_MESSAGE });
+    expect(server.calls.map((call) => call.op)).toEqual(["putDeck"]);
+    expect(store.getSnapshot().decks[0]?.name).toBe("Aggro, on the train");
+
+    // With nothing unsaved, the restore itself cannot reach the server.
+    const quiet = fakeServer();
+    const clean = seeded(quiet);
+    quiet.state.offline = true;
+    expect(await clean.restoreDeckVersion("d1", "v1")).toEqual({ ok: false, message: RESTORE_OFFLINE_MESSAGE });
+    expect(quiet.calls.map((call) => call.op)).toEqual(["restoreDeckVersion"]);
+    expect(clean.getSnapshot().decks[0]).toMatchObject({ name: "Aggro", cards: AGGRO });
+    expect(quiet.decks.get("d1")).toMatchObject({ name: "Aggro", cards: AGGRO });
+  });
+
+  it("R2100000 a deck whose latest edit has not landed restores nothing, so the edit is never saved over", async () => {
+    const server = fakeServer();
+    const store = seeded(server);
+    server.state.refusals.set("d1", new ApiRequestError(503, { code: "unavailable", message: "The server is waking up." }));
+    store.updateDeck("d1", { name: "Aggro, edited" });
+    expect(await store.restoreDeckVersion("d1", "v1")).toEqual({ ok: false, message: RESTORE_UNSAVED_MESSAGE });
+    expect(server.calls.map((call) => call.op)).toEqual(["putDeck"]);
+    expect(store.getSnapshot().decks[0]?.name).toBe("Aggro, edited");
+  });
+
+  it("R2100000 a refused restore passes the server's sentence on", async () => {
+    const server = fakeServer();
+    const store = seeded(server);
+    expect(await store.restoreDeckVersion("d1", "nope")).toEqual({ ok: false, message: "There is no such version." });
+    const refusal = "The server refused this version.";
+    server.state.refusals.set("d1", new ApiRequestError(400, { code: "bad_request", message: refusal }));
+    expect(await store.restoreDeckVersion("d1", "v1")).toEqual({ ok: false, message: refusal });
+    const stale = "This page is out of date. Reload it to keep building.";
+    server.state.refusals.set("d1", new ApiRequestError(409, { code: "update_required", message: stale }));
+    expect(await store.restoreDeckVersion("d1", "v1")).toEqual({ ok: false, message: stale });
+    // A deck this device does not hold is never asked about.
+    expect(await store.restoreDeckVersion("gone", "v1")).toEqual({ ok: false, message: "There is no such deck." });
+
+    expect(server.calls.map((call) => call.op)).toEqual(["restoreDeckVersion", "restoreDeckVersion", "restoreDeckVersion"]);
+    expect(store.getSnapshot().decks[0]).toMatchObject({ name: "Aggro", cards: AGGRO });
+    expect(server.versions.get("d1")).toEqual(kept());
+    expect(store.getSnapshot().status.state).toBe("saved");
+  });
+
+  it("R2100000 the history is read from the server, and offline says so", async () => {
+    const server = fakeServer();
+    const store = seeded(server);
+    expect(await store.deckVersions("d1")).toEqual({ ok: true, versions: kept() });
+
+    // What is unsaved goes first, so the newest version is the deck the editor shows.
+    store.updateDeck("d1", { name: "Aggro v2" });
+    await store.deckVersions("d1");
+    expect(server.calls.map((call) => call.op)).toEqual(["getDeckVersions", "putDeck", "getDeckVersions"]);
+
+    // A deck the server does not hold for this account is its own 404, in its words.
+    expect(await store.deckVersions("gone")).toEqual({ ok: false, message: "There is no such deck." });
+    server.state.offline = true;
+    expect(await store.deckVersions("d1")).toEqual({ ok: false, message: HISTORY_OFFLINE_MESSAGE });
   });
 });

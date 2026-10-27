@@ -15,6 +15,9 @@
 //
 // Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
 // (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
+//
+// R2100000: the server keeps a deck's earlier versions on its saves; this store only reads them and
+// asks for a restore, which, like an import, is one request and never the autosave.
 
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName } from "@jackioh/validator";
 
@@ -30,12 +33,14 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckVersion,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
 import { isRecord } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
+import { deckVersionsFrom } from "./deckHistory.ts";
 
 // The shapes
 
@@ -67,6 +72,10 @@ export type DeckSyncApi = {
   deleteTrio(id: string): Promise<unknown>;
   /** R341: a trio code's decks and the trio, all or nothing, in one request. */
   importTrio(input: TrioImportInput): Promise<unknown>;
+  /** R2100000: the deck's kept versions, newest first. */
+  getDeckVersions(id: string): Promise<unknown>;
+  /** R2100000: a kept version saved as the deck's current one; answers the deck and the versions. */
+  restoreDeckVersion(id: string, versionId: string, catalogVersion: string): Promise<unknown>;
 };
 
 /** What a trio import makes (R339): the trio's name, and each slot's deck or nothing. */
@@ -77,6 +86,9 @@ export type TrioImport = {
 
 /** How an import ended: the new trio's id, or the sentence saying why nothing was made (R340). */
 export type TrioImportResult = { ok: true; trioId: string } | { ok: false; message: string };
+
+/** R2100000: a deck's kept versions, newest first, or the sentence saying why there are none to show. */
+export type DeckHistoryResult = { ok: true; versions: readonly DeckVersion[] } | { ok: false; message: string };
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -119,6 +131,18 @@ export type DeckStore = {
    * ids are minted once per import and reused on a retry, so a lost answer never makes it twice.
    */
   importTrio(init: TrioImport): Promise<TrioImportResult>;
+  /**
+   * R2100000: the deck's kept versions, as the server lists them. What is unsaved goes first, so the
+   * newest is the deck the editor shows.
+   */
+  deckVersions(deckId: string): Promise<DeckHistoryResult>;
+  /**
+   * R2100000: makes a kept version the deck's current one, in one request and never through the
+   * autosave (whose window would fold it into the newest version). The server keeps it as a new
+   * version and answers the deck, which is taken as saved, and the list. What is unsaved goes first;
+   * a deck still unsaved after that restores nothing, since the restore would save over its edit.
+   */
+  restoreDeckVersion(deckId: string, versionId: string): Promise<DeckHistoryResult>;
   /** Saves now (the debounce is skipped); settles once this flush and any re-run it caused have. */
   flush(): Promise<void>;
   /** Saves on `pagehide`, on the page going hidden and on coming back online. Idempotent. */
@@ -307,6 +331,16 @@ export const IMPORT_OFFLINE_MESSAGE = "You’re offline, so nothing was imported
 /** R341: why an import made nothing, when earlier edits (a deletion made to make room) have not landed. */
 export const IMPORT_UNSAVED_MESSAGE =
   "Your latest changes haven’t reached the server yet, so nothing was imported. Try again once they’re saved.";
+
+/** R2100000: why a deck's history is not shown, when the server could not be asked. */
+export const HISTORY_OFFLINE_MESSAGE = "You’re offline, so this deck’s history can’t be shown. Try again once you’re back online.";
+/** R2100000: why a restore changed nothing, when the server could not be asked. */
+export const RESTORE_OFFLINE_MESSAGE = "You’re offline, so nothing was restored. Try again once you’re back online.";
+/** R2100000: why a restore changed nothing, when the deck's latest edit has not landed (a restore would save over it). */
+export const RESTORE_UNSAVED_MESSAGE =
+  "This deck’s latest changes haven’t reached the server yet, so nothing was restored. Try again once they’re saved.";
+/** The server's own sentence for a deck it does not hold for this account (`crates/server/src/api/decks.rs`). */
+const NO_SUCH_DECK_MESSAGE = "There is no such deck.";
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TIMEOUT = 408;
@@ -761,6 +795,42 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     return { ok: true, trioId: trioItem.id };
   }
 
+  async function deckVersions(deckId: string): Promise<DeckHistoryResult> {
+    await flush();
+    try {
+      return { ok: true, versions: deckVersionsFrom(await api.getDeckVersions(deckId)) };
+    } catch (cause: unknown) {
+      const failure = failureOf(cause);
+      return { ok: false, message: failure.kind === "offline" ? HISTORY_OFFLINE_MESSAGE : failure.message };
+    }
+  }
+
+  async function restoreDeckVersion(deckId: string, versionId: string): Promise<DeckHistoryResult> {
+    await flush();
+    const entry = decks.find((candidate) => candidate.item.id === deckId);
+    if (entry === undefined) return { ok: false, message: NO_SUCH_DECK_MESSAGE };
+    if (entry.dirty) return { ok: false, message: offline ? RESTORE_OFFLINE_MESSAGE : RESTORE_UNSAVED_MESSAGE };
+    const rev = entry.rev;
+
+    let answer: unknown;
+    try {
+      answer = await api.restoreDeckVersion(deckId, versionId, catalogVersion);
+    } catch (cause: unknown) {
+      const failure = failureOf(cause);
+      return { ok: false, message: failure.kind === "offline" ? RESTORE_OFFLINE_MESSAGE : failure.message };
+    }
+
+    const body = isRecord(answer) ? answer : {};
+    const saved = deckFrom(body.deck);
+    // An edit made while the restore was on its way is newer than it, and saves over it as any edit does.
+    const current = decks.find((candidate) => candidate.item.id === deckId);
+    if (saved !== null && saved.id === deckId && current === entry && !current.dirty && current.rev === rev) {
+      decks = decks.map((candidate) => (candidate === current ? tracked(saved, false) : candidate));
+      changed();
+    }
+    return { ok: true, versions: deckVersionsFrom(body) };
+  }
+
   const onPageHide = (): void => {
     void flush();
   };
@@ -891,6 +961,10 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     },
 
     importTrio,
+
+    deckVersions,
+
+    restoreDeckVersion,
 
     flush,
 

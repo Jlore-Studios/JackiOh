@@ -15,7 +15,9 @@
 //!  - R341: a trio import is checked like every save and written all or nothing, under both caps
 //!    (R340);
 //!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource;
-//!  - R1827000: a deck's portrait is one its account owns, on top of D5.
+//!  - R1827000: a deck's portrait is one its account owns, on top of D5;
+//!  - R2100000: each save keeps a version (a burst one, at most `DECK_VERSIONS_KEPT`), and a restore
+//!    is a save of one that keeps the version it replaced.
 //!
 //! The test app serves the compiled-in catalog and the handlers call the shared validator directly
 //! (SURFACE §11.3), so the cards here are the real catalog's playable ids.
@@ -38,10 +40,11 @@ use jackioh_server::api::decks::{assert_free_to_play, freeze_choice, read_mode_c
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
-    DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+    DECK_NAME_MAX_LENGTH, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, DRAFT_ISSUES_REPORTED_MAX,
+    MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
 };
 use jackioh_server::cosmetics::portrait_cosmetic_id;
-use jackioh_server::db::store::{CollectionEntry, SavedDeck, SavedTrio, SeriesRow, StoreError};
+use jackioh_server::db::store::{CollectionEntry, DeckVersion, SavedDeck, SavedTrio, SeriesRow, StoreError};
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{add_user, call, test_app};
@@ -244,6 +247,42 @@ impl Ctx {
             .map(json_of)
             .collect()
     }
+
+    /// R2100000: `GET /api/decks/:id/versions`, which must answer 200: the versions, newest first.
+    async fn versions(&self, deck_id: &str, bearer: &str) -> Vec<Value> {
+        let (status, body) = self
+            .request("GET", &format!("/api/decks/{deck_id}/versions"), None, bearer)
+            .await;
+        assert_eq!(status, 200, "{body}");
+        body["versions"].as_array().expect("versions").clone()
+    }
+
+    /// R2100000: `POST /api/decks/:id/versions/:versionId/restore`.
+    async fn restore(&self, deck_id: &str, version_id: &str, body: Value, bearer: &str) -> (u16, Value) {
+        self.request(
+            "POST",
+            &format!("/api/decks/{deck_id}/versions/{version_id}/restore"),
+            Some(body),
+            bearer,
+        )
+        .await
+    }
+
+    async fn versions_table(&self) -> Vec<Value> {
+        fake_lock(&self.app)
+            .await
+            .tables
+            .deck_versions
+            .iter()
+            .map(json_of)
+            .collect()
+    }
+}
+
+/// R2100000: one millisecond past `DECK_VERSION_DEBOUNCE_MS`, so the next save keeps a version of
+/// its own.
+fn past_the_debounce() -> Duration {
+    Duration::from_millis(DECK_VERSION_DEBOUNCE_MS.unsigned_abs() + 1)
 }
 
 /// R1827000: `profile` owns `portrait` on its account, as a pack's drop would leave it.
@@ -1097,6 +1136,264 @@ mod r1833000_a_deck_s_slots_are_ones_the_account_owns {
     }
 }
 
+// A deck's earlier versions
+
+mod r2100000_a_deck_keeps_its_earlier_versions {
+    use super::*;
+
+    fn restore_body() -> Value {
+        json!({ "catalogVersion": catalog_version() })
+    }
+
+    fn field(versions: &[Value], key: &str) -> Vec<Value> {
+        versions.iter().map(|version| version[key].clone()).collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_a_save_keeps_a_version_and_a_burst_of_quick_edits_keeps_one() {
+        let ctx = setup().await;
+        for count in [4, 3, 2] {
+            let (status, _) = ctx
+                .put_deck(
+                    deck_body(json!({ "cards": cards(count, 0) })),
+                    &uuid(1),
+                    &ctx.token,
+                )
+                .await;
+            assert_eq!(status, 200);
+            tokio::time::advance(Duration::from_millis(5_000)).await;
+        }
+        let versions = ctx.versions(&uuid(1), &ctx.token).await;
+        assert_eq!(versions.len(), 1, "{versions:?}");
+        // The burst's last save, at its own time; the owner is the caller, so no profile id.
+        let last_save = now_ms() - 5_000;
+        assert_eq!(
+            versions[0],
+            json!({ "id": versions[0]["id"], "name": "Aggro", "cards": cards(2, 0), "savedAt": last_save })
+        );
+
+        // Past the window, a save that changes nothing keeps nothing…
+        tokio::time::advance(past_the_debounce()).await;
+        let unchanged = deck_body(json!({ "cards": cards(2, 0) }));
+        assert_eq!(ctx.put_deck(unchanged, &uuid(1), &ctx.token).await.0, 200);
+        assert_eq!(ctx.versions(&uuid(1), &ctx.token).await, versions);
+
+        // …and a rename keeps one, listed first.
+        tokio::time::advance(past_the_debounce()).await;
+        let renamed = deck_body(json!({ "name": "Aggro v2", "cards": cards(2, 0) }));
+        assert_eq!(ctx.put_deck(renamed, &uuid(1), &ctx.token).await.0, 200);
+        let versions = ctx.versions(&uuid(1), &ctx.token).await;
+        assert_eq!(field(&versions, "name"), vec![json!("Aggro v2"), json!("Aggro")]);
+        assert_eq!(versions[0]["savedAt"], json!(now_ms()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_drops_the_oldest_version_past_deck_versions_kept() {
+        let ctx = setup().await;
+        let saves = DECK_VERSIONS_KEPT + 2;
+        for n in 0..saves {
+            let body = deck_body(json!({ "name": format!("Deck {n}") }));
+            assert_eq!(ctx.put_deck(body, &uuid(1), &ctx.token).await.0, 200);
+            tokio::time::advance(past_the_debounce()).await;
+        }
+        let versions = ctx.versions(&uuid(1), &ctx.token).await;
+        let kept: Vec<Value> = (2..saves).rev().map(|n| json!(format!("Deck {n}"))).collect();
+        assert_eq!(field(&versions, "name"), kept);
+        assert_eq!(ctx.versions_table().await.len(), DECK_VERSIONS_KEPT);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_restore_makes_the_chosen_version_current_and_keeps_the_one_it_replaced() {
+        let ctx = setup().await;
+        let first = deck_body(json!({ "name": "First", "cards": cards(4, 0), "portrait": DEFAULT_PORTRAIT }));
+        assert_eq!(ctx.put_deck(first, &uuid(1), &ctx.token).await.0, 200);
+        tokio::time::advance(past_the_debounce()).await;
+        let second =
+            deck_body(json!({ "name": "Second", "cards": cards(3, 10), "portrait": DEFAULT_PORTRAIT }));
+        assert_eq!(ctx.put_deck(second, &uuid(1), &ctx.token).await.0, 200);
+        tokio::time::advance(Duration::from_millis(1_000)).await;
+
+        let versions = ctx.versions(&uuid(1), &ctx.token).await;
+        assert_eq!(field(&versions, "name"), vec![json!("Second"), json!("First")]);
+        let first_id = versions[1]["id"].as_str().expect("an id").to_string();
+        let (status, body) = ctx.restore(&uuid(1), &first_id, restore_body(), &ctx.token).await;
+        assert_eq!(status, 200, "{body}");
+        // The deck is the version's name and cards, saved now; its portrait stays its own.
+        assert_matches(
+            &body["deck"],
+            &json!({ "id": uuid(1), "name": "First", "cards": cards(4, 0), "portrait": DEFAULT_PORTRAIT, "updatedAt": now_ms() }),
+            "deck",
+        );
+        // A new version, though the last save was a second ago: the one it replaced stays.
+        let restored = body["versions"].as_array().expect("versions").clone();
+        assert_eq!(
+            field(&restored, "name"),
+            vec![json!("First"), json!("Second"), json!("First")]
+        );
+        assert_eq!(restored[0]["savedAt"], json!(now_ms()));
+        assert_ne!(restored[0]["id"], json!(first_id));
+        assert_eq!(ctx.versions(&uuid(1), &ctx.token).await, restored);
+        let listed = ctx.get_decks(&ctx.token).await;
+        assert_eq!(listed["decks"], json!([body["deck"]]));
+
+        // Restoring the version the restore replaced undoes it (a second later: versions saved in
+        // one millisecond are ordered by their random ids).
+        tokio::time::advance(Duration::from_millis(1_000)).await;
+        let second_id = restored[1]["id"].as_str().expect("an id").to_string();
+        let (status, body) = ctx
+            .restore(&uuid(1), &second_id, restore_body(), &ctx.token)
+            .await;
+        assert_eq!(status, 200, "{body}");
+        assert_matches(
+            &body["deck"],
+            &json!({ "name": "Second", "cards": cards(3, 10) }),
+            "deck",
+        );
+        assert_eq!(
+            field(body["versions"].as_array().expect("versions"), "name"),
+            vec![json!("Second"), json!("First"), json!("Second"), json!("First")]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_a_restore_is_checked_as_any_save_is() {
+        let ctx = setup().await;
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({})), &uuid(1), &ctx.token).await.0,
+            200
+        );
+        let version_id = ctx.versions(&uuid(1), &ctx.token).await[0]["id"]
+            .as_str()
+            .expect("an id")
+            .to_string();
+        let decks = ctx.decks_table().await;
+        let versions = ctx.versions_table().await;
+
+        let (status, body) = ctx
+            .restore(
+                &uuid(1),
+                &version_id,
+                json!({ "catalogVersion": "stale-0" }),
+                &ctx.token,
+            )
+            .await;
+        assert_eq!((status, error_code(&body)), (409, &json!("update_required")));
+        let (status, _) = ctx.restore(&uuid(1), &version_id, json!({}), &ctx.token).await;
+        assert_eq!(status, 400);
+        let (status, body) = ctx.restore(&uuid(1), "nope", restore_body(), &ctx.token).await;
+        assert_eq!(
+            (status, &body["error"]["message"]),
+            (400, &json!("that is not a version id"))
+        );
+        let (status, _) = ctx.restore("nope", &version_id, restore_body(), &ctx.token).await;
+        assert_eq!(status, 400);
+        let (status, body) = ctx
+            .restore(&uuid(1), &uuid(999), restore_body(), &ctx.token)
+            .await;
+        assert_eq!(
+            (status, &body["error"]["message"]),
+            (404, &json!("There is no such version."))
+        );
+        let (status, body) = ctx
+            .restore(&uuid(2), &version_id, restore_body(), &ctx.token)
+            .await;
+        assert_eq!(
+            (status, &body["error"]["message"]),
+            (404, &json!("There is no such deck."))
+        );
+
+        // A version is judged by today's catalog, as a save is: a card no deck may hold (D3) is refused.
+        let token_deck = vec![a_token()];
+        fake_lock(&ctx.app).await.tables.deck_versions.push(DeckVersion {
+            id: uuid(900),
+            deck_id: uuid(1),
+            profile_id: PROFILE.to_string(),
+            name: "Tokens".to_string(),
+            cards: token_deck.clone(),
+            saved_at: now_ms() - 1,
+        });
+        let (status, body) = ctx
+            .restore(&uuid(1), &uuid(900), restore_body(), &ctx.token)
+            .await;
+        let expected = draft_issues("Tokens", &token_deck);
+        assert_eq!((status, error_code(&body)), (400, &json!("bad_request")));
+        assert_eq!(body["error"]["details"], expected);
+        assert_eq!(body["error"]["message"], first_message(&expected));
+
+        assert_eq!(ctx.decks_table().await, decks);
+        assert_eq!(ctx.versions_table().await.len(), versions.len() + 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_another_account_never_reads_or_restores_a_deck_s_versions() {
+        let ctx = setup().await;
+        assert_eq!(
+            ctx.put_deck(deck_body(json!({})), &uuid(1), &ctx.token).await.0,
+            200
+        );
+        let version_id = ctx.versions(&uuid(1), &ctx.token).await[0]["id"]
+            .as_str()
+            .expect("an id")
+            .to_string();
+
+        // The same answer as for a deck nobody has, so an id reveals nothing.
+        let path = |deck_id: &str| format!("/api/decks/{deck_id}/versions");
+        let (status, theirs) = ctx.request("GET", &path(&uuid(1)), None, &ctx.other_token).await;
+        let (_, missing) = ctx.request("GET", &path(&uuid(2)), None, &ctx.other_token).await;
+        assert_eq!((status, error_code(&theirs)), (404, &json!("not_found")));
+        assert_eq!(theirs, missing);
+
+        let (status, theirs) = ctx
+            .restore(&uuid(1), &version_id, restore_body(), &ctx.other_token)
+            .await;
+        let (_, missing) = ctx
+            .restore(&uuid(2), &version_id, restore_body(), &ctx.other_token)
+            .await;
+        assert_eq!((status, error_code(&theirs)), (404, &json!("not_found")));
+        assert_eq!(theirs, missing);
+        assert_eq!(ctx.versions(&uuid(1), &ctx.token).await.len(), 1);
+        assert_eq!(json_of(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Aggro"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_deleting_a_deck_deletes_its_versions() {
+        let ctx = setup().await;
+        for id in [uuid(1), uuid(2)] {
+            assert_eq!(ctx.put_deck(deck_body(json!({})), &id, &ctx.token).await.0, 200);
+        }
+        let (_, removed) = ctx.delete(&format!("/api/decks/{}", uuid(1)), &ctx.token).await;
+        assert_eq!(removed, json!({ "deleted": true }));
+        let (status, _) = ctx
+            .request(
+                "GET",
+                &format!("/api/decks/{}/versions", uuid(1)),
+                None,
+                &ctx.token,
+            )
+            .await;
+        assert_eq!(status, 404);
+        let left = ctx.versions_table().await;
+        assert_eq!(field(&left, "deckId"), vec![json!(uuid(2))]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2100000_a_trio_import_keeps_a_version_of_each_deck_it_saves() {
+        let ctx = setup().await;
+        assert_eq!(
+            ctx.post_import(import_body(500, json!({})), &ctx.token).await.0,
+            200
+        );
+        for slot in 0..3 {
+            let versions = ctx.versions(&uuid(501 + slot), &ctx.token).await;
+            assert_eq!(
+                field(&versions, "name"),
+                vec![json!(format!("Imported {}", slot + 1))]
+            );
+            assert_eq!(versions[0]["cards"], json!(cards(3, slot * 3)));
+        }
+    }
+}
+
 // Trios
 
 mod saved_trios_9_4_r252 {
@@ -1651,6 +1948,8 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
                 "GET /api/decks",
                 "PUT /api/decks/:id",
                 "DELETE /api/decks/:id",
+                "GET /api/decks/:id/versions",
+                "POST /api/decks/:id/versions/:versionId/restore",
                 "PUT /api/trios/:id",
                 "POST /api/trios/import",
                 "DELETE /api/trios/:id",
@@ -1671,6 +1970,15 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
             ctx.request("GET", "/api/decks", None, &pending).await,
             ctx.put_deck(deck_body(json!({})), &uuid(1), &pending).await,
             ctx.delete(&format!("/api/decks/{}", uuid(1)), &pending).await,
+            ctx.request("GET", &format!("/api/decks/{}/versions", uuid(1)), None, &pending)
+                .await,
+            ctx.restore(
+                &uuid(1),
+                &uuid(2),
+                json!({ "catalogVersion": catalog_version() }),
+                &pending,
+            )
+            .await,
             ctx.put_trio(
                 json!({ "name": "T", "deckIds": [null, null, null] }),
                 &uuid(101),
@@ -1686,6 +1994,7 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
         }
         assert!(ctx.decks_table().await.is_empty());
         assert!(ctx.trios_table().await.is_empty());
+        assert!(ctx.versions_table().await.is_empty());
     }
 }
 

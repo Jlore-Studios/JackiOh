@@ -484,6 +484,54 @@ impl From<UpsertOutcome> for TrioUpsertOutcome {
     }
 }
 
+/// R2100000: one earlier version of a saved deck (migration 0065): the name and cards one save
+/// wrote, and when. The deck's portrait and cosmetic picks are no part of it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeckVersion {
+    /// A UUID the server mints.
+    pub id: String,
+    pub deck_id: String,
+    pub profile_id: String,
+    pub name: String,
+    pub cards: Vec<String>,
+    /// Epoch ms of the save, or of the last save of the burst it replaced.
+    pub saved_at: i64,
+}
+
+store_union! {
+    /// R2100000: what keeping a save's version did:
+    ///  - `added` — a new version, the deck's newest; the oldest past the cap were dropped;
+    ///  - `merged` — the save came within the window of the newest version, which now holds it;
+    ///  - `unchanged` — the newest version already holds this name and these cards; nothing was
+    ///    written;
+    ///  - `missing` — the profile has no deck with this id; nothing was written.
+    pub enum DeckVersionOutcome {
+        Added = "added",
+        Merged = "merged",
+        Unchanged = "unchanged",
+        Missing = "missing",
+    }
+}
+
+/// R2100000: what keeping `save` does, given the deck's newest version. A `debounce_ms` of `None`
+/// (a restore) never merges, so the version it replaced stays.
+pub fn deck_version_step(
+    newest: Option<&DeckVersion>,
+    save: &DeckVersion,
+    debounce_ms: Option<i64>,
+) -> DeckVersionOutcome {
+    match (newest, debounce_ms) {
+        (Some(newest), _) if newest.name == save.name && newest.cards == save.cards => {
+            DeckVersionOutcome::Unchanged
+        }
+        (Some(newest), Some(window)) if save.saved_at - newest.saved_at < window => {
+            DeckVersionOutcome::Merged
+        }
+        _ => DeckVersionOutcome::Added,
+    }
+}
+
 // Custom cards on the account (SPEC §12.9, R915008; migration 0037). Private to their owner: a
 // profile reads its own and the server alone writes them, each checked by the engine's validator
 // (R915001) first. The store counts the versions: a create is version 1, and an update names the
@@ -1933,6 +1981,32 @@ impl Tx<'_> {
     /// statement (R252). False when the profile has no deck with this id.
     pub async fn decks_remove(&mut self, profile_id: &str, deck_id: &str) -> StoreResult<bool> {
         dispatch!(self, decks_remove(profile_id, deck_id))
+    }
+
+    // deck versions (R2100000, migration 0065)
+
+    /// R2100000: the profile's own deck's versions, newest first: `saved_at` descending, then `id`
+    /// descending. Another profile's deck has none.
+    pub async fn deck_versions_list(
+        &mut self,
+        profile_id: &str,
+        deck_id: &str,
+    ) -> StoreResult<Vec<DeckVersion>> {
+        dispatch!(self, deck_versions_list(profile_id, deck_id))
+    }
+
+    /// R2100000: keeps `save` as its deck's newest version, by `deck_version_step`: `merged` within
+    /// `debounce_ms` of the newest (`None` never merges), `unchanged` when the newest already holds
+    /// its name and cards, otherwise `added`, dropping the oldest past `max_versions`. `missing`
+    /// when the profile has no such deck. Two saves of one deck run one after the other (Postgres
+    /// locks the deck's row).
+    pub async fn deck_versions_keep(
+        &mut self,
+        save: &DeckVersion,
+        debounce_ms: Option<i64>,
+        max_versions: i64,
+    ) -> StoreResult<DeckVersionOutcome> {
+        dispatch!(self, deck_versions_keep(save, debounce_ms, max_versions))
     }
 
     // trios

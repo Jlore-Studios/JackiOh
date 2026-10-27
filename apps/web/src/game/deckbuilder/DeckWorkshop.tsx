@@ -1,7 +1,8 @@
 // `/decks` deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one open at
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
-// the local store and supplied API (R256).
+// the local store and supplied API (R256). The open deck's kept versions are its History, in the
+// editor's head (R2100000).
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -17,6 +18,7 @@ import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
+import DeckHistory from "./DeckHistory.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import ImportPanel from "./ImportPanel.tsx";
@@ -512,6 +514,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           void store.flush();
         }}
         onBack={backToList}
+        // R2100000: mounted with the editor, which is keyed by the deck, so one deck's list never shows under another.
+        history={<DeckHistory deckId={openDeck.id} store={store} catalog={catalog} />}
       />
     );
   } else if (openTrio !== null) {

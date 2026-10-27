@@ -7,11 +7,13 @@ import {
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
 } from "@jackioh/server-config";
+import { pickedDeckCosmetics } from "../../cards/cosmetics.ts";
 import {
   ApiRequestError,
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckVersion,
   type SavedDeck,
   type SavedTrio,
   type TrioImportInput,
@@ -102,15 +104,24 @@ export function memoryStorage(): StorageLike & { data: Map<string, string> } {
 }
 
 export type ServerCall = {
-  op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio";
+  op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio" | "getDeckVersions" | "restoreDeckVersion";
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
+  /** R2100000: the version a restore names. */
+  versionId?: string;
 };
+
+/** The server's 404 for a deck or version that is not the caller's. */
+function notFound(what: "deck" | "version"): ApiRequestError {
+  return new ApiRequestError(404, { code: "not_found", message: `There is no such ${what}.` });
+}
 
 /** An in-memory `/api/decks` and `/api/trios`, with the refusals the store has to handle. */
 export function fakeDeckServer() {
   const decks = new Map<string, DeckInput>();
   const trios = new Map<string, TrioInput>();
+  /** R2100000: each deck's kept versions, newest first, as a test seeds them (a save keeps none here). */
+  const versions = new Map<string, DeckVersion[]>();
   const calls: ServerCall[] = [];
   const state = {
     offline: false,
@@ -161,6 +172,27 @@ export function fakeDeckServer() {
       trios.set(input.trio.id, { name: input.trio.name, deckIds });
       return {};
     },
+    async getDeckVersions(id) {
+      gate({ op: "getDeckVersions", id });
+      if (!decks.has(id)) throw notFound("deck");
+      return { versions: versions.get(id) ?? [] };
+    },
+    async restoreDeckVersion(id, versionId, catalogVersion) {
+      gate({ op: "restoreDeckVersion", id, versionId });
+      const deck = decks.get(id);
+      if (deck === undefined) throw notFound("deck");
+      const kept = versions.get(id) ?? [];
+      const version = kept.find((entry) => entry.id === versionId);
+      if (version === undefined) throw notFound("version");
+      // As the server: the version's name and cards, the deck's portrait and picks, kept as a new version.
+      const savedAt = (kept[0]?.savedAt ?? 0) + 1;
+      decks.set(id, { ...deck, name: version.name, cards: [...version.cards], catalogVersion });
+      const listed = [{ ...version, id: `${versionId}-restored`, savedAt }, ...kept];
+      versions.set(id, listed);
+      // The fake keeps no creation time, so the answer's is the restore's.
+      const saved = savedDeck(id, version.name, version.cards, savedAt, catalogVersion);
+      return { deck: { ...saved, portrait: deck.portrait ?? null, ...pickedDeckCosmetics(deck) }, versions: listed };
+    },
   };
 
   /** Seeds the server with what a `GET /api/decks` answer says it holds. */
@@ -171,7 +203,7 @@ export function fakeDeckServer() {
     for (const trio of response.trios) trios.set(trio.id, { name: trio.name, deckIds: trio.deckIds });
   }
 
-  return { api, calls, decks, trios, state, seed };
+  return { api, calls, decks, trios, versions, state, seed };
 }
 
 /** An api that accepts everything and remembers nothing. */
@@ -182,5 +214,7 @@ export function quietDeckApi(): DeckSyncApi {
     putTrio: async () => ({}),
     deleteTrio: async () => ({}),
     importTrio: async () => ({}),
+    getDeckVersions: async () => ({ versions: [] }),
+    restoreDeckVersion: async () => ({}),
   };
 }

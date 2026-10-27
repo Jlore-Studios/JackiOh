@@ -838,6 +838,32 @@ export function deleteDeck(token: string, id: string): Promise<{ deleted: boolea
   });
 }
 
+/** R2100000: a version a save of the deck kept: its name and cards then, and when (ms). */
+export type DeckVersion = { id: string; name: string; cards: string[]; savedAt: number };
+
+/** `GET /api/decks/:id/versions` (R2100000): the deck's kept versions, newest first; 404 when the deck is not the caller's. */
+export function getDeckVersions(token: string, deckId: string): Promise<{ versions: DeckVersion[] }> {
+  return apiRequest<{ versions: DeckVersion[] }>(`/api/decks/${encodeURIComponent(deckId)}/versions`, { token });
+}
+
+/**
+ * `POST /api/decks/:id/versions/:versionId/restore` (R2100000): saves the version's name and cards as
+ * the deck's, keeping its portrait and picks, and keeps that as a new version, so the one it replaced
+ * stays listed. Refusals as `putDeck`'s (a draft rule, `update_required`), and 404 for a deck or
+ * version that is not the caller's.
+ */
+export function restoreDeckVersion(
+  token: string,
+  deckId: string,
+  versionId: string,
+  catalogVersion: string,
+): Promise<{ deck: SavedDeck; versions: DeckVersion[] }> {
+  return apiRequest<{ deck: SavedDeck; versions: DeckVersion[] }>(
+    `/api/decks/${encodeURIComponent(deckId)}/versions/${encodeURIComponent(versionId)}/restore`,
+    { method: "POST", token, body: { catalogVersion } },
+  );
+}
+
 export type TrioInput = { name: string; deckIds: TrioSlots };
 
 /**

@@ -1,5 +1,5 @@
-// Deck workshop: decks and trios, comparison (R251, R252, R253), codes (R255, R339–R341), and autosave
-// (R256) (SPEC §9.4, R250–R256).
+// Deck workshop: decks and trios, comparison (R251, R252, R253), codes (R255, R339–R341), autosave
+// (R256) and a deck's history (R2100000) (SPEC §9.4, R250–R256).
 //
 // Validator sentences are computed, never copied (messages.test.ts).
 
@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { cosmeticsOf } from "../../cards/cosmetics.ts";
+import { formatDateTime } from "../../i18n/i18n.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";
@@ -42,6 +43,9 @@ import {
   DECK_DELETE_CANCEL,
   DECK_DELETE_CONFIRM,
   DECK_EDITOR,
+  DECK_HISTORY_BUTTON,
+  DECK_HISTORY_PANEL,
+  DECK_HISTORY_ROW,
   DECK_IMPORT,
   DECK_IMPORT_CAP_REASON,
   DECK_IMPORT_INPUT,
@@ -78,6 +82,7 @@ import {
   addPoolId,
   deckCardId,
   deckCompareChipId,
+  deckHistoryRestoreId,
   deckRowId,
   loadoutErrorId,
   poolCardId,
@@ -971,5 +976,55 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     // Escape closes the picker again.
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+  });
+});
+
+describe("the deck's history (R2100000)", () => {
+  it("R2100000 the History panel lists the versions newest first with the cards in and out, and Restore makes one current", async () => {
+    const [kept1 = "", kept2 = "", dropped = "", added1 = "", added2 = ""] = ONE;
+    const first = [kept1, kept2, dropped];
+    const second = [kept1, kept2, added1, added2];
+    const savedAt = Date.UTC(2026, 9, 27, 12);
+    const server = fakeDeckServer();
+    server.versions.set("a", [
+      { id: "v2", name: "Aggro", cards: second, savedAt },
+      { id: "v1", name: "Opener", cards: first, savedAt: Date.UTC(2026, 9, 26, 9, 30) },
+    ]);
+    mount({ server, decks: [savedDeck("a", "Aggro", second, 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(screen.queryByTestId(DECK_HISTORY_PANEL)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(DECK_HISTORY_BUTTON));
+    const panel = screen.getByTestId(DECK_HISTORY_PANEL);
+    expect(panel).toHaveAttribute("role", "dialog");
+    const rows = await within(panel).findAllByTestId(DECK_HISTORY_ROW);
+    expect(rows.map((row) => row.getAttribute("data-version"))).toEqual(["v2", "v1"]);
+    const [newest, oldest] = rows;
+    expect(newest).toHaveTextContent(formatDateTime(savedAt, { dateStyle: "medium", timeStyle: "short" }));
+    expect(newest).toHaveTextContent("Latest save");
+    expect(newest).toHaveTextContent("Renamed from “Opener”");
+    expect(newest).toHaveTextContent(`In: ${nameOf(added1)} and ${nameOf(added2)}`);
+    expect(newest).toHaveTextContent(`Out: ${nameOf(dropped)}`);
+    expect(within(newest as HTMLElement).queryByRole("button"), "the newest is the deck as saved").toBeNull();
+    expect(oldest).toHaveTextContent("The oldest version kept");
+
+    fireEvent.click(screen.getByTestId(deckHistoryRestoreId("v1")));
+    await waitFor(() => {
+      expect(within(panel).getAllByTestId(DECK_HISTORY_ROW)).toHaveLength(3);
+    });
+    expect(within(panel).getAllByTestId(DECK_HISTORY_ROW).map((row) => row.getAttribute("data-version"))).toEqual(["v1-restored", "v2", "v1"]);
+    expect(within(panel).getAllByTestId(DECK_HISTORY_ROW)[0]).toHaveTextContent("Renamed from “Aggro”");
+    expect(server.decks.get("a")).toMatchObject({ name: "Opener", cards: first });
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Opener");
+    expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", String(first.length));
+    expect(screen.getByTestId(deckCardId(dropped))).toBeInTheDocument();
+    expect(screen.queryByTestId(deckCardId(added1))).toBeNull();
+    expect(syncState()).toBe("saved");
+
+    // Escape closes the panel, and each open reads the list again.
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId(DECK_HISTORY_PANEL)).toBeNull();
+    fireEvent.click(screen.getByTestId(DECK_HISTORY_BUTTON));
+    expect(await within(screen.getByTestId(DECK_HISTORY_PANEL)).findAllByTestId(DECK_HISTORY_ROW)).toHaveLength(3);
+    expect(server.calls.filter((call) => call.op === "getDeckVersions")).toHaveLength(2);
   });
 });
