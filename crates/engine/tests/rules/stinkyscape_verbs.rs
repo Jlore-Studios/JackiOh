@@ -3,7 +3,8 @@
 // before a card uses it — Immune to Spell Damage (R1849000), Evolve (R1849001), destroy becomes exile
 // (R1849002), reflected damage (R1849003), the own-turn redirect (R1849004), the Gauntlet's lanes
 // (R1849005), "Units cannot be in Defense Position" (R1849006), a random forced attacker (R1849007),
-// "when one of your Units is attacked" (R1849008) and a trap's chance to reveal (R1849009).
+// "when one of your Units is attacked" (R1849008) and a trap's chance to reveal (R1849009); and S15's
+// Trap that answers a Unit's death in combat before anything moves (R1875006, issue #1875).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -865,6 +866,82 @@ mod r1849009_reveal_chance {
         assert!(types_of(s.last_events()).contains(&GameEventType::TrapFired));
         s.expect_in_zone(trap.as_str(), "graveyard");
         assert_eq!(s.state().rng_cursor, cursor);
+    }
+}
+
+/// R1875006 (issue #1875, Stinkyscape #138 Pocket Peptides): a `wouldDie` replacement that answers a
+/// Unit killed in combat, its follow-up resolving before any card moves and the check starting over; and
+/// a new card's cast with an aim it cannot take casting nothing (R1180005's `aimOnly`, for `castNew`).
+mod r1875006_would_die_in_combat {
+    use super::*;
+
+    fn reprieved(seed: &str, p1: Value) -> (Scenario, String, String) {
+        let s = board(
+            seed,
+            p1,
+            json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [REPRIEVE] }),
+        );
+        let grunt = id_at(&s, P2, 2);
+        let trap = backrow_id(&s, P2, 1);
+        (s, grunt, trap)
+    }
+
+    #[test]
+    fn r1875006_a_unit_killed_in_combat_is_answered_before_anything_moves_and_the_recheck_spares_it() {
+        let (mut s, grunt, trap) = reprieved(
+            "r1875006-combat",
+            json!({ "field": [{ "def": GRUNT, "lane": 2 }] }),
+        );
+        let attacker = id_at(&s, P1, 2);
+        s.attack(attacker.as_str(), grunt.as_str());
+        let types = types_of(s.last_events());
+        let fired = types.iter().position(|t| *t == GameEventType::TrapFired);
+        let destroyed = types.iter().position(|t| *t == GameEventType::Destroyed);
+        assert!(fired.is_some() && fired < destroyed, "{types:?}");
+        s.expect_in_zone(trap.as_str(), "graveyard");
+        // The 3/3 took 3 and was given +10 Health before anything moved: the re-check spares it.
+        s.expect_in_zone(grunt.as_str(), "field");
+        s.expect_stats(grunt.as_str(), json!({ "health": REPRIEVE_HEALTH }));
+        // Its attacker had no reprieve and dies in the check that starts over.
+        s.expect_in_zone(attacker.as_str(), "graveyard");
+    }
+
+    #[test]
+    fn r1875006_a_spells_hit_or_a_destroy_is_no_death_in_combat() {
+        let (mut s, grunt, trap) = reprieved("r1875006-spell", json!({ "hand": [BOLT, SMASH] }));
+        s.play(BOLT, pick(&grunt));
+        assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
+        s.expect_in_zone(grunt.as_str(), "graveyard");
+        assert_eq!(backrow_id(&s, P2, 1), trap);
+        let mut s = board(
+            "r1875006-destroy",
+            json!({ "hand": [SMASH] }),
+            json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [REPRIEVE] }),
+        );
+        let grunt = id_at(&s, P2, 2);
+        s.play(SMASH, pick(&grunt));
+        assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
+        s.expect_in_zone(grunt.as_str(), "graveyard");
+    }
+
+    #[test]
+    fn r1875006_a_new_cards_cast_with_an_aim_it_cannot_take_casts_nothing() {
+        // A bolt aims at Units alone, so "hero:p2" is no legal pick of it.
+        let mut s = board(
+            "r1875006-aim-only",
+            json!({ "hand": [AIM_ONLY, AIM_FALLBACK] }),
+            json!({ "field": [GRUNT] }),
+        );
+        s.play(AIM_ONLY, json!({}));
+        assert!(s.state().pending.is_none());
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if def_id == BOLT))
+        );
+        // Without `aimOnly` the cast falls back to its caster's choice.
+        s.play(AIM_FALLBACK, json!({}));
+        assert!(s.state().pending.is_some());
     }
 }
 
