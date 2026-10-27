@@ -8475,6 +8475,12 @@
         "number": 2019,
         "title": "Patch: a watched game and a friend's shared replay speak of the friend by name, not as you, and a board you can only look at drops Offer draw and Concede",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-27T12:51:18Z",
+        "number": 2046,
+        "title": "Patch: the launch collection grant skips banned cards, as the rules and the fake store already read it",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
