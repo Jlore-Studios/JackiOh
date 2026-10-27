@@ -380,6 +380,12 @@ pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> Sea
     }
 }
 
+/// R608: the lowest ladder position `jlorious_order` reads, Mythic Grape's bottom. A row below it is
+/// never Jlorious, so a read that needs only Jlorious's rows may skip it (#2022).
+pub fn jlorious_floor() -> i32 {
+    tier_bottom(MYTHIC)
+}
+
 /// R608: Jlorious, in order: the season's placed Mythic Grape players by hidden rating, highest
 /// first, ties broken by profile id, the first `JLORIOUS_SIZE` of them. When fewer qualify, every one
 /// of them is Jlorious. A player who falls out is in Mythic Grape again, where the floor holds them.
