@@ -17,6 +17,7 @@ use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use jackioh_server::cosmetics::{CosmeticKind, shipped};
+use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::store::{
@@ -97,6 +98,31 @@ async fn ok(app: &Arc<App>, path: &str, token: &str, body: Value) -> Value {
     let (status, answer) = api(app, "POST", path, token, body).await;
     assert_eq!(status, 200, "{path}: {answer}");
     answer
+}
+
+/// Every store method the fake is asked to run from here on, by name, in order
+/// (`tests/api/friends.rs`'s).
+async fn record_store_calls(app: &App) -> Arc<std::sync::Mutex<Vec<String>>> {
+    let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = Arc::clone(&calls);
+    let hook: OnCall = Arc::new(move |method: &str| {
+        sink.lock().expect("the call log").push(method.to_string());
+        Ok(())
+    });
+    fake(app).lock().await.on_call = Some(hook);
+    calls
+}
+
+/// The economy's and the collection's methods among `calls`, in order: what a handler reads and
+/// writes of the account's holdings (resolving the caller reads only `profiles.`).
+fn economy_calls(calls: &std::sync::Mutex<Vec<String>>) -> Vec<String> {
+    calls
+        .lock()
+        .expect("the call log")
+        .iter()
+        .filter(|method| method.starts_with("economy.") || method.starts_with("collection."))
+        .cloned()
+        .collect()
 }
 
 /// Everything §14.10's clears name, as the store holds it for `profile_id`: the cards owned (above
@@ -699,6 +725,32 @@ async fn r1300000_clearing_everything_empties_all_five_and_a_bogus_part_is_no_cl
             rewards_claimed: 0,
         }]
     );
+}
+
+#[tokio::test]
+async fn fill_and_every_clear_take_the_accounts_economy_lock_before_they_read() {
+    let (app, dev, _other) = dev_app().await;
+    for path in [
+        "/api/dev/fill",
+        "/api/dev/clear/cards",
+        "/api/dev/clear/cosmetics",
+        "/api/dev/clear/jlore",
+        "/api/dev/clear/counters",
+        "/api/dev/clear/tracks",
+        "/api/dev/fill",
+        "/api/dev/clear/everything",
+    ] {
+        let calls = record_store_calls(&app).await;
+        ok(&app, path, &dev, json!({})).await;
+        fake(&app).lock().await.on_call = None;
+        let asked = economy_calls(&calls);
+        assert_eq!(
+            asked.first().map(String::as_str),
+            Some("economy.lock"),
+            "{path}: {:?}",
+            &asked[..asked.len().min(3)]
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
