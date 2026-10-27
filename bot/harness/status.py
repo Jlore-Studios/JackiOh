@@ -43,9 +43,11 @@ def cap_text(ctx: Context, provider: Provider, window: str, usage: Any = None) -
     text = "no cap" if cap is None else f"cap {cap:.0%}"
     usual = provider.caps_at(now, cfg.timezone).get(window)
     if cap is not None and usual is not None and cap != usual:
-        why = ("its last hour" if window == "five_hour"
-               else f"its late week, from {provider.late_week.describe()}")
-        return f"{text} now ({why}), {usual:.0%} after the reset"
+        held = provider.held_caps(now, cfg.timezone, usage).get(window)
+        if held is not None and held != cap:  # its last hour lifted it
+            return f"{text} now (its last hour), {held:.0%} after the reset"
+        return (f"{text} now (its late week, from {provider.late_week.describe()}), "
+                f"{usual:.0%} after the reset")
     hours = provider.schedule.window(cfg.timezone)
     if hours is None or window not in provider.off_hours:
         return text
