@@ -4288,7 +4288,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-10-27T14:55:29Z",
-      "run_id": "pending:5e7c3332-1793114715",
+      "run_id": "40530940591",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-27T15:26:05Z",
