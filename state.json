@@ -3632,15 +3632,8 @@
     "what": "plan #1869 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-27T01:58:34Z",
-    "notes": [
-      "delivered plan #1862 on claude-7 (run 40433459504): planned",
-      "delivered build #2010 on claude-8 (run 40411441690): approved",
-      "started plan #1866 on claude-8 (run 40435904515)",
-      "started plan #1868 on claude-1 (run 40435973672)",
-      "started plan #1869 on claude-7 (run 40436035358)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-27T05:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-27T03:30:00Z; it can start a build or a plan again in 1h 27m; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-27T03:30:00Z; it can start a build or a plan again in 1h 27m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 91h 57m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-27T04:20:00Z; it can start a build or a plan again in 2h 17m; `devin` is idle, but nothing queued is for it"
-    ],
+    "at": "2026-10-27T02:07:31Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
