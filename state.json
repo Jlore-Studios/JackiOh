@@ -4257,8 +4257,10 @@
     "what": "build #2047 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-27T14:46:18Z",
-    "notes": [],
+    "at": "2026-10-27T14:54:02Z",
+    "notes": [
+      "delivered build #2051 on muse (run 40506782231): approved"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -4963,7 +4965,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T14:46:18Z",
+  "loop_tick": "2026-10-27T14:54:02Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T14:47:41Z",
