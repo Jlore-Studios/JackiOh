@@ -19,7 +19,7 @@ use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
 use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
-use crate::effects::buff::grant_random_keywords;
+use crate::effects::buff::{grant_keyword, grant_random_keywords};
 use crate::effects::radiant::set_radiant;
 use crate::effects::targets::{
     PlayerSpec, ScopeSide, TargetSpec, instance_of, player_of, resolve_target, sides_of,
@@ -33,7 +33,7 @@ use crate::script::{Effect, EffectContext, EffectPart};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
-    AttackHealth, CardType, CostRange, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
+    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
@@ -137,6 +137,12 @@ pub struct SummonArgs {
     /// (§9.3), and removes the fizzle hazard of a follow-up effect aimed at a card that never landed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random_keywords: Option<i32>,
+    /// ST-S03-8 (R1860007's Felinor Containment Chamber, issue #1860): keywords the fresh summon
+    /// gains as it lands ("It gains Divine Shield"). The grant belongs to the summon for the same
+    /// reason as `random_keywords` above: no `TargetSpec` can name a just-created card (see that
+    /// comment). Fresh summons only; a card moved by `instance` keeps what it has.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
 }
 
 impl SummonArgs {
@@ -376,6 +382,26 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
     ctx.exits_from = before;
 }
 
+/// The `keywords` rider, granted to the card the summon just made once it has landed. Each keyword
+/// goes through the `grantKeyword` effect aimed at the fresh card by its id — the same stay-marked
+/// path as `roll_random_keywords` above (R174) — so every grant is announced (`keywordGranted`) as
+/// any other grant is.
+fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywords: Vec<Keyword>) {
+    if keywords.is_empty() {
+        return;
+    }
+    let before = ctx.exits_from;
+    ctx.exits_from = Some(exit_mark(ctx.state));
+    for keyword in keywords {
+        let effect = grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": card.id },
+            "keyword": keyword,
+        })));
+        (effect.apply)(ctx);
+    }
+    ctx.exits_from = before;
+}
+
 /// §6.3 Summon: put a card on the field from anywhere else, with no Cry. With no lane named it takes
 /// the leftmost empty, unlocked, unreserved zone of its row (R64) and fails silently when the row
 /// has none; a named lane fails the same way when it is occupied or Locked (R47).
@@ -399,6 +425,7 @@ pub fn summon(args: SummonArgs) -> Effect {
         };
         if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
             roll_random_keywords(ctx, &made, args.random_keywords);
+            grant_summon_keywords(ctx, &made, args.keywords.clone().unwrap_or_default());
             // MD-D30, R1126: the running card remembers the summon under `rememberAs`, written the
             // way `effects::memory::remember` writes it (its own stay, its own part's key).
             if let Some(key) = &args.remember_as
