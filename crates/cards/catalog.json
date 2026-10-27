@@ -25034,7 +25034,7 @@
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "keywords": [],
       "text": "5% chance to add a Radiant Anomaly Found! to your hand.\n20% chance to add an Anomaly Found! to your hand instead.\nOtherwise, your future Scanning Probes have +1% and +4% to these chances."
@@ -25063,7 +25063,7 @@
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "keywords": [
         {
@@ -26054,7 +26054,7 @@
     "flavor": "Chaos",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 222,
     "base": {
       "keywords": [],
       "text": "Replace your side of the field with a random Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices."
