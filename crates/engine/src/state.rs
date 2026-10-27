@@ -675,6 +675,16 @@ pub enum ModifierKind {
     StarshipLaunchCost {
         cost: i32,
     },
+    // ---- Stinkyscape's drones (issue #1863) ----
+    /// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
+    /// play each …": after this player's first resolved play (a cast included, R70) of each of `def_ids`,
+    /// `resume` re-enters the card's step with that card's `defId` in its data, and the definition comes
+    /// off `def_ids`. Expiry `never`; several stack, each its own record. `label` is its badge (R169).
+    PlayWatch {
+        def_ids: Vec<String>,
+        resume: Resume,
+        label: String,
+    },
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
