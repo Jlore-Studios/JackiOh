@@ -176,6 +176,8 @@ class Provider:
     #: How many items it may work on at once. On the machine each needs a runner of its own
     #: with its `runs_on` label (`register-runners.sh` registers that many).
     lanes: int = 1
+    #: Lanes it may borrow from other machine subscriptions while they cannot use them (`FillIn`).
+    fill_in: "FillIn | None" = None
     #: Its builds check themselves before any review (`work.py`'s self-check loop).
     self_check: bool = False
     #: It builds, fixes and revises only after every other subscription that may (claude-2, kept
@@ -217,6 +219,20 @@ class Provider:
             for window, share in self.off_hours.items():
                 caps[window] = min(caps.get(window, 1.0), share)
         return caps
+
+
+@dataclass(frozen=True)
+class FillIn:
+    """The lanes of other subscriptions on the machine that this one fills in (`fill_in` in
+    providers.json): Muse runs in gpt's and agy's lanes on the night box while one of them cannot
+    start work (capped, off, outside its hours, backing off), on runners of its own there labelled
+    `runs_on`, one per lane it may fill. Those subscriptions and its runs there share their lanes,
+    never more at once than theirs: a subscription whose lane Muse fills waits for it
+    (`plan.fill_in_full`)."""
+
+    runs_on: str
+    #: The subscriptions whose lanes it fills.
+    of: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -277,7 +293,7 @@ class Pool:
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]
     #: How many runs may go at once on the bot's machine (`runs_on` not GitHub's), apart from
-    #: `max_parallel`, so neither waits on the other: its two vCPUs run every machine job's
+    #: `max_parallel`, so neither waits on the other: its vCPUs run every machine job's
     #: checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
     #: How many planning runs may go at once (the planning lane), on top of each subscription's
@@ -294,6 +310,16 @@ class Pool:
     def on_machine(self, provider_id: str) -> bool:
         provider = self.get(provider_id)
         return provider is not None and not hosted(provider.runs_on)
+
+    def filler_of(self, provider_id: str) -> Provider | None:
+        """The subscription that fills `provider_id`'s lanes while it cannot use them, if any."""
+        return next((p for p in self.providers.values() if p.fill_in is not None
+                     and provider_id in self.filled_by(p)), None)
+
+    def filled_by(self, filler: Provider) -> list[str]:
+        """The subscriptions whose lanes `filler` fills (`FillIn`): those of its `for` on the
+        machine. One moved to GitHub's runners has no lane on a box to lend."""
+        return [i for i in (filler.fill_in.of if filler.fill_in else ()) if self.on_machine(i)]
 
     def ordered(self) -> list[Provider]:
         """Every provider, in `priority` order."""
@@ -416,7 +442,7 @@ _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason", "usage_since",
                   "lanes", "build_last", "easy_first", "off_hours", "fix_effort",
-                  "review_effort", "start_headroom"}
+                  "review_effort", "start_headroom", "fill_in"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -442,6 +468,23 @@ def _extra_models(raw: Any, effort: str, where: str) -> tuple[ExtraModel, ...]:
                                 _tier(entry.get("tier"), f"{where}[{i}].tier"),
                                 str(entry.get("takes_over") or "")))
     return tuple(found)
+
+
+def _fill_in(raw: Any, where: str) -> FillIn | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping) or not raw.get("runs_on") or not raw.get("for"):
+        raise ConfigError(f"{where}: needs runs_on and for (the subscriptions whose lanes it fills)")
+    unknown = sorted(set(raw) - {"runs_on", "for", "note"})
+    if unknown:
+        raise ConfigError(f"{where}: unknown keys {', '.join(unknown)}")
+    runs_on = str(raw["runs_on"])
+    if not _LABEL.match(runs_on) or hosted(runs_on):
+        raise ConfigError(f"{where}.runs_on: {runs_on!r} is not a runner label on the machine")
+    of = raw["for"]
+    if not isinstance(of, list) or not all(isinstance(i, str) and i for i in of):
+        raise ConfigError(f"{where}.for: expected a list of subscriptions")
+    return FillIn(runs_on, tuple(of))
 
 
 def _tiers(raw: Any) -> dict[str, tuple[TierEntry, ...]]:
@@ -536,6 +579,7 @@ def _provider(name: str, raw: Any) -> Provider:
         off_reason=str(raw.get("off_reason") or ""),
         usage_since=_usage_since(raw.get("usage_since"), f"{where}.usage_since"),
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
+        fill_in=_fill_in(raw.get("fill_in"), f"{where}.fill_in"),
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
         easy_first=bool(raw.get("easy_first", False)),
@@ -570,6 +614,26 @@ def parse(raw: Any) -> Pool:
         if shared and not hosted(p.runs_on):
             raise ConfigError(f"{PROVIDERS_PATH}: {p.id} and {', '.join(shared)} share the runner "
                               f"{p.runs_on}; each provider on the machine has its own")
+    # A fill-in (`FillIn`) runs on runners of its own, in the lanes of other machine
+    # subscriptions, each filled by one subscription at most.
+    labels = [q.runs_on for q in providers.values()]
+    filled: list[str] = []
+    for p in providers.values():
+        if p.fill_in is None:
+            continue
+        where = f"{PROVIDERS_PATH}: {p.id}'s fill_in"
+        if hosted(p.runs_on):
+            raise ConfigError(f"{where}: only a subscription on the machine fills in lanes there")
+        if p.fill_in.runs_on in labels:
+            raise ConfigError(f"{where}: {p.fill_in.runs_on} is a subscription's own runner; a "
+                              "fill-in has runners of its own")
+        labels.append(p.fill_in.runs_on)
+        for other in p.fill_in.of:
+            if other not in providers or other == p.id:
+                raise ConfigError(f"{where}: {other!r} is not another subscription")
+            if other in filled:
+                raise ConfigError(f"{where}: another subscription fills {other}'s lanes already")
+            filled.append(other)
     priority = tuple(str(p) for p in raw.get("priority") or providers)
     missing = [p for p in providers if p not in priority]
     extra = [p for p in priority if p not in providers]

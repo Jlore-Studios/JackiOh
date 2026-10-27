@@ -266,7 +266,9 @@ class Lanes:
     names the subscriptions that run on the machine. Every run holds a runner where it runs, a
     planning run too, so `limit` bounds the hosted runners the bot's model jobs take (#1455) and
     `machine_limit` the machine's slots. `limit` is a pool the bots share, first come first
-    served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`)."""
+    served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`).
+    `filling` are the items whose run fills another subscription's lane (`Provider.fill_in`):
+    those hold no lane of their provider's own."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
@@ -275,6 +277,7 @@ class Lanes:
     machine_limit: int = 0
     machine: frozenset[str] = frozenset()
     shared: int = 0
+    filling: set[int] = field(default_factory=set)
 
     @property
     def busy(self) -> set[str]:
@@ -289,12 +292,20 @@ class Lanes:
         """How many planning runs this provider holds now."""
         return sum(1 for number in self.planning if self.held.get(number) == provider_id)
 
+    def filling_by(self, provider_id: str) -> int:
+        """How many runs this provider holds in other subscriptions' lanes (`fill_in`)."""
+        return sum(1 for number in self.filling if self.held.get(number) == provider_id)
+
+    def all_by(self, provider_id: str) -> int:
+        """Every run this provider holds now, its planning runs and fill-ins too."""
+        return sum(1 for held in self.held.values() if held == provider_id)
+
     def full(self, provider: Provider) -> bool:
         """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
         with usage caps, counts its planning run too: the quiet check cannot tell a second run of
         the bot's from its owner, and two runs deciding from one reading go past a cap together
         (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
-        held = self.count(provider.id)
+        held = self.count(provider.id) - self.filling_by(provider.id)
         if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
         return held >= provider.lanes
@@ -330,11 +341,13 @@ class Lanes:
     def plan_free(self) -> int:
         return max(0, self.plan_limit - len(self.planning))
 
-    def with_run(self, number: int, provider_id: str, action: str) -> "Lanes":
-        """These lanes with one more run held."""
+    def with_run(self, number: int, provider_id: str, action: str,
+                 filling: bool = False) -> "Lanes":
+        """These lanes with one more run held (`filling`: in another subscription's lane)."""
         planning = self.planning | ({number} if action == "plan" else set())
         return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit,
-                     self.machine_limit, self.machine, self.shared)
+                     self.machine_limit, self.machine, self.shared,
+                     self.filling | ({number} if filling else set()))
 
     def describe(self) -> str:
         return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
@@ -390,18 +403,74 @@ def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
             lanes.held[number] = str(record.get("provider") or providers_mod.LEGACY_PROVIDER)
             if record.get("action") == "plan":
                 lanes.planning.add(number)
+            if fills_in(pool, record):
+                lanes.filling.add(number)
     survey = state.get("suggest") or {}
     if survey.get("provider") and run_alive(ctx, survey.get("run_id")):
         lanes.held[0] = str(survey["provider"])
     return lanes
 
 
+def fills_in(pool: Pool, record: Mapping[str, Any]) -> bool:
+    """An item's run is in another subscription's lane: it went to its provider's fill-in
+    runners (`Provider.fill_in`), which `claim` records as its `runs_on`."""
+    provider = pool.get(record.get("provider"))
+    return (provider is not None and provider.fill_in is not None
+            and record.get("runs_on") == provider.fill_in.runs_on)
+
+
+def _shared(pool: Pool, filler: Provider, lanes: Lanes) -> tuple[list[Provider], int]:
+    """The subscriptions whose lanes `filler` fills, and how many of those lanes runs hold now:
+    their own runs, planning ones too, and `filler`'s there."""
+    owners = [pool.providers[i] for i in pool.filled_by(filler)]
+    return owners, lanes.filling_by(filler.id) + sum(lanes.all_by(p.id) for p in owners)
+
+
+def fill_in_free(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lanes) -> bool:
+    """`provider` may start a run in the lanes it fills (`Provider.fill_in`): one is free, and
+    not kept for a subscription it fills in for that may start work itself now. Muse takes gpt's
+    lane on the night box only while gpt is capped, off, outside its hours or backing off."""
+    if provider.fill_in is None:
+        return False
+    cfg = ctx.cfg
+    owners, held = _shared(cfg.pool, provider, lanes)
+    kept = sum(max(0, p.lanes - lanes.all_by(p.id)) for p in owners
+               if providers_mod.availability(p, state, ctx.now(), cfg.timezone, cfg.secrets,
+                                             starting=True) is None)
+    return sum(p.lanes for p in owners) - held > kept
+
+
+def fill_in_full(pool: Pool, provider: Provider, lanes: Lanes) -> bool:
+    """`provider`'s lanes are shared with a subscription that fills them (`Provider.fill_in`),
+    and runs hold every one of the shared lanes: it waits for one, even its own while a fill-in
+    holds it, so its box never runs more at once than those lanes."""
+    filler = pool.filler_of(provider.id)
+    if filler is None:
+        return False
+    owners, held = _shared(pool, filler, lanes)
+    return held >= sum(p.lanes for p in owners)
+
+
+def runner_for(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lanes,
+               role: str) -> str:
+    """The runner label `provider`'s next run takes: its own (`runs_on`) while one of its lanes
+    is free, else its fill-in runners' (`fill_in`) while it may fill a lane (`fill_in_free`; a
+    suggestion survey never does), else ""."""
+    if not lanes.full(provider):
+        return provider.runs_on
+    if role != "suggest" and fill_in_free(ctx, state, provider, lanes):
+        return provider.fill_in.runs_on
+    return ""
+
+
 def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lanes, role: str,
             *, forced: bool, quiet_ok: str) -> bool:
     cfg = ctx.cfg
-    if lanes.full(provider) or role not in provider.roles or not lanes.room_for(provider.id):
+    if role not in provider.roles or not lanes.room_for(provider.id):
         return False
-    if machine_full(cfg.pool, provider, lanes):
+    if machine_full(cfg.pool, provider, lanes) or fill_in_full(cfg.pool, provider, lanes):
+        return False
+    if not runner_for(ctx, state, provider, lanes, role):
         return False
     if (provider.quiet_check and cfg.quiet.enabled and not forced
             and quiet_ok not in (ANY_QUIET, provider.id)):
@@ -428,10 +497,18 @@ class Assignment:
     review: Seat | None = None
     #: What the router decided that a reader should know: a step up in tier, and why.
     notes: list[str] = field(default_factory=list)
+    #: The runner label it takes (`runner_for`): "" is its subscription's own (`runs_on`).
+    runs_on: str = ""
 
     @property
     def self_check(self) -> bool:
         return bool(self.build and self.build.self_check)
+
+    @property
+    def fills_in(self) -> bool:
+        """It runs in another subscription's lane, on its fill-in runners (`Provider.fill_in`)."""
+        fill = self.provider.fill_in
+        return fill is not None and self.runs_on == fill.runs_on
 
     def describe(self) -> str:
         parts = []
@@ -614,7 +691,7 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
             continue
         if (provider.quiet_check or provider.limits.stops) and (planning or lanes.count(provider.id)):
             continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
-        if machine_full(cfg.pool, provider, lanes):
+        if machine_full(cfg.pool, provider, lanes) or fill_in_full(cfg.pool, provider, lanes):
             continue
         if not cfg.pool.on_machine(provider.id) and lanes.free <= 0:
             continue  # GitHub's lanes are full, and a planning run there takes one (#1455)
@@ -680,7 +757,8 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         seat = review_seat(pool, free("review"), candidate, spread)
         if seat is None:
             return None
-        return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
+        return Assignment(seat.provider, "review", candidate.difficulty, review=seat,
+                          runs_on=runner_for(ctx, state, seat.provider, lanes, "review"))
     builders = free(ROLE_OF[candidate.kind])
     floor = plan_floor(candidate)
     if candidate.kind == "build" and not plan_meets(candidate):
@@ -706,6 +784,11 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         return None
     notes = [f"#{candidate.number}: {note}"] if note else []
     reviewer = run_reviewer(pool, builder.provider, candidate.difficulty)
+    runs_on = runner_for(ctx, state, builder.provider, lanes, ROLE_OF[candidate.kind])
+    if runs_on and runs_on != builder.provider.runs_on:
+        notes.append(f"#{candidate.number}: `{builder.provider.id}` fills a lane of "
+                     f"{', '.join(f'`{i}`' for i in builder.provider.fill_in.of)}, which cannot "
+                     f"start work now, on `{runs_on}`")
     if candidate.kind == "build" and not plan_meets(candidate):
         # No planner was free on the planning lane: the builder plans it first in its own run,
         # on its strongest model, which meets the item's plan floor.
@@ -713,9 +796,9 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         if own is None:
             return None
         return Assignment(builder.provider, "build", candidate.difficulty, plan=own,
-                          build=builder, review=reviewer, notes=notes)
+                          build=builder, review=reviewer, notes=notes, runs_on=runs_on)
     return Assignment(builder.provider, candidate.kind, candidate.difficulty, build=builder,
-                      review=reviewer, notes=notes)
+                      review=reviewer, notes=notes, runs_on=runs_on)
 
 
 def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: Lanes, *,
@@ -795,6 +878,9 @@ def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
         reason = providers_mod.start_reason(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
         if reason is None and machine_full(cfg.pool, provider, lanes):
             reason = f"waits for room on the machine ({cfg.pool.machine_parallel} at once)"
+        if reason is None and fill_in_full(cfg.pool, provider, lanes):
+            reason = (f"waits for its lane on its box, which `{cfg.pool.filler_of(provider.id).id}` "
+                      "fills now")
         if reason is None and provider.quiet_check and cfg.quiet.enabled:
             reason = "waits for its owner to be quiet"
         parts.append(f"`{provider.id}` {reason or 'is idle, but nothing queued is for it'}")
@@ -1057,7 +1143,8 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
     work are still free. That run does the same, so the lanes fill one run at a time."""
     if ctx.cfg.controller_loop:
         return  # the status loop plans again at once, in the same tick (`controller.start`)
-    after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
+    after = lanes.with_run(taken.number, assignment.provider.id, assignment.action,
+                           assignment.fills_in)
     if not after.any_room:
         return
     state = ctx.store.load()
@@ -1408,6 +1495,8 @@ def claim(ctx: Context, candidate: Candidate,
                                 "revision changes nothing but the conflicted files and its "
                                 "reviewer approves, it merges without another review run.")
     planned.update(_provider_fields(ctx, provider))
+    if assignment.runs_on:
+        planned["runs_on"] = assignment.runs_on  # its fill-in runners, or its own
     planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
                    routing=list(assignment.notes), assignment=assignment.describe())
     if kind in ("build", "revise"):
@@ -1439,7 +1528,7 @@ def claim(ctx: Context, candidate: Candidate,
         entry = state_item(state, number)
         entry.update(run_id=cfg.run_id, started_at=iso(ctx.now()), kind=kind,
                      action=assignment.action, stop_requested=False, pending_request=False,
-                     provider=provider.id)
+                     provider=provider.id, runs_on=planned["runs_on"])
         taken[:] = asks.take(entry)
         state["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url,
                              "what": f"{assignment.action} #{number} on {provider.id}"}

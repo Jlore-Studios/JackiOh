@@ -11,6 +11,11 @@
 // first saved deck in Best of 1 (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and
 // Enter: the focus moves to Send as soon as the picks are in.
 //
+// R2031000: All Random offers "More cards from" (R924000) for the challenger's own dealt deck, as the
+// lobby does, starting from and writing the device's online pick (`readPlayLean`). The shell mounts
+// the dialog on screens that may not have loaded the engine, so the picker comes once it is in
+// (`LeanSetPickerLazy.tsx`, #778).
+//
 // A modal like the client's others (`game/ConfirmConcede.tsx`, #1569): the focus starts on the checked
 // mode (on Send once the decks are read), Tab and Shift+Tab stay inside, Escape closes it wherever
 // the focus is, and the caller gives the focus back to the button that opened it (`TogetherRoute.tsx`,
@@ -18,6 +23,8 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
+import { LeanSetPickerLazy } from "../game/LeanSetPickerLazy.tsx";
+import { readPlayLean, writePlayLean } from "../game/playLean.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getDecks, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { withSession } from "../net/gate.ts";
@@ -51,6 +58,7 @@ export function ChallengeDialog({
   const [deckReads, setDeckReads] = useState(0);
   const [deckId, setDeckId] = useState<string | null>(null);
   const [trioId, setTrioId] = useState<string | null>(null);
+  const [lean, setLean] = useState(readPlayLean);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialog = useRef<HTMLFormElement>(null);
@@ -82,7 +90,7 @@ export function ChallengeDialog({
     };
   }, [deckReads, initial]);
 
-  const choice = choiceOf(mode, deckId, trioId);
+  const choice = choiceOf(mode, deckId, trioId, lean);
 
   // The first time the picks are complete the player can send, so the focus goes to Send (#1831); a
   // later change of mode leaves it where the player put it, and so does a focus already off the dialog
@@ -158,7 +166,18 @@ export function ChallengeDialog({
         </fieldset>
 
         {mode === "random" ? (
-          <p className="lobby-note">{t("No deck needed: the server deals both of you one when the game starts.")}</p>
+          <>
+            <p className="lobby-note">{t("No deck needed: the server deals both of you one when the game starts.")}</p>
+            <LeanSetPickerLazy
+              value={lean}
+              disabled={sending}
+              testid={togetherTestid.challengeLean}
+              onChange={(pick) => {
+                setLean(pick);
+                writePlayLean(pick);
+              }}
+            />
+          </>
         ) : null}
         {mode !== "random" && saved === null && loadError === null ? (
           <p className="lobby-note" role="status">

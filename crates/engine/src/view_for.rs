@@ -168,6 +168,9 @@ struct Replacements {
     voided: bool,
     /// R1074000: `Some` in a duel, where a pass (B20) takes a hand card out of the state unseen.
     duel: Option<DuelGone>,
+    /// R1020: the cards the events last put into a library (`in_library_of`). A Fuse eats a library
+    /// card unseen, so one of these the state no longer holds ceased to exist there and reads to nobody.
+    in_library: IndexSet<String>,
 }
 
 /// R1074000: what a duel's events say of the cards in no pile that took no successor.
@@ -243,7 +246,41 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
         to_library: to_library.filter(|set| !set.is_empty()),
         voided: false,
         duel: state.and_then(|state| duel_gone(events, state)),
+        in_library: in_library_of(events),
     }
+}
+
+/// R1020: the cards the events last put into a library and taken out of it by no move since. A
+/// `shuffledIn` puts one there, and a library card's replacement (`transformed`, hidden from every
+/// seat, R177) takes its place; any other move (`stays::moved_by`), a steal or an announcement takes
+/// one out. A card of the opening deck that no event named needs nothing: no event names it either.
+fn in_library_of(events: &[&GameEvent]) -> IndexSet<String> {
+    let mut in_library: IndexSet<String> = IndexSet::new();
+    for event in events {
+        match event {
+            GameEvent::ShuffledIn { instance_id, .. } => {
+                in_library.insert(instance_id.clone());
+            }
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                hidden_from: Some(hidden),
+                ..
+            } if PLAYER_IDS.iter().all(|player| hidden.contains(player)) => {
+                in_library.shift_remove(instance_id);
+                in_library.insert(new_instance_id.clone());
+            }
+            GameEvent::Stolen { instance_id, .. } | GameEvent::CardAnnounced { instance_id, .. } => {
+                in_library.shift_remove(instance_id);
+            }
+            _ => {
+                for id in crate::stays::moved_by(event) {
+                    in_library.shift_remove(&id);
+                }
+            }
+        }
+    }
+    in_library
 }
 
 /// R1074000: a pass (B20) takes a card out of its duel's hand with no event, so in a duel a card in no
@@ -468,7 +505,8 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     // R764: so is one a Glitch took off the board or out of the match before it was ever revealed.
     let Some(card) = card else {
         let to_library = replaced.to_library.as_ref().is_some_and(|ids| ids.contains(&id));
-        if to_library || replaced.voided {
+        // R1020: so is one a Fuse ate out of a library.
+        if to_library || replaced.voided || replaced.in_library.contains(&id) {
             return false;
         }
         // R1074000: in a duel, a card a pass took out of a hand is as hidden as it was there, and one

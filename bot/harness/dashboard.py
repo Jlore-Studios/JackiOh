@@ -18,10 +18,13 @@ is kept in the state file; when it is missing or the issue was closed, an open i
 title and the marker, opened by the bot or someone on the trust list, is adopted, or a new one is
 opened and pinned.
 
-Every runner has a section too (`runners_section`): each job a runner holds now, the step it is on
-and what it is for, and the jobs queued for one. Between rewrites the loop redraws that section
-alone every two minutes (`refresh_runners`). What each runner and each workflow is for changes only
-with the pool or the workflows, so it is a comment on the issue (`explain`), which the section links.
+Every runner has a section too, low in the issue (`runners_section`): each job a runner holds now,
+the step it is on and what it is for, and the jobs queued for one, as boxes the way the
+subscriptions are drawn and as a table, each folding away. The owner's PC's group carries its load
+and the gather workflow, from a heartbeat its supervisor writes to a gist (`read_runners`). Between
+rewrites the loop redraws that section alone every two minutes (`refresh_runners`). What each runner
+and each workflow is for changes only with the pool or the workflows, so it is a comment on the issue
+(`explain`), which the section links.
 
 Squishy (#60) has a section of its own in the same issue, apart from the night bot's: what it is
 working on, its account, its queue and its trees. Squishy's own process draws it (`section`), and
@@ -35,7 +38,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
@@ -306,8 +309,8 @@ def _box(ctx: Context, state: dict[str, Any], provider: Any, now: waiting_mod.No
 
 #: The AI's training lanes on the training box that keep a pull request open from `ai/<lane>`
 #: (training/README.md, #1272). None since 2026-10-25: #682's audit stopped `improve` and `unban`
-#: (#1677), so the box shows `gather` alone, which runs no model and opens none. A lane named here
-#: again shows its draft.
+#: (#1677), and `gather` left the box for the owner's PC (gather.yml, training/gather.md), where the
+#: runners section draws it, so no training box is drawn. A lane named here again shows its draft.
 TRAINING_LANES: tuple[str, ...] = ()
 #: A training lane's draft unchanged for longer than a session (`training/loop.sh`'s
 #: TRAIN_SESSION_SECONDS, five hours; each session pushes to it as it starts) says the lane stopped.
@@ -317,9 +320,10 @@ TRAINING_STALE = timedelta(hours=6)
 def training_boxes(ctx: Context) -> list[str]:
     """The training box's lanes as a subgraph, read from their pull requests: a draft is a Muse
     session at work (or an idle unban lane, which its title says), one ready for review is a
-    promotion waiting on CI, and none is a lane between sessions or stopped. `gather` shows
-    nothing on GitHub. With no lane in `TRAINING_LANES`, the box shows `gather` alone. [] when the
-    pull requests cannot be read."""
+    promotion waiting on CI, and none is a lane between sessions or stopped. [] with no lane in
+    `TRAINING_LANES`, or when the pull requests cannot be read."""
+    if not TRAINING_LANES:
+        return []
     try:
         pulls = {str(p["head"]["ref"]): p for p in ctx.gh.list_pulls(state="open")}
     except GitHubError:
@@ -342,13 +346,10 @@ def training_boxes(ctx: Context) -> list[str]:
                 text, style = f"🟢 a Muse session on #{number}{since}", "busy"
                 working += 1
         boxes.append(f'        t{i}["<b>{lane}</b><br/>{text}"]:::{style}')
-    boxes.append(f'        t{len(TRAINING_LANES)}["<b>gather</b><br/>no model, no pull request'
-                 '<br/>its log is on the box"]:::closed')
-    nodes = range(len(TRAINING_LANES) + 1)
-    title = (f"The training box, on Muse: {working} of {len(TRAINING_LANES)} lanes working"
-             if TRAINING_LANES else "The training box: gather alone, no model")
-    return [f'    subgraph training["{title}"]', "        direction LR", *boxes,
-            "        " + " ~~~ ".join(f"t{i}" for i in nodes), "    end"]
+    title = f"The training box, on Muse: {working} of {len(TRAINING_LANES)} lanes working"
+    chain = (["        " + " ~~~ ".join(f"t{i}" for i in range(len(TRAINING_LANES)))]
+             if len(TRAINING_LANES) > 1 else [])
+    return [f'    subgraph training["{title}"]', "        direction LR", *boxes, *chain, "    end"]
 
 
 def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
@@ -833,7 +834,8 @@ WORKFLOWS = {
                       "delivers them",
     "ci-duration.yml": "after CI, an issue for any job over seven minutes",
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
-    "claude-wake.yml": "starts each Claude account's 5-hour session at 06:00 Central",
+    "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
+                       "Central",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
     "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",
@@ -868,10 +870,13 @@ LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<tim
               "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
               "exports and `gather`")
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
-              "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
+              "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
-              "(`pc-<id>-<time>`). bot/machine/README.md has the rest.")
+              "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "
+              "load without its runners, and each runner's CPUs and whether it is slowed), which "
+              "the PC's group in the runners section shows with the gather workflow's state. "
+              "bot/machine/README.md has the rest.")
 
 
 def explanation(ctx: Context) -> str:
@@ -887,6 +892,11 @@ def explanation(ctx: Context) -> str:
                         f"`work` for `{provider.id}`: the `{provider.cli}` CLI with "
                         f"`{provider.model}`, as the Linux user `agent-{provider.id}`, which holds "
                         "that login alone |")
+            if provider.fill_in is not None:
+                of = ", ".join(f"`{i}`" for i in provider.fill_in.of)
+                rows.append(f"| `{provider.fill_in.runs_on}` | the bot's AWS boxes, in the lanes "
+                            f"of {of} | `{provider.id}`'s `work` in those lanes while they cannot "
+                            "start work (capped, off, backing off), as the same user |")
     rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
     flows = [f"| `{name.removesuffix('.yml')}` | {what} |" for name, what in sorted(WORKFLOWS.items())]
     return "\n".join([
@@ -930,20 +940,41 @@ def explain(ctx: Context, number: int, state: dict[str, Any]) -> None:
     state["runners_explained"] = record
 
 
+#: The owner's PC's heartbeat: the gist file its supervisor rewrites every `heartbeatSeconds`
+#: (bot/machine/local/supervisor.ps1, `Send-Heartbeat`), and how old it may be before the issue
+#: says the PC has gone quiet (several missed beats: off, asleep, or the supervisor stopped).
+PC_FILE = "pc.json"
+PC_QUIET = timedelta(minutes=10)
+#: The gather workflow, whose one job runs on the owner's PC (training/gather.md).
+GATHER_WORKFLOW = "gather.yml"
+#: How many boxes a row of the runners diagram holds, and how many of GitHub's runners it draws at
+#: most when the issue is short of room (`runners_section`).
+BOX_ROW = 6
+BOX_STEPS = (12, 6, 0)
+RUNNER_LEGEND = ("🟢 in a job · ⏸️ in a job, slowed while the PC is busy · ⏳ queued for a runner · "
+                 "⚪ idle, waiting for a job · 💤 no job: idle, or its box is off · ⚫ off · ❌ its "
+                 "last run failed. GitHub's runners exist only while they hold a job.")
+
+
 @dataclass
 class Found:
-    """The runs going and queued, as the runners section draws them: each busy job and each
-    queued one with its run, how many runs were not read, and whether the runs could be read."""
+    """What the runners section draws, read once: each busy job and each queued one with its run,
+    how many runs were not read and whether the runs could be read; the gather workflow's last
+    runs; and the owner's PC's heartbeat (None, with `pc_note` saying why, when there is none)."""
 
     busy: list[tuple[dict[str, Any], dict[str, Any]]]
     queued: list[tuple[dict[str, Any], dict[str, Any]]]
     unread: int = 0
     failed: bool = False
+    gather: list[dict[str, Any]] = field(default_factory=list)
+    pc: dict[str, Any] | None = None
+    pc_note: str = ""
 
 
 def read_runners(ctx: Context) -> Found:
     """The jobs of the runs going and queued, from GitHub, since it lists a repository's own
-    runners only to an admin, which the bot is not."""
+    runners only to an admin, which the bot is not; the gather workflow's last runs; and the PC's
+    heartbeat. Every read is a conditional request (`gh._CACHED`)."""
     try:
         runs = (ctx.gh.list_repo_runs(status="in_progress", cached=True)
                 + ctx.gh.list_repo_runs(status="queued", cached=True))
@@ -963,7 +994,32 @@ def read_runners(ctx: Context) -> Found:
             elif job.get("status") == "queued":
                 found.queued.append((run, job))
     found.busy.sort(key=lambda pair: (_where(pair[1])[0], str(pair[1].get("started_at") or "")))
+    try:
+        found.gather = [run for run in ctx.gh.list_runs(GATHER_WORKFLOW, limit=5, cached=True)
+                        if _is_gather(run)]
+    except GitHubError:
+        pass
+    found.pc, found.pc_note = _heartbeat(ctx)
     return found
+
+
+def _heartbeat(ctx: Context) -> tuple[dict[str, Any] | None, str]:
+    """The owner's PC's last heartbeat, from the gist the repository variable JACKIOH_PC_GIST
+    names (`cfg.pc_gist`), or None and why not."""
+    if not ctx.cfg.pc_gist:
+        return None, "no heartbeat set up (JACKIOH_PC_GIST)"
+    try:
+        files = ctx.gh.get_gist(ctx.cfg.pc_gist, cached=True).get("files") or {}
+        beat = json.loads(str((files.get(PC_FILE) or {}).get("content") or "{}"))
+    except (GitHubError, ValueError):
+        return None, "its heartbeat could not be read"
+    if not isinstance(beat, dict) or parse_iso(beat.get("at")) is None:
+        return None, "no heartbeat yet"
+    return beat, ""
+
+
+def _is_gather(run: dict[str, Any]) -> bool:
+    return str(run.get("path") or "").endswith("/" + GATHER_WORKFLOW)
 
 
 def _where(job: dict[str, Any]) -> tuple[int, str]:
@@ -980,14 +1036,14 @@ def _where(job: dict[str, Any]) -> tuple[int, str]:
     return (0, "GitHub's") if providers_mod.hosted(label) else (4, "unknown box")
 
 
-def _step(job: dict[str, Any]) -> str:
+def _step(job: dict[str, Any], limit: int = 45) -> str:
     """The step a running job is on, or the last it finished."""
     steps = job.get("steps") or []
     going = next((s for s in steps if s.get("status") == "in_progress"), None)
     if going is not None:
-        return _cell(going.get("name"), 45)
+        return _cell(going.get("name"), limit)
     done = [s for s in steps if s.get("status") == "completed"]
-    return f"after {_cell(done[-1].get('name'), 39)}" if done else "setting up"
+    return f"after {_cell(done[-1].get('name'), limit - 6)}" if done else "setting up"
 
 
 def _night_items(state: dict[str, Any]) -> dict[str, int]:
@@ -1028,21 +1084,217 @@ def _job_name(run: dict[str, Any], job: dict[str, Any]) -> str:
     return f"{flow or _cell(run.get('name'), 24)} · {_cell(job.get('name'), 32)}"
 
 
+def _text(value: Any, limit: int = 34) -> str:
+    """Text for a box: one line, clipped, with nothing Mermaid or HTML would read as markup."""
+    flat = " ".join(str(value or "").split())
+    for old, new in (("`", ""), ('"', "'"), ("<", "‹"), (">", "›")):
+        flat = flat.replace(old, new)
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
+
+#: An invisible box, which pads a short last row of boxes so that it starts at the left: Mermaid
+#: lines up rows of unequal length at their right ends.
+GHOST_STYLE = "    classDef ghost fill:transparent,stroke:transparent,color:transparent"
+
+
+def _boxes(sid: str, title: str, boxes: list[tuple[list[str], str]]) -> list[str]:
+    """A subgraph of boxes, each (its lines, its style), `BOX_ROW` to a row, each row a chain of
+    invisible links; past one row, the last is padded with invisible boxes (`GHOST_STYLE`)."""
+    if len(boxes) > BOX_ROW and len(boxes) % BOX_ROW:
+        boxes = boxes + [([" "], "ghost")] * (BOX_ROW - len(boxes) % BOX_ROW)
+    nodes = [f"{sid}{i}" for i in range(len(boxes))]
+    lines = [f'    subgraph {sid}["{_text(title, 120)}"]', "        direction LR"]
+    lines += [f'        {node}["{"<br/>".join(t for t in text if t)}"]:::{style}'
+              for node, (text, style) in zip(nodes, boxes)]
+    lines += ["        " + " ~~~ ".join(nodes[i:i + BOX_ROW])
+              for i in range(0, len(nodes), BOX_ROW) if len(nodes[i:i + BOX_ROW]) > 1]
+    return lines + ["    end"]
+
+
+def _fresh(ctx: Context, found: Found) -> dict[str, Any] | None:
+    """The PC's heartbeat while it is recent enough to trust."""
+    at = parse_iso((found.pc or {}).get("at"))
+    return found.pc if at is not None and ctx.now() - at <= PC_QUIET else None
+
+
+def _pc_title(ctx: Context, found: Found) -> str:
+    """The PC's group: how loaded it is, from its heartbeat, and when it was heard."""
+    if found.pc is None:
+        return f"The owner's PC: {found.pc_note}"
+    beat, at = found.pc, parse_iso(found.pc.get("at"))
+    if _fresh(ctx, found) is None:
+        return (f"The owner's PC: not heard since {_clock(ctx, at)}: off, asleep, or its "
+                "supervisor stopped")
+    try:
+        load = f"CPU {float(beat.get('cpu')):.0f}%, {float(beat.get('memGB')):.1f} GB in use"
+    except (TypeError, ValueError):
+        load = "its load not reported"
+    mood = "calm, lending itself" if beat.get("calm") else "busy with its owner's work"
+    return f"The owner's PC: {mood}, {load} · heard {_clock(ctx, at)}"
+
+
+def _pc_runners(beat: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """The heartbeat's runner containers (PowerShell 5.1 may write a list as `{"value": [...]}`)."""
+    runners = (beat or {}).get("runners") or []
+    if isinstance(runners, dict):
+        runners = runners.get("value") or []
+    return [r for r in runners if isinstance(r, dict)] if isinstance(runners, list) else []
+
+
+def _pc_runner(beat: dict[str, Any] | None, name: str) -> dict[str, Any]:
+    return next((r for r in _pc_runners(beat) if r.get("name") == name), {})
+
+
+def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tuple[list[str], str]:
+    """The gather workflow on the owner's PC: gathering now (and how hard the PC lets it), waiting
+    for the PC's runner, or how its last run ended."""
+    title = "<b>gather</b>"
+    going = next(((run, job) for run, job in found.busy if _is_gather(run)), None)
+    if going is not None:
+        _, job = going
+        since = parse_iso(job.get("started_at"))
+        took = human_delta(ctx.now() - since) if since else "?"
+        lines = [title, "🟢 gathering", _text(_step(job)), f"for {took}"]
+        runner = _pc_runner(beat, str(job.get("runner_name") or ""))
+        if runner.get("throttled"):
+            return lines + ["⏸️ slowed: the PC is busy"], "paused"
+        if runner.get("cpus") is not None:
+            lines.append(f"on {float(runner['cpus']):.1f} CPUs")
+        return lines, "busy"
+    waiting = next(((run, job) for run, job in found.queued if _is_gather(run)), None)
+    if waiting is not None:
+        since = parse_iso(waiting[1].get("created_at"))
+        return [title, "⏳ waiting for the PC's runner",
+                f"for {human_delta(ctx.now() - since)}" if since else ""], "next"
+    done = sorted((r for r in found.gather if r.get("status") == "completed"),
+                  key=lambda r: str(r.get("created_at") or ""), reverse=True)
+    if not done:
+        return [title, "no run yet", "it plays each patch", "as it ships"], "off"
+    last, at = done[0], parse_iso(done[0].get("created_at"))
+    when = _clock(ctx, at) if at else "?"
+    if last.get("conclusion") == "skipped":
+        return [title, "⚫ off: GATHER_ON_PATCH", f"is not true (skipped {when})"], "off"
+    if last.get("conclusion") == "success":
+        return [title, "⚪ not gathering", f"last played {when}"], "idle"
+    return [title, f"❌ its last run: {_text(last.get('conclusion'), 12)}", when], "broken"
+
+
+def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int) -> list[str]:
+    """The runners as boxes, as the subscriptions are drawn: GitHub's runners (at most `boxes`
+    of them), the night box's and the Muse box's, the owner's PC with its heartbeat and the gather
+    workflow, then the jobs queued for a runner, by label."""
+    items = _night_items(state)
+    beat = _fresh(ctx, found)
+
+    def busy_box(run: dict[str, Any], job: dict[str, Any], named: bool) -> tuple[list[str], str]:
+        since = parse_iso(job.get("started_at"))
+        took = human_delta(ctx.now() - since) if since else "?"
+        doing = _text(_job_name(run, job))
+        lines = ([f"<b>{_text(job.get('runner_name'))}</b>", f"🟢 {doing}"] if named
+                 else [f"<b>{doing}</b>"])
+        lines += [_text(_run_for(state, items, run)), _text(_step(job)), took]
+        runner = _pc_runner(beat, str(job.get("runner_name") or ""))
+        if runner.get("throttled"):
+            return lines + ["⏸️ slowed: the PC is busy"], "paused"
+        return lines, "busy"
+
+    by_place: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for run, job in found.busy:
+        by_place.setdefault(_where(job)[0], []).append((run, job))
+    lines = ["```mermaid", "flowchart TB"]
+    groups: list[str] = []
+    hosted = by_place.get(0, [])
+    if hosted:
+        shown = [busy_box(run, job, False) for run, job in hosted[:boxes]]
+        if len(hosted) > boxes:
+            shown.append(([f"<b>… and {len(hosted) - boxes} more</b>", "not drawn: no room"],
+                          "closed"))
+        lines += _boxes("gh", f"GitHub's runners: {len(hosted)} busy, of the {HOSTED_RUNNERS} "
+                        "the organization may hold", shown)
+        groups.append("gh")
+    pool = ctx.cfg.pool
+    held = {str(label) for _, job in found.busy for label in job.get("labels") or []}
+    asked: dict[str, int] = {}
+    for _, job in found.queued:
+        for label in job.get("labels") or []:
+            asked[str(label)] = asked.get(str(label), 0) + 1
+    if by_place.get(1):
+        lines += _boxes("nb", f"The night box (AWS): {len(by_place[1])} busy",
+                        [busy_box(run, job, True) for run, job in by_place[1]])
+        groups.append("nb")
+    if by_place.get(2):
+        lines += _boxes("mb", f"The Muse box (AWS): {len(by_place[2])} busy",
+                        [busy_box(run, job, True) for run, job in by_place[2]])
+        groups.append("mb")
+    # The machine's labels no job holds, its fill-in ones (`FillIn`) among them, apart from the
+    # boxes: which box a label's runners are on is register-runners.sh's to say, not the pool's.
+    labels = [label for p in pool.ordered() if pool.on_machine(p.id)
+              for label in (p.runs_on, *((p.fill_in.runs_on,) if p.fill_in else ()))]
+    idle = [([f"<b>{_text(label)}</b>", f"⏳ {asked[label]} queued for it",
+              "its box is starting, or full"], "next") if asked.get(label)
+            else ([f"<b>{_text(label)}</b>", "💤 no job", "idle, or its box is off"], "closed")
+            for label in dict.fromkeys(labels) if label not in held]
+    if idle:
+        lines += _boxes("nj", "The AWS boxes' labels with no job", idle)
+        groups.append("nj")
+    pc_jobs = by_place.get(3, [])
+    pc = [busy_box(run, job, True) for run, job in pc_jobs]
+    with_jobs = {str(job.get("runner_name") or "") for _, job in pc_jobs}
+    for runner in _pc_runners(beat):
+        if str(runner.get("name") or "") in with_jobs:
+            continue
+        name = f"<b>{_text(runner.get('name'))}</b>"
+        pc.append(([name, "🟢 in a job"], "busy") if runner.get("busy")
+                  else ([name, "⚪ idle, waiting", f"for a {_text(runner.get('label'), 24)} job"],
+                        "idle"))
+    if not pc:
+        pc.append(([f"<b>{LOCAL_LABEL}</b>", "💤 no job",
+                    "the PC is busy" if beat is not None and not beat.get("calm")
+                    else "idle, or the PC is off"], "closed"))
+    pc.append(_gather_box(ctx, found, beat))
+    lines += _boxes("pc", _pc_title(ctx, found), pc)
+    groups.append("pc")
+    if by_place.get(4):
+        lines += _boxes("ob", f"Other runners: {len(by_place[4])} busy",
+                        [busy_box(run, job, True) for run, job in by_place[4]])
+        groups.append("ob")
+    waiting: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for run, job in found.queued:
+        waiting.setdefault(", ".join(str(x) for x in job.get("labels") or []) or "any",
+                           []).append((run, job))
+    if waiting:
+        queue = []
+        for label, jobs in sorted(waiting.items(), key=lambda kv: -len(kv[1])):
+            run, job = min(jobs, key=lambda pair: str(pair[1].get("created_at") or ""))
+            since = parse_iso(job.get("created_at"))
+            queue.append(([f"<b>{_text(label)}</b>",
+                           f"⏳ {len(jobs)} {'job' if len(jobs) == 1 else 'jobs'}",
+                           f"the longest {human_delta(ctx.now() - since)}" if since else "",
+                           _text(_job_name(run, job))], "next"))
+        lines += _boxes("qu", f"Queued for a runner: {len(found.queued)} "
+                        + ("job" if len(found.queued) == 1 else "jobs"), queue)
+        groups.append("qu")
+    if len(groups) > 1:
+        lines.append("    " + " ~~~ ".join(groups))
+    ghosts = [GHOST_STYLE] if any(":::ghost" in line for line in lines) else []
+    return lines + [*BOX_STYLES, *ghosts, "```"]
+
+
 def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = None, *,
                     room: int = MAX_BODY) -> str:
-    """Every runner and what it is doing: each job a runner holds now, the step it is on, what
-    it is for and how long it has run; the jobs queued for a runner; the self-hosted labels with
-    no job; and a link to the comment on what each runner is for (`explain`). The table lists
-    fewer runners when the section would pass `room`."""
+    """Every runner and what it is doing, as boxes (`runner_diagram`) and as a table: each job a
+    runner holds now, the step it is on, what it is for and how long it has run, linked to the
+    job; and a link to the comment on what each runner is for (`explain`). Each part folds
+    away. Short of `room`, the table lists fewer runners, then the boxes show fewer of GitHub's."""
     found = found if found is not None else read_runners(ctx)
     read = _clock(ctx, ctx.now())
     url = _explained_url(ctx, state)
-    explained = (f"<sub>What each runner and workflow is for: [its comment]({url}).</sub>" if url
-                 else "<sub>What each runner and workflow is for is in a comment below.</sub>")
+    explained = (f"What each runner and workflow is for: [its comment]({url})." if url
+                 else "What each runner and workflow is for is in a comment below.")
     head = [RUNNERS_START, "## 🖥️ Every runner", ""]
     if found.failed:
-        return "\n".join(head + [f"The runs going could not be read at {read}.", "", explained,
-                                 RUNNERS_END])
+        return "\n".join(head + [f"The runs going could not be read at {read}.", "",
+                                 f"<sub>{explained}</sub>", RUNNERS_END])
     busy, queued = found.busy, found.queued
     hosted, places = 0, {}
     for _, job in busy:
@@ -1056,8 +1308,8 @@ def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = N
     head += [f"🟢 **{len(busy)} {'runner' if len(busy) == 1 else 'runners'} busy**: "
              + ", ".join(counts) + f" · ⏳ **{len(queued)} "
              + ("job" if len(queued) == 1 else "jobs") + f" queued** for a runner · read at {read}",
-             "", f"<sub>Redrawn every {RUNNERS_MINUTES} minutes from the runs going and queued and "
-             "their jobs; each time links to its job.</sub>", ""]
+             "", f"<sub>Redrawn every {RUNNERS_MINUTES} minutes from the runs going and queued, "
+             f"their jobs and the owner's PC's heartbeat. {explained}</sub>", ""]
     items = _night_items(state)
     rows = []
     for run, job in busy[:RUNNER_ROWS]:
@@ -1067,43 +1319,30 @@ def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = N
         name = f"`{job['runner_name']}`" if job.get("runner_name") else "—"
         rows.append(f"| {name} ({_where(job)[1]}) | {_job_name(run, job)} | {_step(job)} "
                     f"| {_run_for(state, items, run)} | {f'[{took}]({link})' if link else took} |")
-    tail: list[str] = []
-    waiting: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
-    for run, job in queued:
-        label = ", ".join(str(x) for x in job.get("labels") or []) or "any"
-        waiting.setdefault(label, []).append((run, job))
-    if waiting:
-        parts = []
-        for label, jobs in sorted(waiting.items(), key=lambda kv: -len(kv[1])):
-            run, job = min(jobs, key=lambda pair: str(pair[1].get("created_at") or ""))
-            since = parse_iso(job.get("created_at"))
-            longest = f", the longest {human_delta(ctx.now() - since)}" if since else ""
-            parts.append(f"`{label}` {len(jobs)} ({_job_name(run, job)}{longest})")
-        tail += ["⏳ **Queued for a runner:** " + "; ".join(parts) + ".", ""]
-    pool = ctx.cfg.pool
-    labels = [p.runs_on for p in pool.ordered() if pool.on_machine(p.id)] + [LOCAL_LABEL]
-    held = {str(label) for _, job in busy for label in job.get("labels") or []}
-    idle = [label for label in dict.fromkeys(labels) if label not in held]
-    if idle:
-        tail += ["💤 **No job on any of its runners:** " + ", ".join(f"`{x}`" for x in idle)
-                 + " (idle, or its box or the PC is off).", ""]
-    if found.unread:
-        tail += [f"<sub>{found.unread} more {'run' if found.unread == 1 else 'runs'} not "
-                 "read.</sub>", ""]
-    tail += [explained, RUNNERS_END]
+    tail = ([f"<sub>{found.unread} more {'run' if found.unread == 1 else 'runs'} not read.</sub>",
+             ""] if found.unread else []) + [RUNNERS_END]
 
-    def drawn(shown: int) -> str:
+    def drawn(shown: int, boxes: int) -> str:
+        diagram = ["<details open><summary><b>The runners, as boxes</b></summary>", "",
+                   *runner_diagram(ctx, state, found, boxes), "", f"<sub>{RUNNER_LEGEND}</sub>",
+                   "", "</details>", ""]
         if not busy:
             table = ["No runner holds a job right now.", ""]
         else:
             more = len(busy) - shown
-            table = (["| Runner | Workflow · job | Step now | For | Running |",
-                      "|---|---|---|---|---|", *rows[:shown]] if shown else [])
+            table = ["<details open><summary><b>Every busy runner's job</b>, as a table "
+                     f"({len(busy)})</summary>", ""]
+            table += (["| Runner | Workflow · job | Step now | For | Running |",
+                       "|---|---|---|---|---|", *rows[:shown]] if shown else [])
             table += ([f"\n…and {more} more." if shown else f"{more} not listed: no room."]
-                      if more > 0 else []) + [""]
-        return "\n".join(head + table + tail)
-    for shown in sorted({len(rows), len(rows) // 2, min(len(rows), 5), 0}, reverse=True):
-        section = drawn(shown)
+                      if more > 0 else []) + ["", "</details>", ""]
+        return "\n".join(head + diagram + table + tail)
+    hosted_boxes = sum(1 for _, job in busy if _where(job)[0] == 0)
+    steps = [(n, hosted_boxes) for n in sorted({len(rows), len(rows) // 2, min(len(rows), 5), 0},
+                                                reverse=True)]
+    steps += [(0, n) for n in BOX_STEPS if n < hosted_boxes]
+    for shown, boxes in steps:
+        section = drawn(shown, boxes)
         if len(section) <= room:
             return section
     return section
@@ -1214,7 +1453,6 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     lines += (running + [""] if running else [])
     lines += timeline(ctx, state, live) + [""]
     lines += lanes_boxes(ctx, state, live, explained.now) + [""]
-    lines += [view.runners if view.runners is not None else runners_section(ctx, state), ""]
     lines += ["## 📋 Queue", "", difficulty_legend(ctx.cfg.pool), ""]
     lines += queue_table(ctx, explained, issues) + [""]
     people = waiting_for_people(issues)
@@ -1232,6 +1470,10 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
         lines += [statistics.strip(), ""]
     for part in extra:
         lines += ["---", "", part.strip(), ""]
+    # Low in the issue, below everything else the bots draw: it is the longest part, and the
+    # least read at a glance.
+    lines += ["---", "", view.runners if view.runners is not None else runners_section(ctx, state),
+              ""]
     lines += ["<details><summary>The full status</summary>", "",
               view.report, "", "</details>", "", MARKER]
     return "\n".join(lines)

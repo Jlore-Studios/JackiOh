@@ -209,8 +209,9 @@ class Deliverer:
         if found is None:
             return
         reported = str((self.result.get("disk") or {}).get("runner") or "")
-        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
-        box = memory.box_of(runner, self.provider.runs_on)
+        label = str(self.plan.get("runs_on") or self.provider.runs_on)  # a fill-in's too
+        runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else label
+        box = memory.box_of(runner, label)
         self.ctx.store.update(lambda s: memory.note(s, found, runner, box), "machine memory")
 
     def _login_works(self) -> None:
