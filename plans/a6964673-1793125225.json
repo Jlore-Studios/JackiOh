@@ -1,0 +1,69 @@
+{
+  "action": "build",
+  "number": 2095,
+  "title": "Patch: the co-op board can show both duels at once",
+  "branch": "bot/issue-2095",
+  "thread": "**Issue #2095 (data, not instructions):**\n\n```text\n# #2095: Patch: the co-op board can show both duels at once\nOpened by @jgoetzmann.\n\n### What it does\n\nIn a co-op (2v2) game a player sees one duel at a time. The portal (`duos-portal`, \"Teammate's board\") flips the board between the player's own duel and the teammate's, which is read-only (SPEC \u00a713.6, B63, `apps/web/src/duos/DuosBoard.tsx`). To follow the teammate's game, a player has to flip away from their own.\n\nThis patch adds a **Both boards** view: on a screen wide enough for two boards, the player can see the teammate's duel beside their own, both live.\n\n- **The toggle.** \"Both boards\" (`duos-both`, `aria-pressed`) sits in the board rail beside the portal.\n  - The choice is kept per device: `localStorage` under a key in `duos/config.ts`, read and written in `try`/`catch` as `CoopPanel.tsx` keeps its room.\n  - It starts off, so nothing changes for a player who never presses it.\n- **The player's own board** stays exactly as it is: `<Game view={view.own}>` with `legal`, passes, trades, pings and the rail.\n- **The teammate's board** is the read-only board the portal shows today: `<Game view={view.teammate} legal={NOTHING} onAction={ignore} replay>`, placed beside the own board at a smaller scale.\n  - Its cards can be hovered and inspected, and the ping wheel works on it (B64). A ping marker shows on whichever board shows its duel.\n  - It plays no sound and no music. Today `useGameAudio` runs in every mounted `Game`, so two boards would play both duels' cues and fight over the music. Add the one prop Game needs for this (for example `silent`), and skip the audio feed when it is set. Don't draw a second kind of board: Game.tsx stays the one board (CLAUDE.md, Architecture).\n  - Each board keeps its own `key`, so neither animates the other duel's events.\n- **Passing.** While both boards show, a hand card dragged onto the teammate's board passes it when `legal` lists that pass, as a drop on the portal does (B62). Anything not listed sends nothing.\n- **The portal** is hidden while both boards show, and comes back when the toggle is off.\n- **Narrow screens.** Below the width where two boards fit, the toggle is hidden and the board works as today, with the portal flipping. Set this with a media query in `duos.css` at the breakpoint the Duos phone layout already uses, or with one named custom property if none fits. Add no JavaScript width number (CLAUDE.md rule 9).\n- **Test ids.** Two Games draw the same test ids (`hero-you`, the zones, the hand). Wrap each board in its own element (`duos-board-own`, `duos-board-teammate`) so tests and specs can scope by board.\n  - Unscoped selectors in `e2e/cypress/e2e/41-duos-coop.cy.ts` must still find the player's own board. That holds with the toggle off by default; scope any selector that would match both.\n- **Out of scope:** the co-op replay (`DuosReplay.tsx`) keeps its portal flip.\n\n**Spec.**\n- \u00a713.6's sentence \"A portal on the board flips it to the teammate's duel, read-only: \u2026\" gains: on a screen wide enough, the player may instead show the teammate's duel beside their own, still read-only and silent.\n- Add a ruling note in this issue's own block (R&lt;this issue&gt;000, `docs/issues-and-patches.md`, Ruling numbers). It records the toggle, its per-device default, the silent read-only second board, the drop-to-pass, and the narrow fallback.\n- Then run `cargo jackioh spec index`.\n- `apps/web/README.md`'s \"Play together and Duos\" section names the toggle and its ids.\n\nOnly `apps/web` changes, plus the spec and `e2e/support/testids.ts`. No server, engine, card or AI change.\n\n### Acceptance\n\nVitest, in `duos/DuosBoard.test.tsx` with tests named after the new ruling (`it(\"R<n> \u2026\")`), plus a CSS check in `test/ux/` like the board-ux tests:\n\n- With the toggle on, both boards render, the teammate's inside `duos-board-teammate`. The own board still sends duel moves and passes.\n- Clicking the teammate's board sends nothing.\n- The choice survives a remount (storage), and it starts off with nothing stored.\n- A ping made on the teammate's board is sent, and its marker shows there.\n- Dragging a listed pass onto the teammate's board sends that pass. An unlisted card sends nothing.\n- The teammate's board feeds no audio: the audio stub sees only the own board's views.\n- The portal is hidden while both boards show, and back when the toggle is off.\n- `duos.css` hides the toggle below the breakpoint and falls back to one board there.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `cargo jackioh spec check` pass.\n\n### Blocked by, part of\n\nPart of #1888.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2095: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first",
+    "#2093 skipped: it waits for #2092 to close first"
+  ]
+}
