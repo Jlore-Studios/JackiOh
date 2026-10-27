@@ -4112,9 +4112,18 @@
     "what": "plan #2067 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-27T13:37:09Z",
+    "at": "2026-10-27T13:32:08Z",
     "notes": [
-      "started a night run, as a lane was free: #2045 (medium) is queued to build, for `claude-8`: build on `claude-8` (claude, `sonnet`, medium); review on `claude-8` (claude, `opus`, strong)"
+      "delivered plan #2050 on claude-8 (run 40511615235): planned",
+      "delivered revise #2059 on claude-7 (run 40502379046): approved",
+      "delivered build #1870 on claude-4 (run 40500828000): interrupted",
+      "delivered build #1859 on claude-6 (run 40471879963): interrupted",
+      "started plan #2047 on claude-7 (run 40513586139)",
+      "started build #2045 on claude-8 (run 40513762484)",
+      "started build #2053 on claude-6 (run 40513926868)",
+      "started plan #2067 on claude-4 (run 40514086137)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 80h 18m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 87h 18m; `devin` is idle, but nothing queued is for it",
+      "#2067: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -4820,7 +4829,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T13:20:00Z",
+  "loop_tick": "2026-10-27T13:32:08Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T12:02:49Z",
