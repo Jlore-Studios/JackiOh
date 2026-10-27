@@ -98,6 +98,18 @@ export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
 export const DECK_DELETE_CANCEL = "deck-delete-cancel";
 
 /**
+ * #2096: Duplicate in the open deck's actions, and the reason it gives when off at the deck limit.
+ * Each row in the list has its own, `deck-duplicate-<deckId>` (never `deck-row-…`, which the e2e
+ * specs read as the rows).
+ */
+export const DECK_DUPLICATE = "deck-duplicate";
+export const DECK_DUPLICATE_REASON = "deck-duplicate-reason";
+
+export function deckDuplicateId(deckId: string): string {
+  return `deck-duplicate-${deckId}`;
+}
+
+/**
  * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
  * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
  */

@@ -39,7 +39,7 @@ import "./duos.css";
 /** The deck select's value for a dealt deck. */
 const RANDOM = "random";
 
-/** R2094000: where this tab remembers its last co-op deck pick, so a link join is one press. */
+/** R2094000: where this device remembers its last co-op deck pick, so a link join is one press. */
 export const COOP_DECK_KEY = "jackioh.coop.deck";
 
 /** R2094000: the remembered deck id, or null when none or storage refuses. */
@@ -163,7 +163,8 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const [coopLink] = useState(readCoopLink);
   // R2094000: a chat Join on this same screen arrives as a new query without remounting.
   const search = useSearch();
-  const [deck, setDeck] = useState<string>(() => readCoopDeck() ?? RANDOM);
+  // A remembered id is only taken once the decks show it is still saved, so the deck sent is the one shown.
+  const [deck, setDeck] = useState<string>(RANDOM);
   const [lean, setLean] = useState(readPlayLean);
   const [room, setRoom] = useState<string | null>(readStoredRoom);
   const [joinCode, setJoinCode] = useState(coopLink ?? "");
