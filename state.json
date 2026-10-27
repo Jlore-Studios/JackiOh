@@ -8412,7 +8412,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-27T06:32:43Z",
+    "idle_since": null,
     "last_run": "2026-10-27T05:47:45Z",
     "provider": null,
     "requested": false,
