@@ -5,7 +5,8 @@
   "type": "module",
   "description": "The Cypress end-to-end specs (BUILD M8 and after). Runs against apps/web in E2E=1 mode.",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "// typecheck": "Runs the deck fixtures' pre-flight too (check:fixtures, well under a second), so a pull request that drops a card a fixture plays or changes the deck size fails CI's `web (typecheck, eslint)` rather than the daily e2e run (#2049).",
+    "typecheck": "tsc -p tsconfig.json && node scripts/check-fixtures.mjs",
     "// typecheck:component": "The component specs are .tsx, which `tsconfig.json`'s `cypress/**/*.ts` glob does not match, so they have a project of their own rather than being silently unchecked.",
     "typecheck:component": "tsc -p cypress/component/tsconfig.json",
     "check:fixtures": "node scripts/check-fixtures.mjs",
