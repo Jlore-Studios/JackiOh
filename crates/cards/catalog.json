@@ -17843,7 +17843,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Freeze a Unit and the Units adjacent to it."
@@ -18231,7 +18231,7 @@
       "classicplus-037",
       "stinkyscape-008-1"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a Rosemary Triscuit to your hand. Shuffle a Wardrum into your deck."
@@ -18265,7 +18265,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 11,
     "base": {
       "keywords": [],
       "text": "Refresh {refresh} mana."
@@ -18319,7 +18319,7 @@
       "stinkyscape-010-2",
       "stinkyscape-010-3"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add an Inner Fire, a Divine Spirit and a Power Word Shield to your hand."
@@ -18355,7 +18355,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Set a Unit's Attack equal to its Health."
@@ -18380,7 +18380,7 @@
     "flavor": "Holy",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Double a Unit's Health."
@@ -18423,7 +18423,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{health} Health. Draw {draw|card|cards}."
@@ -18451,7 +18451,7 @@
       "stinkyscape-011-2",
       "stinkyscape-011-3"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Frostbolt, an Arcane Missiles and a Flame Strike to your hand."
@@ -18487,7 +18487,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage and Freeze it."
@@ -18523,7 +18523,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Echo 2\nDeal {damage} damage to a random enemy."
@@ -18559,7 +18559,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 14,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to all enemy Units."
@@ -18587,7 +18587,7 @@
       "stinkyscape-012-2",
       "stinkyscape-012-3"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Shadow Word Death, a Shadow Word Pain and a Psychic Scream to your hand."
@@ -18622,7 +18622,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Destroy a Unit with {attack} or more Attack."
@@ -18657,7 +18657,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Destroy a Unit with {attack} or less Attack."
@@ -18693,7 +18693,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Shuffle all permanents into your opponent's deck."
@@ -18896,7 +18896,7 @@
     "refs": [
       "meditative-066"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 2,
       "health": 2,
@@ -19074,7 +19074,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 10,
       "health": 6,
@@ -19145,7 +19145,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [
         {
@@ -24200,7 +24200,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Your hero gains a random {least} to {most} Armor."
@@ -24226,7 +24226,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Freeze all Units."
@@ -24716,7 +24716,7 @@
     "flavor": "Fire",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add a random Catalyst card to your hand. Shuffle this into your deck."

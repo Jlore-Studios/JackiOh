@@ -2273,6 +2273,7 @@ excludeSelf: boolean?,
 
 export type ShuffleCardIntoArgs = {
 instanceId: string,
+player: PlayerSpec?,
 }
 
 export type ShuffleCopiesOfSelfArgs = {
