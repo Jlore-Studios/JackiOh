@@ -18926,7 +18926,7 @@
       "stinkyscape-018-2",
       "stinkyscape-018-3"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Summon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."
@@ -18961,7 +18961,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 76,
     "base": {
       "keywords": [
         {
@@ -19003,7 +19003,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [
         {
@@ -19035,7 +19035,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 3,
-    "loc": 6,
+    "loc": 124,
     "base": {
       "keywords": [
         {
