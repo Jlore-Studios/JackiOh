@@ -473,6 +473,11 @@ pub struct CatalogQueryArgs {
     /// keeps to them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub every_set: Option<bool>,
+    /// R1878000: prints every one of these keywords on its base face, as `stats` reads the base face
+    /// (R1080): Stinkyscape #124's "a random Starship Piece". A keyword a card gains in play (granted,
+    /// lent by its Embiggened version or by an aura) is not printed, so no pool reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<KeywordKind>>,
 }
 
 /// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
@@ -511,6 +516,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             busted: None,
             complicated: None,
             every_set: None,
+            keywords: None,
         }
     }
 }
@@ -669,6 +675,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.complicated
         && is_complicated(&def.id) != wanted
+    {
+        return false;
+    }
+    // R1878000: `keywords` reads the printed base face too.
+    if let Some(kinds) = &args.keywords
+        && !kinds.iter().all(|kind| has_keyword(&def.base.keywords, *kind))
     {
         return false;
     }

@@ -56,6 +56,7 @@ costModUpTo: number?,
 temporary: boolean?,
 chinese: boolean?,
 lucky: number?,
+keywords: {Keyword}?,
 }
 
 export type AddRandomFromGraveyardArgs = {
@@ -309,6 +310,7 @@ tribute: boolean?,
 busted: boolean?,
 complicated: boolean?,
 everySet: boolean?,
+keywords: {KeywordKind}?,
 }
 
 export type CellScope = {

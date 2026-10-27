@@ -2578,8 +2578,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Add {cards|random Starship Piece|random Starship Pieces} to your hand.
 - **Radiant:** Add {cards|random Radiant Starship Piece|random Radiant Starship Pieces} to your hand.
-- **Engine:** `add_random_from_catalog`, one draw of the match rng per card ([[R60]]): NEW: a pool of the cards that print Starship Piece ([[§6.1]]), non-tokens, the Dormant Starship never one ([[R1852001]], [[R1857001]]): `CatalogQuery` has no keyword field on main, so S19 adds one or names the pieces by id; a pool that names no set draws from the sets that ship ([[R380]]), so it names Stinkyscape's while the set is held ([[R1420]]); a full hand burns the rest ([[§2.4]]). Radiant: `radiant: true`.
-- **Rulings:** ST-S19-1: "a random Starship Piece" is a random non-token card that prints the keyword on its face, from the set's pieces (about forty, S03's and S06's); the Dormant Starship, no piece, is never one. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** `add_random_from_catalog`, one draw of the match rng per card ([[R60]]), from the Starship Piece pool (`query::starship_pieces()`): the non-token cards that print Starship Piece ([[§6.1]]) on their base face, the query's `keywords` filter, the Dormant Starship never one ([[R1857001]]); the pool names Stinkyscape, the one set that prints the keyword, so it reaches the pieces while the set is held ([[R1420]]); a full hand burns the rest ([[§2.4]]). Radiant: `radiant: true`.
+- **Rulings:** ST-S19-1: "a random Starship Piece" is a random non-token card that prints the keyword on its face, from the set's pieces (about forty, S03's and S06's); the Dormant Starship, no piece, is never one. Built by S19 (#1878) as [[R1878000]]: the base face, sixty pieces as the catalog stands.
 - **Numbers:** cards 3 ↑.
 - **Check:** ST8: the tag "Jlockeed's" is Jlockeed (R278); "Stinkscape" is Stinkyscape. R275: each piece Radiant.
 - **Class:** B
@@ -2591,8 +2591,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Activate: Add a random Starship Piece to your hand.
 - **Radiant:** Activate: Add a random Radiant Starship Piece to your hand.
-- **Engine:** A Field Spell (ST8, [[R1857001]]) whose Activate runs while it is face-up in the backrow, once a turn ([[R384]]): one card from S #124's Starship Piece pool (NEW). Radiant: `radiant: true`.
-- **Rulings:** ST-S19-1 (the pool). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** A Field Spell (ST8, [[R1857001]]) whose Activate runs while it is face-up in the backrow, once a turn ([[R384]]): one card from S #124's Starship Piece pool ([[R1878000]]). Radiant: `radiant: true`.
+- **Rulings:** ST-S19-1 (the pool). Built by S19 (#1878) as [[R1878000]].
 - **Numbers:** none (one card a use; the Activate count is no param, R482).
 - **Check:** ST8: a Field Spell, tagged Jlockeed. The designer's "add" is "Add". R275: a Radiant piece.
 - **Class:** B
@@ -2604,8 +2604,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** For the rest of the game. / Start of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand.
 - **Radiant:** For the rest of the game. / Start of turn: Add {cards|random Radiant Starship Piece|random Radiant Starship Pieces} to your hand. Each costs ({discount}) less.
-- **Engine:** C+ #52 Jlockeed's Permanent Defense Contract's shape: a rest-of-game start-of-turn modifier on its caster ([[R458]]), kept whatever becomes of the card, adding N cards from S #124's Starship Piece pool (NEW) at the start of each of their turns, before the draw ([[R62]]); a full hand burns them. Radiant: `radiant: true` and a `costMod` of −discount on each ([[R65]]).
-- **Rulings:** ST-S19-2: "at the start of your turn" is each of your turns for the rest of the game, starting with your next, C+ #52's modifier; "costs (1) less" is a cost modifier that never takes it below (0). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** C+ #52 Jlockeed's Permanent Defense Contract's shape: a rest-of-game start-of-turn modifier on its caster ([[R458]]), kept whatever becomes of the card, adding N cards from S #124's Starship Piece pool ([[R1878000]]) at the start of each of their turns, before the draw ([[R62]]); a full hand burns them. Radiant: `radiant: true` and a `costMod` of −discount on each ([[R65]]).
+- **Rulings:** ST-S19-2: "at the start of your turn" is each of your turns for the rest of the game, starting with your next, C+ #52's modifier; "costs (1) less" is a cost modifier that never takes it below (0). Built by S19 (#1878) on [[R458]], [[R62]] and [[R65]], C+ #52's, with no ruling of its own.
 - **Numbers:** cards 1 ↑; discount 1 ↑ (Radiant only, `tunedOn: radiant`).
 - **Check:** Written in C+ #52's words (R366: "Start of turn:", never "at the start of your turn"). R275: Radiant pieces at (1) less.
 - **Class:** B
@@ -2617,8 +2617,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** End of turn: This attacks a random enemy. / Embiggened (4): Starship Piece.
 - **Radiant:** End of turn: This attacks a random enemy. / Embiggened (4): Starship Piece.
-- **Engine:** End of turn ([[R62]]): a forced attack ([[R53]]) on one enemy, the hero or a Unit, drawn from the match rng ([[R60]]) among those it may attack under [[§4.2]] step 2 (Flying's restriction holds, [[R783002]]); position, summoning sickness and Taunt are not read and no exertion is spent; with none, nothing. Embiggened ([[R1175000]]): Starship Piece, a keyword the Embiggened version has as the play resolves (`instance.embiggened`, [[R81]]), as Core #56 Jilliax's Equip comes with its price ([[R831013]]); NEW if the Embiggened version cannot lend a keyword on main, Core #56's Equip being a play option and no keyword.
-- **Rulings:** ST-S19-3: "attacks a random enemy" is a forced attack on an enemy drawn among those it may attack (Flying's rule holding), Taunt not binding; "Embiggen: gain Starship Piece" is the Embiggened version having the keyword for good. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** End of turn ([[R62]]): a forced attack ([[R53]]) on one enemy, the hero or a Unit, drawn from the match rng ([[R60]]) among those it may attack under [[§4.2]] step 2 (Flying's restriction holds, [[R783002]]); position, summoning sickness and Taunt are not read and no exertion is spent; with none, nothing. Embiggened ([[R1175000]]): Starship Piece, a keyword the Embiggened version has as the play resolves (`instance.embiggened`, [[R81]]), as Core #56 Jilliax's Equip comes with its price ([[R831013]]): its `conditionalKeywords`, on the card stamped embiggened. A fused card's texts lend no Starship Piece; a kept card that lent it to itself keeps it as a grant ([[R1852001]], [[R1878001]]).
+- **Rulings:** ST-S19-3: "attacks a random enemy" is a forced attack on an enemy drawn among those it may attack (Flying's rule holding), Taunt not binding; "Embiggen: gain Starship Piece" is the Embiggened version having the keyword for good. Built by S19 (#1878): the attack is [[R53]]'s, the keyword [[R1878001]].
 - **Numbers:** none (no number is printed).
 - **Check:** The designer's "Embiggen:" is "Embiggened (4):" (R1175000). R275: stats doubled, the attack with them.
 - **Class:** B
@@ -2630,8 +2630,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Ranged, Cleave / Embiggened (3): Starship Piece.
 - **Radiant:** Ranged, Cleave / Embiggened (3): Starship Piece.
-- **Engine:** Ranged ([[R783000]]) and Cleave ([[§6.1]], [[R63]]): it takes no strike back from a defender without Ranged, and its attack splashes the Units beside its target, which never strike back. Embiggened ([[R1175000]]): Starship Piece, as S #127's.
-- **Rulings:** ST-S19-3 (the Embiggened keyword). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** Ranged ([[R783000]]) and Cleave ([[§6.1]], [[R63]]): it takes no strike back from a defender without Ranged, and its attack splashes the Units beside its target, which never strike back. Embiggened ([[R1175000]]): Starship Piece, as S #127's ([[R1878001]]).
+- **Rulings:** ST-S19-3 (the Embiggened keyword). Built by S19 (#1878) as [[R1878001]].
 - **Numbers:** none (keywords and stats).
 - **Check:** R275's effect half: the same keywords on both faces (⚠ designer).
 - **Class:** A
@@ -2644,7 +2644,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies. / Embiggened (2): Starship Piece and Equip.
 - **Radiant:** End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies. / Embiggened (2): Starship Piece and Equip.
 - **Engine:** End of turn ([[R62]]): one hit of ⌊Attack ÷ divisor⌋, its Attack as it stands, to the enemy hero and every enemy Unit (`damage_all`, [[R59]]); a 0 is no hit ([[R63]]). Embiggened ([[R1175000]]): Starship Piece, and Equip as a play option at that price (Core #56 Jilliax's, [[R831013]], [[R1086]]), so it can be fused into a Unit whose Attack it then divides.
-- **Rulings:** ST-S19-4: "floor(attack / 4)" is its Attack as it stands at the end of turn, buffs included; equipped, its text runs on the host and reads the host's Attack. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S19-4: "floor(attack / 4)" is its Attack as it stands at the end of turn, buffs included; equipped, its text runs on the host and reads the host's Attack. Built by S19 (#1878) as [[R1878002]]; its Starship Piece and Equip are lent as S #127's ([[R1878001]]).
 - **Numbers:** divisor 4 ↓ (Radiant 3).
 - **Check:** The designer's "Embiggen:" is "Embiggened (2):". R275: stats doubled, divisor 4 → 3.
 - **Class:** B
@@ -2656,8 +2656,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Add a random Jlockeed card to your hand. It gains Starship Piece.
 - **Radiant:** Add a random Radiant Jlockeed card to your hand. It gains Starship Piece and costs ({discount}) less.
-- **Engine:** `add_random_from_catalog { tags: [Jlockeed] }`, the non-token cards with the tag, itself left out ([[R278]], [[R387]]), then `grant_keyword` Starship Piece on the card in the hand, read on its death as a granted piece is ([[R1852000]]); a full hand burns it ([[§2.4]]). Radiant: `radiant: true` and a `costMod` of −discount ([[R65]]). A card given it fuses only when it dies: a Spell that resolves never does; NEW if a keyword granted in the hand does not ride onto the field (S19 checks).
-- **Rulings:** ST-S19-5: the granted Starship Piece rides the card from the hand onto the field and is read on its death (R1852000); a Spell or Field Spell given it fuses nothing unless it dies; "Radiant" makes the added card Radiant. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** `add_random_from_catalog { tags: [Jlockeed] }`, the non-token cards with the tag, itself left out ([[R278]], [[R387]]), given Starship Piece as it reaches the hand (its `keywords` rider, [[R1878003]]), which it keeps onto the field and which is read on its death as a granted piece is ([[R1852000]]); a full hand burns it ([[§2.4]]). Radiant: `radiant: true` and a `costMod` of −discount ([[R65]]). A card given it fuses only when it dies: a Spell that resolves never does.
+- **Rulings:** ST-S19-5: the granted Starship Piece rides the card from the hand onto the field and is read on its death (R1852000); a Spell or Field Spell given it fuses nothing unless it dies; "Radiant" makes the added card Radiant. Built by S19 (#1878) as [[R1878003]].
 - **Numbers:** discount 1 ↑ (Radiant only, `tunedOn: radiant`).
 - **Check:** R275: a Radiant card and (1) less.
 - **Class:** B

@@ -446,6 +446,57 @@ mod r1852001_equip_does_not_pass_the_keyword_on {
     }
 }
 
+/// R1878001: an Embiggened version's lent Starship Piece follows R1852001 through a Fuse: the card kept
+/// keeps its own lend, as a grant, and an ingredient's reaches no other card.
+mod r1878001_a_lent_piece_through_a_fuse {
+    use super::*;
+
+    #[test]
+    fn r1878001_a_lent_piece_equipped_onto_a_host_played_embiggened_leaves_it_no_piece() {
+        let mut s = board(
+            "p1",
+            json!([brute.id, lender.id, bolt.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(brute.id.as_str(), json!({ "zone": 1, "embiggen": true }));
+        let host = id_at(&s, P1, 1);
+        assert!(!keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        s.play(
+            lender.id.as_str(),
+            json!({ "zone": 1, "equip": true, "embiggen": true }),
+        );
+        assert_eq!(id_at(&s, P1, 1), host, "the host is the kept card");
+        assert!(
+            !keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece),
+            "the lend does not reach the host, though it too was played Embiggened"
+        );
+        bolt_at(&mut s, &host);
+        assert!(!building_a_ship(s.state(), P1), "it died as no piece");
+    }
+
+    #[test]
+    fn r1878001_a_card_that_lent_itself_the_piece_keeps_it_as_a_grant_when_a_card_is_equipped_onto_it() {
+        let mut s = board(
+            "p1",
+            json!([lender.id, clamp.id, bolt.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(lender.id.as_str(), json!({ "zone": 1, "embiggen": true }));
+        let host = id_at(&s, P1, 1);
+        assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        s.play(clamp.id.as_str(), json!({ "zone": 1, "equip": true }));
+        assert_eq!(id_at(&s, P1, 1), host, "the lender is the kept card");
+        assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        assert!(s.card(&host).granted_keywords.contains(&Keyword::StarshipPiece));
+        bolt_at(&mut s, &host);
+        assert_eq!(piece_defs(&ship_of(&s, P1)).len(), 1, "it died as a piece");
+    }
+}
+
 mod r1852002_a_stolen_piece {
     use super::*;
 

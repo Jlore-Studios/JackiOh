@@ -23247,7 +23247,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23270,7 +23270,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Activate: Add a random Starship Piece to your hand."
@@ -23312,7 +23312,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game.\nStart of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23338,7 +23338,7 @@
       "base": 3,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 8,
       "health": 5,
@@ -23368,7 +23368,7 @@
       "base": 2,
       "embiggen": 3
     },
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 1,
@@ -23422,7 +23422,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23460,7 +23460,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add a random Jlockeed card to your hand. It gains Starship Piece."
