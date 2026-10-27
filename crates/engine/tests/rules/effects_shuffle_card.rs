@@ -12,7 +12,7 @@ use jackioh_engine::effects::shuffle_card_into;
 use jackioh_engine::script::Effect;
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 
-use super::fixtures::harness::{events_json, new_game, run_effect, set_library};
+use super::fixtures::harness::{events_json, new_game, put, run_effect, set_library, slot};
 
 fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
@@ -142,5 +142,83 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         assert_eq!(events, Vec::<GameEvent>::new());
         assert_eq!(state.players.p1.library.len(), 1);
         assert_eq!(state.rng_cursor, cursor);
+    }
+}
+
+/// R1867006: `player: "enemy"` moves the card into the opponent's library as their card.
+mod r1867006_shuffle_card_into_enemy_library {
+    use super::*;
+
+    fn shuffle_enemy(id: &str) -> Effect {
+        shuffle_card_into(json_as(json!({ "instanceId": id, "player": "enemy" })))
+    }
+
+    fn on_field(state: &GameState, id: &str) -> bool {
+        state
+            .players
+            .p1
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .any(|card| card.id == id)
+            || state
+                .players
+                .p2
+                .units
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|card| card.id == id)
+    }
+
+    #[test]
+    fn r1867006_with_enemy_player_a_field_card_becomes_their_card_in_their_library() {
+        let mut state = new_game("shuffle-card-enemy", None);
+        set_library(&mut state, PlayerId::P2, &["fx-2", "fx-3"]);
+        let card = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        assert!(on_field(&state, &card.id));
+
+        let events = run_effect(&mut state, shuffle_enemy(&card.id), PlayerId::P1);
+
+        assert!(!on_field(&state, &card.id));
+        let moved = state
+            .players
+            .p2
+            .library
+            .iter()
+            .find(|held| held.id == card.id)
+            .expect("in p2's library");
+        assert_eq!(moved.owner, PlayerId::P2);
+        assert_eq!(moved.controller, PlayerId::P2);
+        assert_eq!(moved.zone, Zone::Library { player: PlayerId::P2 });
+        let shuffled = events_json(&events, "shuffledIn");
+        assert_eq!(shuffled.len(), 1);
+        assert_eq!(shuffled[0]["player"], json!("p2"));
+        assert_eq!(shuffled[0]["instanceId"], json!(card.id));
+        assert_eq!(shuffled[0]["defId"], json!("fx-1"));
+    }
+
+    #[test]
+    fn r1867006_a_full_enemy_library_refuses_the_card_to_the_enemy_graveyard() {
+        let mut state = new_game("shuffle-card-enemy-full", None);
+        set_library(&mut state, PlayerId::P2, &full_library());
+        let card = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+
+        let events = run_effect(&mut state, shuffle_enemy(&card.id), PlayerId::P1);
+
+        assert_eq!(state.players.p2.library.len(), LIBRARY_CAP as usize);
+        let landed = state
+            .players
+            .p2
+            .graveyard
+            .iter()
+            .find(|held| held.id == card.id)
+            .expect("in p2's graveyard");
+        assert_eq!(landed.owner, PlayerId::P2);
+        let overflow = events_json(&events, "libraryOverflow");
+        assert_eq!(overflow.len(), 1);
+        assert_eq!(overflow[0]["player"], json!("p2"));
+        assert_eq!(overflow[0]["outcome"], json!("graveyard"));
     }
 }
