@@ -3221,6 +3221,7 @@
     "2039": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-27T23:00:40Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -3230,6 +3231,7 @@
       "issue": 1860,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
