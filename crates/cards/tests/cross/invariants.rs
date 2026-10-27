@@ -1541,3 +1541,161 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         }
     }
 }
+
+/// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
+/// (`mayAttackAgain`, no transform), so I2 counts a kill credit beside its one attack, and I1 and I4 read
+/// the sickness the kill lifted as readied. Only an attacker whose text answers its attacks
+/// (`afterAttack`) earns one, and the state the action leaves takes it back when the attacker's attack
+/// is still spent. Fuzz seeds 15, 79, 85, 99 and 123 of the S16 build (#1869).
+mod r1869002_i2_a_kill_credit {
+    use super::*;
+
+    const TMACK_TRAV: &str = "stinkyscape-094";
+    const WASP: &str = "stinkyscape-091";
+    const MR_TOKEN: &str = "core-015";
+
+    fn attack(attacker: &str, target: &str) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: attacker.to_string(),
+            target_id: target.to_string(),
+        }
+    }
+
+    #[test]
+    fn r1869002_a_tmack_trav_played_this_turn_kills_and_attacks_the_hero_with_no_violation() {
+        let mut g = scenario(json!({
+            "p1": { "hand": [TMACK_TRAV, VANILLA] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [VANILLA] },
+        }));
+        let prey = g.unit_at(PlayerId::P2, 1).id;
+        // The setup's card enters as the shadow begins, its bookkeeping to match (p2's, so no sickness
+        // of its is read on p1's turn).
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &prey)
+            .expect("p2's Vanilla")
+            .summoned_turn = Some(turn);
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.enter(&prey);
+        g.play(TMACK_TRAV, json!({ "zone": 1 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let tmack = g.unit_at(PlayerId::P1, 1).id;
+
+        let first = attack(&tmack, &prey);
+        assert_eq!(monitor.before(g.state(), PlayerId::P1, &first), no_violations());
+        g.attack(tmack.as_str(), prey.as_str());
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert_eq!(
+            g.card(tmack.as_str()).summoned_turn,
+            None,
+            "the kill lifted its sickness"
+        );
+
+        let second = attack(&tmack, "hero-p2");
+        assert_eq!(monitor.before(g.state(), PlayerId::P1, &second), no_violations());
+        g.attack(tmack.as_str(), "hero");
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+
+        // The sickness stays lifted for good (no `summonedTurn`), which I4 still reads as readied once
+        // the turn is over (fuzz seed 85).
+        assert_eq!(
+            monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn),
+            no_violations()
+        );
+        g.end_turn();
+        assert_eq!(g.card(tmack.as_str()).summoned_turn, None);
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+
+    #[test]
+    fn r1869002_r636_a_windfury_tmack_trav_s_kill_on_its_second_attack_gives_it_two_more() {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let first = g.unit_at(PlayerId::P2, 1);
+        let second = g.unit_at(PlayerId::P2, 2);
+        find_instance_mut(g.state_mut(), &tmack.id)
+            .expect("Tmack Trav")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Windfury" }))];
+        let mut monitor = create_invariant_monitor(g.state());
+        // Read between actions, as the fuzz does, for Windfury (R636); its I3 on the setup's cards is not
+        // this test's.
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        let declared = |target: &str| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": target, "forced": false }),
+            )
+        };
+        let killed = |prey: &CardInstance| {
+            event(json!({
+                "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+                "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+            }))
+        };
+        // Windfury's two, the second a kill whose fresh exertion is two more (B5 E35); a fifth is extra.
+        let mut events = vec![
+            declared("hero-p2"),
+            declared(&first.id),
+            killed(&first),
+            declared("hero-p2"),
+            declared(&second.id),
+            killed(&second),
+        ];
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+        events = vec![declared("hero-p2"), declared("hero-p2"), declared("hero-p2")];
+        let found = monitor.after(&events, g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("I2 extra attack: ") && found[0].contains("attack number 7"),
+            "{}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        let declared =
+            json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": prey.id, "forced": false });
+        let events = vec![
+            event(declared.clone()),
+            event(json!({
+                "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+                "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": unit.id,
+            })),
+            event(declared),
+        ];
+        let found = monitor.after(&events, g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    #[test]
+    fn r1869002_a_kill_that_left_its_attack_spent_readied_nothing_and_its_credit_is_taken_back() {
+        // The Wasp's text answers its attacks (it copies itself), but readies nothing: its kill leaves
+        // its attack spent, so a second declaration is still an extra attack.
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": WASP, "lane": 1 }], "hand": [VANILLA] },
+            "p2": { "field": [{ "def": MR_TOKEN, "lane": 1 }], "hand": [VANILLA] },
+        }));
+        let wasp = g.unit_at(PlayerId::P1, 1).id;
+        let prey = g.unit_at(PlayerId::P2, 1).id;
+        let mut monitor = create_invariant_monitor(g.state());
+        g.attack(wasp.as_str(), prey.as_str());
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert!(g.card(wasp.as_str()).exertion.attacked);
+
+        let again =
+            json!({ "type": "attackDeclared", "attackerId": wasp, "targetId": "hero-p2", "forced": false });
+        let found = monitor.after(&[event(again)], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}

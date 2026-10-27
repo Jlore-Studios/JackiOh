@@ -2398,6 +2398,7 @@ revealChance: number?,
 pilotsActions: number?,
 pilotsTurn: boolean?,
 hintsPlays: boolean?,
+lendsEquip: boolean?,
 }
 
 export type StealAllArgs = {
@@ -2597,6 +2598,7 @@ scope: CardScope?,
 export type TriggerCryArgs = {
 target: TargetSpec?,
 instanceId: string?,
+random: boolean?,
 }
 
 export type TriggerTurnHooksArgs = {

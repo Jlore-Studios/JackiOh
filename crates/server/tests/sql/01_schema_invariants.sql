@@ -1158,4 +1158,65 @@ begin
     'tickets_claimed_at_idx, results_ended_at_idx and matches_over_ended_at_idx';
 end $$;
 
+\echo '=== CHECK 21 (#2022): the rank reads take a season''s asked rows and its Mythic Grape rows, each through an index ==='
+-- own_rank, match_ranks and ladder_tiers (src/api/ranked.rs) read ranked_standings_subset (src/db/pg.rs):
+-- a season's rows for the profiles shown plus every row from the Jlorious floor up (R608), on every
+-- match screen, rank read and match's telemetry. Over 2,000 analysed probe rows with sequential scans
+-- priced out, the Mythic range must be an Index Cond of season_ranks_season_ladder_idx (migration
+-- 0064), never a Filter over the season, and the asked ids an Index Cond. Without 0064 the planner
+-- walks season_ranks_profile_idx whole and filters. The probe is pg.rs's query with its binds as
+-- literals: 36 is jlorious_floor(), Mythic Grape's index 4 x RANK_DIVISIONS_PER_TIER 3 x
+-- RANK_PIPS_PER_DIVISION 3. Rolled back, rows and column statistics; ANALYZE's in-place pg_class
+-- counts stay, and no later file plans a query.
+begin;
+insert into public.seasons (id, patch_version, started_at) values ('check-21', 'check-21.0', now());
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-21-%s@example.test', n), now() from generate_series(1, 2000) as n;
+insert into public.season_ranks (season_id, profile_id, games, wins, losses, draws, ladder, floor,
+                                 streak, peak_ladder, peak_jlorious, updated_at)
+  select 'check-21', u.id, 10, 5, 5, 0, (row_number() over (order by u.id))::integer % 40, 0, 0,
+         null, null, now()
+    from auth.users u
+   where u.email like 'check-21-%';
+analyze public.season_ranks;
+do $$
+declare
+  asked     text;
+  probe     text;
+  plan_text text := '';
+  line      text;
+begin
+  select string_agg(profile_id::text, ',') into asked
+    from (select profile_id from public.season_ranks where season_id = 'check-21' and ladder < 36
+           order by profile_id limit 2) as two;
+  probe := format(
+    'select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
+            r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+            coalesce(b.rating, p.rating) as rating, p.kind
+       from public.season_ranks r
+       join public.profiles p on p.id = r.profile_id
+       left join public.bot_ratings b on p.kind = ''bot'' and b.bot_id = p.id::text
+      where r.season_id = ''check-21''::text
+        and (r.profile_id = any(''{%s}''::uuid[]) or r.ladder >= 36)
+      order by r.profile_id', asked);
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for line in execute 'explain ' || probe loop
+    plan_text := plan_text || line || E'\n';
+  end loop;
+  if plan_text ~ 'Seq Scan on season_ranks\M' then
+    raise exception E'FAIL (CHECK 21): the rank read reads season_ranks whole:\n%', plan_text;
+  end if;
+  if plan_text !~ '\mseason_ranks_season_ladder_idx\M'
+     or plan_text !~ 'Index Cond: [^\n]*ladder >= 36'
+     or plan_text ~ 'Filter: [^\n]*ladder >= 36' then
+    raise exception E'FAIL (CHECK 21): the rank read filters its season for the Mythic rows instead of reading their range through season_ranks_season_ladder_idx:\n%', plan_text;
+  end if;
+  if plan_text !~ 'Index Cond: [^\n]*profile_id = ANY' then
+    raise exception E'FAIL (CHECK 21): the rank read does not take the asked rows through an index:\n%', plan_text;
+  end if;
+  raise notice 'OK (CHECK 21): the rank read takes its asked rows through an index and its Mythic rows as a range of season_ranks_season_ladder_idx, and reads no season whole';
+end $$;
+rollback;
+
 \echo '=== ALL CHECKS RAN ==='

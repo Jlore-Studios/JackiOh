@@ -755,6 +755,12 @@ pub struct StaticFlags {
     /// is shown the Pareto hint on each of their turns (`subsystems::pareto::pareto_hint_ids`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hints_plays: Option<bool>,
+    // ---- Stinkyscape S16 (issue #1869) ----
+    /// R1869000 (Stinkyscape #16 Rod of Ages): "The first Unit you play onto this is Equipped into it".
+    /// While this Unit's definition is no fusion, any Unit card its controller plays may be played onto
+    /// it as an Equip play (R1086) though it has no Equip (`play_choices::equip_onto_at`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lends_equip: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your

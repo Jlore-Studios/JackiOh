@@ -5,7 +5,8 @@ done.
 It opens with a headline (what runs, what waits and on what, which subscriptions can start work),
 then draws the same facts as `/harness status` (`status.py`) for a glance: what each lane is doing
 and a timeline of the runs going now; every subscription as a box with what it is doing or why it
-is not, and its usage, always; the queue, each item with the tier its difficulty needs and what it
+is not, and its usage, always; every subscription's lanes, held and open, Squishy's too, with the
+totals and the limits on them (`lanes_table`); the queue, each item with the tier its difficulty needs and what it
 waits for (`waiting.py`, the planner's own rules on the lanes held now: never "free" for a
 subscription the planner would give no work, never "starts next" for an item it would not start);
 each subscription's usage as bars and charts against its caps; the last runs; the statistics
@@ -52,6 +53,7 @@ from harness import status as status_mod
 from harness import waiting as waiting_mod
 from harness.clock import human_delta, parse_iso, zone
 from harness.config import LABEL_BLOCKED, LABEL_TREE, MODES, NIGHT_WORKFLOW, SLASH
+from harness.config import NAME as BOT_NAME
 from harness.config import TITLE as BOT_TITLE
 from harness.context import Context
 from harness.errors import GitHubError
@@ -406,6 +408,193 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
     return lines + ["", f"<sub>{LEGEND}</sub>", "",
                     f"<sub>Lanes on GitHub's runners: {building} of {pool.max_parallel} in use"
                     f"{plan_note}.</sub>"]
+
+
+# ------------------------------------------------------------------ the lanes
+
+#: The lanes table's order after the Claude accounts, which come first by number: the AWS boxes'
+#: subscriptions, as the owner reads them. Any other follows by name, and the other bots' last.
+LANE_ORDER = ("agy", "gpt", "devin", "muse")
+#: How a bot's section carries its lanes to the night bot's table (`lanes_mark`): JSON in an HTML
+#: comment, which GitHub draws for nobody.
+LANES_MARK = "<!-- jackioh-bot:lanes "
+#: What the Claude accounts' secrets are named (`providers.SECRETS`): one account each.
+CLAUDE_SECRET = "CLAUDE_CODE_OAUTH_TOKEN"
+
+
+def _lanes_where(pool: Any, provider: Any) -> str:
+    if not pool.on_machine(provider.id):
+        return "GitHub's runners"
+    places = [place for place, owners, extras in BOX_SLOTS if provider.id in owners + extras]
+    return " and ".join(f"the {place}" for place in places) or f"`{provider.runs_on}`"
+
+
+def lane_rows(ctx: Context, state: dict[str, Any], live: dict[int, str],
+              halted: str = "") -> list[dict[str, Any]]:
+    """Each subscription's lanes, in `LANE_ORDER`: how many it has, how many of them its runs
+    hold now (`plan.Lanes.used`, what the planner holds to them), whether it is switched off or
+    may start a build or a plan now (`waiting.held_by`: its usage and hours; nothing while the
+    bot is `halted`), its secret and where it runs. A fill-in's runs (`FillIn`) count in the
+    lanes they fill, the first of its `for` first; a planning run the planning lane holds counts
+    beside its lanes (`planning`)."""
+    pool, cfg = ctx.cfg.pool, ctx.cfg
+    lanes = waiting_mod.lanes_of(ctx, state, live)
+    rows: dict[str, dict[str, Any]] = {}
+    for p in pool.ordered():
+        off = (not p.enabled or providers_mod.switched_off_by_date(p, ctx.now(), cfg.timezone)
+               or (p.login == "secret" and cfg.secrets.has(p.secret) is False))
+        counted = p.quiet_check or p.limits.stops
+        rows[p.id] = {"id": p.id, "bot": "", "claude": p.family == "claude",
+                      "where": _lanes_where(pool, p), "github": not pool.on_machine(p.id),
+                      "secret": p.secret if p.login == "secret" else "",
+                      "startable": not (off or halted)
+                      and waiting_mod.held_by(ctx, state, p) is None,
+                      "lanes": p.lanes, "used": lanes.used(p), "off": bool(off),
+                      "planning": 0 if counted else lanes.planning_by(p.id),
+                      "runs": lanes.all_by(p.id), "filling": lanes.filling_by(p.id),
+                      "fills": pool.filled_by(p), "filled": 0, "filler": ""}
+    for filler in pool.ordered():
+        left = rows[filler.id]["filling"]
+        for owner in pool.filled_by(filler):
+            row = rows[owner]
+            took = min(left, max(0, row["lanes"] - row["used"]))
+            row["filled"], row["filler"], left = took, filler.id if took else "", left - took
+
+    def order(row: dict[str, Any]) -> tuple[int, int, str]:
+        number = row["id"].removeprefix("claude-")
+        if row["claude"] and number.isdigit():
+            return (0, int(number), "")
+        if row["id"] in LANE_ORDER:
+            return (1, LANE_ORDER.index(row["id"]), "")
+        return (2, 0, row["id"])
+    return sorted(rows.values(), key=order)
+
+
+def lanes_mark(ctx: Context, state: dict[str, Any], live: dict[int, str],
+               halted: str = "") -> str:
+    """This bot's lanes for the night bot's table (`marked_lanes`), named for this bot."""
+    rows = [{**row, "bot": BOT_TITLE} for row in lane_rows(ctx, state, live, halted)]
+    # No `>` inside, so nothing in it can close the comment.
+    return LANES_MARK + json.dumps(rows).replace(">", "\\u003e") + " -->"
+
+
+def marked_lanes(parts: tuple[str, ...]) -> list[dict[str, Any]]:
+    """The other bots' lanes their sections carry (`lanes_mark`), in their order. A section with
+    none, or with one that cannot be read, adds no row."""
+    found: list[dict[str, Any]] = []
+    for part in parts:
+        start = part.find(LANES_MARK)
+        if start < 0:
+            continue
+        try:
+            rows = json.loads(part[start + len(LANES_MARK):part.index(" -->", start)])
+            found += [{"id": str(r["id"]), "bot": str(r.get("bot") or ""),
+                       "claude": bool(r.get("claude")), "where": str(r.get("where") or ""),
+                       "github": bool(r.get("github")), "off": bool(r.get("off")),
+                       "secret": str(r.get("secret") or ""),
+                       "startable": bool(r.get("startable")),
+                       **{key: int(r.get(key) or 0) for key in ("lanes", "used", "planning",
+                                                                "runs", "filling", "filled")},
+                       "fills": [str(o) for o in r.get("fills") or []],
+                       "filler": str(r.get("filler") or "")} for r in rows]
+        except (ValueError, TypeError, KeyError, AttributeError):
+            continue
+    return found
+
+
+def _open(row: dict[str, Any]) -> int:
+    return 0 if row["off"] else max(0, row["lanes"] - row["used"] - row["filled"])
+
+
+def _in_use(row: dict[str, Any]) -> str:
+    fills = " or ".join(f"`{owner}`'s" for owner in row["fills"])
+    notes = ([f"{row['filled']} of them `{row['filler']}`'s"] if row["filled"] else []) + (
+        [f"+{row['filling']} filling in {fills}"] if row["filling"] else []) + (
+        [f"+{row['planning']} planning, on the planning lane"] if row["planning"] else [])
+    return str(row["used"] + row["filled"]) + (f" <sub>({', '.join(notes)})</sub>" if notes else "")
+
+
+def lanes_table(ctx: Context, state: dict[str, Any], live: dict[int, str],
+                others: tuple[str, ...] = (), halted: str = "") -> list[str]:
+    """How many lanes each subscription has, how many its runs hold and how many are open: the
+    night bot's, the Claude accounts first by number (`lane_rows`), then each other bot's from its
+    section (`marked_lanes`), then the totals, the Claude accounts' and everyone's. Under them,
+    the limits on the lanes: an account's own, the Claude secrets the workflows hand over, the
+    runs GitHub's runners, the planning lane and the AWS boxes take at once, usage and hours, and
+    how many more Claude runs there is room for now."""
+    pool = ctx.cfg.pool
+    rows = lane_rows(ctx, state, live, halted) + marked_lanes(others)
+    lines = ["| Subscription | Runs on | Lanes | In use | Open |", "|---|---|---|---|---|"]
+    for row in rows:
+        name = f"`{row['id']}`" + (f" ({row['bot']})" if row["bot"] else "")
+        lines.append(f"| {name} | {row['where']} | {row['lanes']} | {_in_use(row)} "
+                     f"| {'⚫ off' if row['off'] else _open(row)} |")
+    claude = [r for r in rows if r["claude"]]
+    for label, picked in ((f"All {len(claude)} Claude accounts", claude),
+                          (f"All {len(rows)} subscriptions", rows)):
+        if not picked or (picked is rows and len(claude) == len(rows)):
+            continue
+        off = sum(1 for r in picked if r["off"])
+        lines.append(f"| **{label}**{f' ({off} off)' if off else ''} | "
+                     f"| **{sum(r['lanes'] for r in picked)}** "
+                     f"| **{sum(r['used'] + r['filled'] for r in picked)}** "
+                     f"| **{sum(_open(r) for r in picked)}** |")
+    return lines + ["", "**The limits on the lanes**", "", *lane_limits(ctx, state, live, rows)]
+
+
+def lane_limits(ctx: Context, state: dict[str, Any], live: dict[int, str],
+                rows: list[dict[str, Any]]) -> list[str]:
+    """What holds the lanes, as a list (`lanes_table`), each limit with how much of it is held."""
+    pool = ctx.cfg.pool
+    claude, github = [r for r in rows if r["claude"]], [r for r in rows if r["github"]]
+    runs = {BOT_NAME: sum(1 for p in live.values() if not pool.on_machine(p))}
+    for row in github:
+        if row["bot"]:
+            runs[row["bot"]] = runs.get(row["bot"], 0) + row["runs"]
+    held, on_github = sum(runs.values()), sum(r["lanes"] for r in github)
+    secrets = [name for name in providers_mod.SECRETS if name.startswith(CLAUDE_SECRET)]
+    named: dict[str, set[str]] = {}
+    for row in claude:
+        if row["secret"] in secrets:
+            named.setdefault(row["bot"] or BOT_NAME, set()).add(row["secret"])
+    free = [f"`{name}`" for name in secrets if not any(name in n for n in named.values())]
+    there = "Claude lanes" if all(r["claude"] for r in github) else "lanes there"
+    limits = [
+        "- **Each account:** its `lanes` in its bot's `providers.json`, 1 or more; the code sets "
+        "no top. Each lane is a run on a GitHub runner of its own, and its runs share the "
+        "account's usage: each reads it before it starts and watches it while it works, so "
+        "together they pass its cap by at most one reading each.",
+        f"- **Accounts:** the workflows hand over {len(secrets)} Claude secrets "
+        f"(`providers.SECRETS`), one an account: "
+        + ", ".join(f"{len(n)} {bot}'s" for bot, n in named.items())
+        + (f"; free: {', '.join(free)}." if free else
+           ", so none is free: another account needs a new secret there and in the workflows."),
+        f"- **At once:** GitHub's runners take {pool.max_parallel} of the bots' runs, planning "
+        f"runs too ({held} now: " + ", ".join(f"{n} {bot}'s" for bot, n in runs.items())
+        + f"), the organization's {HOSTED_RUNNERS} hosted jobs less the "
+        f"{HOSTED_RUNNERS - pool.max_parallel} kept for CI (#1455)."
+        + (f" So the {on_github} {there} never all run at once: past {pool.max_parallel}, a "
+           "lane lets work go to an account with room while others are capped or outside "
+           "their hours." if on_github > pool.max_parallel else "")]
+    if pool.plan_lanes:
+        planning = sum(1 for n in live
+                       if n and status_mod.record_of(state, n).get("action") == "plan")
+        limits.append(f"- **Planning:** the planning lane runs {pool.plan_lanes} plans at once "
+                      f"beside the accounts' own lanes ({planning} now), on those same runners.")
+    if pool.machine_parallel:
+        on_machine = sum(1 for p in live.values() if pool.on_machine(p))
+        limits.append(f"- **The AWS boxes:** {pool.machine_parallel} runs at once "
+                      f"({on_machine} now), apart from GitHub's runners.")
+    startable = sum(_open(r) for r in claude if r["startable"])
+    room = max(0, pool.max_parallel - held)
+    limits += [
+        "- **Usage and hours:** an open lane takes work only while its subscription is under "
+        "its caps and in its hours (🔋 Subscriptions); a capped account counts its planning run "
+        "in its own lanes.",
+        f"- **Now:** {startable} Claude {'lane is' if startable == 1 else 'lanes are'} open on "
+        f"accounts that may start work, and GitHub's runners have {room} free, so there is room "
+        f"for {min(startable, room)} more Claude {'run' if min(startable, room) == 1 else 'runs'}."]
+    return limits
 
 
 # ------------------------------------------------------------------ the subscriptions
@@ -1479,7 +1668,8 @@ def section(ctx: Context) -> str:
     view = look(ctx)
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
-    lines = [SECTION_START, f"## 🫧 {BOT_TITLE}", "",
+    # Its lanes first, for the night bot's lanes table, which lists every bot's (`marked_lanes`).
+    lines = [SECTION_START, lanes_mark(ctx, state, live, halted), f"## 🫧 {BOT_TITLE}", "",
              f"{'🛑 **Halted.** ' if halted else ''}_@{ctx.cfg.bot_login}, on its own Claude "
              f"account and GitHub's runners. `{SLASH} status` gives the same facts on demand._",
              "", headline(ctx, live, explained), "", "### What it is working on", ""]
@@ -1537,6 +1727,9 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     lines += fold("What each lane is doing, the runs going on a timeline, and every subscription",
                   (running + [""] if running else []) + timeline(ctx, state, live) + [""]
                   + lanes_boxes(ctx, state, live, explained.now))
+    lines += ["## 🛣️ Lanes", ""] + fold(
+        "How many lanes each subscription has, how many its runs hold and how many are open, "
+        "with the totals and the limits", lanes_table(ctx, state, live, extra, halted))
     people = waiting_for_people(issues)
     lines += ["## 📋 Queue", ""] + fold(
         "What each queued item waits for, in the order the planner takes them",
