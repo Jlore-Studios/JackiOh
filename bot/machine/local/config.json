@@ -3,7 +3,7 @@
   "image": "jackioh-pc-runner:latest",
   "serve": [
     { "label": "jackioh-selfplay-local", "workflows": ["learn.yml", "selfplay.yml"], "standby": true },
-    { "label": "jackioh-selfplay-local-gather", "workflows": ["gather.yml"], "ownSlot": true, "containerCpus": 2, "containerMemory": "3g" },
+    { "label": "jackioh-selfplay-local-gather", "workflows": ["gather.yml"], "ownSlot": true, "priority": true },
     { "label": "night-vm-muse", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-muse" },
     { "label": "night-vm-gpt", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-gpt", "seccompUnconfined": true },
     { "label": "night-vm-agy", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-agy" }
