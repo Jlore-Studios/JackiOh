@@ -68,7 +68,7 @@ cargo test -p jackioh-tools                    # the tools' own tests
 `describe(` whose title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on
 a call around it; or an SQL script's `\echo '### R<n>: … ###'` heading; every `r<n>` test token and
 every `R<n>` cited in `crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in
-`spec/` resolves; every note's `title` and `cards` are filled in; `spec/INDEX.md` is what
+`spec/` resolves; every note's `title` and `cards` are filled in, and every ruling, section and card its `cards` names exists (#2047); `spec/INDEX.md` is what
 `spec index` writes from the notes; and no code file under those three roots still says its ruling
 is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243). It reads ids, file
-names and test names, and of the wording only those two phrases.
+names, test names and the references in `cards`, and of the wording only those two phrases.
