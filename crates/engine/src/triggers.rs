@@ -1124,7 +1124,10 @@ fn offer_to_death_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Q
         let (entry_id, seq) = next_entry_id(sink.state, false, "w");
         let mut data = resume.data.clone();
         data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
-        data.insert("watcher".to_string(), Value::String(controller.as_str().to_string()));
+        data.insert(
+            "watcher".to_string(),
+            Value::String(controller.as_str().to_string()),
+        );
         let entry = QueuedTrigger {
             id: entry_id,
             seq,

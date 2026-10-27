@@ -16,9 +16,7 @@ use serde_json::json;
 
 use crate::catalog::{def_by_index, query, query_cost};
 use crate::combat::{SwitchPositionOptions, switch_position};
-use crate::config::{
-    CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_FIELD_SPELLS, CHAOS_STINKYSCAPE_COST,
-};
+use crate::config::{CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_FIELD_SPELLS, CHAOS_STINKYSCAPE_COST};
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::delayed_resume;
 use crate::prelude::json_as;
@@ -238,13 +236,7 @@ fn build_death_watch() -> Effect {
             );
             resume.instance_id = None;
             let player = ctx.controller;
-            crate::modifiers::add_death_watch(
-                ctx,
-                player,
-                Tag::Acclaimed,
-                resume,
-                CHAOS_DEATH_WATCH_LABEL,
-            );
+            crate::modifiers::add_death_watch(ctx, player, Tag::Acclaimed, resume, CHAOS_DEATH_WATCH_LABEL);
         })]
     })
 }
@@ -253,7 +245,9 @@ fn build_death_watch() -> Effect {
 fn build_golem() -> Effect {
     entry("golem", |_ctx| match def_id_at(GOLEM_INDEX) {
         None => vec![],
-        Some(def_id) => vec![crate::effects::summon::summon(json_as(json!({ "defId": def_id })))],
+        Some(def_id) => vec![crate::effects::summon::summon(json_as(
+            json!({ "defId": def_id }),
+        ))],
     })
 }
 

@@ -91,8 +91,13 @@ fn build_corvettes() -> Effect {
 /// 3. R1842000: the Drone Battleship, its three layers one pile in one unit zone, the Shield on top.
 fn build_battleship() -> Effect {
     entry("battleship", |_ctx| {
-        let def_ids: Vec<String> = BATTLESHIP_LAYERS.iter().filter_map(|index| def_id_at(index)).collect();
-        vec![crate::effects::summon::summon_pile(json_as(json!({ "defIds": def_ids })))]
+        let def_ids: Vec<String> = BATTLESHIP_LAYERS
+            .iter()
+            .filter_map(|index| def_id_at(index))
+            .collect();
+        vec![crate::effects::summon::summon_pile(json_as(
+            json!({ "defIds": def_ids }),
+        ))]
     })
 }
 
@@ -108,7 +113,10 @@ fn build_systems() -> Effect {
         let picked = match kept {
             Some(picked) => picked,
             None => {
-                let mut left: Vec<String> = SYSTEM_INDICES.iter().filter_map(|index| def_id_at(index)).collect();
+                let mut left: Vec<String> = SYSTEM_INDICES
+                    .iter()
+                    .filter_map(|index| def_id_at(index))
+                    .collect();
                 let mut picked = Vec::new();
                 for _ in 0..CHAOS_SCAPE_SYSTEMS {
                     if left.is_empty() {
