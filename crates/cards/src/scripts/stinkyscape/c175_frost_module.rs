@@ -64,7 +64,6 @@ mod tests {
     const FROST: &str = "stinkyscape-175";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     fn open() -> PreviewGuard {
         preview_sets(&[SetName::Stinkyscape])
