@@ -2239,3 +2239,21 @@ mod r1705005_a_lessons_human_seat_under_tutorial_human {
         assert!(!(forgot.errors.is_empty() && hash_state(&forgot.state) == hash_state(&live.state)));
     }
 }
+
+mod r1866002_starting_health_of {
+    use super::*;
+
+    #[test]
+    fn r1866002_starting_health_of_reads_each_seats_own_handicap_else_hero_health() {
+        let state = game("starting-health", Some(on_p2(AI_TUTORIAL)), None);
+        assert_eq!(query::starting_health_of(&state, PlayerId::P2), tutorial_health());
+        assert_eq!(query::starting_health_of(&state, PlayerId::P1), HERO_HEALTH);
+
+        // The health it started with, not the health it has: a hit moves neither answer.
+        let mut hit = state.clone();
+        hit.players.p2.hero.health -= 5;
+        hit.players.p1.hero.health -= 5;
+        assert_eq!(query::starting_health_of(&hit, PlayerId::P2), tutorial_health());
+        assert_eq!(query::starting_health_of(&hit, PlayerId::P1), HERO_HEALTH);
+    }
+}
