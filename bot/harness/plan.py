@@ -28,7 +28,7 @@ is forced, under its limits):
   hard item. When the builder's own subscription has a seat of that tier, the plan and the
   build share one run; otherwise the planning is a run of its own, and the item goes back to
   the queue to build from the plan. Such a planning run is short and starts before any long
-  run, so a planner plans Devin's next item before it builds one of its own.
+  run, so a planner plans a weak builder's next item before it builds one of its own.
 - **review** in the run: the run's own strongest seat of at least medium, in a fresh
   adversarial session; a weak builder's own model checks itself instead (findings only, never
   an approval), and the change goes to its final audit.
@@ -601,8 +601,8 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
     free = {provider.id for provider in providers}
 
     def builds(provider: Provider, seat: Seat) -> bool:
-        # A stand-in (`takes_over`, Sonnet for Devin) builds only an easy item, and only while
-        # the subscription it stands in for cannot take it (#317 part 9).
+        # A stand-in (`takes_over`, a Sonnet seat for a weak one) builds only an easy item, and only
+        # while the subscription it stands in for cannot take it (#317 part 9).
         if seat.takes_over and (difficulty != "easy" or seat.takes_over in free):
             return False
         if tier_at_least(seat.tier, floor):
@@ -769,7 +769,7 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     if candidate.kind == "build" and not plan_meets(candidate):
         # It has no plan its difficulty may build from (#317 part 6): the planning lane writes one
         # (the Needs plan stage), or a builder whose own seat meets the plan floor plans it first
-        # in its run. A builder that cannot plan (Devin) waits for the plan.
+        # in its run. A builder that cannot plan (a weak one) waits for the plan.
         builders = [p for p in builders if "plan" in p.roles
                     and pool.best_seat(p, floor) is not None]
     if candidate.kind == "revise" and (not candidate.bot_pr or candidate.conflict):
@@ -819,7 +819,7 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
                                          KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty),
                                          c.queued_at, c.number))
     # The Needs plan stage first: a planner on the planning lane, which takes no build lane,
-    # plans the items a builder that cannot plan (Devin) waits on before the rest, then the
+    # plans the items a builder that cannot plan (a weak one) waits on before the rest, then the
     # fullsend parts a medium subscription (Muse) builds from their plans, each by a model that
     # meets its plan floor (medium for an easy, medium or unrated item, strong for a hard one).
     planning: list[tuple[Candidate, Assignment]] = []

@@ -19,7 +19,7 @@
 # A box keeps only the runners it is given: one past its count (or every one, at `id=0`) is
 # unregistered and its service removed, unless it holds a job, which a run once it ends removes.
 #
-#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill
+#   bot/machine/register-runners.sh OWNER/REPO gpt agy muse=1 muse:fill
 #   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=3
 #
 # `id:fill` is a subscription's fill-in runners (providers.json `fill_in`): labelled with the

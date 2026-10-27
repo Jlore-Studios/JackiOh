@@ -54,6 +54,8 @@ struct HandRiders {
     memory: Option<IndexMap<String, Value>>,
     /// R1848003: an X-cost card reaches the hand with its X set at this.
     fixed_x: Option<i32>,
+    /// R1878003: the card is given these keywords as it reaches the hand.
+    keywords: Option<Vec<Keyword>>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -115,6 +117,12 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
         && n > 0
     {
         card.granted_keywords.push(Keyword::Lucky { n });
+    }
+    // R1878003: "It gains Starship Piece" — given in the hand as Lucky is, it is the card's from there
+    // on: R78's reset takes a granted keyword off only as the card leaves the field, so it rides the
+    // card onto the field, where the layers read it (§10.4).
+    for keyword in riders.keywords.iter().flatten() {
+        card.granted_keywords.push(keyword.clone());
     }
 }
 
@@ -256,6 +264,7 @@ impl AddToHandArgs {
             lucky: self.lucky,
             memory: self.memory.clone(),
             fixed_x: self.fixed_x,
+            keywords: None,
         }
     }
 }
@@ -356,6 +365,10 @@ pub struct AddRandomFromCatalogArgs {
     /// R1438: give each card added Lucky X once it is in the hand (Meditative #101 Gachaholic).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lucky: Option<i32>,
+    /// R1878003: give each card added these keywords once it is in the hand (Stinkyscape #130's "It
+    /// gains Starship Piece").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -375,6 +388,7 @@ impl AddRandomFromCatalogArgs {
             lucky: self.lucky,
             memory: None,
             fixed_x: None,
+            keywords: self.keywords.clone(),
         }
     }
 }
