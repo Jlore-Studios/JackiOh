@@ -110,8 +110,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     ])
 });
 
-pub static HIDDEN_TRADE_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| {
+pub static HIDDEN_TRADE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         SNEAK.clone(),
         TRADER.clone(),

@@ -608,9 +608,9 @@ mod r1845002_a_trade_offer {
 mod r1877001_a_lucky_trade_offer {
     use super::*;
 
-    /// The cost of a fixture hand card by its definition.
+    /// R65's cost of a hand card, as the offer compares them.
     fn cost_of(s: &Scenario, id: &str) -> i32 {
-        registered_catalog()[&s.card(id).def_id].cost
+        jackioh_engine::mana::effective_cost(s.state(), s.card(id), Default::default())
     }
 
     /// The offer `trader` makes on `seed`: p1 gives its plain card, and the opponent's Discover opens
@@ -644,7 +644,12 @@ mod r1877001_a_lucky_trade_offer {
             json!({ "hand": [DUD.id, plain.id] }),
         );
         s.play(TRADER.id.as_str(), json!({ "zone": 2 }));
-        assert!(!s.state().delayed[0].resume.data.contains_key(TRADE_OFFER_LUCKY_KEY));
+        assert!(
+            !s.state().delayed[0]
+                .resume
+                .data
+                .contains_key(TRADE_OFFER_LUCKY_KEY)
+        );
 
         let mut s = board(
             "r1877001-lucky",

@@ -190,8 +190,19 @@ fn give(ctx: &mut EffectContext<'_>) {
     let cheapest = |set: &[usize]| set.iter().map(|&i| costs[i]).min().unwrap_or(0);
     let offered = ctx.rng.lucky(
         lucky,
-        |rng| rng.shuffle(&indices).into_iter().take(shown).collect::<Vec<usize>>(),
-        |best, next| if cheapest(&next) > cheapest(&best) { next } else { best },
+        |rng| {
+            rng.shuffle(&indices)
+                .into_iter()
+                .take(shown)
+                .collect::<Vec<usize>>()
+        },
+        |best, next| {
+            if cheapest(&next) > cheapest(&best) {
+                next
+            } else {
+                best
+            }
+        },
     );
     let options: Vec<PromptOption> = offered
         .iter()
