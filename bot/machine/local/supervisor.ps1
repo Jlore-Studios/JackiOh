@@ -19,7 +19,10 @@
   An `ownSlot` label (jackioh-selfplay-local-gather, gather.yml) is outside maxJobs: it gets one
   runner of its own while a job is queued for it, whatever the other labels' runners hold, and
   keeps no standby. An entry's own `containerCpus` and `containerMemory` size its containers in
-  place of the global ones.
+  place of the global ones. A `priority` entry's runner (gather's, #2134) comes before the others'
+  in the Docker VM: it takes the CPU ahead of them while both want it, and under the VM's memory
+  pressure the kernel kills their job processes first (Start-Runner). The throttle below still
+  holds every runner alike, so each gives way to the owner's own programs.
   An idle runner no label wants any more is retired after a minute. When it is not calm, every
   idle runner is retired at once, and a runner in the middle of a job is throttled to
   throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
@@ -265,6 +268,16 @@ function Start-Runner([string]$label, [string]$why) {
   # Codex sandboxes its commands with bubblewrap, which needs the user namespaces Docker's default
   # seccomp profile refuses.
   if ($entry.seccompUnconfined) { $argv += @('--security-opt', 'seccomp=unconfined') }
+  # A priority runner's cgroup weighs eight times another's, so while both want the VM's CPUs it
+  # gets its own first and the other the rest; alone, either has all of its --cpus. The runner
+  # writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
+  # actions/runner's ProcessInvoker). The kernel kills the process with the highest score, its share
+  # of the VM's memory in thousandths plus that value: 1000 for the rest puts any training step
+  # above a priority step's 200 (at most 200 plus its own 6 GB's share), so when the VM runs out of
+  # memory a training step goes first; the owner's own containers (0) score below either at the
+  # same size. Gather takes the global size: its build of jackioh-server outgrew 3 GB (#2134).
+  if ($entry.priority) { $argv += @('--cpu-shares', '8192', '-e', 'PIPELINE_JOB_OOMSCOREADJ=200') }
+  else { $argv += @('-e', 'PIPELINE_JOB_OOMSCOREADJ=1000') }
   $r = Run 'docker' ($argv + @($cfg.image))
   Remove-Item -Force $envFile -ErrorAction SilentlyContinue
   if ($r.Code -ne 0) {
