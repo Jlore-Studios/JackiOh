@@ -23,6 +23,7 @@ import {
 } from "./constants.ts";
 import { Glossary } from "./Glossary.tsx";
 import { Printed } from "./Printed.tsx";
+import { TermTips } from "../TermTip.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
 import {
@@ -341,10 +342,13 @@ export function CardListSheet({
           </ul>
         ) : (
           <div className="inspect-list-detail" data-testid={INSPECT_LIST_DETAIL}>
-            <div className="inspect-face inspect-face--list" data-testid={INSPECT_FACE}>
-              <CardFace face={opened} layout="full" />
-            </div>
-            <Printed face={opened} />
+            {/* R2098000: a pile's dialog allows controls, so the opened face's terms are tab stops that show their rule. */}
+            <TermTips focusable>
+              <div className="inspect-face inspect-face--list" data-testid={INSPECT_FACE}>
+                <CardFace face={opened} layout="full" />
+              </div>
+              <Printed face={opened} />
+            </TermTips>
             <Glossary entries={glossaryFor(opened)} />
           </div>
         )}

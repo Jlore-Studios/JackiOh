@@ -6,6 +6,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import type { FaceModel } from "../model.ts";
+import { startsOnTermTip } from "../TermTip.tsx";
 import { readCardSettings, useCardSettings } from "../settings.ts";
 // The settings panel's "Hover previews" switch also gates the preview (with `hoverPreviews`).
 import { readSettings as readPanelSettings, useSetting as usePanelSetting } from "../../settings/store.ts";
@@ -192,6 +193,9 @@ export function useInspectTrigger(
         clearPress();
         const holds = event.pointerType === "touch" || (opts.holdAnyPointer === true && event.button === 0);
         if (!holds || opts.longPress === false) return;
+        // R2098000: a press that starts on a glossary term showing its rule is that term's long press
+        // (cards/TermTip.tsx), never the card's sheet, callback or hold preview.
+        if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;
         press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };

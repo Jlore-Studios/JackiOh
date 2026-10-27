@@ -15,6 +15,7 @@ export type { RefMatch } from "./refs.ts";
 export { CardDefsProvider, RefsInteractive, useDefResolver } from "./refContext.tsx";
 export type { DefResolver } from "./refContext.tsx";
 export { CardRef, REF_TOOLTIP_TESTID } from "./CardRef.tsx";
+export { TERM_TOOLTIP_TESTID, TermTips } from "./TermTip.tsx";
 export { RulesText } from "./RulesText.tsx";
 
 // What a face in play prints where play and print part ways (SPEC §10.10).
