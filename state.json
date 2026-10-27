@@ -4165,19 +4165,30 @@
     "2056": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T02:55:18Z",
       "issue": 2034,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The crowd director still schedules filtered-noise patrons and reactions on a suspended or interrupted context, including while the page is hidden and in the window after it returns but before the tap, so they pile up at the frozen currentTime and all play at once on resume. That breaks \u00a710.11 Autoplay and the issue's acceptance that nothing scheduled while the page was hidden plays as a backlog, and it is a likely source of the reported 'harsh crackle'.",
+          "evidence": "connect() checks `output.context.state !== \"running\"` only once. After that, schedulePatron loops on window.setTimeout every CROWD_FEEL.patronMinMs\u2013patronMaxMs (6\u201315 s) and calls patron(), which runs source.start() and stop(context.currentTime + length) without checking context state or visibility. observe() \u2192 reaction() does the same for every `damage` and slam event useGameAudio.ts:73/76 forwards, with roar gain 0.42. spec/10-engine-guide.md \u00a710.11 Autoplay: 'Nothing is scheduled while the context is suspended \u2026 a cue asked for then is dropped, never saved up to play all at once when it resumes.' The plan put crowd.ts out of bounds, and the PR claims \u00a710.11 conformance without covering it. No test covers the crowd under hide or suspend.",
+          "severity": "blocking",
+          "where": "apps/web/src/audio/crowd.ts:142"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-10-27T06:51:42Z",
+      "queued_at": "2026-10-27T08:10:08Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40470539154",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-27T07:59:57Z",
       "stop_requested": false,
       "taken_asks": [],
