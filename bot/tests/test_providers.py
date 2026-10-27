@@ -692,15 +692,16 @@ class MatchingTests(unittest.TestCase):
                          (3, "muse", "build"))
         gh.runs["2"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
-        # The lanes fill in tier order (#695): Muse holds #3 on one of its two lanes (#1273),
-        # so it takes the next one too, then agy, then Codex, then the Sonnet seats in usage
+        # The lanes fill in tier order (#695): Muse holds #3 on one of its four lanes (#1273),
+        # so it takes the next three too, then agy, then Codex, then the Sonnet seats in usage
         # order.
-        gh.add_issue(6, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (6, "muse", "build"))
-        gh.runs["3"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 6).update(run_id="3"))
+        for number, run in ((6, "3"), (15, "15"), (16, "16")):
+            gh.add_issue(number, labels=(LABEL_BUILD,))
+            planned = plan_mod.make(ctx)
+            self.assertEqual((planned["number"], planned["provider"], planned["action"]),
+                             (number, "muse", "build"))
+            gh.runs[run] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=number, r=run: state_item(s, n).update(run_id=r))
         gh.add_issue(5, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
         # Muse's lanes are held: agy takes the next one.
@@ -788,11 +789,11 @@ class MatchingTests(unittest.TestCase):
 
     def test_each_subscription_takes_as_many_items_as_its_lanes(self):
         gh = FakeGitHub()
-        for n in (3, 4, 5, 6, 7, 8, 9):
+        for n in (3, 4, 5, 6, 7, 8, 9, 10, 11):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         ctx = ctx_for(gh, at=DAY)
         taken = []
-        for _ in range(7):
+        for _ in range(9):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -800,14 +801,14 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"], r=str(len(taken)): state_item(
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
-        # Muse, first of the medium models, takes two items on its two lanes (#1273) before
+        # Muse, first of the medium models, takes four items on its four lanes (#1273) before
         # agy, next in the tier order, and then gpt.
-        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "agy"), (6, "gpt")])
+        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "muse"), (6, "muse"), (7, "agy"),
+                                 (8, "gpt")])
         # By day the Claude accounts are closed, and each machine subscription holds its lane.
         self.assertIn("`muse` is busy", planned["reason"])
-        # Each claim with work and a lane left started the next run: Muse's first and second,
-        # and agy's.
-        self.assertEqual(len(gh.dispatches), 3)
+        # Each claim with work and a lane left started the next run: Muse's four and agy's.
+        self.assertEqual(len(gh.dispatches), 5)
 
     def test_with_the_machine_subscriptions_full_github_takes_the_claude_accounts(self):
         """Each machine subscription holds as many runs as its lanes (#695; Muse's are two,
@@ -833,12 +834,13 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(again["action"], "none")
         self.assertIn("`claude-2` is busy", again["reason"])
 
-    def test_muse_works_two_items_at_once(self):
-        """#1273: `lanes: 2`, under its one login, both on the Muse box now. With gpt and agy
-        at work (so no lane of theirs to fill, `fill_in`), a third item waits on its lanes, and a
-        planning run counts in them, as on any capped subscription (`plan.Lanes.full`)."""
+    def test_muse_works_four_items_at_once(self):
+        """#1273: `lanes: 4`, under its one login: one runner on the night box and three on the
+        Muse box. With gpt and agy at work (so no lane of theirs to fill, `fill_in`), a fifth item
+        waits on its lanes, and a planning run counts in them, as on any capped subscription
+        (`plan.Lanes.full`)."""
         gh = FakeGitHub()
-        items = (3, 4, 5)
+        items = (3, 4, 5, 6, 7)
         for n in items:
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:medium"))
         ctx = ctx_for(gh, at=DAY, env=secrets(), machine=MACHINE)
@@ -850,9 +852,9 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
                                     for n in items])
         muse = ctx.cfg.pool.get("muse")
-        self.assertEqual(muse.lanes, 2)
+        self.assertEqual(muse.lanes, 4)
         taken = []
-        for _ in range(3):
+        for _ in range(5):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -860,12 +862,13 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(3, "muse"), (4, "muse")])
+        self.assertEqual(taken, [(n, "muse") for n in items[:4]])
         self.assertIn("`muse` is busy", planned["reason"])
-        one = plan_mod.Lanes(11, machine_limit=6, machine=frozenset({"muse"})).with_run(
-            3, "muse", "build")
-        self.assertFalse(one.full(muse))
-        self.assertTrue(one.with_run(4, "muse", "plan").full(muse))
+        three = plan_mod.Lanes(11, machine_limit=6, machine=frozenset({"muse"}))
+        for n in (3, 4, 5):
+            three = three.with_run(n, "muse", "build")
+        self.assertFalse(three.full(muse))
+        self.assertTrue(three.with_run(6, "muse", "plan").full(muse))
 
     def test_devin_can_fill_the_machine(self):
         """`lanes: 6`: Devin takes more items while it holds some (six runners carry its
