@@ -461,7 +461,7 @@ Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 f
 | 72 | Reminisce | 1 | Discover from the GY including spell tokens (R50); chosen card −1 (radiant 0); exiled; empty GY → nothing |
 | 73 | Anti-oneshot Armor | 2 | A 12 hit becomes 5 (radiant 3), per instance, hero only; Cry draws 1 (radiant 2) |
 | 74 | Adaptive UI | 1 | X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token (R353); radiant 4 / 6 / 4 / 6-6; X=0 refused, and no X offered with no mana (R348) |
-| 75 | Infinite Reserves | 2 | Empty-library draw yields a Rush Token card and no fatigue damage; radiant Cry draws 3 |
+| 75 | Infinite Reserves | 2 | Empty-library draw yields a Rush Token card and no fatigue damage; Cry draws 1 (radiant 3) |
 | 76 | Field of Dreams | 2 | Costs (2) (patch v0.3.13); hand of N → N Reminisce, old cards in GY (R31); exiled; radiant gives radiant Reminisce |
 | 77 | Professor Curvature | 2 | Next turn only: cards whose current cost is 4 or more −1 (radiant −2); not this turn; expires (R48, R363) |
 | 78 | /fullsend | 2 | Refresh 3, never past max (R364); −1 cost this turn; hand exiled at end of turn; radiant also each play draws 1 |
