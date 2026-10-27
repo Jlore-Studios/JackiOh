@@ -79,8 +79,12 @@ struct OfferEntry {
     leans: IndexMap<DuosSeat, Option<LeanPick>>,
     /// `now` of the latest offer; the sweep reads this.
     at: i64,
-    /// The game both seats' offers made, once made.
+    /// The game both seats' offers made, once made — and only once made, so no offer ever reads
+    /// an id for a game whose create then fails.
     match_id: Option<String>,
+    /// Whether one offer's create is still in flight: a second offer landing meanwhile waits for
+    /// it instead of minting a second game.
+    creating: bool,
     /// Which entry this is: a swept-and-remade entry must not be mistaken for it after a failed create.
     generation: u64,
 }
@@ -183,71 +187,135 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(DuosM
 
 /// Records the offer and, once both seats have offered, makes the new co-op match outside the lock.
 /// One new game per pair of offers: the check and the claim run under one lock, so two offers
-/// landing together cannot mint two games; a failed create clears the claim, so the seats re-offer.
+/// landing together cannot mint two games. The created id is published only after the create
+/// succeeds: an offer landing while another's create is still in flight waits for it (yielding, so
+/// the create progresses) and then answers the same id, instead of reading a game that may never
+/// exist. A failed create clears the claim, so the seats re-offer.
 async fn offer_as(
     app: &Arc<App>,
     match_row: &DuosMatch,
     seat: DuosSeat,
     lean: Option<LeanPick>,
 ) -> Result<Option<String>, ApiError> {
-    // The claim: the minted game, or none while the pair is incomplete.
-    let claimed = {
-        let mut map = offers(app);
-        let now = now_ms();
-        if live_entry(&mut map, &match_row.id, now).is_none() {
-            let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
-            map.insert(
-                match_row.id.clone(),
-                OfferEntry {
-                    offers: IndexSet::new(),
-                    leans: IndexMap::new(),
-                    at: now,
-                    match_id: None,
-                    generation,
-                },
-            );
-        }
-        let Some(entry) = map.get_mut(&match_row.id) else {
-            return Err(ApiError::internal(
-                "the play again offer vanished while it was being written",
-            ));
-        };
-        entry.at = now;
-        entry.offers.insert(seat);
-        entry.leans.insert(seat, lean);
-        if entry.match_id.is_some() {
-            None
-        } else if entry.offers.contains(&seat.teammate()) {
-            let id = new_uuid();
-            entry.match_id = Some(id.clone());
-            let lean_of = |at: DuosSeat| entry.leans.get(&at).copied().flatten();
-            Some((
-                id,
-                entry.generation,
-                (lean_of(DuosSeat::A1), lean_of(DuosSeat::A2)),
-            ))
-        } else {
-            None
-        }
-    };
-
-    let Some((new_id, generation, leans)) = claimed else {
-        // The pair is incomplete, or another offer already made the game: answer what the entry
-        // holds. A re-offer after the game was made learns its id here.
-        return Ok(offers(app)
-            .get(&match_row.id)
-            .and_then(|entry| entry.match_id.clone()));
-    };
-    if let Err(error) = create_again(app, match_row, leans, &new_id).await {
-        let mut map = offers(app);
-        if let Some(entry) = map.get_mut(&match_row.id)
-            && entry.generation == generation
-        {
-            entry.match_id = None;
-        }
-        return Err(error);
+    enum Claim {
+        /// Answer now: the pair is incomplete, or the game is already made.
+        Done(Option<String>),
+        /// This offer makes the game.
+        Make {
+            id: String,
+            generation: u64,
+            leans: (Option<LeanPick>, Option<LeanPick>),
+        },
+        /// Another offer's create is still in flight: let it finish, then read what it made.
+        Wait,
     }
-    Ok(Some(new_id))
+
+    loop {
+        // The claim: the created game, the decision to create it, or a concurrent create to wait for.
+        let claim = {
+            let mut map = offers(app);
+            let now = now_ms();
+            if live_entry(&mut map, &match_row.id, now).is_none() {
+                let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
+                map.insert(
+                    match_row.id.clone(),
+                    OfferEntry {
+                        offers: IndexSet::new(),
+                        leans: IndexMap::new(),
+                        at: now,
+                        match_id: None,
+                        creating: false,
+                        generation,
+                    },
+                );
+            }
+            let Some(entry) = map.get_mut(&match_row.id) else {
+                return Err(ApiError::internal(
+                    "the play again offer vanished while it was being written",
+                ));
+            };
+            entry.at = now;
+            entry.offers.insert(seat);
+            entry.leans.insert(seat, lean);
+            if let Some(created) = entry.match_id.clone() {
+                Claim::Done(Some(created))
+            } else if entry.offers.contains(&seat.teammate()) {
+                if entry.creating {
+                    Claim::Wait
+                } else {
+                    let id = new_uuid();
+                    entry.creating = true;
+                    let lean_of = |at: DuosSeat| entry.leans.get(&at).copied().flatten();
+                    Claim::Make {
+                        id,
+                        generation: entry.generation,
+                        leans: (lean_of(DuosSeat::A1), lean_of(DuosSeat::A2)),
+                    }
+                }
+            } else {
+                Claim::Done(None)
+            }
+        };
+
+        match claim {
+            Claim::Done(created) => {
+                // The pair is incomplete, or another offer already made the game: answer what the
+                // entry holds. A re-offer after the game was made learns its id here.
+                return Ok(created);
+            }
+            // The lock is never held across the create, so yielding lets it progress.
+            Claim::Wait => {
+                tokio::task::yield_now().await;
+            }
+            Claim::Make {
+                id,
+                generation,
+                leans,
+            } => {
+                if let Err(error) = create_again(app, match_row, leans, &id).await {
+                    let mut map = offers(app);
+                    if let Some(entry) = map.get_mut(&match_row.id)
+                        && entry.generation == generation
+                    {
+                        entry.match_id = None;
+                        entry.creating = false;
+                    }
+                    return Err(error);
+                }
+                {
+                    let mut map = offers(app);
+                    match map.get_mut(&match_row.id) {
+                        Some(entry) if entry.generation == generation => {
+                            entry.match_id = Some(id.clone());
+                            entry.creating = false;
+                        }
+                        // A sweep won a race at the window's edge while the create was in flight:
+                        // keep the made game discoverable under a fresh answered entry.
+                        _ => {
+                            let mut made = IndexSet::new();
+                            made.insert(DuosSeat::A1);
+                            made.insert(DuosSeat::A2);
+                            let mut made_leans = IndexMap::new();
+                            made_leans.insert(DuosSeat::A1, leans.0);
+                            made_leans.insert(DuosSeat::A2, leans.1);
+                            map.insert(
+                                match_row.id.clone(),
+                                OfferEntry {
+                                    offers: made,
+                                    leans: made_leans,
+                                    at: now_ms(),
+                                    match_id: Some(id.clone()),
+                                    creating: false,
+                                    generation: NEXT_GENERATION.fetch_add(1, Ordering::Relaxed),
+                                },
+                            );
+                        }
+                    }
+                }
+                return Ok(Some(id));
+            }
+        }
+    }
 }
 
 /// Makes the new co-op match both seats offered: the same `a1` and `a2` (the host stays a1) and the
