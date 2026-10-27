@@ -4445,7 +4445,25 @@
       "feedback_since": "2026-10-27T14:15:05Z",
       "issue": 2048,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40519337564",
+            "tier": "medium"
+          }
+        ],
+        "sha": "144794e5a4cc65b8cd752fdfcb60bee9f22e3fb3",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
