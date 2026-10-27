@@ -473,6 +473,10 @@ pub struct CatalogQueryArgs {
     /// keeps to them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub every_set: Option<bool>,
+    /// R1859005: `true` asks for the cards the catalog marks `dealsDamage` only (R1748001), `false`
+    /// forbids them (Stinkyscape #136 Magic Module's "a random Spell that deals damage").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deals_damage: Option<bool>,
     /// R1878000: prints every one of these keywords on its base face, as `stats` reads the base face
     /// (R1080): Stinkyscape #124's "a random Starship Piece". A keyword a card gains in play (granted,
     /// lent by its Embiggened version or by an aura) is not printed, so no pool reads it.
@@ -516,6 +520,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             busted: None,
             complicated: None,
             every_set: None,
+            deals_damage: None,
             keywords: None,
         }
     }
@@ -675,6 +680,11 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.complicated
         && is_complicated(&def.id) != wanted
+    {
+        return false;
+    }
+    if let Some(wanted) = args.deals_damage
+        && (def.deals_damage == Some(true)) != wanted
     {
         return false;
     }

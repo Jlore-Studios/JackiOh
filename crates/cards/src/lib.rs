@@ -245,6 +245,78 @@ pub(crate) fn stand_in_backrow(s: &mut jackioh_engine::testkit::Scenario, id: &s
     ));
 }
 
+/// R1852000 (Stinkyscape's Starship cards, #1859): p1's main phase with p1's Dormant Starship built
+/// from `pieces` — field entries of p1's (`{ "def", "lane", "radiant" }`), each destroyed by a Core
+/// #16 Hit Job in the order given, so each fuses its copy into the Starship in that order — and p1's
+/// mana as it was before the Hit Jobs. `p1` and `p2` go over each side's defaults, p1's `hand` and
+/// `field` beside the Hit Jobs and the pieces; no turn ends by itself. Returns the scenario and the
+/// Dormant Starship's id.
+#[cfg(test)]
+pub(crate) fn built_starship(
+    seed: &str,
+    pieces: serde_json::Value,
+    p1: serde_json::Value,
+    p2: serde_json::Value,
+) -> (jackioh_engine::testkit::Scenario, String) {
+    use jackioh_engine::testkit::{PlayerId, json, pick};
+    const HIT_JOB: &str = "core-016";
+    const HIT_JOB_COST: i32 = 3;
+    let pieces: Vec<serde_json::Value> = pieces.as_array().cloned().unwrap_or_default();
+    let listed = |side: &serde_json::Value, key: &str| -> Vec<serde_json::Value> {
+        side.get(key)
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+    };
+    let mut hand = vec![json!(HIT_JOB); pieces.len()];
+    hand.extend(listed(&p1, "hand"));
+    let mut field = pieces.clone();
+    field.extend(listed(&p1, "field"));
+    let mut p1 = merged(json!({ "library": filler(4), "mana": 10 }), p1);
+    p1["hand"] = json!(hand);
+    p1["field"] = json!(field);
+    let mut s = scenario(json!({
+        "seed": seed,
+        "active": "p1",
+        "p1": p1,
+        "p2": merged(json!({ "hand": filler(1), "library": filler(4) }), p2),
+    }));
+    for player in [PlayerId::P1, PlayerId::P2] {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    let mana = s.state().players.p1.mana.current;
+    let lanes: Vec<i32> = pieces
+        .iter()
+        .map(|piece| {
+            piece["lane"]
+                .as_i64()
+                .and_then(|lane| i32::try_from(lane).ok())
+                .expect("a piece names its lane")
+        })
+        .collect();
+    for lane in lanes {
+        s.state_mut().players.p1.mana.current = mana.max(HIT_JOB_COST);
+        let targets = pick::unit_at(&s, PlayerId::P1, lane);
+        s.play(HIT_JOB, json!({ "targets": targets }));
+    }
+    s.state_mut().players.p1.mana.current = mana;
+    let ship = jackioh_engine::prelude::dormant_starship_of(s.state(), PlayerId::P1)
+        .expect("the pieces built p1 a Dormant Starship")
+        .id
+        .clone();
+    (s, ship)
+}
+
+/// R1852003: p1 launches the Dormant Starship `ship` by its Activate, at its price.
+#[cfg(test)]
+pub(crate) fn launch_starship(s: &mut jackioh_engine::testkit::Scenario, ship: &str) {
+    use jackioh_engine::testkit::json;
+    s.activate(
+        ship,
+        json!({ "ability": jackioh_engine::prelude::STARSHIP_LAUNCH_ABILITY }),
+    );
+}
+
 /// R1081000: give the card `id` Flying (`grantedKeywords`), so that in hand it may be played into an
 /// open backrow zone.
 #[cfg(test)]

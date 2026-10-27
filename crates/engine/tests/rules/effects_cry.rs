@@ -366,3 +366,71 @@ mod e13_trigger_a_cry {
         assert_eq!(pile.first().map(|card| card.id.clone()), Some(unit.id.clone()));
     }
 }
+
+// R1869001 (Stinkyscape #71 A'Zoth): `trigger_cry` with `random` asks the controller nothing; each of
+// their choices is drawn from the match rng, as R1855001's are.
+mod r1869001_a_random_trigger {
+    use super::*;
+
+    /// `trigger_cry` with `random` on `card`, for p1, its rng cursor written back as `rewind_on`'s is.
+    fn random_trigger(state: &mut GameState, card: &CardInstance) -> Vec<String> {
+        let mut sink = sink_for(state);
+        {
+            let mut inner = sink.sink();
+            let mut ctx = make_context(
+                &mut inner,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (trigger_cry(json_as(json!({ "instanceId": card.id, "random": true }))).apply)(&mut ctx);
+        }
+        settle(&mut sink.sink(), Default::default());
+        let cursor = sink.rng.cursor();
+        let events = std::mem::take(&mut sink.events);
+        state.rng_cursor = cursor;
+        event_types(&events)
+    }
+
+    /// p1's aimer (Cry: 3 to an enemy Unit or hero) in unit zone 1, p2's plain in unit zone 3.
+    fn aiming(seed: &str) -> (GameState, CardInstance, CardInstance) {
+        let mut state = board(seed);
+        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1), json!({}));
+        let enemy = put(&mut state, &plain.id, slot(P2, Units, 3), json!({}));
+        (state, unit, enemy)
+    }
+
+    #[test]
+    fn r1869001_a_random_trigger_of_aimers_cry_asks_nothing_and_hits_one_target() {
+        let (mut state, unit, enemy) = aiming("cry-random");
+        random_trigger(&mut state, &unit);
+        assert!(state.pending.is_none(), "nothing is asked");
+        let hero_hit = state.players.p2.hero.health == HERO_HEALTH - 3;
+        // The plain dies of the 3, which takes its damage off with it (R78).
+        let unit_hit = live(&state, &enemy).zone.z() == ZoneName::Graveyard;
+        assert!(hero_hit != unit_hit, "exactly one of the two took the 3");
+    }
+
+    #[test]
+    fn r1869001_the_same_seed_draws_the_same_target() {
+        let (state, unit, _) = aiming("cry-random-replay");
+        let run = |mut copy: GameState| {
+            random_trigger(&mut copy, &unit);
+            hash_state(&copy)
+        };
+        assert_eq!(run(round_trip(&state)), run(round_trip(&state)));
+    }
+
+    #[test]
+    fn r1869001_a_random_trigger_draws_the_crys_mode_too() {
+        let mut state = board("cry-random-mode");
+        let unit = put(&mut state, &moder().id, slot(P1, Units, 1), json!({}));
+        random_trigger(&mut state, &unit);
+        assert!(state.pending.is_none(), "nothing is asked");
+        let hit = state.players.p2.hero.health == HERO_HEALTH - 4;
+        let healed = state.players.p1.hero.health == HERO_HEALTH + 4;
+        assert!(hit != healed, "one mode ran");
+    }
+}

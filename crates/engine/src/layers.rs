@@ -12,7 +12,7 @@ use crate::config::{
     RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
 };
 use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
-use crate::state::{CardInstance, GameState, Position};
+use crate::state::{CardInstance, GameState, ModifierKind, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
     AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone,
@@ -192,6 +192,28 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
         return false;
     };
     unit_top(state, player, lane).map(|top| top.id.as_str()) != Some(instance.id.as_str())
+}
+
+/// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
+/// a Unit of theirs on the field, in a unit zone or standing in the backrow (R1081000) — never a
+/// Vanilla one, unlike an aura's grant (the War Doctrines' rows of §8.10), nor one Dormant or buried
+/// under a Stack pile, which no effect reaches (R13, R1839000).
+fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
+    if instance.vanilla
+        || is_dormant(state, instance)
+        || crate::slumber::is_slumbering(instance)
+        || !crate::zones::in_units_row_or_standing(state, instance)
+    {
+        return Vec::new();
+    }
+    state.players[instance.controller]
+        .mods
+        .iter()
+        .filter_map(|modifier| match &modifier.kind {
+            ModifierKind::UnitsHaveKeyword { keyword } => Some(keyword.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
@@ -498,6 +520,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
+    listed.extend(lent_by_player(state, instance));
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).

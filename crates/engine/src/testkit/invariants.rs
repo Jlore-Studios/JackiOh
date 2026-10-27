@@ -33,7 +33,14 @@
 //!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
 //!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` on the turn it entered is
 //!     readied too (R1839002: a Dormant Starship summoned and launched in one turn, fuzz seed 2), and
-//!     `slumber::awaken_card` leaves it with no `summonedTurn`.
+//!     `slumber::awaken_card` leaves it with no `summonedTurn`;
+//!   - `kill_credits`, the fresh exertion a kill gives without a transform (B5 E35's `mayAttackAgain`,
+//!     Stinkyscape #94 Tmack Trav, R1869002): an attacker that destroyed the Unit its attack targeted,
+//!     declared or forced, and whose running text answers its attacks (`afterAttack`, the only text that
+//!     can ready it) may declare its attacks of a turn again from there, in that stint that turn, and its
+//!     stint is `readied`. The state settles the bound where it can: a kill whose attacker the action
+//!     leaves on the field with its attack spent, its killing attack its last, readied nothing, and its
+//!     credit is taken back.
 //!
 //! The nine checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
@@ -44,11 +51,12 @@
 //!      seen on a state between actions, or gained inside the action, granted (`keywordGranted`) or
 //!      Buffed (`upgraded`, R386), or carried onto the field by an entry inside the action, as the
 //!      card was before the action or as the action left it (the autopilot's turn, R1183002).
-//!      A unit that re-entered may attack again within its keywords (R83, R171); forced attacks are not
-//!      declarations and are skipped (R53).
+//!      A unit that re-entered may attack again within its keywords (R83, R171), and a kill credit's fresh
+//!      exertion counts its attacks again from the ones declared at the kill (R1869002); forced attacks
+//!      are not declarations and are skipped (R53).
 //!   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
 //!   I4 the bookkeeping matches the shadow (white-box R171): (a) `summonedTurn` is the turn of the
-//!      latest entry, or absent on a `readied` stint (R424, R1839002); (b) a spent attack exertion
+//!      latest entry, or absent on a `readied` stint (R424, R1839002, R1869002); (b) a spent attack exertion
 //!      belongs to the current stint, so an exertion left spent across an entry trips it.
 //!   I5 nothing happens after the game is over (§2.5, R216): `gameOver` is the last event an action
 //!      emits. Added in the hunt's fourth round, whose engine-invariants lens found the rest of an
@@ -1410,12 +1418,25 @@ struct AttackMark {
     count: i32,
 }
 
-/// R424: the latest declared attack, and whether its attacker destroyed its target (R42).
+/// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
+/// many attacks it had declared there then (none once a settling took it back), `before` the credit it
+/// held there before it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct KillCredit {
+    turn: i32,
+    stint: i32,
+    at: Option<i32>,
+    before: Option<i32>,
+}
+
+/// R424: the latest attack, and whether its attacker destroyed its target (R42). A forced one (R53) readies
+/// no transform, but its kill may earn a kill credit (R1869002).
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ShadowAttack {
     attacker_id: String,
     target_id: String,
     killed: bool,
+    forced: bool,
 }
 
 /// Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2).
@@ -1490,7 +1511,12 @@ pub struct InvariantMonitor {
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
     readied: IndexSet<String>,
-    /// R424: the latest declared attack, and whether its attacker destroyed its target (R42).
+    /// B5 E35, R1869002: each instance's latest kill credit.
+    kill_credits: IndexMap<String, KillCredit>,
+    /// R1869002: the attackers credited since the state last settled whose killing attack is still their
+    /// latest, for the state an action leaves with nothing owed to settle.
+    unsettled_credits: IndexSet<String>,
+    /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
@@ -1521,6 +1547,8 @@ impl InvariantMonitor {
             carried_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
+            kill_credits: IndexMap::new(),
+            unsettled_credits: IndexSet::new(),
             attack: None,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
@@ -1558,9 +1586,58 @@ impl InvariantMonitor {
         }
     }
 
-    /// R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it.
+    /// R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it;
+    /// R1869002: or `mayAttackAgain` does, for a stint holding a kill credit no state has settled yet.
     fn is_readied(&self, card: &CardInstance) -> bool {
-        self.readied.contains(&card.id) && card.summoned_turn.is_none()
+        (self.readied.contains(&card.id) || self.credited_at(&card.id).is_some())
+            && card.summoned_turn.is_none()
+    }
+
+    /// B5 E35, R1869002: the attacks the instance had declared in its current stint this turn when its
+    /// latest kill credit there freshened its exertion, if it holds one.
+    fn credited_at(&self, id: &str) -> Option<i32> {
+        self.kill_credits
+            .get(id)
+            .filter(|credit| credit.turn == self.turn && credit.stint == self.stint_of(id))
+            .and_then(|credit| credit.at)
+    }
+
+    /// R1869002: a kill credit for the instance at the attacks it has declared in its current stint this
+    /// turn, the one it held there kept for a settling that takes the new one back.
+    fn credit_kill(&mut self, id: &str) {
+        let stint = self.stint_of(id);
+        let declared = self
+            .last_attack
+            .get(id)
+            .filter(|mark| mark.turn == self.turn && mark.stint == stint)
+            .map_or(0, |mark| mark.count);
+        let credit = KillCredit {
+            turn: self.turn,
+            stint,
+            at: Some(declared),
+            before: self.credited_at(id),
+        };
+        self.kill_credits.insert(id.to_string(), credit);
+        self.unsettled_credits.insert(id.to_string());
+    }
+
+    /// R1869002: a credited attacker the action leaves on the field, its killing attack its last, with
+    /// its attack exertion spent was readied by nothing: its credit is taken back. One it readied is
+    /// `readied` for the rest of its stint, as `mayAttackAgain` leaves it with no `summonedTurn`. Settled
+    /// once nothing is owed, since an `afterAttack` a prompt paused runs in a later action (R113).
+    fn settle_kill_credits(&mut self, state: &GameState) {
+        if state.pending.is_some() || !state.work.is_empty() {
+            return;
+        }
+        for id in std::mem::take(&mut self.unsettled_credits) {
+            let spent = find_instance(state, &id)
+                .is_some_and(|card| card.zone.z() == ZoneName::Field && card.exertion.attacked);
+            if !spent {
+                self.readied.insert(id);
+            } else if let Some(credit) = self.kill_credits.get_mut(&id) {
+                credit.at = credit.before;
+            }
+        }
     }
 
     pub fn enter(&mut self, id: &str) {
@@ -1992,11 +2069,9 @@ impl InvariantMonitor {
                         self.enter(new_instance_id);
                         self.note_entry_windfury(new_instance_id, state);
                     }
-                    if self
-                        .attack
-                        .as_ref()
-                        .is_some_and(|attack| attack.killed && attack.attacker_id == *instance_id)
-                    {
+                    if self.attack.as_ref().is_some_and(|attack| {
+                        attack.killed && !attack.forced && attack.attacker_id == *instance_id
+                    }) {
                         self.readied.insert(new_instance_id.clone());
                     }
                 }
@@ -2008,8 +2083,17 @@ impl InvariantMonitor {
                     if let Some(attack) = self.attack.as_mut()
                         && attack.target_id == *instance_id
                         && killer_id.as_deref() == Some(attack.attacker_id.as_str())
+                        && !attack.killed
                     {
                         attack.killed = true;
+                        // R1869002: a kill readies its attacker only through its own `afterAttack` text.
+                        let attacker_id = attack.attacker_id.clone();
+                        let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
+                            crate::scripts::script_of(state, attacker).after_attack.is_some()
+                        });
+                        if answers {
+                            self.credit_kill(&attacker_id);
+                        }
                     }
                 }
                 GameEvent::Redirected {
@@ -2065,9 +2149,20 @@ impl InvariantMonitor {
                     forced,
                     instead_of,
                 } => {
-                    // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
+                    // R53: a forced attack is not a declaration and spends nothing (nor readies a
+                    // transform, R424); its kill may still earn a kill credit (R1869002).
                     self.attack = None;
+                    // R1869002: a credited attacker declaring again inside the action was readied.
+                    if self.unsettled_credits.shift_remove(attacker_id) {
+                        self.readied.insert(attacker_id.clone());
+                    }
                     if *forced {
+                        self.attack = Some(ShadowAttack {
+                            attacker_id: attacker_id.clone(),
+                            target_id: target_id.clone(),
+                            killed: false,
+                            forced: true,
+                        });
                         continue;
                     }
                     // R1202: a substitute's declaration spends its declarer's attack, not its own —
@@ -2086,11 +2181,13 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
-                    let allowed = if self.windfury.get(declarer) == Some(&current) {
+                    let per_turn = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
+                    // R1869002: a kill credit's fresh exertion counts the attacks of a turn again from there.
+                    let allowed = per_turn + self.credited_at(declarer).unwrap_or(0);
                     if mark.count > allowed {
                         let who = match find_instance(state, declarer) {
                             None => declarer.to_string(),
@@ -2107,6 +2204,7 @@ impl InvariantMonitor {
                         attacker_id: attacker_id.clone(),
                         target_id: target_id.clone(),
                         killed: false,
+                        forced: false,
                     });
                 }
                 _ => {}
@@ -2114,6 +2212,7 @@ impl InvariantMonitor {
         }
 
         self.note_windfury(state);
+        self.settle_kill_credits(state);
 
         // I9: what the action announced is the state it left (§10.3); a Glitch's reset moves `resets` (R676).
         let reset = state.resets != self.resets;

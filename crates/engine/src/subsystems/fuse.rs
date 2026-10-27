@@ -1207,6 +1207,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 pilots_actions: numbers(|f| f.pilots_actions),
                 pilots_turn: flags(|f| f.pilots_turn),
                 hints_plays: flags(|f| f.hints_plays),
+                lends_equip: flags(|f| f.lends_equip),
             })
         }
     }

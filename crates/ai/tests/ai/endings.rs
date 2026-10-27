@@ -3,8 +3,8 @@
 //! one through `reduce` — and a finished game is scored as it ended for the AI's seat, so the
 //! opponent's flight is a draw for it, not a loss.
 //!
-//! The fixture card is test-only: Stinkyscape #148.1 Edge of the Universe is built later, behind the
-//! set's gate (R1420), and its own tests cover the same prompt again.
+//! The fixture card is test-only, Edge of the Universe's shape; the real Stinkyscape #148.1, held
+//! behind its set's gate (R1420), is answered once more at the end.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -212,5 +212,56 @@ mod r1843004_a_flight_is_scored_as_it_ended_for_the_seat {
             Some(GameOverReason::FledDecisive)
         );
         assert!(evaluate(&loss, AI, NextSwing::Enemy, &AI_EVAL) < drawn);
+    }
+}
+
+mod r1843003_the_ai_answers_edge_of_the_universe {
+    use super::*;
+
+    #[test]
+    fn r1843003_the_ai_answers_edge_of_the_universes_radiant_prompt_and_wins() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "r1843003-ai-edge",
+            "p1": { "hand": [{ "def": "stinkyscape-148-1", "radiant": true }], "library": ["core-053", "core-030"] },
+            "p2": { "library": ["core-053", "core-030"], "hand": ["core-005"] },
+        }));
+        s.play("stinkyscape-148-1", json!({}));
+        let state = s.state().clone();
+        assert_eq!(
+            state
+                .pending
+                .as_ref()
+                .map(|pending| (pending.player_id, pending.kind)),
+            Some((AI, PromptKind::Mode))
+        );
+        let decision = decide(
+            &clone(&state),
+            AI,
+            &mut AiOptions {
+                rng: create_rng("r1843003-ai-edge", 0),
+                budget: AI_BUDGET,
+                should_stop: None,
+            },
+        )
+        .expect("a decision");
+        // Both answers end the game in the AI's favour, so its lethal finder may take the answer before
+        // the prompt search does; either way it answers the prompt.
+        assert!(
+            matches!(decision.reason, DecisionReason::Prompt | DecisionReason::Lethal),
+            "{:?}",
+            decision.reason
+        );
+        assert_eq!(decision.stats.sim_errors, 0);
+        assert!(matches!(decision.action, ActionBody::Answer { .. }));
+        assert!(is_legal(&state, AI, &decision.action));
+        let next = reduce(&state, &Action::new(decision.action, AI, "ai-answer".to_string()));
+        assert!(next.error.is_none(), "{:?}", next.error);
+        let result = next.state.result.expect("the answer ends the game");
+        assert_eq!(result.winner, Winner::from(AI));
+        assert!(matches!(
+            result.reason,
+            GameOverReason::Fled | GameOverReason::FledDecisive
+        ));
     }
 }
