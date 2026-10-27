@@ -3043,20 +3043,21 @@
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
+      "pr": 2037,
       "previous_branch": "bot/old/issue-2010-20261026-2149",
       "previous_pr": 2026,
       "previous_why": "it failed 3 times at `difficulty:medium` (the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1; `claude-7` (claude, opus) rejected it: `task`: The pull request does not say which of super run 40337807269's failed jobs the change fixes or how each fix was checked, and the issue requi); it was raised to `difficulty:hard`",
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-26T21:49:12Z",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "40411441690",
       "started_at": "2026-10-26T22:18:36Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2011": {
       "cleared": {
