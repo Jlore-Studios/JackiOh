@@ -4223,6 +4223,8 @@
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-27T14:12:07Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40528004465",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
