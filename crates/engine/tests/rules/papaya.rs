@@ -22,7 +22,7 @@ use crate::rules::fixtures::papaya::{
     body, curve, curve_now, curve_quickdraw, field, register_papaya_fixtures, snare, token,
 };
 use crate::rules::fixtures::prompt_harness::{
-    AnswerResult, answer_keys, board, cast_now, must, open_as, round_trip,
+    AnswerResult, answer_keys, board, cast_now, open_as, round_trip,
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
 

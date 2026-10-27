@@ -64,10 +64,6 @@ mod tests {
         scenario(opts)
     }
 
-    fn must(card: Option<CardInstance>, what: &str) -> CardInstance {
-        card.unwrap_or_else(|| panic!("the scenario has no {what}"))
-    }
-
     mod base {
         use super::*;
 

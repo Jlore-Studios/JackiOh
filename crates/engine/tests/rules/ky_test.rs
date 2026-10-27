@@ -13,7 +13,7 @@ use crate::rules::fixtures::harness::{act_logged, in_hand, json_of, setup_catalo
 use crate::rules::fixtures::ky_test::{
     FIXTURE_BANK, book, coin, four, gift, ky_test, ky_test_qd, ky_two, legend, register_ky_test_fixtures,
 };
-use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
 
 use jackioh_engine::config::KyTestDifficulty::{Easy, Hard, Medium};
 

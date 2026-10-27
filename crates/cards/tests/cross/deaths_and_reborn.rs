@@ -320,13 +320,6 @@ const RENO: &str = "core-053";
 const RADIANT_SAINTESS: &str = "core-081";
 const TWISTING_NETHER: &str = "core-088";
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing: {what}"),
-    }
-}
-
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
     if !place_on_field(

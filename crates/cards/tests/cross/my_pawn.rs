@@ -483,7 +483,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
                 "library": [CORPSE_EATER, GIGA, GIGA],
             },
         }));
-        let victim = must(s.unit("p1", 2));
+        let victim = s.unit_at("p1", 2);
         let victim_id = victim.id.clone();
         let fires = TriggerDef::new(
             "edge-r11-sniper-fires",
@@ -538,8 +538,4 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
             .collect();
         assert!(fed.is_empty(), "{fed:?}");
     }
-}
-
-fn must<T>(value: Option<T>) -> T {
-    value.unwrap_or_else(|| panic!("setup: expected a value"))
 }

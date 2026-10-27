@@ -18,7 +18,7 @@ fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep = ids(&ready.players[player].hand);
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).0;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).0;
     }
     for player in [PlayerId::P1, PlayerId::P2] {
         ready.players[player].mana.current = 8;
@@ -32,7 +32,7 @@ fn attempt(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult 
     reduce(state, &Action::new(json_as(body), player_id, next_nonce()))
 }
 
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
     let result = attempt(state, player_id, body);
     if let Some(error) = result.error {
         panic!("{error}");
@@ -108,7 +108,7 @@ mod r781001_spells_field_spells_and_field_traps_cant_target_it_in_play {
             serde_json::to_string(action).is_ok_and(|text| text.contains(&bolt.id) && text.contains(&wall.id))
         };
         assert!(!listed.iter().any(names_wall));
-        let (after, _) = must(
+        let (after, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": zapper.id, "targets": [at(&wall)] }),
@@ -132,7 +132,7 @@ mod r781001_spells_field_spells_and_field_traps_cant_target_it_in_play {
         let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
 
-        let (asked, _) = must(
+        let (asked, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": chooser.id }),

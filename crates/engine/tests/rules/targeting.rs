@@ -26,7 +26,7 @@ fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep = ids(&ready.players[player].hand);
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).0;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).0;
     }
     for player in [PlayerId::P1, PlayerId::P2] {
         ready.players[player].mana.current = 8;
@@ -40,7 +40,7 @@ fn attempt(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult 
     reduce(state, &Action::new(json_as(body), player_id, next_nonce()))
 }
 
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
     let result = attempt(state, player_id, body);
     if let Some(error) = result.error {
         panic!("{error}");
@@ -79,7 +79,7 @@ fn answer(state: &GameState, player_id: PlayerId, selection: Vec<Selection>) -> 
         .as_ref()
         .map(|pending| pending.id.clone())
         .unwrap_or_default();
-    must(
+    reduce_ok(
         state,
         player_id,
         json!({ "type": "answer", "choiceId": choice_id, "selection": selection }),
@@ -254,7 +254,7 @@ mod r450_immune_to_spells_e35_a_spells_declarations_never_offer_it {
             .error
             .is_some()
         );
-        let (after, _) = must(
+        let (after, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": zapper.id, "targets": [at(&immune)] }),
@@ -315,7 +315,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         );
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 2);
-        let (after, events) = must(
+        let (after, events) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] }),
@@ -476,7 +476,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 3);
         let spare_ids = ids(&spares);
 
-        let (after, events) = must(
+        let (after, events) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] }),
@@ -545,7 +545,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         let rich_bolt = one(&mut rich, PlayerId::P1, &PA.bolt.id);
         hand(&mut rich, PlayerId::P1, "fx-5", 2);
         // Payable — and the two random discards land on its controller all the same.
-        let (_, events) = must(
+        let (_, events) = reduce_ok(
             &rich,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": rich_bolt.id, "targets": [at(&own_ghost)] }),
@@ -566,7 +566,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         let spares = hand(&mut state, PlayerId::P1, "fx-5", 2);
         let spare_ids = ids(&spares);
 
-        let (asked, _) = must(
+        let (asked, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": chooser.id }),
@@ -612,7 +612,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
         hand(&mut state, PlayerId::P1, "fx-5", 1);
-        let (asked, _) = must(
+        let (asked, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": chooser.id }),
@@ -645,7 +645,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         let echo = one(&mut state, PlayerId::P1, &PA.echo_bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 2);
 
-        let (repeat, _) = must(
+        let (repeat, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": echo.id, "targets": [at(&other)] }),
@@ -724,7 +724,7 @@ mod r450_an_interception_classic_33_joro {
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
 
-        let (after, events) = must(
+        let (after, events) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&unit)] }),
@@ -775,7 +775,7 @@ mod r450_an_interception_classic_33_joro {
         let unit = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let zapper = one(&mut state, PlayerId::P1, &PA.zapper.id);
-        let (after, _) = must(
+        let (after, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": zapper.id, "targets": [at(&unit)] }),
@@ -802,7 +802,7 @@ mod r450_an_interception_classic_33_joro {
         put(&mut hero, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         one(&mut hero, PlayerId::P2, &PA.joro.id);
         let bolt = one(&mut hero, PlayerId::P1, &PA.bolt.id);
-        let to_hero = must(
+        let to_hero = reduce_ok(
             &hero,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -813,7 +813,7 @@ mod r450_an_interception_classic_33_joro {
         let mine = put(&mut own, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         one(&mut own, PlayerId::P1, &PA.joro.id);
         let zap = one(&mut own, PlayerId::P1, &PA.zapper.id);
-        let zapped = must(
+        let zapped = reduce_ok(
             &own,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": zap.id, "targets": [at(&mine)] }),
@@ -827,7 +827,7 @@ mod r450_an_interception_classic_33_joro {
         one(&mut full, PlayerId::P2, &PA.joro.id);
         let full_bolt = one(&mut full, PlayerId::P1, &PA.bolt.id);
         let target = units[0].clone();
-        let blocked = must(
+        let blocked = reduce_ok(
             &full,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": full_bolt.id, "targets": [at(&target)] }),
@@ -843,7 +843,7 @@ mod r450_an_interception_classic_33_joro {
         live_mut(&mut unfit, &hurt).damage = 1;
         one(&mut unfit, PlayerId::P2, &PA.joro.id);
         let medic = one(&mut unfit, PlayerId::P1, &PA.medic.id);
-        let healed = must(
+        let healed = reduce_ok(
             &unfit,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": medic.id, "targets": [at(&hurt)] }),
@@ -860,7 +860,7 @@ mod r450_an_interception_classic_33_joro {
         let (joro, spare) = (joros[0].clone(), joros[1].clone());
         let twin = one(&mut state, PlayerId::P1, &PA.twin.id);
 
-        let (after, events) = must(
+        let (after, events) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": twin.id, "targets": [at(&first), at(&second)] }),
@@ -896,7 +896,7 @@ mod r450_an_interception_classic_33_joro {
         let unit = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let chooser = one(&mut state, PlayerId::P1, &PA.chooser.id);
-        let (asked, _) = must(
+        let (asked, _) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": chooser.id }),
@@ -928,7 +928,7 @@ mod r450_an_interception_classic_33_joro {
         let joro = one(&mut state, PlayerId::P2, &PA.joro.id);
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
         hand(&mut state, PlayerId::P1, "fx-5", 2);
-        let (after, events) = must(
+        let (after, events) = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [at(&ghost)] }),

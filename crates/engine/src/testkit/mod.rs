@@ -17,7 +17,8 @@
 //! `cargo jackioh golden check` share. It is not globbed in: a caller names `golden::<item>`.
 //!
 //! `pick.rs` holds the one-instance pick builders and `scenario.rs` the panicking `Scenario::unit_at`
-//! (#1826); like `golden`, callers name the module (`pick::<builder>`).
+//! (#1826); like `golden`, callers name the module (`pick::<builder>`). `scenario.rs`'s `must` (an
+//! `Option`'s value, or a panic naming what was expected, #2023) comes in with the glob.
 //!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.

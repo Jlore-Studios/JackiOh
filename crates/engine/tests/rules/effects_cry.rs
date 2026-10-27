@@ -17,7 +17,7 @@ use jackioh_engine::{
 use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, put, slot};
 use super::fixtures::prompt_harness::{
-    answer_keys, board, cast_now, event_types, expect_replays, hand_card, must, open_as, replayable,
+    answer_keys, board, cast_now, event_types, expect_replays, hand_card, open_as, replayable,
     resolving_card, round_trip,
 };
 use super::fixtures::prompts::{

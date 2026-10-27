@@ -77,11 +77,6 @@ mod tests {
         vec![X; n]
     }
 
-    /// The value, or a failure naming what is missing.
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("missing: {what}"))
-    }
-
     fn option_ids(s: &Scenario) -> Vec<String> {
         let pending = must(s.state().pending.clone(), "an open prompt");
         pending

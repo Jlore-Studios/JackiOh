@@ -22,7 +22,7 @@ fn game(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in PLAYER_IDS {
         ready.players[player].mana.current = 8;
@@ -32,7 +32,7 @@ fn game(seed: &str) -> GameState {
 }
 
 /// `body` is the action literal; the player and a fresh nonce are added.
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut body = body;
     body["playerId"] = json!(player_id);
     body["nonce"] = json!(next_nonce());
@@ -63,7 +63,7 @@ const ENEMY_HERO: Selection = Selection::Hero { player: PlayerId::P2 };
 fn pacted(seed: &str, radiant: bool) -> GameState {
     let mut state = game(seed);
     let pact = one(&mut state, PlayerId::P1, &PA.pact.id, radiant);
-    must(
+    reduce_ok(
         &state,
         PlayerId::P1,
         json!({ "type": "play", "instanceId": pact.id }),
@@ -133,7 +133,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         let crier = one(&mut state, PlayerId::P1, &PA.crier.id, false);
         let mana = state.players.p1.mana.current;
 
-        let played = must(
+        let played = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id, "zone": { "row": "units", "lane": 3 } }),
@@ -176,7 +176,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             .collect();
         assert_eq!(resolving, vec![book_id.clone()]);
 
-        let answered = must(
+        let answered = reduce_ok(
             &asked,
             PlayerId::P1,
             json!({ "type": "answer", "choiceId": pending_id(&asked), "selection": [ENEMY_HERO] }),
@@ -219,7 +219,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     fn r449_r177_the_other_player_never_reads_the_card_that_was_replaced_in_the_hand() {
         let mut state = pacted("r449-hidden", false);
         let crier = one(&mut state, PlayerId::P1, &PA.crier.id, false);
-        let asked = must(
+        let asked = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -237,13 +237,13 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     fn r449_the_radiant_modifier_replaces_with_the_radiant_card() {
         let mut state = pacted("r449-radiant", true);
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let asked = must(
+        let asked = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
         )
         .state;
-        let after = must(
+        let after = reduce_ok(
             &asked,
             PlayerId::P1,
             json!({ "type": "answer", "choiceId": pending_id(&asked), "selection": [ENEMY_HERO] }),
@@ -277,7 +277,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
                 .as_ref()
                 .is_some_and(|pending| pending.prompt.contains("Cast:"))
         );
-        let after = must(
+        let after = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "answer", "choiceId": pending_id(&state), "selection": [ENEMY_HERO] }),
@@ -291,7 +291,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     fn r449_the_named_card_itself_is_not_replaced_by_itself() {
         let mut state = pacted("r449-self", false);
         let book = one(&mut state, PlayerId::P1, &PA.book.id, false);
-        let played = must(
+        let played = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": book.id, "targets": [ENEMY_HERO] }),
@@ -319,7 +319,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             },
         });
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let after = must(
+        let after = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
@@ -336,11 +336,11 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     #[test]
     fn r449_the_modifier_lasts_this_turn_only() {
         let state = pacted("r449-expiry", false);
-        let mut after = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
-        after = must(&after, PlayerId::P2, json!({ "type": "endTurn" })).state;
+        let mut after = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        after = reduce_ok(&after, PlayerId::P2, json!({ "type": "endTurn" })).state;
         after.players.p1.mana.current = 8;
         let ping = one(&mut after, PlayerId::P1, &PA.ping.id, false);
-        let played = must(
+        let played = reduce_ok(
             &after,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
@@ -364,7 +364,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         fn run() -> (String, String, String) {
             let mut state = pacted("r449-pause", false);
             let crier = one(&mut state, PlayerId::P1, &PA.crier.id, false);
-            let asked = must(
+            let asked = reduce_ok(
                 &state,
                 PlayerId::P1,
                 json!({ "type": "play", "instanceId": crier.id }),
@@ -406,13 +406,13 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         );
         let mine = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
-        let asked = must(
+        let asked = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
         )
         .state;
-        let answered = must(
+        let answered = reduce_ok(
             &asked,
             PlayerId::P1,
             json!({
@@ -448,7 +448,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
 
-        let first = must(
+        let first = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": pear.id }),
@@ -461,7 +461,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
             zones::card_at(&first.state, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.radiant),
             Some(true)
         );
-        let second = must(
+        let second = reduce_ok(
             &first.state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
@@ -490,7 +490,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
         let wanted: ActionBody =
             json_as(json!({ "type": "play", "instanceId": apple.id, "targets": [ENEMY_HERO] }));
         assert!(legal_actions(&state, PlayerId::P1).contains(&wanted));
-        let after = must(
+        let after = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": apple.id, "targets": [ENEMY_HERO] }),
@@ -511,7 +511,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
             json!({}),
         );
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
-        let mut after = must(
+        let mut after = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": pear.id }),

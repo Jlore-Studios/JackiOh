@@ -55,13 +55,6 @@ mod tests {
         vec![X; n]
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     fn option_ids(s: &Scenario) -> Vec<String> {
         must(s.state().pending.as_ref(), "an open prompt")
             .options

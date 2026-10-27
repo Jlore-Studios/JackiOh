@@ -67,10 +67,6 @@ mod tests {
         scenario(opts)
     }
 
-    fn must(card: Option<CardInstance>, what: &str) -> CardInstance {
-        card.unwrap_or_else(|| panic!("the scenario has no {what}"))
-    }
-
     fn destroyed_event(s: &Scenario, instance_id: &str) -> Value {
         s.events()
             .iter()

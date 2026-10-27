@@ -51,10 +51,6 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 fn play_into(state: &GameState, card: &CardInstance, lane: i32) -> GameState {
     act(
         state,

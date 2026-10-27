@@ -47,13 +47,6 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
     )
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// R103: the power names are state, so pinning one is writing what `ensurePower` writes.
 fn with_power(s: &mut Scenario, card: &CardInstance, name: &str) -> CardInstance {
     let live = find_instance_mut(s.state_mut(), &card.id).expect("the Heroic Power");

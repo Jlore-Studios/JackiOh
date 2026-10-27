@@ -311,13 +311,6 @@ mod tests {
         serde_json::from_value(js(state)).expect("the state round-trips")
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("the scenario has no {what}"),
-        }
-    }
-
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")
     }

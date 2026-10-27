@@ -1150,10 +1150,6 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 fn on_unit(instance: &CardInstance) -> AttackTarget {
     AttackTarget::Unit {
         instance: instance.clone(),

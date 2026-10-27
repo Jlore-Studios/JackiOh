@@ -13,7 +13,7 @@ use super::fixtures::keywords_783::{
     toe_cracker, trap_discount,
 };
 use super::fixtures::play_pipeline_b::plays_of;
-use super::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
+use super::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;

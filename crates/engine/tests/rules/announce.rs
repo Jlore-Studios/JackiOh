@@ -27,7 +27,7 @@ fn game(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in [PlayerId::P1, PlayerId::P2] {
         ready.players[player].mana.current = 8;
@@ -37,7 +37,7 @@ fn game(seed: &str) -> GameState {
 }
 
 /// `{ ...body, playerId, nonce }` reduced; a refusal panics.
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut action = body;
     action["playerId"] = json!(player_id);
     action["nonce"] = json!(next_nonce());
@@ -116,7 +116,7 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
         let mut state = game("r448-plain");
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id, "zone": { "row": "units", "lane": 2 } }),
@@ -161,7 +161,7 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
             Default::default(),
         );
 
-        let first = must(
+        let first = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -173,7 +173,7 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
 
         let mut first_state = first.state.clone();
         let second = hand(&mut first_state, PlayerId::P1, &PA.bolt.id);
-        let next = must(
+        let next = reduce_ok(
             &first_state,
             PlayerId::P1,
             json!({
@@ -209,7 +209,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
         let mana = state.players.p1.mana.current;
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -265,7 +265,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         );
         let ping = hand(&mut state, PlayerId::P1, &PA.ping.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
@@ -299,7 +299,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         );
         let echo = hand(&mut state, PlayerId::P1, &PA.echo_bolt.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({
@@ -326,7 +326,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -346,7 +346,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         // A play that paid 0 is not the chalice's: it resolves.
         let mut after = after.clone();
         let field = hand(&mut after, PlayerId::P1, &PA.field.id);
-        let next = must(
+        let next = reduce_ok(
             &after,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": field.id }),
@@ -372,7 +372,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         );
         let ping = hand(&mut state, PlayerId::P1, &PA.ping.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
@@ -411,7 +411,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         let other = hand(&mut state, PlayerId::P1, &PA.bolt.id);
 
         // At the hero: not a Spell that targets one of p2's units, so it resolves.
-        let first = must(
+        let first = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -420,7 +420,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             events_json(&first.events, GameEventType::Countered),
             Vec::<Value>::new()
         );
-        let second = must(
+        let second = reduce_ok(
             &first.state,
             PlayerId::P1,
             json!({
@@ -465,7 +465,7 @@ mod r448_where_the_card_waits_the_resolving_zone_out_of_every_hands_reach {
             .map(|card| card.id.clone())
             .collect();
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -570,7 +570,7 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
         );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -624,7 +624,7 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
         }
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
 
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),
@@ -665,7 +665,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             Default::default(),
         );
         let bolt = hand(&mut state, PlayerId::P1, &PA.bolt.id);
-        let waiting = must(
+        let waiting = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -712,7 +712,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     #[test]
     fn r448_the_answer_steal_sacrifices_the_field_spell_and_takes_the_spell_which_never_resolves() {
         let (state, bolt, palantir) = paused("r448-steal-answer");
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P2,
             json!({ "type": "answer", "choiceId": choice_id(&state), "selection": [{ "pick": "mode", "option": "steal" }] }),
@@ -742,7 +742,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     #[test]
     fn r448_the_answer_pass_lets_the_play_go_on_to_step_4_and_resolve() {
         let (state, bolt, _) = paused("r448-pass");
-        let result = must(
+        let result = reduce_ok(
             &state,
             PlayerId::P2,
             json!({ "type": "answer", "choiceId": choice_id(&state), "selection": [{ "pick": "mode", "option": "pass" }] }),
@@ -899,7 +899,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
             Default::default(),
         );
         let trap = hand(&mut state, PlayerId::P1, trap_def);
-        let waiting = must(
+        let waiting = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": trap.id, "zone": { "row": "backrow", "lane": 3 } }),
@@ -967,7 +967,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
             .as_ref()
             .map(|pending| pending.id.clone())
             .unwrap_or_default();
-        let after = must(
+        let after = reduce_ok(
             &state,
             PlayerId::P2,
             json!({ "type": "answer", "choiceId": choice, "selection": [{ "pick": "mode", "option": "noted" }] }),
@@ -1002,7 +1002,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
             Default::default(),
         );
         let crier = hand(&mut state, PlayerId::P1, &PA.crier.id);
-        let waiting = must(
+        let waiting = reduce_ok(
             &state,
             PlayerId::P1,
             json!({ "type": "play", "instanceId": crier.id }),

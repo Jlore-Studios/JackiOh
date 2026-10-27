@@ -27,10 +27,6 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) 
     (effect.apply)(&mut ctx);
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 /// p1's lane 1 holding `below` bottom to top — the last one is the top of the pile.
 fn pile(state: &mut GameState, def_ids: &[String], owner: PlayerId) -> Vec<CardInstance> {
     let mut placed = vec![];

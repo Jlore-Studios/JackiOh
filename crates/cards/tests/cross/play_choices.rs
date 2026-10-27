@@ -52,13 +52,6 @@ fn body(literal: Value) -> ActionBody {
     json_as(literal)
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// The `play` actions `legalActions` offers the card's controller for this card.
 fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(state, card.controller)

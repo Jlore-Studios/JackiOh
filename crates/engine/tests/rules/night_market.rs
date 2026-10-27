@@ -14,8 +14,7 @@ use crate::rules::fixtures::night_market::{
     ROCK, ai_card, cn_four, market, market_qd, register_night_market_fixtures,
 };
 use crate::rules::fixtures::prompt_harness::{
-    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
-    round_trip,
+    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, open_as, round_trip,
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
 

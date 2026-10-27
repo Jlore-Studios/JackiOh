@@ -84,10 +84,6 @@ fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     fuse_in(state, &mut sink, args)
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 fn input(literal: Value) -> ActionInput {
     json_as(literal)
 }

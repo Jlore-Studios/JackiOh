@@ -593,13 +593,6 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
     only(&in_hand(state, def_id, player, 1))
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing {what}"),
-    }
-}
-
 fn instance_in(state: &GameState, id: &str) -> CardInstance {
     must(find_instance(state, id).cloned(), &format!("instance {id}"))
 }

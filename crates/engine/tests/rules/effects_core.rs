@@ -201,10 +201,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     std::mem::take(&mut sink.events)
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 /// `resolve_target`'s answer as JSON: `{ kind: "unit", instance }`, `{ kind: "hero", player }`, or
 /// `null`.
 fn target_json(target: Option<DamageTarget>) -> Value {

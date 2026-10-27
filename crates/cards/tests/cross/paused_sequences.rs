@@ -76,13 +76,6 @@ const RIGHT_HOUSE_DEFENDER: &str = "core-003";
 const UNLICENSED_EXPERIMENTATION: &str = "core-085";
 const HIT_JOB: &str = "core-016";
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// TS `sinkFor(s)`: `{ state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) }`.
 /// The sink writes the scenario's state in place; the events it collects and the draws it makes go
 /// nowhere, as in TS.

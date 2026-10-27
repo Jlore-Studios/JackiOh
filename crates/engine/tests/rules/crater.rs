@@ -13,7 +13,7 @@ use super::fixtures::keywords_783::{
     flicker_all, plague_field, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
 };
 use super::fixtures::play_pipeline_b::plays_of;
-use super::fixtures::prompt_harness::{board, cast_now, must};
+use super::fixtures::prompt_harness::{board, cast_now};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;

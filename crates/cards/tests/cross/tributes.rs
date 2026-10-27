@@ -27,13 +27,6 @@ const SHEEP: &str = "core-t-sheep"; // "Worth 2 Tributes while on the field."
 
 use super::{craft_fused, scenario};
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing: {what}"),
-    }
-}
-
 /// A tributed set as one string, whatever order it is listed in.
 fn sorted_join(ids: &[String]) -> String {
     let mut sorted = ids.to_vec();

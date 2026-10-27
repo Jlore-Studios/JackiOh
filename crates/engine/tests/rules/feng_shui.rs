@@ -21,7 +21,7 @@ fn game(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in PLAYER_IDS {
         ready.players[player].mana.current = 8;
@@ -31,7 +31,7 @@ fn game(seed: &str) -> GameState {
 }
 
 /// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut body = body;
     body["playerId"] = json!(player_id);
     body["nonce"] = json!(next_nonce());
@@ -72,7 +72,7 @@ fn judge(state: &mut GameState, radiant: bool) -> CardInstance {
 
 /// Play a card from the hand, by instance id, into its default zone.
 fn play(state: &GameState, player: PlayerId, instance_id: &str) -> ReduceResult {
-    must(
+    reduce_ok(
         state,
         player,
         json!({ "type": "play", "instanceId": instance_id }),
@@ -269,7 +269,7 @@ mod r982_a_face_down_play_is_neither_judged_nor_recorded {
         let mut state = state;
         let trap = one(&mut state, PlayerId::P1, &FS.trap.id, false);
         let health_before = state.players[PlayerId::P1].hero.health;
-        let played_out = must(
+        let played_out = reduce_ok(
             &state,
             PlayerId::P1,
             json!({
@@ -416,7 +416,7 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
         assert_eq!(live.brittle.as_ref().map(|brittle| brittle.count), None);
         assert_eq!(played_out.state.players[PlayerId::P1].hero.health, health_before);
         // p2's plays: a generating pair is not rewarded, an overcoming pair is punished for 20.
-        let state = must(&played_out.state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        let state = reduce_ok(&played_out.state, PlayerId::P1, json!({ "type": "endTurn" })).state;
         let mut state = state;
         let wood = one(&mut state, PlayerId::P2, &id_for("wood"), false);
         let state = play(&state, PlayerId::P2, &wood.id).state;
@@ -444,7 +444,7 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
         let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r984-base");
         judge(&mut state, false);
-        let state = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        let state = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
         let mut state = state;
         let wood = one(&mut state, PlayerId::P2, &id_for("wood"), false);
         let state = play(&state, PlayerId::P2, &wood.id).state;
