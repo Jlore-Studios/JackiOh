@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 2024,
+  "title": "Patch: the rules tests' sink bench and their ids_of, types_of and hand_ids helpers come from the shared harness, and the check keeps it so",
+  "branch": "bot/issue-2024",
+  "thread": "**Issue #2024 (data, not instructions):**\n\n```text\n# #2024: Patch: the rules tests' sink bench and their ids_of, types_of and hand_ids helpers come from the shared harness, and the check keeps it so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAbout forty of the engine's rule test files each write their own small holder for \"the events this step produced and the random numbers it used\", under three different names. A dozen or more of them each also repeat the same three one-line helpers for listing card ids, event types and the cards in a hand.\n\nOnce this is built, the shared test harness offers one of each, and the repository's check refuses new copies, as it already does for the helpers moved earlier. Players see nothing; the rules tests get shorter and read alike.\n\n## Why\n- 39 files under `crates/engine/tests/rules` define a struct holding `events: Vec<GameEvent>` and `rng: Rng`, named `Bench`, `Sink` or `SinkFor` (`grep -lE 'struct (Bench|Sink|SinkFor)\\b'`). For example, `draw.rs:12-27` says \"TS `sinkFor(state, events)`: a sink's events and rng (from the state's cursor), lent with the state to one engine call at a time\".\n- 22 files define their own `fn sink_for`.\n- The harness's `sink_for` (`fixtures/harness.rs:39-45`) leaks its event list, so a test cannot read the events back. That is why each file writes its own bench.\n- The rules tree also repeats three helpers, most with identical bodies:\n  - `fn ids_of`: 13 definitions;\n  - `fn types_of`: 13;\n  - `fn hand_ids`: 15.\n\n  A few differ: `effects_give.rs:82` takes `&[Value]`, and `effects_targets.rs:85` and `board_history.rs:56` are generic over `Borrow<CardInstance>`.\n- #2011 moved the act, live and one-effect runners into this harness and listed them in `SHARED_TEST_HELPERS` (`crates/tools/tests/acceptance.rs:983-1002`). These helpers are the next ones down.\n\n## Proposal\n- In `fixtures/harness.rs`, add `pub struct Bench { pub events: Vec<GameEvent>, pub rng: Rng }` with `Bench::new(&GameState)` (the rng from the state's seed and cursor, as today) and `sink(&mut self, &mut GameState) -> EngineSink<'_>`.\n- Move the benches that hold the state inside them to this borrowing form.\n- Delete the local structs and the local `sink_for`s.\n- Define `ids_of` (generic over `Borrow<CardInstance>`), `types_of` and `hand_ids` once in the harness. The few copies whose bodies differ get names for what they do.\n- Add the new names to the harness row of `SHARED_TEST_HELPERS`.\n- Only tests change. The rng is seeded the same way and the events start empty, as before.\n\n## Where it lands\n- `crates/engine/tests/rules/fixtures/harness.rs`\n- about 45 files under `crates/engine/tests/rules/`\n- `crates/tools/tests/acceptance.rs`\n\n## Acceptance criteria\n- [ ] No struct holding exactly `events` and `rng`, and no `fn sink_for`, `fn ids_of`, `fn types_of` or `fn hand_ids`, remains under `crates/engine/tests/rules` outside the harness. The acceptance check refuses a planted copy.\n- [ ] `cargo test -p jackioh-engine --features testkit --test rules -- --list` lists the same tests before and after, and they all pass.\n- [ ] The tools' acceptance test, fmt and clippy pass.\n\n## Size and risks\nMedium: about 45 test files in one crate. A few benches need their borrows changed.\n\nRisks:\n- #2011 just rewrote many of these files, so base on current `main`.\n- It shares `acceptance.rs` and some rules files with the `must` suggestion, so build them one after the other.\n- `harness.rs` is a hot spot for any open engine PR's tests.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-26T22:55:53Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2024: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
