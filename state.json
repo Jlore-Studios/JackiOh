@@ -4003,9 +4003,12 @@
         "sha": "f3d440c3d91a09b70d0af019ec3f58ffbb78d61d"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T00:01:26Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2025,
       "kind": "review",
       "pending_request": false,
