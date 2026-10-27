@@ -7,11 +7,10 @@
     .\login.ps1 muse     # muse login
     .\login.ps1 gpt      # codex login --device-auth  (Sign in with ChatGPT)
     .\login.ps1 agy      # agy: sign in with Google, then quit
-    .\login.ps1 devin    # devin auth login --force-manual-token-flow
     .\login.ps1 muse -Shell   # a shell in that volume, to look around
 #>
 param(
-  [Parameter(Mandatory)][ValidateSet('muse', 'gpt', 'agy', 'devin')][string]$Sub,
+  [Parameter(Mandatory)][ValidateSet('muse', 'gpt', 'agy')][string]$Sub,
   [switch]$Shell
 )
 $image = (Get-Content (Join-Path $PSScriptRoot 'config.json') -Raw | ConvertFrom-Json).image
@@ -20,7 +19,6 @@ $cmd = if ($Shell) { @('bash') } else {
     'muse'  { @('muse', 'login') }
     'gpt'   { @('codex', 'login', '--device-auth') }
     'agy'   { @('agy') }
-    'devin' { @('devin', 'auth', 'login', '--force-manual-token-flow') }
   }
 }
 docker run -it --rm -v "jackioh-pc-home-${Sub}:/home/runner" $image @cmd

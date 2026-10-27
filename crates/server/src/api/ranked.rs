@@ -35,8 +35,8 @@ use crate::db::store::{
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game_scored, widen_for_promotions};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
-    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
-    place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
+    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_floor, jlorious_order, peak_badge,
+    percentile_of, place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
 
@@ -723,7 +723,10 @@ pub struct OwnRankBody {
 pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiError> {
     let season_id = build_season_id(&SeasonDeps::current());
     let mut tx = app.db.begin(Some(profile_id)).await?;
-    let standings = tx.ranked_standings(&season_id).await?;
+    // #2022: the rows shown and Mythic Grape's, all that a rank and Jlorious read.
+    let standings = tx
+        .ranked_standings_subset(&season_id, &[profile_id.to_string()], jlorious_floor())
+        .await?;
     let history = tx.ranked_ranks_of(profile_id).await?;
     let usernames = usernames_of(&mut tx, [profile_id]).await?;
     tx.commit().await?;
@@ -919,7 +922,11 @@ pub async fn match_ranks(
         return Ok(None);
     }
     let standings = tx
-        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .ranked_standings_subset(
+            &build_season_id(&SeasonDeps::current()),
+            &[row.players.0.clone(), row.players.1.clone()],
+            jlorious_floor(),
+        )
         .await?;
     let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
     tx.commit().await?;
@@ -947,7 +954,11 @@ pub async fn match_ranks(
 pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(RankTier, RankTier), StoreError> {
     let mut tx = app.db.begin(None).await?;
     let standings = tx
-        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .ranked_standings_subset(
+            &build_season_id(&SeasonDeps::current()),
+            &[players.0.clone(), players.1.clone()],
+            jlorious_floor(),
+        )
         .await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));

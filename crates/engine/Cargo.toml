@@ -26,12 +26,18 @@ ts-rs = { workspace = true, optional = true }
 # Golden traces and the hotseat fixture run the real cards (SURFACE §2, §13).
 jackioh-cards = { workspace = true }
 
-# The one integration-test binary for the ported engine tests (SURFACE §1). It reaches the engine
-# through `jackioh_engine::testkit`, so it builds only with that feature:
-# `cargo test -p jackioh-engine --features testkit`.
+# The integration-test binaries for the ported engine tests (SURFACE §1), the modules of
+# `tests/rules/` from `a` to `o` in `rules` and the rest in `rules_2`, which compile side by side in
+# CI (#2090). They reach the engine through `jackioh_engine::testkit`, so they build only with that
+# feature: `cargo test -p jackioh-engine --features testkit --test 'rules*'`.
 [[test]]
 name = "rules"
 path = "tests/rules.rs"
+required-features = ["testkit"]
+
+[[test]]
+name = "rules_2"
+path = "tests/rules_2.rs"
 required-features = ["testkit"]
 
 # The golden replay (§13), through `jackioh_engine::testkit::golden`, which `cargo jackioh golden check`

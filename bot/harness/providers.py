@@ -1,8 +1,8 @@
 """The subscriptions the bot can spend: `.harness/providers.json`, and whether each is usable now.
 
 A *provider* is one subscription behind one CLI: a Claude account (`claude`), ChatGPT through
-the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), Meta through Muse Code
-(`muse`), or Cognition through the Devin CLI (`devin`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
+the Codex CLI (`codex`), Google through the Antigravity CLI (`agy`), or Meta through Muse Code
+(`muse`). Each has its own hours (`schedule`), its own limits (`limits`), the runner its model job
 runs on (`runs_on`: GitHub's `ubuntu-latest`, or its own runner on the bot's machine,
 `night-vm-<id>`, which runs as a Linux user of its own; `bot/machine/README.md`), and its login
 (`login`): a `secret` the workflows hand to that model job and to nothing else, or a login made
@@ -14,8 +14,8 @@ Every model a provider can run is a *seat* with a *tier* (`weak`, `medium` or `s
 `model` with its `tier`, and any `extra_models` (every Claude account runs Sonnet, medium, as well
 as Opus, strong, and a run switches between them: `work.Worker._switch`). The tier attaches to the model a role runs on, not to the subscription. The
 top-level `tiers` map lists each tier's models in the order the router tries them, after the
-subscriptions' own order (`priority`, the usage order). A provider with `self_check` (Devin)
-checks its own builds before any review.
+subscriptions' own order (`priority`, the usage order). A provider with `self_check` (a weak
+one) checks its own builds before any review.
 
 Whether a provider may start a run now is `availability()`; its reading of the state file is
 `state["providers"][<id>]` (usage readings, a refusal's reset time, minutes spent), which
@@ -41,10 +41,10 @@ from harness.identity import CURRENT, HOME
 #: `.squishy/providers.json` for Squishy.
 PROVIDERS_PATH = Path(HOME) / "providers.json"
 
-CLIS = ("claude", "codex", "agy", "muse", "devin")
+CLIS = ("claude", "codex", "agy", "muse")
 LOGINS = ("secret", "machine")
-#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy and Devin
-#: keep their logins only on the machine.
+#: The CLIs that can be logged in from a secret on a fresh runner (`logins.py`). agy keeps its
+#: login only on the machine.
 SECRET_CLIS = ("claude", "codex", "muse")
 _LABEL = re.compile(r"^[A-Za-z0-9._-]+$")
 #: Labels of GitHub's own runners: a fresh virtual machine per job, with no login on it.
@@ -197,7 +197,8 @@ class Provider:
     #: for planning and review); it plans and reviews in its `priority` place.
     build_last: bool = False
     #: It builds and revises easy items ahead of every other subscription while it has a free lane
-    #: (Devin: it may build nothing harder, so the stronger models are kept for what only they can).
+    #: (a weak one: it may build nothing harder, so the stronger models are kept for what only
+    #: they can).
     easy_first: bool = False
     #: Other models the subscription can run for a role, each with its own tier.
     extra_models: tuple["ExtraModel", ...] = ()

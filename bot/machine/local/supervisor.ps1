@@ -20,10 +20,11 @@
   idle runner is retired at once, and a runner in the middle of a job is throttled to
   throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
 
-  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, whether it is
-  calm, and each runner container with the CPUs it uses and whether it is throttled, as pc.json
-  in a secret gist of the signed-in account. The status issue's runners section reads it
-  (bot/harness/dashboard.py), so it says what the PC and its gather job are doing. The gist is
+  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, with and without
+  its runners, the size of its memory, whether it is calm, and each runner container with the
+  CPUs it uses and whether it is throttled, as pc.json in a secret gist of the signed-in account.
+  The status issue's runners section and learn lane read it (bot/harness/dashboard.py), so it
+  says how loaded the PC is and what it and its gather job are doing. The gist is
   made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
   JACKIOH_PC_GIST, which bot-status.yml hands the status loop. A heartbeat that fails is logged
   and tried again at the next beat: it never holds a runner up.
@@ -38,6 +39,7 @@ $ErrorActionPreference = 'Continue'
 $cfg = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 $repo = $cfg.repo
 $logical = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+$memTotalGB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB
 $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $logFile = Join-Path $logDir 'supervisor.log'
@@ -150,7 +152,7 @@ function Get-Runners {
 }
 
 # This PC's load without its runner containers and its yielding ones: CPU % of all logical CPUs,
-# memory used in GB.
+# memory used in GB; and the whole PC's, with them, for the heartbeat.
 function Get-Sample($runners) {
   $cpu = $null
   # CPU time, as `docker stats` measures the runners' share, so the two subtract like for like.
@@ -187,6 +189,8 @@ function Get-Sample($runners) {
   [pscustomobject]@{
     Cpu = [math]::Max(0, [math]::Min(100, $cpu) - $oursCpu)
     Mem = [math]::Max(0, $memGB - $oursMem)
+    CpuAll = [math]::Min(100, $cpu)
+    MemAll = $memGB
   }
 }
 
@@ -308,6 +312,9 @@ function Send-Heartbeat($sample, [bool]$calm, $runners) {
     calm = $calm
     cpu = [math]::Round($sample.Cpu, 1)
     memGB = [math]::Round($sample.Mem, 1)
+    cpuAll = [math]::Round($sample.CpuAll, 1)
+    memAllGB = [math]::Round($sample.MemAll, 1)
+    memTotalGB = [math]::Round($memTotalGB, 1)
     logical = $logical
     runners = @($runners | ForEach-Object {
       [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id] }
