@@ -3701,6 +3701,13 @@
     "2024": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T04:37:40Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "about 40 files or more: about 75 files change (40 local benches, 33 helper copies, the harness, acceptance.rs), even though all of it is tests in one crate plus the tools' check"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
