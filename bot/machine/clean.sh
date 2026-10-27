@@ -22,7 +22,7 @@ if [ "${1:-}" = --job ] && [ -n "${RUNNER_TEMP:-}" ] && [ -d "$RUNNER_TEMP" ]; t
   find "$RUNNER_TEMP" -mindepth 1 -delete 2>/dev/null
 fi
 
-# The jobs this user has going, one line each (Devin and Muse have several lanes). When pgrep
+# The jobs this user has going, one line each (Muse has several lanes). When pgrep
 # cannot tell (it exits 0 with some, 1 with none), nothing a job might be using is touched.
 workers="$(pgrep -a -u "$uid" -f Runner.Worker)"
 known=$?
@@ -85,16 +85,6 @@ if [ -d "$muse_sessions" ]; then
   find "$muse_sessions/.msp-view-v1" -mindepth 1 -maxdepth 1 -type d -mmin +480 \
     -exec rm -rf {} + 2>/dev/null
   find "$muse_sessions" -mindepth 1 -type d -empty -delete 2>/dev/null
-fi
-# Devin keeps every session in one SQLite file, about 700 MB a day; the bot never resumes one
-# (`devin -p` with `--export`). An open database is not deleted under a running session, so it
-# goes only when Devin has no job going; its login is credentials.toml, beside it, and stays.
-devin_cli="$home/.local/share/devin/cli"
-if [ -d "$devin_cli" ]; then
-  if [ "$known" = 1 ] && [ "$running" -le "$mine" ]; then
-    rm -f "$devin_cli/sessions.db" "$devin_cli/sessions.db-wal" "$devin_cli/sessions.db-shm"
-  fi
-  find "$devin_cli/logs" "$devin_cli/summaries" -type f -mmin +480 -delete 2>/dev/null
 fi
 echo "night-vm-clean: $(id -un): disk ${before:-?}% full before, $(used)% after"
 exit 0
