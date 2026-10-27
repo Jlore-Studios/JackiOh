@@ -13,7 +13,7 @@
 
 use jackioh_engine::prelude::*;
 
-use crate::CardQuery;
+use crate::query::CardQuery;
 
 pub const ID: &str = "stinkyscape-130";
 
