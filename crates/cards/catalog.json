@@ -21927,7 +21927,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 8,
@@ -22536,7 +22536,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 3,
@@ -23481,7 +23481,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 49,
     "base": {
       "attack": 6,
       "health": 6,
@@ -23573,7 +23573,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 2,
@@ -23709,7 +23709,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 3,
@@ -23756,7 +23756,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 9,
       "health": 9,
@@ -23793,7 +23793,7 @@
     "flavor": "Physical",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
@@ -23828,7 +23828,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your Starship's Health."
@@ -23864,7 +23864,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Rush. Deal damage equal to {multiplier}× your Starship's Attack, split randomly among all enemies."
@@ -23900,7 +23900,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Flying. Fill your hand with copies of the Starship Pieces fused into your Starship."
@@ -24147,7 +24147,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [
         {
@@ -24343,7 +24343,7 @@
     "refs": [
       "stinkyscape-148-1"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [
         {
@@ -24376,7 +24376,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Escape the Universe: you win the game, and it is a draw for your opponent."

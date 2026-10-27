@@ -12,7 +12,7 @@ use crate::state::{
     CardInstance, DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier,
     Resume, find_instance,
 };
-use crate::wire::{GameEvent, Keyword, PLAYER_IDS, PlayerId, ZoneName};
+use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, ZoneName};
 
 /// `"sourceId" in mod ? mod.sourceId : undefined`: the permanent a modifier belongs to (#79
 /// Twinspell's rider is the one kind that carries one).
@@ -276,21 +276,6 @@ pub fn has_countdown(effect: &DelayedEffect) -> bool {
 
 pub fn drop_delayed(state: &mut GameState, id: &str) {
     state.delayed.retain(|effect| effect.id != id);
-}
-
-/// R1870004: the keywords `player`'s live `unitsKeyword` modifiers give each Unit of theirs on the field
-/// (Stinkyscape #4.4 Last Word's Charge), in the order they were made. Read by §10.4 (`layers.rs`).
-pub fn units_keywords_of(state: &GameState, player: PlayerId) -> Vec<Keyword> {
-    state.players[player]
-        .mods
-        .iter()
-        .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
-                Some(keyword.clone())
-            }
-            _ => None,
-        })
-        .collect()
 }
 
 // ---------------------------------------------------------------------------

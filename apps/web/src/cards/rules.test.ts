@@ -188,6 +188,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // Scanning Probes (S20) explain them on their own faces.
     "Replace your board",
     "Scan for an Anomaly",
+    // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
+    "Units have keyword",
     // R1870000, R1870001, R1870002, R1870004, R1870007: the engine's readings of Stinkyscape's Terminus
     // texts (S22), which print them in plain words, not as terms.
     "Win on play",

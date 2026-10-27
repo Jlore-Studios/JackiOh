@@ -12,12 +12,12 @@
 //! effect: the trap fires, goes to the graveyard, and the hit is cancelled, dealing nothing
 //! (R1704001). Its `then` step ends the turn running (`end_turn`, once what is resolving has resolved,
 //! R456); on its controller's own turn it owes them an extra turn (R845), on the opponent's their
-//! own next turn follows. Through that turn of theirs their Units have Charge (a `unitsKeyword`
-//! modifier, `give_units_keyword_next_turn`), and a delayed step at its end-of-turn stage, one turn of
-//! theirs on (R1181000), makes the opponent win the game (`win_game`, R850). Extra turns the opponent
-//! is already owed come first (R846): the turn is still the controller's next. Radiant: a delayed
-//! step at the start of that turn, after its mana refresh, tops their mana up to `mana`, past
-//! `MAX_MANA` (§6.3 Mana) (R1870004).
+//! own next turn follows. Through that turn of theirs their Units have Charge (R1859007's
+//! `unitsHaveKeyword` modifier, `give_units_keyword_next_turn`), and a delayed step at its end-of-turn
+//! stage, one turn of theirs on (R1181000), makes the opponent win the game (`win_game`, R850). Extra
+//! turns the opponent is already owed come first (R846): the turn is still the controller's next.
+//! Radiant: a delayed step at the start of that turn, after its mana refresh, tops their mana up to
+//! `mana`, past `MAX_MANA` (§6.3 Mana) (R1870004).
 
 use jackioh_engine::effects::{end_turn, gain_mana, give_units_keyword_next_turn, take_extra_turn, win_game};
 use jackioh_engine::prelude::*;

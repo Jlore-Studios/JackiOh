@@ -195,41 +195,6 @@ pub fn give_next_spell_keyword(args: GiveNextSpellKeywordArgs) -> Effect {
     })
 }
 
-/// `giveUnitsKeywordNextTurn`'s argument.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct GiveUnitsKeywordArgs {
-    /// The keyword their Units have: Charge for Stinkyscape #4.4 Last Word.
-    pub keyword: Keyword,
-    /// Whose Units, relative to the controller. Default "self".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub player: Option<PlayerSpec>,
-}
-
-/// R1870004 (Stinkyscape #4.4 Last Word, "the next turn is yours: your Units have Charge during it"):
-/// through the player's next turn each Unit they control on the field has `keyword` — a `unitsKeyword`
-/// player modifier, expiry `nextTurnOf` from this turn, so it is live on the next turn of theirs only
-/// (`mana::modifier_is_live`) and gone at that turn's cleanup. A Unit that lands during it has the
-/// keyword as it lands, as an aura's.
-pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
-    Effect::new("giveUnitsKeywordNextTurn", move |ctx| {
-        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let turn = ctx.sink.state.turn;
-        add_modifier(
-            ctx,
-            player,
-            ModifierExpiry::NextTurnOf {
-                player,
-                from_turn: turn,
-            },
-            ModifierKind::UnitsKeyword {
-                keyword: args.keyword.clone(),
-            },
-        );
-    })
-}
-
 /// `starshipLaunchCosts`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -252,6 +217,55 @@ pub fn starship_launch_costs(args: StarshipLaunchCostArgs) -> Effect {
             ModifierExpiry::Used,
             ModifierKind::StarshipLaunchCost {
                 cost: args.cost.max(0),
+            },
+        );
+    })
+}
+
+/// `giveUnitsKeyword`'s and `giveUnitsKeywordNextTurn`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveUnitsKeywordArgs {
+    /// The keyword every Unit has: Trample, Deft, Rush or Flying for Stinkyscape's War Doctrines,
+    /// Charge for #4.4 Last Word.
+    pub keyword: Keyword,
+}
+
+/// R1859007 (Stinkyscape #137.1–#137.4, the War Doctrines): "For the rest of the game, your Units
+/// have X." A `UnitsHaveKeyword` player modifier on the controller, expiry `never`: every Unit they
+/// control on the field has the keyword, those that arrive later too (`layers::lent_by_player`).
+pub fn give_units_keyword(args: GiveUnitsKeywordArgs) -> Effect {
+    Effect::new("giveUnitsKeyword", move |ctx| {
+        let player = ctx.controller;
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::Never,
+            ModifierKind::UnitsHaveKeyword {
+                keyword: args.keyword.clone(),
+            },
+        );
+    })
+}
+
+/// R1870004 (Stinkyscape #4.4 Last Word, "the next turn is yours: your Units have Charge during it"):
+/// R1859007's `UnitsHaveKeyword` player modifier on the controller with expiry `nextTurnOf` from this
+/// turn, so it lends `keyword` on their next turn only (`mana::modifier_is_live`) and is gone at that
+/// turn's cleanup. A Unit that lands during it has the keyword as it lands, as an aura's.
+pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
+    Effect::new("giveUnitsKeywordNextTurn", move |ctx| {
+        let player = ctx.controller;
+        let turn = ctx.sink.state.turn;
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::NextTurnOf {
+                player,
+                from_turn: turn,
+            },
+            ModifierKind::UnitsHaveKeyword {
+                keyword: args.keyword.clone(),
             },
         );
     })

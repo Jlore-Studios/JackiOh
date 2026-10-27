@@ -1,10 +1,11 @@
 // Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
 // `.landing` so it cannot affect the board layout. After `GATE_SLOW_NOTICE_SECONDS`, local session
 // state avoids flashing Sign in while the account read is slow. R765 shows an active online game.
+// R2035000 hangs the account's quests off the doors' box.
 
-import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
-import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
+import { ECONOMY_LIVE, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -17,7 +18,7 @@ import { readerName } from "../cards/chinese.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
-import { t } from "../i18n/i18n.ts";
+import { formatNumber, t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -41,6 +42,7 @@ import {
   type RandomSource,
 } from "./landingFan.ts";
 import { LiveGameBanner } from "./GameBanner.tsx";
+import { QuestsView, useQuests } from "./QuestsPanel.tsx";
 import { followInApp } from "./nav.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 
@@ -308,7 +310,118 @@ function Corner({ account }: { account: Account }): ReactElement | null {
   );
 }
 
-function Actions(): ReactElement {
+/** R2035000: the bookmark's glyph, an exclamation on a brass disc like Jlore's coin. */
+function QuestGlyph(): ReactElement {
+  return (
+    <svg
+      className="landing-quests-glyph"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      focusable="false"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.28" />
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 6.5 V13.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="12" cy="17.2" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** R2035000: how long the quests' parchment takes to unroll from its bookmark, and to roll back up. */
+export const QUESTS_UNROLL_MS = 220;
+
+type QuestsPhase = "closed" | "open" | "closing";
+
+/** R2035000: the account's quests behind a bookmark on the doors' box, read once on mount (CLAUDE.md rule 7). */
+function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
+  const { quests, error, reread } = useQuests(token);
+  const [phase, setPhase] = useState<QuestsPhase>("closed");
+  const root = useRef<HTMLDivElement>(null);
+  const bookmark = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+  const close = useCallback((): void => {
+    setPhase(motion === "reduced" ? "closed" : "closing");
+  }, [motion]);
+
+  // The roll back up ends hidden.
+  useEffect(() => {
+    if (phase !== "closing") return undefined;
+    const timer = window.setTimeout(() => {
+      setPhase("closed");
+    }, QUESTS_UNROLL_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [phase]);
+
+  // While open: Escape closes it and gives the focus back; a press outside closes it.
+  useEffect(() => {
+    if (phase !== "open") return undefined;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      close();
+      bookmark.current?.focus();
+    };
+    const onPress = (event: Event): void => {
+      if (event.target instanceof Node && root.current?.contains(event.target) === true) return;
+      close();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPress);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPress);
+    };
+  }, [phase, close]);
+
+  // Nothing held and nothing due (R1304002): nothing to show, as on `/collection`.
+  if (quests !== null && quests.quests.length === 0 && quests.nextDueAt === null) return null;
+  const held = quests?.quests.length ?? 0;
+  const open = phase === "open";
+  return (
+    <div
+      ref={root}
+      className="landing-quests"
+      style={{ "--quests-unroll": `${String(QUESTS_UNROLL_MS)}ms` } as CSSProperties}
+    >
+      <button
+        ref={bookmark}
+        type="button"
+        className="landing-quests-bookmark"
+        data-testid={landingTestid.questsBookmark}
+        aria-label={t("Quests")}
+        title={t("Quests")}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => {
+          if (open) close();
+          else setPhase("open");
+        }}
+      >
+        <QuestGlyph />
+        {held > 0 ? (
+          <span className="landing-quests-count" data-testid={landingTestid.questsCount} aria-hidden="true">
+            {formatNumber(held)}
+          </span>
+        ) : null}
+      </button>
+      <div
+        id={panelId}
+        className="landing-quests-panel"
+        data-testid={landingTestid.questsPanel}
+        data-state={phase}
+        data-motion={motion}
+        hidden={phase === "closed"}
+      >
+        {phase === "closed" ? null : <QuestsView quests={quests} error={error} onRetry={reread} onArrived={reread} />}
+      </div>
+    </div>
+  );
+}
+
+function Actions({ questsToken, motion }: { questsToken: string | null; motion: LandingMotion }): ReactElement {
   // #1577, R1578000: the three doors. Play leads to the Play hub, which holds every way to play,
   // online first; the invite-only sentence lives on `/invite` and `/play`, where the player decides.
   return (
@@ -349,6 +462,7 @@ function Actions(): ReactElement {
           {t("Hotseat: both seats on this device")}
         </a>
       ) : null}
+      {questsToken === null ? null : <QuestsBookmark token={questsToken} motion={motion} />}
     </nav>
   );
 }
@@ -358,15 +472,20 @@ function Actions(): ReactElement {
 export type LandingRouteProps = {
   /** R374: where the fan's deal draws its randomness; `Math.random` on the page, a seeded source in tests. */
   random?: RandomSource;
+  /** R2035000: whether the economy is live, for the quests bookmark. */
+  economyLive?: boolean;
 };
 
-export default function LandingRoute({ random = Math.random }: LandingRouteProps = {}): ReactElement {
+export default function LandingRoute({ random = Math.random, economyLive = ECONOMY_LIVE }: LandingRouteProps = {}): ReactElement {
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
   // R765: the player's live online game, for the banner at the top.
   const liveGame = useLiveGame(account);
   const motion = useMotion();
+  // R2035000: GET /api/quests answers an active account alone.
+  const questsToken =
+    economyLive && account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
   // R374 deals once per mount; R639 uses all shipped cards after enough games; R704 rotates that pool.
   // R1017002: from the cards that print whole on a fan card, a hero's full-art card favoured.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
@@ -436,7 +555,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
 
           <CardFan hand={hand} onOpen={setOpen} onHold={setHeld} />
 
-          <Actions />
+          <Actions questsToken={questsToken} motion={motion} />
         </div>
       </section>
 
