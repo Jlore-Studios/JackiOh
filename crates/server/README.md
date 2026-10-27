@@ -933,6 +933,13 @@ turn count, R1256000's sums with the count of records that carry them), written 
 `record_totals`' do, and a total of at least one game. RLS is on with no policy and no grant, as the
 other totals: the server alone reads it.
 
+Migration 0064 only adds `season_ranks_season_ladder_idx` on `season_ranks (season_id, ladder)`, for
+`ranked_standings_subset` (#2022): the read of `own_rank`, `match_ranks` and `ladder_tiers`, which
+takes a season's rows for the profiles shown plus every row from `ladder::jlorious_floor()` up, bound
+from the ladder code so the index is not partial. `tests/sql/01_schema_invariants.sql` CHECK 21 plans
+it with sequential scans off, and fails when the Mythic range is filtered rather than read through
+the index.
+
 ## Tests
 
 ```

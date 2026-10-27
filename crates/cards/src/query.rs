@@ -38,7 +38,7 @@
 //! `catalog.trap_types` are always in reach even when only `catalog` is named, as the TS `catalog`
 //! object was.
 
-use jackioh_engine::{CardDef, CardType, CatalogQueryArgs};
+use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};
 
 /// §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
 /// withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
@@ -93,6 +93,17 @@ pub fn luck_based() -> CardQuery {
 pub fn embiggen_cards() -> CardQuery {
     CardQuery {
         embiggen: Some(true),
+        ..CardQuery::default()
+    }
+}
+
+/// R1878000: "a random Starship Piece" (Stinkyscape #124, #125, #126): every non-token card that prints
+/// Starship Piece on its base face, which leaves out the Dormant Starship (R1857001). It names its set,
+/// the one that prints the keyword, so it reaches the pieces while the set is held (R1420).
+pub fn starship_pieces() -> CardQuery {
+    CardQuery {
+        set: Some(OneOrMany::One(SetName::Stinkyscape)),
+        keywords: Some(vec![KeywordKind::StarshipPiece]),
         ..CardQuery::default()
     }
 }
