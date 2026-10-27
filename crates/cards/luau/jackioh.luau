@@ -1976,6 +1976,12 @@ keyword: Keyword,
 expiry: ModifierExpiry,
 ["kind"]: "starshipLaunchCost",
 cost: number,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "playWatch",
+defIds: {string},
+resume: Resume,
+label: string,
 }
 
 export type PlayerSpec = "self" | "enemy"
