@@ -11,6 +11,7 @@
 //!   `cancel_attack` (R44), the exertion spent all the same, and a Freeze of the attacker, which thaws at
 //!   the cleanup of its controller's next turn (R1174000). Declares no numbers (R482).
 
+use jackioh_engine::damage::DamageTarget;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-t-ai-04";
@@ -71,23 +72,31 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::scenario;
+    use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const SHIELD: &str = "stinkyscape-t-ai-04";
-    /// #13 Jlockeed Shredder-10, 6/10 with no keywords.
-    const ATTACKER: &str = "core-013";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    /// #8 Mr. Vanilla, a plain (1) 4/4.
+    const ATTACKER: &str = "core-008";
+    /// #1 Big D-fender, 0/7: the Unit attacked.
+    const VANILLA: &str = "core-001";
+    const FILLER: &str = "core-005";
 
     /// p1 holds the trap and a Vanilla in lane 1; p2 is active with an attacker.
     fn set(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "predictive-shield",
             "active": "p2",
-            "p1": { "health": 30, "backrow": [{ "def": SHIELD, "radiant": radiant }], "field": [VANILLA] },
-            "p2": { "field": [ATTACKER] },
+            "p1": {
+                "health": 30,
+                "backrow": [{ "def": SHIELD, "radiant": radiant }],
+                "field": [VANILLA],
+                "hand": [FILLER],
+                "library": filler(6),
+            },
+            "p2": { "field": [ATTACKER], "hand": [FILLER], "library": filler(6) },
         }))
     }
 
@@ -105,8 +114,8 @@ mod tests {
         s.attack(ATTACKER, VANILLA);
         assert!(fired(&s));
         assert!(cancelled(&s));
-        s.expect_stats(VANILLA, json!({ "health": 4 }));
-        s.expect_stats(ATTACKER, json!({ "health": 10 }));
+        s.expect_stats(VANILLA, json!({ "health": 7 }));
+        s.expect_stats(ATTACKER, json!({ "health": 4 }));
         assert!(s.card(ATTACKER).frozen.is_some(), "the attacker is Frozen");
         s.expect_in_zone(SHIELD, "graveyard");
     }
@@ -130,7 +139,7 @@ mod tests {
         let mut s = set(false);
         s.attack(ATTACKER, "hero");
         assert!(!fired(&s));
-        s.expect_health("p1", 24);
+        s.expect_health("p1", 26);
         assert!(s.card(ATTACKER).frozen.is_none());
         s.expect_in_zone(SHIELD, "field");
     }
@@ -149,8 +158,8 @@ mod tests {
     fn r1881002_your_own_attack_leaves_it_set() {
         let mut s = scenario(json!({
             "seed": "predictive-shield-own",
-            "p1": { "backrow": [SHIELD], "field": [ATTACKER] },
-            "p2": { "field": [VANILLA] },
+            "p1": { "backrow": [SHIELD], "field": [ATTACKER], "hand": [FILLER], "library": filler(6) },
+            "p2": { "field": [VANILLA], "hand": [FILLER], "library": filler(6) },
         }));
         s.attack(ATTACKER, VANILLA);
         assert!(!fired(&s));

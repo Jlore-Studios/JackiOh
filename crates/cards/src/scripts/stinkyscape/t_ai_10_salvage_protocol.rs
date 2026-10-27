@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn radiant_2_4_and_a_radiant_piece() {
-        let s = scenario(json!({ "p1": { "field": [{ "def": SALVAGE, "radiant": true }] } }));
+        let mut s = scenario(json!({ "p1": { "field": [{ "def": SALVAGE, "radiant": true }] } }));
         s.expect_stats(SALVAGE, json!({ "attack": 2, "health": 4 }));
         let s = killed(true, "salvage-radiant");
         let added = salvaged(&s);

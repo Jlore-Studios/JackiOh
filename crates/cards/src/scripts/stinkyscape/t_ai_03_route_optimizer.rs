@@ -24,15 +24,12 @@ fn face(radiant: bool) -> Script {
             vec![discover_from_catalog(DiscoverFromCatalogArgs {
                 step: PICKED.to_string(),
                 query: Some(crate::query::starship_pieces()),
-                query_fn: None,
-                count: None,
                 prompt: Some("Discover a Starship Piece".to_string()),
-                data: StepData::default(),
-                offer: None,
+                ..json_as(json!({ "step": PICKED }))
             })]
         })),
         resume: IndexMap::from([(
-            PICKED.to_string(),
+            PICKED,
             hook(move |ctx| {
                 let Some(picked) = chosen_options(ctx).into_iter().next() else {
                     return vec![];

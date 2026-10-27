@@ -1270,7 +1270,10 @@ pub const MARKETPLACE_TABLE: &[MarketLot] = &[
     },
     card_lot(MarketPool::Ids(MARKETPLACE_DRONE_CORES), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_LAUNCHERS), 1),
-    card_lot(MarketPool::SetKeyword(SetName::Stinkyscape, KeywordKind::StarshipPiece), 2),
+    card_lot(
+        MarketPool::SetKeyword(SetName::Stinkyscape, KeywordKind::StarshipPiece),
+        2,
+    ),
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
 ];

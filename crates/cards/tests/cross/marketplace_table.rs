@@ -48,7 +48,13 @@ fn r1881006_every_lots_pool_resolves_to_cards_the_catalog_holds_at_least_its_cou
             }
         }
         let ids = pool(lot.pool);
-        assert!(ids.len() >= lot.count as usize, "{:?} holds {} cards, fewer than {}", lot.pool, ids.len(), lot.count);
+        assert!(
+            ids.len() >= lot.count as usize,
+            "{:?} holds {} cards, fewer than {}",
+            lot.pool,
+            ids.len(),
+            lot.count
+        );
         assert!(lot.stock_min >= 1 && lot.stock_min <= lot.stock_max, "{lot:?}");
     }
 }
@@ -66,23 +72,39 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
         def.tags.contains(&Tag::Weapon) && ["v3", "v4", "v5"].iter().any(|v| def.name.ends_with(v))
     });
     assert_eq!(MARKETPLACE_WEAPONS.len(), 12);
-    named(MARKETPLACE_WARP_DISRUPTORS, "a Warp Disruptor", &|id| card_def(id).name.starts_with("Warp Disruptor"));
+    named(MARKETPLACE_WARP_DISRUPTORS, "a Warp Disruptor", &|id| {
+        card_def(id).name.starts_with("Warp Disruptor")
+    });
     assert_eq!(MARKETPLACE_WARP_DISRUPTORS.len(), 2);
-    named(MARKETPLACE_PROBE_MK1, "Scanning Probe Mk1", &|id| card_def(id).name == "Scanning Probe Mk1");
-    named(MARKETPLACE_PROBE_MK2, "Scanning Probe Mk2", &|id| card_def(id).name == "Scanning Probe Mk2");
-    named(MARKETPLACE_DRONE_CORES, "a Drone Core", &|id| card_def(id).tags.contains(&Tag::DroneCore));
+    named(MARKETPLACE_PROBE_MK1, "Scanning Probe Mk1", &|id| {
+        card_def(id).name == "Scanning Probe Mk1"
+    });
+    named(MARKETPLACE_PROBE_MK2, "Scanning Probe Mk2", &|id| {
+        card_def(id).name == "Scanning Probe Mk2"
+    });
+    named(MARKETPLACE_DRONE_CORES, "a Drone Core", &|id| {
+        card_def(id).tags.contains(&Tag::DroneCore)
+    });
     assert_eq!(
         MARKETPLACE_DRONE_CORES.len(),
-        registered_catalog().values().filter(|def| def.tags.contains(&Tag::DroneCore)).count(),
+        registered_catalog()
+            .values()
+            .filter(|def| def.tags.contains(&Tag::DroneCore))
+            .count(),
         "every Drone Core"
     );
-    named(MARKETPLACE_LAUNCHERS, "a Launcher", &|id| card_def(id).name.ends_with("Launcher"));
+    named(MARKETPLACE_LAUNCHERS, "a Launcher", &|id| {
+        card_def(id).name.ends_with("Launcher")
+    });
     named(MARKETPLACE_AI_CARDS, "an AI card of the set", &|id| {
         let def = card_def(id);
         def.set == SetName::Stinkyscape && def.tags.contains(&Tag::Ai)
     });
     assert_eq!(MARKETPLACE_AI_CARDS.len(), 10);
-    for id in pool(MarketPool::SetKeyword(SetName::Stinkyscape, KeywordKind::StarshipPiece)) {
+    for id in pool(MarketPool::SetKeyword(
+        SetName::Stinkyscape,
+        KeywordKind::StarshipPiece,
+    )) {
         assert!(!card_def(&id).token, "{id}: a Starship Piece lot holds no token");
     }
 }
@@ -102,7 +124,10 @@ fn r1881006_an_offering_rolled_from_it_holds_each_lot_at_its_count_and_stock() {
             let ids = pool(lot.pool);
             for offer in &offers[at..at + lot.count as usize] {
                 assert!(ids.contains(&offer.def_id), "{} in {:?}", offer.def_id, lot.pool);
-                assert!((lot.stock_min..=lot.stock_max).contains(&offer.stock), "{offer:?}");
+                assert!(
+                    (lot.stock_min..=lot.stock_max).contains(&offer.stock),
+                    "{offer:?}"
+                );
                 assert_eq!(offer.bought[PlayerId::P1], 0);
             }
             at += lot.count as usize;
@@ -112,9 +137,15 @@ fn r1881006_an_offering_rolled_from_it_holds_each_lot_at_its_count_and_stock() {
 
 #[test]
 fn r1881006_the_stocks_are_st3s() {
-    let stocks: Vec<(i32, i32)> = MARKETPLACE_TABLE.iter().map(|lot| (lot.stock_min, lot.stock_max)).collect();
+    let stocks: Vec<(i32, i32)> = MARKETPLACE_TABLE
+        .iter()
+        .map(|lot| (lot.stock_min, lot.stock_max))
+        .collect();
     let card = (MARKETPLACE_CARD_STOCK_MIN, MARKETPLACE_CARD_STOCK_MAX);
-    assert_eq!((MARKETPLACE_RESOURCE_STOCK_MIN, MARKETPLACE_RESOURCE_STOCK_MAX), (4, 8));
+    assert_eq!(
+        (MARKETPLACE_RESOURCE_STOCK_MIN, MARKETPLACE_RESOURCE_STOCK_MAX),
+        (4, 8)
+    );
     assert_eq!((MARKETPLACE_PROBE_MK1_STOCK, MARKETPLACE_PROBE_MK2_STOCK), (6, 3));
     assert_eq!(card, (1, 3));
     assert_eq!(

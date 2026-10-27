@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn r64_its_cry_summons_an_interceptor_into_the_leftmost_open_zone() {
-        let s = played(false, json!([{ "def": VANILLA, "lane": 1 }]), 3);
+        let mut s = played(false, json!([{ "def": VANILLA, "lane": 1 }]), 3);
         let escort = s.unit(P1, 3).expect("the Escort in lane 3");
         assert_eq!(escort.def_id, ESCORT);
         assert!(keywords_of(s.state(), s.card(escort.id.as_str())).contains(&Keyword::Flying));
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn radiant_2_6_and_a_radiant_interceptor() {
-        let s = played(true, json!([]), 1);
+        let mut s = played(true, json!([]), 1);
         s.expect_stats(ESCORT, json!({ "attack": 2, "health": 6 }));
         let drone = s.unit(P1, 2).expect("the Interceptor in lane 2");
         assert_eq!(drone.def_id, INTERCEPTOR);

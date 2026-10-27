@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn radiant_4_4_and_two_different_keywords_each() {
-        let s = played(true, "subroutine-radiant");
+        let mut s = played(true, "subroutine-radiant");
         s.expect_stats(SUBROUTINE, json!({ "attack": 4, "health": 4 }));
         for lane in 1..=2 {
             let keywords = keywords_at(&s, P1, lane);
