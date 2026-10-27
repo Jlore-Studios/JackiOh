@@ -25,6 +25,7 @@ import {
   writeCosmetics,
   type CardPickChange,
 } from "../cards/cosmetics.ts";
+import { CHINESE } from "../cards/chinese.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
 import {
   CARD_SETTINGS_DEFAULTS,
@@ -35,6 +36,7 @@ import {
   faceModel,
   writeCardSettings,
 } from "../cards/index.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
@@ -48,6 +50,7 @@ import {
   COLLECTED_DEFS,
   NO_FULL_ART_ID,
   accountTiles,
+  cardNameOf,
   cardStrip,
   collectionSectionOf,
   collectionTestid as T,
@@ -68,6 +71,7 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
   resetCosmeticsForTests();
+  resetLocaleForTests();
 });
 
 function defOf(id: string): CardDef {
@@ -175,6 +179,61 @@ describe("#1307 OwnedCards", () => {
     expect(screen.getByTestId(T.cardView)).toHaveTextContent("Owned");
     fireEvent.click(screen.getByTestId(T.cardViewText));
     expect(screen.getByTestId(INSPECT_DETAIL)).toHaveTextContent("Owned");
+  });
+});
+
+describe("#2053 card names in the reader's language", () => {
+  /** A locked tile, its view and its detail, opened in turn: the names each carries. */
+  function openLocked(): { tile: string | null; locked: string | null; view: HTMLElement; title: string; detail: string | null } {
+    render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    const tile = screen.getByTestId(T.card("core-001")).getAttribute("aria-label");
+    const locked = screen.getByTestId(T.card("core-002")).getAttribute("aria-label");
+    fireEvent.click(screen.getByTestId(T.card("core-002")));
+    const view = screen.getByTestId(T.cardView);
+    const title = view.querySelector(".collection-cardview__title")?.textContent ?? "";
+    fireEvent.click(screen.getByTestId(T.cardViewText));
+    return { tile, locked, view, title, detail: screen.getByTestId(INSPECT_DETAIL).getAttribute("aria-label") };
+  }
+
+  it("#2053 cardNameOf names a catalog card as the reader reads it, else its id", async () => {
+    expect(cardNameOf("core-004")).toBe(defOf("core-004").name);
+    expect(cardNameOf("not-a-card")).toBe("not-a-card");
+
+    await setLocale("zh-CN");
+
+    expect(cardNameOf("core-004")).toBe(CHINESE["core-004"]!.name);
+    expect(cardNameOf("not-a-card")).toBe("not-a-card");
+  });
+
+  it("#2053 in English a tile, its view and its detail are labelled with the catalog's name", () => {
+    const opened = openLocked();
+
+    expect(opened.tile).toBe(defOf("core-001").name);
+    expect(opened.locked).toBe(`${defOf("core-002").name}, not owned yet`);
+    expect(opened.view).toHaveAttribute("aria-label", defOf("core-002").name);
+    expect(opened.title).toBe(defOf("core-002").name);
+    expect(opened.detail).toBe(defOf("core-002").name);
+  });
+
+  it("#2053 for a reader of Chinese they are labelled with the Chinese table's name", async () => {
+    await setLocale("zh-CN");
+    const opened = openLocked();
+
+    expect(opened.tile).toBe(CHINESE["core-001"]!.name);
+    expect(opened.locked).toBe(`${CHINESE["core-002"]!.name}，尚未拥有`);
+    expect(opened.view).toHaveAttribute("aria-label", CHINESE["core-002"]!.name);
+    expect(opened.title).toBe(CHINESE["core-002"]!.name);
+    expect(opened.detail).toBe(CHINESE["core-002"]!.name);
+  });
+
+  it("#2053 an owned per-card cosmetic names its card in the reader's language", async () => {
+    await setLocale("zh-CN");
+    render(<OwnedCosmetics owned={ownedCosmeticsOf()} />);
+
+    expect(screen.getByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toHaveTextContent(
+      `用于${CHINESE["core-004"]!.name}`,
+    );
   });
 });
 
