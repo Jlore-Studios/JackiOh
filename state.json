@@ -3732,7 +3732,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"sed -n '1,/^## Log/p' .bot-notes.md | head -80; echo ---; git diff --name-only --diff-filter=U; git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec | head\", \"description\": \"Read notes st\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 1:50am (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "issue": 1861,
       "kind": "revise",
       "last_findings": [],
