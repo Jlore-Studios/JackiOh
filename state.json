@@ -3272,7 +3272,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-27T12:46:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:b16b4b1f-1793105172",
+      "run_id": "40506500010",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T12:46:58Z",
       "stop_requested": false,
