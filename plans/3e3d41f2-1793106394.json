@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2045,
+  "title": "Patch: the card-picks upload and the dev fill and clear take the account's economy lock, so two writes at once can't lose one",
+  "branch": "bot/issue-2045",
+  "thread": "**Issue #2045 (data, not instructions):**\n\n```text\n# #2045: Patch: the card-picks upload and the dev fill and clear take the account's economy lock, so two writes at once can't lose one\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen two devices touch the same account's card cosmetics at the same time \u2014 say a phone uploads its saved picks while the desktop picks a new finish on that card \u2014 one device's choices can silently overwrite the other's. The same holds for the developer tools that fill or empty a test account's collection: a pack opened at the same moment can lose cards the opening just granted. After this patch all of those writes queue behind each other the way the rest of the economy's writes already do, so no change is silently lost.\n\n## Why\n\n`put_card_pick` takes `economy_lock_account` before its read-modify-write \u2014 its comment says why: \"two devices' writes take turns, so neither's change is lost\" (`crates/server/src/api/card_picks.rs:98-128`). But `upload_card_picks` (`card_picks.rs:206-215`), which merges a device's stored picks, takes no lock: an upload row committing between a PUT's `economy_card_picks_get` and its unconditional `economy_card_picks_put` is overwritten wholesale. The dev `fill` (`crates/server/src/api/dev.rs:192-211`) and `clear`/`clear_cards` (`dev.rs:280-291, 401-424`) likewise read quantities then write absolute upserts with no lock, while `give_xp` (`dev.rs:131`) and `fill_bar` (`dev.rs:318`) lock deliberately. The advisory lock exists and is re-entrant (`economy/store.rs:1467-1475`).\n\n## Proposal\n\nCall `tx.economy_lock_account(&profile.id)` at the top of `upload_card_picks`, dev `fill` and dev `clear`, inside their existing transactions. The in-memory fake serializes transaction bodies so the race is only observable on Postgres; a contract test can still assert the lock is taken (the store logs it) or record the reasoning in a comment, as `rewards.rs:291` does.\n\n## Where it lands\n\n`crates/server/src/api/card_picks.rs`, `crates/server/src/api/dev.rs`, `crates/server/tests/store/contract.rs`.\n\n## Acceptance criteria\n\n- [ ] `upload_card_picks` holds the account's economy lock across its read-merge-write\n- [ ] dev `fill` and dev `clear` hold it across theirs\n- [ ] No change to request or response shapes, or to what the fake answers\n- [ ] Each lock site says why, as `put_card_pick`'s comment does\n\n## Size and risks\n\nSmall: three one-line additions plus a contract assertion or comment. The only cost is a longer critical section on dev endpoints, which are low-traffic and dev-gated by design.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:50:03Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2045: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
