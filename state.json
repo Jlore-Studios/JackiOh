@@ -3575,7 +3575,9 @@
     },
     "2021": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6429255343"
+      ],
       "difficulty_by": {
         "at": "2026-10-27T04:16:00Z",
         "difficulty": "medium",
@@ -3609,9 +3611,7 @@
       "started_at": "2026-10-27T04:02:13Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6429255343"
-      ]
+      "taken_asks": []
     },
     "2022": {
       "action": "plan",
