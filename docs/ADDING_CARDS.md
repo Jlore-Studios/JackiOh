@@ -146,7 +146,7 @@ with `use crate::<name>;`; use them rather than a copy: `scenario` (the shipped 
 `js` (an engine value as JSON, never `serde_json::to_value(…).expect(…)`), `merged` (TS `{ ...base, ...over }`: a
 side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(count)` (`count` Stockpiles, Core #5,
 for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
-`stand_in_backrow`, `give_flying`, `give_lucky`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
+`stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
 `can_degrade_number`. Take the engine testkit's `Scenario::unit_at` and `pick::…` the same way;
 `crates/tools/tests/acceptance.rs` refuses a copy (#1826). Keep a local helper only when its body differs.
 

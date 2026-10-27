@@ -635,6 +635,43 @@ mod r1852003_the_launch {
     }
 
     #[test]
+    fn r1852003_a_piece_on_the_field_and_a_launched_starship_do_nothing_when_another_starship_launches() {
+        // Each side's booster dies into a Starship; p1 also has a live booster on the field.
+        let mut s = board(
+            "p1",
+            json!([bolt.id, booster.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+        );
+        let mine = id_at(&s, P1, 1);
+        bolt_at(&mut s, &mine);
+        s.play(booster.id.as_str(), json!({ "zone": 2 }));
+        let p2_health = health_of(&s, P2);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        assert_eq!(
+            health_of(&s, P2),
+            p2_health - LAUNCHED_DAMAGE,
+            "only the booster fused into the Starship answers its launch"
+        );
+        // p2 launches theirs: p1's live booster and p1's launched Starship answer nothing.
+        s.end_turn();
+        let theirs = id_at(&s, P2, 1);
+        bolt_at(&mut s, &theirs);
+        let p1_health = health_of(&s, P1);
+        let p2_health = health_of(&s, P2);
+        let ship = ship_of(&s, P2);
+        launch(&mut s, &ship.id);
+        assert_eq!(health_of(&s, P1), p1_health - LAUNCHED_DAMAGE);
+        assert_eq!(
+            health_of(&s, P2),
+            p2_health,
+            "no card of p1's answered p2's launch"
+        );
+    }
+
+    #[test]
     fn r1852003_a_trap_reveals_when_either_player_launches_a_starship() {
         let mut s = built_ship_with(json!([]), None, json!([{ "def": countdown.id, "lane": 1 }]));
         let ship = ship_of(&s, P1);

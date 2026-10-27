@@ -675,6 +675,14 @@ pub enum ModifierKind {
     StarshipLaunchCost {
         cost: i32,
     },
+    // ---- Stinkyscape's War Doctrines (issue #1859) ----
+    /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
+    /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but
+    /// a Vanilla, Dormant or buried one (`layers::lent_by_player`). Expiry `never`; it outlasts the
+    /// War Doctrine that gave it.
+    UnitsHaveKeyword {
+        keyword: Keyword,
+    },
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's

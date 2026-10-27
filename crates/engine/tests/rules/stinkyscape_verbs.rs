@@ -867,3 +867,62 @@ mod r1849009_reveal_chance {
         assert_eq!(s.state().rng_cursor, cursor);
     }
 }
+
+/// R1859007 (issue #1859, Stinkyscape's War Doctrines): "For the rest of the game, your Units have X",
+/// a `unitsHaveKeyword` player modifier: every Unit its holder controls on the field has the keyword,
+/// those that arrive later too, but a Vanilla one, a card in a hand and the opponent's Units do not.
+mod r1859007_units_have_keyword {
+    use super::*;
+
+    fn has_trample(s: &Scenario, id: &str) -> bool {
+        unit_has(s.state(), s.card(id), KeywordKind::Trample)
+    }
+
+    #[test]
+    fn r1859007_units_have_keyword_reaches_every_unit_its_holder_controls_now_and_later() {
+        let mut s = board(
+            "r1859007",
+            json!({
+                "hand": [PLAIN],
+                "field": [
+                    { "def": PLAIN, "lane": 1 },
+                    { "def": PLAIN, "lane": 2 },
+                    { "def": PLAIN, "lane": 3 },
+                ],
+            }),
+            json!({ "field": [{ "def": PLAIN, "lane": 1 }] }),
+        );
+        let ours = [id_at(&s, P1, 1), id_at(&s, P1, 2)];
+        let bland = id_at(&s, P1, 3);
+        let theirs = id_at(&s, P2, 1);
+        let held = s.state().players.p1.hand[0].id.clone();
+        s.card_mut(bland.as_str()).vanilla = true;
+        assert!(!has_trample(&s, &ours[0]));
+        s.state_mut().players.p1.mods.push(PlayerModifier {
+            id: "r1859007".to_string(),
+            expiry: ModifierExpiry::Never,
+            kind: ModifierKind::UnitsHaveKeyword {
+                keyword: Keyword::Trample,
+            },
+        });
+        assert!(ours.iter().all(|id| has_trample(&s, id)));
+        assert!(!has_trample(&s, &bland), "a Vanilla Unit takes none");
+        assert!(!has_trample(&s, &theirs), "the opponent's Units take none");
+        assert!(!has_trample(&s, &held), "a card in a hand takes none");
+        // A Unit that arrives later has it too, and both seats read the badge.
+        s.play(PLAIN, json!({ "zone": 4 }));
+        assert!(has_trample(&s, &held));
+        for (viewer, side) in [(P1, true), (P2, false)] {
+            let view = s.view(viewer);
+            let mods = if side {
+                &view.you.modifiers
+            } else {
+                &view.opponent.modifiers
+            };
+            assert!(
+                mods.iter().any(|badge| badge.label == "Your Units have Trample"),
+                "{viewer:?}: {mods:?}"
+            );
+        }
+    }
+}

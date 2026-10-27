@@ -1274,6 +1274,10 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             "Your next Spell this turn has {}",
             crate::wire::keyword_key(keyword)
         ),
+        // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X".
+        ModifierKind::UnitsHaveKeyword { keyword } => {
+            format!("Your Units have {}", crate::wire::keyword_key(keyword))
+        }
     }
 }
 

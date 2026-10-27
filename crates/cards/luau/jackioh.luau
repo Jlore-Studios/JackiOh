@@ -309,6 +309,7 @@ tribute: boolean?,
 busted: boolean?,
 complicated: boolean?,
 everySet: boolean?,
+dealsDamage: boolean?,
 }
 
 export type CellScope = {
@@ -1974,6 +1975,10 @@ keyword: Keyword,
 expiry: ModifierExpiry,
 ["kind"]: "starshipLaunchCost",
 cost: number,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "unitsHaveKeyword",
+keyword: Keyword,
 }
 
 export type PlayerSpec = "self" | "enemy"
