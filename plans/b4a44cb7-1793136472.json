@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 2116,
+  "title": "Patch: prefetch a screen's code and the engine on hover or focus",
+  "branch": "bot/issue-2116",
+  "thread": "**Issue #2116 (data, not instructions):**\n\n```text\n# #2116: Patch: prefetch a screen's code and the engine on hover or focus\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## What\n\nThis is the \"pre-rendering\" tip. The crawler pages are already pre-rendered (`static-pages.ts`); the gap is code. Every route is a `lazy()` chunk (`main.tsx`) that is fetched only after the click, and the engine's WebAssembly loads only when a game starts.\n\n- **One map of imports.** Keep each route's `import()` in a single map. `main.tsx`'s `lazy()` and a new `prefetchRoute(path)` helper both call it, so a prefetch and the route share one request.\n- **When to prefetch.** Call `prefetchRoute` on `pointerenter` and `focus` of every control that navigates to a route, and on `touchstart` on touch devices. Do it once per route per page load.\n- **The engine.** When the player shows intent toward Practice, Play or a match, also start `loadWasm()` (`src/wasm/index.ts`, already idempotent).\n- **Save-Data.** Skip all prefetching when `navigator.connection?.saveData` is true.\n- **Dev routes.** A production build never prefetches a dev-only route.\n\n## Done when\n\nvitest checks that:\n- hovering a control calls its route's import once, and a second hover starts no new fetch;\n- a prefetched route renders without showing the Suspense fallback;\n- Save-Data turns all prefetching off;\n- intent toward Practice starts `loadWasm()`.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2116: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2131: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
