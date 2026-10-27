@@ -1810,5 +1810,103 @@
     "pr": 2040,
     "title": "patches ship: v0.4.12d",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8d6e16e6ab8781d43cb5a5c7810b0628ec96ee8f",
+    "pr": 2043,
+    "title": "patches log: 19555b6..4c3b39a",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "7d8f56276cf533b56d969b16aaef6513d22b290f",
+    "pr": 2041,
+    "title": "the co-op replay's scrubber moves the board when it is let go, as the 1v1 replay's does, from one shared toolbar",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "60971847cf29f288876fca736d4184967e31daa6",
+    "pr": 2044,
+    "title": "Stinkyscape S13, spells on existing primitives",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b73d5ba789b389bcb77eaa03951d947697ee9eea",
+    "pr": 2055,
+    "title": "Stinkyscape S01, the Dormant cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "6e339d0289fdb0407f8d7fb61868ebccc1f4b308",
+    "pr": 2058,
+    "title": "Stinkyscape S08, the trade cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e98716ea4f0744460a0fe84cad366e2e8b84b6ab",
+    "pr": 2056,
+    "title": "audio comes back cleanly after a phone backgrounds the browser mid-game",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "65fc8df7ec3df333c7e55f4025173b2ce3233184",
+    "pr": 2060,
+    "title": "Stinkyscape S06, the weapon rack",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "10e8c13192fd59d984733cc7f757b74519dd996f",
+    "pr": 2062,
+    "title": "Stinkyscape S10, Job Application",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e4412b898441e62c6c518fd8839f8e34b3adb826",
+    "pr": 2064,
+    "title": "Stinkyscape S14, spells that bend a rule",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0e9a8161383eaae46d24f8f738c87f7ec4a537d9",
+    "pr": 2063,
+    "title": "Stinkyscape S07, the drones",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ed9f6ba401ea2b7c56aa6bb7bcbab5184a109900",
+    "pr": 2068,
+    "title": "capped Claude accounts spend their session's last hour, and claude-5's week goes to 90% from Sunday 17:00",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5df02f923bb51930dc1cf88db897bcc18b7a0694",
+    "pr": 2066,
+    "title": "Stinkyscape S11, the three Brains",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "14d26d49cb048cacf9a0dbfae14a7aa2580d8290",
+    "pr": 2069,
+    "title": "three jobs a box, Muse runs six at most",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0b87f8625465e808656e5731320376e5137e5e2e",
+    "pr": 2072,
+    "title": "no last hour for claude-2; claude-5's comes with its late week, which lifts it to 80% of a session and all of its week",
+    "kind": "internal"
   }
 ]

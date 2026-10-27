@@ -221,3 +221,29 @@ pub fn starship_launch_costs(args: StarshipLaunchCostArgs) -> Effect {
         );
     })
 }
+
+/// `giveUnitsKeyword`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveUnitsKeywordArgs {
+    /// The keyword every Unit has: Trample, Deft, Rush or Flying for Stinkyscape's War Doctrines.
+    pub keyword: Keyword,
+}
+
+/// R1859007 (Stinkyscape #137.1–#137.4, the War Doctrines): "For the rest of the game, your Units
+/// have X." A `UnitsHaveKeyword` player modifier on the controller, expiry `never`: every Unit they
+/// control on the field has the keyword, those that arrive later too (`layers::lent_by_player`).
+pub fn give_units_keyword(args: GiveUnitsKeywordArgs) -> Effect {
+    Effect::new("giveUnitsKeyword", move |ctx| {
+        let player = ctx.controller;
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::Never,
+            ModifierKind::UnitsHaveKeyword {
+                keyword: args.keyword.clone(),
+            },
+        );
+    })
+}

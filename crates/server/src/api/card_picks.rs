@@ -204,6 +204,10 @@ pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
         .collect::<Result<Vec<CardPicks>, ApiError>>()?;
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // What the account owns is read and the rows it lacks are written: under the lock
+    // `put_card_pick` takes, a `PUT` from another device takes its turn instead of writing over
+    // an uploaded row, so neither's change is lost.
+    tx.economy_lock_account(&profile.id).await?;
     let owned = tx.economy_cosmetics_get(&profile.id).await?;
     let kept: Vec<CardPicks> = uploaded
         .into_iter()

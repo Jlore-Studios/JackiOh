@@ -100,7 +100,7 @@ class PullTitleTests(unittest.TestCase):
         loop = (ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
         self.assertIn("title=$(git log -1 --format=%s)", loop)
         self.assertIn('gh pr create --base main --head "$branch" --title "$title"', loop)
-        # The lane's draft, while Devin works (training/README.md, How a lane runs).
+        # The lane's draft, while a session works (training/README.md, How a lane runs).
         self.assertIn('title="AI gen $((generation + 1)) ($lane): in training, nothing promoted yet"', loop)
         self.assertTrue(triage.pull_title_ok("AI gen 2 (unban): in training, nothing promoted yet"))
         for lane in ("improve", "unban"):

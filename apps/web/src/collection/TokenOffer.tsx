@@ -124,7 +124,7 @@ export default function TokenOffer({
       </button>
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={errorTestid}>
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

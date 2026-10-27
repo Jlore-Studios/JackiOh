@@ -56,8 +56,10 @@ crates/
     src/subsystems/<x>.rs  one per packages/engine/src/subsystems/<x>.ts (index.ts → mod.rs)
     src/validator.rs       ← packages/validator/src/index.ts
     src/testkit/           feature "testkit": scenario() (§8), invariants, glow
-    tests/rules.rs         the one integration-test binary for ported engine tests: `mod rules;`
-    tests/rules/mod.rs     `pub mod <x>;` per file below, `pub mod fixtures;`
+    tests/rules.rs         an integration-test binary for ported engine tests: `mod rules;` (a–o)
+    tests/rules_2.rs       the other (p–z), its `mod rules;` from rules/mod_2.rs (#2090)
+    tests/rules/mod.rs     `pub mod <x>;` per file below from a to o, `pub mod fixtures;`
+    tests/rules/mod_2.rs   the same from p on
     tests/rules/<x>.rs     one per ported packages/engine/test/<x>.test.ts
     tests/rules/fixtures/  ← packages/engine/test/fixtures/*.ts (test-only scripts and catalogs)
     tests/golden.rs        golden trace replay (§13)
@@ -114,7 +116,8 @@ Rules that follow from the tree:
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
   `tests/server.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its own binary
-  and its own link step, so 300 of them would cost minutes per `cargo test`.
+  and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
+  are two, `tests/rules.rs` and `tests/rules_2.rs`, which CI compiles side by side (#2090).
 - Data files are **copied** by part 1, not moved: the TypeScript engine must keep working on
   `staging` until part 23 has recorded the golden traces and Wave 3 has used them. Part 37 deletes
   the originals.

@@ -30,6 +30,7 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type
 import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { CardArt, CardDetail, CardFace, faceModel } from "../cards/index.ts";
 import {
   DEFAULT_CARD_COSMETICS,
@@ -305,7 +306,7 @@ export default function CardCosmeticsView({
 
   return (
     <OwnCopy own>
-      <div className="collection-cardview" data-testid={T.cardView} data-card={def.id} role="dialog" aria-modal="true" aria-label={def.name} onKeyDown={trapTab}>
+      <div className="collection-cardview" data-testid={T.cardView} data-card={def.id} role="dialog" aria-modal="true" aria-label={readerName(def)} onKeyDown={trapTab}>
         <div
           className="collection-cardview__scrim"
           aria-hidden="true"
@@ -316,7 +317,7 @@ export default function CardCosmeticsView({
         <div className="collection-cardview__panel">
           <LargeFace face={face} preview={preview} />
           <div className="collection-cardview__side">
-            <h3 className="collection-cardview__title">{def.name}</h3>
+            <h3 className="collection-cardview__title">{readerName(def)}</h3>
             <p className="collection-cardview__status">{owned ? t("Owned") : t("Not owned yet")}</p>
             <p className="collection-cardview__hint">
               {t("Hover or focus a cosmetic to see it on the card. Choose one to wear it on this card only.")}

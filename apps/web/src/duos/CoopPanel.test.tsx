@@ -450,6 +450,23 @@ describe("#1900 the way back to a live co-op game", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByTestId("coop-live-retry")).toBeNull();
   }, TEST_MS);
+
+  it("#1900 when both reads fail, each Try again is described by its own alert", async () => {
+    serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/duos/live"
+        ? refusal(500, "internal", "The co-op games are out of reach.")
+        : call.method === "GET" && call.path === "/api/decks"
+          ? refusal(500, "internal", "The decks are out of reach.")
+          : undefined,
+    );
+    await renderPanel();
+    expect(await screen.findByTestId("coop-live-retry", undefined, SLOW)).toHaveAccessibleDescription(
+      "Your live co-op game could not be checked: The co-op games are out of reach.",
+    );
+    expect(await screen.findByTestId("coop-decks-retry", undefined, SLOW)).toHaveAccessibleDescription(
+      "Your decks could not be loaded: The decks are out of reach.",
+    );
+  }, TEST_MS);
 });
 
 describe("B60 inviting a friend", () => {

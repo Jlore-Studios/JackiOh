@@ -540,7 +540,7 @@ class Candidate:
     #: Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
     rated: bool = True
     #: A revision queued because `main` left the pull request with conflicts: only a builder
-    #: with its own reviewer in the run takes it, never Devin (#317 part 2).
+    #: with its own reviewer in the run takes it, never a weak one (#317 part 2).
     conflict: bool = False
     #: For a review: the weakest tier a person asked to review it (`/harness review strong`).
     review_floor: str = ""
@@ -609,7 +609,7 @@ def plan_meets(candidate: Candidate) -> bool:
 
 def needs_plan(candidate: Candidate) -> bool:
     """The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-    weaker than its difficulty's plan floor (a medium plan for a hard item). Devin,
+    weaker than its difficulty's plan floor (a medium plan for a hard item). A weak builder,
     which cannot plan, builds only from a plan that meets its floor."""
     return candidate.kind == "build" and not plan_meets(candidate)
 

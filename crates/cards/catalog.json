@@ -18158,7 +18158,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 6,
       "health": 4,
@@ -18206,7 +18206,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 108,
     "base": {
       "keywords": [],
       "text": "Cry: Discover an Acclaimed Unit or a Jelly Bean.\nQuest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit.\nQuest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource.\nQuest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals."
@@ -18774,7 +18774,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 4,
       "health": 5,
@@ -18812,7 +18812,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 2,
       "health": 3,
@@ -18849,7 +18849,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 1,
       "health": 1,
@@ -20051,7 +20051,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon a Drone Interceptor."
@@ -20075,7 +20075,7 @@
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [
         {
@@ -20806,7 +20806,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 0,
       "health": 1,
@@ -20845,7 +20845,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 0,
       "health": 2,
@@ -20884,7 +20884,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 4,
@@ -20923,7 +20923,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 6,
@@ -20962,7 +20962,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 8,
@@ -21127,7 +21127,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "attack": 5,
       "health": 7,
@@ -21164,7 +21164,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 7,
       "health": 5,
@@ -21303,7 +21303,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 10,
       "health": 1,
@@ -21484,7 +21484,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 4,
       "health": 4,
@@ -21520,7 +21520,7 @@
       "base": 4,
       "embiggen": 5
     },
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 8,
       "health": 8,
@@ -21559,7 +21559,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 10,
       "health": 10,
@@ -21927,7 +21927,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 8,
@@ -21962,7 +21962,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 3,
       "health": 3,
@@ -21989,7 +21989,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 4,
       "health": 4,
@@ -22073,7 +22073,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 9,
       "health": 9,
@@ -22117,7 +22117,7 @@
       "stinkyscape-103",
       "stinkyscape-115"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
@@ -22454,7 +22454,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 0,
       "health": 6,
@@ -22493,7 +22493,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 3,
@@ -22536,7 +22536,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 3,
@@ -23247,7 +23247,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23270,7 +23270,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Activate: Add a random Starship Piece to your hand."
@@ -23312,7 +23312,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game.\nStart of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23338,7 +23338,7 @@
       "base": 3,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 8,
       "health": 5,
@@ -23368,7 +23368,7 @@
       "base": 2,
       "embiggen": 3
     },
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 1,
@@ -23422,7 +23422,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23460,7 +23460,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add a random Jlockeed card to your hand. It gains Starship Piece."
@@ -23481,7 +23481,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 49,
     "base": {
       "attack": 6,
       "health": 6,
@@ -23573,7 +23573,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 2,
@@ -23709,7 +23709,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 3,
@@ -23756,7 +23756,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 9,
       "health": 9,
@@ -23793,7 +23793,7 @@
     "flavor": "Physical",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
@@ -23828,7 +23828,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your Starship's Health."
@@ -23864,7 +23864,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Rush. Deal damage equal to {multiplier}× your Starship's Attack, split randomly among all enemies."
@@ -23900,7 +23900,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Flying. Fill your hand with copies of the Starship Pieces fused into your Starship."
@@ -24147,7 +24147,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [
         {
@@ -24254,7 +24254,7 @@
       "stinkyscape-147",
       "stinkyscape-147-1"
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 1,
       "health": 2,
@@ -24288,7 +24288,7 @@
       "classicplus-037",
       "stinkyscape-147-2"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 9,
       "health": 5,
@@ -24316,7 +24316,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: An AI always helps you make the Pareto Optimal decisions.\nStart of turn: Do something helpful."
@@ -24343,7 +24343,7 @@
     "refs": [
       "stinkyscape-148-1"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [
         {
@@ -24376,7 +24376,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Escape the Universe: you win the game, and it is a draw for your opponent."
@@ -24566,7 +24566,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [
         {
@@ -24748,7 +24748,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [
         {
@@ -24811,7 +24811,7 @@
       "stinkyscape-110",
       "stinkyscape-111"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
@@ -24838,7 +24838,7 @@
       "stinkyscape-073",
       "stinkyscape-074"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand."
@@ -24865,7 +24865,7 @@
       "stinkyscape-114",
       "stinkyscape-123"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
@@ -24893,7 +24893,7 @@
       "stinkyscape-079",
       "stinkyscape-080"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
@@ -24921,7 +24921,7 @@
       "stinkyscape-161",
       "stinkyscape-162"
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [],
       "text": "Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is."
