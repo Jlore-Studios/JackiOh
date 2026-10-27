@@ -1028,8 +1028,10 @@ HOSTED_RUNNERS = 20
 RUNNER_RUNS = 40
 #: How many busy runners the table lists at most; fewer when the issue has no room for them.
 RUNNER_ROWS = 25
-#: The owner's PC's own label (bot/machine/README.md, The local runner).
+#: The owner's PC's own label, and its gather slot's, outside the PC's one job at a time
+#: (bot/machine/README.md, The local runner; #2134).
 LOCAL_LABEL = "jackioh-selfplay-local"
+GATHER_LABEL = "jackioh-selfplay-local-gather"
 #: What each workflow is for, by file. A workflow added without a line here fails `bot selftest`
 #: (test_dashboard.RunnersTests).
 WORKFLOWS = {
@@ -1074,9 +1076,12 @@ HOSTED_ROLES = (
     ("macos-15", "GitHub's macOS", "`voice`'s macOS `say` lines"),
     ("windows-2022", "GitHub's Windows", "`voice`'s Windows SAPI lines"),
 )
-LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while "
-              "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
-              "exports and `gather`")
+LOCAL_ROLES = (
+    (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while the PC is "
+     "otherwise idle", "`learn`, every job of it, back to back, and `selfplay` exports"),
+    (GATHER_LABEL, "the owner's PC, a slot of its own beside the learn lane's: a container a job, "
+     "`pc-gather-<time>`, two CPUs, only while the PC is otherwise idle", "`gather`"),
+)
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
               "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
@@ -1106,7 +1111,7 @@ def explanation(ctx: Context) -> str:
                 rows.append(f"| `{provider.fill_in.runs_on}` | the bot's AWS boxes, in the lanes "
                             f"of {of} | `{provider.id}`'s `work` in those lanes while they cannot "
                             "start work (capped, off, backing off), as the same user |")
-    rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
+    rows += [f"| `{label}` | {where} | {what} |" for label, where, what in LOCAL_ROLES]
     flows = [f"| `{name.removesuffix('.yml')}` | {what} |" for name, what in sorted(WORKFLOWS.items())]
     return "\n".join([
         "## 🖥️ What each runner is for", "",
@@ -1235,7 +1240,7 @@ def _where(job: dict[str, Any]) -> tuple[int, str]:
     """Where a job runs, from its runner's name and its label, as (order, words)."""
     name, labels = str(job.get("runner_name") or ""), [str(x) for x in job.get("labels") or []]
     label = labels[0] if labels else ""
-    if name.startswith("pc-") or label == LOCAL_LABEL:
+    if name.startswith("pc-") or label in (LOCAL_LABEL, GATHER_LABEL):
         return 3, "owner's PC"
     if name.startswith("night-vm-") or label.startswith("night-vm-"):
         return (2, "Muse box") if memory_mod.box_of(name, label) else (1, "night box")
@@ -1582,7 +1587,7 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
             continue
         name = f"<b>{_text(runner.get('name'))}</b>"
         pc.append(([name, "🟢 in a job"], "busy") if runner.get("busy")
-                  else ([name, "⚪ idle, waiting", f"for a {_text(runner.get('label'), 24)} job"],
+                  else ([name, "⚪ idle, waiting", f"for a {_text(runner.get('label'), 30)} job"],
                         "idle"))
     if not pc:
         pc.append(([f"<b>{LOCAL_LABEL}</b>", "💤 no job",
