@@ -3387,6 +3387,13 @@
     "2050": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T13:33:16Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 3 fails: the change adds a ruling (R2050000, refining R1365000, as R1487001 and R1705004 did for classify), and spec/INDEX.md is regenerated; the rest is one crate (crates/tools)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
