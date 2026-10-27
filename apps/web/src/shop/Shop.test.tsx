@@ -15,12 +15,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
+import { CHINESE } from "../cards/chinese.ts";
 import { DEFAULT_CARD_COSMETICS, readCardPicks, readCosmetics, resetCosmeticsForTests, writeCosmetics } from "../cards/cosmetics.ts";
 import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -65,6 +68,7 @@ afterEach(() => {
   vi.useRealTimers();
   __resetSettingsForTests();
   resetFxSettingsForTests();
+  resetLocaleForTests();
   window.localStorage.clear();
 });
 
@@ -190,6 +194,38 @@ describe("#1309 the Jlore shop", () => {
     expect(announceWallet, "nor to tell the pills").not.toHaveBeenCalled();
     expect(screen.queryByTestId(T.fly("Core")), "no pack flew").toBeNull();
     expect(screen.getByTestId(T.packObject("Core")), "the press is let go").toHaveAttribute("data-state", "idle");
+  });
+
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    shopServer({ wallet: { status: 500 } });
+    render(<Shop token={TOKEN} />);
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a refused buy says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } }, buy: { status: 500 } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a server sentence the dictionary lacks stays English for a reader of Chinese", async () => {
+    await setLocale("zh-CN");
+    shopServer({
+      wallet: { status: 200, body: { jlore: 250 } },
+      buy: refusal(409, "conflict", "not enough Jlore for a card pack"),
+    });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("not enough Jlore for a card pack");
   });
 
   it("a bought pack moves the wallet and the count from the answer, and tells the page", async () => {
@@ -573,6 +609,39 @@ describe("#1309 the cosmetic packs", () => {
     await screen.findByTestId(T.reveal);
 
     expect(screen.getByTestId(T.equipLink)).toHaveAttribute("href", "/collection?section=cosmetics");
+  });
+
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer({ packs: { status: 500 } });
+    render(<CosmeticPacks token={TOKEN} />);
+    expect(await screen.findByTestId(T.packsLoadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a refused open says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer({ open: { status: 500 } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+
+    fireEvent.click(screen.getByTestId(T.open));
+
+    expect(await screen.findByTestId(T.packsError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 an opened pack names the card its cosmetic went on in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    // Only the card line: the slot's outcome line holds the cosmetic's name, which stays English.
+    const card = screen.getByTestId(T.slot(0)).querySelector(".pack-slot__card");
+    expect(card).toHaveTextContent(`用于${CHINESE["core-008"]!.name}`);
+    expect(card).not.toHaveTextContent(CATALOG["core-008"]!.name);
   });
 
   it("a refused open shows its reason and changes nothing on screen", async () => {

@@ -12,6 +12,7 @@ import { CATALOG } from "@jackioh/cards";
 import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, OwnedCosmeticsResponse, TrackRewards } from "../net/api.ts";
@@ -135,6 +136,12 @@ export function ownedCosmetics(owned: OwnedCosmeticsResponse): { cosmetic: Cosme
     }
   }
   return out;
+}
+
+/** R711000: a catalog card's name as the reader reads it (`readerName`), else its id. */
+export function cardNameOf(cardId: string): string {
+  const def = CATALOG[cardId];
+  return def === undefined ? cardId : readerName(def);
 }
 
 /** A cosmetic's kind in a player's words. */

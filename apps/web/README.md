@@ -346,7 +346,7 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
-                        refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
