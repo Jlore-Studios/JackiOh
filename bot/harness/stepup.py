@@ -9,9 +9,9 @@ or a step up does.
 
 At `STEP_UP_AFTER` (3) strikes the bot raises the item's difficulty one step, easy to medium to
 hard, so a stronger model plans and builds it, and rebuilds its open pull request from `main`
-rather than revising it again (`rebuild`): #141, #203 and #214 were revised for days, Devin
-committing conflict markers each time, until a person closed them. A difficulty a person set is
-never replaced: the bot asks instead, and so it does at hard, where there is no step left.
+rather than revising it again (`rebuild`): #141, #203 and #214 were revised for days, a weak
+builder committing conflict markers each time, until a person closed them. A difficulty a person set
+is never replaced: the bot asks instead, and so it does at hard, where there is no step left.
 
 `/harness rebuild` rebuilds at once, at the same difficulty.
 """

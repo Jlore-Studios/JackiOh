@@ -529,3 +529,71 @@ mod r1859005_a_deals_damage_pool {
         );
     }
 }
+
+/// R1878000: `keywords` (Stinkyscape #124's "a random Starship Piece") is the cards that print every
+/// listed keyword on their base face.
+mod r1878000_the_keywords_filter_reads_the_printed_base_face {
+    use super::*;
+
+    fn keyword_defs() -> Vec<CardDef> {
+        let piece = json!({ "keywords": [{ "kind": "Starship Piece" }], "text": "Starship Piece" });
+        let both = json!({ "keywords": [{ "kind": "Starship Piece" }, { "kind": "Taunt" }], "text": "both" });
+        vec![
+            card(
+                "core-401",
+                "Core",
+                "401",
+                json!({ "base": piece, "radiant": piece }),
+            ),
+            card(
+                "core-402",
+                "Core",
+                "402",
+                json!({ "base": both, "radiant": both }),
+            ),
+            card("core-403", "Core", "403", json!({})),
+            // Only the Radiant face prints it, so the card does not.
+            card("core-404", "Core", "404", json!({ "radiant": piece })),
+            card(
+                "core-405",
+                "Core",
+                "405",
+                json!({ "tags": ["Token"], "rarity": "Token", "token": true, "base": piece, "radiant": piece }),
+            ),
+            card(
+                "boss-406",
+                "Boss",
+                "406",
+                json!({ "base": piece, "radiant": piece }),
+            ),
+        ]
+    }
+
+    #[test]
+    fn r1878000_keywords_keeps_the_cards_printing_every_listed_keyword_on_their_base_face() {
+        register_catalog(catalog_of(keyword_defs()));
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"] })),
+            vec!["core-401", "core-402"]
+        );
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece", "Taunt"] })),
+            vec!["core-402"]
+        );
+        // A token joins only a pool that takes tokens, and a held set only a pool that names it (R1420).
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"], "withTokens": true })),
+            vec!["core-401", "core-402", "core-405"]
+        );
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"], "set": "Boss" })),
+            vec!["boss-406"]
+        );
+        // Unasked, the field filters nothing, and it serialises under its own name.
+        assert_eq!(pool(json!({})).len(), 4);
+        assert_eq!(
+            as_json(&q(json!({ "keywords": ["Starship Piece"] }))),
+            json!({ "keywords": ["Starship Piece"] })
+        );
+    }
+}

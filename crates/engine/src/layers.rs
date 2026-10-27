@@ -398,7 +398,7 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
 /// B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
 /// "while it has a Plague Counter"): the card's `conditionalKeywords` hook, read with its printed ones,
 /// so a Vanilla takes it (`scripts::script_of` runs no script for one). The hook reads instance data only.
-fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
+pub(crate) fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let script = crate::scripts::script_of(state, instance);
     match script.conditional_keywords.as_ref() {
         None => Vec::new(),
