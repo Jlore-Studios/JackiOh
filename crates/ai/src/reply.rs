@@ -51,7 +51,7 @@ use jackioh_engine::{
 
 use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY};
-use crate::evaluate::{NextSwing, coming_mana, evaluate, heal_worth, kill_worth, unit_worth};
+use crate::evaluate::{NextSwing, coming_mana, evaluate, heal_converted, heal_worth, kill_worth, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
@@ -167,12 +167,15 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     // §4.4 step 8: Lifesteal heals the attacker's hero by what each of its hits deals, which step 5 does
     // not cap at the unit's health but for a Trample hit, whose rest heals as it lands on the hero.
     if lands && has_keyword(&a.view.keywords, KeywordKind::Lifesteal) {
-        value += heal_worth(
-            state,
-            attacker.controller,
-            on_unit(out.dealt, &t) + splashed + trampled,
-            &AI_EVAL,
-        );
+        let amount = on_unit(out.dealt, &t) + splashed + trampled;
+        if heal_converted(state, attacker.controller) {
+            // E8, R413: the heal becomes that much Pierce damage on the healing hero instead,
+            // on the stated amount (`damage.rs`: a replaced heal is never multiplied), ignoring
+            // Armor, so `reply_face_value` without `projected_hero_damage`'s Armor pass.
+            value -= reply_face_value(state, attacker.controller, amount);
+        } else {
+            value += heal_worth(state, attacker.controller, amount, &AI_EVAL);
+        }
     }
     Trade {
         value: value + cleave_value,
@@ -669,6 +672,7 @@ fn countdowns_due(end: &GameState, after: &GameState, seat: PlayerId) -> Option<
 mod tests {
     use jackioh_engine::config::HERO_HEALTH;
     use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
+    use jackioh_engine::{ModifierExpiry, ModifierKind, PlayerModifier};
 
     use super::*;
 
@@ -685,6 +689,8 @@ mod tests {
     /// M+ #7 Life Mage, whose Radiant face makes healing its controller's hero twice as effective
     /// (R1180003).
     const LIFE_MAGE: &str = "meditativeplus-007";
+    /// C+ #22 Blood Moon, whose Radiant face is a face-up Field Trap converting enemy heals.
+    const MOON: &str = "classicplus-022";
 
     /// p1's `attacker` facing p2's Radiant Mommy Barker.
     fn facing_barker(attacker: Value) -> Scenario {
@@ -830,6 +836,63 @@ mod tests {
         assert!(trade.kills);
         // R1180003: the Radiant Life Mage doubles the 4 healed.
         let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 8);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_lifesteal_hit_under_a_face_up_blood_moon_is_worth_self_damage() {
+        let s = vanilla_with(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA] },
+                "p2": { "field": [OOMEN], "backrow": [{ "def": MOON, "radiant": true, "faceUp": true }] },
+            }),
+            &[Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        // E8, R413: the 4 healed become 4 Pierce damage on p1's own hero instead.
+        let expected =
+            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) - reply_face_value(s.state(), PlayerId::P1, 4);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+        assert!(trade.value < 0.0, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_lifesteal_hit_under_a_live_heal_to_damage_modifier_is_worth_self_damage() {
+        let mut s = vanilla_with(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
+            &[Keyword::Lifesteal],
+        );
+        // A fired base-face Moon leaves a rest-of-turn converter on the healed hero's opponent.
+        let turn = s.state().turn;
+        s.state_mut().players[PlayerId::P2].mods.push(PlayerModifier {
+            id: "moon".into(),
+            expiry: ModifierExpiry::ThisTurn { turn },
+            kind: ModifierKind::HealToDamage {
+                converter_id: "moon".into(),
+            },
+        });
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        let expected =
+            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) - reply_face_value(s.state(), PlayerId::P1, 4);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+        assert!(trade.value < 0.0, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_hidden_blood_moon_leaves_the_lifesteal_price_unchanged() {
+        let s = vanilla_with(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA] },
+                "p2": { "field": [OOMEN], "backrow": [{ "def": MOON, "radiant": true, "faceUp": false }] },
+            }),
+            &[Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        // R33, R1487000: a face-down card's text sleeps, so the trap stays unmodeled.
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 4);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 

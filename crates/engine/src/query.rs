@@ -99,6 +99,12 @@ pub fn hero_of(state: &GameState, player: PlayerId) -> HeroView {
     }
 }
 
+/// R290, R180: the health this player's hero started the game with: its seat's handicap `heroHealth`,
+/// else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002).
+pub fn starting_health_of(state: &GameState, player: PlayerId) -> i32 {
+    crate::state::starting_hero_health(state.players[player].handicap.as_ref())
+}
+
 /// The live pile, for this module's own use only. The zone -> pile mapping is `zones.rs`'s
 /// (`pile_for`), which is private there because handing a card file a live pile hands it a `push`
 /// into a zone; every export below copies before it returns.
