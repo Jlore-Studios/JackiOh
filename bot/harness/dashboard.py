@@ -1080,8 +1080,8 @@ HOSTED_ROLES = (
 LOCAL_ROLES = (
     (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while the PC is "
      "otherwise idle", "`learn`, every job of it, back to back, and `selfplay` exports"),
-    (GATHER_LABEL, "the owner's PC, a slot of its own beside the learn lane's: a container a job, "
-     "`pc-gather-<time>`, two CPUs, only while the PC is otherwise idle", "`gather`"),
+    (GATHER_LABEL, "the owner's PC, a slot of its own beside the learn lane's, ahead of it for the "
+     "CPU: a container a job, `pc-gather-<time>`, only while the PC is otherwise idle", "`gather`"),
 )
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
               "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "

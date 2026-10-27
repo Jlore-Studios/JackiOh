@@ -48,6 +48,9 @@ pub mod query;
 /// Classic+ #42 KY's Test's problem bank (R420).
 pub mod ky_test_bank;
 
+/// Stinkyscape #4.2 KY's Last Exam's bank of impossible problems (R1870002).
+pub mod ky_last_exam_bank;
+
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
 

@@ -24,6 +24,14 @@ pub struct WinGameArgs {
     pub player: Option<PlayerSpec>,
 }
 
+/// R1870000 (Stinkyscape #4 Olivian Expanse's Radiant face, "you win the game when you play it"): a card
+/// whose `memory` holds `true` under this key wins its player the game as it is played, a cast too
+/// (R70): §10.5 step 4 takes the key off it and sets the won flag (`play_steps::place_card`), which the
+/// state check that closes that play holds, a hero at 0 losing first (R850). The key rides that one
+/// instance (an `add_to_hand` memory rider puts it there), never a copy or a Transform of it, and goes
+/// with the rest of its memory once it reaches a graveyard or an exile pile from a hand (R215).
+pub const WIN_ON_PLAY_KEY: &str = "winOnPlay";
+
 /// R850: win the game outright for the player. The flag takes hold at the state check that closes
 /// this effect list (R59), where a hero at 0 still loses first.
 pub fn win_game(args: WinGameArgs) -> Effect {
