@@ -507,3 +507,25 @@ mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
         );
     }
 }
+
+/// R1859005 (issue #1859, Stinkyscape #136 Magic Module): `dealsDamage` keeps only the cards the
+/// catalog marks so (R1748001), and `false` leaves them out.
+mod r1859005_a_deals_damage_pool {
+    use super::*;
+
+    #[test]
+    fn r1859005_a_deals_damage_pool_keeps_only_the_cards_marked_so() {
+        let mut all = defs();
+        all.push(card("core-024", "Core", "24", json!({ "dealsDamage": true })));
+        register_catalog(catalog_of(all));
+        assert_eq!(pool(json!({ "dealsDamage": true })), vec!["core-024"]);
+        let without = pool(json!({ "dealsDamage": false }));
+        assert!(!without.contains(&"core-024".to_string()));
+        assert_eq!(without.len(), pool(json!({})).len() - 1);
+        // It serialises under its own name.
+        assert_eq!(
+            as_json(&q(json!({ "dealsDamage": true }))),
+            json!({ "dealsDamage": true })
+        );
+    }
+}
