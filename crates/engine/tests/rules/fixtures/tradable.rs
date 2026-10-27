@@ -1,11 +1,16 @@
 //! Test-only cards for Tradable and the Trade (R1838000–R1838003): a Tradable Spell, a Unit with no
 //! text, and a Field Spell that lets nobody draw. The engine's proof; the shipped cards that print the
-//! keyword (Meditative #53 Prestige, #98 Showdown) test it again in their own files.
+//! keyword (Meditative #53 Prestige, #98 Showdown) test it again in their own files. And three Field
+//! Spells for Stinkyscape's trade cards (R1864002–R1864004): one whose aura lends Tradable to its
+//! controller's hand, one that gives its controller `FIXTURE_TRADES` Trades a turn, and one whose
+//! trigger on its controller's `traded` exiles the card the Trade put into the deck. Stinkyscape #164
+//! The Syndicate and #165 The Trade Union test them again in their own files.
 //!
 //! Ids are prefixed `trade-` and indexed from 18380 up, clear of every other fixture file (BUILD §0).
 
 use std::sync::LazyLock;
 
+use jackioh_engine::effects::exile;
 use jackioh_engine::testkit::*;
 
 use super::harness::both;
@@ -47,8 +52,35 @@ pub fn no_draws() -> CardDef {
     def(18382, "no-draws", "Field Spell", 1, json!([]))
 }
 
-pub static TRADE_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| vec![tradable_spell(), plain_unit(), no_draws()]);
+/// R1864004: the Trades a turn `two_trades` gives its controller.
+pub const FIXTURE_TRADES: i32 = 2;
+
+/// R1864002: a Field Spell whose aura lends Tradable to every card in its controller's hand.
+pub fn lender() -> CardDef {
+    def(18383, "lender", "Field Spell", 1, json!([]))
+}
+
+/// R1864004: a Field Spell that gives its controller `FIXTURE_TRADES` Trades a turn while it acts.
+pub fn two_trades() -> CardDef {
+    def(18384, "two-trades", "Field Spell", 1, json!([]))
+}
+
+/// R1864003: a Field Spell whose trigger on its controller's `traded` exiles the card the Trade put
+/// into the deck.
+pub fn trade_watcher() -> CardDef {
+    def(18385, "watcher", "Field Spell", 1, json!([]))
+}
+
+pub static TRADE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        tradable_spell(),
+        plain_unit(),
+        no_draws(),
+        lender(),
+        two_trades(),
+        trade_watcher(),
+    ]
+});
 
 pub static TRADE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     let mut table: IndexMap<String, CardScripts> = IndexMap::new();
@@ -63,6 +95,40 @@ pub static TRADE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
                     count: 0,
                 }]
             })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        lender().id,
+        both(Script {
+            aura: Some(tradable_hand_aura()),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        two_trades().id,
+        both(Script {
+            trades_per_turn: Some(read_hook(|_args| FIXTURE_TRADES)),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        trade_watcher().id,
+        both(Script {
+            triggers: vec![
+                TriggerDef::new("watch", &[GameEventType::Traded], |ctx, _event| {
+                    traded_card_of(ctx)
+                        .map(|id| {
+                            vec![exile(json_as(json!({
+                                "target": { "of": "instance", "instanceId": id },
+                            })))]
+                        })
+                        .unwrap_or_default()
+                })
+                .with_when(
+                    |ctx, event| matches!(event, GameEvent::Traded { player } if *player == ctx.controller),
+                ),
+            ],
             ..Script::default()
         }),
     );

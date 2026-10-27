@@ -21832,7 +21832,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 73,
     "base": {
       "attack": 2,
       "health": 2,
@@ -24962,7 +24962,7 @@
         "max": 100
       }
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [
         {
@@ -25002,7 +25002,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "keywords": [
         {

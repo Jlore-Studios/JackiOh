@@ -936,6 +936,10 @@ pub type GraveyardPlayHook =
 /// (Radiant Paranoia's "Spells you reveal have Echo +{echo}"), read as the Spell reveals. 0 adds none.
 pub type RevealEchoHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
+/// R1864004: the Trades a turn this card gives its controller while it acts on their field (Radiant
+/// The Trade Union's "You may Trade up to {trades} cards each turn").
+pub type TradesPerTurnHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
+
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
@@ -1223,6 +1227,11 @@ pub struct Script {
     /// R1850005: "When this has N or more keywords, make it Radiant" — the N, read at every state check
     /// against the card's distinct keyword kinds through the layers (`card_on_card::radiant_by_keywords`).
     pub radiant_at_keywords: Option<i32>,
+    // ---- Stinkyscape's trade cards (#1864) ----
+    /// R1864004: the Trades a turn this card gives its controller while it acts on their field, read by
+    /// `trade::trades_per_turn_of`. A PURE READ, like `aura`, so a Nerf or Buff of the declared number
+    /// moves it; several cards do not add, the most holds.
+    pub trades_per_turn: Option<TradesPerTurnHook>,
 }
 
 /// R1850002: one exile aura — the cards on the field it reaches (`scope`, read for the card as an
