@@ -537,20 +537,68 @@ pub fn equip_host_at(
     Some(top.id.clone())
 }
 
+/// R1869000: whether this card is a Unit card that needs a zone, the cards a host that lends Equip
+/// takes as an Equip play though they have no Equip.
+fn plays_as_unit(state: &GameState, card: &CardInstance) -> bool {
+    needs_zone(state, card) && row_for_card(state, card) == Row::Units
+}
+
+/// R1869000: whether the card on top of `slot` lends Equip (`staticFlags.lendsEquip`, Stinkyscape #16
+/// Rod of Ages) — while its definition is no fusion.
+fn lends_equip_at(state: &GameState, slot: &ZoneSlot) -> bool {
+    crate::zones::card_at(state, slot).is_some_and(|top| {
+        crate::scripts::flags_of(state, top).lends_equip == Some(true)
+            && crate::subsystems::fuse::fused_ingredients(state, &top.def_id).is_none()
+    })
+}
+
+/// `equip_onto_at` for a Unit card whose Equip (`plays_equip`) is already read: an Equip card goes onto
+/// any host, any other Unit card onto a host that lends Equip. The lending is read first, so a plain
+/// Unit costs no layer read where nothing lends.
+fn equip_host_for(
+    state: &GameState,
+    player: PlayerId,
+    equip: bool,
+    slot: &ZoneSlot,
+    tributes: &[String],
+) -> Option<String> {
+    if !equip && !lends_equip_at(state, slot) {
+        return None;
+    }
+    equip_host_at(state, player, slot, tributes)
+}
+
+/// R1086, R1869000: the host `card` fuses into when it is played onto `slot` as an Equip play. An Equip
+/// card may go onto any host (`equip_host_at`); any other Unit card onto a host that lends Equip while
+/// that host is no fusion. The listing and the refusal both read this one function.
+pub fn equip_onto_at(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    slot: &ZoneSlot,
+    tributes: &[String],
+) -> Option<String> {
+    if !plays_as_unit(state, card) {
+        return None;
+    }
+    equip_host_for(state, player, plays_equip(state, card), slot, tributes)
+}
+
 /// R1086: the zones that hold a host for an Equip play, in lane order: the unit row's, then the backrow
-/// zones a Unit stands in (R1081000). Empty unless the card plays Equip at all.
+/// zones a Unit stands in (R1081000). Empty unless the card plays Equip or a host lends it (R1869000).
 pub fn legal_equip_zones_for(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
     tributes: &[String],
 ) -> Vec<ZoneChoice> {
-    if !plays_equip(state, card) {
+    if !plays_as_unit(state, card) {
         return Vec::new();
     }
+    let equip = plays_equip(state, card);
     ROWS.iter()
         .flat_map(|row| crate::zones::slots_of(player, *row))
-        .filter(|slot| equip_host_at(state, player, slot, tributes).is_some())
+        .filter(|slot| equip_host_for(state, player, equip, slot, tributes).is_some())
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
@@ -2548,8 +2596,9 @@ fn refuse(message: String) -> Result<(), EngineError> {
 }
 
 /// R1086: the refusal for an Equip play. A play with `equip: false` is a plain play. The
-/// card must play Equip at all, the zone must name a unit-row lane in range, and that zone must
-/// hold a host — read off `equip_host_at`, the same function the listing uses.
+/// card must play Equip at all or be a Unit card a host may lend it to (R1869000), the zone must name
+/// a unit-row lane in range, and that zone must hold a host it may go onto — read off `equip_onto_at`,
+/// the same function the listing uses.
 fn refuse_equip(
     state: &GameState,
     player: PlayerId,
@@ -2558,7 +2607,7 @@ fn refuse_equip(
     tributes: &[String],
 ) -> Result<(), EngineError> {
     let name = name_of(state, &card.def_id);
-    if !plays_equip(state, card) {
+    if !plays_as_unit(state, card) {
         return refuse(format!("{name} is not Equip"));
     }
     let Some(zone) = zone else {
@@ -2574,6 +2623,9 @@ fn refuse_equip(
     };
     if equip_host_at(state, player, &slot, tributes).is_none() {
         return refuse(format!("that {} zone holds no Unit for {name}", zone.row));
+    }
+    if equip_onto_at(state, player, card, &slot, tributes).is_none() {
+        return refuse(format!("{name} is not Equip"));
     }
     Ok(())
 }
