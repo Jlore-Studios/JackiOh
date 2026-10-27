@@ -5305,7 +5305,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-27T20:00:52Z",
       "requested_by": "squishy-squooby",
-      "run_id": "pending:43d670d8-1793133753",
+      "run_id": "40580530253",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T20:43:06Z",
       "stop_requested": false,
