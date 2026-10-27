@@ -5624,10 +5624,19 @@
     "what": "build #2098 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-27T21:08:34Z",
+    "at": "2026-10-27T21:23:46Z",
     "notes": [
-      "delivered plan #2119 on claude-7 (run 40580530253): planned",
-      "delivered revise #2086 on claude-8 (run 40577952883): interrupted"
+      "delivered plan #2115 on claude-3 (run 40582114440): planned",
+      "delivered plan #2124 on claude-3 (run 40582006852): planned",
+      "delivered revise #2132 on muse (run 40578188852): approved",
+      "delivered revise #2131 on muse (run 40576140515): approved",
+      "started plan #2116 on claude-6 (run 40587086964)",
+      "started plan #2117 on claude-3 (run 40587186211)",
+      "started plan #2118 on claude-3 (run 40587284879)",
+      "started plan #2120 on claude-7 (run 40587395241)",
+      "started review #2132 on claude-1 (run 40587507136)",
+      "started revise #2131 on muse (run 40587619616)",
+      "could not start build #2098 on muse: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 500: Failed to run workflow dispatch"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6333,7 +6342,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T21:08:34Z",
+  "loop_tick": "2026-10-27T21:23:46Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T21:20:40Z",
