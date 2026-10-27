@@ -4329,7 +4329,7 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-27T15:05:41Z",
-      "run_id": "pending:f736ee09-1793114835",
+      "run_id": "40531270126",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
