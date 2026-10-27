@@ -19322,7 +19322,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 90,
     "base": {
       "keywords": [],
       "text": "Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy)."
@@ -21441,7 +21441,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 9,
     "base": {
       "attack": 1,
       "health": 8,
@@ -22669,7 +22669,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "attack": 6,
       "health": 11,
@@ -22735,7 +22735,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 4,
       "health": 7,
@@ -23202,7 +23202,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 2,
       "health": 1,

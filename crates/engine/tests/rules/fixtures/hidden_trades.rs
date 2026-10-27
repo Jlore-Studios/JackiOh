@@ -53,6 +53,17 @@ pub static TRADER: LazyLock<CardDef> = LazyLock::new(|| {
         json!({ "attack": 1, "health": 1, "keywords": [], "text": "trader" }),
     )
 });
+/// The trader with Lucky 1 printed (#77 Yuma's Radiant face): its offer's Discover is drawn twice
+/// (R1877001).
+pub static LUCKY_TRADER: LazyLock<CardDef> = LazyLock::new(|| {
+    card(
+        18454,
+        "lucky-trader",
+        "Unit",
+        0,
+        json!({ "attack": 1, "health": 1, "keywords": [{ "kind": "Lucky", "n": 1 }], "text": "lucky trader" }),
+    )
+});
 /// A (1) 2/2 Immutable Unit with no script, which no Nerf reaches (R23, R386).
 pub static STOIC: LazyLock<CardDef> = LazyLock::new(|| {
     card(
@@ -89,11 +100,25 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 ..Script::default()
             }),
         ),
+        (
+            LUCKY_TRADER.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| vec![effects::trade_offer()])),
+                ..Script::default()
+            }),
+        ),
     ])
 });
 
-pub static HIDDEN_TRADE_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| vec![SNEAK.clone(), TRADER.clone(), STOIC.clone(), DUD.clone()]);
+pub static HIDDEN_TRADE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        SNEAK.clone(),
+        TRADER.clone(),
+        LUCKY_TRADER.clone(),
+        STOIC.clone(),
+        DUD.clone(),
+    ]
+});
 
 /// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_hidden_trade_fixtures() {
