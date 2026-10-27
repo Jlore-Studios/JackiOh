@@ -762,6 +762,7 @@
     "1862": {
       "action": "build",
       "asks": [],
+      "failures": 1,
       "handoff": {
         "at": "2026-10-26T22:43:03Z",
         "draft": "# Plan draft for #1862 (S06, the weapon rack) \u2014 in progress\n\n## Found so far\n- Foundation #1857 merged (5e04fd9d7). 21 stubs exist: crates/cards/src/scripts/stinkyscape/c050..c061, c081, c082, c083, c085, c086, c140..c143 (each `Script::default()`).\n- Brief: docs/stinkyscape-set.md ST13 entries lines 1586-1740 (#50-61), 1989-2078 (#81-86), 2847-2897 (#140-143).\n- Proposed rulings ST-S06-1..8 \u2192 this issue's block R1862000.. .\n- No other S part built yet: this is among the first card parts.\n\n## To research\n- M05 weapon kit on main (#1841): extraTurnCooldown, halfToHeroes, equip_picks, float_lowers_tribute; R1841000-3\n- Starship Piece (M02 #1852, R1852000/1), Equip (R1086), Activate N (R384, R1751000)\n- Cleave splash (zones::adjacent), Pierce ignoreArmor (R346), damage_all (R59)\n- Rush Token + forced attack (Core #60 Bear Honeypot), cast_random (R382), Auspicious Rock (M #39.1), Book tag pool\n- catalog rows, \u00a78.10, \u00a77, BUILD M12, radiant-audit rows\n- test patterns for held-set cards (R1420)",
