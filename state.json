@@ -3752,15 +3752,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/11-rulings.md"
+          ],
+          "from": "f0373f041f88b1006578e3a86990f34c23a78916",
+          "main": "65fc8df7ec3df333c7e55f4025173b2ce3233184"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40477788300",
+            "run": "40497723279",
             "tier": "strong"
           }
         ],
-        "sha": "f0373f041f88b1006578e3a86990f34c23a78916",
+        "sha": "23417b708b7b2ef1d0116cb21ab62faef11b557e",
         "tiers": {
           "claude": "strong"
         }
