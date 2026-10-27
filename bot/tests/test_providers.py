@@ -1101,7 +1101,8 @@ class LastHourTests(unittest.TestCase):
     """The last hour of a 5-hour session (`last_hour`): what is left of a session is lost at its
     reset, so in the hour before it a capped Claude account that nobody but the bot spent (its
     reading no further over its cap than the bot's own calls leave it) may run past its 5-hour
-    cap, one run at a time, until the reset. Its weekly cap still holds."""
+    cap, one run at a time, until the reset. Not claude-2, and claude-5 only in its late week
+    (`LateWeekTests`)."""
 
     zone = "America/Chicago"
 
@@ -1120,8 +1121,9 @@ class LastHourTests(unittest.TestCase):
 
     def test_every_capped_claude_account_has_one(self):
         self.assertEqual({p.id for p in self.pool.ordered() if p.last_hour},
-                         {"claude-1", "claude-2", "claude-4", "claude-5", "claude-6", "claude-7",
-                          "claude-8"})
+                         {"claude-1", "claude-4", "claude-6", "claude-7", "claude-8"})
+        self.assertEqual({p.id for p in self.pool.ordered() if p.takes_last_hours},
+                         {"claude-1", "claude-4", "claude-5", "claude-6", "claude-7", "claude-8"})
         raw = raw_providers()
         raw["providers"]["claude-3"]["last_hour"] = True  # no caps to lift
         with self.assertRaisesRegex(ConfigError, "it lifts a 5-hour cap, and claude-3 has none"):
@@ -1137,13 +1139,16 @@ class LastHourTests(unittest.TestCase):
         # Further past the cap, somebody else spent the session: it stays capped.
         self.assertIn("5-hour usage is 60%, too close to its 50% cap outside its hours",
                       self.why("claude-4", 0.6, timedelta(minutes=20)))
-        # claude-2 caps its session at 90% any hour; its last hour lifts that too.
-        self.assertIn("5-hour usage is 90%, too close to its 90% cap", self.why("claude-2", 0.9, 2 * hour))
-        self.assertIsNone(self.why("claude-2", 0.9, timedelta(minutes=59)))
-        # The week's cap still holds: claude-5 at 61% of its 60%.
-        self.assertIn("7-day usage is 61%, too close to its 60% cap",
-                      self.why("claude-5", 0.4, timedelta(minutes=30), seven_day=0.61))
-        self.assertIsNone(self.why("claude-5", 0.4, timedelta(minutes=30), seven_day=0.3))
+        # claude-8 caps its session at 85% any hour; its last hour lifts that too.
+        self.assertIn("5-hour usage is 85%, too close to its 85% cap",
+                      self.why("claude-8", 0.85, 2 * hour))
+        self.assertIsNone(self.why("claude-8", 0.85, timedelta(minutes=59)))
+        # claude-2 has none: its 90% holds to the end of the session.
+        self.assertIn("5-hour usage is 90%, too close to its 90% cap",
+                      self.why("claude-2", 0.9, timedelta(minutes=20)))
+        # Nor has claude-5 outside its late week (a Tuesday): its 40% holds.
+        self.assertIn("5-hour usage is 40%, too close to its 40% cap",
+                      self.why("claude-5", 0.4, timedelta(minutes=20), seven_day=0.3))
         # No reading, or one with no reset, never opens it.
         claude_4 = self.pool.get("claude-4")
         self.assertIsNone(providers.last_hour_of(claude_4, {}, EVENING, self.zone))
@@ -1193,7 +1198,8 @@ class LastHourTests(unittest.TestCase):
 
 class LateWeekTests(unittest.TestCase):
     """claude-5's late week (`late_week`): from Sunday 17:00 Central until its week resets
-    (Monday 09:00 UTC), it may spend up to 90% of its week instead of 60%."""
+    (Monday 09:00 UTC), it may spend all of its week instead of 60%, 80% of a 5-hour session
+    instead of 40%, and a session's last hour (`LastHourTests`), which it takes nowhere else."""
 
     zone = "America/Chicago"
     #: Sunday 2026-11-01, the day the clocks go back: 17:00 CST is 23:00 UTC, ten hours before
@@ -1205,56 +1211,91 @@ class LateWeekTests(unittest.TestCase):
         self.claude_5 = providers.load(ROOT).get("claude-5")
         self.everyone = Secrets.of(secrets(*providers.SECRETS))
 
-    def why(self, at, week, resets=RESETS, starting=True):
-        entry = {"usage": {
-            "five_hour": {"utilization": 0.1, "resets_at": clock.iso(at + timedelta(hours=3))},
-            "seven_day": {"utilization": week, "resets_at": resets}}}
+    def usage(self, at, week, session=0.1, session_resets=timedelta(hours=3), resets=RESETS):
+        return {"five_hour": {"utilization": session,
+                              "resets_at": clock.iso(at + session_resets)},
+                "seven_day": {"utilization": week, "resets_at": resets}}
+
+    def why(self, at, week, starting=True, **reading):
+        entry = {"usage": self.usage(at, week, **reading)}
         return providers.availability(self.claude_5, {"providers": {"claude-5": entry}}, at,
                                       self.zone, self.everyone, starting=starting)
 
-    def test_from_sunday_17_00_until_the_reset_its_week_goes_to_90_percent(self):
+    def test_from_sunday_17_00_until_the_reset_its_caps_go_up(self):
         late = self.claude_5.late_week
-        self.assertEqual((late.describe(), late.seven_day), ("Sun 17:00", 0.9))
+        self.assertEqual((late.describe(), late.caps, late.last_hour),
+                         ("Sun 17:00", {"five_hour": 0.8, "seven_day": 1.0}, True))
         self.assertEqual(dict(self.claude_5.limits.stops), {"five_hour": 0.4, "seven_day": 0.6})
+        self.assertFalse(self.claude_5.last_hour)
         sunday = self.SUNDAY
+        # The week: 60% until 17:00, then all of it (a build starts under 95%).
         self.assertIn("7-day usage is 70%, too close to its 60% cap",
                       self.why(sunday - timedelta(minutes=1), 0.7))
         self.assertIsNone(self.why(sunday, 0.7))
-        self.assertIsNone(self.why(sunday + timedelta(hours=9, minutes=59), 0.84))
-        self.assertIn("too close to its 90% cap to start a long run (it starts under 85%)",
-                      self.why(sunday, 0.87))
-        self.assertIsNone(self.why(sunday, 0.87, starting=False))  # a review goes up to the cap
-        self.assertIn("7-day usage is 90%, at or over its 90% cap",
-                      self.why(sunday, 0.9, starting=False))
-        # Its 5-hour cap is still its own.
-        entry = {"usage": {"five_hour": {"utilization": 0.41, "resets_at": clock.iso(
-            sunday + timedelta(hours=3))}, "seven_day": {"utilization": 0.7, "resets_at": self.RESETS}}}
-        self.assertIn("5-hour usage is 41%, at or over its 40% cap",
-                      providers.refusal(self.claude_5, entry, sunday, self.zone))
-        # The new week holds to 60% again.
+        self.assertIsNone(self.why(sunday + timedelta(hours=9, minutes=59), 0.94))
+        self.assertIn("7-day usage is 96%, too close to its 100% cap to start a long run (it "
+                      "starts under 95%)", self.why(sunday, 0.96))
+        self.assertIsNone(self.why(sunday, 0.96, starting=False))  # a review goes up to the cap
+        self.assertIn("7-day usage is 100%, at or over its 100% cap",
+                      self.why(sunday, 1.0, starting=False))
+        # The session: 40% until 17:00, then 80% (a build starts under 75%).
+        self.assertIn("5-hour usage is 50%, too close to its 40% cap",
+                      self.why(sunday - timedelta(minutes=1), 0.3, session=0.5))
+        self.assertIsNone(self.why(sunday, 0.3, session=0.5))
+        self.assertIn("5-hour usage is 78%, too close to its 80% cap",
+                      self.why(sunday, 0.3, session=0.78))
+        self.assertIn("5-hour usage is 81%, at or over its 80% cap",
+                      self.why(sunday, 0.3, session=0.81, starting=False))
+        # A session's last hour, at its 80% cap and nobody else's spending, lifts that cap; past
+        # it by more than a point, somebody else spent it, and it holds.
+        last = timedelta(minutes=30)
+        self.assertIsNone(self.why(sunday, 0.3, session=0.8, session_resets=last))
+        self.assertIn("5-hour usage is 85%, too close to its 80% cap",
+                      self.why(sunday, 0.3, session=0.85, session_resets=last))
+        self.assertEqual(providers.last_hour_of(self.claude_5, self.usage(
+            sunday, 0.3, session=0.8, session_resets=last), sunday, self.zone), sunday + last)
+        # Its week's cap still holds in that last hour.
+        self.assertIn("7-day usage is 100%, too close to its 100% cap",
+                      self.why(sunday, 1.0, session=0.8, session_resets=last))
+        # The new week holds to 60% and 40% again, with no last hour.
+        monday = datetime(2026, 11, 2, 9, 30, tzinfo=timezone.utc)
+        week = "2026-11-09T09:00:00Z"
         self.assertIn("7-day usage is 65%, too close to its 60% cap",
-                      self.why(datetime(2026, 11, 2, 9, 30, tzinfo=timezone.utc), 0.65,
-                               resets="2026-11-09T09:00:00Z"))
+                      self.why(monday, 0.65, resets=week))
+        self.assertIn("5-hour usage is 50%, too close to its 40% cap",
+                      self.why(monday, 0.1, session=0.5, resets=week))
+        self.assertIn("5-hour usage is 40%, too close to its 40% cap",
+                      self.why(monday, 0.1, session=0.4, session_resets=last, resets=week))
         # A week whose reset moved days off (to Wednesday) raises nothing on Sunday.
         self.assertIn("too close to its 60% cap", self.why(sunday + timedelta(hours=1), 0.7,
                                                          resets="2026-11-04T09:00:00Z"))
         # In summer time, 17:00 CDT is 22:00 UTC.
         week = "2026-10-26T09:00:00Z"
         self.assertIn("7-day usage is 70%, too close to its 60% cap",
-                      self.why(datetime(2026, 10, 25, 21, 59, tzinfo=timezone.utc), 0.7, week))
-        self.assertIsNone(self.why(datetime(2026, 10, 25, 22, 0, tzinfo=timezone.utc), 0.7, week))
+                      self.why(datetime(2026, 10, 25, 21, 59, tzinfo=timezone.utc), 0.7,
+                               resets=week))
+        self.assertIsNone(self.why(datetime(2026, 10, 25, 22, 0, tzinfo=timezone.utc), 0.7,
+                                   resets=week))
 
     def test_it_says_when_it_starts_and_counts_its_room(self):
         noon = datetime(2026, 11, 1, 18, 0, tzinfo=timezone.utc)
         entry = {"usage": {"seven_day": {"utilization": 0.62, "resets_at": self.RESETS}}}
         self.assertEqual(providers.frees_at(self.claude_5, entry, noon, self.zone), self.SUNDAY)
         self.assertEqual(providers.room(self.claude_5, entry, noon, self.zone), 0.0)
-        self.assertAlmostEqual(providers.room(self.claude_5, entry, self.SUNDAY, self.zone),
-                               (0.9 - 0.62) / 0.9)
+        self.assertAlmostEqual(providers.room(self.claude_5, entry, self.SUNDAY, self.zone), 0.38)
         ctx = make_ctx(at=self.SUNDAY, cfg=make_config(committed_hours=True))
         from harness import status as status_mod
-        self.assertEqual(status_mod.cap_text(ctx, self.claude_5, "seven_day", entry["usage"]),
-                         "cap 90% now (its late week, from Sun 17:00), 60% after the reset")
+
+        def cap(window, **reading):
+            return status_mod.cap_text(ctx, self.claude_5, window,
+                                       self.usage(self.SUNDAY, 0.62, **reading))
+
+        self.assertEqual(cap("seven_day"),
+                         "cap 100% now (its late week, from Sun 17:00), 60% after the reset")
+        self.assertEqual(cap("five_hour", session=0.5),
+                         "cap 80% now (its late week, from Sun 17:00), 40% after the reset")
+        self.assertEqual(cap("five_hour", session=0.8, session_resets=timedelta(minutes=30)),
+                         "cap 100% now (its last hour), 80% after the reset")
 
     def test_mistakes_are_errors(self):
         for provider_id, bad, message in (
@@ -1263,13 +1304,22 @@ class LateWeekTests(unittest.TestCase):
                 ("claude-5", {"from": "Sun 17:00"}, "needs from"),
                 ("claude-5", {"from": "Sun 17:00", "seven_day": 0.9, "until": "Mon"},
                  "unknown keys until"),
-                ("claude-5", {"from": "Sun 17:00", "seven_day": 0.5}, "it raises a weekly cap"),
-                ("claude-4", {"from": "Sun 17:00", "seven_day": 0.9}, "claude-4's is not under")):
+                ("claude-5", {"from": "Sun 17:00", "seven_day": 0.5}, "it raises a 7-day cap"),
+                ("claude-5", {"from": "Sun 17:00", "seven_day": 1.0, "five_hour": 0.3},
+                 "it raises a 5-hour cap, and claude-5's is not under 30%"),
+                ("claude-4", {"from": "Sun 17:00", "seven_day": 0.9}, "claude-4's is not under"),
+                ("claude-3", {"from": "Sun 17:00", "seven_day": 0.9, "last_hour": True},
+                 "claude-3's is not under")):
             raw = raw_providers()
             raw["providers"][provider_id]["late_week"] = bad
             with self.assertRaisesRegex(ConfigError, message):
                 providers.parse(raw)
-
+        raw = raw_providers()
+        raw["providers"]["claude-5"]["limits"] = {"mode": "caps", "seven_day": 0.6}
+        raw["providers"]["claude-5"]["late_week"] = {"from": "Sun 17:00", "seven_day": 1.0,
+                                                     "last_hour": True}
+        with self.assertRaisesRegex(ConfigError, "late_week.last_hour: it lifts a 5-hour cap"):
+            providers.parse(raw)
 
 if __name__ == "__main__":
     unittest.main()

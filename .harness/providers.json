@@ -56,7 +56,6 @@
       "lanes": 1,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
-      "last_hour": true,
       "build_last": true,
       "quiet_check": false
     },
@@ -98,7 +97,7 @@
       "quiet_check": false
     },
     "claude-5": {
-      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and at 90% of its week from Sunday 17:00 Central until the week resets (`late_week`; its week resets Monday at 09:00 UTC, 03:00 Central in winter). Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and from Sunday 17:00 Central until its week resets (Monday at 09:00 UTC, 03:00 Central in winter) at 80% of its 5-hour session and all of its week, with its session's last hour too (`late_week`): its only time past those caps. Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -112,8 +111,7 @@
       "runs_on": "ubuntu-latest",
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.4, "seven_day": 0.6 },
-      "last_hour": true,
-      "late_week": { "from": "Sun 17:00", "seven_day": 0.9 },
+      "late_week": { "from": "Sun 17:00", "seven_day": 1.0, "five_hour": 0.8, "last_hour": true },
       "quiet_check": false
     },
     "claude-6": {
