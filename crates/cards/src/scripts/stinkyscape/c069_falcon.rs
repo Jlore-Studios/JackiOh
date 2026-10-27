@@ -1,6 +1,9 @@
 //! SPEC §8.10 Stinkyscape 69 Falcon, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S03 (#1860) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! (2) Unit, Rare, 4/1 → 8/2: Starship Piece, Charge, Flying.
+//! Radiant: Starship Piece, Charge, Flying, Pierce (8/2, ST9: Radiant stats doubled).
+//!
+//! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its
+//! owner's Dormant Starship, summoned first if they have none (R1852000).
 
 use jackioh_engine::prelude::*;
 
@@ -8,6 +11,77 @@ pub const ID: &str = "stinkyscape-069";
 
 pub fn script() -> CardScripts {
     let base = Script::default();
+    // The Radiant face doubles the stats and adds Pierce: catalog data only.
     let radiant = base.clone();
     CardScripts { base, radiant }
+}
+
+// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69: "a 4/1 Charge Flying Starship
+// Piece, attacking a hero the turn it is played; radiant 8/2 with Pierce, its hits ignoring Armor
+// (R346)".
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
+    use crate::filler;
+
+    const FALCON: &str = "stinkyscape-069";
+    const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
+    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+
+    fn open() -> PreviewGuard {
+        preview_sets(&[SetName::Stinkyscape])
+    }
+
+    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
+        keywords
+            .iter()
+            .map(|keyword| keyword.kind().as_str().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn prints_charge_flying_4_1_radiant_8_2_with_pierce() {
+        crate::register_all();
+        let def = crate::card_def(FALCON);
+        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Charge", "Flying"]);
+        assert_eq!(
+            kinds_of(&def.radiant.keywords),
+            vec!["Starship Piece", "Charge", "Flying", "Pierce"]
+        );
+        assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
+        assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
+    }
+
+    #[test]
+    fn charge_may_attack_the_hero_the_turn_it_is_played() {
+        crate::register_all();
+        let _preview = open();
+        let mut s = scenario(json!({
+            "p1": { "hand": [FALCON, ANCHOR], "mana": 10, "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "library": filler(4) },
+        }));
+        s.play(FALCON, json!({ "zone": 1 }));
+        s.attack(FALCON, "hero");
+
+        s.expect_health(PlayerId::P2, 26);
+    }
+
+    #[test]
+    fn radiant_pierce_ignores_armor() {
+        crate::register_all();
+        let _preview = open();
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": FALCON, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },
+        }));
+        s.play(FALCON, json!({ "zone": 1 }));
+        // R346: the 8-attack hit ignores the 7 Armor, so the 7/7 takes 8.
+        s.attack(FALCON, ARMORED);
+
+        s.expect_in_zone(ARMORED, "graveyard");
+        s.expect_in_zone(FALCON, "graveyard");
+    }
 }

@@ -882,6 +882,11 @@ pub const HEAL_MULTIPLIER: i32 = 2;
 /// nothing. A deck that refills itself with answering cards would otherwise answer forever.
 pub const SPELL_ANSWER_CHAIN_CAP: i32 = 20;
 
+/// R1870002 (Stinkyscape #4.2 KY's Last Exam, issue #1870): the most Echo repeats one play of a card may
+/// give itself (`effects::gain_echo`). A run of right guesses is one in four each, but a Spell that gains
+/// a repeat with every resolution would otherwise be owed one more for as long as the guesses held.
+pub const SELF_ECHO_GAIN_CAP: i32 = 20;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).

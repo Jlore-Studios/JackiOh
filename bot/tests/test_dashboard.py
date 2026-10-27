@@ -1053,8 +1053,8 @@ class RunnersTests(unittest.TestCase):
         return diagram[diagram.index('    subgraph pc['):].split("    end")[0]
 
     def beat(self, minutes_ago: int = 1, **fields) -> dict:
-        runners = [{"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL, "busy": True,
-                    "cpus": 5.8, "throttled": False},
+        runners = [{"name": "pc-gather-1", "label": dashboard.GATHER_LABEL, "busy": True,
+                    "cpus": 1.9, "throttled": False},
                    {"name": "pc-lite-2", "label": "night-vm-lite", "busy": False}]
         return {"at": iso(NIGHT - timedelta(minutes=minutes_ago)), "calm": True, "cpu": 7.4,
                 "memGB": 11.2, "logical": 16, "runners": runners, **fields}
@@ -1065,8 +1065,8 @@ class RunnersTests(unittest.TestCase):
                                "path": ".github/workflows/gather.yml",
                                "display_title": "Patch v0.3.40", "created_at": ago(13)}
         self.gh.jobs["300"] = [{"name": "gather the newest patch", "status": status,
-                                "labels": [dashboard.LOCAL_LABEL], "created_at": ago(13),
-                                **({"runner_name": "pc-selfplay-1", "started_at": ago(12),
+                                "labels": [dashboard.GATHER_LABEL], "created_at": ago(13),
+                                **({"runner_name": "pc-gather-1", "started_at": ago(12),
                                     "steps": [{"name": "build", "status": "completed"},
                                               {"name": "play (cargo jackioh stats --series "
                                                        "gather)", "status": "in_progress"}]}
@@ -1081,13 +1081,13 @@ class RunnersTests(unittest.TestCase):
         group = self.pc(self.beat())
         self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, working on gather, '
                       'CPU 7%, 11.2 GB in use · heard 21:59"]', group)
-        self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
+        self.assertIn('pc0["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
                       'Patch v0.3.40<br/>play (cargo jackioh stats --serie…<br/>12m"]:::busy',
                       group)
         self.assertIn('pc1["<b>pc-lite-2</b><br/>⚪ idle, waiting<br/>for a night-vm-lite job"]'
                       ':::idle', group)
         self.assertIn('pc2["<b>gather</b><br/>🟢 gathering<br/>play (cargo jackioh stats --serie…'
-                      '<br/>for 12m<br/>on 5.8 CPUs"]:::busy', group)
+                      '<br/>for 12m<br/>on 1.9 CPUs"]:::busy', group)
         # The PC busy with its owner's work: gather goes on, slowed.
         slowed = self.beat(calm=False)
         slowed["runners"][0]["throttled"] = True
@@ -1102,7 +1102,7 @@ class RunnersTests(unittest.TestCase):
         # PowerShell 5.1 may write a list as {"value": [...]}.
         wrapped = self.beat()
         wrapped["runners"] = {"value": wrapped["runners"], "Count": 2}
-        self.assertIn("on 5.8 CPUs", self.pc(wrapped))
+        self.assertIn("on 1.9 CPUs", self.pc(wrapped))
         # No job on the PC: not working, and whether a runner of its waits for one.
         del self.gh.runs["300"]
         idle = self.beat()
@@ -1111,6 +1111,26 @@ class RunnersTests(unittest.TestCase):
                       self.pc(idle))
         self.assertIn("calm, lending itself, not working: no job, CPU 7%",
                       self.pc(self.beat(runners=[])))
+
+    def test_learn_and_gather_side_by_side(self):
+        """Gather's label has a slot of its own on the PC, outside the learn lane's one job at a
+        time (#2134), so the two run together and the group names both."""
+        self.gather_going()
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        self.gh.runs["104"]["status"] = "in_progress"
+        self.gh.jobs["104"] = [{"name": "export (shard 3)", "status": "in_progress",
+                                "labels": [dashboard.LOCAL_LABEL], "runner_name": "pc-selfplay-1",
+                                "started_at": ago(40), "steps": [{"name": "play",
+                                                                  "status": "in_progress"}]}]
+        beat = self.beat()
+        beat["runners"].insert(0, {"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL,
+                                   "busy": True, "cpus": 5.8, "throttled": False})
+        group = self.pc(beat)
+        self.assertIn("The owner's PC: calm, lending itself, working on learn and gather, CPU 7%",
+                      group)
+        self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 learn · export (shard 3)', group)
+        self.assertIn('pc1["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch', group)
+        self.assertIn('<br/>on 1.9 CPUs"]:::busy', group)
 
     def test_a_pc_gone_quiet_or_never_heard(self):
         group = self.pc(self.beat(minutes_ago=30))
@@ -1205,6 +1225,7 @@ class RunnersTests(unittest.TestCase):
                       "`agent-lite`, which holds that login alone |", text)
         self.assertIn("| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
         self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", text)
+        self.assertIn(f"| `{dashboard.GATHER_LABEL}` | the owner's PC, a slot of its own", text)
         self.assertIn("| `voice` | renders a branch's voice lines", text)
         # None of the statistics' outcomes reads it as a run's.
         from harness import stats
@@ -1244,6 +1265,7 @@ class RunnersTests(unittest.TestCase):
                                    ("night-vm-muse-b2", "night-vm-muse", "Muse box"),
                                    ("pc-lite-1026021400", "night-vm-lite", "owner's PC"),
                                    ("", dashboard.LOCAL_LABEL, "owner's PC"),
+                                   ("", dashboard.GATHER_LABEL, "owner's PC"),
                                    ("someone-elses", "gpu", "unknown box")):
             self.assertEqual(dashboard._where({"runner_name": name, "labels": [label]})[1], where)
 

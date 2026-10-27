@@ -10,10 +10,11 @@
 //! it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward
 //! given at the next state check; a line hearing back or done has nothing open, and the opponent's
 //! Quests and an untagged card are passed by. R1873000: the Radiant face first summons S #7 The
-//! Greatest Heist into its controller's leftmost open backrow zone (R64). A summon is no play, so the
-//! Heist's Cry (its Discover) does not run (R1; R411's triggered Cry reaches Units alone, B2.7); its first
-//! stage, opened as it entered, is then completed with the rest. A full backrow summons nothing, and the
-//! completion reaches the other Quests alone.
+//! Greatest Heist into its controller's leftmost open backrow zone (R64). The summon names it, so its
+//! Cry (its Discover) runs there, as League of Losers' Mid Loser's does (R411), a face-up Field Spell's
+//! Cry being triggered as a Unit's is (R1873003); its first stage, opened as it entered, is then
+//! completed with the rest. A full backrow summons nothing, so no Discover, and the completion reaches
+//! the other Quests alone.
 
 use jackioh_engine::prelude::*;
 
@@ -21,6 +22,19 @@ pub const ID: &str = "stinkyscape-006";
 
 /// S #7 The Greatest Heist.
 const HEIST: &str = "stinkyscape-007";
+
+/// R411, R1873000: the Heist this Cry summoned, if it is still there, has its Cry triggered.
+fn heist_cry() -> Effect {
+    for_each_card(ForEachCardArgs {
+        cards: Arc::new(|ctx: &mut EffectContext<'_>| {
+            summoned_so_far(ctx)
+                .into_iter()
+                .filter(|id| find_instance(&*ctx.state, id).is_some_and(|card| card.def_id == HEIST))
+                .collect()
+        }),
+        each: Arc::new(|instance_id: &str| trigger_cry(json_as(json!({ "instanceId": instance_id })))),
+    })
+}
 
 pub fn script() -> CardScripts {
     CardScripts {
@@ -30,7 +44,7 @@ pub fn script() -> CardScripts {
         },
         radiant: Script {
             cry: Some(hook(|_ctx| {
-                vec![summon(json_as(json!({ "defId": HEIST }))), complete_quests()]
+                vec![summon(json_as(json!({ "defId": HEIST }))), heist_cry(), complete_quests()]
             })),
             ..Script::default()
         },
@@ -40,7 +54,8 @@ pub fn script() -> CardScripts {
 // Stinkyscape #6 Tylannt — SPEC §8.10 row 6, BUILD M12 row S 6: "Tradable in hand (one Trade a turn, R1838000);
 // Cry (played): each Quest of yours on the field has its open quest completed and pays its reward at the next
 // state check, In Too Deep's included, the opponent's untouched, a line hearing back untouched (R1854001);
-// radiant 12/8, S #7 summoned first, with no Cry (R1873000), its Stage 1 opened and completed". Tradable,
+// radiant 12/8, S #7 summoned first, its Cry's Discover asked (R411, R1873000), its Stage 1 opened and
+// completed". Tradable,
 // In Too Deep's line and a line hearing back are the engine's, proven by its tests (R1838000, R1854001).
 #[cfg(test)]
 mod tests {
@@ -131,11 +146,21 @@ mod tests {
     }
 
     #[test]
-    fn r1873000_radiant_summons_the_greatest_heist_without_its_cry_and_completes_its_first_stage_with_the_rest() {
+    fn r1873000_radiant_summons_the_greatest_heist_runs_its_cry_then_completes_its_first_stage_with_the_rest() {
         let mut s = heists(true, "tylannt-radiant");
+        let hand = s.state().players.p1.hand.len();
         s.play(ID, json!({ "zone": 1 }));
-        // A summon is no play: the summoned Heist asks no Discover (R1).
+        // The summon names the Heist, so its Cry runs first (R411): its Discover is asked, with the
+        // summoned Heist in the next backrow zone and the completion waiting behind it.
+        let pending = s.state().pending.clone().expect("the summoned Heist's Discover");
+        assert_eq!(pending.player_id, P1);
+        assert_eq!(pending.prompt, "Discover an Acclaimed Unit or a Jelly Bean");
+        assert!(s.state().players.p1.backrow[1].as_ref().is_some_and(|card| card.def_id == HEIST));
+        assert_eq!(stage_of(&s, P1, 1), Some(1), "the Heist that stood there");
+        answer_first(&mut s);
         assert!(s.state().pending.is_none());
+        // Tylannt left the hand and the Discover's pick joined it.
+        assert_eq!(s.state().players.p1.hand.len(), hand);
         assert_eq!(stage_of(&s, P1, 1), Some(2), "the Heist that stood there");
         assert_eq!(stage_of(&s, P1, 2), Some(2), "the Heist it summoned");
         assert_eq!(stage_of(&s, P2, 1), Some(1));

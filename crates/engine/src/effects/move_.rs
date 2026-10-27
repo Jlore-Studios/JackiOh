@@ -8,6 +8,7 @@
 //!
 //! Port of `packages/engine/src/effects/move.ts` (`move` is a Rust keyword, hence `move_`).
 
+use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 
 use crate::announce::{innermost_live_announce, is_announce_live, mark_countered};
@@ -177,6 +178,28 @@ pub fn exile_all(args: BoardScope) -> Effect {
             .collect();
         for card in &cards {
             exile_card(ctx, card);
+        }
+    })
+}
+
+/// R1870001 (Stinkyscape #4.1 Farewell, "exile all permanents"): `exile_all`, with each Stack pile taken
+/// whole. A pass exiles what the scope names, in `cards_in_scope` order, and the cards it uncovers are
+/// reached on the next pass; `seen` ends the walk once a pass finds nothing new, so a card that does
+/// not leave (a Dormant one no effect reaches, R1839000, is not named at all) cannot hold it for ever.
+pub fn exile_all_piles(args: BoardScope) -> Effect {
+    Effect::new("exileAllPiles", move |ctx| {
+        let mut seen: IndexSet<String> = IndexSet::new();
+        loop {
+            let fresh: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args, TargetAim::Harm)
+                .into_iter()
+                .filter(|card| seen.insert(card.id.clone()))
+                .collect();
+            if fresh.is_empty() {
+                break;
+            }
+            for card in &fresh {
+                exile_card(ctx, card);
+            }
         }
     })
 }

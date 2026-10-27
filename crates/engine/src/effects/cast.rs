@@ -286,6 +286,13 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
             Zone::Resolving { player: controller },
         );
         card.radiant = def.radiant.or(args.radiant).unwrap_or(false);
+        // R1180005, R1875006: an aim the new card cannot legally take casts nothing (Stinkyscape #138's
+        // casts at Units a cast before them may have destroyed).
+        if args.how.aim_only == Some(true)
+            && !aim_is_legal(ctx.sink.state, controller, &card, args.how.aim_at.as_deref())
+        {
+            return;
+        }
         crate::generators::record_generator(ctx, &card);
         let options = options_of(&args.how);
         cast_card(&mut sink_of(ctx), &card, options);
