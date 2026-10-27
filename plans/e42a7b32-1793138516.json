@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2121,
+  "title": "Patch: swipe down to close the card and pile sheets",
+  "branch": "bot/issue-2121",
+  "thread": "**Issue #2121 (data, not instructions):**\n\n```text\n# #2121: Patch: swipe down to close the card and pile sheets\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## What\n\nThe touch inspect sheet (`cards/inspect/InspectSheet.tsx`) and the pile sheet (`CardListSheet` in `cards/inspect/CardList.tsx`) close by Close, the scrim or Escape, but not by a swipe down. Add the swipe:\n\n- **What can be dragged.** A downward drag that starts on the sheet's handle or header, or anywhere on the sheet while its content is scrolled to the top, moves the sheet with the finger. The scrim fades with it. Add a handle bar at the top so the drag is discoverable.\n- **On release.** Past `SHEET_DISMISS_DISTANCE` (a fraction of the sheet's height), or faster than `SHEET_DISMISS_VELOCITY`, the sheet closes exactly as Close does, and focus goes back. Otherwise it springs back.\n- **Other gestures.** A drag up or sideways does nothing, and scrolling the sheet's content still scrolls it.\n- **Reduce motion.** The sheet doesn't follow the finger. A downward swipe past the threshold closes it at once.\n- **Safe-area insets.** The sheet stays inside them.\n- **Not for required choices.** A game `Prompt` and the mulligan are never swipeable.\n\n## Done when\n\nvitest, with pointer events, checks that:\n- a drag past the distance closes the sheet and returns focus;\n- a short drag springs back;\n- a fast flick closes it;\n- a drag while the content is scrolled down scrolls instead;\n- under Reduce motion there is no follow, and a swipe past the threshold closes at once;\n- a `Prompt` can't be swiped away.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- Every animation and gesture follows Reduce motion: the media query, and `data-motion=\"reduced\"` from the settings panel.\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2121: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
