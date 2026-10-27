@@ -81,12 +81,12 @@ use crate::db::store::{
     NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
-    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput,
-    RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile,
-    SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource,
-    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -3692,6 +3692,97 @@ pub async fn replays_list(
         if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
             replays.push(replay);
         }
+    }
+    Ok(replays)
+}
+
+/// R768: what `replays_list` answers, each row already paired with what `matches_mode_of` answers
+/// for it, in one query: the matches, their results and their action counts joined, with the mode
+/// derived in Rust by the same precedence `matches_mode_of` uses (a series' game is `bo3`, else a
+/// rematch's own mode, else its room's mode or `bo1`, else its tickets' mode).
+pub async fn replays_list_with_modes(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayWithMode>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select m.id, m.status, m.seed, m.p1_profile_id, m.p2_profile_id, m.p1_deck, m.p2_deck,
+                m.catalog_version, m.turn_deadline_at, m.prompt_deadline_at, m.p1_disconnected_at,
+                m.p2_disconnected_at, m.ceiling_at, m.created_at, m.ended_at, m.p1_last_board,
+                m.p2_last_board, m.ranked, m.p1_portrait, m.p2_portrait, m.mode, m.stake,
+                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts,
+                r.match_id as r_match_id, r.p1_profile_id as r_p1_profile_id,
+                r.p2_profile_id as r_p2_profile_id, r.winner_profile_id as r_winner_profile_id,
+                r.reason as r_reason, r.turns as r_turns,
+                r.p1_rating_before as r_p1_rating_before, r.p1_rating_after as r_p1_rating_after,
+                r.p2_rating_before as r_p2_rating_before, r.p2_rating_after as r_p2_rating_after,
+                r.ended_at as r_ended_at,
+                (select count(*) from public.match_actions a where a.match_id = m.id) as actions,
+                m.room_code, m.room_mode,
+                (select t.mode from public.tickets t where t.match_id = m.id
+                  order by t.enqueued_at, t.id limit 1) as ticket_mode,
+                exists (select 1 from public.series s where s.state -> 'games'
+                  @> jsonb_build_array(jsonb_build_object('matchId', m.id::text))) as in_series
+           from public.matches m
+           join public.results r on r.match_id = m.id
+          where m.status = 'over'
+            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
+            and exists (select 1 from public.results r where r.match_id = m.id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
+          order by m.ended_at desc nulls last, m.id desc
+          limit $2::bigint offset $3::bigint",
+    )
+    .bind(profile_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut replays = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let mut shape = MatchDbRow::read(row)?;
+        // As `replay_row` reads it: a deleted second seat is the empty id, so the replay is kept.
+        shape.p2_profile_id.get_or_insert_with(String::new);
+        let replay = ReplayRow {
+            row: to_match(shape)?,
+            result: to_result(ResultDbRow {
+                match_id: uuid_text(row, "r_match_id")?,
+                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
+                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
+                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
+                reason: get(row, "r_reason")?,
+                turns: get(row, "r_turns")?,
+                p1_rating_before: get(row, "r_p1_rating_before")?,
+                p1_rating_after: get(row, "r_p1_rating_after")?,
+                p2_rating_before: get(row, "r_p2_rating_before")?,
+                p2_rating_after: get(row, "r_p2_rating_after")?,
+                ended_at: get(row, "r_ended_at")?,
+            })?,
+            actions: get(row, "actions")?,
+        };
+        // R376, R672: the precedence `matches_mode_of` answers, in the same order.
+        let own: Option<String> = get(row, "mode")?;
+        let room_code: Option<String> = get(row, "room_code")?;
+        let room_mode: Option<String> = get(row, "room_mode")?;
+        let ticket_mode: Option<String> = get(row, "ticket_mode")?;
+        let mode = if get::<bool>(row, "in_series")? {
+            from_literal("bo3").map(Some)?
+        } else if let Some(own) = own.as_deref() {
+            queue_mode_of(own).map(Some)?
+        } else if room_code.is_some() {
+            match room_mode.as_deref() {
+                None => from_literal("bo1").map(Some)?,
+                Some(mode) => queue_mode_of(mode).map(Some)?,
+            }
+        } else {
+            ticket_mode.as_deref().map(queue_mode_of).transpose()?
+        };
+        replays.push(ReplayWithMode { replay, mode });
     }
     Ok(replays)
 }
