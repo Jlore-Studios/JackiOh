@@ -3300,6 +3300,13 @@
     "2045": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T13:21:08Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 3 fails: the dev.rs lock comments cite the existing ruling R1301003, as give_xp's comment does. Line 9 (open PRs on these files) cannot be checked from here."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
