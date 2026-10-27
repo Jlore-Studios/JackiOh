@@ -1977,6 +1977,12 @@ expiry: ModifierExpiry,
 cost: number,
 } | {
 expiry: ModifierExpiry,
+["kind"]: "playWatch",
+defIds: {string},
+resume: Resume,
+label: string,
+} | {
+expiry: ModifierExpiry,
 ["kind"]: "unitsHaveKeyword",
 keyword: Keyword,
 }

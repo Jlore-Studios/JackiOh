@@ -675,6 +675,16 @@ pub enum ModifierKind {
     StarshipLaunchCost {
         cost: i32,
     },
+    // ---- Stinkyscape's drones (issue #1863) ----
+    /// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
+    /// play each …": after this player's first resolved play (a cast included, R70) of each of `def_ids`,
+    /// `resume` re-enters the card's step with that card's `defId` in its data, and the definition comes
+    /// off `def_ids`. Expiry `never`; several stack, each its own record. `label` is its badge (R169).
+    PlayWatch {
+        def_ids: Vec<String>,
+        resume: Resume,
+        label: String,
+    },
     // ---- Stinkyscape's War Doctrines (issue #1859) ----
     /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
     /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but
@@ -1914,6 +1924,12 @@ pub struct HeldCard {
     pub holder_mark: u32,
     pub to: PlayerId,
     pub card: CardInstance,
+    /// R1865000: a hand card set aside beneath its holder (`effects::hold::set_aside_from_hand`), held as
+    /// it was in the hand, with no reset, and exiled rather than summoned once the holder leaves the
+    /// field. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub exile_on_release: Option<bool>,
 }
 
 /// B5 E4: a card as a play record names it — the definition and the face it was played with.

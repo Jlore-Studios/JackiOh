@@ -8,8 +8,15 @@
 //! the viewer's own Tradable hand card its refusal as `tradeReason` and their Trades as `trades`
 //! (`view_for.rs`), so a greyed-out control and a refusal cannot disagree (§9.3).
 //!
-//! A card is Tradable when its running face prints the keyword or an effect granted it — the set a card
-//! in a hand is made of (`card_keywords`), as Temporary is read (`temporary.rs`).
+//! A card is Tradable when its running face prints the keyword, an effect granted it, or an aura that
+//! reaches its controller's hand lends it, read through the layers as Cloaked is (`alt_play::is_cloaked`).
+//!
+//! Stinkyscape's trade cards (#1864) read three things more. An aura lends Tradable to its controller's
+//! hand (`tradable_hand_aura`, R1864002: The Syndicate, The Trade Union). A card acting on its
+//! controller's field may give them more Trades a turn (`Script::trades_per_turn`, R1864004: Radiant
+//! The Trade Union), the most of all holding and never a sum. And a trigger on `traded` is handed the
+//! card the Trade put into the deck (`traded_card_of`, R1864003: The Syndicate's roll), though the
+//! public event names none.
 //!
 //! The Trade is hidden information like a draw (R1838001): `traded` names only the player, the card
 //! goes in through the one shuffle-in the engine has (`draw::shuffle_into_library`: `shuffledIn`, its
@@ -17,22 +24,101 @@
 //! comes out through §2.4's draw (`draw::draw`: `drawn`, hidden from the other player). It is no play,
 //! no cast and no discard (R1838002).
 
-use crate::config::{LIBRARY_CAP, TRADE_COST, TRADES_PER_TURN};
-use crate::layers::card_keywords;
-use crate::script::EngineSink;
-use crate::state::{CardInstance, DrawCount, EngineError, GameState};
-use crate::wire::{GameEvent, KeywordKind, Phase, PlayerId, has_keyword};
+use serde_json::Value;
 
-/// R1838000: whether this card may be Traded from a hand: its running face prints Tradable or an effect
-/// gave it the keyword.
+use crate::config::{LIBRARY_CAP, TRADE_COST, TRADES_PER_TURN};
+use crate::script::{AuraEntry, AuraHook, EffectContext, EngineSink, HookArgs, StatMod};
+use crate::state::{CardInstance, DrawCount, EngineError, GameState};
+use crate::wire::{GameEvent, Keyword, KeywordKind, Phase, PlayerId, Zone};
+
+/// R1838000, R1864002: whether this card may be Traded from a hand, read through the layers (§10.4):
+/// its running face prints Tradable, an effect gave it the keyword, or an aura that reaches the cards in
+/// its controller's hand lends it.
 pub fn is_tradable(state: &GameState, card: &CardInstance) -> bool {
-    has_keyword(&card_keywords(state, card), KeywordKind::Tradable)
+    crate::layers::unit_has(state, card, KeywordKind::Tradable)
 }
 
-/// R1838000: the Trades `player` may make each turn — `TRADES_PER_TURN`, or their own figure once an
-/// effect has set one. Every rule that reads the limit reads it here.
+/// R1838000, R1864004: the Trades `player` may make each turn — `TRADES_PER_TURN`, or their own figure
+/// once an effect has set one, or the most a card acting on their field gives when that is more: the
+/// larger holds, never a sum. Every rule that reads the limit reads it here.
 pub fn trades_per_turn_of(state: &GameState, player: PlayerId) -> i32 {
-    state.players[player].trades_per_turn.unwrap_or(TRADES_PER_TURN)
+    let own = state.players[player].trades_per_turn.unwrap_or(TRADES_PER_TURN);
+    trades_given(state, player).map_or(own, |given| own.max(given))
+}
+
+/// R1864004: the most Trades a turn any card acting on `player`'s field gives them
+/// (`Script::trades_per_turn`), or `None` when none gives a figure; a Unit a carrier holds is one of
+/// them (R446), and a face-down card's text sleeps (R1487000).
+fn trades_given(state: &GameState, player: PlayerId) -> Option<i32> {
+    let mut most: Option<i32> = None;
+    for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+        if source.controller != player
+            || source.vanilla
+            || crate::alt_play::is_dormant(source)
+            || crate::preview::lasting_text_off(state, source)
+        {
+            continue;
+        }
+        let script = crate::scripts::script_of(state, source);
+        let Some(hook) = script.trades_per_turn.as_ref() else {
+            continue;
+        };
+        let given = hook(HookArgs {
+            state,
+            self_: source,
+            radiant: source.radiant,
+        });
+        most = Some(most.map_or(given, |most| most.max(given)));
+    }
+    most
+}
+
+/// R1864002: "Aura: Cards in your hand have Tradable." — Tradable for every card in its controller's
+/// hand while the source acts on their field (The Syndicate, The Trade Union), as `alt_play`'s
+/// `cloak_hand_aura` lends Cloaked.
+pub fn tradable_hand_aura() -> AuraHook {
+    crate::script::aura_hook(|args| {
+        let controller = args.self_.controller;
+        vec![AuraEntry {
+            applies: Box::new(
+                move |card: &CardInstance| matches!(card.zone, Zone::Hand { player } if player == controller),
+            ),
+            mod_: StatMod {
+                keywords: Some(vec![Keyword::Tradable]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+/// R1864003: the key a trigger on `traded` finds the traded card's id under in its data.
+pub const TRADED_ID_KEY: &str = "tradedId";
+
+/// R1864003: the card the Trade being answered put into a deck, read as a trigger on its `traded` is
+/// queued. `traded` names no card (R1838001), but the loop takes an action's events into
+/// `state.dispatch` before it offers any of them, in the order they happened, and takes each off as it
+/// offers it (`triggers::dispatch_new_events`); `apply_trade` reports the card's `shuffledIn` right
+/// after `traded`. So while `traded` is offered, the next event still owed (passing a cast-on-draw
+/// `drawn` held back, R58) is that shuffle-in. `None` when it is not one: a deck at R80's cap turned
+/// the card away.
+pub fn traded_card_after(state: &GameState) -> Option<String> {
+    let next = state
+        .dispatch
+        .iter()
+        .find(|item| !crate::draw_complete::held_back(state, &item.event))?;
+    match &next.event {
+        GameEvent::ShuffledIn { instance_id, .. } => Some(instance_id.clone()),
+        _ => None,
+    }
+}
+
+/// R1864003: in a trigger on `traded`, the card that Trade put into a deck (`TRADED_ID_KEY`), or
+/// `None` in any other hook.
+pub fn traded_card_of(ctx: &EffectContext<'_>) -> Option<String> {
+    ctx.data
+        .get(TRADED_ID_KEY)
+        .and_then(Value::as_str)
+        .map(str::to_string)
 }
 
 /// R1838000: the Trades `player` has made this turn. `PlayerState.trades` is kept per turn, so a count

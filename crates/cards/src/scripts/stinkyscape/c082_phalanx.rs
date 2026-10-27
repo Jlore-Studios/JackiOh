@@ -1,13 +1,158 @@
-//! SPEC §8.10 Stinkyscape 82 Phalanx, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S06 (#1862) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 4/4 → 8/8, cost 4, Epic; held (R1420).
+//!   Base:    "Starship Piece, Armor 3
+//!            Cry: Discover 2 Rare Weapons and Equip them into this."
+//!   Radiant: "Starship Piece, Armor 6
+//!            Cry: Discover 2 Epic Weapons and Equip them into this."
+//!
+//! R1862002: the Cry is `equip_picks` (R1841002), 2 Discovers of three in turn from the Weapon-tagged
+//! cards of the rarity, the pool naming its set so that it reaches them while the set is held (R1420,
+//! R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
+//! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
+//! wears (R77), so a Radiant Phalanx wields its Weapons' Radiant faces. Starship Piece is a catalog
+//! keyword the engine plays: this one's death fuses a copy into its owner's Dormant Starship
+//! (R1852000), and the Weapons it takes leave it a piece (R1852001). Its Armor is a catalog keyword,
+//! which a fusion keeps (R77).
 
+use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-082";
 
+/// "Discover 2".
+const PICKS: i32 = 2;
+
+/// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
+fn arm(rarity: Rarity) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![equip_picks(json_as(json!({
+                "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
+                "times": PICKS,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: arm(Rarity::Rare),
+        radiant: arm(Rarity::Epic),
+    }
+}
+
+// Stinkyscape #82 Phalanx — SPEC §8.10 row 82, BUILD M12 row S 82: its Cry asks 2 Discovers in turn,
+// each three Rare Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
+// (R1841002, R1751000); radiant 8/8 with Armor 6 and Epic Weapons.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::weapon_board;
+    use jackioh_engine::effects::EQUIP_PICK_STEP;
+    use jackioh_engine::subsystems::activate::activate_actions_for;
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+
+    const VANILLA: &str = "core-008"; // (1) 4/4.
+
+    /// The Rare and the Epic Weapons (§8.10 row 82).
+    const RARE: [&str; 6] = [
+        "stinkyscape-050",
+        "stinkyscape-051",
+        "stinkyscape-052",
+        "stinkyscape-053",
+        "stinkyscape-140",
+        "stinkyscape-141",
+    ];
+    const EPIC: [&str; 6] = [
+        "stinkyscape-054",
+        "stinkyscape-055",
+        "stinkyscape-056",
+        "stinkyscape-057",
+        "stinkyscape-142",
+        "stinkyscape-143",
+    ];
+
+    /// Plays it with a p2 Vanilla on the field and answers each Discover with the first card offered: each a
+    /// Discover of three `pool` Weapons it does not hold yet (as many as are left), each pick adding the
+    /// Weapon's health. Returns the scenario and the host's id.
+    fn arms(radiant: bool, pool: &[&str]) -> (Scenario, String) {
+        let mut s = weapon_board(
+            "s082",
+            json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
+            json!({ "field": [VANILLA] }),
+        );
+        s.play(ID, json!({ "zone": 1 }));
+        let host = s.unit_at(P1, 1).id;
+        let mut held: Vec<String> = Vec::new();
+        for _ in 0..PICKS {
+            let pending = s.state().pending.clone().expect("a Discover is open");
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
+            assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
+            let offered: Vec<String> = pending
+                .options
+                .iter()
+                .filter_map(|option| match &option.selection {
+                    Selection::Mode { option } => Some(option.clone()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                offered.len(),
+                (DISCOVER_OPTIONS as usize).min(pool.len() - held.len()),
+                "{offered:?}"
+            );
+            assert!(
+                offered
+                    .iter()
+                    .all(|id| pool.contains(&id.as_str()) && !held.contains(id)),
+                "radiant {radiant}: {offered:?}"
+            );
+            let before = s.stats(host.as_str()).health;
+            s.answer(json!(offered[0]));
+            // R77: the fusion wears the face its kept host wears, so a Radiant host takes its picks'
+            // Radiant stats, though each goes in unflagged.
+            let def = crate::card_def(&offered[0]);
+            let gained = if radiant {
+                def.radiant.health
+            } else {
+                def.base.health
+            }
+            .unwrap_or_default();
+            assert_eq!(s.stats(host.as_str()).health, before + gained, "{}", offered[0]);
+            held.push(offered[0].clone());
+        }
+        assert!(s.state().pending.is_none());
+        (s, host)
+    }
+
+    /// The host takes its Weapons' Activates that turn, and is still a Starship Piece (R1852001) with
+    /// its `armor`.
+    fn armed(s: &Scenario, host: &str, armor: i32) {
+        let card = s.card(host).clone();
+        assert_eq!(s.stats(host).armor, armor);
+        assert!(!activate_actions_for(s.state(), P1, &card).is_empty());
+        assert!(unit_has(s.state(), &card, KeywordKind::StarshipPiece));
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn r1862002_the_cry_discovers_n_weapons_of_its_rarity_in_turn_and_equips_each() {
+            let (s, host) = arms(false, &RARE);
+            armed(&s, &host, 3);
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn r1862002_the_cry_discovers_n_epic_weapons_in_turn_and_equips_each() {
+            let (s, host) = arms(true, &EPIC);
+            armed(&s, &host, 6);
+        }
+    }
 }

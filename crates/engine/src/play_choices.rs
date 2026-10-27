@@ -362,15 +362,7 @@ pub fn radiant_next_play(state: &GameState, player: PlayerId) -> bool {
 /// What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as
 /// a play wherever the card lies, so a play from a graveyard pays the player's prices (E11, R454).
 fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: Option<bool>) -> i32 {
-    let probe = CardInstance {
-        x: if chooses_x(state, card) {
-            Some(x.unwrap_or(0))
-        } else {
-            card.x
-        },
-        ..stamped_with_embiggen(state, card, embiggen)
-    };
-    crate::mana::play_cost(state, &probe)
+    crate::mana::play_cost(state, &stamped_for_play(state, card, x, embiggen))
 }
 
 /// The card stamped with a play's embiggen choice, as §10.5 step 1 stamps it before it reads the price
@@ -385,6 +377,26 @@ fn stamped_with_embiggen(state: &GameState, card: &CardInstance, embiggen: Optio
         }
     } else {
         card.clone()
+    }
+}
+
+/// R1868000: the card as a play at these prices declares its choices — its embiggen stamped and the X
+/// the play is for, as §10.5 step 1 stamps them before the price is read (`play_steps::validate_play`),
+/// so a declaration's named check reads the play's X (`tuning::x_of`; Stinkyscape #99 No-No Words). A
+/// set X (R1848003) is on the card already, and a card that chooses no X keeps the one it has.
+fn stamped_for_play(
+    state: &GameState,
+    card: &CardInstance,
+    x: Option<i32>,
+    embiggen: Option<bool>,
+) -> CardInstance {
+    CardInstance {
+        x: if chooses_x(state, card) {
+            Some(x.unwrap_or(0))
+        } else {
+            card.x
+        },
+        ..stamped_with_embiggen(state, card, embiggen)
     }
 }
 
@@ -1968,7 +1980,7 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
                     &resolving_face(
                         state,
                         player,
-                        &stamped_with_embiggen(state, card, price.embiggen),
+                        &stamped_for_play(state, card, price.x, price.embiggen),
                         price.cost,
                     ),
                     None,
@@ -2246,7 +2258,7 @@ fn why_unplayable(
     let face = resolving_face(
         state,
         player,
-        &stamped_with_embiggen(state, card, cheapest.embiggen),
+        &stamped_for_play(state, card, cheapest.x, cheapest.embiggen),
         cheapest.cost,
     );
     if play_choice_combinations(state, player, &face, None).is_empty() {
@@ -2312,7 +2324,7 @@ pub fn face_for_action(
     resolving_face(
         state,
         player,
-        &stamped_with_embiggen(state, card, action.embiggen),
+        &stamped_for_play(state, card, action.x, action.embiggen),
         cost_with(state, card, action.x, action.embiggen),
     )
 }
@@ -2433,7 +2445,7 @@ pub fn priced_play_actions(
             continue;
         }
         // R214: the choices of the face step 5 will resolve, which this price decides (#64, R1181002).
-        let face = resolving_face(state, player, &stamped_with_embiggen(state, card, embiggen), cost);
+        let face = resolving_face(state, player, &stamped_for_play(state, card, x, embiggen), cost);
         let bound = declares_bound_tribute(state, &face);
         // #1889: the price's choices whose targets' discard cost can be paid, listed once the price
         // offers a zone: neither reads the Tribute set or the zone, so a wide hand of many Tribute
@@ -2997,10 +3009,11 @@ pub fn why_choices_refused(
     refuse_tributes(state, player, card, action.tributes.as_deref())?;
     // R214: the targets and modes are the resolving face's, so they are read against it. The Tribute
     // above is paid at step 2, before step 3 can change the face, so it is the face in hand's.
+    // R1868000: the face carries the play's X, which a declaration's named check may read.
     let face = resolving_face(
         state,
         player,
-        &stamped,
+        &stamped_for_play(state, card, action.x, action.embiggen),
         cost_with(state, card, action.x, action.embiggen),
     );
     // R1851000: a play gate that does not hold refuses the play whatever it carried, as the listing

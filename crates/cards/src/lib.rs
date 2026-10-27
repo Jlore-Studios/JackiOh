@@ -466,6 +466,46 @@ pub(crate) fn matches_object(actual: &serde_json::Value, pattern: &serde_json::V
     }
 }
 
+/// Stinkyscape's weapon rack (S06, #1862): p1's turn 9 with each side set up as `p1` and `p2` say, a
+/// library of filler to draw unless it names one, and no turn that ends by itself (R345), so a test
+/// ends each turn it means to.
+#[cfg(test)]
+pub(crate) fn weapon_board(
+    seed: &str,
+    p1: serde_json::Value,
+    p2: serde_json::Value,
+) -> jackioh_engine::testkit::Scenario {
+    let side = |over: serde_json::Value| merged(serde_json::json!({ "library": filler(4) }), over);
+    let mut s = scenario(serde_json::json!({ "seed": seed, "p1": side(p1), "p2": side(p2) }));
+    for player in jackioh_engine::PLAYER_IDS {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    s
+}
+
+/// Ends turns until it is `player`'s again: their next turn.
+#[cfg(test)]
+pub(crate) fn next_turn_of(s: &mut jackioh_engine::testkit::Scenario, player: jackioh_engine::PlayerId) {
+    s.end_turn();
+    while s.state().active != player {
+        s.end_turn();
+    }
+}
+
+/// The hits among `events`: each `damage` event's target and amount, in order.
+#[cfg(test)]
+pub(crate) fn hits(events: &[jackioh_engine::GameEvent]) -> Vec<(String, i32)> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            jackioh_engine::GameEvent::Damage {
+                target_id, amount, ..
+            } => Some((target_id.clone(), *amount)),
+            _ => None,
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
