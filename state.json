@@ -4265,6 +4265,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2077": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-27T12:29:39Z",
+      "issue": 1871,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
