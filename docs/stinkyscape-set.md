@@ -2189,7 +2189,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Radiant:** Add a Radiant Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** ST8: the Radiant face keeps Vxyl. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3151,7 +3151,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Radiant:** Add a Radiant iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3164,7 +3164,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Radiant:** Add a Radiant Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** The list's "Paragon mk1", "mk2" and "Paragon X" are S #72 Paragon Mk1, #73 Paragon Mk2 and #74 Paragon-X. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3177,7 +3177,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Radiant:** Add a Radiant A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** The list's Radiant face drops "to your hand"; it is the same move. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3190,7 +3190,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Radiant:** Add a Radiant Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** ST8: the Radiant face adds the five Radiant, and the name is Star-jumper Core, as #163 writes it. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3203,7 +3203,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Radiant:** Choose a Radiant Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Engine:** A choice of five ([[R81]]'s declared modes, or a `pick` prompt its caster alone sees): the chosen bundle added to the hand (Radiant on the Radiant face, [[§5.2]]), a full hand burning it ([[§2.4]]). Then every card its caster owns of the four other definitions is exiled ([[§6.3]] Exile) from their hand, deck and graveyard, as Core #94 Genn's Greed's exile reaches those zones; the opponent's are untouched.
-- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three.
+- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three. Built by S24 (#1880) as [[R1880001]] and [[R1880002]], as five declared modes chosen with the play.
 - **Numbers:** none.
 - **Check:** ST8: "Golden" is Golden Accord; the name Swear Loyalities kept as written. R275: the chosen bundle Radiant (about 2×). ⚠ designer: E9.
 - **Class:** B (a choice and an exile across zones).
