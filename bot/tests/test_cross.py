@@ -115,15 +115,15 @@ class ReviewRuleTests(unittest.TestCase):
         self.assertFalse(d._rule_met(votes))
 
     def test_an_easy_item_ships_on_its_medium_audit(self):
-        """Devin builds an easy item and checks itself, which is no review; the lane's Medium
+        """The weak one builds an easy item and checks itself, which is no review; the lane's Medium
         final audit then ships it, with no Opus gate (#725). No weak review run goes out."""
-        h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("devin", "agy"), at=DAY)
+        h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("lite", "agy"), at=DAY)
         h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:easy"),
                        body="<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n"
                             "<!-- /jackioh-bot:plan -->")
         planned, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                                               "self_check": reviewer(APPROVE)}))
-        self.assertEqual((planned["provider"], result["status"]), ("devin", "built"))
+        self.assertEqual((planned["provider"], result["status"]), ("lite", "built"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         self.assertIn("a medium model's final audit", h.gh.bot_comments(12)[-1])
         # The Medium audit approves, and that ships the easy item.
@@ -451,16 +451,16 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertNotIn("cleared this change", h.gh.bot_comments(pr)[-1])
 
     def test_a_conflict_revision_goes_to_a_builder_that_reviews_in_its_own_run(self):
-        """Devin takes an easy revision first, but never a conflict (#317 part 2): nothing reviews
-        in its run, and it committed conflict markers in SPEC §11 again and again (#203, #214,
-        #287). agy takes the conflict, cleared or not, and its own reviewer can carry a
+        """The weak one takes an easy revision first, but never a conflict (#317 part 2): nothing
+        reviews in its run, and it committed conflict markers in SPEC §11 again and again (#203,
+        #214, #287). agy takes the conflict, cleared or not, and its own reviewer can carry a
         clearance."""
         gh = FakeGitHub()
         ctx = make_ctx(gh, at=DAY, cfg=make_config(env={"HARNESS_SECRETS_SET": ""},
-                                                   machine=("devin", "agy")))
+                                                   machine=("lite", "agy")))
         gh.add_pull(9, "bot/issue-2", labels=(LABEL_PR, LABEL_REVISE, "difficulty:easy"))
         ctx.store.update(lambda s: state_item(s, 9).update(kind="revise", source="request"))
-        self.assertEqual(plan_mod.peek(ctx).provider, "devin")
+        self.assertEqual(plan_mod.peek(ctx).provider, "lite")
         ctx.store.update(lambda s: state_item(s, 9).update(kind="revise", source="conflict"))
         self.assertEqual(plan_mod.peek(ctx).provider, "agy")
         ctx.store.update(lambda s: state_item(s, 9).update(

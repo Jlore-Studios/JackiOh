@@ -20,7 +20,7 @@ from harness.errors import GitHubError
 from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
-from tests.support import ALL_MACHINE, NIGHT, ROOT, make_config, make_ctx, raw_providers
+from tests.support import ALL_MACHINE, NIGHT, ROOT, WEAK, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
 from tests.test_providers import EARLY, too_close_to_start
 from tests.test_providers import secrets as providers_secrets
@@ -571,8 +571,9 @@ class DashboardTests(unittest.TestCase):
 
     def test_every_subscriptions_lanes_with_the_totals(self):
         """The lanes section: each subscription's lanes, how many its runs hold and how many are
-        open, the Claude accounts by number, then agy, gpt, Devin and Muse, then Squishy's from
-        the comment its section carries; Muse's fill-in counts in the lane it fills, and a
+        open, the Claude accounts by number, then agy, gpt and Muse, then any other by name (the
+        tests' weak one), then Squishy's from the comment its section carries; Muse's fill-in
+        counts in the lane it fills, and a
         planning run of claude-3's (no caps) on the planning lane beside its own."""
         cfg = make_config(env=providers_secrets(*providers.SECRETS), machine=ALL_MACHINE,
                           plan_lanes=None)
@@ -598,15 +599,15 @@ class DashboardTests(unittest.TestCase):
             "| `claude-3` | GitHub's runners | 2 | 0 <sub>(+1 planning, on the planning lane)</sub>"
             " | 2 |",
             *[f"| `claude-{n}` | GitHub's runners | 1 | 0 | 1 |" for n in (4, 5, 6, 7)],
-            "| `claude-8` | GitHub's runners | 3 | 2 | 1 |",
+            "| `claude-8` | GitHub's runners | 2 | 2 | 0 |",
             "| `agy` | the night box | 1 | 0 | 1 |",
             "| `gpt` | the night box | 1 | 1 <sub>(1 of them `muse`'s)</sub> | 0 |",
-            "| `devin` | the night box | 6 | 0 | 6 |",
             "| `muse` | the night box and the Muse box | 4 | 1 <sub>(+1 filling in `gpt`'s or "
             "`agy`'s)</sub> | 3 |",
+            "| `lite` | `night-vm-lite` | 6 | 0 | 6 |",
             "| `claude-squishy` (Squishy) | GitHub's runners | 2 | 1 | 1 |",
-            "| **All 9 Claude accounts** | | **13** | **3** | **10** |",
-            "| **All 13 subscriptions** | | **25** | **5** | **20** |"])
+            "| **All 9 Claude accounts** | | **12** | **3** | **9** |",
+            "| **All 13 subscriptions** | | **24** | **5** | **19** |"])
         # Under them, the limits on the lanes, each with how much of it is held now.
         limits = [line for line in lanes.splitlines() if line.startswith("- **")]
         self.assertEqual([line.split("**")[1] for line in limits],
@@ -618,19 +619,19 @@ class DashboardTests(unittest.TestCase):
                       "needs a new secret there and in the workflows.", limits[1])
         self.assertIn("GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "
                       "night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "
-                      "kept for CI (#1455). So the 13 Claude lanes never all run at once: past 8,",
+                      "kept for CI (#1455). So the 12 Claude lanes never all run at once: past 8,",
                       limits[2])
         self.assertIn("runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
         self.assertIn("6 runs at once (2 now)", limits[4])
         self.assertTrue(limits[6].endswith(
-            "10 Claude lanes are open on accounts that may start work, and GitHub's runners have "
+            "9 Claude lanes are open on accounts that may start work, and GitHub's runners have "
             "4 free, so there is room for 4 more Claude runs."))
         # A subscription switched off has no open lane, and the totals say how many are off;
         # with no Squishy row, its secret is the one free.
         self.ctx = make_ctx(self.gh, at=NIGHT)  # only claude-1's secret, the machine's off
         lanes = "\n".join(dashboard.lanes_table(self.ctx, self.ctx.store.load(), {}))
-        self.assertIn("| `claude-8` | GitHub's runners | 3 | 0 | ⚫ off |", lanes)
-        self.assertIn("| **All 8 Claude accounts** (7 off) | | **11** | **0** | **1** |", lanes)
+        self.assertIn("| `claude-8` | GitHub's runners | 2 | 0 | ⚫ off |", lanes)
+        self.assertIn("| **All 8 Claude accounts** (7 off) | | **10** | **0** | **1** |", lanes)
         self.assertIn("one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
                       lanes)
         self.assertIn("**Now:** 1 Claude lane is open on accounts that may start work, and GitHub's "
@@ -645,7 +646,7 @@ class DashboardTests(unittest.TestCase):
         [row] = [r for r in dashboard.marked_lanes((section,)) if r["id"] == "claude-8"]
         self.assertEqual((row["bot"], row["lanes"], row["used"], row["off"], row["startable"],
                           row["secret"]),
-                         (dashboard.BOT_TITLE, 3, 0, True, False, "CLAUDE_CODE_OAUTH_TOKEN_8"))
+                         (dashboard.BOT_TITLE, 2, 0, True, False, "CLAUDE_CODE_OAUTH_TOKEN_8"))
         self.assertLess(section.index(dashboard.LANES_MARK), section.index("## 🫧"))
         for broken in ("[{]", '{"id": "x"}', '[{"lanes": 2}]', '[{"id": "x", "lanes": "two"}]'):
             self.assertEqual(dashboard.marked_lanes((f"{dashboard.LANES_MARK}{broken} -->",)), [])
@@ -886,6 +887,13 @@ class RunnersTests(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
         self.ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config())
+        # The tests' weak subscription has runners on the night box that take no slot of their
+        # own, as the committed weak one's did until #2129, so the boxes' other runners stay tested.
+        boxes = mock.patch.object(dashboard, "BOX_SLOTS", (
+            ("night box", ("gpt", "agy", "muse"), (WEAK,)),
+            ("Muse box", ("muse", "muse", "muse"), ())))
+        boxes.start()
+        self.addCleanup(boxes.stop)
         ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
 
         def seed(state):
@@ -998,7 +1006,7 @@ class RunnersTests(unittest.TestCase):
 
     def test_a_fill_in_takes_a_free_slot_and_other_runners_follow_the_slots(self):
         """Muse's fill-in runners take gpt's or agy's slot while it has no job of its own
-        (#2028); Devin's runners on the night box take none, and follow the slots."""
+        (#2028); the weak one's runners on the night box take none, and follow the slots."""
         def night(jobs):
             self.gh.jobs["103"] = [{"name": "work", "status": "in_progress", "labels": [label],
                                     "runner_name": name, "started_at": iso(NIGHT)}
@@ -1015,10 +1023,10 @@ class RunnersTests(unittest.TestCase):
         self.assertIn('nb1["<b>Slot 2 · agy\'s lane</b><br/>🟢 muse fills it<br/>', box)
         self.assertIn('nb2["<b>Slot 3 · muse\'s lane</b><br/>⚪ free"]', box)  # no fill-in's
         self.assertIn('nb3["<b>night-vm-muse-fill-2</b><br/>🟢 ci · work<br/>', box)
-        box = night([("night-vm-devin", "night-vm-devin-3")])
+        box = night([("night-vm-lite", "night-vm-lite-3")])
         self.assertIn('subgraph nb["The night box (AWS): 0 of 3 slots busy · 1 more on its other '
                       'runners"]', box)
-        self.assertIn('nb3["<b>night-vm-devin-3</b><br/>🟢 ci · work<br/>', box)
+        self.assertIn('nb3["<b>night-vm-lite-3</b><br/>🟢 ci · work<br/>', box)
         # A machine subscription no box's slots name has its labels drawn apart.
         with mock.patch.object(dashboard, "BOX_SLOTS", (("night box", ("gpt", "muse"), ()),
                                                          ("Muse box", ("muse",), ()))):
@@ -1047,7 +1055,7 @@ class RunnersTests(unittest.TestCase):
     def beat(self, minutes_ago: int = 1, **fields) -> dict:
         runners = [{"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL, "busy": True,
                     "cpus": 5.8, "throttled": False},
-                   {"name": "pc-devin-2", "label": "night-vm-devin", "busy": False}]
+                   {"name": "pc-lite-2", "label": "night-vm-lite", "busy": False}]
         return {"at": iso(NIGHT - timedelta(minutes=minutes_ago)), "calm": True, "cpu": 7.4,
                 "memGB": 11.2, "logical": 16, "runners": runners, **fields}
 
@@ -1076,7 +1084,7 @@ class RunnersTests(unittest.TestCase):
         self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
                       'Patch v0.3.40<br/>play (cargo jackioh stats --serie…<br/>12m"]:::busy',
                       group)
-        self.assertIn('pc1["<b>pc-devin-2</b><br/>⚪ idle, waiting<br/>for a night-vm-devin job"]'
+        self.assertIn('pc1["<b>pc-lite-2</b><br/>⚪ idle, waiting<br/>for a night-vm-lite job"]'
                       ':::idle', group)
         self.assertIn('pc2["<b>gather</b><br/>🟢 gathering<br/>play (cargo jackioh stats --serie…'
                       '<br/>for 12m<br/>on 5.8 CPUs"]:::busy', group)
@@ -1108,7 +1116,7 @@ class RunnersTests(unittest.TestCase):
         group = self.pc(self.beat(minutes_ago=30))
         self.assertIn("The owner's PC: not heard since 21:30: off, asleep, or its supervisor "
                       "stopped", group)
-        self.assertNotIn("pc-devin-2", group)  # an old heartbeat's runners are not trusted
+        self.assertNotIn("pc-lite-2", group)  # an old heartbeat's runners are not trusted
         self.assertIn('["<b>jackioh-selfplay-local</b><br/>💤 no job<br/>idle, or the PC is off"]',
                       group)
         self.assertIn("The owner's PC: no heartbeat set up (JACKIOH_PC_GIST)", self.pc(gist=""))
@@ -1192,9 +1200,9 @@ class RunnersTests(unittest.TestCase):
         self.assertTrue(text.startswith("## 🖥️ What each runner is for"))
         self.assertIn(dashboard.EXPLAINED, text)
         self.assertIn("| `ubuntu-latest` | GitHub's Linux", text)
-        self.assertIn("| `night-vm-devin` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
-                      "`devin`: the `devin` CLI with `swe-2-max`, as the Linux user "
-                      "`agent-devin`, which holds that login alone |", text)
+        self.assertIn("| `night-vm-lite` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
+                      "`lite`: the `codex` CLI with `lite-1`, as the Linux user "
+                      "`agent-lite`, which holds that login alone |", text)
         self.assertIn("| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
         self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", text)
         self.assertIn("| `voice` | renders a branch's voice lines", text)
@@ -1232,9 +1240,9 @@ class RunnersTests(unittest.TestCase):
         for name, label, where in (("GitHub Actions 7", "ubuntu-latest", "Linux"),
                                    ("GitHub Actions 8", "macos-15", "macOS"),
                                    ("GitHub Actions 9", "windows-2022", "Windows"),
-                                   ("night-vm-devin-3", "night-vm-devin", "night box"),
+                                   ("night-vm-lite-3", "night-vm-lite", "night box"),
                                    ("night-vm-muse-b2", "night-vm-muse", "Muse box"),
-                                   ("pc-devin-1026021400", "night-vm-devin", "owner's PC"),
+                                   ("pc-lite-1026021400", "night-vm-lite", "owner's PC"),
                                    ("", dashboard.LOCAL_LABEL, "owner's PC"),
                                    ("someone-elses", "gpu", "unknown box")):
             self.assertEqual(dashboard._where({"runner_name": name, "labels": [label]})[1], where)

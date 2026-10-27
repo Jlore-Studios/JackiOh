@@ -11,4 +11,3 @@ self-hosted-runner:
     - night-vm-gpt
     - night-vm-agy
     - night-vm-muse
-    - night-vm-devin

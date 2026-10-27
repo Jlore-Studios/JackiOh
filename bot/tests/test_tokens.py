@@ -116,24 +116,24 @@ class RecordingTests(unittest.TestCase):
     def test_a_window_sums_tokens_and_cost(self):
         ctx = make_ctx(FakeGitHub(), at=DAY)
         ctx.store.update(lambda s: s.setdefault("providers", {}).update(
-            devin={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 60.0}],
+            lite={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 60.0}],
                    "tokens_spent": [{"at": "2026-09-29T12:00:00Z", "input": 1000,
                                       "output": 50, "cache": 200, "cost": 0.04}]}))
         facts = stats.collect(ctx)
         window = stats.window("Last 6 hours", None, DAY, facts)
-        self.assertEqual(window.tokens["devin"], (1000, 50, 200))
-        self.assertAlmostEqual(window.cost["devin"], 0.04)
+        self.assertEqual(window.tokens["lite"], (1000, 50, 200))
+        self.assertAlmostEqual(window.cost["lite"], 0.04)
 
     def test_the_issue_shows_tokens_and_cost(self):
         ctx = make_ctx(FakeGitHub(), at=DAY)
         ctx.store.update(lambda s: s.setdefault("providers", {}).update(
-            devin={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 60.0}],
+            lite={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 60.0}],
                    "tokens_spent": [{"at": "2026-09-29T12:00:00Z", "input": 1000,
                                       "output": 50, "cache": 200, "cost": 0.04}]}))
         body = stats.block(ctx, stats.collect(ctx))
         self.assertIn("| Model tokens (in / out / cached) | 1,000 / 50 / 200 |", body)
         self.assertIn("| Model cost (USD) | $0.04 |", body)
-        self.assertIn("| `devin` | 1,000 | 50 | 200 | $0.04 |", body)
+        self.assertIn("| `lite` | 1,000 | 50 | 200 | $0.04 |", body)
 
     def test_a_window_without_tokens_says_so(self):
         from tests.test_stats import section, world
