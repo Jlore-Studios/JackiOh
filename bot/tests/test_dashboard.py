@@ -20,9 +20,10 @@ from harness.errors import GitHubError
 from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
-from tests.support import NIGHT, ROOT, make_config, make_ctx, raw_providers
+from tests.support import ALL_MACHINE, NIGHT, ROOT, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
 from tests.test_providers import EARLY, too_close_to_start
+from tests.test_providers import secrets as providers_secrets
 
 
 def opened(gh: FakeGitHub) -> list[int]:
@@ -543,6 +544,88 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("claude-3` (claude: `opus` strong, `sonnet` medium; any time): it refused "
                       "a call; its limit resets at 2026-10-09T12:00:00Z. Usage:", body)
 
+    def test_every_subscriptions_lanes_with_the_totals(self):
+        """The lanes section: each subscription's lanes, how many its runs hold and how many are
+        open, the Claude accounts by number, then agy, gpt, Devin and Muse, then Squishy's from
+        the comment its section carries; Muse's fill-in counts in the lane it fills, and a
+        planning run of claude-3's (no caps) on the planning lane beside its own."""
+        cfg = make_config(env=providers_secrets(*providers.SECRETS), machine=ALL_MACHINE,
+                          plan_lanes=None)
+        self.ctx = make_ctx(self.gh, at=NIGHT, cfg=cfg)
+        runs = {37: ("claude-8", {}), 38: ("claude-8", {}), 39: ("claude-3", {"action": "plan"}),
+                49: ("muse", {}), 50: ("muse", {"runs_on": "night-vm-muse-fill"})}
+        for number, (provider, extra) in runs.items():
+            self.gh.add_issue(number, labels=(LABEL_WORKING,))
+            self.gh.runs[str(number)] = {"status": "in_progress"}
+            self.ctx.store.update(lambda s, n=number, p=provider, e=extra: state_item(s, n).update(
+                provider=p, kind="build", run_id=str(n), **e))
+        squishy = {"id": "claude-squishy", "bot": "Squishy", "claude": True, "github": True,
+                   "where": "GitHub's runners", "lanes": 2, "used": 1, "runs": 1,
+                   "secret": "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY", "startable": True}
+        part = (f"{dashboard.SECTION_START}\n{dashboard.LANES_MARK}{json.dumps([squishy])} -->\n"
+                f"## 🫧 Squishy\n{dashboard.SECTION_END}")
+        body = dashboard.render(self.ctx, (part,))
+        lanes = body[body.index("## 🛣️ Lanes"):body.index("## 📋 Queue")]
+        rows = [line for line in lanes.splitlines() if line.startswith("| ")][1:]
+        self.assertEqual(rows, [
+            "| `claude-1` | GitHub's runners | 1 | 0 | 1 |",
+            "| `claude-2` | GitHub's runners | 1 | 0 | 1 |",
+            "| `claude-3` | GitHub's runners | 2 | 0 <sub>(+1 planning, on the planning lane)</sub>"
+            " | 2 |",
+            *[f"| `claude-{n}` | GitHub's runners | 1 | 0 | 1 |" for n in (4, 5, 6, 7)],
+            "| `claude-8` | GitHub's runners | 3 | 2 | 1 |",
+            "| `agy` | the night box | 1 | 0 | 1 |",
+            "| `gpt` | the night box | 1 | 1 <sub>(1 of them `muse`'s)</sub> | 0 |",
+            "| `devin` | the night box | 6 | 0 | 6 |",
+            "| `muse` | the night box and the Muse box | 4 | 1 <sub>(+1 filling in `gpt`'s or "
+            "`agy`'s)</sub> | 3 |",
+            "| `claude-squishy` (Squishy) | GitHub's runners | 2 | 1 | 1 |",
+            "| **All 9 Claude accounts** | | **13** | **3** | **10** |",
+            "| **All 13 subscriptions** | | **25** | **5** | **20** |"])
+        # Under them, the limits on the lanes, each with how much of it is held now.
+        limits = [line for line in lanes.splitlines() if line.startswith("- **")]
+        self.assertEqual([line.split("**")[1] for line in limits],
+                         ["Each account:", "Accounts:", "At once:", "Planning:", "The AWS boxes:",
+                          "Usage and hours:", "Now:"])
+        self.assertIn("the code sets no top", limits[0])
+        self.assertIn("the workflows hand over 9 Claude secrets (`providers.SECRETS`), one an "
+                      "account: 8 the night bot's, 1 Squishy's, so none is free: another account "
+                      "needs a new secret there and in the workflows.", limits[1])
+        self.assertIn("GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "
+                      "night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "
+                      "kept for CI (#1455). So the 13 Claude lanes never all run at once: past 8,",
+                      limits[2])
+        self.assertIn("runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
+        self.assertIn("6 runs at once (2 now)", limits[4])
+        self.assertTrue(limits[6].endswith(
+            "10 Claude lanes are open on accounts that may start work, and GitHub's runners have "
+            "4 free, so there is room for 4 more Claude runs."))
+        # A subscription switched off has no open lane, and the totals say how many are off;
+        # with no Squishy row, its secret is the one free.
+        self.ctx = make_ctx(self.gh, at=NIGHT)  # only claude-1's secret, the machine's off
+        lanes = "\n".join(dashboard.lanes_table(self.ctx, self.ctx.store.load(), {}))
+        self.assertIn("| `claude-8` | GitHub's runners | 3 | 0 | ⚫ off |", lanes)
+        self.assertIn("| **All 8 Claude accounts** (7 off) | | **11** | **0** | **1** |", lanes)
+        self.assertIn("one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
+                      lanes)
+        self.assertIn("**Now:** 1 Claude lane is open on accounts that may start work, and GitHub's "
+                      "runners have 8 free, so there is room for 1 more Claude run.", lanes)
+        # Halted, no lane may start work.
+        lanes = "\n".join(dashboard.lanes_table(self.ctx, self.ctx.store.load(), {},
+                                                 halted="HALT is on main"))
+        self.assertIn("**Now:** 0 Claude lanes are open on accounts that may start work", lanes)
+
+    def test_a_bots_section_carries_its_lanes_and_a_broken_comment_adds_none(self):
+        section = dashboard.section(self.ctx)
+        [row] = [r for r in dashboard.marked_lanes((section,)) if r["id"] == "claude-8"]
+        self.assertEqual((row["bot"], row["lanes"], row["used"], row["off"], row["startable"],
+                          row["secret"]),
+                         (dashboard.BOT_TITLE, 3, 0, True, False, "CLAUDE_CODE_OAUTH_TOKEN_8"))
+        self.assertLess(section.index(dashboard.LANES_MARK), section.index("## 🫧"))
+        for broken in ("[{]", '{"id": "x"}', '[{"lanes": 2}]', '[{"id": "x", "lanes": "two"}]'):
+            self.assertEqual(dashboard.marked_lanes((f"{dashboard.LANES_MARK}{broken} -->",)), [])
+        self.assertEqual(dashboard.marked_lanes((f"{dashboard.LANES_MARK}[]",)), [])
+
     def test_a_cell_stays_one_line_without_pipes(self):
         self.assertEqual(dashboard._cell("a | b\nc"), "a \\| b c")
         self.assertEqual(dashboard.bar(None), "—")
@@ -920,8 +1003,8 @@ class RunnersTests(unittest.TestCase):
 
     def test_each_section_folds_away_under_its_heading(self):
         body = dashboard.render(self.ctx, (dashboard.section(self.ctx),), "")
-        for heading in ("## ⚡ Running now", "## 📋 Queue", "## 🔋 Subscriptions",
-                        "## 🏃 Last night-bot runs", "## 🧠 The learn lane",
+        for heading in ("## ⚡ Running now", "## 🛣️ Lanes", "## 📋 Queue",
+                        "## 🔋 Subscriptions", "## 🏃 Last night-bot runs", "## 🧠 The learn lane",
                         f"## 🫧 {dashboard.BOT_TITLE}"):
             after = body[body.index(heading) + len(heading):].lstrip("\n")
             self.assertTrue(after.startswith("<details open><summary>"), heading)
