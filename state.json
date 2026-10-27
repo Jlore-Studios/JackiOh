@@ -3279,6 +3279,9 @@
       "started_at": "2026-10-27T06:11:12Z",
       "stop_requested": false
     },
+    "2048": {
+      "suggestion": true
+    },
     "2050": {
       "asks": [
         "c:6442259193"
