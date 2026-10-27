@@ -3353,6 +3353,13 @@
     "2047": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T13:54:51Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "line 3 fails outright: the fixes edit 81 ruling notes' front matter in spec/rulings/ plus spec/README.md, far past 10 files; not hard, as nothing touches crates/engine or crates/ai"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
