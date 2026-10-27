@@ -746,10 +746,12 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
     return "gated out"
 
 
-def learn_lane(ctx: Context) -> list[str]:
+def learn_lane(ctx: Context, found: Found | None = None) -> list[str]:
     """The learn lane's section: the AI on main, the lane's pull request, the next scheduled run,
-    the owner's PC it runs on (its heartbeat: how loaded it is, with and without its runners), and
-    its last runs with how each ended. Each part says so when GitHub cannot be read."""
+    the owner's PC it runs on (its heartbeat: whether it is working and on what, from the runners
+    `found`, and how loaded it is, with and without its runners), and its last runs with how each
+    ended. Each part says so when GitHub cannot be read. Without `found` it reads the heartbeat
+    alone, which says a runner is in a job but not which."""
     lines = ["## 🧠 The learn lane", "",
              "<sub>`learn.yml` retrains the learned evaluation on fresh self-play on the owner's "
              "PC, one run after another (the local runner, only while the PC is idle: a run takes "
@@ -784,7 +786,9 @@ def learn_lane(ctx: Context) -> list[str]:
     lines.append(f"- **Its pull request:** {pulled}")
     upcoming = _local(ctx, next_learn_run(ctx.now())).strftime("%a %b %d %H:%M")
     lines.append(f"- **Next scheduled run:** {upcoming} (Central).")
-    lines += [f"- **The owner's PC:** {_pc_words(ctx, *_heartbeat(ctx), apart=True)}.", ""]
+    beat, note = (found.pc, found.pc_note) if found is not None else _heartbeat(ctx)
+    pc = _pc_words(ctx, beat, note, _pc_jobs(found) if found is not None else None, full=True)
+    lines += [f"- **The owner's PC:** {pc}.", ""]
     try:
         runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
                 if r.get("event") != "workflow_run"][:LEARN_ROWS]
@@ -881,7 +885,7 @@ BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are t
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "
               "CPU and memory in use, with and without its runners, and each runner's CPUs and "
               "whether it is slowed), which the PC's group in the runners section and the learn "
-              "lane show, the group with the gather workflow's state. "
+              "lane show with whether it is working, the group with the gather workflow's state. "
               "bot/machine/README.md has the rest.")
 
 
@@ -1092,10 +1096,15 @@ def _run_for(state: dict[str, Any], items: dict[str, int], run: dict[str, Any]) 
     return f"{run.get('event')}: {_cell(title, 36)}"
 
 
+def _flow(run: dict[str, Any]) -> str:
+    """`ci`: a run's workflow by its file, or by its name when the run does not say its file."""
+    flow = str(run.get("path") or "").rsplit("/", 1)[-1].removesuffix(".yml")
+    return flow or _cell(run.get("name"), 24)
+
+
 def _job_name(run: dict[str, Any], job: dict[str, Any]) -> str:
     """`ci · rust (test engine)`: the workflow by its file, then the job."""
-    flow = str(run.get("path") or "").rsplit("/", 1)[-1].removesuffix(".yml")
-    return f"{flow or _cell(run.get('name'), 24)} · {_cell(job.get('name'), 32)}"
+    return f"{_flow(run)} · {_cell(job.get('name'), 32)}"
 
 
 def _text(value: Any, limit: int = 34) -> str:
@@ -1134,39 +1143,71 @@ def _fresh(ctx: Context, found: Found) -> dict[str, Any] | None:
     return found.pc if at is not None and ctx.now() - at <= PC_QUIET else None
 
 
-def _pc_load(beat: dict[str, Any], apart: bool = False) -> str:
-    """How loaded the PC is, as its CPU and memory in use, runners included; with `apart`, also
-    without its runners (what decides whether it lends itself). A heartbeat from a supervisor
-    older than its memory's size says its load without its runners, in GB."""
+def _pc_load(beat: dict[str, Any], full: bool = False) -> str:
+    """How loaded the PC is, as its CPU and memory in use, runners included; with `full`, also
+    its memory's size and its load without its runners (what decides whether it lends itself). A
+    heartbeat from a supervisor older than its memory's size says its load without its runners,
+    in GB."""
     try:
         if not beat.get("memTotalGB"):
             return f"CPU {float(beat['cpu']):.0f}%, {float(beat['memGB']):.1f} GB in use"
         whole = float(beat["memTotalGB"])
-        cpu, mem = float(beat.get("cpuAll", beat["cpu"])), float(beat.get("memAllGB", beat["memGB"]))
-        load = f"CPU {cpu:.0f}%, memory {100 * mem / whole:.0f}% of {whole:.0f} GB"
-        if apart:
-            load += (f" ({float(beat['cpu']):.0f}% and {100 * float(beat['memGB']) / whole:.0f}% "
-                     "without its runners)")
+        cpu = float(beat.get("cpuAll", beat["cpu"]))
+        mem = float(beat.get("memAllGB", beat["memGB"]))
+        load = f"CPU {cpu:.0f}%, memory {100 * mem / whole:.0f}%"
+        if full:
+            load += (f" of {whole:.0f} GB ({float(beat['cpu']):.0f}% and "
+                     f"{100 * float(beat['memGB']) / whole:.0f}% without its runners)")
         return load
     except (KeyError, TypeError, ValueError, ZeroDivisionError):
         return "its load not reported"
 
 
-def _pc_words(ctx: Context, beat: dict[str, Any] | None, note: str, apart: bool = False) -> str:
-    """The PC from its heartbeat: lending itself or busy, how loaded, and when it was heard; or
-    that it has gone quiet, or why there is no heartbeat (`note`)."""
+def _pc_jobs(found: Found) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """The jobs the PC's runners hold now, as GitHub lists them."""
+    return [(run, job) for run, job in found.busy if _where(job)[0] == 3]
+
+
+def _pc_work(beat: dict[str, Any], jobs: list[tuple[dict[str, Any], dict[str, Any]]],
+             full: bool = False) -> str:
+    """Whether the PC is working: the workflows of the jobs its runners hold (GitHub's jobs, or
+    the heartbeat's busy runners when GitHub has not listed them yet), with `full` each job's name
+    and whether it is slowed; or that it is not, and whether a runner of its waits for a job."""
+    runners = _pc_runners(beat)
+    if not jobs and not any(r.get("busy") for r in runners):
+        waiting = any(not r.get("busy") for r in runners)
+        return "not working: " + ("a runner waits for a job" if waiting else "no job")
+    if not jobs:
+        return "working on a job"
+    if not full:
+        return "working on " + " and ".join(dict.fromkeys(_flow(run) for run, _ in jobs))
+    slowed = any(_pc_runner(beat, str(job.get("runner_name") or "")).get("throttled")
+                 for _, job in jobs)
+    return ("working on " + "; ".join(f"{_flow(run)} ({_cell(job.get('name'), 48)})"
+                                      for run, job in jobs)
+            + (", slowed while the PC is busy" if slowed else ""))
+
+
+def _pc_words(ctx: Context, beat: dict[str, Any] | None, note: str,
+              jobs: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
+              full: bool = False) -> str:
+    """The PC from its heartbeat: lending itself or busy, whether it is working (on `jobs`, the
+    ones GitHub lists on its runners), how loaded, and when it was heard; or that it has gone
+    quiet, or why there is no heartbeat (`note`)."""
     if beat is None:
         return note
     at = parse_iso(beat.get("at"))
     if at is None or ctx.now() - at > PC_QUIET:
         return f"not heard since {_clock(ctx, at)}: off, asleep, or its supervisor stopped"
     mood = "calm, lending itself" if beat.get("calm") else "busy with its owner's work"
-    return f"{mood}, {_pc_load(beat, apart)} · heard {_clock(ctx, at)}"
+    return (f"{mood}, {_pc_work(beat, jobs or [], full)}, {_pc_load(beat, full)} · heard "
+            f"{_clock(ctx, at)}")
 
 
 def _pc_title(ctx: Context, found: Found) -> str:
-    """The PC's group: how loaded it is, from its heartbeat, and when it was heard."""
-    return f"The owner's PC: {_pc_words(ctx, found.pc, found.pc_note)}"
+    """The PC's group: whether it is working, how loaded it is, from its heartbeat, and when it
+    was heard."""
+    return f"The owner's PC: {_pc_words(ctx, found.pc, found.pc_note, _pc_jobs(found))}"
 
 
 def _pc_runners(beat: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -1571,7 +1612,7 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
         + ([disk_line, ""] if disk_line else []) + ([memory_line] if memory_line else []))
     lines += ["## 🏃 Last night-bot runs", ""] + fold(f"bot-night.yml's last {RUN_ROWS} runs",
                                                       view.runs)
-    learn = view.learn if view.learn is not None else learn_lane(ctx)
+    learn = view.learn if view.learn is not None else learn_lane(ctx, view.found)
     lines += learn[:2] + fold("The AI on main, the lane's pull request, the PC and its last runs",
                               learn[2:])
     if statistics:
@@ -1646,8 +1687,8 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     A count reads which set's cards win most from production through `read_cards` once a day
     (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
-    view.learn = learn_lane(ctx)
     view.found = read_runners(ctx)
+    view.learn = learn_lane(ctx, view.found)
     state = view.state
     issue = find(ctx, state)
     if issue is not None:

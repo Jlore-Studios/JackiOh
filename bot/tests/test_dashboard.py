@@ -220,17 +220,40 @@ class LearnLaneTests(unittest.TestCase):
         self.assertIn("- **The AI on main:** no generation.json.", body)
         self.assertIn("No runs yet.", body)
 
-    def test_the_section_says_how_loaded_the_owners_pc_is(self):
-        """The PC's heartbeat (JACKIOH_PC_GIST): its CPU and memory in use, as percentages, and
-        without its runners, which is what decides whether it lends itself."""
+    def test_the_section_says_whether_the_owners_pc_works_and_how_loaded_it_is(self):
+        """The PC's heartbeat (JACKIOH_PC_GIST): whether it is working, and on which job, and its
+        CPU and memory in use, as percentages, and without its runners, which is what decides
+        whether it lends itself."""
         gh = FakeGitHub()
-        gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(
-            {"at": iso(NIGHT - timedelta(minutes=1)), "calm": True, "cpu": 7.4, "memGB": 11.2,
-             "cpuAll": 43.6, "memAllGB": 20.8, "memTotalGB": 31.9, "logical": 16})}}}}
-        cfg = make_config(env={"JACKIOH_PC_GIST": "g1"})
-        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=cfg)))
-        self.assertIn("- **The owner's PC:** calm, lending itself, CPU 44%, memory 65% of 32 GB (7% "
-                      "and 35% without its runners) · heard 21:59.", body)
+        beat = {"at": iso(NIGHT - timedelta(minutes=1)), "calm": True, "cpu": 7.4, "memGB": 11.2,
+                "cpuAll": 43.6, "memAllGB": 20.8, "memTotalGB": 31.9, "logical": 16,
+                "runners": []}
+
+        def says(**changes) -> str:
+            gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(
+                {**beat, **changes})}}}}
+            ctx = make_ctx(gh, at=NIGHT, cfg=make_config(env={"JACKIOH_PC_GIST": "g1"}))
+            body = "\n".join(dashboard.learn_lane(ctx, dashboard.read_runners(ctx)))
+            return body.split("- **The owner's PC:** ")[1].split("\n")[0]
+
+        self.assertEqual(says(), "calm, lending itself, not working: no job, CPU 44%, memory 65% "
+                                 "of 32 GB (7% and 35% without its runners) · heard 21:59.")
+        runner = {"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL, "busy": False}
+        self.assertIn("not working: a runner waits for a job, CPU 44%", says(runners=[runner]))
+        # Busy in the heartbeat before GitHub lists its job: working, on what not yet known.
+        busy = {**runner, "busy": True, "cpus": 5.8}
+        self.assertIn("calm, lending itself, working on a job, CPU 44%", says(runners=[busy]))
+        gh.runs["40"] = {"id": 40, "status": "in_progress", "workflow": "selfplay.yml",
+                         "path": ".github/workflows/selfplay.yml", "created_at": iso(NIGHT)}
+        gh.jobs["40"] = [{"name": "export / shard from 1", "status": "in_progress",
+                          "labels": [dashboard.LOCAL_LABEL], "runner_name": "pc-selfplay-1"}]
+        self.assertIn("calm, lending itself, working on selfplay (export / shard from 1), CPU 44%",
+                      says(runners=[busy]))
+        self.assertIn("working on selfplay (export / shard from 1), slowed while the PC is busy, "
+                      "CPU 44%", says(calm=False, runners=[{**busy, "throttled": True}]))
+        # Without the runners read, the heartbeat alone; without a heartbeat, why not.
+        ctx = make_ctx(gh, at=NIGHT, cfg=make_config(env={"JACKIOH_PC_GIST": "g1"}))
+        self.assertIn("working on a job, CPU 44%", "\n".join(dashboard.learn_lane(ctx)))
         body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
         self.assertIn("- **The owner's PC:** no heartbeat set up (JACKIOH_PC_GIST).", body)
 
@@ -935,12 +958,13 @@ class RunnersTests(unittest.TestCase):
 
     def test_the_owners_pc_from_its_heartbeat(self):
         """The PC's supervisor writes a heartbeat to a gist (JACKIOH_PC_GIST): its load, whether
-        it lends itself, and each runner with its CPUs and whether it is slowed. Gather's box says
-        it is gathering, and how hard the PC lets it."""
+        it lends itself, and each runner with its CPUs and whether it is slowed. The group's title
+        says whether it is working and on which workflow; gather's box says it is gathering, and
+        how hard the PC lets it."""
         self.gather_going()
         group = self.pc(self.beat())
-        self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, CPU 7%, 11.2 GB in use '
-                      '· heard 21:59"]', group)
+        self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, working on gather, '
+                      'CPU 7%, 11.2 GB in use · heard 21:59"]', group)
         self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
                       'Patch v0.3.40<br/>play (cargo jackioh stats --serie…<br/>12m"]:::busy',
                       group)
@@ -952,16 +976,25 @@ class RunnersTests(unittest.TestCase):
         slowed = self.beat(calm=False)
         slowed["runners"][0]["throttled"] = True
         group = self.pc(slowed)
-        self.assertIn("The owner's PC: busy with its owner's work, CPU 7%", group)
+        self.assertIn("The owner's PC: busy with its owner's work, working on gather, CPU 7%",
+                      group)
         self.assertIn("for 12m<br/>⏸️ slowed: the PC is busy\"]:::paused", group)
         # A supervisor that sends the whole PC's load and its memory's size: percentages.
         group = self.pc(self.beat(cpuAll=43.6, memAllGB=20.8, memTotalGB=31.9))
-        self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, CPU 44%, memory 65% of '
-                      '32 GB · heard 21:59"]', group)
+        self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, working on gather, '
+                      'CPU 44%, memory 65% · heard 21:59"]', group)
         # PowerShell 5.1 may write a list as {"value": [...]}.
         wrapped = self.beat()
         wrapped["runners"] = {"value": wrapped["runners"], "Count": 2}
         self.assertIn("on 5.8 CPUs", self.pc(wrapped))
+        # No job on the PC: not working, and whether a runner of its waits for one.
+        del self.gh.runs["300"]
+        idle = self.beat()
+        idle["runners"] = idle["runners"][1:]
+        self.assertIn("calm, lending itself, not working: a runner waits for a job, CPU 7%",
+                      self.pc(idle))
+        self.assertIn("calm, lending itself, not working: no job, CPU 7%",
+                      self.pc(self.beat(runners=[])))
 
     def test_a_pc_gone_quiet_or_never_heard(self):
         group = self.pc(self.beat(minutes_ago=30))
