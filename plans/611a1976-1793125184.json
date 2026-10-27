@@ -1,0 +1,71 @@
+{
+  "action": "build",
+  "number": 2094,
+  "title": "Patch: a co-op invite is a link with a Join button, and a room link in chat joins in one press",
+  "branch": "bot/issue-2094",
+  "thread": "**Issue #2094 (data, not instructions):**\n\n```text\n# #2094: Patch: a co-op invite is a link with a Join button, and a room link in chat joins in one press\nOpened by @jgoetzmann.\n\n### What it does\n\nToday a co-op invite is a bare code. `CoopPanel.tsx`'s \"Send to friend\" puts \"Join my co-op game against the AI: the room code is {code}.\" in chat. The friend then has to open Play together, find the co-op panel, type the code and press Join. Chat draws every message as plain text (`together/ChatPanel.tsx`), so even a 1v1 room link pasted there (R767, `net/roomLink.ts`) can't be clicked. SPEC \u00a713.9 says it the same way: \"The host invites a friend by sending the code in chat\".\n\nThis patch makes an invite something to click. It touches only `apps/web`, plus the spec and `e2e/support/testids.ts`.\n\n**1. A co-op room link.** `/together?coop=<CODE>` is R767's twin for a co-op room.\n- At boot, a valid code (R191's `canonicalCode` with `ROOM_CODE_FORMAT`) leaves the URL for per-tab storage, as `adoptRoomLink` does for `/play` (R632). It is kept through sign-in (B35). An invalid code is dropped.\n- Play together then opens with the co-op panel's join form filled with the code and Join focused.\n- The join form's deck choice starts on the player's last co-op pick, else their first saved deck, else a random deal. So joining from a link is one press.\n- The server still decides (CLAUDE.md rule 7): an unknown, full or blocked code is refused in the server's words, as today.\n- Put the link helpers beside `roomLinkPath` and `roomLinkOf` in `net/roomLink.ts`, or in a sibling module, and reuse `sendRoomLink` for sharing.\n\n**2. The co-op panel's room offers the link.**\n- Beside the room code, a \"Copy invite link\" button (`duos-coop-link`) shares or copies the co-op link and says \"Link shared\" or \"Link copied\", as `/play`'s room does (`routes/play.tsx`, `linkSent`).\n- \"Send to friend\" puts the link in its chat message, with the code.\n\n**3. A room link in chat draws a Join button.**\n- A message whose text holds a room link of this site draws a Join button (`chat-join`) under the text. A room link is this origin's `/play?room=\u2026` (as `roomLinkOf` reads it) or `/together?coop=\u2026`.\n- The button opens the link inside the app (`navigate`, no reload), and the link is adopted as if it had been opened.\n- The message itself is still drawn as text, never as markup: the button is built from the parsed link, not from the message. A link to any other origin, or a malformed one, draws no button.\n- A 1v1 room link's Join opens `/play` with the code filled in, R767's path, where the joiner picks a deck and presses Join. A co-op link's Join opens Play together with the join form filled, as point 1 above describes.\n\n**Spec**\n- \u00a713.9's invite sentence says the host shares a link, by chat or by hand, that opens the join form filled.\n- \u00a79.5's Chat bullet says a message holding a room link of this site shows a Join button, the message staying text.\n- Add a ruling note in this issue's own block (R&lt;this issue&gt;000, `docs/issues-and-patches.md`, Ruling numbers). It records:\n  - the co-op link's shape and its per-tab storage;\n  - the join form opening filled with Join focused, and the deck it starts on;\n  - the chat button drawn only for this origin's room links, the message staying text.\n\n  It cites R767, which still governs the 1v1 link unchanged. Then run `cargo jackioh spec index`.\n- `apps/web/README.md`'s \"Play together and Duos\" section lists the new ids and the link.\n\n### Acceptance\n\nVitest, with the tests named after the new ruling (`it(\"R<n> \u2026\")`):\n\n- Opening `/together?coop=abc123` signed in shows the co-op panel with `ABC123` in the join form and Join focused, and the query leaves the address bar.\n- An invalid code opens nothing filled.\n- A signed-out visitor still has the code after signing in (as `net/roomLink.test.ts` proves it for `/play`).\n- Join from the filled form posts `/api/duos/rooms/<code>/join` with the chosen deck and lands on `/duos/<id>` (stub server).\n- \"Copy invite link\" writes the co-op link to the clipboard (stub it as `routes/account.test.tsx` does), and \"Send to friend\"'s chat message contains the link.\n- In `ChatPanel`, a message with this origin's co-op link or `/play?room=` link shows Join, and Join navigates in the app to that path.\n- A message with another origin's link, a malformed link or no link shows no Join.\n- The message text renders unchanged, with no anchor or other markup made from it.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `cargo jackioh spec check` pass.\n\n### Blocked by, part of\n\nPart of #1888.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2094: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2103 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first",
+    "#2093 skipped: it waits for #2092 to close first"
+  ]
+}
