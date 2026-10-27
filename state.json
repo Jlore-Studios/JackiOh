@@ -4154,25 +4154,8 @@
     "what": "build #1865 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-27T06:20:41Z",
-    "notes": [
-      "delivered review #2044 on claude-6 (run 40459602134): reviewed",
-      "delivered suggest on devin (run 40457345006): suggested",
-      "delivered build #1858 on claude-4 (run 40450885992): approved",
-      "started build #1864 on claude-6 (run 40460859571)",
-      "started build #1865 on claude-4 (run 40460943115)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-10-27T07:50:00Z; it can start a build or a plan again in 1h 24m; `claude-1` it refused a call; its limit resets at 2026-10-27T08:20:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-27T08:30:00Z; it can start a build or a plan again in 2h 04m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 87h 34m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it",
-      "#2054: typed it Task",
-      "#2053: typed it Task",
-      "#2052: typed it Task",
-      "#2051: typed it Feature",
-      "#2050: typed it Task",
-      "#2049: typed it Task",
-      "#2048: typed it Task",
-      "#2047: typed it Task",
-      "#2046: typed it Task",
-      "#2045: typed it Task"
-    ],
+    "at": "2026-10-27T06:31:48Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -4877,7 +4860,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T06:20:41Z",
+  "loop_tick": "2026-10-27T06:31:48Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T06:15:22Z",
