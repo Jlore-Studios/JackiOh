@@ -2687,19 +2687,18 @@
     "params": [
       {
         "key": "draw",
-        "base": 3,
+        "base": 1,
         "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant",
         "cry": true
       }
     ],
-    "loc": 9,
+    "loc": 37,
     "base": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue."
+      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
