@@ -14,8 +14,9 @@ import shutil
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from harness import cardsets as cardsets_mod
 from harness import config as config_mod
@@ -232,7 +233,10 @@ def cmd_wake(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def make_probe(ctx: context_mod.Context, number: int | None,
-               provider: providers_mod.Provider | None = None):
+               provider: providers_mod.Provider | None = None,
+               last_hour: Callable[[], datetime | None] = lambda: None):
+    """Between a run's steps: whether it must stop. `last_hour` gives the reset of the 5-hour
+    session whose last hour the run took (`work.Worker.last_hour`), whose cap stays lifted."""
     provider = provider or ctx.cfg.pool.ordered()[0]
 
     def closed(thread: int) -> bool:
@@ -260,7 +264,7 @@ def make_probe(ctx: context_mod.Context, number: int | None,
                 return (f"#{number} was closed", "stop")
         providers_mod.note_usage(state, provider.id, last_usage, None, ctx.now())
         refusal = providers_mod.refusal(provider, providers_mod.peek_record(state, provider.id),
-                                        ctx.now(), ctx.cfg.timezone)
+                                        ctx.now(), ctx.cfg.timezone, last_hour=last_hour())
         if refusal:
             return (f"`{provider.id}` stops: {refusal}", "usage")
         return None
@@ -305,7 +309,9 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
     runner = get_runner(cfg, provider, login)
     worker = Worker(
         cfg, planned, runner, cfg.root, Path(args.work_dir), out,
-        probe=make_probe(ctx, int(number) if number else None, provider), after_call=keep_login,
+        probe=make_probe(ctx, int(number) if number else None, provider,
+                         last_hour=lambda: worker.last_hour),
+        after_call=keep_login,
     )
     if cfg.backend != "fake" and provider.limits.stops:
         # A fresh reading before any model work: the stored one is the last run's, and none at
