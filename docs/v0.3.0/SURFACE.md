@@ -679,7 +679,8 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
-`card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::invariants::Monitor`
+`card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::Monitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
