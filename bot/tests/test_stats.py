@@ -35,15 +35,15 @@ def world():
     gh = FakeGitHub()
     for number in (3, 4, 5, 6):
         gh.add_issue(number, f"Patch v0.2.Y: item {number}")
-    # #9, for issue 3, inside the six hours: planned on claude-3, built on devin (its own reviewer
+    # #9, for issue 3, inside the six hours: planned on claude-3, built on lite (its own reviewer
     # claude-2), revised on muse (which reviewed its own revision), and approved again by agy.
     say(gh, 3, f"Planning this now ([run]({RUN}/12)), on `claude-3` (claude, `opus`, strong) "
                "(`bot:needs-plan`).", "2026-09-29T11:30:00Z")
     say(gh, 3, f"Planned on `claude-3` (claude, `opus`, strong) ([run]({RUN}/12)). The plan is in "
                "this issue's description.", "2026-09-29T11:45:00Z")
     say(gh, 3, f"Starting work on this now ([run]({RUN}/13)): it is difficulty:easy. I build it on "
-               "`devin` (devin, `swe-2-max`, weak).", "2026-09-29T11:50:00Z")
-    say(gh, 3, "Opened #9, built on `devin` (devin, `swe-2-max`, weak). Its adversarial reviewer, "
+               "`lite` (lite, `lite-1`, weak).", "2026-09-29T11:50:00Z")
+    say(gh, 3, "Opened #9, built on `lite` (lite, `lite-1`, weak). Its adversarial reviewer, "
                "`claude-2` (claude, `opus`, strong), approved it on round 1 of 10.",
         "2026-09-29T12:00:00Z")
     say(gh, 9, f"Starting a revision now ([run]({RUN}/14)), because of: CI. I build it on `muse` "
@@ -89,7 +89,7 @@ def world():
                     "3": {"status": "completed", "conclusion": "success"}})
     ctx = make_ctx(gh, at=DAY)
     ctx.store.update(lambda s: s.setdefault("providers", {}).update(
-        devin={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 120.0},
+        lite={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 120.0},
                          {"at": "2026-09-20T00:00:00Z", "minutes": 60.0}]}))
     return gh, ctx
 
@@ -113,7 +113,7 @@ class ParseTests(unittest.TestCase):
                               "issue_url": "x/issues/3"})
         self.assertEqual((opened.kind, opened.pr, opened.provider, opened.model),
                          ("opened", 44, "gpt", "gpt-5.6-terra"))
-        for body, kind in (("Revision pushed on `devin` …", "revised"),
+        for body, kind in (("Revision pushed on `lite` …", "revised"),
                            ("Paused: the run's time budget is spent.", "paused"),
                            ("My revision did not pass review after 10 rounds", "not approved"),
                            ("The run could not work on this on `claude-3`: 401", "infra"),
@@ -125,7 +125,7 @@ class ParseTests(unittest.TestCase):
         def approvers(body):
             return stats.parse({"body": body, "issue_url": "x/issues/3"}).approvers
 
-        self.assertEqual(approvers("Opened #9, built on `devin` (devin, `swe-2-max`, weak). Its "
+        self.assertEqual(approvers("Opened #9, built on `lite` (lite, `lite-1`, weak). Its "
                                    "adversarial reviewer, `claude-2` (claude, `opus`, strong), "
                                    "approved it on round 2 of 10."), ("claude-2",))
         self.assertEqual(approvers("Revision pushed (run) on `muse` (muse, `m`, medium); `agy` "
@@ -135,7 +135,7 @@ class ParseTests(unittest.TestCase):
                                    "approved it. Auto-merge is on."), ("gpt",))
         # A vote tally names families, not seats, and a builder is not an approver.
         self.assertEqual(approvers("`claude-opus` (strong) approved it, so it waits"), ())
-        self.assertEqual(approvers("Opened #9, built on `devin` (devin, `swe-2-max`, weak). "
+        self.assertEqual(approvers("Opened #9, built on `lite` (lite, `lite-1`, weak). "
                                    "Nobody has approved it yet."), ())
 
     def test_an_outcome_takes_its_runs_subscription(self):
@@ -154,7 +154,7 @@ class CreditTests(unittest.TestCase):
         facts = stats.collect(ctx)
         who = stats.credits(facts.events, facts.pulls)
         self.assertEqual(who.planned.get(9), ["claude-3"])
-        self.assertEqual(who.built.get(9), "devin")
+        self.assertEqual(who.built.get(9), "lite")
         self.assertEqual(who.revised.get(9), ["muse"])
         self.assertEqual(who.approved.get(9), ["claude-2", "muse", "agy"])
         # No "Opened" comment: the last build started on its issue before it was opened.
@@ -204,7 +204,7 @@ class IssueTests(unittest.TestCase):
         body = stats.block(ctx, stats.collect(ctx))
         six = section(body, "Last 6 hours")
         self.assertIn("<b>Last 6 hours</b>: 4 runs, 1 pull requests merged, +40 / −5 lines", six)
-        self.assertIn("| `devin` | `swe-2-max` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
+        self.assertIn("| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
                       "| 0 | 0 | 0 | 2.0 h |", six)
         self.assertIn("| `agy` | `gemini-3.1-pro` | 1 | 0 | 0 | 0 | 1 | 1 of 1 | 0 | 0 | +0 / −0 "
                       "| 0 | 0 | 0 | 0.0 h |", six)
@@ -219,14 +219,14 @@ class IssueTests(unittest.TestCase):
                       "| 0 | 1 | 0 | 0.0 h |", week)
 
         ever = section(body, "All time")
-        self.assertIn("| `devin` | `swe-2-max` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
+        self.assertIn("| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
                       "| 0 | 0 | 0 | 3.0 h (its last 2 runs) |", ever)
         # One list of every merge, newest first, with when it merged and who did what.
         merged = body[body.index("<b>Pull requests merged</b>"):]
         self.assertIn("<b>Pull requests merged</b>: the newest 4 of 4", merged)
         rows = [line for line in merged.splitlines() if line.startswith("| #")]
         self.assertEqual([row.split()[1] for row in rows], ["#9", "#10", "#11", "#12"])
-        self.assertIn("| #9 Patch v0.2.Y: work for #3 | Tue 09-29 10:00 | `claude-3` | `devin` "
+        self.assertIn("| #9 Patch v0.2.Y: work for #3 | Tue 09-29 10:00 | `claude-3` | `lite` "
                       "| `muse` | `claude-2`, `muse`, `agy` | 3h 00m | +40 / −5 | 4 |", merged)
         self.assertIn("| #10 Patch v0.2.Y: work for #4 | Mon 09-28 22:00 | — | `gpt` | — | — "
                       "| 3h 00m | +100 / −10 | 2 |", merged)
@@ -248,8 +248,8 @@ class IssueTests(unittest.TestCase):
         lines = section(body, "Last 24 hours").splitlines()
         at = lines.index('    title "Lines added in merged pull requests, by builder '
                          '(last 24 hours)"')
-        self.assertEqual(lines[at + 1:at + 4], ['    x-axis ["devin", "gpt"]', '    y-axis "lines"',
-                                                '    bar [40, 100]'])
+        self.assertEqual(lines[at + 1:at + 4], ['    x-axis ["gpt", "lite"]', '    y-axis "lines"',
+                                                '    bar [100, 40]'])
         self.assertIn('title "What runs ended in (all time)"', body)
         self.assertEqual(body.count('title "Runs started per day (last 14 days)"'), 1)
 

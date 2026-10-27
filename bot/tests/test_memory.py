@@ -149,7 +149,7 @@ class LineTests(unittest.TestCase):
     def test_a_runners_name_says_its_box(self):
         # register-runners.sh's names: the label, a lane past the first, the second box's BOX.
         for runner, label, box in (("night-vm-muse", "night-vm-muse", ""),
-                                   ("night-vm-devin-6", "night-vm-devin", ""),
+                                   ("night-vm-lite-6", "night-vm-lite", ""),
                                    ("night-vm-muse-b2", "night-vm-muse", "b2"),
                                    ("night-vm-muse-2-b2", "night-vm-muse", "b2"),
                                    ("someone-else", "night-vm-muse", "")):

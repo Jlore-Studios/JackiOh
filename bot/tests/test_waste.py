@@ -170,7 +170,7 @@ class ForbiddenOnlyTests(unittest.TestCase):
 
 
 class ClosedDuringTheRunTests(unittest.TestCase):
-    """Devin stayed on #125 for hours after #163 closed it."""
+    """A builder stayed on #125 for hours after #163 closed it."""
 
     def test_the_probe_stops_a_run_whose_thread_closed(self):
         gh = FakeGitHub()
