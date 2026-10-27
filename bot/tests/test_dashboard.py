@@ -220,6 +220,20 @@ class LearnLaneTests(unittest.TestCase):
         self.assertIn("- **The AI on main:** no generation.json.", body)
         self.assertIn("No runs yet.", body)
 
+    def test_the_section_says_how_loaded_the_owners_pc_is(self):
+        """The PC's heartbeat (JACKIOH_PC_GIST): its CPU and memory in use, as percentages, and
+        without its runners, which is what decides whether it lends itself."""
+        gh = FakeGitHub()
+        gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(
+            {"at": iso(NIGHT - timedelta(minutes=1)), "calm": True, "cpu": 7.4, "memGB": 11.2,
+             "cpuAll": 43.6, "memAllGB": 20.8, "memTotalGB": 31.9, "logical": 16})}}}}
+        cfg = make_config(env={"JACKIOH_PC_GIST": "g1"})
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=cfg)))
+        self.assertIn("- **The owner's PC:** calm, lending itself, CPU 44%, memory 65% of 32 GB (7% "
+                      "and 35% without its runners) · heard 21:59.", body)
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("- **The owner's PC:** no heartbeat set up (JACKIOH_PC_GIST).", body)
+
     def test_unreadable_github_still_draws_the_section(self):
         gh = FakeGitHub()
         with mock.patch.object(gh, "list_pulls", side_effect=GitHubError("down", 502)), \
@@ -940,6 +954,10 @@ class RunnersTests(unittest.TestCase):
         group = self.pc(slowed)
         self.assertIn("The owner's PC: busy with its owner's work, CPU 7%", group)
         self.assertIn("for 12m<br/>⏸️ slowed: the PC is busy\"]:::paused", group)
+        # A supervisor that sends the whole PC's load and its memory's size: percentages.
+        group = self.pc(self.beat(cpuAll=43.6, memAllGB=20.8, memTotalGB=31.9))
+        self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, CPU 44%, memory 65% of '
+                      '32 GB · heard 21:59"]', group)
         # PowerShell 5.1 may write a list as {"value": [...]}.
         wrapped = self.beat()
         wrapped["runners"] = {"value": wrapped["runners"], "Count": 2}

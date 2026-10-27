@@ -748,7 +748,8 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
 
 def learn_lane(ctx: Context) -> list[str]:
     """The learn lane's section: the AI on main, the lane's pull request, the next scheduled run,
-    and its last runs with how each ended. Each part says so when GitHub cannot be read."""
+    the owner's PC it runs on (its heartbeat: how loaded it is, with and without its runners), and
+    its last runs with how each ended. Each part says so when GitHub cannot be read."""
     lines = ["## 🧠 The learn lane", "",
              "<sub>`learn.yml` retrains the learned evaluation on fresh self-play on the owner's "
              "PC, one run after another (the local runner, only while the PC is idle: a run takes "
@@ -782,7 +783,8 @@ def learn_lane(ctx: Context) -> list[str]:
         pulled = "could not be read."
     lines.append(f"- **Its pull request:** {pulled}")
     upcoming = _local(ctx, next_learn_run(ctx.now())).strftime("%a %b %d %H:%M")
-    lines += [f"- **Next scheduled run:** {upcoming} (Central).", ""]
+    lines.append(f"- **Next scheduled run:** {upcoming} (Central).")
+    lines += [f"- **The owner's PC:** {_pc_words(ctx, *_heartbeat(ctx), apart=True)}.", ""]
     try:
         runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
                 if r.get("event") != "workflow_run"][:LEARN_ROWS]
@@ -877,8 +879,9 @@ BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are t
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "
-              "load without its runners, and each runner's CPUs and whether it is slowed), which "
-              "the PC's group in the runners section shows with the gather workflow's state. "
+              "CPU and memory in use, with and without its runners, and each runner's CPUs and "
+              "whether it is slowed), which the PC's group in the runners section and the learn "
+              "lane show, the group with the gather workflow's state. "
               "bot/machine/README.md has the rest.")
 
 
@@ -1131,20 +1134,39 @@ def _fresh(ctx: Context, found: Found) -> dict[str, Any] | None:
     return found.pc if at is not None and ctx.now() - at <= PC_QUIET else None
 
 
+def _pc_load(beat: dict[str, Any], apart: bool = False) -> str:
+    """How loaded the PC is, as its CPU and memory in use, runners included; with `apart`, also
+    without its runners (what decides whether it lends itself). A heartbeat from a supervisor
+    older than its memory's size says its load without its runners, in GB."""
+    try:
+        if not beat.get("memTotalGB"):
+            return f"CPU {float(beat['cpu']):.0f}%, {float(beat['memGB']):.1f} GB in use"
+        whole = float(beat["memTotalGB"])
+        cpu, mem = float(beat.get("cpuAll", beat["cpu"])), float(beat.get("memAllGB", beat["memGB"]))
+        load = f"CPU {cpu:.0f}%, memory {100 * mem / whole:.0f}% of {whole:.0f} GB"
+        if apart:
+            load += (f" ({float(beat['cpu']):.0f}% and {100 * float(beat['memGB']) / whole:.0f}% "
+                     "without its runners)")
+        return load
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return "its load not reported"
+
+
+def _pc_words(ctx: Context, beat: dict[str, Any] | None, note: str, apart: bool = False) -> str:
+    """The PC from its heartbeat: lending itself or busy, how loaded, and when it was heard; or
+    that it has gone quiet, or why there is no heartbeat (`note`)."""
+    if beat is None:
+        return note
+    at = parse_iso(beat.get("at"))
+    if at is None or ctx.now() - at > PC_QUIET:
+        return f"not heard since {_clock(ctx, at)}: off, asleep, or its supervisor stopped"
+    mood = "calm, lending itself" if beat.get("calm") else "busy with its owner's work"
+    return f"{mood}, {_pc_load(beat, apart)} · heard {_clock(ctx, at)}"
+
+
 def _pc_title(ctx: Context, found: Found) -> str:
     """The PC's group: how loaded it is, from its heartbeat, and when it was heard."""
-    if found.pc is None:
-        return f"The owner's PC: {found.pc_note}"
-    beat, at = found.pc, parse_iso(found.pc.get("at"))
-    if _fresh(ctx, found) is None:
-        return (f"The owner's PC: not heard since {_clock(ctx, at)}: off, asleep, or its "
-                "supervisor stopped")
-    try:
-        load = f"CPU {float(beat.get('cpu')):.0f}%, {float(beat.get('memGB')):.1f} GB in use"
-    except (TypeError, ValueError):
-        load = "its load not reported"
-    mood = "calm, lending itself" if beat.get("calm") else "busy with its owner's work"
-    return f"The owner's PC: {mood}, {load} · heard {_clock(ctx, at)}"
+    return f"The owner's PC: {_pc_words(ctx, found.pc, found.pc_note)}"
 
 
 def _pc_runners(beat: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -1550,7 +1572,7 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     lines += ["## 🏃 Last night-bot runs", ""] + fold(f"bot-night.yml's last {RUN_ROWS} runs",
                                                       view.runs)
     learn = view.learn if view.learn is not None else learn_lane(ctx)
-    lines += learn[:2] + fold("The AI on main, the lane's pull request and its last runs",
+    lines += learn[:2] + fold("The AI on main, the lane's pull request, the PC and its last runs",
                               learn[2:])
     if statistics:
         lines += [statistics.strip(), ""]
