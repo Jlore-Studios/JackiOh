@@ -27,7 +27,7 @@ import {
   type DuosDeckChoice,
 } from "../net/duos.ts";
 import { withSession } from "../net/gate.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { coopLinkUrl, forgetCoopLink, readCoopLink, sendRoomLink } from "../net/roomLink.ts";
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
@@ -161,6 +161,8 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   // R2094000: a co-op link fills the join form once, read here so StrictMode's second call agrees.
   const [coopLink] = useState(readCoopLink);
+  // R2094000: a chat Join on this same screen arrives as a new query without remounting.
+  const search = useSearch();
   const [deck, setDeck] = useState<string>(() => readCoopDeck() ?? RANDOM);
   const [lean, setLean] = useState(readPlayLean);
   const [room, setRoom] = useState<string | null>(readStoredRoom);
@@ -228,12 +230,20 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   useEffect(() => {
     forgetCoopLink();
   }, []);
+  // R2094000: a chat Join on this same screen arrives as a new query without remounting.
+  useEffect(() => {
+    const code = readCoopLink();
+    if (code === null) return;
+    setJoinCode(code);
+    focusPending.current = true;
+  }, [search]);
   useEffect(() => {
     if (!focusPending.current || busy || room !== null) return;
+    if (joinSubmit.current === null || joinSubmit.current.disabled) return;
     focusPending.current = false;
-    joinSubmit.current?.focus();
+    joinSubmit.current.focus();
     forgetCoopLink();
-  }, [busy, room]);
+  }, [busy, room, search, joinCode]);
 
   /** S6: exactly one of a saved deck and a random deal, the deal with its lean when there is one. */
   const choice = (): DuosDeckChoice =>

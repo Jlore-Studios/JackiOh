@@ -824,4 +824,41 @@ describe("R2094000 a co-op link opens Play together filled", () => {
     expect(window.location.search).toBe("");
     expect(window.sessionStorage.getItem("jackioh.together.coopLink")).toBeNull();
   });
+
+  it("R2094000 a chat Join on the same screen fills the already-mounted join form and focuses Join", async () => {
+    window.sessionStorage.clear();
+    at("/together");
+    const origin = window.location.origin;
+    await renderPage(world(), (call) =>
+      call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`
+        ? {
+            status: 200,
+            body: {
+              messages: [
+                {
+                  id: "msg-1",
+                  from: ANN.profileId,
+                  to: ME.profileId,
+                  body: `Join my co-op game here: ${origin}/together?coop=ABC234 (room code ABC234).`,
+                  createdAt: "2026-10-14T09:01:00.000Z",
+                  read: true,
+                },
+              ],
+              nextCursor: null,
+            },
+          }
+        : undefined,
+    );
+    fireEvent.click(must(within(rowOf(ANN)).queryByTestId(TESTID.chatOpen), "chat"));
+    fireEvent.click(await screen.findByTestId("chat-join", undefined, SLOW));
+    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
+    await waitFor(() => {
+      expect(input).toHaveValue("ABC234");
+    }, SLOW);
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("");
+    await waitFor(() => {
+      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+    }, SLOW);
+  });
 });
