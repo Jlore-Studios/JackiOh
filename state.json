@@ -3719,7 +3719,7 @@
       "failures": 0,
       "feedback_since": "2026-10-27T20:54:48Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1861,
       "kind": "revise",
       "last_findings": [],
