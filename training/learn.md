@@ -23,8 +23,8 @@ hours, #1455). That runner takes one job at a time and only while the PC is othe
 export's shards play one after another, at about 2,500 games an hour on its six CPUs: a run's 100,000
 games take about 40 hours of an idle PC, and the retrain and the screen about one more (run 21's
 took 59 minutes there), the gate another. A run may take several days, and each starts the next as it
-ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a daily schedule
-starts the lane again should that chain stop (one run at a time). Each run:
+ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a schedule twice a
+day starts the lane again should that chain stop (one run at a time). Each run:
 
 1. **Clears the way.** The lane's pull request (`ai/learn`) with a failed check, or open more than
    48 hours (`LEARN_PR_STALE_HOURS`), it closes, saying why. One whose checks are green or running is a
@@ -72,7 +72,7 @@ starts the lane again should that chain stop (one run at a time). Each run:
    earlier run's export (`export_run`) files nothing new.
 8. **Starts the next run** (`next`), unless one is already on its way (a run on the same export, or the
    schedule's) or this one took under an hour (`LEARN_NEXT_MIN_MINUTES`): one that breaks that early
-   would break again, so it waits for the daily schedule.
+   would break again, so it waits for the schedule, at most 12 hours.
 
 Each run keeps its reports as the artifact `learn-<run>` (the fit's report, the screen's tally, each
 gate's report, `deliver.json`, the weights) for 90 days, and its summary says how far it got. The
@@ -93,8 +93,8 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 | Something merged to `main` that pins the AI's own play outside `crates/ai` (as R1303002's fixture did, #1480) | The lane can't fix that: it may change nothing outside its files. CI fails, `watch` closes the promotion and tries the export again, and the lane stays stuck until a person fixes the test. The status issue shows it as a run whose promotion closed |
 | The screen or the gate does not pass | Nothing: that is the lane working. A run's network passes the screen about 70% of the time and the gate about 30%, so with runs one after another (about three a week) expect a promotion about once a week. Each run's export is new self-play by the AI on `main`, so each is a new candidate |
 | `LEARN_LANE_TOKEN` is missing or has expired | A passing run fails in red at its deliver step and keeps the promotion as its artifact (`promotion.patch`). A person renews the token (Setting it up) |
-| A run ends | It starts the next (step 8). A run that broke within the hour starts none, and the daily schedule (06:23 UTC) starts the lane again |
-| GitHub skips or delays the daily schedule | It matters only once the chain has stopped: the next day's, or `gh workflow run learn.yml`, picks it up. Nothing is lost |
+| A run ends | It starts the next (step 8). A run that broke within the hour starts none, and the schedule (06:23 and 18:23 UTC) starts the lane again |
+| GitHub skips or delays the schedule | It matters only once the chain has stopped: the next one, 12 hours on, or `gh workflow run learn.yml`, picks it up. Nothing is lost. A scheduled run queued behind a running one waits; the next schedule's replaces it (the `learn` concurrency group holds one waiting), and the status issue leaves out a run cancelled that way |
 | `STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed; the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
 | The PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
 | The PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
