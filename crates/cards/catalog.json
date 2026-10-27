@@ -18158,7 +18158,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 6,
       "health": 4,
@@ -18206,7 +18206,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 108,
     "base": {
       "keywords": [],
       "text": "Cry: Discover an Acclaimed Unit or a Jelly Bean.\nQuest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit.\nQuest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource.\nQuest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals."
