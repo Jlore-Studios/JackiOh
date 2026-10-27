@@ -315,7 +315,7 @@ pub(crate) fn summon_fresh_standing(
         row: Row::Backrow,
         lane,
     };
-    if is_reserved(ctx.state, &slot) || !is_empty(ctx.state, &slot) {
+    if is_reserved(ctx.state, slot) || !is_empty(ctx.state, slot) {
         return None;
     }
     summon_fresh_into(ctx, def_id, player, &slot, at, true)
