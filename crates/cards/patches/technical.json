@@ -1663,5 +1663,152 @@
     "pr": 2003,
     "title": "Remove the CLA and say JackiOh takes no external contributions",
     "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "3a2447efa7883605625faa587d4670ff2a8d433d",
+    "pr": 2006,
+    "title": "patches log: e1da458..19555b6",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "88fe8d158e5c17961c3b1da8c99f3af0e7cb9165",
+    "pr": 2002,
+    "title": "every opened slot fills the token bars, and a phone-friendly pack opening",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8fea3fd9b0c46806ddaa08d018a9b82b74caa53f",
+    "pr": 2007,
+    "title": "the deck editor's Practice with this deck opens practice with that deck already picked",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "91bdfad19392a6298e5efbb0ba0bf195d114529e",
+    "pr": 2011,
+    "title": "the rules tests' act, live and one-effect runner come from the shared harness, and the check keeps it so",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "76f83b4d6d3f551468dfae74673ff4aa8d128a7b",
+    "pr": 1988,
+    "title": "a card's cosmetic picks show in more places, sooner, and Created cards wear their generator's picks",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "50b4b6af88cb5d3d9b8b5cf6633093ad3d5ced2c",
+    "title": "Merge pull request #2009 from Jlore-Studios/bot/issue-1996",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f6a0e74f257774f67a75d86ee591fb667f133265",
+    "pr": 2008,
+    "title": "clear the leftover explainer text off the client's screens, and drop the stats Clear and the public-stats opt-out",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "73eacdb8c1d07976e0ab2419764a0d4038b6306d",
+    "pr": 2014,
+    "title": "the AI weighs the countdowns on the board, its own as a payoff and the enemy's as a threat",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "1a23365170ec9ae5db9664420092f58ff48f26f9",
+    "pr": 2004,
+    "title": "the match seed's coin seats every 1v1 door, and a rematch swaps the seats",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "76e29ac8d6570a0785a72c24b4b4ff64a4c3b0ce",
+    "pr": 2017,
+    "title": "each half's playmat taps in its own sound, and empty zones stop looking pressed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5e04fd9d7f4dae90f5235f9dbe48acd9a1baf8a2",
+    "pr": 2018,
+    "title": "bot: build pass 1 for #1857",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "95b7c6d394ae6c3baf1ff3ce96443a62d56f58f3",
+    "pr": 2016,
+    "title": "split the deploy image's crates stage so a server-only change no longer recompiles the engine, the cards and the AI",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "844114ff49c2f6d41dfa1c5bd6f408099c6bb9db",
+    "pr": 2012,
+    "title": "bot: build pass 1 for #1994",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "c9d24e9ff67a97c97176acf103771151668aa006",
+    "pr": 2028,
+    "title": "two lanes a box, Muse fills gpt's and agy's on the night box",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "50b63483240e778e727a11e432a91a53055bc7ad",
+    "pr": 2027,
+    "title": "Local runner: start a new runner only under 15% CPU",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ae6107436f2345926015a0db3ee237ed05113779",
+    "pr": 2030,
+    "title": "register-runners.sh copies a self-updated runner's bin, not its link",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "d59ab8c9623506af5f84bdf646d45c7323b5cd36",
+    "pr": 2029,
+    "title": "the status issue draws every runner as boxes, low in the issue, and hears the owner's PC",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ba2aa0a0e930c9d7354def75a22447c7daf28aff",
+    "pr": 2032,
+    "title": "the Claude sessions wake every four hours, with a trimmed ping that survives refusals",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "a340de5c2344a1fd32c616330a15ed303c7bb405",
+    "pr": 2033,
+    "title": "the \"More cards from\" set picker wherever a random deck is dealt",
+    "kind": "app",
+    "player": "Pick a set to get more cards from when you challenge a friend to All Random, accept a challenge, or start a Duos game on a random deck."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8f42bfb1c55eb2775914366c0a9df5a110c7b1cd",
+    "pr": 2037,
+    "title": "a card a Fuse eats out of a library stays hidden, and the Meditative play-through and custom-card specs pass again",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "4c3b39aad4bdb03aa3938095a3ed25f573c79928",
+    "pr": 2040,
+    "title": "patches ship: v0.4.12d",
+    "kind": "app"
   }
 ]
