@@ -2,7 +2,8 @@
 //! turn, aimed at a unit (Classic #20) or read then over a scope (its Radiant face); your hand
 //! discarded at the end of this turn or of your *next* turn (Classic #37); `delay`'s `next`; and a
 //! start-of-turn effect for the rest of the game (Classic+ #52), which runs in R62's delayed stage
-//! among the delayed effects in creation order, once per turn, and stacks.
+//! among the delayed effects in creation order, once per turn, and stacks; and its end-of-turn form
+//! (Stinkyscape #39, R1861002).
 
 use jackioh_engine::effects::delay::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::effects::discard_hand_at_turn_end;
@@ -22,8 +23,8 @@ use crate::rules::fixtures::harness::{
     act_ok, events_of_type, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
-    LOG_LANE, TURN_SCRIPTS, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder,
-    turn_catalog,
+    LOG_LANE, TURN_SCRIPTS, contract, contract_ask, contract_end, doom, doom_all, hurrah, later, log_card,
+    notes, reminder, turn_catalog,
 };
 
 fn register() {
@@ -375,6 +376,47 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
             vec![
                 format!("tick:p1:{}:1:no-self", state.turn + 2),
                 format!("tick:p1:{}:1:no-self", state.turn + 4),
+            ]
+        );
+    }
+
+    #[test]
+    fn r1861002_an_end_of_turn_one_runs_at_each_end_of_its_players_turns_from_this_one() {
+        let mut state = playing("contract-end");
+        let cast = play(&mut state, P1, &contract_end().id, json!({})).state;
+        let label = json!("At the end of your turn, take a note");
+        assert!(modifier_labels(&json_of(view_for(&cast, P1))["you"]).contains(&label));
+        assert!(modifier_labels(&json_of(view_for(&cast, P2))["opponent"]).contains(&label));
+        assert!(notes(&cast).is_empty(), "nothing as it is made");
+
+        let theirs = pass(&cast).state;
+        let first = vec![format!("end-tick:p1:{}:no-self", state.turn)];
+        assert_eq!(notes(&theirs), first, "this turn's end, as the player's effect");
+        let mine = pass(&theirs).state;
+        assert_eq!(notes(&mine), first, "not the opponent's end, nor the start of a turn");
+        let next = pass(&mine).state;
+        assert_eq!(
+            notes(&next),
+            vec![first[0].clone(), format!("end-tick:p1:{}:no-self", state.turn + 2)]
+        );
+    }
+
+    #[test]
+    fn r1861002_several_stack_and_run_with_the_end_of_turn_delayed_effects_in_creation_order_r68() {
+        let mut state = playing("contract-end-stack");
+        let mut next = play(&mut state, P1, &later().id, json!({})).state;
+        next = play(&mut next, P1, &contract_end().id, json!({})).state;
+        next = play(&mut next, P1, &contract_end().id, json!({})).state;
+        let tick = |turn: i32| format!("end-tick:p1:{turn}:no-self");
+        let ended = pass(&next).state;
+        assert_eq!(notes(&ended), vec![tick(state.turn), tick(state.turn)]);
+        let back = pass(&pass(&ended).state).state;
+        assert_eq!(
+            notes(&back)[2..],
+            [
+                format!("later:{}", state.turn + 2),
+                tick(state.turn + 2),
+                tick(state.turn + 2)
             ]
         );
     }

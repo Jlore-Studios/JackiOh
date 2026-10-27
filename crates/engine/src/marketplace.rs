@@ -24,10 +24,10 @@
 
 use crate::catalog::{def_of, find_def, query_cost, registered_catalog};
 use crate::config::{
-    MARKETPLACE_CREDITS_PER_MANA, MARKETPLACE_CREDITS_PER_MANA_PAST, MARKETPLACE_CYCLE_TURNS,
-    MARKETPLACE_FIXED_LOT_STOCK, MARKETPLACE_FULL_PRICE_MANA, MARKETPLACE_PRICE_SPREAD_DIVISOR,
-    MARKETPLACE_RADIANT_CHANCE, MARKETPLACE_RADIANT_PRICE_MULTIPLIER, MARKETPLACE_TABLE,
-    MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, RESOURCE_TRAY_CAP,
+    HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_CREDITS_PER_MANA, MARKETPLACE_CREDITS_PER_MANA_PAST,
+    MARKETPLACE_CYCLE_TURNS, MARKETPLACE_FIXED_LOT_STOCK, MARKETPLACE_FULL_PRICE_MANA,
+    MARKETPLACE_PRICE_SPREAD_DIVISOR, MARKETPLACE_RADIANT_CHANCE, MARKETPLACE_RADIANT_PRICE_MULTIPLIER,
+    MARKETPLACE_TABLE, MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, RESOURCE_TRAY_CAP,
 };
 use crate::resources::{
     add_market_credits, draw_sell_price, receive_resource, resource_def_ids, spend_market_credits,
@@ -82,6 +82,41 @@ fn base_price(def: &CardDef, radiant: bool) -> i32 {
 /// Whether the definition `def_id` names is a Resource, which goes to the tray and keeps its price.
 fn is_resource(state: &GameState, def_id: &str) -> bool {
     find_def(Some(state), def_id).is_some_and(|def| def.resource.is_some())
+}
+
+/// R1861000: whether this card is in a hand and its face sells from there (`handSale`, Stinkyscape #89
+/// Spice), as a tray Resource sells.
+pub fn sells_from_hand(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Hand { .. }) && crate::scripts::flags_of(state, card).hand_sale == Some(true)
+}
+
+/// R1861000: the registered cards whose base face sells from the hand, sorted, the ones the Marketplace
+/// quotes after the Resources.
+fn hand_sale_def_ids() -> Vec<String> {
+    let mut ids: Vec<String> = registered_catalog()
+        .values()
+        .filter(|def| {
+            crate::scripts::registered_entry(&def.id).is_some_and(|entry| entry.base.flags().hand_sale == Some(true))
+        })
+        .map(|def| def.id.clone())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// R1853003, R1861000: the card of `player`'s that `instance_id` names and a sale may take: a Resource
+/// in their tray, or a card in their hand that sells from there.
+fn sellable_card<'a>(state: &'a GameState, player: PlayerId, instance_id: &str) -> Option<&'a CardInstance> {
+    let side = &state.players[player];
+    side.resource_tray
+        .iter()
+        .flatten()
+        .find(|card| card.id == instance_id)
+        .or_else(|| {
+            side.hand
+                .iter()
+                .find(|card| card.id == instance_id && sells_from_hand(state, card))
+        })
 }
 
 /// R1853002: this turn's price of a lot whose base is `base`: a whole number drawn uniformly within
@@ -149,7 +184,8 @@ pub fn roll_offers(state: &GameState, rng: &mut Rng, table: &[MarketLot]) -> Vec
 /// R1853001, R1853002: the Marketplace's turn-start work, in this order. On a re-roll the lots an
 /// effect added stay, restocked, after a fresh roll of the table, and the cycle starts this turn. Then
 /// each rolled lot that is no Resource moves its price, in offer order, and each of the catalog's
-/// Resources is quoted, its base face then its Radiant face, in sorted order.
+/// Resources is quoted, its base face then its Radiant face, in sorted order, then each card that sells
+/// from the hand the same way (R1861000).
 fn refresh(sink: &mut EngineSink<'_>, reroll: bool) {
     let Some(mut market) = sink.state.marketplace.take() else {
         return;
@@ -188,6 +224,17 @@ fn refresh(sink: &mut EngineSink<'_>, reroll: bool) {
             })
         })
         .collect();
+    // R1861000: then each card that sells from the hand, its base face then its Radiant face, after the
+    // Resources so their draws stay as they were.
+    for def_id in hand_sale_def_ids() {
+        let base = draw_sell_price(sink.rng, HAND_SALE_PRICE);
+        let radiant = draw_sell_price(sink.rng, HAND_SALE_RADIANT_PRICE);
+        market.quotes.push(ResourceQuote {
+            def_id,
+            base,
+            radiant,
+        });
+    }
     sink.state.marketplace = Some(market);
 }
 
@@ -216,8 +263,8 @@ pub fn marketplace_turn_start(sink: &mut EngineSink<'_>) {
     refresh(sink, reroll);
 }
 
-/// R1853002: what this tray Resource sells for at an open Marketplace this turn, on its own face; `None`
-/// while the Marketplace is closed or quotes no such Resource.
+/// R1853002: what this tray Resource (or hand card that sells from there, R1861000) sells for at an open
+/// Marketplace this turn, on its own face; `None` while the Marketplace is closed or quotes no such card.
 pub fn sell_quote(state: &GameState, card: &CardInstance) -> Option<i32> {
     let quote = state
         .marketplace
@@ -286,19 +333,15 @@ pub fn why_market_buy_refused(state: &GameState, player: PlayerId, offer: i32) -
 }
 
 /// R1853003: why `player` may not sell the tray Resource `instance_id` names now, or `Ok`: the first
-/// checks a buy makes, then the card in their Resource tray and a quote for it this turn.
+/// checks a buy makes, then the card in their Resource tray (or in their hand, a card that sells from
+/// there, R1861000) and a quote for it this turn.
 pub fn why_market_sell_refused(
     state: &GameState,
     player: PlayerId,
     instance_id: &str,
 ) -> Result<(), EngineError> {
     open_for_deals(state, player)?;
-    let Some(card) = state.players[player]
-        .resource_tray
-        .iter()
-        .flatten()
-        .find(|card| card.id == instance_id)
-    else {
+    let Some(card) = sellable_card(state, player, instance_id) else {
         return Err(EngineError::new(format!(
             "no Resource {instance_id} in your Resource tray"
         )));
@@ -361,21 +404,16 @@ pub fn apply_market_buy(sink: &mut EngineSink<'_>, player: PlayerId, offer: i32)
     Ok(())
 }
 
-/// R1853003: the sale. Refused as `why_market_sell_refused` refuses it; otherwise the Resource ceases
-/// to exist, the public `marketSold` names it and its quote, and its Credits are gained.
+/// R1853003: the sale. Refused as `why_market_sell_refused` refuses it; otherwise the Resource (or the
+/// hand card, R1861000) ceases to exist, the public `marketSold` names it and its quote, and its Credits
+/// are gained.
 pub fn apply_market_sell(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
     instance_id: &str,
 ) -> Result<(), EngineError> {
     why_market_sell_refused(sink.state, player, instance_id)?;
-    let Some(mut card) = sink.state.players[player]
-        .resource_tray
-        .iter()
-        .flatten()
-        .find(|card| card.id == instance_id)
-        .cloned()
-    else {
+    let Some(mut card) = sellable_card(sink.state, player, instance_id).cloned() else {
         return Err(EngineError::new(format!(
             "no Resource {instance_id} in your Resource tray"
         )));
@@ -424,8 +462,8 @@ pub fn add_fixed_market_lot(sink: &mut EngineSink<'_>, player: PlayerId, pool: &
 /// re-rolls on; every lot offered to them (not another player's own), with its index, this turn's
 /// price, the copies left to them this cycle and, while they may act (their turn, the main phase, no
 /// prompt open), the refusal of a buy `legal_actions` does not list; and each Resource in their own
-/// tray with a quote, at that quote. The offering and its prices are public; the stock and the sales
-/// are the viewer's own (R97).
+/// tray with a quote, at that quote, then each card in their own hand that sells from there (R1861000).
+/// The offering and its prices are public; the stock and the sales are the viewer's own (R97).
 pub fn marketplace_view(state: &GameState, viewer: PlayerId) -> Option<MarketplaceView> {
     let market = state.marketplace.as_ref()?;
     let may_act = state.result.is_none()
@@ -458,10 +496,12 @@ pub fn marketplace_view(state: &GameState, viewer: PlayerId) -> Option<Marketpla
             }
         })
         .collect();
-    let sales = state.players[viewer]
+    let side = &state.players[viewer];
+    let sales = side
         .resource_tray
         .iter()
         .flatten()
+        .chain(side.hand.iter().filter(|card| sells_from_hand(state, card)))
         .filter_map(|card| {
             Some(MarketSaleView {
                 instance_id: card.id.clone(),

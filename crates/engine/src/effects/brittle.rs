@@ -148,3 +148,29 @@ pub fn gain_brittle(args: GainBrittleArgs) -> Effect {
         }
     })
 }
+
+/// R1861001: "lower Brittle by N" — N less on the count in force, never below 0; a card with no count in
+/// force has none to lower. A card on the field that it leaves at 0 crumbles at once (B3.3 rule 3), an
+/// ordinary destroy the next state check collects, so its Death reads the count spent
+/// (`query::brittle_spent`).
+pub fn lower_brittle(args: GainBrittleArgs) -> Effect {
+    Effect::new("lowerBrittle", move |ctx| {
+        for entry in reached(ctx, &args.on) {
+            let n = args.n.max(0);
+            write_count(ctx, &entry.card, |state, card| {
+                if active_brittle_count(card).is_some() {
+                    gain_brittle_count(state, card, -n);
+                }
+            });
+            if entry.report {
+                report(ctx, &entry.card);
+            }
+            let Some(live) = find_instance(ctx.state, &entry.card.id).cloned() else {
+                continue;
+            };
+            if live.zone.z() == ZoneName::Field && active_brittle_count(&live) == Some(0) {
+                crate::brittle::crumble(&mut ctx.sink, &live);
+            }
+        }
+    })
+}

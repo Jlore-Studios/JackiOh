@@ -67,7 +67,7 @@ pub fn brittle_due(state: &GameState, card: &CardInstance) -> bool {
 /// B3.3 rule 3: a count at 0 crumbles its card. That is an ordinary destroy (§6.3), so the next state
 /// check collects it, Indestructible ignores it (R46) and the count stays at 0, checked again at every
 /// tick. R215 resets the card in its graveyard, which spends the count (R441).
-fn crumble(sink: &mut EngineSink<'_>, card: &CardInstance) {
+pub(crate) fn crumble(sink: &mut EngineSink<'_>, card: &CardInstance) {
     sink.events.push(GameEvent::Crumbled {
         instance_id: card.id.clone(),
         def_id: card.def_id.clone(),

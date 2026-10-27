@@ -717,6 +717,9 @@ pub struct ForRestOfGameArgs {
     pub data: Option<IndexMap<String, Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R1861002: "at the end of each of your turns" instead of the start (Stinkyscape #39).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_end: Option<bool>,
 }
 
 /// B5 E28, R458 (Classic+ #52): "For the rest of the game: at the start of your turn, …". The card's
@@ -724,7 +727,9 @@ pub struct ForRestOfGameArgs {
 /// each of `player`'s turns from the next one on, in R62's delayed stage with the delayed effects, in
 /// creation order; several stack, each running once per turn. It is the player's effect now, not the
 /// card's: it resolves with no `self` whatever became of the card (R127), under the face it was made
-/// with, carrying `data`. `label` is its badge (R169), in the card's own words.
+/// with, carrying `data`. `label` is its badge (R169), in the card's own words. With `atEnd`
+/// (R1861002) it is re-entered at the end of each of `player`'s turns instead, this one included when
+/// it is made before that turn's end-of-turn stage begins.
 pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
     Effect::new("forRestOfGame", move |ctx| {
         let mut resume = delayed_resume(
@@ -735,7 +740,7 @@ pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
         );
         resume.instance_id = None;
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        add_start_of_turn_effect(ctx, player, resume, &args.label);
+        add_start_of_turn_effect(ctx, player, resume, &args.label, args.at_end == Some(true));
     })
 }
 

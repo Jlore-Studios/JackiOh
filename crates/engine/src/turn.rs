@@ -147,30 +147,31 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
             what: Due::Delayed(Box::new(due.clone())),
         })
         .collect();
-    if phase == Phase::Start {
-        // `modifiers.dueStartOfTurnEffects(state, player)`: the player's rest-of-game start-of-turn
-        // effects that have not run this turn, in creation order. (A private copy, as above.)
-        let mut recurring: Vec<(u32, String)> = state.players[player]
-            .mods
-            .iter()
-            .filter_map(|held| match &held.kind {
-                ModifierKind::StartOfTurnEffect { seq, ran_turn, .. } if *ran_turn != Some(state.turn) => {
-                    Some((*seq, held.id.clone()))
-                }
-                _ => None,
-            })
-            .collect();
-        recurring.sort_by_key(|a| a.0);
-        entries.extend(
-            recurring
-                .into_iter()
-                .filter(|(seq, _)| *seq < due_before)
-                .map(|(seq, id)| DueEntry {
-                    seq,
-                    what: Due::Recurring { id },
-                }),
-        );
-    }
+    // `modifiers.dueStartOfTurnEffects(state, player)`: the player's rest-of-game effects due in this
+    // phase that have not run this turn, in creation order: at the start of the turn, or at its end for
+    // an `atEnd` one (R1861002). (A private copy, as above.)
+    let mut recurring: Vec<(u32, String)> = state.players[player]
+        .mods
+        .iter()
+        .filter_map(|held| match &held.kind {
+            ModifierKind::StartOfTurnEffect {
+                seq, ran_turn, at_end, ..
+            } if *ran_turn != Some(state.turn) && (*at_end == Some(true)) == (phase == Phase::End) => {
+                Some((*seq, held.id.clone()))
+            }
+            _ => None,
+        })
+        .collect();
+    recurring.sort_by_key(|a| a.0);
+    entries.extend(
+        recurring
+            .into_iter()
+            .filter(|(seq, _)| *seq < due_before)
+            .map(|(seq, id)| DueEntry {
+                seq,
+                what: Due::Recurring { id },
+            }),
+    );
     // A stable sort, as `Array.prototype.sort` (SURFACE §4.4.1).
     entries.sort_by_key(|a| a.seq);
     entries

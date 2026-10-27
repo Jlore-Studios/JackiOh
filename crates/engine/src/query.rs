@@ -151,6 +151,14 @@ pub fn tray_holds(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool
         .any(|card| def_ids.contains(&card.def_id.as_str()))
 }
 
+/// R1861001: "if Brittle destroyed this" (Stinkyscape #39 The Narcor Project): the card's Brittle count
+/// in force is spent, at 0. A Death hook reads it off its snapshot, taken before R78's reset drops the
+/// spent count (`state_check.rs`'s collect, R441), so a crumble's death reads true and any other
+/// destroy of a card with a count left reads false.
+pub fn brittle_spent(card: &CardInstance) -> bool {
+    crate::brittle_count::active_brittle_count(card) == Some(0)
+}
+
 /// R1840005: this player's Credits, 0 until first gained. Public (§10.8).
 pub fn market_credits_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].market_credits.unwrap_or(0)

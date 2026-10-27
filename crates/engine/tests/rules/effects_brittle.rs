@@ -1,10 +1,10 @@
 //! Brittle X's verbs (docs/classic-sets.md B3.3 rule 4; R385, R440, R441): "Give Brittle N" sets the
 //! count and starts it now, "gain +N Brittle" adds to it, on a named card anywhere or over a card scope,
-//! and what each reports to whom.
+//! and what each reports to whom; "lower Brittle by N" takes from it and crumbles at 0 (R1861001).
 //!
 //! Port of `packages/engine/test/effects-brittle.test.ts`.
 
-use jackioh_engine::effects::{gain_brittle, give_brittle};
+use jackioh_engine::effects::{gain_brittle, give_brittle, lower_brittle};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
@@ -250,5 +250,76 @@ mod b3_3_rule_4_give_and_gain_r385 {
         // TS read the detached object, which nothing can reach: it is in no zone of the state.
         assert!(find_instance(&state, &held.id).is_none());
         assert_eq!(held.brittle, None);
+    }
+}
+
+mod r1861001_lower_brittle {
+    use super::*;
+
+    /// The state check, as the settle runs it after an effect (§4.5).
+    fn check(state: &mut GameState) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            jackioh_engine::state_check::state_check(&mut sink);
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    fn lower(state: &mut GameState, id: &str) -> Vec<GameEvent> {
+        let self_ = find_instance(state, id).cloned();
+        run(
+            state,
+            lower_brittle(json_as(json!({ "target": { "of": "self" }, "n": 1 }))),
+            self_,
+            HookOptions::default(),
+        )
+    }
+
+    #[test]
+    fn r1861001_lower_brittle_crumbles_at_0_and_leaves_the_card_spent() {
+        let mut state = game();
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let events = lower(&mut state, &unit.id);
+        assert_eq!(
+            as_json(&events),
+            json!([{ "type": "counterChanged", "instanceId": unit.id, "counter": "brittle", "value": 1 }]),
+            "lowered once, Brittle 2 is 1 and nothing crumbles"
+        );
+        assert!(!brittle_spent(find_instance(&state, &unit.id).expect("on the field")));
+
+        let events = lower(&mut state, &unit.id);
+        assert_eq!(
+            as_json(&events),
+            json!([
+                { "type": "counterChanged", "instanceId": unit.id, "counter": "brittle", "value": 0 },
+                { "type": "crumbled", "instanceId": unit.id, "defId": brittle_unit.id, "owner": "p1", "zone": "field" },
+            ]),
+            "lowered to 0 it crumbles at once"
+        );
+        let live = find_instance(&state, &unit.id).expect("still on the field until the check");
+        assert!(brittle_spent(live), "the Death snapshot reads its count spent");
+        check(&mut state);
+        assert_eq!(
+            find_instance(&state, &unit.id).map(|card| card.zone.z()),
+            Some(ZoneName::Graveyard),
+            "the state check collects it"
+        );
+    }
+
+    #[test]
+    fn r1861001_a_card_with_no_count_in_force_has_none_to_lower() {
+        let mut state = game();
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        assert_eq!(lower(&mut state, &unit.id), Vec::<GameEvent>::new());
+        assert_eq!(brittle_of(&state, &unit.id), None);
+        assert!(!brittle_spent(find_instance(&state, &unit.id).expect("on the field")));
     }
 }

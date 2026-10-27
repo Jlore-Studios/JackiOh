@@ -1122,6 +1122,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
             Some(StaticFlags {
                 cast_on_draw: flags(|f| f.cast_on_draw),
                 quickdraw: flags(|f| f.quickdraw),
+                hand_sale: flags(|f| f.hand_sale),
                 infinite_reserves: flags(|f| f.infinite_reserves),
                 never_defense: flags(|f| f.never_defense),
                 echo: numbers(|f| f.echo),
