@@ -3727,7 +3727,7 @@
       "question": "",
       "queued_at": "2026-10-27T16:40:22Z",
       "round_tier": "strong",
-      "run_id": "pending:c31b8106-1793119215",
+      "run_id": "40543304545",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
