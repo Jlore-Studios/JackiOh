@@ -3891,9 +3891,12 @@
         "sha": "0b419466e3ad01ca3f9285a0ec2aee501f895e8d"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T00:02:03Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2020,
       "kind": "review",
       "pending_request": false,
