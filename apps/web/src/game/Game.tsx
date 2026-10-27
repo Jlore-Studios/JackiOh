@@ -186,6 +186,11 @@ export type GameProps = {
    * puts the Trade button in its card bar beside the pass control instead. Absent, on.
    */
   tradeBar?: boolean;
+  /**
+   * R2095000: the board feeds no audio. The Duos both-boards view sets it on the teammate's
+   * read-only board, so two mounted boards play only the own duel's cues and music. Absent, off.
+   */
+  silent?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -231,6 +236,7 @@ export default function Game({
   replay = false,
   lesson = false,
   tradeBar = true,
+  silent = false,
 }: GameProps): ReactElement {
   useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -396,7 +402,7 @@ export default function Game({
   }
   const runner = queue.current;
   useGameStats(view, trackStats);
-  useGameAudio(runner, view); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
+  useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9); hotseat and online play simply carry it.
   const speaking = useVoiceSpeaking();

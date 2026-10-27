@@ -37,6 +37,10 @@ export const duosTestid = {
   coopLiveRetry: "coop-live-retry",
   // The board's own: the rail's pieces, the concede offer and the result.
   board: "duos-board",
+  /** R2095000: the rail's Both boards toggle, and each board's own wrapper. */
+  both: "duos-both",
+  boardOwn: "duos-board-own",
+  boardTeammate: "duos-board-teammate",
   lifeStrip: "duos-life-strip",
   round: "duos-round",
   waiting: "duos-waiting",

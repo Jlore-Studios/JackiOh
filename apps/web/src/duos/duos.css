@@ -36,6 +36,51 @@
   container-type: size;
 }
 
+/* R2095000: Both boards, side by side on a wide screen. The own board keeps its room; the narrower
+   teammate wrapper makes the container-query board draw smaller: the smaller scale. The teammate's
+   board is the portal's board, so it takes the same rules under `.duos-both`. */
+.duos-both {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.duos-board-own {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.duos-board-teammate {
+  position: relative;
+  display: flex;
+  flex: 0 0 40%;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.duos-both .game {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}
+
+.duos-both .game > .board {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+}
+
+/* While both boards show, the rail draws the Both boards toggle instead of the portal. */
+.duos-board[data-both="true"] .duos-portal {
+  display: none;
+}
+
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .app-shell.app-shell--wide:has(> .duos-board) {
     gap: 6px;
@@ -575,6 +620,20 @@
     gap: 0 6px;
     padding: 2px 6px;
     font-size: 0.72em;
+  }
+
+  /* R2095000: below the width two boards fit, the toggle is hidden and the board falls back to
+     one: the teammate's board is not drawn, so the own board takes the row. */
+  .duos-both-toggle {
+    display: none;
+  }
+
+  .duos-board[data-both="true"] .duos-board-teammate {
+    display: none;
+  }
+
+  .duos-both {
+    display: block;
   }
 
   .duos-rail__row {
