@@ -268,8 +268,9 @@ function Start-Runner([string]$label, [string]$why) {
   # Codex sandboxes its commands with bubblewrap, which needs the user namespaces Docker's default
   # seccomp profile refuses.
   if ($entry.seccompUnconfined) { $argv += @('--security-opt', 'seccomp=unconfined') }
-  # A priority runner's cgroup weighs eight times another's, so while both want the VM's CPUs it
-  # gets its own first and the other the rest; alone, either has all of its --cpus. The runner
+  # A priority runner's cgroup weighs about five times another's (Docker 29 makes --cpu-shares 8192
+  # cpu.weight 532, against the default 100), so while both want the VM's 8 CPUs it gets its own 6
+  # first and the other the rest; alone, either has all of its --cpus. The runner
   # writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
   # actions/runner's ProcessInvoker). The kernel kills the process with the highest score, its share
   # of the VM's memory in thousandths plus that value: 1000 for the rest puts any training step
