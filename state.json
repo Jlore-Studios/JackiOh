@@ -6444,12 +6444,12 @@
   "loop_tick": "2026-10-27T22:12:47Z",
   "machine_disk": {
     "reading": {
-      "at": "2026-10-27T22:04:24Z",
-      "free": 77937041408,
+      "at": "2026-10-27T22:17:51Z",
+      "free": 77999165440,
       "percent": 37,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40587619616",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40593640511",
     "runner": "night-vm-muse-fill"
   },
   "machine_memory": [
