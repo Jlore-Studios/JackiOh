@@ -83,18 +83,21 @@ class StartTests(unittest.TestCase):
 
     def test_it_plans_again_until_nothing_more_can_start(self):
         gh = FakeGitHub()
-        for n in (3, 4, 5):
+        for n in (3, 4, 5, 6, 7):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         listing(gh)
         ctx = loop_ctx(gh)
         notes = controller.start(ctx, sleep=no_sleep)
         started = [n for n in notes if n.startswith("started")]
-        # Muse has two lanes on the machine; the third item waits (by day no Claude account works).
-        self.assertEqual(len(started), 2, notes)
+        # Muse has two lanes on the Muse box, and fills gpt's and agy's on the night box while
+        # they are off (`fill_in`); the fifth item waits (by day no Claude account works).
+        self.assertEqual(len(started), 4, notes)
         self.assertTrue(notes[-1].startswith("nothing more to start"), notes)
         # Each plan run is the loop's: none of them started another run as a plan job's
         # `fill_lanes` does.
-        self.assertEqual(len(gh.dispatches), 2)
+        self.assertEqual([d["inputs"]["runs_on"] for d in gh.dispatches],
+                         ["night-vm-muse", "night-vm-muse", "night-vm-muse-fill",
+                          "night-vm-muse-fill"])
 
     def test_a_run_not_listed_yet_keeps_its_claim_pending_until_found(self):
         gh = FakeGitHub()

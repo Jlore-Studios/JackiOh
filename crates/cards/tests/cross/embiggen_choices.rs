@@ -43,6 +43,11 @@ const CURVATURE: &str = "core-077";
 /// AI Alignment Tax: "Your opponent's cards cost (1) more during their next turn."
 const ALIGNMENT_TAX: &str = "classicplus-t-ai-07";
 
+/// A (1) Unit (Core #8), which p1 can afford under the tax, so R82 never ends p1's taxed turn for
+/// want of a play when the embiggen card's taxed price is past `MAX_MANA`, as the held Stinkyscape
+/// set's #79 Orca's (4) is (R1857001).
+const AFFORDABLE: &str = "core-008";
+
 /// p1's hand card of `def_id`.
 fn held(g: &Scenario, def_id: &str) -> String {
     g.hand(P1)
@@ -322,7 +327,7 @@ fn r455_ai_alignment_tax_raises_both_prices_and_the_view_says_so() {
         for radiant in [false, true] {
             let mut g = scenario(json!({
                 "active": "p2",
-                "p1": { "hand": [{ "def": id, "radiant": radiant }] },
+                "p1": { "hand": [{ "def": id, "radiant": radiant }, AFFORDABLE] },
                 "p2": { "hand": [ALIGNMENT_TAX] },
             }));
             let from = g.state().turn;

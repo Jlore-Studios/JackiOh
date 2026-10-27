@@ -363,6 +363,9 @@ class Config:
     run_id: str = ""
     server_url: str = "https://github.com"
     now_override: str = ""
+    #: The gist the owner's PC writes its heartbeat to (the repository variable JACKIOH_PC_GIST,
+    #: which its supervisor sets; bot/machine/README.md, The local runner).
+    pc_gist: str = ""
     #: Which provider secrets the workflow has; the plan job learns that, never their values.
     secrets: Secrets = field(default_factory=lambda: Secrets(frozenset(), False))
     #: The model job's one provider secret (`HARNESS_PROVIDER_SECRET`), or, run by hand, the
@@ -579,6 +582,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         run_id=env.get("GITHUB_RUN_ID", ""),
         server_url=env.get("GITHUB_SERVER_URL", "https://github.com") or "https://github.com",
         now_override=env.get("HARNESS_NOW", ""),
+        pc_gist=env.get("JACKIOH_PC_GIST", ""),
         secrets=Secrets.of(env),
         provider_secrets={k: env[k] for k in (PROVIDER_SECRET_KEY, *providers_mod.SECRETS)
                           if env.get(k)},

@@ -28,7 +28,14 @@ const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalo
 /// R1178000: a tag that only a held set's cards carry waits for that set's release migration
 /// (Meditative+'s Potion, #1187's 0043): until the set ships the latest check need not admit it, and
 /// only the entries of that set may carry it. Once the set ships the check must admit it like any tag.
-const AWAITING_RELEASE: &[(Tag, SetName)] = &[(Tag::Potion, SetName::MeditativePlus)];
+/// R1857000: the held Stinkyscape set's four wait for its release (#1884) the same way.
+const AWAITING_RELEASE: &[(Tag, SetName)] = &[
+    (Tag::Potion, SetName::MeditativePlus),
+    (Tag::DroneCore, SetName::Stinkyscape),
+    (Tag::Weapon, SetName::Stinkyscape),
+    (Tag::WarDoctrine, SetName::Stinkyscape),
+    (Tag::Swarm, SetName::Stinkyscape),
+];
 
 /// R1178000: the held set `tag` waits for (`AWAITING_RELEASE`), while that set has not shipped.
 fn awaits_release(tag: &str) -> Option<SetName> {
@@ -684,6 +691,48 @@ mod r1178000_a_tag_only_a_held_set_carries_waits_for_its_release_migration {
             .map(String::as_str)
             .collect();
         assert_eq!(waiting, Vec::<&str>::new());
+    }
+}
+
+/// R1857000: the held Stinkyscape set's four tags, Drone Core, Weapon, War Doctrine and Swarm, are the
+/// engine's from #1857 and wait for the release that ships the set (#1884), whose migration admits
+/// them, as Potion waited for Meditative+'s (R1178000).
+mod r1857000_the_four_stinkyscape_tags_wait_for_its_release_migration {
+    use super::*;
+
+    const FOUR: [Tag; 4] = [Tag::DroneCore, Tag::Weapon, Tag::WarDoctrine, Tag::Swarm];
+
+    #[tokio::test]
+    async fn r1857000_the_four_tags_wait_for_the_stinkyscape_release() {
+        let (_, tags) = admitted_tags();
+        for tag in FOUR {
+            assert!(Tag::ALL.contains(&tag), "{tag}");
+            if set_ships(SetName::Stinkyscape) {
+                assert!(
+                    tags.iter().any(|admitted| admitted == tag.as_str()),
+                    "{tag}: {tags:?}"
+                );
+            } else {
+                assert_eq!(awaits_release(tag.as_str()), Some(SetName::Stinkyscape), "{tag}");
+                assert!(
+                    !tags.iter().any(|admitted| admitted == tag.as_str()),
+                    "{tag}: {tags:?}"
+                );
+            }
+        }
+        // No shipped entry carries one, so the seed of the sets that ship never meets it.
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
+        let carried: Vec<&str> = entries
+            .iter()
+            .flat_map(|entry| entry.tags.iter())
+            .map(String::as_str)
+            .filter(|tag| FOUR.iter().any(|four| four.as_str() == *tag))
+            .collect();
+        if !set_ships(SetName::Stinkyscape) {
+            assert_eq!(carried, Vec::<&str>::new());
+        }
     }
 }
 

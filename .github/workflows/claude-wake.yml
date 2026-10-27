@@ -1,20 +1,26 @@
-# Starts every Claude subscription's 5-hour session at 06:00 America/Chicago (bot/harness/wake.py),
-# so each resets five hours later, rather than at whatever hour the first run of the day lands. A
-# session the bots' state file shows running is left alone; each other one gets one turn of Haiku
-# at low effort, the smallest call there is.
+# Starts every Claude subscription's 5-hour session at 06:00 America/Chicago and every four hours
+# around it (02:00, 06:00, 10:00, 14:00, 18:00, 22:00; bot/harness/wake.py's WAKE_AT and EVERY),
+# so each resets five hours later, rather than at whatever hour its next run lands. A session the
+# bots' state files show running is left alone, and so is one whose usage limit refused a call or
+# has a window full; each other one gets one turn of Haiku at low effort with no tools, skills or
+# commands, the smallest call there is. A ping its limit refuses is reported, not failed.
 #
-# GitHub starts this repository's schedules late and drops some, so it fires four times in the
-# hours before and the first run sleeps until 06:00 (`wake --wait`). Its later firings queue
-# behind it and stop once a run has finished green since 06:00; one that GitHub starts up to two
-# hours late still wakes the sessions. GitHub's cron is UTC: the firings cover 06:00 in both CDT
-# (11:00 UTC) and CST (12:00 UTC). Run it by hand with `now` to wake them at any hour.
+# GitHub starts this repository's schedules late and drops some, so it fires every hour: a run
+# within an hour before a wake time sleeps until it (`wake --wait`), one up to two hours after
+# it wakes the sessions at once, and the rest find nothing to do. Later firings queue behind a
+# sleeping run and stop once a run has finished green since that wake time. GitHub's cron is UTC;
+# the hourly firing covers the wake times in both CDT and CST. Run it by hand with `now` to wake
+# them at any hour.
 #
-# Each subscription's turn runs in a job of its own, holding that one secret and no write token.
+# The accounts are every Claude subscription in either bot's pool (`wake --list`), so a new one is
+# woken once its secret is in providers.SECRETS and in the list below, which
+# bot/tests/test_workflows.py holds to it. Each subscription's turn runs in a job of its
+# own, all at once, holding that one secret and no write token.
 name: claude wake
 
 on:
   schedule:
-    - cron: "13 8,9,10,11 * * *"
+    - cron: "13 * * * *"
   workflow_dispatch:
     inputs:
       now:
@@ -34,9 +40,9 @@ env:
 
 jobs:
   clock:
-    name: wait for 06:00 Chicago
+    name: wait for the wake time
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 75
     permissions:
       contents: read         # the state files on the bots' state branches
       actions: read          # whether an earlier run already woke today's sessions
@@ -54,7 +60,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Sleep until 06:00 Chicago
+      - name: Sleep until the wake time
         id: wait
         working-directory: bot
         env:
@@ -67,7 +73,7 @@ jobs:
             python -m harness wake --wait
           fi
 
-      # Which Claude secrets exist, never their values (providers.SECRETS).
+      # Which provider secrets exist, never their values (providers.SECRETS).
       - name: The sessions not running, the night bot's and Squishy's
         id: list
         if: steps.wait.outputs.go == 'true'
@@ -83,6 +89,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_7 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_7' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_8 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_8' || '' }}
+            ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
+            ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           set -euo pipefail

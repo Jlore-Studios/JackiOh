@@ -17,6 +17,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::config::{STATS_INTERVAL_Z, STATS_SHARE_PRECISION};
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
 use crate::wire::events::{GameOverReason, Winner};
@@ -616,6 +617,101 @@ impl ListTotal {
     }
 }
 
+/// R1994000: one key's whole games, which the game figures are read from: who won from which seat,
+/// how the games ended and how long they ran, and R1256000's counts, both seats added, over the
+/// records that carry them. They are kept apart from the records' detail, so R1044001's purge
+/// leaves them whole.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GameTotal {
+    pub games: i64,
+    /// Games nobody won.
+    pub draws: i64,
+    /// Games the seat that took the first turn won.
+    pub first_wins: i64,
+    /// Games per ending; an ending no game had is absent.
+    pub reasons: IndexMap<GameOverReason, i64>,
+    /// Games per turn counter at the end (§2.5).
+    pub turns: IndexMap<i32, i64>,
+    /// Games whose records carry all six of R1256000's counts on both seats: the sums below are
+    /// over these alone.
+    pub counted: i64,
+    /// Counted games with a draw from an empty library.
+    pub fatigue_games: i64,
+    pub fatigue_damage: i64,
+    pub traps_set: i64,
+    pub traps_fired: i64,
+    pub position_switches: i64,
+    pub radiant_upgrades: i64,
+}
+
+/// R1256000's counts of one game, both seats added.
+#[derive(Clone, Copy, Default)]
+struct GameCounts {
+    fatigue_draws: i64,
+    fatigue_damage: i64,
+    traps_set: i64,
+    traps_fired: i64,
+    position_switches: i64,
+    radiant_upgrades: i64,
+}
+
+/// R1256000: a game's counts, or `None` when either seat's record lacks one (written before them).
+fn game_counts(game: &GameSummary) -> Option<GameCounts> {
+    let mut sum = GameCounts::default();
+    for seat in PLAYER_IDS {
+        let seat = &game.seats[seat];
+        sum.fatigue_draws += i64::from(seat.fatigue_draws?);
+        sum.fatigue_damage += i64::from(seat.fatigue_damage?);
+        sum.traps_set += i64::from(seat.traps_set?);
+        sum.traps_fired += i64::from(seat.traps_fired?);
+        sum.position_switches += i64::from(seat.position_switches?);
+        sum.radiant_upgrades += i64::from(seat.radiant_upgrades?);
+    }
+    Some(sum)
+}
+
+impl GameTotal {
+    /// R1994000: adds one game. A win is the seat the record names, so a fled game (R1843004) is the
+    /// fleer's, as `stats report --games` always read it.
+    fn count(&mut self, game: &GameSummary) {
+        self.games += 1;
+        self.draws += i64::from(game.winner == Winner::Draw);
+        self.first_wins += i64::from(game.winner.player() == Some(game.first));
+        *self.reasons.entry(game.reason).or_default() += 1;
+        *self.turns.entry(game.turns).or_default() += 1;
+        if let Some(counts) = game_counts(game) {
+            self.counted += 1;
+            self.fatigue_games += i64::from(counts.fatigue_draws > 0);
+            self.fatigue_damage += counts.fatigue_damage;
+            self.traps_set += counts.traps_set;
+            self.traps_fired += counts.traps_fired;
+            self.position_switches += counts.position_switches;
+            self.radiant_upgrades += counts.radiant_upgrades;
+        }
+    }
+
+    /// R1994000: adds `other`'s games, each ending's and each turn's entry by entry.
+    pub fn add(&mut self, other: &GameTotal) {
+        self.games += other.games;
+        self.draws += other.draws;
+        self.first_wins += other.first_wins;
+        for (reason, games) in &other.reasons {
+            *self.reasons.entry(*reason).or_default() += games;
+        }
+        for (turn, games) in &other.turns {
+            *self.turns.entry(*turn).or_default() += games;
+        }
+        self.counted += other.counted;
+        self.fatigue_games += other.fatigue_games;
+        self.fatigue_damage += other.fatigue_damage;
+        self.traps_set += other.traps_set;
+        self.traps_fired += other.traps_fired;
+        self.position_switches += other.position_switches;
+        self.radiant_upgrades += other.radiant_upgrades;
+    }
+}
+
 /// R1044000: records folded into the counts every card figure is read from. Adding is commutative
 /// and associative, so records folded in any order, or in pieces and added, make the same totals.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -626,6 +722,9 @@ pub struct StatsTotals {
     pub cards: IndexMap<TotalsKey, IndexMap<String, CardTotal>>,
     /// Each patch's live Best-of-1 human decklists, by their sorted ids joined with commas.
     pub lists: IndexMap<String, IndexMap<String, ListTotal>>,
+    /// R1994000: the whole games under each records key. A record folded before they were kept
+    /// counts in `records` and not here.
+    pub game_totals: IndexMap<RecordsKey, GameTotal>,
 }
 
 /// One breakdown added into another.
@@ -659,7 +758,8 @@ impl StatsTotals {
     /// R1044000: adds one record. Each seat's cards go under its own pilot's key, counted as R377
     /// counts them. With `drills`, also each card's games by the turn it was played on and with each
     /// card that shared its deck, which the card drill-down reads; without, R377's breakdowns and the
-    /// decklists alone, which are all `card_stats` reads.
+    /// decklists alone, which are all `card_stats` reads. R1994000: the whole game goes under the
+    /// records key either way.
     pub fn fold(&mut self, record: &GameRecord, drills: bool) {
         let records_key = RecordsKey {
             patch: record.patch.clone(),
@@ -667,7 +767,11 @@ impl StatsTotals {
             mode: record.mode,
             pilots: (record.pilots.p1, record.pilots.p2),
         };
-        *self.records.entry(records_key).or_default() += 1;
+        *self.records.entry(records_key.clone()).or_default() += 1;
+        self.game_totals
+            .entry(records_key)
+            .or_default()
+            .count(&record.game);
 
         for seat in PLAYER_IDS {
             let pilot = record.pilots[seat];
@@ -853,11 +957,14 @@ impl StatsTotals {
                 }
             }
         }
+        for (key, total) in &other.game_totals {
+            self.game_totals.entry(key.clone()).or_default().add(total);
+        }
     }
 
     /// R1044000: the totals of the sources, mode (or every mode) and patch (or every patch) given,
-    /// each card's turn and co-played counts only with `drills`, and no decklists (`decklists` reads
-    /// those).
+    /// each card's turn and co-played counts only with `drills`, their whole games (R1994000), and
+    /// no decklists (`decklists` reads those).
     pub fn select(
         &self,
         sources: &[GameSource],
@@ -899,10 +1006,17 @@ impl StatsTotals {
                 (key.clone(), cards)
             })
             .collect();
+        let game_totals = self
+            .game_totals
+            .iter()
+            .filter(|(key, _)| wanted(&key.patch, key.source, key.mode))
+            .map(|(key, total)| (key.clone(), total.clone()))
+            .collect();
         StatsTotals {
             records,
             cards,
             lists: IndexMap::new(),
+            game_totals,
         }
     }
 
@@ -1074,6 +1188,210 @@ pub fn played_delta(stats: &CardStats) -> Option<f64> {
     let played = win_rate(&stats.played)?;
     let baseline = win_rate(&stats.drawn_not_played)?;
     Some(played - baseline)
+}
+
+// ---------------------------------------------------------------------------
+// The game figures (R1994000)
+// ---------------------------------------------------------------------------
+
+/// The turns are cut into this many parts by their quartiles.
+const QUARTERS: usize = 4;
+
+/// R850000, R1994000: the 95% Wilson score interval of `wins` in `games`: the range a true win rate
+/// can sit in and still give this result. It stays inside [0, 1] and is sound at 0 or every win,
+/// where the normal approximation is not. No games is no information: [0, 1].
+pub fn wilson_interval(wins: i64, games: i64) -> (f64, f64) {
+    if games <= 0 {
+        return (0.0, 1.0);
+    }
+    let n = games as f64;
+    let p = wins as f64 / n;
+    let z2 = STATS_INTERVAL_Z * STATS_INTERVAL_Z;
+    let denominator = 1.0 + z2 / n;
+    let centre = (p + z2 / (2.0 * n)) / denominator;
+    let half = STATS_INTERVAL_Z * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt() / denominator;
+    ((centre - half).max(0.0), (centre + half).min(1.0))
+}
+
+/// R1994000: a share to three places (`STATS_SHARE_PRECISION`).
+pub fn round_share(share: f64) -> f64 {
+    (share * STATS_SHARE_PRECISION).round() / STATS_SHARE_PRECISION
+}
+
+/// R1994000: the figures of some games read whole, whichever of their seats a filter counts.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameFigures {
+    /// How many games.
+    pub games: i64,
+    /// How many of them nobody won.
+    pub draws: i64,
+    /// How many the seat that took the first turn won.
+    pub first_wins: i64,
+    /// `first_wins` over `games`, to three places.
+    pub first_share: f64,
+    /// The low end of the 95% Wilson interval of `first_share`.
+    pub first_low: f64,
+    /// The high end of the 95% Wilson interval of `first_share`.
+    pub first_high: f64,
+    /// Games per ending, every `GameOverReason` in its declared order, the ones no game had at 0.
+    pub reasons: IndexMap<GameOverReason, i64>,
+    /// The turn counter at the end: the first, second and third quartiles, nearest rank.
+    pub turn_quartiles: [i32; QUARTERS - 1],
+    /// How many of the games have R1256000's counts: the figures below are over these only.
+    pub counted: i64,
+    /// How many of the counted games had a draw from an empty library, or null when none is counted.
+    pub fatigue_games: Option<i64>,
+    /// `fatigue_games` over `counted`, to three places.
+    pub fatigue_share: Option<f64>,
+    /// The mean of the nominal fatigue damage a counted game dealt, both seats added, to three places.
+    pub fatigue_damage_mean: Option<f64>,
+    /// Traps set from a hand over the counted games, both seats.
+    pub traps_set: Option<i64>,
+    /// Traps that fired over the counted games, both seats.
+    pub traps_fired: Option<i64>,
+    /// `traps_fired` over `traps_set` to three places, or null when no Trap was set.
+    pub traps_fired_per_set: Option<f64>,
+    /// Position switches by units over the counted games, both seats.
+    pub position_switches: Option<i64>,
+    /// The mean of `position_switches` over the counted games, to three places.
+    pub position_switches_mean: Option<f64>,
+    /// Cards an effect made Radiant over the counted games, both seats.
+    pub radiant_upgrades: Option<i64>,
+    /// The mean of `radiant_upgrades` over the counted games, to three places.
+    pub radiant_upgrades_mean: Option<f64>,
+}
+
+/// `stats report --games`: one patch's figures in one mode from one source.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameGroup {
+    /// The patch the games were played with.
+    pub patch: String,
+    /// The match type.
+    pub mode: GameMode,
+    /// Where the games were played: live matches or an AI development run's.
+    pub source: GameSource,
+    #[serde(flatten)]
+    pub figures: GameFigures,
+}
+
+/// `stats report --games`: the groups a filter reads and the records it left to another source.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameReport {
+    /// What the report read.
+    pub filter: CardStatsFilter,
+    /// How many records came from a source the filter does not read (R378).
+    pub other_sources: i64,
+    /// One group per patch, mode and source, in the order a record of it was first read.
+    pub groups: Vec<GameGroup>,
+}
+
+/// R1994000: the figures of a total's games, `None` when it holds none. The turn quartiles are
+/// read off the histogram by nearest rank, as off the games' turns sorted.
+fn game_figures(total: &GameTotal) -> Option<GameFigures> {
+    if total.games <= 0 {
+        return None;
+    }
+    let (low, high) = wilson_interval(total.first_wins, total.games);
+
+    let mut reasons: IndexMap<GameOverReason, i64> =
+        GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
+    for (reason, games) in &total.reasons {
+        *reasons.entry(*reason).or_default() += games;
+    }
+
+    let mut turns: Vec<(i32, i64)> = total.turns.iter().map(|(turn, games)| (*turn, *games)).collect();
+    turns.sort_unstable();
+    let n = usize::try_from(total.games).unwrap_or(usize::MAX);
+    let turn_quartiles = std::array::from_fn(|cut| {
+        let rank = ((cut + 1) * n).div_ceil(QUARTERS);
+        let mut seen = 0usize;
+        turns
+            .iter()
+            .find(|(_, games)| {
+                seen += usize::try_from(*games).unwrap_or(0);
+                seen >= rank
+            })
+            .map_or(0, |(turn, _)| *turn)
+    });
+
+    let counted = total.counted;
+    let any = counted > 0;
+    let mean = |sum: i64| round_share(sum as f64 / counted as f64);
+    Some(GameFigures {
+        games: total.games,
+        draws: total.draws,
+        first_wins: total.first_wins,
+        first_share: round_share(total.first_wins as f64 / total.games as f64),
+        first_low: round_share(low),
+        first_high: round_share(high),
+        reasons,
+        turn_quartiles,
+        counted,
+        fatigue_games: any.then_some(total.fatigue_games),
+        fatigue_share: any.then(|| mean(total.fatigue_games)),
+        fatigue_damage_mean: any.then(|| mean(total.fatigue_damage)),
+        traps_set: any.then_some(total.traps_set),
+        traps_fired: any.then_some(total.traps_fired),
+        traps_fired_per_set: (any && total.traps_set > 0)
+            .then(|| round_share(total.traps_fired as f64 / total.traps_set as f64)),
+        position_switches: any.then_some(total.position_switches),
+        position_switches_mean: any.then(|| mean(total.position_switches)),
+        radiant_upgrades: any.then_some(total.radiant_upgrades),
+        radiant_upgrades_mean: any.then(|| mean(total.radiant_upgrades)),
+    })
+}
+
+/// R1994000: the game figures over the totals the filter reads, as `stats report --games` counted
+/// the records folded into them: a key counts when the filter reads its source, mode and patch and
+/// its pilot reads one of the key's seats (as `CardStatsReport.games` counts a record), and a key of
+/// a source the filter does not read is only tallied (R378). One group per patch, mode and source,
+/// in the order their first key was folded.
+pub fn game_figures_of(totals: &StatsTotals, filter: &CardStatsFilter) -> GameReport {
+    let sources = sources_of(filter.source);
+    let mut other_sources = 0;
+    let mut grouped: IndexMap<(String, GameMode, GameSource), GameTotal> = IndexMap::new();
+    for (key, total) in &totals.game_totals {
+        if !sources.contains(&key.source) {
+            other_sources += total.games;
+        } else if filter.mode.is_none_or(|mode| key.mode == mode)
+            && filter.patch.as_ref().is_none_or(|patch| key.patch == *patch)
+            && (pilot_counts(filter.pilot, key.pilots.0) || pilot_counts(filter.pilot, key.pilots.1))
+        {
+            grouped
+                .entry((key.patch.clone(), key.mode, key.source))
+                .or_default()
+                .add(total);
+        }
+    }
+    GameReport {
+        filter: filter.clone(),
+        other_sources,
+        groups: grouped
+            .into_iter()
+            .filter_map(|((patch, mode, source), total)| {
+                Some(GameGroup {
+                    patch,
+                    mode,
+                    source,
+                    figures: game_figures(&total)?,
+                })
+            })
+            .collect(),
+    }
+}
+
+/// R1994000: the game figures over records, folded into totals and read off them as the server
+/// reads the totals it keeps, so `stats report --games` and `GET /api/stats/games` cannot count
+/// differently. Groups are in the order a record of each was first read.
+pub fn game_report(records: &[GameRecord], filter: &CardStatsFilter) -> GameReport {
+    let mut totals = StatsTotals::default();
+    for record in records {
+        totals.fold(record, false);
+    }
+    game_figures_of(&totals, filter)
 }
 
 // ---------------------------------------------------------------------------
@@ -2304,12 +2622,34 @@ mod tests {
                         PlayerId::P2
                     },
                     winner,
-                    reason: GameOverReason::HeroDeath,
-                    turns: 10,
-                    seats: PerPlayer::new(random_seat(draws), random_seat(draws)),
+                    reason: GAME_OVER_REASONS[n % GAME_OVER_REASONS.len()],
+                    turns: 3 + i32::try_from(n % 23).unwrap_or(0),
+                    seats: with_counts(PerPlayer::new(random_seat(draws), random_seat(draws)), n),
                 },
                 build: None,
             }
+        }
+
+        /// R1256000's six counts, made from `n` so the draws stay as they were: on both seats in
+        /// three records of four, on p1's alone in one of eight (which no game figure counts), on
+        /// neither in the rest, as records written before them.
+        fn with_counts(mut seats: PerPlayer<SeatSummary>, n: usize) -> PerPlayer<SeatSummary> {
+            let both = !n.is_multiple_of(4);
+            let p1_only = n.is_multiple_of(8);
+            for (index, seat) in [PlayerId::P1, PlayerId::P2].into_iter().enumerate() {
+                if !(both || (p1_only && seat == PlayerId::P1)) {
+                    continue;
+                }
+                let at = |offset: usize, most: usize| i32::try_from((n + index + offset) % most).unwrap_or(0);
+                let summary = &mut seats[seat];
+                summary.fatigue_draws = Some(at(0, 3) * at(1, 2));
+                summary.fatigue_damage = Some(at(2, 7));
+                summary.traps_set = Some(at(3, 4));
+                summary.traps_fired = Some(at(4, 3));
+                summary.position_switches = Some(at(5, 5));
+                summary.radiant_upgrades = Some(at(6, 3));
+            }
+            seats
         }
 
         /// Records as the store reads them: one per id, in id order.
@@ -2463,6 +2803,20 @@ mod tests {
                 card_stats_of(&selected, &filter),
                 card_stats_of(&in_order, &filter)
             );
+            // R1994000: and the whole games of the keys it keeps.
+            assert!(!selected.game_totals.is_empty());
+            assert!(
+                selected
+                    .game_totals
+                    .keys()
+                    .all(|key| key.source == GameSource::Live
+                        && key.mode == GameMode::Bo1
+                        && key.patch == "v1")
+            );
+            assert_eq!(
+                game_figures_of(&selected, &filter).groups,
+                game_figures_of(&in_order, &filter).groups
+            );
             assert_eq!(
                 in_order.live_games("v1"),
                 records
@@ -2470,6 +2824,149 @@ mod tests {
                     .filter(|record| record.patch == "v1" && record.source == GameSource::Live)
                     .count() as i64
             );
+        }
+
+        /// One group's figures over its records, which are never none: `stats report --games` as
+        /// it counted the records themselves (`crates/tools/src/stats.rs`, before R1994000).
+        fn reference_game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> GameGroup {
+            let (patch, mode, source) = key;
+            let n = records.len();
+            let draws = records
+                .iter()
+                .filter(|record| record.game.winner == Winner::Draw)
+                .count();
+            let first_wins = records
+                .iter()
+                .filter(|record| record.game.winner.player() == Some(record.game.first))
+                .count();
+            let (low, high) = wilson_interval(first_wins as i64, n as i64);
+
+            let mut reasons: IndexMap<GameOverReason, i64> =
+                GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
+            for record in records {
+                *reasons.entry(record.game.reason).or_default() += 1;
+            }
+
+            let mut turns: Vec<i32> = records.iter().map(|record| record.game.turns).collect();
+            turns.sort_unstable();
+            let turn_quartiles = std::array::from_fn(|cut| turns[((cut + 1) * n).div_ceil(QUARTERS) - 1]);
+
+            let known: Vec<GameCounts> = records
+                .iter()
+                .filter_map(|record| game_counts(&record.game))
+                .collect();
+            let counted = known.len();
+            let any = counted > 0;
+            let fatigue_games = known.iter().filter(|counts| counts.fatigue_draws > 0).count();
+            let damage: i64 = known.iter().map(|counts| counts.fatigue_damage).sum();
+            let traps_set: i64 = known.iter().map(|counts| counts.traps_set).sum();
+            let traps_fired: i64 = known.iter().map(|counts| counts.traps_fired).sum();
+            let switches: i64 = known.iter().map(|counts| counts.position_switches).sum();
+            let upgrades: i64 = known.iter().map(|counts| counts.radiant_upgrades).sum();
+            GameGroup {
+                patch,
+                mode,
+                source,
+                figures: GameFigures {
+                    games: n as i64,
+                    draws: draws as i64,
+                    first_wins: first_wins as i64,
+                    first_share: round_share(first_wins as f64 / n as f64),
+                    first_low: round_share(low),
+                    first_high: round_share(high),
+                    reasons,
+                    turn_quartiles,
+                    counted: counted as i64,
+                    fatigue_games: any.then_some(fatigue_games as i64),
+                    fatigue_share: any.then(|| round_share(fatigue_games as f64 / counted as f64)),
+                    fatigue_damage_mean: any.then(|| round_share(damage as f64 / counted as f64)),
+                    traps_set: any.then_some(traps_set),
+                    traps_fired: any.then_some(traps_fired),
+                    traps_fired_per_set: (any && traps_set > 0)
+                        .then(|| round_share(traps_fired as f64 / traps_set as f64)),
+                    position_switches: any.then_some(switches),
+                    position_switches_mean: any.then(|| round_share(switches as f64 / counted as f64)),
+                    radiant_upgrades: any.then_some(upgrades),
+                    radiant_upgrades_mean: any.then(|| round_share(upgrades as f64 / counted as f64)),
+                },
+            }
+        }
+
+        /// `stats report --games` over the records themselves, before R1994000.
+        fn reference_game_report(records: &[GameRecord], filter: &CardStatsFilter) -> GameReport {
+            let sources = sources_of(filter.source);
+            let mut other_sources = 0;
+            let mut grouped: IndexMap<(String, GameMode, GameSource), Vec<&GameRecord>> = IndexMap::new();
+            for record in records {
+                if !sources.contains(&record.source) {
+                    other_sources += 1;
+                } else if record_matches(record, filter) && !seats_counted(record, filter.pilot).is_empty() {
+                    grouped
+                        .entry((record.patch.clone(), record.mode, record.source))
+                        .or_default()
+                        .push(record);
+                }
+            }
+            GameReport {
+                filter: filter.clone(),
+                other_sources,
+                groups: grouped
+                    .into_iter()
+                    .map(|(key, records)| reference_game_group(key, &records))
+                    .collect(),
+            }
+        }
+
+        /// A report's groups by patch, mode and source, as totals folded out of order hold them.
+        fn sorted(mut report: GameReport) -> GameReport {
+            report
+                .groups
+                .sort_by(|a, b| (&a.patch, a.mode, a.source).cmp(&(&b.patch, b.mode, b.source)));
+            report
+        }
+
+        #[test]
+        fn r1994000_game_figures_off_totals_folded_in_any_order_are_what_the_records_give() {
+            let records = records();
+            let totals = folded(&records);
+            let mut counted = 0;
+            for source in SOURCE_FILTERS {
+                for mode in [
+                    None,
+                    Some(GameMode::Bo1),
+                    Some(GameMode::Bo3),
+                    Some(GameMode::Random),
+                ] {
+                    for patch in [None, Some("v1"), Some("v2"), Some("v3")] {
+                        for pilot in PILOT_FILTERS {
+                            let filter = CardStatsFilter {
+                                source: *source,
+                                mode,
+                                patch: patch.map(str::to_string),
+                                pilot: *pilot,
+                            };
+                            let expected = reference_game_report(&records, &filter);
+                            assert_eq!(game_report(&records, &filter), expected, "{filter:?}");
+                            assert_eq!(
+                                sorted(game_figures_of(&totals, &filter)),
+                                sorted(expected.clone()),
+                                "{filter:?}"
+                            );
+                            counted += expected
+                                .groups
+                                .iter()
+                                .filter(|group| group.figures.counted > 0)
+                                .count();
+                        }
+                    }
+                }
+            }
+            assert!(counted > 0, "some group's records carry R1256000's counts");
+            // A total is stored as its JSON and read back whole.
+            for total in totals.game_totals.values() {
+                let json = serde_json::to_string(total).unwrap();
+                assert_eq!(&serde_json::from_str::<GameTotal>(&json).unwrap(), total);
+            }
         }
     }
 

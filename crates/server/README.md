@@ -212,6 +212,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
+| `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) |
@@ -374,7 +375,7 @@ Once the match is over, a watcher that has been sent the view with the result is
 match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
 with `MATCH_VOIDED_CLOSE_CODE`.
 
-## Card statistics (§9.11, R376–R378, R1044000, R1044001)
+## Card statistics (§9.11, R376–R378, R1044000, R1044001, R1994000)
 
 ```
 target/release/jackioh-server stats-cards                                   # live games of every mode and patch, their human seats
@@ -404,7 +405,11 @@ checks, then one transaction folds every record into the totals and writes no ro
 and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
-learn lane and the gather workflow keep as their runs' artifacts. A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
+learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
+whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
+Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
+outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill
+(R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
 
@@ -920,6 +925,13 @@ only adds indexes: `tickets (claimed_at) where status = 'claimed'` for `tickets_
 `matches (ended_at) where status = 'over'` for `game_records_unfiled`, the refile sweep's
 (R1596000). `tests/sql/01_schema_invariants.sql` CHECK 20 plans each query with sequential scans
 off, and fails when one reads its table whole or does not use its index.
+
+Migration 0063 adds `game_totals` (R1994000) and only adds objects: one row per `record_totals` key,
+its `total` the engine's `GameTotal` as JSON (games, draws, first-seat wins, games per ending and per
+turn count, R1256000's sums with the count of records that carry them), written whole by
+`stats_totals_add` under 0041's advisory locks. Its checks pin the source, mode and pilots as
+`record_totals`' do, and a total of at least one game. RLS is on with no policy and no grant, as the
+other totals: the server alone reads it.
 
 ## Tests
 

@@ -9,6 +9,8 @@
 //! R1178000: the Meditative+ set (issue #1173) was the next held set, in the catalog order after
 //! Meditative, and shipped in v0.3.15 (issue #1187), so its fixture cards here now draw, deal and lean
 //! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
+//! R1857000: the Stinkyscape set (issue #1836) is the third held set, after Meditative+ in the catalog
+//! order, behind the gate until its release (#1884); its four tags name no tribe.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -43,7 +45,8 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
 /// token (shipped since v0.3.5), two cards and a token of the Boss set (which does not ship), two
 /// cards and three tokens of the Meditative+ set (shipped since v0.3.15, R1178000: its Prime, M+
 /// #16.1, and the AI generated helpers of M+ #1, #1.1 and #1.2), two Prime tokens and a KY and a Book
-/// card for the pools.
+/// card for the pools, and three cards and two tokens of the held Stinkyscape set (R1857000: a Drone
+/// Core, a Weapon and a Swarm Unit, a War Doctrine and an AI generated card).
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -89,6 +92,29 @@ fn defs() -> CardDefs {
     ));
     defs.push(card("meditativeplus-001-1", "Meditative+", "1.1", &["AI"], true));
     defs.push(card("meditativeplus-001-2", "Meditative+", "1.2", &["AI"], true));
+    defs.push(card(
+        "stinkyscape-027",
+        "Stinkyscape",
+        "27",
+        &["Drone Core"],
+        false,
+    ));
+    defs.push(card("stinkyscape-050", "Stinkyscape", "50", &["Weapon"], false));
+    defs.push(card("stinkyscape-091", "Stinkyscape", "91", &["Swarm"], false));
+    defs.push(card(
+        "stinkyscape-137-1",
+        "Stinkyscape",
+        "137.1",
+        &["War Doctrine"],
+        true,
+    ));
+    defs.push(card(
+        "stinkyscape-t-ai-01",
+        "Stinkyscape",
+        "T-AI-1",
+        &["AI"],
+        true,
+    ));
     defs.into_iter().map(|def| (def.id.clone(), def)).collect()
 }
 
@@ -116,6 +142,14 @@ fn unshipped(ids: &[String]) -> Vec<String> {
 fn meditative_plus(ids: &[String]) -> Vec<String> {
     ids.iter()
         .filter(|id| id.starts_with("meditativeplus-"))
+        .cloned()
+        .collect()
+}
+
+/// The Stinkyscape fixture's ids among `ids` (R1857000).
+fn stinkyscape(ids: &[String]) -> Vec<String> {
+    ids.iter()
+        .filter(|id| id.starts_with("stinkyscape-"))
         .cloned()
         .collect()
 }
@@ -316,7 +350,8 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
                 .position(|set| *set == SetName::Meditative)
                 .map(|at| at + 1)
         );
-        assert_eq!(CATALOG_SETS.last(), Some(&SetName::MeditativePlus));
+        // Fifth: the held Stinkyscape set follows it (R1857000).
+        assert_eq!(CATALOG_SETS.get(4), Some(&SetName::MeditativePlus));
         assert!(set_ships(SetName::MeditativePlus));
         assert!(set_is_open(SetName::MeditativePlus));
         assert_eq!(SHIPPED_SETS.last(), Some(&SetName::MeditativePlus));
@@ -594,6 +629,10 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::Otherworldly,
             Tag::OtherOrigins,
             Tag::JellyBean,
+            Tag::DroneCore,
+            Tag::Weapon,
+            Tag::WarDoctrine,
+            Tag::Swarm,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
@@ -626,7 +665,9 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        assert_eq!(at(Tag::Token), Some(potion + 1 + NEW.len()));
+        // The held Stinkyscape set's four follow them (R1857000), and Token stays last.
+        assert_eq!(at(Tag::DroneCore), Some(potion + 1 + NEW.len()));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 
     /// A pool by one of the five holds that tag's cards and, as any tag outside `POOL_TOKEN_TAGS`,
@@ -656,5 +697,173 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
             pool(json!({ "tags": ["Other-Origins"], "withTokens": true })),
             vec!["classicplus-032-1", "classicplus-032-2"]
         );
+    }
+}
+
+/// R1857000: the Stinkyscape set (issue #1836) is the third set R1420's gate holds, as R1178000 said
+/// of Meditative+: sixth in the catalog order, right after Meditative+, and in no pool that names no
+/// set, no deck and no lean until its release (#1884) lists it in `SHIPPED_SETS`. Its four tags are
+/// family tags that no rule reads (R1424).
+mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
+    use super::*;
+
+    /// The set's four tags, as written.
+    const TAGS: [(Tag, &str); 4] = [
+        (Tag::DroneCore, "Drone Core"),
+        (Tag::Weapon, "Weapon"),
+        (Tag::WarDoctrine, "War Doctrine"),
+        (Tag::Swarm, "Swarm"),
+    ];
+
+    #[test]
+    fn r1857000_stinkyscape_follows_meditative_plus_and_is_held() {
+        assert_eq!(SetName::Stinkyscape.as_str(), "Stinkyscape");
+        assert_eq!(json_as::<SetName>(json!("Stinkyscape")), SetName::Stinkyscape);
+        let at = |set: SetName| CATALOG_SETS.iter().position(|each| *each == set);
+        assert_eq!(
+            at(SetName::Stinkyscape),
+            at(SetName::MeditativePlus).map(|at| at + 1)
+        );
+        assert_eq!(CATALOG_SETS.last(), Some(&SetName::Stinkyscape));
+        // Held: it does not ship, it is not open, it is not the newest set, and no lean names it.
+        assert!(!set_ships(SetName::Stinkyscape));
+        assert!(!SHIPPED_SETS.contains(&SetName::Stinkyscape));
+        assert!(!set_is_open(SetName::Stinkyscape));
+        assert_eq!(newest_shipped_set(), SetName::MeditativePlus);
+        assert_eq!(LeanPick::parse("Stinkyscape"), None);
+        assert!(!LeanPick::choices().contains(&LeanPick::Set(SetName::Stinkyscape)));
+        // The preview opens it on this thread and ships nothing.
+        {
+            let _preview = preview_sets(&[SetName::Stinkyscape]);
+            assert!(set_is_open(SetName::Stinkyscape));
+            assert!(!set_ships(SetName::Stinkyscape));
+            assert_eq!(newest_shipped_set(), SetName::MeditativePlus);
+        }
+        {
+            let _preview = preview_every_set();
+            assert!(set_is_open(SetName::Stinkyscape));
+        }
+        assert!(!set_is_open(SetName::Stinkyscape));
+    }
+
+    #[test]
+    fn r1857000_its_four_tags_parse_as_written_follow_jelly_bean_and_name_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        let bean = at(Tag::JellyBean).expect("Jelly Bean is in the union");
+        for (offset, (tag, text)) in TAGS.iter().enumerate() {
+            assert_eq!(tag.as_str(), *text);
+            assert_eq!(json_as::<Tag>(json!(text)), *tag);
+            assert_eq!(at(*tag), Some(bean + 1 + offset), "{tag}");
+            assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
+            assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
+        }
+        assert_eq!(at(Tag::Token), Some(bean + 1 + TAGS.len()));
+    }
+
+    #[test]
+    fn r1857000_a_pool_that_names_no_set_never_reaches_it_one_that_names_it_does() {
+        setup();
+        // Whatever it asks for: its own tags, the AI generated cards (R1421) or every token.
+        for args in [
+            json!({}),
+            json!({ "tags": ["Drone Core"] }),
+            json!({ "tags": ["Weapon"] }),
+            json!({ "anyTags": ["Swarm", "War Doctrine"] }),
+            json!({ "tags": ["AI"] }),
+            json!({ "withTokens": true }),
+        ] {
+            assert_eq!(stinkyscape(&pool(args.clone())), Vec::<String>::new(), "{args}");
+        }
+        // An AI pool stays the shipped sets' AI generated cards.
+        assert_eq!(
+            pool(json!({ "tags": ["AI"] })),
+            vec![
+                "classicplus-t-ai-01",
+                "meditativeplus-001-1",
+                "meditativeplus-001-2"
+            ]
+        );
+        // A pool that names the set, or its cards by id, reaches them, so its cards find their own
+        // tokens and pools.
+        assert_eq!(
+            pool(json!({ "set": "Stinkyscape" })),
+            vec!["stinkyscape-027", "stinkyscape-050", "stinkyscape-091"]
+        );
+        assert_eq!(
+            pool(json!({ "set": "Stinkyscape", "tags": ["War Doctrine"], "withTokens": true })),
+            vec!["stinkyscape-137-1"]
+        );
+        assert_eq!(
+            pool(json!({ "defId": ["stinkyscape-t-ai-01"] })),
+            vec!["stinkyscape-t-ai-01"]
+        );
+        // Previewed, it draws in its catalog place: after Meditative+, before the Boss set the
+        // order does not name.
+        let _preview = preview_sets(&[SetName::Stinkyscape, SetName::Boss]);
+        let all = pool(json!({}));
+        assert_eq!(
+            &all[all.len() - 7..],
+            [
+                "meditativeplus-011",
+                "meditativeplus-021",
+                "stinkyscape-027",
+                "stinkyscape-050",
+                "stinkyscape-091",
+                "boss-001",
+                "boss-002"
+            ]
+        );
+        assert_eq!(
+            stinkyscape(&pool(json!({ "tags": ["AI"] }))),
+            vec!["stinkyscape-t-ai-01"]
+        );
+    }
+
+    #[test]
+    fn r1857000_no_deck_holds_one_unless_previewed() {
+        setup();
+        let catalog = defs();
+        assert!(!deckable(&catalog["stinkyscape-027"]));
+        assert!(!deckable(&catalog["stinkyscape-137-1"]), "a Token never is");
+        let mut deck: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
+        deck.push("stinkyscape-050".to_string());
+        let refused = validate_deck(&deck, &catalog, "p1", 20).expect_err("refused");
+        assert!(
+            refused
+                .to_string()
+                .contains("Stinkyscape, which has not shipped yet"),
+            "{refused}"
+        );
+
+        let collection: IndexMap<String, i32> = deck.iter().map(|id| (id.clone(), 1)).collect();
+        let result = jackioh_engine::validator::validate_deck(&jackioh_engine::validator::DeckInput {
+            deck: jackioh_engine::validator::LoadoutDeck {
+                cards: deck.clone(),
+                ..Default::default()
+            },
+            catalog: jackioh_engine::validator::CatalogSnapshot {
+                version: "test".to_string(),
+                cards: catalog.clone(),
+                banned: None,
+            },
+            collection,
+        });
+        let l3: Vec<&str> = result
+            .errors
+            .iter()
+            .filter(|error| error.rule == jackioh_engine::validator::LoadoutRule::L3)
+            .map(|error| error.message.as_str())
+            .collect();
+        assert_eq!(l3.len(), 1, "{:?}", result.errors);
+        assert!(
+            l3[0].contains("the Stinkyscape set has not shipped yet"),
+            "{}",
+            l3[0]
+        );
+
+        let _preview = preview_sets(&[SetName::Stinkyscape]);
+        assert!(deckable(&catalog["stinkyscape-027"]));
+        assert!(!deckable(&catalog["stinkyscape-137-1"]), "a Token never is");
+        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
     }
 }

@@ -834,14 +834,19 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("`claude-2` is busy", again["reason"])
 
     def test_muse_works_two_items_at_once(self):
-        """#1273: `lanes: 2` on the night box, under its one login, which its four runners serve
-        in turn. A third item waits on its lanes, and a planning run counts in them, as on any
-        capped subscription (`plan.Lanes.full`)."""
+        """#1273: `lanes: 2`, under its one login, both on the Muse box now. With gpt and agy
+        at work (so no lane of theirs to fill, `fill_in`), a third item waits on its lanes, and a
+        planning run counts in them, as on any capped subscription (`plan.Lanes.full`)."""
         gh = FakeGitHub()
         items = (3, 4, 5)
         for n in items:
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:medium"))
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("muse",))
+        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=MACHINE)
+        for n, provider in ((40, "gpt"), (41, "agy")):
+            gh.add_issue(n, labels=(LABEL_WORKING,))
+            gh.runs[str(n)] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=n, p=provider: state_item(s, n).update(run_id=str(n),
+                                                                             provider=p))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
                                     for n in items])
         muse = ctx.cfg.pool.get("muse")

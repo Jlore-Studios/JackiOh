@@ -115,12 +115,13 @@ fn deck_size() -> usize {
     usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size")
 }
 
-/// The catalog's playable ids (no tokens), in catalog order.
+/// The catalog's playable ids (no tokens, and no set that has not shipped, which the server does not
+/// know of: R1420), in catalog order.
 fn pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .values()
-        .filter(|def| !def.token)
+        .filter(|def| !def.token && jackioh_engine::set_ships(def.set))
         .map(|def| def.id.clone())
         .collect()
 }

@@ -8,6 +8,7 @@
 // cannot be renewed, is a 401 refusal like any other.
 
 import type { Difficulty } from "@jackioh/engine/config";
+import type { LeanPick } from "@jackioh/shared";
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -30,13 +31,14 @@ export type DuosRoom = {
   matchId: string | null;
 };
 
-/** `POST /api/duos/rooms`: exactly one of `deckId` and `random: true`; the answer is the room's code. */
-export function createDuosRoom(body: {
-  difficulty: Difficulty;
-  deckId?: string;
-  random?: boolean;
-  leanNewest?: boolean;
-}): Promise<{ code: string }> {
+/**
+ * S6: exactly one of `deckId` and `random: true`; a random deal may carry the player's "More cards
+ * from" pick for their own deck (`leanSet`, R924000, R2031000), absent for none.
+ */
+export type DuosDeckChoice = { deckId?: string; random?: boolean; leanSet?: LeanPick };
+
+/** `POST /api/duos/rooms`: a difficulty and the deck choice; the answer is the room's code. */
+export function createDuosRoom(body: { difficulty: Difficulty } & DuosDeckChoice): Promise<{ code: string }> {
   return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
 }
 
@@ -46,10 +48,7 @@ export function getDuosRoom(code: string): Promise<DuosRoom> {
 }
 
 /** `POST /api/duos/rooms/:code/join`: the match it starts, or 404, or 409 `full` / `own_room`. */
-export function joinDuosRoom(
-  code: string,
-  body: { deckId?: string; random?: boolean; leanNewest?: boolean },
-): Promise<{ matchId: string }> {
+export function joinDuosRoom(code: string, body: DuosDeckChoice): Promise<{ matchId: string }> {
   return withSession((token) =>
     apiRequest<{ matchId: string }>(`/api/duos/rooms/${encodeURIComponent(code)}/join`, { method: "POST", token, body }),
   );

@@ -1030,8 +1030,9 @@ pub enum GameEvent {
     },
     /// R1852000 (Stinkyscape's Starship, §6.1 Starship Piece): `player`'s Starship Piece `piece_id`
     /// (of `def_id`) died, and a copy of it fused into their Dormant Starship `instance_id`, which now
-    /// holds `pieces` pieces (after the `fused` the Fuse itself reports). Public: the death and the
-    /// Starship are.
+    /// holds `pieces` pieces (after the `fused` the Fuse itself reports). Public, each card judged by
+    /// where it is now (R97): `piece_id` and `def_id` go once the piece is where the viewer may not read
+    /// it, `instance_id` once the Starship is.
     StarshipFused {
         player: PlayerId,
         instance_id: String,
@@ -1042,7 +1043,7 @@ pub enum GameEvent {
     /// R1852003 (§6.3 Launch): `player` launched their Starship `instance_id` — the Dormant Starship
     /// awakened — which took the Starship keyword and the name `name`; `pieces` are the definitions of
     /// the pieces it holds, oldest first. Its fused Cries fire next, then its fused "When launched",
-    /// which answer this (§6.2). Public.
+    /// which answer this (§6.2). Public, the Starship judged by where it is now (R97).
     StarshipLaunched {
         player: PlayerId,
         instance_id: String,

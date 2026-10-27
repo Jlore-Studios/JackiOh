@@ -37,8 +37,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS,
-    RollOdds,
+    DORMANT_STARSHIP_DEF_ID, GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS,
+    POOL_TOKEN_TAGS, RollOdds,
 };
 use crate::rng::Rng;
 use crate::script::CardScripts;
@@ -575,9 +575,20 @@ pub fn is_embiggen_card(def: &CardDef) -> bool {
     matches!(def.cost, CardCost::Embiggen { .. })
 }
 
+/// R674, R1857001: the cards only a rule makes, which no pool reaches unless it names them by id
+/// (`defId`) and no deck holds: Glitch, which only R673's roll makes, and the Dormant Starship, which
+/// only a Starship Piece's death summons (R1852000).
+pub const RULE_MADE_DEF_IDS: [&str; 2] = [GLITCH_DEF_ID, DORMANT_STARSHIP_DEF_ID];
+
+/// R674, R1857001: whether a definition is one of `RULE_MADE_DEF_IDS`.
+pub fn made_by_a_rule(def: &CardDef) -> bool {
+    RULE_MADE_DEF_IDS.contains(&def.id.as_str())
+}
+
 fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -> bool {
     // R674: Glitch is in no pool, not even one that takes every token; only R673's roll makes one.
-    if def.id == GLITCH_DEF_ID && !as_list(&args.def_id).contains(&def.id) {
+    // R1857001: nor is the Dormant Starship, a card and no token, which only a piece's death summons.
+    if made_by_a_rule(def) && !as_list(&args.def_id).contains(&def.id) {
         return false;
     }
     if !tokens_allowed && def.is_token() && !tag_pool_takes_token(args, def) {
@@ -855,9 +866,10 @@ pub fn set_is_open(set: SetName) -> bool {
 }
 
 /// R1420, §2.6, §9.4 L3: whether a definition may be in a deck: a card, not a Token, of a set that is
-/// open (`set_is_open`). The validator, the deck builder and every random deck read this one test.
+/// open (`set_is_open`), and not one only a rule makes (`made_by_a_rule`: R1857001's Dormant
+/// Starship). The validator, the deck builder and every random deck read this one test.
 pub fn deckable(def: &CardDef) -> bool {
-    !def.is_token() && set_is_open(def.set)
+    !def.is_token() && !made_by_a_rule(def) && set_is_open(def.set)
 }
 
 /// §5.1's single source of random pools and Discover: every definition the filters allow, set by set

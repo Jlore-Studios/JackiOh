@@ -34,6 +34,8 @@ export const togetherTestid = {
   challengeForm: "together-challenge-form",
   challengeDeck: "together-challenge-deck",
   challengeTrio: "together-challenge-trio",
+  /** R2031000: under All Random only, "More cards from" (R924000), a select. */
+  challengeLean: "together-challenge-lean",
   challengeSend: "together-challenge-send",
   challengeClose: "together-challenge-close",
   challengeError: "together-challenge-error",
@@ -101,6 +103,8 @@ export const challengeToastTestid = {
   decline: "challenge-decline",
   /** The deck or trio the toast joins with. */
   deck: "challenge-toast-deck",
+  /** R2031000: an All Random challenge's "More cards from" (R924000), a select. */
+  lean: "challenge-toast-lean",
   /** R767's way in: `/play` with the room's code filled in, offered after a refused join. */
   lobby: "challenge-toast-lobby",
   error: "challenge-toast-error",

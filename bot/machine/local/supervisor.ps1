@@ -4,11 +4,13 @@
 
   Every sampleSeconds it reads this PC's CPU and memory, leaving out what its own runner
   containers use. "Calm" means every sample of the last calmSeconds had CPU under
-  cpuPercentBelow and used memory under memoryGBBelow (config.json).
+  cpuPercentBelow and used memory under memoryGBBelow (config.json). "Quiet" is calm with every
+  sample's CPU under startCpuPercentBelow too: a new runner starts only then, while one already
+  up stays as long as it is calm.
 
   Each entry of config.json's `serve` is one runner label. A runner here is one ephemeral
   container: it registers with that one label (a single-use JIT config), takes one job and is
-  gone. While it is calm and fewer than maxJobs jobs run here:
+  gone. While it is quiet and fewer than maxJobs jobs run here:
   - a label with a job queued for it (in one of the entry's `workflows`) gets a runner;
   - a `standby` label (jackioh-selfplay-local) keeps one idle runner registered, so it shows Idle
     under Settings -> Actions -> Runners and a dispatch starts at once;
@@ -17,6 +19,14 @@
   An idle runner no label wants any more is retired after a minute. When it is not calm, every
   idle runner is retired at once, and a runner in the middle of a job is throttled to
   throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
+
+  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, whether it is
+  calm, and each runner container with the CPUs it uses and whether it is throttled, as pc.json
+  in a secret gist of the signed-in account. The status issue's runners section reads it
+  (bot/harness/dashboard.py), so it says what the PC and its gather job are doing. The gist is
+  made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
+  JACKIOH_PC_GIST, which bot-status.yml hands the status loop. A heartbeat that fails is logged
+  and tried again at the next beat: it never holds a runner up.
 
   No container is ever given a GPU. Runs in the foreground; install-task.ps1 starts it at logon.
   Log: logs\supervisor.log.
@@ -32,6 +42,7 @@ $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $logFile = Join-Path $logDir 'supervisor.log'
 $windowSize = [math]::Ceiling($cfg.calmSeconds / $cfg.sampleSeconds)
+$startCpuBelow = if ($null -ne $cfg.startCpuPercentBelow) { $cfg.startCpuPercentBelow } else { $cfg.cpuPercentBelow }
 $samples = New-Object System.Collections.Generic.Queue[object]
 $throttled = @{}      # container id -> $true while throttled
 $unwanted = @{}       # container id -> when it was first idle with no label wanting it
@@ -41,6 +52,9 @@ $nextStart = [datetime]::MinValue
 $queued = @()
 $startCooldownSeconds = 15
 $retireGraceMinutes = 1
+$heartbeatSeconds = if ($null -ne $cfg.heartbeatSeconds) { [int]$cfg.heartbeatSeconds } else { 120 }
+$lastHeartbeat = [datetime]::MinValue
+$gistFile = Join-Path $PSScriptRoot 'pc-gist.txt'
 
 function Log([string]$msg) {
   $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $msg
@@ -270,6 +284,53 @@ function Remove-StaleRunners($runners) {
   } catch { Log "stale-runner sweep failed: $_" }
 }
 
+# A request body for `gh api --input`, as UTF-8 without the byte-order mark PowerShell 5.1's
+# Set-Content writes, which GitHub's JSON parser refuses.
+function Write-Body([string]$path, $body) {
+  [System.IO.File]::WriteAllText($path, ($body | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding $false))
+}
+
+# The heartbeat (see the top): pc.json in the gist pc-gist.txt names, made, and named to the
+# repository as JACKIOH_PC_GIST, the first time.
+function Send-Heartbeat($sample, [bool]$calm, $runners) {
+  $cpus = @{}
+  if ($runners.Count) {
+    $s = Run 'docker' (@('stats', '--no-stream', '--format', '{{.ID}}|{{.CPUPerc}}') + @($runners | ForEach-Object Id))
+    if ($s.Code -eq 0) {
+      foreach ($line in ($s.Out -split "`n")) {
+        $f = $line.Trim() -split '\|'
+        if ($f.Count -ge 2) { $cpus[$f[0]] = [math]::Round([double]($f[1].TrimEnd('%').Trim()) / 100, 1) }
+      }
+    }
+  }
+  $beat = [ordered]@{
+    at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    calm = $calm
+    cpu = [math]::Round($sample.Cpu, 1)
+    memGB = [math]::Round($sample.Mem, 1)
+    logical = $logical
+    runners = @($runners | ForEach-Object {
+      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id] }
+    })
+  }
+  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 4 -Compress) } }
+  $bodyFile = Join-Path $env:TEMP 'jackioh-pc-heartbeat.json'
+  $id = if (Test-Path $gistFile) { (Get-Content $gistFile -Raw).Trim() } else { '' }
+  if ($id) {
+    Write-Body $bodyFile @{ files = $files }
+    $r = Run 'gh' @('api', '-X', 'PATCH', "gists/$id", '--input', $bodyFile)
+    if ($r.Code -eq 0) { return }
+    if ($r.Out -notmatch '404|Not Found') { Log "heartbeat not sent: $(@($r.Out -split "`n")[0])"; return }
+    Log "the heartbeat's gist $id is gone; making another"
+  }
+  Write-Body $bodyFile @{ description = "JackiOh: this PC's heartbeat, for $repo's status issue"; public = $false; files = $files }
+  $made = GhJson @('api', '-X', 'POST', 'gists', '--input', $bodyFile)
+  Set-Content -Path $gistFile -Value $made.id -Encoding ascii -NoNewline
+  $v = Run 'gh' @('variable', 'set', 'JACKIOH_PC_GIST', '--repo', $repo, '--body', $made.id)
+  if ($v.Code -eq 0) { Log "heartbeat gist $($made.id) made, and named to $repo as JACKIOH_PC_GIST" }
+  else { Log "heartbeat gist $($made.id) made, but not named to $repo ($(@($v.Out -split "`n")[0])): set the variable JACKIOH_PC_GIST to it" }
+}
+
 # The labels wanted now, at most `room` of them: one per queued job, then each standby label not
 # already among them.
 function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
@@ -281,15 +342,15 @@ function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
   , $want
 }
 
-Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s; at most {4} job(s); no GPU" -f `
-  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs)
-$wasCalm = $null
+Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; at most {4} job(s); no GPU" -f `
+  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow)
+$wasState = $null
 while ($true) {
   $d = Run 'docker' @('info', '--format', '{{.ServerVersion}}') 30
   if ($d.Code -ne 0) {
-    if ($wasCalm -ne 'nodocker') {
+    if ($wasState -ne 'nodocker') {
       Log "Docker is not answering ($(@($d.Out -split "`n")[0])); waiting"
-      $wasCalm = 'nodocker'
+      $wasState = 'nodocker'
     }
     Start-Sleep -Seconds 30
     continue
@@ -300,9 +361,12 @@ while ($true) {
   while ($samples.Count -gt $windowSize) { [void]$samples.Dequeue() }
   $over = @($samples | Where-Object { $_.Cpu -ge $cfg.cpuPercentBelow -or $_.Mem -ge $cfg.memoryGBBelow })
   $calm = ($samples.Count -ge $windowSize) -and ($over.Count -eq 0)
-  if ($calm -ne $wasCalm) {
-    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners and yielding containers)" -f $(if ($calm) { 'calm' } else { 'busy' }), $sample.Cpu, $sample.Mem)
-    $wasCalm = $calm
+  $quiet = $calm -and -not @($samples | Where-Object { $_.Cpu -ge $startCpuBelow }).Count
+  # quiet: a runner may start; calm: one already up keeps going at full speed; busy: neither.
+  $state = if ($quiet) { 'quiet' } elseif ($calm) { 'calm' } else { 'busy' }
+  if ($state -ne $wasState) {
+    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners and yielding containers)" -f $state, $sample.Cpu, $sample.Mem)
+    $wasState = $state
   }
 
   if (((Get-Date) - $lastSweep).TotalMinutes -ge 10) { Remove-StaleRunners $runners; $lastSweep = Get-Date }
@@ -310,6 +374,11 @@ while ($true) {
   $busy = @($runners | Where-Object Busy)
   $idle = @($runners | Where-Object { -not $_.Busy })
   foreach ($r in $busy) { Set-Throttle $r (-not $calm); $unwanted.Remove($r.Id) }
+
+  if ($heartbeatSeconds -gt 0 -and ((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+    $lastHeartbeat = Get-Date
+    try { Send-Heartbeat $sample $calm $runners } catch { Log "heartbeat failed: $_" }
+  }
 
   $room = [int]$cfg.maxJobs - $busy.Count
   if (-not $calm -or $room -le 0) {
@@ -338,7 +407,7 @@ while ($true) {
     elseif (((Get-Date) - $unwanted[$r.Id]).TotalMinutes -ge $retireGraceMinutes) { Stop-IdleRunner $r 'nothing wants it' }
   }
   # Idle runners count against maxJobs too, so two jobs landing at once never run past it.
-  if ($missing.Count -and ($busy.Count + $idle.Count) -lt [int]$cfg.maxJobs -and (Get-Date) -ge $nextStart) {
+  if ($quiet -and $missing.Count -and ($busy.Count + $idle.Count) -lt [int]$cfg.maxJobs -and (Get-Date) -ge $nextStart) {
     $label = $missing[0]
     $why = if ($label -in $queued) { "a queued $label job" } else { "standby for $label" }
     try { Start-Runner $label $why } catch { Log "start failed: $_" }

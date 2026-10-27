@@ -105,7 +105,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// card frame says so), and "tribal tag based hate" is an effect that picks its cards by having or
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
 /// Quickdraw, Wincon, Potion (Meditative+, R1178000), Terminus, Quest, Otherworldly, Other-Origins,
-/// Jelly Bean (#1837, R1837000) and Token name families and mechanics, not tribes.
+/// Jelly Bean (#1837, R1837000), Drone Core, Weapon, War Doctrine, Swarm (the held Stinkyscape set,
+/// R1857000) and Token name families and mechanics, not tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// R1176000: the tag every card in Chinese has. A card instance whose `chinese` flag is set (R1300)
@@ -1913,6 +1914,17 @@ pub const PATCH_MIN_CARDS: usize = 10;
 /// card's stats window must log before its figures are live-only. Fewer, and the card shows its
 /// previous window; the previous window short too, and AI development games pad the current one.
 pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
+
+// ---------------------------------------------------------------------------------------------
+// Whole-game figures (#1994, R1994000; SPEC §9.11)
+// ---------------------------------------------------------------------------------------------
+
+/// R1994000: the normal quantile of a two-sided 95% interval, which the first seat's Wilson
+/// interval (`wire::stats::wilson_interval`) and the arena's tallies take.
+pub const STATS_INTERVAL_Z: f64 = 1.96;
+
+/// R1994000: a share of the game figures is rounded to this many parts of one (three decimals).
+pub const STATS_SHARE_PRECISION: f64 = 1000.0;
 
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)

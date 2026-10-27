@@ -7,11 +7,13 @@
 #
 #   docker build -f crates/server/Dockerfile -t jackioh-server .
 #
-# Five stages build `jackioh-server` in release, cargo-chef's way: the tool (`chef`), the recipe
-# (`planner`), the dependencies (`deps`), the workspace's crates (`crates`), then the server's binary
-# (`build`). The dependencies (some 260 crates) sit in a layer of their own that a change to the
-# sources alone does not rebuild; the workspace's own four crates and the thin-LTO link are compiled
-# on every change, in two stages so that CI can build them in two jobs. The image is the
+# Six stages build `jackioh-server` in release, cargo-chef's way: the tool (`chef`), the recipe
+# (`planner`), the dependencies (`deps`), the engine, the cards and the AI (`game`), the server's
+# library (`crates`), then the server's binary (`build`). The dependencies (some 260 crates) sit in a
+# layer of their own that a change to the sources alone does not rebuild, and the engine, the cards
+# and the AI in one that a change to the server alone does not; the server's library and the
+# thin-LTO link are compiled on every change, each stage on its own so that CI can build each in a
+# job of its own. The image is the
 # last stage, a slim Debian with CA certificates (the server calls Supabase Auth over TLS and
 # connects to Supabase's Postgres over TLS) and the one binary. Nothing at run time needs Node, pnpm
 # or the repository: the catalog (crates/cards/catalog.json), the patch history that names the
@@ -65,17 +67,35 @@ FROM chef AS deps
 COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --locked -p jackioh-server --recipe-path recipe.json
 
-# The workspace's crates: the real manifests and sources over the skeleton, and the server's library
-# built with everything it builds on (the engine, the cards and the AI). `--lib` leaves out only the
-# server's binary, whose thin-LTO link generates the whole program's machine code; the features and
-# the profile are the same, so the build below compiles the binary alone and reuses everything here,
-# and the binary is byte for byte the one a single stage builds. target/ stays in this layer for it
-# (about 360 MB unpacked). A stage of its own, so CI can build it and write it to the layer cache in a
-# job of its own before the rehearsal (crates/server/tests/deploy/rehearse.sh's REHEARSAL_STAGE=crates,
-# #1223): on 4 cores this compile took 94 s and the binary's 131 s, against 234 s for both in one stage.
-FROM deps AS crates
+# The crates the server builds on, the engine, the cards and the AI: the real manifests and their
+# sources over the skeleton, built by the server's own command below (so with its features) while
+# the server is still the skeleton's empty crate. Only these three of crates/ are copied, so this
+# layer is rebuilt only when they, a manifest or the lock file change: a change to the server alone,
+# or to crates/tools, crates/luau or crates/wasm, reuses it (#2013). A crate the server comes to
+# build on needs a COPY line here, or the server's build below fails on its empty skeleton.
+# `cargo clean -p jackioh-server` then drops what the empty server left in target/, as `cargo chef
+# cook` drops the skeleton's compiled crates: the server's sources copied below keep the build
+# context's times, older than this build, so cargo would take the empty build script for fresh
+# and the library would not compile (JACKIOH_RULES_FINGERPRINT not defined). A stage of its own, so
+# CI can build it and write it to the layer cache in a job of its own
+# (crates/server/tests/deploy/rehearse.sh's REHEARSAL_STAGE=game): on 4 cores this compile took 54 s.
+FROM deps AS game
 COPY Cargo.toml Cargo.lock ./
-COPY crates ./crates
+COPY crates/engine ./crates/engine
+COPY crates/cards ./crates/cards
+COPY crates/ai ./crates/ai
+RUN cargo build --release --locked -p jackioh-server --lib \
+ && cargo clean --release --locked -p jackioh-server
+
+# The server's library on the crates above: its sources, and nothing above compiled again. `--lib`
+# leaves out only the server's binary, whose thin-LTO link generates the whole program's machine
+# code; the features and the profile are the same, so the build below compiles the binary alone and
+# reuses everything here, and the binary is byte for byte the one a single stage builds. target/
+# stays in this layer for it. A stage of its own, so CI can build it and write it to the layer cache
+# in a job of its own before the rehearsal (crates/server/tests/deploy/rehearse.sh's
+# REHEARSAL_STAGE=crates, #1223, #2013): on 4 cores this compile took 51 s and the binary's 122 s.
+FROM game AS crates
+COPY crates/server ./crates/server
 RUN cargo build --release --locked -p jackioh-server --lib
 
 # The server's binary and its thin-LTO link, the build the image always ran, on the crates above.
