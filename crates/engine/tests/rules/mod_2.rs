@@ -65,6 +65,7 @@ pub mod stays;
 pub mod stinkyscape_verbs;
 pub mod targeting;
 pub mod temporary;
+pub mod terminus;
 pub mod tradable;
 pub mod transform_riders;
 pub mod transform_variants;
