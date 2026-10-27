@@ -3376,6 +3376,13 @@
     "2053": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T13:05:43Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 1 fails: 11 source/doc files plus 5 test files is over the 10-file limit, though it all stays inside apps/web with no spec, engine or catalog work"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
