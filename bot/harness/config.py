@@ -130,7 +130,7 @@ _SHARED: dict[str, tuple[str, str]] = {
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
     "human required": ("e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"),
     "person merges": ("1d76db", "The bot builds it, but a person reviews and merges its pull request"),
-    "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
+    "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
     "priority:high": ("d73a4a", "The night bot picks this up first"),
