@@ -190,6 +190,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Scan for an Anomaly",
     // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
     "Units have keyword",
+    // R1876000, R1876001: ZolarKeth's verbs, its own face's words ("It can't use its own Activate",
+    // "Activate your Universities"), no term of their own.
+    "Another card's Activate",
   ],
 };
 
