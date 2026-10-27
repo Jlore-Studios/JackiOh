@@ -64,7 +64,7 @@ class RulesTests(unittest.TestCase):
 
     def test_an_older_reading_never_replaces_a_newer_one(self):
         state: dict = {}
-        disk.note(state, found(50, 15, "2026-10-04T21:00:00Z"), "night-vm-devin", "")
+        disk.note(state, found(50, 15, "2026-10-04T21:00:00Z"), "night-vm-gpt", "")
         disk.note(state, found(90, 3, "2026-10-04T20:00:00Z"), "night-vm-muse", "")
         self.assertEqual(state["machine_disk"]["reading"]["percent"], 50)
         disk.note(state, found(85, 4, "2026-10-04T22:00:00Z"), "night-vm-muse-2", "u")
@@ -325,22 +325,6 @@ class CleanScriptTests(unittest.TestCase):
         self.workers = f"11 {self.runner}/bin/Runner.Worker spawnclient 1 2"
         self.run_script("--job", runner_temp=temp)
         self.assertFalse(store.exists(), "the user's last job takes the store with it")
-
-    def test_devins_session_database_goes_with_its_last_job_and_its_login_stays(self):
-        cli = self.home / ".local/share/devin/cli"
-        db = self.make(cli / "sessions.db", 1, "x" * 100)
-        login = self.make(cli / "credentials.toml", 100)
-        old_log = self.make(cli / "logs" / "a.log", 9)
-        new_log = self.make(cli / "logs" / "b.log", 1)
-        self.workers = f"7 {self.lane2}/bin/Runner.Worker spawnclient 1 2"
-        self.run_script()
-        self.assertTrue(db.exists(), "another Devin job may have it open")
-        self.assertFalse(old_log.exists())
-        self.assertTrue(new_log.exists())
-        self.workers = ""
-        self.run_script()
-        self.assertFalse(db.exists())
-        self.assertTrue(login.exists())
 
     def test_when_it_cannot_tell_which_jobs_run_it_leaves_their_files_alone(self):
         self.lay_out_a_runner(self.runner)

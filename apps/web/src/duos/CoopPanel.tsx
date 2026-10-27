@@ -154,6 +154,9 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   useLocale();
   const headingId = useId();
   const joinId = useId();
+  // Each Try again is described by its own alert, so two of them on one panel can be told apart.
+  const decksErrorId = useId();
+  const liveErrorId = useId();
   const { decks, loadError, retry } = useSavedDecks();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   // R2094000: a co-op link fills the join form once, read here so StrictMode's second call agrees.
@@ -316,11 +319,11 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
       )}
       {liveError === null ? null : (
         <>
-          <p className="coop-panel__error" role="alert">
+          <p id={liveErrorId} className="coop-panel__error" role="alert">
             {t("Your live co-op game could not be checked: {message}", { message: t(liveError) })}
           </p>
           <div className="coop-panel__row">
-            <button type="button" data-testid={duosTestid.coopLiveRetry} onClick={retryLive}>
+            <button type="button" data-testid={duosTestid.coopLiveRetry} aria-describedby={liveErrorId} onClick={retryLive}>
               {t("Try again")}
             </button>
           </div>
@@ -380,11 +383,11 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
       </div>
       {loadError === null ? null : (
         <>
-          <p className="coop-panel__error" role="alert">
+          <p id={decksErrorId} className="coop-panel__error" role="alert">
             {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
           </p>
           <div className="coop-panel__row">
-            <button type="button" data-testid={duosTestid.coopDecksRetry} onClick={retry}>
+            <button type="button" data-testid={duosTestid.coopDecksRetry} aria-describedby={decksErrorId} onClick={retry}>
               {t("Try again")}
             </button>
           </div>

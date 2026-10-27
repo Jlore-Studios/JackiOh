@@ -71,8 +71,7 @@ class StarterTests(unittest.TestCase):
                                      only={"night-vm-other"})
         self.assertEqual([w["label"] for w in other], ["night-vm-other"])
         night = starter.waiting_jobs("123", ["bot-night.yml"], get, NOW,
-                                     only={"night-vm-gpt", "night-vm-agy", "night-vm-muse",
-                                           "night-vm-devin"})
+                                     only={"night-vm-gpt", "night-vm-agy", "night-vm-muse"})
         self.assertEqual([w["label"] for w in night], ["night-vm-gpt"])
 
 
@@ -149,9 +148,8 @@ class RegisterRunnersTests(unittest.TestCase):
         self.assertIn("agy=night-vm-agy=1", handed)
 
     def test_each_box_names_its_own_subscriptions_and_runners(self):
-        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=1")[3:],
-                         ["", "gpt=night-vm-gpt=1", "agy=night-vm-agy=1",
-                          "devin=night-vm-devin=6", "muse=night-vm-muse=1"])
+        self.assertEqual(self.handed("gpt", "agy", "muse=1")[3:],
+                         ["", "gpt=night-vm-gpt=1", "agy=night-vm-agy=1", "muse=night-vm-muse=1"])
         self.assertEqual(self.handed("muse=1", box="b2")[3:], ["b2", "muse=night-vm-muse=1"])
         self.assertEqual(self.handed("muse=0")[4:], ["muse=night-vm-muse=0"])
 
@@ -160,9 +158,9 @@ class RegisterRunnersTests(unittest.TestCase):
         and its fill-in runners (providers.json `fill_in`) on the night box, one per lane of
         gpt's and agy's."""
         self.assertIn("muse:fill=night-vm-muse-fill=2", self.handed())
-        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=1", "muse:fill")[4:],
-                         ["gpt=night-vm-gpt=1", "agy=night-vm-agy=1", "devin=night-vm-devin=6",
-                          "muse=night-vm-muse=1", "muse:fill=night-vm-muse-fill=2"])
+        self.assertEqual(self.handed("gpt", "agy", "muse=1", "muse:fill")[4:],
+                         ["gpt=night-vm-gpt=1", "agy=night-vm-agy=1", "muse=night-vm-muse=1",
+                          "muse:fill=night-vm-muse-fill=2"])
         self.assertEqual(self.handed("muse=3", box="b2")[3:], ["b2", "muse=night-vm-muse=3"])
         self.assertEqual(self.handed("muse:fill=1")[4:], ["muse:fill=night-vm-muse-fill=1"])
         self.assertNotEqual(self.run_script("gpt:fill").returncode, 0)
@@ -409,17 +407,13 @@ class SetupTests(unittest.TestCase):
             self.assertIn(night_only, self.night, night_only)
         self.assertIn("systemctl disable --now night-vm-idle-stop.timer", self.training)
 
-    def test_the_training_lanes_run_muse_and_devin_stays_on_the_night_box(self):
-        """#1272: the improve and unban lanes run Muse; Devin is the night bot's weak builder
-        alone, so only the night box installs it."""
+    def test_the_training_lanes_run_muse(self):
+        """#1272: the improve and unban lanes run Muse, which both boxes install."""
         self.assertIn("\n  install_muse\n", self.training)
-        for devin in ("install_devin", "DEVIN_MODEL", "devin --version"):
-            self.assertNotIn(devin, self.training, devin)
-        self.assertIn("\ninstall_muse\ninstall_devin\n", self.night)
+        self.assertIn("\ninstall_muse\n", self.night)
         loop = (REPO_ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
         self.assertIn('muse exec --yolo --disable-web-tools --workspace "$repo"', loop)
         self.assertIn('--model "$MUSE_MODEL"', loop)
-        self.assertNotIn("devin", loop.lower())
 
     def test_the_training_lanes_clean_their_own_disk(self):
         """The training box has no clean-up timer: each lane's cycle starts by giving back its own

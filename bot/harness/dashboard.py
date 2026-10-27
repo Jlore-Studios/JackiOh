@@ -414,7 +414,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
 
 #: The lanes table's order after the Claude accounts, which come first by number: the AWS boxes'
 #: subscriptions, as the owner reads them. Any other follows by name, and the other bots' last.
-LANE_ORDER = ("agy", "gpt", "devin", "muse")
+LANE_ORDER = ("agy", "gpt", "muse")
 #: How a bot's section carries its lanes to the night bot's table (`lanes_mark`): JSON in an HTML
 #: comment, which GitHub draws for nobody.
 LANES_MARK = "<!-- jackioh-bot:lanes "
@@ -706,8 +706,9 @@ def usage_charts(ctx: Context, state: dict[str, Any]) -> list[str]:
 def difficulty_legend(pool: Any) -> str:
     """What each difficulty may be built by, in one line above the queue."""
     names = {tier: waiting_mod.tier_names(pool, tier) for tier in ("weak", "medium", "strong")}
-    return ("<sub>🟢 **easy**: any model, the weak ones first "
-            f"({names['weak']}) · 🟡 **medium**, and ⚪ **unrated** until its planner rates it: "
+    weak = f", the weak ones first ({names['weak']})" if names["weak"] != "none" else ""
+    return (f"<sub>🟢 **easy**: any model{weak} · 🟡 **medium**, and ⚪ **unrated** until its "
+            "planner rates it: "
             f"a medium or strong model ({names['medium']}, then {names['strong']}) · 🔴 **hard**: "
             f"a strong model only ({names['strong']}). A build needs a plan first, by a medium "
             "or strong model (strong for a hard one); a review run of a medium or hard change "
@@ -867,9 +868,10 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
 #: the lane's pull request and its runs.
 LEARN_WORKFLOW = "learn.yml"
 LEARN_BRANCH = "ai/learn"
-#: learn.yml's schedule, "23 6 * * *": every day at 06:23 UTC. Each run starts the next as it ends
-#: (its `next` job), so the schedule only starts the lane again when that chain stops.
-LEARN_SCHEDULE = (6, 23)
+#: learn.yml's schedule, "23 6,18 * * *": twice a day, at 06:23 and 18:23 UTC. Each run starts the
+#: next as it ends (its `next` job), so the schedule only starts the lane again when that chain
+#: stops.
+LEARN_SCHEDULE = ((6, 23), (18, 23))
 #: learn.yml's LEARN_PR_STALE_HOURS: a lane pull request open this long is closed by the next run.
 LEARN_PR_STALE = timedelta(hours=48)
 LEARN_ROWS = 5
@@ -877,9 +879,10 @@ LEARN_ROWS = 5
 
 def next_learn_run(now: datetime) -> datetime:
     """When learn.yml's schedule next fires (GitHub fires schedules late; never early)."""
-    hour, minute = LEARN_SCHEDULE
-    at = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
-    return at if at > now else at + timedelta(days=1)
+    day = now.astimezone(timezone.utc).replace(second=0, microsecond=0)
+    times = [day.replace(hour=hour, minute=minute) + timedelta(days=ahead)
+             for ahead in (0, 1) for hour, minute in LEARN_SCHEDULE]
+    return min(at for at in times if at > now)
 
 
 #: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
@@ -980,13 +983,20 @@ def learn_lane(ctx: Context, found: Found | None = None) -> list[str]:
     lines += [f"- **The owner's PC:** {pc}.", ""]
     try:
         runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
-                if r.get("event") != "workflow_run"][:LEARN_ROWS]
+                if r.get("event") != "workflow_run"]
     except GitHubError:
         return lines + ["Its runs could not be read."]
     rows = []
     for run in runs:
+        if len(rows) == LEARN_ROWS:
+            break
         try:
             jobs = ctx.gh.list_jobs(run["id"]) if run.get("status") == "completed" else []
+            # A scheduled run queued behind a running one is cancelled by GitHub when the next
+            # schedule queues another (the `learn` concurrency group holds one waiting): it never
+            # ran, so it is no row.
+            if run.get("conclusion") == "cancelled" and not any(j.get("runner_name") for j in jobs):
+                continue
             result = learn_outcome(run, jobs)
         except (GitHubError, KeyError):
             result = RESULT.get(str(run.get("conclusion")), str(run.get("conclusion")))
@@ -1447,10 +1457,10 @@ def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tupl
 
 #: Each AWS box as its slots, as register-runners.sh lays the runners out (its header, and
 #: bot/machine/README.md, The Muse box; #2069): the place `_where` names it, the subscription whose
-#: lane each slot is, and the subscriptions whose runners there take no slot of their own (Devin's,
-#: until its plan ends), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
+#: lane each slot is, and the subscriptions whose runners there take no slot of their own (none
+#: now), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
 #: the slot of a subscription it fills while that one has no job in it. Change it with the boxes.
-BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ("devin",)),
+BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ()),
              ("Muse box", ("muse", "muse", "muse"), ()))
 _PLACE_ORDER = {"night box": 1, "Muse box": 2}
 
@@ -1497,7 +1507,7 @@ def _box_slots(ctx: Context, state: dict[str, Any], items: dict[str, int], place
             slots.append(([head, "⚪ free", f"{_text(fill[0])} may fill it" if fill else ""],
                           "idle"))
     busy = sum(1 for _, style in slots if style == "busy")
-    for pair in left:  # its other runners' jobs (Devin's), and any no slot names
+    for pair in left:  # its other runners' jobs, and any no slot names
         run, job = pair
         slots.append(([f"<b>{_text(job.get('runner_name'))}</b>",
                        f"🟢 {_text(_job_name(run, job))}", *working(pair)], "busy"))
