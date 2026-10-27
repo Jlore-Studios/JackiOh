@@ -5548,15 +5548,15 @@
       "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-2",
       "question": "",
       "queued_at": "2026-10-27T21:26:32Z",
       "round_tier": "medium",
-      "run_id": "40587507136",
+      "run_id": "pending:7806b3f1-1793137663",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-27T21:31:25Z",
+      "started_at": "2026-10-27T21:48:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -5626,9 +5626,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-27T21:33:02Z",
+    "at": "2026-10-27T21:48:24Z",
     "url": "",
-    "what": "build #2098 on muse"
+    "what": "review #2132 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-27T21:23:46Z",
