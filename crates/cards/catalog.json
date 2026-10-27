@@ -18158,7 +18158,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 16,
+    "loc": 27,
     "base": {
       "attack": 6,
       "health": 4,
@@ -22117,7 +22117,7 @@
       "stinkyscape-103",
       "stinkyscape-115"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
@@ -24811,7 +24811,7 @@
       "stinkyscape-110",
       "stinkyscape-111"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
@@ -24838,7 +24838,7 @@
       "stinkyscape-073",
       "stinkyscape-074"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand."
@@ -24865,7 +24865,7 @@
       "stinkyscape-114",
       "stinkyscape-123"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
@@ -24893,7 +24893,7 @@
       "stinkyscape-079",
       "stinkyscape-080"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
@@ -24921,7 +24921,7 @@
       "stinkyscape-161",
       "stinkyscape-162"
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [],
       "text": "Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is."

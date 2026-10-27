@@ -3,7 +3,7 @@
 The night bot's model sessions for the subscriptions that log in here run on this machine, the
 night box: one virtual machine on AWS, where each subscription in
 [`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is `night-vm-<id>`
-(Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
+(Codex, agy and Muse) has a Linux user of its own and a GitHub runner of its own per lane.
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
 GitHub write token. A second box, the training box (below), ran the two LLM training lanes
@@ -20,16 +20,16 @@ touches neither the logins nor the runners' registrations, and a runner in the m
 picks up the new `PATH` at its next restart (the script says which):
 
 ```sh
-bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
+bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
 ```
 
 | | |
 |---|---|
 | Instance | EC2 `m7i-flex.xlarge` (4 vCPUs, 16 GB, plus 8 GB swap) since 2026-10-26, an `m7i-flex.large` (2 vCPUs, 8 GB) before; Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
-| Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
+| Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
-| CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Browser | Google Chrome stable (`google-chrome-stable`, from Google's `.deb`, which adds Google's apt repository, so a later `setup.sh` upgrades it), for the UI walkthroughs `scripts/browse.sh` drives (`.claude/skills/ui-walkthrough/`, #816); nothing starts it but an item's UI work |
 | Rust | in each user's home: rustup, and the toolchain `rust-toolchain.toml` pins (1.97.0) on the minimal profile with `rustfmt`, `clippy` and the `wasm32-unknown-unknown` target; `~/.cargo/bin` is first on every runner's `PATH` |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
@@ -41,8 +41,8 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has four (two since #1273): one here,
+the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Muse has
+four lanes (two since #1273): one here,
 `night-vm-muse`, and three on the Muse box (`night-vm-muse-b2`, `-2-b2`, `-3-b2`), plus two
 fill-in runners here in gpt's and agy's lanes (`night-vm-muse-fill`, `-fill-2`), each under that
 box's `agent-muse` and its login (#1677). A lane the harness counts but no
@@ -80,7 +80,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 2. **Set it up**, with the ids from `providers.json`:
 
    ```sh
-   bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
+   bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
    ```
 3. **Log in** each machine subscription, once, as its own user
    (`aws ssm start-session --target <instance>`):
@@ -89,7 +89,6 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    sudo -iu agent-gpt codex login --device-auth   # Sign in with ChatGPT
    sudo -iu agent-agy agy                         # sign in with Google, then quit
    sudo -iu agent-muse muse login
-   sudo -iu agent-devin devin auth login --force-manual-token-flow   # paste the page's token
    ```
 4. **Register the runners**, from the repository's root:
 
@@ -99,7 +98,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
    It prints each runner's state; they also appear under Settings → Actions → Runners. With the
    Muse box, name what each box carries instead ([The Muse box](#the-muse-box), step 4): here,
-   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill`.
+   `bot/machine/register-runners.sh OWNER/REPO gpt agy muse=1 muse:fill`.
 5. **Deploy the starter**:
 
    ```sh
@@ -144,7 +143,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
-| CLIs | `muse` (as on the night box; #1272 moved the lanes from Devin, whose plan ends on 2026-11-02), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
+| CLIs | `muse` (as on the night box; #1272 moved the lanes to it), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
 | Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; only `gather` enabled since #1677, so it alone starts at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
@@ -201,8 +200,7 @@ Running the lanes:
   had built 20 GB of `target/debug` a lane in two weeks and left the disk 6 GB free (2026-10-19).
   Muse keeps every session in `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop
   deletes one 8 hours after it ended, as `clean.sh` does on the night box. The records
-  (`training-out/`) and logs stay. A box set up before #1272 also holds Devin's session database
-  in `~/.local/share/devin/cli/`; delete it as that user.
+  (`training-out/`) and logs stay.
 - **Cost**: about $0.19 an hour for the instance (on-demand `m7i-flex.xlarge` in `us-east-2`), so
   about $140 a month were it always on (the Muse box stops when idle), plus about $8 for its disk.
 
@@ -227,19 +225,18 @@ both boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB), and each runs three of these 
 So Muse runs six at once at most, and the two boxes six jobs together (`machine_parallel`). A
 job for `night-vm-muse` goes to whichever of the four runners with that label is free, so the
 runners each box holds are its limit. Muse has no login a secret can carry onto GitHub's runners,
-which is why both boxes are AWS's. Devin's six runners stay on the night box until its plan ends
-on 2026-11-02, outside those lanes; its jobs count in `machine_parallel` too.
+which is why both boxes are AWS's.
 
 | | The night box (`jackioh-night-vm`) | The Muse box (`jackioh-train-box`) |
 |---|---|---|
 | Instance | `m7i-flex.xlarge` (4 vCPUs, 16 GB) | `m7i-flex.xlarge` (4 vCPUs, 16 GB) |
-| Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-muse`, Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2`, and `night-vm-devin` (until 2026-11-02) | `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2` |
-| At once | three: gpt's lane and agy's, which Muse fills while either cannot start work, and one of Muse's own; Devin's apart | three of Muse's own |
+| Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-muse` and Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2` | `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2` |
+| At once | three: gpt's lane and agy's, which Muse fills while either cannot start work, and one of Muse's own | three of Muse's own |
 | Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
 | Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
-The status issue draws each box as its slots (`dashboard.BOX_SLOTS` in `bot/harness/`): the night box's gpt's, agy's and Muse's lanes, Devin's runners after them, and the Muse box's three of Muse's. Change it with the boxes.
+The status issue draws each box as its slots (`dashboard.BOX_SLOTS` in `bot/harness/`): the night box's gpt's, agy's and Muse's lanes, and the Muse box's three of Muse's. Change it with the boxes.
 
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
 runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
@@ -261,7 +258,7 @@ repository admin:
    `sudo -iu agent-muse muse login` (a second login of the same account).
 4. **Register the runners**, the night box's first:
    ```sh
-   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill
+   bot/machine/register-runners.sh OWNER/REPO gpt agy muse=1 muse:fill
    TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=3
    ```
    The first keeps one of the night box's own Muse runners, `night-vm-muse` (it removes any of
@@ -319,14 +316,14 @@ take some of the night box's own jobs while the box is busy or off.
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`, and no other: `learn.yml` and `gather.yml` name it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). Registered to this repository alone. `gather.yml` is left out of `config.json`'s workflows on purpose: its job waits for the idle runner the supervisor keeps for the label, so a learn job or a night-box job queued at the same time is served first |
+| Label | `jackioh-selfplay-local`: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). And `jackioh-selfplay-local-gather`, which `gather.yml`'s one job names (#2134): its entry in `config.json` has `ownSlot`, a slot of its own outside `maxJobs`, so gather runs beside a learn shard instead of waiting behind it, and the learn lane loses nothing. The supervisor starts its runner only when a gather job is queued (no standby) and retires it a minute after it goes idle. Both are registered to this repository alone |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
-| Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
+| Limits | one job at a time (`maxJobs`), 6 CPUs and 6 GB a container (`containerCpus`, `containerMemory`), swap off; and gather's slot, one job more, 2 CPUs and 3 GB (its entry's own `containerCpus` and `containerMemory`), so a learn shard and gather together stay within WSL2's 8 processors. A gather run there takes about three times as long as on six CPUs; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
 | Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit) |
 | Heartbeat | every `heartbeatSeconds` (120, `config.json`; 0 turns it off) the supervisor writes `pc.json` to a secret gist of the account `gh` is signed in as: the PC's CPU and memory in use, as a whole and without its runners (the figures that decide whether it lends itself), the size of its memory, whether it is calm (lending itself), and each runner container with the CPUs it uses and whether it is throttled. It makes the gist the first time, keeps its id in `pc-gist.txt` beside the scripts and names it to the repository as the variable `JACKIOH_PC_GIST` (`gh variable set`, which needs the admin sign-in the supervisor has anyway). `bot-status.yml` hands that variable to the status loop, whose runners section draws the PC from it, gather's job included. A heartbeat that fails is logged and tried again two minutes on; it never holds a runner up. `gh` needs its `gist` scope, which `gh auth login` gives by default (`gh auth refresh -s gist` adds it) |
 | Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
-| Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21) |
+| Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21). Its 6 GB and gather's 3 GB add up to more than WSL2's 8 GB, which the owner's own containers share too. A cap is a limit, not a reservation, and the learn lane nears its own only in the retrain; raising `.wslconfig`'s `memory` (and `processors`, to give gather more CPUs) is the owner's call |
 
 Any workflow could ask for the label, so it is safe only while **"Require approval for all external
 contributors"** stays on (Settings → Actions → General), as the night box's runners are (Why each
@@ -396,13 +393,12 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
     `/usr/local/bin/night-vm-job-done.sh`) it deletes that job's files; and after every job and
     every ten minutes (`night-vm-disk.timer`, for every agent user) it deletes what nothing needs:
     the user's package store, Cypress's binary and the npm cache once the user has no job going
-    (Devin's and Muse's other lanes share them), what a job that died without its hook left in an
+    (Muse's other lanes share them), what a job that died without its hook left in an
     idle runner's `_work/_temp`, the runner version a self-update replaced (`bin.<version>` and
     `externals.<version>`, about 650 MB a runner, beside the one `bin` links to) and its download,
     the runner's own logs after two days, the user's `/tmp` leftovers after 6 hours, Codex's
-    sessions after 7 days, Muse's (a few hundred MB a day) after 8 hours, and Devin's session
-    database (about 700 MB a day; the bot never resumes a Devin session) once Devin has no job
-    going, with its logs and summaries after 8 hours. It runs as the user whose home it cleans,
+    sessions after 7 days, and Muse's (a few hundred MB a day) after 8 hours. It runs as the
+    user whose home it cleans,
     never as root, and the checkout and the logins stay.
   - **Temporary files stay with the job:** on the machine `TMPDIR` is the job's own
     `RUNNER_TEMP/tmp` (`bot-night.yml`), emptied when the job ends.

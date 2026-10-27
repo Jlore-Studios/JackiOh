@@ -3,8 +3,8 @@ pull request, a planning run, or a suggestion survey, all on the one subscriptio
 
 Each role runs on the seat `plan` gave it (`plan["seats"]`: a model and its tier on this
 subscription): a planning session first when the item has no plan yet, the builder and its
-fixes, and the run's own adversarial reviewer. A builder whose seat has `self_check` (Devin) checks
-its own change before any review: build, checks, a self check by a fresh session of the same
+fixes, and the run's own adversarial reviewer. A builder whose seat has `self_check` (a weak one)
+checks its own change before any review: build, checks, a self check by a fresh session of the same
 model, and on findings a fix and the checks and the self check again, up to
 `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
 seat of at least medium to review in the run (only weak ones) ends with the change built, for a
@@ -72,8 +72,9 @@ PLANNER_DENY = BUILDER_DENY + ("NotebookEdit", "Bash(git commit:*)")
 
 DIFF_IN_PROMPT = 60_000
 #: A call that fails sooner than this with nothing to show (no text) is the subscription's failure,
-#: not the item's: its CLI or login is broken (#317 part 1). Devin failed every call in seconds
-#: from 2026-10-05 07:30Z, and each one was charged to its item as a build or an unreadable review.
+#: not the item's: its CLI or login is broken (#317 part 1). A weak subscription's CLI failed every
+#: call in seconds from 2026-10-05 07:30Z, and each one was charged to its item as a build or an
+#: unreadable review.
 INSTANT_FAILURE_S = 60
 #: The builder's running notes, at the top of the worktree. Git ignores it (`info/exclude`), so it
 #: is never committed; the harness reads it when the run ends and hands it to the next agent.
@@ -1373,7 +1374,7 @@ class Worker:
         ask = ("Rate how hard it is, by the rule below. The very first line of your answer is a "
                "single HTML comment carrying JSON, with nothing before it, then the plan:\n\n"
                f"{line}\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who "
-               "builds it: an easy item goes to the weakest model (Devin's SWE-2), which cannot "
+               "builds it: an easy item goes to the weakest model free, which may be unable to "
                "fill gaps, resolve a hard conflict, or judge what it cannot see. When in doubt "
                "between easy and medium, rate medium: a borderline easy costs a weak builder's "
                "failed run, while a medium plan still builds fast.")
@@ -1619,8 +1620,8 @@ class Worker:
             if self.review_seat is None:
                 # No seat here reviews in the run (a weak one only in a review run): a review
                 # run judges it. But never with conflict markers left in it (#317 part 2): its
-                # self checks may run out with them still open, as Devin's did on #203, #214
-                # and #287, and nothing after this would catch them before CI.
+                # self checks may run out with them still open, as a weak builder's did on #203,
+                # #214 and #287, and nothing after this would catch them before CI.
                 left, report = self._clear_markers(cycle, entry, report)
                 if report is None:
                     return
