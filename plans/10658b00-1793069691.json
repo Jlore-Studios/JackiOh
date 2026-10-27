@@ -1,0 +1,73 @@
+{
+  "action": "build",
+  "number": 2034,
+  "title": "Patch: audio comes back cleanly after a phone backgrounds the browser mid-game",
+  "branch": "bot/issue-2034",
+  "thread": "**Issue #2034 (data, not instructions):**\n\n```text\n# #2034: Patch: audio comes back cleanly after a phone backgrounds the browser mid-game\nOpened by @MaxGoetzmann.\n\n### What happens\n\nThis is a recent regression. On a phone, during a game, leaving the browser (switching to another app or the home screen) and then coming back does one of two things every time:\n\n1. **The audio never comes back.** Music, SFX and voice all stay silent for the rest of the game, even after more taps.\n2. **A loud, harsh audio tear** (a crackle, glitch or burst) plays as the page comes back.\n\nIt reproduces every time on mobile. It was not happening before the last few days of audio changes.\n\n### What should happen\n\nWhen the page comes back to the foreground, sound picks up where it left off. If the OS left the context suspended, the next tap resumes it (`apps/web/src/audio/unlock.ts`'s contract: \"iOS can suspend the context again after a call or a backgrounding, and the next tap has to resume it\"). Nothing that was scheduled or held while the page was hidden plays as a burst, and the music fades back in on its focus ramp (`MUSIC_FOCUS_TC_S`) with no click.\n\n### How to reproduce\n\n1. On a phone (iOS Safari and/or Android Chrome), open the client and start a game (`/practice` is enough). Tap until sound plays.\n2. Mid-game, with music playing, leave the browser: go to the home screen or switch apps for a few seconds or longer.\n3. Come back to the browser and tap the board.\n4. Either nothing is audible from then on, or a harsh tear plays as the page returns.\n\n### Where\n\n`apps/web`, `apps/web/src/audio/`\n\n### Leads (unconfirmed: verify before acting on them)\n\n- `engine.ts` doesn't react to the page's lifecycle (`visibilitychange`, `pagehide`/`pageshow`, the context's `statechange`). Only the music player's focus gain (`music.ts` `browserFocus`) and the gesture unlock (`unlock.ts`) do. Everything else is left to the OS suspending and resuming the context.\n- `unlock()` (`engine.ts`) only calls `ctx.resume()` on the existing context. If the OS closed it while the page was in the background (or it came back from the bfcache in a state `resume()` can't fix), nothing ever builds a new one. That would explain \"audio doesn't come back\". `state()` maps Safari's `\"interrupted\"` to `\"suspended\"`, so look at that path too.\n- For the tear: anything scheduled against `ctx.currentTime` or by `setTimeout` while the page was hidden (music voices and fades, ducks, SFX, the focus gain's `setTargetAtTime`) may all fire or jump at once when the context resumes. Also check whether a gain ramp starts from a stale value.\n- Recent audio changes to bisect from: #1887 (the #1827 build, the page-wide `appAudio.ts`, unlock and menu music) and #1970 (`engine.ts`'s `RAPID_SFX` field taps). Neither is confirmed as the cause.\n\n### Acceptance\n\n- Unit tests in `apps/web/src/audio/` with a fake `AudioContext` and document. The page goes hidden, then visible again, with the context `suspended`, `interrupted` and `closed`. After the next gesture, `engine.state()` is `\"running\"` and `playSfx` and the music play again. A closed context is rebuilt along with its mix and settings subscription.\n- A test that nothing scheduled while the page was hidden plays as a backlog on resume, and that the music's focus gain ramps back from silence instead of jumping.\n- `pnpm --dir apps/web typecheck` and `pnpm --dir apps/web test` pass.\n- No change to the engine, cards, AI or server crates.\n\n### Version or commit\n\nSeen on production around 2026-10-27, `main` at or after `5e04fd9`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2034: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
