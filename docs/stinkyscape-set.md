@@ -2240,8 +2240,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Destroy a Unit with less than {per}X Attack.
 - **Radiant:** Destroy a Unit with less than {per}X Attack, and the Units adjacent to it.
-- **Engine:** An X Spell ([[R65]], [[R348]]): its player chooses X as they play it, or it has its set X ([[R1848003]], S #102's copies). A declared target, a Unit whose Attack, read through the layers ([[§10.4]]), is below 4 × X as it is chosen and as it resolves ([[R81]]); `destroy`, Indestructible ignoring it. Radiant: `destroy_adjacent_to` as well, the Units beside it whatever their Attack ([[R59]]). A random cast takes its caster's mana as X, at least 1 ([[R348]]).
-- **Rulings:** ST-S14-4: "less than [4X]" is strictly below 4 × X, so an X of 1 destroys a Unit of 3 Attack or less; a Nerf's or a Buff's X step moves X, never below 1 ([[R386]]).
+- **Engine:** An X Spell ([[R65]], [[R348]]): its player chooses X as they play it, or it has its set X ([[R1848003]], S #102's copies). A declared target, a Unit whose Attack, read through the layers ([[§10.4]]), is below 4 × X as the play declares it, the check asked of the card with the play's X stamped, and not again as it resolves ([[R81]], [[R1868000]]), a pick the play needs ([[R703]]); `destroy`, Indestructible ignoring it. Radiant: `destroy_adjacent_to` as well, the Units beside it whatever their Attack ([[R59]]). A random cast takes its caster's mana as X, at least 1 ([[R348]]).
+- **Rulings:** ST-S14-4: "less than [4X]" is strictly below 4 × X, so an X of 1 destroys a Unit of 3 Attack or less; a Nerf's or a Buff's X step moves X, never below 1 ([[R386]]). Built by S14 (#1868) as [[R1868000]]: the target is checked at the play's X, needed, and not again as the Spell resolves.
 - **Numbers:** per 4 ↑ (the threshold's multiple of X).
 - **Check:** R275: its neighbours too, as S #12.1's Radiant.
 - **Class:** B.
@@ -2500,8 +2500,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Set all Units' Attack to 0. Lose {loss} mana next turn.
 - **Radiant:** Set all enemy Units' Attack to 0. Lose {loss} mana next turn.
-- **Engine:** For each Unit on the field of both sides (`for_each_card`), `buff { attack: −its Attack }`, read through the layers as it resolves ([[§10.4]]), so each shows 0; a later Buff or aura adds on top, as after Hearthstone's set. Then `next_turn_mana { amount: −1 }` on its caster ([[R1848004]]). Radiant: the enemy's Units alone.
-- **Rulings:** ST-S14-7: "Set … attack to 0" is a Buff of minus each Unit's Attack now (S #10.1's reading), existing primitives, so an Attack aura that leaves later takes its part with it, never below 0; a set of Attack alone at layer 1 would be NEW.
+- **Engine:** For each Unit on the field of both sides, `buff { attack: −its Attack }`, read through the layers as it resolves ([[§10.4]]) before layer 5's floor (`unclamped_attack`), so each shows exactly 0, one Nerfed below 0 included ([[R1868001]]); a later Buff or aura adds on top, as after Hearthstone's set. Then `next_turn_mana { amount: −1 }` on its caster ([[R1848004]]). Radiant: the enemy's Units alone.
+- **Rulings:** ST-S14-7: "Set … attack to 0" is a Buff of minus each Unit's Attack now (S #10.1's reading), existing primitives, so an Attack aura that leaves later takes its part with it, never below 0; a set of Attack alone at layer 1 would be NEW. Built by S14 (#1868) as [[R1868001]].
 - **Numbers:** loss 1 ↓; the 0 is what the card is ([[R1748003]]).
 - **Check:** R275: its caster's Units keep their Attack (both sides to one).
 - **Class:** C (M14's next-turn mana).
@@ -2513,8 +2513,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Double the Attack of all Units. All Units gain First Strike.
 - **Radiant:** Double the Attack of all Units. Your Units gain First Strike.
-- **Engine:** For each Unit on the field of both sides (`for_each_card`), `buff { attack: its Attack now }`, read through the layers ([[§10.4]]); then `grant_keyword { First Strike }` on every Unit of both sides, kept until it leaves the field ([[R78]]). Radiant: the First Strike for its caster's Units alone.
-- **Rulings:** ST-S14-8: "Double" is a Buff of each Unit's Attack now, as Hearthstone doubles; the First Strike is for good, not for the turn.
+- **Engine:** For each Unit on the field of both sides, `buff { attack: its Attack now }`, read through the layers and shown, floored at 0 ([[§10.4]], [[R1868001]]); then `grant_keyword { First Strike }` on every Unit of both sides, kept until it leaves the field ([[R78]]). Radiant: the First Strike for its caster's Units alone.
+- **Rulings:** ST-S14-8: "Double" is a Buff of each Unit's Attack now, as Hearthstone doubles; the First Strike is for good, not for the turn. Built by S14 (#1868) as [[R1868001]].
 - **Numbers:** none (the doubling is the card's word).
 - **Check:** R275: First Strike on your side alone (both sides to one).
 - **Class:** B.
