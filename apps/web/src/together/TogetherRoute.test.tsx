@@ -795,3 +795,33 @@ describe("the challenge dialog's focus (#1569)", () => {
     stopFollowingChallenge();
   });
 });
+
+describe("R2094000 a co-op link opens Play together filled", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+    at("/together");
+  });
+
+  it("R2094000 opening /together?coop=abc234 signed in shows the co-op panel with ABC234 filled and Join focused", async () => {
+    window.sessionStorage.clear();
+    at("/together?coop=abc234");
+    await renderPage();
+    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
+    expect(input).toHaveValue("ABC234");
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("");
+    await waitFor(() => {
+      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+    }, SLOW);
+  });
+
+  it("R2094000 an invalid code opens nothing filled", async () => {
+    window.sessionStorage.clear();
+    at("/together?coop=abc123");
+    await renderPage();
+    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
+    expect(input).toHaveValue("");
+    expect(window.location.search).toBe("");
+    expect(window.sessionStorage.getItem("jackioh.together.coopLink")).toBeNull();
+  });
+});

@@ -10,7 +10,7 @@
 // match, and then both players are on the board (the guest goes straight from its join). A room the
 // tab opened is remembered for the tab (COOP_ROOM_KEY, try/catch), so a reload picks the wait up.
 
-import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 
@@ -28,15 +28,47 @@ import {
 } from "../net/duos.ts";
 import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { coopLinkUrl, forgetCoopLink, readCoopLink, sendRoomLink } from "../net/roomLink.ts";
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
-import { messageOf } from "../together/session.ts";
+import { attempt, messageOf } from "../together/session.ts";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
 import { duosTestid } from "./testids.ts";
 import "./duos.css";
 
 /** The deck select's value for a dealt deck. */
 const RANDOM = "random";
+
+/** R2094000: where this tab remembers its last co-op deck pick, so a link join is one press. */
+export const COOP_DECK_KEY = "jackioh.coop.deck";
+
+/** R2094000: the remembered deck id, or null when none or storage refuses. */
+export function readCoopDeck(): string | null {
+  try {
+    const raw = window.localStorage.getItem(COOP_DECK_KEY);
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** R2094000: remember the deck a co-op room was made or joined with; null clears it. */
+export function writeCoopDeck(id: string | null): void {
+  try {
+    if (id === null) window.localStorage.removeItem(COOP_DECK_KEY);
+    else window.localStorage.setItem(COOP_DECK_KEY, id);
+  } catch {
+    // Remembering the pick is a convenience; a refusal costs nothing.
+  }
+}
+
+/**
+ * R2094000: the deck a join starts on: the last co-op pick when still saved,
+ * else the first saved deck, else none (a random deal).
+ */
+export function defaultCoopDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
+  return decks.find((deck) => deck.id === remembered) ?? decks[0] ?? null;
+}
 
 const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = {
   easy: "Easy",
@@ -124,11 +156,18 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const joinId = useId();
   const { decks, loadError, retry } = useSavedDecks();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
-  const [deck, setDeck] = useState<string>(RANDOM);
+  // R2094000: a co-op link fills the join form once, read here so StrictMode's second call agrees.
+  const [coopLink] = useState(readCoopLink);
+  const [deck, setDeck] = useState<string>(() => readCoopDeck() ?? RANDOM);
   const [lean, setLean] = useState(readPlayLean);
   const [room, setRoom] = useState<string | null>(readStoredRoom);
-  const [joinCode, setJoinCode] = useState("");
+  const [joinCode, setJoinCode] = useState(coopLink ?? "");
+  const [linkSent, setLinkSent] = useState<"shared" | "copied" | null>(null);
   const [picked, setPicked] = useState("");
+  // R2094000: the deck settles to the last pick once decks arrive, unless the player touched it.
+  const touchedDeck = useRef(false);
+  const joinSubmit = useRef<HTMLButtonElement>(null);
+  const focusPending = useRef(coopLink !== null);
   // The friend the invite goes to: the one picked, else the first listed, so one friend needs no pick.
   const invitee = friends.some((each) => each.profileId === picked) ? picked : (friends[0]?.profileId ?? "");
   const [busy, setBusy] = useState(false);
@@ -175,6 +214,24 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     };
   }, [room]);
 
+  // R2094000: settle the join deck on the last co-op pick, else the first saved deck, once decks arrive.
+  useEffect(() => {
+    if (touchedDeck.current || decks.length === 0) return;
+    const settled = defaultCoopDeck(decks, readCoopDeck())?.id ?? RANDOM;
+    setDeck((current) => (current === settled ? current : settled));
+  }, [decks]);
+
+  // R2094000: the link is used once: the join form opens filled and Join takes the focus.
+  useEffect(() => {
+    forgetCoopLink();
+  }, []);
+  useEffect(() => {
+    if (!focusPending.current || busy || room !== null) return;
+    focusPending.current = false;
+    joinSubmit.current?.focus();
+    forgetCoopLink();
+  }, [busy, room]);
+
   /** S6: exactly one of a saved deck and a random deal, the deal with its lean when there is one. */
   const choice = (): DuosDeckChoice =>
     deck === RANDOM ? { random: true, ...(lean === null ? {} : { leanSet: lean }) } : { deckId: deck };
@@ -196,8 +253,10 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   };
 
   const create = (): void => {
+    const pickedDeck = deck;
     run(async () => {
       const made = await createDuosRoom({ difficulty, ...choice() });
+      writeCoopDeck(pickedDeck === RANDOM ? null : pickedDeck);
       storeRoom(made.code);
       setRoom(made.code);
     });
@@ -218,17 +277,29 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     if (room === null || friend === undefined) return;
     const code = room;
     run(async () => {
-      await sendChat(friend.profileId, t("Join my co-op game against the AI: the room code is {code}.", { code }));
+      await sendChat(
+        friend.profileId,
+        t("Join my co-op game against the AI here: {link} (room code {code}).", { link: coopLinkUrl(code), code }),
+      );
       setStatus(t("Invite sent to {name}.", { name: friend.username }));
     });
+  };
+
+  const sendLink = (): void => {
+    if (room === null) return;
+    const code = room;
+    // R2094000: sharing failures stay silent, like the 1v1 room's link button.
+    attempt(() => sendRoomLink(coopLinkUrl(code))).then(setLinkSent, () => undefined);
   };
 
   const join = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const code = joinCode.trim().toUpperCase();
     if (code === "") return;
+    const pickedDeck = deck;
     run(async () => {
       const joined = await joinDuosRoom(code, choice());
+      writeCoopDeck(pickedDeck === RANDOM ? null : pickedDeck);
       navigate(paths.duos(joined.matchId));
     });
   };
@@ -282,7 +353,9 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
             value={deck}
             disabled={busy || room !== null}
             onChange={(event) => {
+              touchedDeck.current = true;
               setDeck(event.target.value);
+              writeCoopDeck(event.target.value === RANDOM ? null : event.target.value);
             }}
           >
             <option value={RANDOM}>{t("Random deck")}</option>
@@ -355,6 +428,9 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
             <button type="button" data-testid={duosTestid.coopInvite} disabled={busy || invitee === ""} onClick={invite}>
               {t("Invite")}
             </button>
+            <button type="button" data-testid={duosTestid.coopLink} disabled={busy} onClick={sendLink}>
+              {linkSent === "shared" ? t("Link shared") : linkSent === "copied" ? t("Link copied") : t("Copy invite link")}
+            </button>
             <button type="button" data-testid={duosTestid.coopCancel} disabled={busy} onClick={cancel}>
               {t("Close the room")}
             </button>
@@ -376,7 +452,12 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
             setJoinCode(event.target.value);
           }}
         />
-        <button type="submit" data-testid={duosTestid.coopJoinSubmit} disabled={busy || room !== null || joinCode.trim() === ""}>
+        <button
+          type="submit"
+          ref={joinSubmit}
+          data-testid={duosTestid.coopJoinSubmit}
+          disabled={busy || room !== null || joinCode.trim() === ""}
+        >
           {t("Join")}
         </button>
       </form>
