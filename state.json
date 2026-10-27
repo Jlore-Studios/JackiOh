@@ -820,7 +820,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "round_tier": "",
-      "run_id": "pending:9688c01a-1793063166",
+      "run_id": "40430597692",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T01:06:34Z",
       "stop_requested": false,
