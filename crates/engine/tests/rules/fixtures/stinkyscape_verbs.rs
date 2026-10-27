@@ -2,7 +2,8 @@
 //! Immune to Spell Damage (R1849000), Evolve (R1849001), destroy becomes exile (R1849002), reflected
 //! damage (R1849003), the own-turn redirect (R1849004), the Gauntlet's lanes (R1849005), "Units cannot
 //! be in Defense Position" (R1849006), a random forced attacker (R1849007), "when one of your Units is
-//! attacked" (R1849008) and a trap's chance to reveal (R1849009). Each does it through the engine's own
+//! attacked" (R1849008) and a trap's chance to reveal (R1849009); and, for S15 (issue #1875), a Trap that
+//! answers a Unit's death in combat before anything moves (R1875006). Each does it through the engine's own
 //! verbs and static flags, as a card script would, so the engine never imports `crates/cards`; the
 //! Stinkyscape cards that use them come later, behind the set's gate.
 //!
@@ -35,6 +36,8 @@ pub const AERELRET_CHANCE: i32 = 30;
 pub const AERELRET_DAMAGE: i32 = 1;
 /// The lucky Aerelret's Lucky.
 pub const AERELRET_LUCKY: i32 = 2;
+/// What the reprieve's follow-up gives the Unit it answers for (Stinkyscape #138's shape, R1875006).
+pub const REPRIEVE_HEALTH: i32 = 10;
 
 /// A 2/4 Unit with Divine Shield, immune to Spell Damage (Paragon-X's shape).
 pub const IMMUNE: &str = "sv-immune";
@@ -112,6 +115,13 @@ pub const TAUNTER: &str = "sv-taunter";
 pub const FLYER: &str = "sv-flyer";
 /// A plain 1/1, to draw.
 pub const PLAIN: &str = "sv-plain";
+/// A Trap: "Reveals when one of your Units would die in combat: give it +10 Health" (Stinkyscape #138
+/// Pocket Peptides' shape, R1875006).
+pub const REPRIEVE: &str = "sv-reprieve";
+/// A Spell: "Cast a new bolt at the enemy hero, and only there" (a bolt aims at Units alone).
+pub const AIM_ONLY: &str = "sv-aim-only";
+/// A Spell: "Cast a new bolt at the enemy hero", which falls back to its caster's choice.
+pub const AIM_FALLBACK: &str = "sv-aim-fallback";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (base, radiant) = match stats {
@@ -228,6 +238,62 @@ fn warp(random: bool) -> Script {
     Script {
         static_flags: flags(json!({ "unitsNeverDefense": true })),
         triggers: vec![enemy_summons("sv-warp-summoned", random)],
+        ..Script::default()
+    }
+}
+
+/// The reprieve's `wouldDie` replacement: one of its controller's Units the check collected was killed
+/// in combat (`DyingUnit.combat`); its follow-up resolves before anything moves (`resolveFirst`).
+fn reprieve() -> Script {
+    let in_combat = |event: &ReplacedEvent, controller: PlayerId| match event {
+        ReplacedEvent::WouldDie { units } => units
+            .iter()
+            .find(|unit| unit.controller == controller && unit.combat == Some(true))
+            .map(|unit| unit.instance_id.clone()),
+        _ => None,
+    };
+    Script {
+        replacements: vec![ReplacementDef {
+            id: "sv-reprieve".into(),
+            on: ReplacementMoment::WouldDie,
+            where_: None,
+            when: Some(replacement_when(move |rc| {
+                in_combat(rc.event, rc.controller).is_some()
+            })),
+            instead: ReplacementInstead {
+                resolve_first: Some(true),
+                ..ReplacementInstead::default()
+            },
+            then: Some("reprieve".into()),
+            by: None,
+        }],
+        resume: IndexMap::from([(
+            "reprieve",
+            hook(move |ctx| {
+                replacement_of(&*ctx)
+                    .and_then(|record| in_combat(&record.event, ctx.controller))
+                    .map(|id| {
+                        vec![effects::buff(json_as(
+                            json!({ "target": instance(&id), "health": REPRIEVE_HEALTH }),
+                        ))]
+                    })
+                    .unwrap_or_default()
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+/// A Spell that casts a new bolt aimed at the enemy hero, `aimOnly` or not.
+fn aimed_bolt(only: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            let mut args = json!({ "def": BOLT, "aimAt": "hero:p2" });
+            if only {
+                args["aimOnly"] = json!(true);
+            }
+            vec![effects::cast_new(json_as(args))]
+        })),
         ..Script::default()
     }
 }
@@ -513,6 +579,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 ..Script::default()
             }),
         ),
+        (REPRIEVE.to_string(), both(reprieve())),
+        (AIM_ONLY.to_string(), both(aimed_bolt(true))),
+        (AIM_FALLBACK.to_string(), both(aimed_bolt(false))),
     ])
 }
 
@@ -573,6 +642,9 @@ fn defs() -> Vec<CardDef> {
         card(18524, FLYER, "Unit", Some((2, 3)), json!([{ "kind": "Flying" }])),
         card(18525, PLAIN, "Unit", Some((1, 1)), json!([])),
         card(18526, WARDEN, "Unit", Some((2, 2)), json!([])),
+        card(18527, REPRIEVE, "Trap", None, json!([])),
+        card(18528, AIM_ONLY, "Spell", None, json!([])),
+        card(18529, AIM_FALLBACK, "Spell", None, json!([])),
     ]
 }
 
