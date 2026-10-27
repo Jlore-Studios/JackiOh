@@ -115,11 +115,11 @@ use crate::db::store::{
     PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
-    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus,
+    SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
+    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1742,6 +1742,41 @@ pub fn replays_list(
             .finished_at
             .cmp(&a.row.finished_at)
             .then_with(|| b.row.id.cmp(&a.row.id))
+    });
+    Ok(rows
+        .into_iter()
+        .skip(usize::try_from(offset).unwrap_or(0))
+        .take(usize::try_from(limit).unwrap_or(0))
+        .collect())
+}
+
+/// R768: the rows `replays_list` answers, each paired with what `matches_mode_of` answers for its
+/// match: one call, however many rows the page holds.
+pub fn replays_list_with_modes(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayWithMode>, StoreError> {
+    call(f, "replays.listWithModes")?;
+    let tables: &FakeTables = f.tables();
+    let mut rows: Vec<ReplayWithMode> = tables
+        .matches
+        .iter()
+        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
+        .filter_map(|row| replay_row_in(tables, row))
+        .filter(|replay| replay.actions > 0)
+        .map(|replay| {
+            let mode = match_mode_in(tables, &replay.row.id);
+            ReplayWithMode { replay, mode }
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        b.replay
+            .row
+            .finished_at
+            .cmp(&a.replay.row.finished_at)
+            .then_with(|| b.replay.row.id.cmp(&a.replay.row.id))
     });
     Ok(rows
         .into_iter()
