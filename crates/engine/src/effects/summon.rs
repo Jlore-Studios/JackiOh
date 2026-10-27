@@ -37,7 +37,8 @@ use crate::wire::{
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, remove_from_any_zone, row_size,
+    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, place_standing_on_field,
+    remove_from_any_zone, row_size,
 };
 
 // R1 (`CRY_ON_PLAY_ONLY`): a summon fires no Cry, nor does any other verb that puts a card on the
@@ -210,14 +211,27 @@ fn summon_onto(
     at: &SummonPlacement,
     former_id: Option<String>,
 ) -> bool {
-    if !place_on_field(
-        ctx.state,
-        card,
-        slot,
-        PlaceOnFieldOptions {
-            stack: Some(at.stack == Some(true)),
-        },
-    ) {
+    summon_onto_as(ctx, card, slot, at, former_id, false)
+}
+
+/// `summon_onto`, with `stands` for a Unit set down standing in a backrow zone (R1081000, R1879001).
+fn summon_onto_as(
+    ctx: &mut EffectContext<'_>,
+    card: &mut CardInstance,
+    slot: &ZoneSlot,
+    at: &SummonPlacement,
+    former_id: Option<String>,
+    stands: bool,
+) -> bool {
+    let options = PlaceOnFieldOptions {
+        stack: Some(at.stack == Some(true)),
+    };
+    let placed = if stands {
+        place_standing_on_field(ctx.state, card, slot, options)
+    } else {
+        place_on_field(ctx.state, card, slot, options)
+    };
+    if !placed {
         return false;
     }
 
@@ -281,7 +295,40 @@ pub(crate) fn summon_fresh(
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
     let slot = zone_for(ctx, player, row, at)?;
+    summon_fresh_into(ctx, def_id, player, &slot, at, false)
+}
 
+/// R1879001: a fresh Unit summoned standing in its controller's backrow zone `at.lane`, as a Flying
+/// play stands there (R1081000): an open, unreserved zone, else nothing. The caller vets the card.
+pub(crate) fn summon_fresh_standing(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> Option<CardInstance> {
+    let lane = at.lane?;
+    if lane < 1 || lane > row_size(Row::Backrow) {
+        return None;
+    }
+    let slot = ZoneSlot {
+        player,
+        row: Row::Backrow,
+        lane,
+    };
+    if is_reserved(ctx.state, &slot) || !is_empty(ctx.state, &slot) {
+        return None;
+    }
+    summon_fresh_into(ctx, def_id, player, &slot, at, true)
+}
+
+fn summon_fresh_into(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    slot: &ZoneSlot,
+    at: &SummonPlacement,
+    stands: bool,
+) -> Option<CardInstance> {
     let mut card = new_instance(&mut *ctx.state, def_id, player, Zone::Resolving { player });
     if at.radiant == Some(true) {
         card.radiant = true;
@@ -297,7 +344,7 @@ pub(crate) fn summon_fresh(
         card.x = Some(x);
     }
     crate::generators::record_generator(ctx, &card);
-    if summon_onto(ctx, &mut card, &slot, at, None) {
+    if summon_onto_as(ctx, &mut card, slot, at, None, stands) {
         Some(card)
     } else {
         None
