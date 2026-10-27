@@ -74,35 +74,86 @@ mod tests {
     use crate::launch_starship;
     use jackioh_engine::prelude::{STARSHIP_LAUNCH_COST, dormant_starship_of, launch_cost, starship_pieces_of};
     use jackioh_engine::testkit::*;
+    use jackioh_engine::{is_tradable, trades_left};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const FEELINGS: &str = "classic-032"; // (2) Spell: steal an enemy Unit in a lane with your (1) Unit.
+    const FIRSTSTRIKE: &str = "stinkyscape-137"; // (4) Unit, Cry: launch your Dormant Starship.
 
     /// p1's Prepare For Liftoff set (Radiant if `radiant`) in backrow lane 1, and a Startos of p1's in
     /// lane 2 and of p2's in lane 1, p1 holding two Hit Jobs.
     fn setup(seed: &str, radiant: bool) -> Scenario {
+        board(seed, radiant, "p1", json!({}), json!({}))
+    }
+
+    /// `setup`'s board with `active` to act and each side's entries replaced by `p1`'s and `p2`'s.
+    fn board(seed: &str, radiant: bool, active: &str, p1: Value, p2: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
-            "active": "p1",
-            "p1": {
+            "active": active,
+            "p1": crate::merged(json!({
                 "hand": [HIT_JOB, HIT_JOB],
                 "field": [{ "def": STARTOS, "lane": 2 }],
                 "backrow": [{ "def": ID, "lane": 1, "faceUp": false, "radiant": radiant }],
                 "mana": 10,
                 "library": crate::filler(4),
-            },
-            "p2": {
+            }), p1),
+            "p2": crate::merged(json!({
                 "hand": crate::filler(1),
                 "field": [{ "def": STARTOS, "lane": 1 }],
+                "mana": 10,
                 "library": crate::filler(4),
-            },
+            }), p2),
         }));
         for player in [P1, P2] {
             s.state_mut().players[player].auto_end_turn = Some(false);
         }
         s
+    }
+
+    /// `player` steals the enemy Unit in `lane` with Felinor Feelings, their own Startos standing in
+    /// that lane: the stolen card's id.
+    fn steal(s: &mut Scenario, player: PlayerId, lane: i32) -> String {
+        let id = s.unit_at(opponent_of(player), lane).id;
+        s.play(FEELINGS, json!({ "targets": pick::id(&id) }));
+        assert_eq!(s.card(id.as_str()).controller, player, "stolen");
+        id
+    }
+
+    /// p1 sets the Prepare For Liftoff in their graveyard into backrow lane 1 again (Flashback, §6.1),
+    /// as `legalActions` offers it: the harness's `play` takes a card from a hand.
+    fn set_from_graveyard(s: &mut Scenario) {
+        let trap = s.card(ID).id.clone();
+        s.act(
+            ActionBody::Play {
+                instance_id: trap,
+                zone: Some(ZoneChoice {
+                    row: Row::Backrow,
+                    lane: 1,
+                }),
+                x: None,
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: None,
+            },
+            P1,
+            "set Prepare For Liftoff from the graveyard",
+        );
+    }
+
+    /// Whether `legalActions` offers p1 a play of the Prepare For Liftoff.
+    fn offered(s: &Scenario) -> bool {
+        let trap = s.card(ID).id.clone();
+        legal_actions(s.state(), P1)
+            .iter()
+            .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == trap))
     }
 
     fn hit(s: &mut Scenario, player: PlayerId, lane: i32) -> String {
@@ -162,5 +213,115 @@ mod tests {
         hit(&mut s, P1, lane);
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship");
         assert_eq!(starship_pieces_of(ship).len(), 2);
+    }
+
+    #[test]
+    fn r1859012_a_piece_it_owns_dying_under_the_enemy_fuses_into_its_starship_and_reveals_it() {
+        // p2 steals p1's Startos and destroys it: it dies under p2's control into p1's graveyard, and
+        // its copy fuses into p1's Starship (R1852002), so it is one of p1's Starship Pieces.
+        let mut s = board(
+            "r1859012-stolen-own",
+            false,
+            "p2",
+            json!({ "hand": [] }),
+            json!({ "hand": [FEELINGS, HIT_JOB], "field": [{ "def": STARTOS, "lane": 2 }] }),
+        );
+        let piece = steal(&mut s, P2, 2);
+        s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P1 });
+        assert!(dormant_starship_of(s.state(), P1).is_some(), "the copy fused into p1's Starship");
+        assert!(trap_fired(&s));
+        s.expect_in_zone(ID, "graveyard");
+        assert_eq!(launch_cost(s.state(), P1), 0);
+        assert_eq!(launch_cost(s.state(), P2), STARSHIP_LAUNCH_COST);
+    }
+
+    #[test]
+    fn r1859012_an_enemy_piece_dying_under_its_controller_leaves_it_set() {
+        // p1 steals p2's Startos and destroys it: it dies under p1's control but fuses into p2's
+        // Starship, so it is not one of p1's Starship Pieces.
+        let mut s = board(
+            "r1859012-stolen-enemy",
+            false,
+            "p1",
+            json!({ "hand": [FEELINGS, HIT_JOB] }),
+            json!({ "field": [{ "def": STARTOS, "lane": 2 }] }),
+        );
+        let piece = steal(&mut s, P1, 2);
+        s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P2 });
+        assert!(dormant_starship_of(s.state(), P2).is_some(), "the copy fused into p2's Starship");
+        assert!(dormant_starship_of(s.state(), P1).is_none());
+        assert!(!trap_fired(&s));
+        let trap = s.card(ID);
+        assert!(matches!(trap.zone, Zone::Field { row: Row::Backrow, .. }) && trap.face_up != Some(true));
+        assert_eq!(launch_cost(s.state(), P1), STARSHIP_LAUNCH_COST);
+    }
+
+    #[test]
+    fn r1859012_a_launch_by_an_effect_leaves_the_free_launch_held() {
+        let mut s = board(
+            "r1859012-effect-launch",
+            false,
+            "p1",
+            json!({ "hand": [HIT_JOB, FIRSTSTRIKE] }),
+            json!({}),
+        );
+        hit(&mut s, P1, 2);
+        assert_eq!(launch_cost(s.state(), P1), 0);
+        let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship").id.clone();
+        // Firststrike Capability's Cry awakens the Starship, a launch that spends no price (R1852006).
+        s.play(FIRSTSTRIKE, json!({ "zone": 4 }));
+        assert!(s.card(ship.as_str()).starship.as_ref().is_some_and(|memory| memory.launched.is_some()));
+        assert_eq!(launch_cost(s.state(), P1), 0, "still held for the next launch by the Activate");
+    }
+
+    /// Tradable (R1838000): either face goes from the hand into the deck for a draw, one Trade a turn.
+    #[test]
+    fn both_faces_trade_from_the_hand_for_a_draw_once_a_turn() {
+        for radiant in [false, true] {
+            let mut s = board(
+                "r1838000-liftoff-trade",
+                radiant,
+                "p1",
+                json!({ "hand": [{ "def": ID, "radiant": radiant }], "backrow": [] }),
+                json!({}),
+            );
+            let trap = s.card(ID).clone();
+            assert!(is_tradable(s.state(), &trap), "radiant {radiant}: the face prints Tradable");
+            let (hand, deck) = (s.hand("p1").len(), s.pile("p1", "library").len());
+            s.trade(&trap.id);
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+            assert_eq!(s.hand("p1").len(), hand);
+            assert_eq!(s.pile("p1", "library").len(), deck);
+            assert_eq!(trades_left(s.state(), P1), 0, "the turn's one Trade is made");
+        }
+    }
+
+    #[test]
+    fn flashback_sets_it_again_once_from_the_graveyard_where_it_reveals_again() {
+        let mut s = board(
+            "liftoff-flashback",
+            false,
+            "p1",
+            json!({ "field": [{ "def": STARTOS, "lane": 2 }, { "def": STARTOS, "lane": 3 }] }),
+            json!({}),
+        );
+        hit(&mut s, P1, 2);
+        assert!(trap_fired(&s));
+        s.expect_in_zone(ID, "graveyard");
+        assert!(offered(&s), "Flashback offers it from the graveyard");
+
+        set_from_graveyard(&mut s);
+        let trap = s.card(ID).clone();
+        assert!(matches!(trap.zone, Zone::Field { player: P1, row: Row::Backrow, lane: 1 }), "{:?}", trap.zone);
+        assert!(trap.face_up != Some(true), "set face-down");
+        assert_eq!(trap.flashback_spent, Some(true));
+
+        // Set again, it reveals on the next of p1's pieces to die, then Flashback is spent.
+        hit(&mut s, P1, 3);
+        assert!(trap_fired(&s));
+        s.expect_in_zone(ID, "graveyard");
+        assert!(!offered(&s), "not again");
     }
 }
