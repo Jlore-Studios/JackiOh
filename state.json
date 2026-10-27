@@ -4650,15 +4650,23 @@
       }
     },
     "2088": {
+      "action": "revise",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T14:38:13Z",
       "issue": 2047,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-27T17:13:33Z",
+      "run_id": "pending:61386845-1793121207",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-27T17:14:01Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -4681,9 +4689,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-27T17:01:21Z",
+    "at": "2026-10-27T17:14:01Z",
     "url": "",
-    "what": "build #2023 on claude-5"
+    "what": "revise #2088 on muse"
   },
   "last_sweep": {
     "at": "2026-10-27T16:57:59Z",
