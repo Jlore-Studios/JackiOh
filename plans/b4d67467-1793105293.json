@@ -1,0 +1,75 @@
+{
+  "action": "build",
+  "number": 2051,
+  "title": "Patch: the replays list reads a page in a few queries instead of ninety",
+  "branch": "bot/issue-2051",
+  "thread": "**Issue #2051 (data, not instructions):**\n\n```text\n# #2051: Patch: the replays list reads a page in a few queries instead of ninety\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe replays screen is one of the client's hot reads. Building one page of ten rows currently costs the database close to ninety statements \u2014 the row list, then several more queries per row to learn each match's mode and result \u2014 all inside one transaction. After this patch the same page is built in a small constant number of queries, so the screen loads faster and holds a database connection for a fraction of the time.\n\n## Why\n\n`api/replays.rs:444-449` calls `replays_list` (page + 1), then `matches_mode_of` once per replay. Each `matches_mode_of` (`db/pg.rs:3488-3525`) runs a GIN-indexed `series_with_game` probe plus a mode select; inside `replays_list`, `replay_row` (`db/pg.rs:3640-3661`) adds a `matches` select and `results_get_by_match` per row. With a `run_as` statement per store call (`db/pg.rs:512-520`), a `REPLAY_LIST_PAGE = 10` page is roughly 1 + 2\u00d711 + 2\u00d710 + 1 = 44 logical calls \u2014 ~88 sequential statements over the pooler. The in-memory fake answers instantly, so only Postgres shows the cost.\n\n## Proposal\n\nA batched `replays_list` variant that joins `matches`, `results` and the action count and derives each row's mode in one query (the series/room/ticket precedence mirrors `matches_mode_of`), keeping the already-batched `profiles_get_many` opponent read. Fake and Postgres change symmetrically; the existing `contract.rs` `replays` module already asserts row equality between them.\n\n## Where it lands\n\n`crates/server/src/api/replays.rs`, `crates/server/src/db/pg.rs`, `crates/server/src/db/fake.rs`, `crates/server/tests/store/contract.rs`.\n\n## Acceptance criteria\n\n- [ ] A page costs a constant small number of statements regardless of page size\n- [ ] Fake and Postgres return identical rows (the contract tests prove it)\n- [ ] No change to the response shape or pagination behaviour\n\n## Size and risks\n\nMedium: mostly SQL join work. The contract suite gives parity coverage for free; the risk is a subtly wrong mode derivation, which the same suite's row-equality assertions cover.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:46:59Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2051: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2050 needs a plan",
+    "#2051 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
