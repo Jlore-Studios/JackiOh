@@ -3646,7 +3646,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-27T11:01:12Z",
-      "run_id": "pending:13038f47-1793098865",
+      "run_id": "40493070589",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
