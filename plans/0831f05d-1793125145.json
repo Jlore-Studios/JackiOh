@@ -1,0 +1,67 @@
+{
+  "action": "build",
+  "number": 2092,
+  "title": "Patch (part 1 of 2): Play again after a co-op game, the server's offers",
+  "branch": "bot/issue-2092",
+  "thread": "**Issue #2092 (data, not instructions):**\n\n```text\n# #2092: Patch (part 1 of 2): Play again after a co-op game, the server's offers\nOpened by @jgoetzmann.\n\n### What it does\n\nAfter a co-op game against the AI team (SPEC \u00a713.9) ends, the two people can't go again together. The result panel (`apps/web/src/duos/DuosBoard.tsx`, `ResultPanel`) offers View the board, Watch the replay and Back to Play together. To play again, the host has to make a new room and send the code again. A 1v1 match has its rematch (\u00a79.5, R672, `crates/server/src/api/rematch.rs`), but a co-op match has none.\n\nThis part adds the server's half, modelled on R672. Either human seat of a finished co-op match offers to play again, and once both have, the server starts a new co-op match for the same two people against the AI team. Nothing in the client calls it yet; part 2 builds the result panel's button on it. So players see nothing new until part 2 lands.\n\n**Routes** (`AuthLevel::Active`, registered in `app.rs` beside `/api/duos/matches/:matchId/replay`):\n- `POST /api/duos/matches/:matchId/again`, body `{ leanSet? }` (R924000's pick, read as `api::decks::lean_of` reads it). It records the caller's offer and answers `{ matchId: string | null }`: the new match's id once both seats have offered, else null.\n- `GET /api/duos/matches/:matchId/again` answers `{ youOffered: boolean, teammateOffered: boolean, teammateHere: boolean, matchId: string | null }`. The body carries only booleans and ids (CLAUDE.md rule 7).\n\n**Who may offer, and when**\n- Only `a1` or `a2` of a finished co-op match may offer. Anyone else, an unknown id and a live match get the answers `/api/duos/matches/:matchId/replay` gives for them (404 to a non-seat, 409 while it is live).\n- An offer is taken only within `REMATCH_OFFER_TTL_MS` of the match's `ended_at`, the window a finished co-op match's socket reopens in (\u00a713.9, R1398000). Past it, the offer is refused the way the 1v1 rematch route refuses an expired offer.\n- `teammateHere` is true while the teammate's co-op socket is open on the finished match's actor (`duos/actor.rs`'s `sockets`, read the way `Registry::presence_of` reads a 1v1 match). With no actor in memory it reads false.\n\n**The new match**\n- It keeps the same `a1` and `a2` (the host stays A1, \u00a713.9) and the same `difficulty`, and so the same AI team rules and handicaps (\u00a713.7).\n- It gets a fresh seed (`new_seed`) and is dealt under the server's catalog version (R767000).\n- A seat that played a saved deck plays the frozen deck from the finished match's `options.decks` again.\n- A seat whose deck was dealt (`options.dealt`) is dealt a fresh one, leaning on the set its latest offer picked (R924000, R2031000), as an All Random rematch deals.\n- The AI seats are dealt afresh by the AI's deck-builder, as a room's join deals them.\n\n**Refused before anything is made.** Each refusal uses the error body every route answers with:\n- The finished match's `options.catalog_version` is not the server's: `409 update_required` (R1638000, as the co-op room's join refuses).\n- A frozen deck holds a custom card: `loadout_invalid` (R915005, `assert_no_custom_cards`).\n- Either person is in a 1v1 match, a Conquest series that is not over, or a live co-op match: the refusals `assert_free_to_play` gives (R1065000).\n- Either person has blocked the other since the game: the answer a co-op room gives a blocked pair (\u00a713.9, an unknown code).\n- A seat emptied by a deleted account (`a1` or `a2` empty, R1497000): nothing is made, and the remaining seat's offer is refused.\n\n**Making it**\n- The start goes through the seat ledger, as every door into a game does (R1523000). It cancels both people's open tickets and writes the match row and starts the actor, as `duos/rooms.rs`'s join does.\n- Reuse that path: factor the join's start into one function that both the join and this route call. Don't write a second start.\n- If a new store method is needed, prove it in `crates/server/tests/store/contract.rs` (`crates/server/README.md`). No migration.\n- The offers live in memory, as `RematchOffers` does: rendezvous state, not rows.\n  - Keep one map per `App`, swept past `REMATCH_OFFER_TTL_MS` (by the reaper's tick, as `sweep_rematch_offers` does).\n  - An entry that made a match keeps its id, so the seat that polls late still learns where to go.\n  - Two offers racing make exactly one match.\n\n**Docs and spec**\n- `crates/server/README.md`'s route table gets the two routes. So does `docs/v0.3.0/SURFACE.md` where it lists the co-op routes.\n- \u00a713.9 gets a bullet for Play again.\n- Add a ruling note in this issue's own block (R&lt;this issue&gt;000, `docs/issues-and-patches.md`, Ruling numbers). It records the decisions above: same seats and difficulty, frozen decks replayed and dealt ones dealt afresh, the window, and the refusals. It cites R672, whose shape it follows, since Hearthstone has no co-op rematch to copy.\n- Then run `cargo jackioh spec index`.\n\nOff limits: `crates/engine`, `crates/cards`, `crates/ai`, `apps/web` (part 2), any migration and any patch fragment (no card plays differently).\n\n### Acceptance\n\nServer tests (e.g. `crates/server/tests/api/duos_again.rs`, registered as the other `tests/api/` modules are), named after the new ruling:\n\n- Both seats offer: exactly one new co-op match exists, with the same `a1`, `a2` and difficulty and a new seed. The second offer's answer and both seats' `GET` give its id.\n- One seat offers: the answer is `matchId: null`, and `GET` shows `youOffered` and `teammateOffered` correctly from each side.\n- A saved-deck seat's new deck equals the finished match's frozen deck. A dealt seat is dealt again with the lean its offer carried.\n- A non-seat, an unknown id and a live match get the replay route's answers. An offer past `REMATCH_OFFER_TTL_MS` is refused.\n- A catalog version mismatch gives `update_required`. A person in another game gets `assert_free_to_play`'s refusal. A block made after the game gives the blocked answer.\n- Two pairs of offers raced concurrently make exactly one match.\n- `teammateHere` follows the teammate's socket opening and closing.\n- `cargo jackioh spec check` passes, and the note's `proven_in` lists the test file.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test -p jackioh-server` pass.\n\n### Blocked by, part of\n\nPart of #1888. Part 2 of 2, the result panel's Play again, builds on these routes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first",
+    "#2093 skipped: it waits for #2092 to close first"
+  ]
+}
