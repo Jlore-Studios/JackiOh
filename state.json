@@ -3719,6 +3719,15 @@
       "failures": 0,
       "feedback_since": "2026-10-27T20:54:48Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-10-27T22:20:00Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "",
+        "provider": "claude-3",
+        "reason": "`claude-3` reached its usage limit",
+        "trail": "- Bash: {\"command\": \"sed -n '1,/^## Log/p' .bot-notes.md | head -80; echo ---; git diff --name-only --diff-filter=U; git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec | head\", \"description\": \"Read notes st\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 1:50am (UTC)"
+      },
       "interruptions": 1,
       "issue": 1861,
       "kind": "revise",
