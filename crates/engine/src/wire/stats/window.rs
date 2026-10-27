@@ -568,7 +568,7 @@ mod tests {
     use super::*;
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
-    use crate::wire::stats::{GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
+    use crate::wire::stats::{CreatedUse, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
 
     const A: &str = "core-001";
     const B: &str = "core-002";
@@ -806,6 +806,57 @@ mod tests {
         assert_eq!(a.stats.in_deck.games, 2);
         // The window every card shares holds v1's 999 and v2's one, and clears.
         assert_eq!(report.patch.source, WindowSource::Live);
+    }
+
+    #[test]
+    fn r2089000_windowed_card_stats_reads_each_created_card_over_its_own_window() {
+        // A's token is of A's family, which v2 touched; B is a deck card that is made in play too.
+        const TOKEN: &str = "core-001-1";
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Micro, &[A]),
+        ];
+        let made = |id: &str, patch: &str| {
+            let mut record = game(id, GameSource::Live, patch, &[B]);
+            record.game.seats.p1.created_used = Some(vec![
+                CreatedUse {
+                    card: TOKEN.to_string(),
+                    turn: 2,
+                    radiant: false,
+                },
+                CreatedUse {
+                    card: B.to_string(),
+                    turn: 3,
+                    radiant: true,
+                },
+            ]);
+            record
+        };
+        let mut totals = StatsTotals::default();
+        totals.fold(&made("m1", "v1"), false);
+        totals.fold(&made("m2", "v2"), false);
+        add_live(&mut totals, "v1", PUBLIC_STATS_MIN_LIVE_GAMES);
+        add_live(&mut totals, "v2", PUBLIC_STATS_MIN_LIVE_GAMES);
+
+        let report = windowed_card_stats(&totals, &query(&history, "v2"));
+        let ids: Vec<&str> = report.created.iter().map(|row| row.stats.card.as_str()).collect();
+        assert_eq!(ids, [TOKEN, B]);
+        let token = &report.created[0];
+        assert_eq!(versions(&token.window), ["v2"]);
+        assert_eq!(
+            (token.stats.created_played.games, token.stats.created_played.wins),
+            (1, 1)
+        );
+        assert_eq!(token.stats.created_played_normal.games, 1);
+        let b = &report.created[1];
+        assert_eq!(versions(&b.window), ["v1", "v2"]);
+        assert_eq!(b.stats.created_played.games, 2);
+        assert_eq!(b.stats.created_played_radiant.games, 2);
+        // B's deck row is its dealt copies' alone, and the token, which no deck held, has none.
+        let deck_b = report.card(B).expect("B is held");
+        assert_eq!(deck_b.stats.in_deck.games, 2);
+        assert_eq!(deck_b.stats.created_played.games, 0);
+        assert!(report.card(TOKEN).is_none());
     }
 
     #[test]

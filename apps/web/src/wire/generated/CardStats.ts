@@ -12,4 +12,22 @@ playedRadiant: Tally,
 /**
  * R1147000: played, never Radiant.
  */
-playedNormal: Tally, };
+playedNormal: Tally, 
+/**
+ * R2089000: a seat made a Created copy of the card and used one. The four Created tallies are
+ * kept beside the deck's, under the same key, and read apart from them (`card_stats_of`'s
+ * `created`); each is absent while empty, so a deck row reads and is stored as before.
+ */
+createdPlayed?: Tally, 
+/**
+ * R2089000: a seat made Created copies of the card and used none.
+ */
+createdNotPlayed?: Tally, 
+/**
+ * R2089000: of `created_played`, a copy was Radiant at its first use.
+ */
+createdPlayedRadiant?: Tally, 
+/**
+ * R2089000: of `created_played`, none was.
+ */
+createdPlayedNormal?: Tally, };

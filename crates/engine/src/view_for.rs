@@ -2183,6 +2183,8 @@ fn redact_event(
         GameEventType::CardPlayed | GameEventType::Summoned => {
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if hidden(&instance) {
                 // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`. Any other hidden play keeps both, as it always has (D14).

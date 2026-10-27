@@ -325,6 +325,12 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
+        /// R2089000: as on `addedToHand`, the seat whose effect summoned the card, set only when that is
+        /// not `player`; the game record credits a Created card to it (§9.11). Engine bookkeeping: no
+        /// rule reads it and a view never forwards it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        creator: Option<PlayerId>,
     },
     /// §4.4 step 5: `amount` is what got through. `absorbed` (R1360) is what the target's Armor took
     /// off this hit at step 2 — never the hero's divisors or cap, Divine Shield or Indestructible, and 0
@@ -1285,10 +1291,11 @@ impl GameEvent {
     /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
     /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
-    /// whose effect summoned it, which no rule reads. R2089000: an `addedToHand`, a `shuffledIn` and a
-    /// `transformed` without their `creator`, the game record's (§9.11). So the state a game passes through, a frontier paused
-    /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
-    /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
+    /// whose effect summoned it, which no rule reads. R2089000: an `addedToHand`, a `shuffledIn`, a
+    /// `summoned` and a `transformed` without their `creator`, the game record's (§9.11). So the state a
+    /// game passes through, a frontier paused on a prompt or left by a game's end included, hashes as it
+    /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
+    /// Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
         match self {
             GameEvent::Damage {
@@ -1371,7 +1378,8 @@ impl GameEvent {
                 hidden_from: hidden_from.clone(),
                 creator: None,
             },
-            // R1088: `sourceId` is the client's, like `how` above, so the rules drop it.
+            // R1088: `sourceId` is the client's, like `how` above, so the rules drop it, and R2089000's
+            // `creator` with it.
             GameEvent::Summoned {
                 player,
                 instance_id,
@@ -1382,6 +1390,7 @@ impl GameEvent {
                 source_id: _,
                 arrived_during,
                 exits_from,
+                creator: _,
             } => GameEvent::Summoned {
                 player: *player,
                 instance_id: instance_id.clone(),
@@ -1392,6 +1401,7 @@ impl GameEvent {
                 source_id: None,
                 arrived_during: arrived_during.clone(),
                 exits_from: *exits_from,
+                creator: None,
             },
             other => other.clone(),
         }

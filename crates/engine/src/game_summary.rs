@@ -200,10 +200,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                             .map(|(_, def_id)| def_id.clone())
                             .collect()
                     };
-                    reading.opening = Some(PerPlayer::new(
-                        dealt(&reading.hands.p1),
-                        dealt(&reading.hands.p2),
-                    ));
+                    reading.opening =
+                        Some(PerPlayer::new(dealt(&reading.hands.p1), dealt(&reading.hands.p2)));
                 }
             }
             GameEvent::Drawn {
@@ -263,17 +261,23 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 def_id,
                 former_id,
                 source_id,
+                creator,
                 ..
             } => {
                 let ids: Vec<&str> = std::iter::once(instance_id.as_str())
                     .chain(former_id.as_deref())
                     .collect();
                 if is_created(before, after, &ids) {
-                    // R1088: the card whose effect summoned it, as it stood when the step began.
-                    let maker = source_id
-                        .as_deref()
-                        .and_then(|source| find_instance(before, source).or_else(|| find_instance(after, source)))
-                        .map_or(*player, |source| source.controller);
+                    // The seat whose effect summoned it for the other side, else the controller of the
+                    // card whose effect summoned it (R1088), as it stood when the step began.
+                    let maker = creator.unwrap_or_else(|| {
+                        source_id
+                            .as_deref()
+                            .and_then(|source| {
+                                find_instance(before, source).or_else(|| find_instance(after, source))
+                            })
+                            .map_or(*player, |source| source.controller)
+                    });
                     let radiant = is_radiant(before, after, &ids);
                     use_created(reading, &ids, maker, def_id, radiant);
                 }
@@ -406,7 +410,11 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
 
 fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatSummary {
     fn listed<T: Clone>(list: &[T]) -> Option<Vec<T>> {
-        if list.is_empty() { None } else { Some(list.to_vec()) }
+        if list.is_empty() {
+            None
+        } else {
+            Some(list.to_vec())
+        }
     }
     // R2089000: the Created cards the seat made that no use reached, one per instance; a card set
     // face-down is one instance under both its ids, which `used` holds together.

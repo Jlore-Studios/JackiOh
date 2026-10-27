@@ -412,6 +412,13 @@ outlive the purge; a record folded before 0063 counts in `record_totals` alone, 
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
+A Created card (R943: a token, a generated or copied card, a transform's result, The Coin) is no deck
+card: a record lists each seat's Created cards apart, those it made and used and those it made and never
+used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones split by face) ride in the
+card's `card_totals` row beside the deck's, empty ones left out of its `stats`, so no migration and no
+back-fill: a record written before them adds none. `stats-cards` prints them as a second table after
+the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/cards` answers them as
+`created` (R2089000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it

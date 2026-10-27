@@ -37,9 +37,9 @@ use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, GameFigures, GameMode,
     GameSource, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally,
     TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport,
-    add_created, add_stats, card_drills_of, created_played_delta,
-    card_family, card_stats_of, card_window, collapse_gameless, patch_windows, played_delta, sources_of,
-    win_rate, windowed_card_stats, windowed_game_figures,
+    add_created, add_stats, card_drills_of, card_family, card_stats_of, card_window, collapse_gameless,
+    created_played_delta, patch_windows, played_delta, sources_of, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -131,9 +131,10 @@ impl PublicCreatedStat {
             created_played_radiant_win_rate: win_rate(&stats.created_played_radiant),
             created_played_normal_games: tally_of(&stats.created_played_normal).0,
             created_played_normal_win_rate: win_rate(&stats.created_played_normal),
-            created_played_delta: Some(stats)
-                .filter(|_| played_games >= CARD_STATS_MIN_SAMPLE && not_played_games >= CARD_STATS_MIN_SAMPLE)
-                .and_then(created_played_delta),
+            created_played_delta: (played_games >= CARD_STATS_MIN_SAMPLE
+                && not_played_games >= CARD_STATS_MIN_SAMPLE)
+                .then(|| created_played_delta(stats))
+                .flatten(),
             has_enough_games: games >= CARD_STATS_MIN_SAMPLE,
             window: PublicCardWindow::of(&row.window),
         }

@@ -505,7 +505,10 @@ mod summarize_game_over_real_cards_s9_11 {
             }
             let p2 = &summary.seats.p2;
             assert!(
-                p2.created_used.iter().flatten().any(|used| used.card == COIN_DEF_ID)
+                p2.created_used
+                    .iter()
+                    .flatten()
+                    .any(|used| used.card == COIN_DEF_ID)
                     || p2.created_unused.iter().flatten().any(|id| id == COIN_DEF_ID),
                 "{seed}"
             );
@@ -519,14 +522,23 @@ mod summarize_game_over_real_cards_s9_11 {
                 );
                 let seat = &summary.seats[player];
                 // R2089000: the dealt cards' plays in `played`, the Created cards' in `createdPlayed`.
-                let (made, dealt): (Vec<&Play>, Vec<&Play>) = plays[player].iter().partition(|play| play.created);
+                let (made, dealt): (Vec<&Play>, Vec<&Play>) =
+                    plays[player].iter().partition(|play| play.created);
                 let logged: Vec<String> = dealt.iter().map(|play| play.def_id.clone()).collect();
                 let logged_made: Vec<String> = made.iter().map(|play| play.def_id.clone()).collect();
-                let created_played: Vec<String> =
-                    seat.created_played.iter().flatten().map(|play| play.card.clone()).collect();
+                let created_played: Vec<String> = seat
+                    .created_played
+                    .iter()
+                    .flatten()
+                    .map(|play| play.card.clone())
+                    .collect();
                 if pawn {
                     assert!(subsequence(&logged, &seat.played), "{seed} {}", player.as_str());
-                    assert!(subsequence(&logged_made, &created_played), "{seed} {}", player.as_str());
+                    assert!(
+                        subsequence(&logged_made, &created_played),
+                        "{seed} {}",
+                        player.as_str()
+                    );
                 } else {
                     assert_eq!(seat.played, logged, "{seed} {}", player.as_str());
                     let expected_radiant: Vec<bool> = dealt.iter().map(|play| play.radiant).collect();
@@ -538,8 +550,12 @@ mod summarize_game_over_real_cards_s9_11 {
                     );
                     radiant_plays += expected_radiant.iter().filter(|&&r| r).count();
                     assert_eq!(created_played, logged_made, "{seed} {}", player.as_str());
-                    let made_radiant: Vec<bool> =
-                        seat.created_played.iter().flatten().map(|play| play.radiant).collect();
+                    let made_radiant: Vec<bool> = seat
+                        .created_played
+                        .iter()
+                        .flatten()
+                        .map(|play| play.radiant)
+                        .collect();
                     assert_eq!(
                         made_radiant,
                         made.iter().map(|play| play.radiant).collect::<Vec<bool>>(),
@@ -1057,6 +1073,8 @@ mod r2089000_created_cards {
     const RECYCLING: &str = "core-039"; // (0) Spell, end of turn: copies of the cards played go to the hand.
     const SHADE_IRIS: &str = "meditative-028"; // (2) Unit, Cry: Ancient Curses into the opponent's deck.
     const CURSE: &str = "meditative-028-1"; // Spell token, Cast on draw: take damage.
+    const FATE: &str = "meditative-026"; // (4) Field Spell, end of turn: a Mana Well into every empty backrow.
+    const WELL: &str = "core-006";
 
     /// One scenario step, read by the reader as `summarize_game` reads a logged action.
     fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
@@ -1161,32 +1179,48 @@ mod r2089000_created_cards {
         assert!(p1.played.is_empty());
         assert_eq!(p1.created_played, Some(vec![used(DUPLICATING, turn, true)]));
         assert_eq!(cards(&p1.created_used), [DUPLICATING, DUPLICATING]);
-        assert_eq!(p1.created_used.iter().flatten().next(), Some(&used(DUPLICATING, turn, true)));
+        assert_eq!(
+            p1.created_used.iter().flatten().next(),
+            Some(&used(DUPLICATING, turn, true))
+        );
 
         // The dealt copy sat in the opening hand (the reader began after the deal) and was never
-        // played, so the deck's card is drawn but not played, whatever the Created ones did.
+        // played, so the deck's card is drawn but not played, whatever the Created ones did: its row
+        // is the row of the same record without the Created lists.
         p1.opening = vec![DUPLICATING.to_string()];
-        let record = GameRecord {
+        let record = |p1: SeatSummary| GameRecord {
             id: "r2089000-copy".to_string(),
             patch: "v0.0.1".to_string(),
             source: GameSource::Live,
             mode: GameMode::Bo1,
             pilots: PerPlayer::new(Pilot::Human, Pilot::Human),
-            summary: GameSummary {
+            game: GameSummary {
                 first: P1,
                 winner: Winner::P1,
                 reason: GameOverReason::HeroDeath,
                 turns: turn,
                 seats: PerPlayer::new(p1, SeatSummary::default()),
             },
-            ..GameRecord::default()
+            build: None,
         };
-        let report = card_stats(std::slice::from_ref(&record), &CardStatsFilter::default());
-        let deck = report.card(DUPLICATING).expect("the deck's card has figures");
+        let dealt_only = SeatSummary {
+            created_used: None,
+            created_unused: None,
+            created_played: None,
+            ..p1.clone()
+        };
+        let report = card_stats(&[record(p1)], &DEFAULT_CARD_STATS_FILTER);
+        assert_eq!(
+            report.cards,
+            card_stats(&[record(dealt_only)], &DEFAULT_CARD_STATS_FILTER).cards
+        );
+        let [deck] = report.cards.as_slice() else {
+            panic!("one deck card: {:?}", report.cards);
+        };
+        assert_eq!(deck.card, DUPLICATING);
         assert_eq!(deck.played.games, 0);
         assert_eq!(deck.drawn_not_played.games, 1);
         assert_eq!(deck.played_radiant.games, 0);
-        assert_eq!(deck.created_played.games, 0);
         let [made] = report.created.as_slice() else {
             panic!("one Created card: {:?}", report.created);
         };
@@ -1208,16 +1242,28 @@ mod r2089000_created_cards {
         step(&mut reader, &mut s, |s| {
             s.play(SHADE_IRIS, json!({}));
         });
-        assert_eq!(reader.seat(P1, Vec::new()).created_unused, Some(vec![CURSE.to_string()]));
+        assert_eq!(
+            reader.seat(P1, Vec::new()).created_unused,
+            Some(vec![CURSE.to_string()])
+        );
         assert_eq!(reader.seat(P2, Vec::new()).created_unused, None);
+        // The record reads the maker off the `shuffledIn`, which no view forwards.
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::ShuffledIn { player: P2, def_id, creator: Some(P1), .. } if def_id == CURSE
+        )));
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            assert!(!events.contains("creator"), "{}'s view", seat.as_str());
+        }
 
         step(&mut reader, &mut s, |s| {
             s.end_turn();
         });
         assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::CardPlayed { player: P2, def_id, .. } if def_id == CURSE)),
+            s.events().iter().any(
+                |event| matches!(event, GameEvent::CardPlayed { player: P2, def_id, .. } if def_id == CURSE)
+            ),
             "p2 cast the Curse on its draw"
         );
         let turn = s.state().turn;
@@ -1230,6 +1276,49 @@ mod r2089000_created_cards {
         assert!(p2.drawn.is_empty());
         assert_eq!(p2.created_used, None);
         assert_eq!(p2.created_played, None);
+        assert_eq!(p2.created_unused, None);
+    }
+
+    #[test]
+    fn r2089000_a_token_summoned_into_the_other_seat_s_backrow_is_its_summoner_s() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [FATE, VANILLA], "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+        step(&mut reader, &mut s, |s| {
+            s.play(FATE, json!({}));
+        });
+        // p1's end of turn summons a Mana Well into every empty backrow of both sides, each its own
+        // side's (R942), and each one p1's Created card, used as it lands.
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        let wells = |player: PlayerId| {
+            (1..=5)
+                .filter_map(|lane| s.backrow(player, lane))
+                .filter(|card| card.def_id == WELL)
+                .count()
+        };
+        assert!(wells(P2) > 0, "a Well in p2's backrow");
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::Summoned { player: P2, def_id, creator: Some(P1), .. } if def_id == WELL
+        )));
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            assert!(!events.contains("creator"), "{}'s view", seat.as_str());
+        }
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(
+            p1.created_used,
+            Some(vec![used(WELL, turn, false); wells(P1) + wells(P2)])
+        );
+        assert_eq!(p1.created_unused, None);
+        let p2 = reader.seat(P2, Vec::new());
+        assert_eq!(p2.created_used, None);
         assert_eq!(p2.created_unused, None);
     }
 
@@ -1320,7 +1409,14 @@ mod r2089000_created_cards {
                 .collect();
             state = act(&state, &mut log, ActionBody::Mulligan { keep }, player);
         }
-        assert!(state.players.p2.hand.iter().any(|card| card.def_id == COIN_DEF_ID));
+        assert!(
+            state
+                .players
+                .p2
+                .hand
+                .iter()
+                .any(|card| card.def_id == COIN_DEF_ID)
+        );
         state = act(&state, &mut log, ActionBody::Concede, P1);
         assert!(state.result.is_some());
 

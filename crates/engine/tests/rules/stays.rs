@@ -17,6 +17,7 @@ fn summoned(id: &str) -> GameEvent {
         source_id: None,
         arrived_during: None,
         exits_from: None,
+        creator: None,
     }
 }
 

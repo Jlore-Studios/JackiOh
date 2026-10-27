@@ -554,6 +554,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             source_id: None,
             arrived_during: None,
             exits_from: None,
+            creator: None,
         };
         sink.events.push(event);
         // R783010: a Crater body Locks the zone it came back into.
