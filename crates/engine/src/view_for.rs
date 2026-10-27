@@ -1274,6 +1274,17 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             "Your next Spell this turn has {}",
             crate::wire::keyword_key(keyword)
         ),
+        // R1870004: Stinkyscape #4.4 Last Word's "your Units have Charge during it", the turn named until
+        // it comes.
+        ModifierKind::UnitsKeyword { keyword } => format!(
+            "Your Units have {}{}",
+            crate::wire::keyword_key(keyword),
+            if crate::mana::modifier_is_live(state, modifier) {
+                ""
+            } else {
+                " during your next turn"
+            }
+        ),
     }
 }
 

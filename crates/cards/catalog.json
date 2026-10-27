@@ -17917,7 +17917,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Discover a Terminus card. If your deck is empty, it costs (0)."
@@ -17942,7 +17942,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Exile all permanents and every card in both graveyards."
@@ -17979,7 +17979,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Solve an impossible problem. If you get it right, deal {damage} damage to the enemy hero, and this gains Echo +1."
@@ -18004,7 +18004,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Take an extra turn after this one."
@@ -18040,7 +18040,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 68,
     "base": {
       "keywords": [],
       "text": "Reveals when your hero would take lethal damage: Prevent it and end the turn. The next turn is yours: your Units have Charge during it, and you lose the game at its end."
@@ -18068,7 +18068,7 @@
     "refs": [
       "classicplus-071"
     ],
-    "loc": 6,
+    "loc": 61,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent's turn ends: Lock every lane but one, picked at random. Set each hero's health to 1. Both players discard every Spell in their hand."
@@ -18100,7 +18100,7 @@
       "stinkyscape-150",
       "stinkyscape-151"
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Cast one of each Call to Chaos."
@@ -24648,7 +24648,7 @@
       "base": 0,
       "embiggen": 1
     },
-    "loc": 6,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."

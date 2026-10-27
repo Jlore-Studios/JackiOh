@@ -498,6 +498,15 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
+    // R1870004: a player modifier's "your Units have <keyword>" (Stinkyscape #4.4 Last Word's Charge)
+    // reaches each Unit of theirs on top of a unit zone, as an aura does.
+    if matches!(instance.zone, Zone::Field { row: Row::Units, .. })
+        && !is_dormant(state, instance)
+        && !crate::slumber::is_slumbering(instance)
+        && crate::faces::card_type_of(state, instance) == CardType::Unit
+    {
+        listed.extend(crate::modifiers::units_keywords_of(state, instance.controller));
+    }
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).

@@ -668,6 +668,12 @@ pub enum ModifierKind {
     KeywordNextSpell {
         keyword: Keyword,
     },
+    /// R1870004 (Stinkyscape #4.4 Last Word, "your Units have Charge during it"): while the modifier is
+    /// live (`mana::modifier_is_live`), each Unit its player controls on the field has `keyword`, read
+    /// by §10.4 beside the auras' keywords (`modifiers::units_keywords_of`). Expiry `nextTurnOf`.
+    UnitsKeyword {
+        keyword: Keyword,
+    },
     // ---- Stinkyscape's Starship (issue #1852) ----
     /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
     /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it
