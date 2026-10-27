@@ -3635,7 +3635,9 @@
     },
     "2023": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6429272516"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3658,9 +3660,7 @@
       "started_at": "2026-10-27T04:03:02Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6429272516"
-      ]
+      "taken_asks": []
     },
     "2024": {
       "asks": [
