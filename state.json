@@ -4372,15 +4372,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/tools/src/fuzz.rs"
+          ],
+          "from": "2060cab0aaffd14cc884183a7039ea9b3f6f6926",
+          "main": "b6018e34115a1492ce24540dcc0a3251639d52a1"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40504187628",
+            "run": "40531270126",
             "tier": "strong"
           }
         ],
-        "sha": "2060cab0aaffd14cc884183a7039ea9b3f6f6926",
+        "sha": "1b8681b4eed3af8ebf164970d503f0a3d6a5128a",
         "tiers": {
           "claude": "strong"
         }
