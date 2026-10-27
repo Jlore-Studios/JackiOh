@@ -46,6 +46,7 @@ pub mod papaya;
 pub mod play_gate;
 pub mod play_pipeline_a;
 pub mod play_pipeline_b;
+pub mod play_watch;
 pub mod prompt_harness;
 pub mod prompts;
 pub mod quests;

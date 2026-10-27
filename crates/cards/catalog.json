@@ -17864,7 +17864,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Freeze a Unit forever."
@@ -17896,7 +17896,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a Unit, trampling onto the Units adjacent to it. Lock its zone."
@@ -18733,7 +18733,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [
         {
@@ -19379,7 +19379,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Discard a random card. Summon a Drone Interceptor."
@@ -19405,7 +19405,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Interceptor."
@@ -19441,7 +19441,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19477,7 +19477,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19503,7 +19503,7 @@
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Corvette."
@@ -19539,7 +19539,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19576,7 +19576,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19602,7 +19602,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nFill your board with Drone Interceptors."
@@ -19638,7 +19638,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}."
@@ -19666,7 +19666,7 @@
       "stinkyscape-t-propagation-layer",
       "stinkyscape-t-meltdown-layer"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nSummon the Drone Battleship."
@@ -19873,7 +19873,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Drone Core card|random Drone Core cards} to your hand."
@@ -19907,7 +19907,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 4,
       "health": 5,
@@ -19980,7 +19980,7 @@
     "refs": [
       "stinkyscape-027"
     ],
-    "loc": 6,
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add the next tier to your hand."
@@ -20023,7 +20023,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 8,
       "health": 12,
@@ -22262,7 +22262,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Destroy a Unit with less than {per}X Attack."
@@ -22386,7 +22386,7 @@
     "refs": [
       "stinkyscape-099"
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Add 4 No-No Words to your hand, their X set at 1, 2, 3 and 4."
@@ -22412,7 +22412,7 @@
     "refs": [
       "stinkyscape-099"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 1,
       "health": 4,
@@ -23015,7 +23015,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Bounce all permanents. Lose {loss} mana next turn."
@@ -23046,7 +23046,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Set all Units' Attack to 0. Lose {loss} mana next turn."
@@ -23067,7 +23067,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Double the Attack of all Units. All Units gain First Strike."
@@ -23098,7 +23098,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "keywords": [],
       "text": "All Units attack each other until only one survives. Gain {mana} mana next turn."
@@ -23125,7 +23125,7 @@
       "stinkyscape-119",
       "stinkyscape-120"
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Add your choice of a Core System, a Secure System, an Unsecure System or a Wild System to your hand."
@@ -24617,7 +24617,7 @@
         "max": 100
       }
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Stimmycheck to your hand. Its Inflation chance goes up by 10%."
@@ -25097,7 +25097,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Start of turn: Summon a Drone Interceptor."
@@ -25502,7 +25502,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "attack": 2,
       "health": 2,
@@ -25554,7 +25554,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "attack": 8,
       "health": 8,
@@ -25596,7 +25596,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 5,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 12,
       "health": 12,
@@ -25656,7 +25656,7 @@
       "stinkyscape-t-drone-interceptor",
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 12,
       "health": 12,
@@ -25708,7 +25708,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 12,
       "health": 12,
