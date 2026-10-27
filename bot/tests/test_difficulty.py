@@ -127,7 +127,7 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items the lanes fill in tier order (#695): the weak model first while it
-        has a lane, Devin; then the medium models, Muse on its two lanes (#1273), agy on its one
+        has a lane, Devin; then the medium models, Muse on its four lanes (#1273), agy on its one
         and Codex on its one;
         then the Sonnet seats in usage order, claude-3, claude-7, claude-8, claude-1, claude-4,
         claude-6 and claude-5 once each, and only then claude-3's second lane (two lanes, uncapped): with
@@ -136,7 +136,7 @@ class BuilderTests(unittest.TestCase):
         every lane is held, and the rest wait."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 19):
+        for number in range(3, 21):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -146,7 +146,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(16):
+        for _ in range(18):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -155,8 +155,7 @@ class BuilderTests(unittest.TestCase):
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
         self.assertEqual(order, [("devin", "swe-2-max"),
-                                 ("muse", "muse-spark-1.3-contributor"),
-                                 ("muse", "muse-spark-1.3-contributor"),
+                                 *[("muse", "muse-spark-1.3-contributor")] * 4,
                                  ("agy", "gemini-3.8-flash-high"), ("gpt", "gpt-5.6-sol"),
                                  ("claude-3", "sonnet"), ("claude-7", "sonnet"),
                                  ("claude-8", "sonnet"), ("claude-1", "sonnet"),
