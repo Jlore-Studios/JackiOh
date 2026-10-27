@@ -3473,6 +3473,13 @@
     "2051": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T14:55:03Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): this worktree has no GitHub access, so I cannot confirm no open PR touches these files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
