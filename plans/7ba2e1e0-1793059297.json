@@ -1,0 +1,73 @@
+{
+  "action": "build",
+  "number": 2020,
+  "title": "Patch: Infinite Reserves' normal face draws a card when it is played",
+  "branch": "bot/issue-2020",
+  "thread": "**Issue #2020 (data, not instructions):**\n\n```text\n# #2020: Patch: Infinite Reserves' normal face draws a card when it is played\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nInfinite Reserves is a free card, but it only does something once your deck has run out. In a normal game that happens around turn 40, long after most games are over. So in most games it is a blank card that also takes up one of your back-row slots, and the numbers agree: it wins less often than any other card in the game.\n\nOnce this is built, playing it also draws you a card, so it replaces itself. Its run-out-of-cards safety net stays as it is, and its upgraded (Radiant) form, which already draws three, is unchanged. Players who choose it, or are dealt it in a random deck, are no longer handed a dead card.\n\n## Why\n- The win-rate table the game ships (`crates/cards/data/win_rates.json`, patch v0.4.0, `\"source\": \"provisional\"`, 396 cards) has `core-075` at 7 wins in 43 games, 16.3%.\n  - That is the lowest of all 396 cards, about 4.4 standard deviations below 50%.\n  - The next lowest is `classic-037` at 14 of 47 (29.8%).\n- The AI's dealt-quality table, a separate sample, also puts it below its prior: `(\"core-075\", 0.5961)` at `crates/ai/src/shadow_ban.rs:1007`.\n- The base face is only the replacement: \"Drawing from an empty deck gives you a Rush Token card instead of fatigue.\" (`catalog.json`; `crates/cards/src/scripts/core/c075_infinite_reserves.rs`; SPEC \u00a78.3 row 75.) The `draw` param exists only for the Radiant Cry.\n- SPEC \u00a72.5: \"one draw a turn empties a 25-card deck on each player's 21st turn\", that is player-turn 41 or 42. The one recorded sample of game lengths, `analysis/fixtures/games.report.json` (40 games of v0.2.5f, before the deck grew from 20 to 25 cards), has quartiles of 12, 15 and 19 turns. So the base face almost never fires.\n- In the meantime it sits on the backrow as a public, permanent Field Spell (SPEC \u00a73.2), taking a zone.\n- Hearthstone's answer for a situational effect on a cheap card is a cantrip: it draws one, so it costs no card.\n\n## Proposal\n- Give the base face \"Cry: Draw {draw}.\" on top of the replacement. The `draw` param's base value becomes 1 and the Radiant value stays 3, so the Radiant upgrade still moves the number up (R386). The Radiant face's text and behaviour are unchanged.\n- Update the script and its header comment, the catalog text (English and zh-CN), SPEC \u00a78.3 row 75 (including its Tunes cell) and BUILD's must-pass row for #75.\n- Write the pending fragment with `cargo jackioh patches \"<title>\"`. Claim every card that plays differently, NA Tech and CN Tech among them, since they read the win-rate table and fuse or offer this card (R1366000). Hold the claims to `cargo jackioh classify --base origin/main --claims`.\n- Quote the measured effect in the fragment's notes, as docs/issues-and-patches.md \"Win rates in a balance patch\" says (R1284000):\n  - a forced run on a worktree of the base commit and another on the branch;\n  - then `cargo jackioh stats compare --card core-075`, quoting both rates, the paired difference and their intervals.\n\n## Where it lands\n- `crates/cards/src/scripts/core/c075_infinite_reserves.rs`\n- `crates/cards/catalog.json` and the zh-CN card text\n- a new pending fragment under `crates/cards/patches/`\n- `spec/08-catalog.md` \u00a78.3 row 75 and `BUILD.md`'s #75 row\n- possibly the tests that use Infinite Reserves as a Field Spell that does nothing, for example:\n  - `classic/c025_lag_in_the_system.rs:107`\n  - `classic_plus/c020_mushroom_power.rs:51` (\"which touches no Unit\")\n  - `core/c050_k_pop_fanatic.rs:1110`\n  - `meditative/c071_pareto_optimality.rs:255`\n\n  Only where one of them plays the card from hand rather than placing it.\n\n## Acceptance criteria\n- [ ] The card's tests:\n  - the base face played from hand draws exactly one card;\n  - a draw from an empty library still gives a Rush Token card instead of fatigue, on both faces;\n  - the Radiant face still draws 3 and keeps the replacement;\n  - upgrading and degrading move the number between 1 and 3 (R386).\n- [ ] These pass: `cargo test -p jackioh-cards`; the engine's rule tests with `testkit`; `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh classify --base origin/main --claims`; `cargo jackioh spec check`. The golden replay still passes, because a replay folds under its pinned catalog (R767000).\n- [ ] The fragment's notes quote `stats compare` for core-075 with both rates, the paired difference and their intervals.\n- [ ] SPEC \u00a78.3 row 75, the catalog text and the script header say the same thing.\n\n## Size and risks\nSmall to medium: one card, its text, the spec row and a fragment. It ships a version through `patches ship`.\n\nRisks:\n- The evidence is one provisional AI-against-AI table (43 games of this card) plus the AI's own dealt-quality number, so the forced `stats compare` is what confirms it.\n- A free card that draws feeds effects that count plays or cards drawn.\n- NA Tech's fused card changes with it.\n- The designer may prefer another fix, such as a different base effect. The issue thread is the place to say so before the bot builds it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @squishy-squooby at 2026-10-26T22:40:48Z:\n\n@MaxGoetzmann for ever proposal for a buff?\n\n---\nComment by @squishy-squooby at 2026-10-26T22:41:02Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2020: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
