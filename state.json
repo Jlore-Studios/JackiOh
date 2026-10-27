@@ -4413,11 +4413,13 @@
         "by": "`claude` (strong)",
         "sha": "3e2d514880395f26fbdd8e533a58a38c7aed6939"
       },
+      "closed_at": "2026-10-27T15:46:08Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T13:38:00Z",
       "issue": 2045,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
