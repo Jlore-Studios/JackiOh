@@ -4912,7 +4912,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-27T18:18:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:9cec4d64-1793126618",
+      "run_id": "40562724502",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T18:44:10Z",
       "stop_requested": false,
