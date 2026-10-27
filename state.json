@@ -917,6 +917,7 @@
     "1868": {
       "action": "plan",
       "asks": [],
+      "failures": 1,
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
