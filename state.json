@@ -3743,6 +3743,7 @@
     "2025": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-26T23:07:17Z",
         "difficulty": "medium",
