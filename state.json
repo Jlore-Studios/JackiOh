@@ -4221,9 +4221,12 @@
         "sha": "d4e27be9115381ad16f3f1c9161d2e4d21fab960"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T12:47:58Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2054,
       "kind": "review",
       "pending_request": false,
