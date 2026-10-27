@@ -4024,9 +4024,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-27T05:07:18Z",
+    "at": "2026-10-27T05:47:45Z",
     "url": "",
-    "what": "build #2035 on muse"
+    "what": "suggestions on devin"
   },
   "last_sweep": {
     "at": "2026-10-27T05:39:21Z",
@@ -8075,13 +8075,19 @@
         "number": 1993,
         "title": "Patch: a card script's effect or target literal with a key its type never reads fails that card's tests",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-26T22:51:52Z",
+        "number": 2019,
+        "title": "Patch: a watched game and a friend's shared replay speak of the friend by name, not as you, and a board you can only look at drops Offer draw and Concede",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-27T05:15:01Z",
-    "last_run": "2026-10-26T20:12:51Z",
-    "provider": null,
+    "idle_since": "2026-10-27T05:47:45Z",
+    "last_run": "2026-10-27T05:47:45Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:0a898b5f-1793080029",
     "taken_asks": []
   },
   "usage": null,
