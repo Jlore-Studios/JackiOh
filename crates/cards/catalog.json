@@ -20806,7 +20806,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 0,
       "health": 1,
@@ -20845,7 +20845,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 0,
       "health": 2,
@@ -20884,7 +20884,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 4,
@@ -20923,7 +20923,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 6,
@@ -20962,7 +20962,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 8,
@@ -21484,7 +21484,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 4,
       "health": 4,
@@ -21520,7 +21520,7 @@
       "base": 4,
       "embiggen": 5
     },
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 8,
       "health": 8,
@@ -21559,7 +21559,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 10,
       "health": 10,

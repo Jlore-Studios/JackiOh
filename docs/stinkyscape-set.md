@@ -1747,7 +1747,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate: Gain a random Stinkyscape Resource. Has an extra turn cooldown.
 - **Radiant:** Starship Piece, Equip / Activate: Gain a random Radiant Stinkyscape Resource. Has an extra turn cooldown.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate, once a turn ([[R384]], [[R1751000]]), with `extraTurnCooldown` ([[R1841000]]), refused on its user's next turn: `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1: a Miner's Resource is a Stinkyscape Resource, every Resource the catalog holds, by R1840002's roll; it goes to the controller of the Unit the Activate is on, an equipped host's controller included. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1: a Miner's Resource is a Stinkyscape Resource, every Resource the catalog holds, by R1840002's roll; it goes to the controller of the Unit the Activate is on, an equipped host's controller included. Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate; "has an extra turn cooldown" is the M05 rider. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1760,7 +1760,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate, once a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1773,7 +1773,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 2: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 2: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 2, two uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1786,7 +1786,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 3: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 3: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 3, three uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1799,7 +1799,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 5: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 5: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 5, five uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1955,7 +1955,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece / Cry: Equip a random Miner into this.
 - **Radiant:** Starship Piece / Cry: Equip a random Radiant Miner into this, twice.
 - **Engine:** Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry ([[R1]]): `equip_picks` ([[R1841002]]), a random pick from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id, a fresh copy fused straight into it as an Equip play fuses its card ([[R1086]], [[R77]]): no hand, no play, no Cry, its Activate with it; the Radiant face makes two picks, each Radiant ([[R469]]), the second from the Miners it does not hold. Off the field, Immutable, or holding every Miner, nothing ([[R129]]). It stays a piece, the kept card being one ([[R1852001]]).
-- **Rulings:** ST-S05-2: the designer's "[Radiant]" on both faces marks what the Radiant face changes, as his brackets do on one-face entries (the M05 fixture's chest reads it so): the base face's Miner is plain, the Radiant face's two are Radiant. "twice" is two picks, the second from the Miners it does not hold yet. "Miner vXs" are S #62 to S #66. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-2: the designer's "[Radiant]" on both faces marks what the Radiant face changes, as his brackets do on one-face entries (the M05 fixture's chest reads it so): the base face's Miner is plain, the Radiant face's two are Radiant. "twice" is two picks, the second from the Miners it does not hold yet. "Miner vXs" are S #62 to S #66. Built by S05 (#1872) as [[R1872001]].
 - **Numbers:** none (one pick, two on the Radiant face: the frame).
 - **Check:** The designer's "is Equip this" is "Equip into this". R275: stats doubled, the pick doubled and Radiant.
 - **Class:** C
@@ -1968,7 +1968,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Flying / Cry: Choose one of 2 Miners and Equip it into this. / Embiggened (5): The Miners offered are Radiant.
 - **Radiant:** Starship Piece, Flying / Cry: Choose one of 2 Miners and Equip it into this, twice. / Embiggened (5): The Miners offered are Radiant.
 - **Engine:** Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry: `equip_picks` with a Discover of `options` 2 ([[R1841002]], `EQUIP_PICK_STEP`) from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id; the Radiant face twice, the second offer once the first pick is in and without it. Embiggened ([[R1175000]]): the offer is Radiant, the Cry reading `instance.embiggened` ([[R81]]). Its Embiggened price, (5), is past `MAX_MANA` (4), so it is played so only with mana an effect gave ([[R1857001]]).
-- **Rulings:** ST-S05-3: the designer's "[Radiant]" is the Embiggened version's (ST8, ST9: the offered Miners are Radiant); the Radiant face's change is "twice" alone, and Embiggened it offers Radiant Miners too. Its (5) is past `MAX_MANA` (4), so it is played Embiggened only with mana an effect gave (R1857001). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-3: the designer's "[Radiant]" is the Embiggened version's (ST8, ST9: the offered Miners are Radiant); the Radiant face's change is "twice" alone, and Embiggened it offers Radiant Miners too. Its (5) is past `MAX_MANA` (4), so it is played Embiggened only with mana an effect gave (R1857001). Built by S05 (#1872) as [[R1872002]].
 - **Numbers:** none (the offer of 2 and the picks are the frame).
 - **Check:** ST8 and ST9: Embiggened (5), the offered Miners Radiant; the cost {4, embiggen 5} (R1857003's label). R275: stats doubled and the picks doubled.
 - **Class:** C
@@ -1981,7 +1981,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 2, Starship Piece, Flying / Cry: Discover 2 Radiant Miners and Equip them into this.
 - **Radiant:** Tribute 2, Starship Piece, Flying / Cry: Equip a Radiant copy of every Miner into this.
 - **Engine:** Tribute 2 ([[§6.3]] Tribute, [[R101]]), printed in the keyword line ([[R366]]), the script's `tribute`. Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry: `equip_picks`, two Discovers of three in turn ([[R1841002]]) from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id, Radiant, the second without the first; the Radiant face fuses all five, Radiant, Miner v1 first, asking nothing.
-- **Rulings:** ST-S05-4: "Equip this with each Radiant Miner vX" is all five Miners, Radiant, fused one by one, v1 to v5. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-4: "Equip this with each Radiant Miner vX" is all five Miners, Radiant, fused one by one, v1 to v5. Built by S05 (#1872) as [[R1872003]].
 - **Numbers:** none (the picks are the frame; Tribute is no param, R482).
 - **Check:** R275: stats doubled; 2 of 5 → 5 of 5.
 - **Class:** C
