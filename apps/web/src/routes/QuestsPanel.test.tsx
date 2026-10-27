@@ -108,6 +108,24 @@ describe("QuestsList", () => {
 
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
   });
+
+  it("R2035000 with onArrived, the next falling due asks for one read instead of the reopen sentence", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    const onArrived = vi.fn();
+    const view = render(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
+
+    expect(screen.getByTestId(questsTestid.next)).toHaveTextContent("Next quest in 0:00:01");
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onArrived).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/reopen this page/)).toBeNull();
+
+    // The same due time arriving again asks nothing more: one read per due time.
+    view.rerender(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
+    expect(onArrived).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("QuestsPanel", () => {
