@@ -1002,6 +1002,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T03:23:41Z",
       "stop_requested": false,
+      "strike_log": [
+        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
+      ],
+      "strikes": 1,
       "taken_asks": []
     },
     "1871": {
