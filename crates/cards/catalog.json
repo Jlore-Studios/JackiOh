@@ -19379,7 +19379,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Discard a random card. Summon a Drone Interceptor."
@@ -19405,7 +19405,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Interceptor."
@@ -19441,7 +19441,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19477,7 +19477,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19503,7 +19503,7 @@
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Corvette."
@@ -19539,7 +19539,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Summon {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19576,7 +19576,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
@@ -19602,7 +19602,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nFill your board with Drone Interceptors."
@@ -19638,7 +19638,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}."
@@ -19666,7 +19666,7 @@
       "stinkyscape-t-propagation-layer",
       "stinkyscape-t-meltdown-layer"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nSummon the Drone Battleship."
@@ -19873,7 +19873,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Drone Core card|random Drone Core cards} to your hand."
@@ -19907,7 +19907,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 4,
       "health": 5,
@@ -19980,7 +19980,7 @@
     "refs": [
       "stinkyscape-027"
     ],
-    "loc": 6,
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add the next tier to your hand."
@@ -20023,7 +20023,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 8,
       "health": 12,
@@ -25097,7 +25097,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Start of turn: Summon a Drone Interceptor."
@@ -25502,7 +25502,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 2,
       "health": 2,
@@ -25554,7 +25554,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 8,
       "health": 8,
@@ -25596,7 +25596,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 5,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 12,
       "health": 12,
@@ -25656,7 +25656,7 @@
       "stinkyscape-t-drone-interceptor",
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 12,
       "health": 12,
@@ -25708,7 +25708,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 12,
       "health": 12,

@@ -183,6 +183,7 @@ pub mod play_gate;
 pub mod play_pipeline_b_replay;
 pub mod play_reason;
 pub mod play_step3;
+pub mod play_watch;
 pub mod pools;
 pub mod preview;
 pub mod preview_ids;

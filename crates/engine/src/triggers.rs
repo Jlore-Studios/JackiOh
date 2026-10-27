@@ -126,6 +126,10 @@ pub const OWED_TO_TRAPS: &str = "@traps";
 /// entering its lane (Meditative #98, Radiant face).
 pub const LANE_WATCH: &str = "@laneWatch";
 
+/// R1863000: the `hook` of a play watcher's queue entry — Great Replacement Theory's watcher answering
+/// the first resolved play of a card it names (Stinkyscape #44).
+pub const PLAY_WATCH: &str = "@playWatch";
+
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something — a dispatch, owed work, a check or one queued trigger — so the cap has to hold every
 /// trigger one legal action can set off, and R58 bounds that from the rules: "draw your whole
@@ -935,6 +939,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     }
     // MD-B22, R946: Showdown's watchers answer the event before anything notes its removals.
     queued.extend(offer_to_lane_watches(sink, event));
+    // R1863000: and Great Replacement Theory's, a resolved play's first of each card they name.
+    queued.extend(offer_to_play_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
     queued
@@ -1029,6 +1035,44 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
     queued
 }
 
+/// R1863000: offer one event to the play watchers (`ModifierKind::PlayWatch`) of the player whose play
+/// it reports. A watch matches a `cardResolved` of its owner's whose definition it still names, and the
+/// definition comes off it, so each card answers its first resolved play once; a countered play never
+/// resolves, so it answers none. Each match queues one `PLAY_WATCH` entry carrying the stored resume
+/// with the card's definition (`defId`) and the watcher (`watcher`) in its data, the watches in the
+/// order they were made. A play no watch names touches nothing.
+fn offer_to_play_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    let GameEvent::CardResolved { player, def_id, .. } = event else {
+        return Vec::new();
+    };
+    let mut answers: Vec<(String, Resume)> = Vec::new();
+    for modifier in &mut sink.state.players[*player].mods {
+        if let crate::state::ModifierKind::PlayWatch { def_ids, resume, .. } = &mut modifier.kind
+            && let Some(at) = def_ids.iter().position(|watched| watched == def_id)
+        {
+            def_ids.remove(at);
+            answers.push((modifier.id.clone(), resume.clone()));
+        }
+    }
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for (id, resume) in answers {
+        let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+        let mut data = resume.data.clone();
+        data.insert("defId".to_string(), Value::String(def_id.clone()));
+        data.insert("watcher".to_string(), Value::String(player.as_str().to_string()));
+        let entry = QueuedTrigger {
+            id: entry_id,
+            seq,
+            instance_id: id,
+            hook: PLAY_WATCH.to_string(),
+            resume: Resume { data, ..resume },
+        };
+        sink.state.trigger_queue.push(entry.clone());
+        queued.push(entry);
+    }
+    queued
+}
+
 // ---------------------------------------------------------------------------
 // 3. The loop.
 // ---------------------------------------------------------------------------
@@ -1048,8 +1092,9 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         run_turn_hooks_round(sink, entry);
         return;
     }
-    // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner.
-    if entry.hook == LANE_WATCH {
+    // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
+    // watcher's the same.
+    if entry.hook == LANE_WATCH || entry.hook == PLAY_WATCH {
         let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
         let owner = PLAYER_IDS
             .into_iter()

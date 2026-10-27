@@ -31,7 +31,7 @@ use crate::effects::targets::{
     stands_since_script_began,
 };
 use crate::marks::{mark_delayed, sync_marks};
-use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delayed};
+use crate::modifiers::{add_lane_watch, add_play_watch, add_start_of_turn_effect, schedule_delayed};
 use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::random_cast::RANDOM_CHOICES_KEY;
 use crate::resolve::{HookOptions, make_context};
@@ -770,5 +770,39 @@ pub fn watch_lane_this_turn(args: WatchLaneArgs) -> Effect {
         resume.instance_id = None;
         let player = ctx.controller;
         add_lane_watch(ctx, player, args.lane, resume, &args.label);
+    })
+}
+
+/// `watchFirstPlays`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct WatchFirstPlaysArgs {
+    pub def_ids: Vec<String>,
+    pub step: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<IndexMap<String, Value>>,
+}
+
+/// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
+/// play each …" — a `never` watcher on the controller that re-enters the card's `step` (under `hook`,
+/// `RESUME_HOOK` unless the card names another) after their first resolved play, a cast included (R70),
+/// of each of `def_ids`, with that card's `defId` in its data; a countered play never resolves, so it
+/// answers nothing. It is the player's effect, with no `self` (R127), under the face it was made with.
+/// `label` is its badge (R169), in the card's own words.
+pub fn watch_first_plays(args: WatchFirstPlaysArgs) -> Effect {
+    Effect::new("watchFirstPlays", move |ctx| {
+        let mut resume = delayed_resume(
+            ctx,
+            &args.step,
+            args.data.clone().unwrap_or_default(),
+            args.hook.as_deref().unwrap_or(RESUME_HOOK),
+        );
+        resume.instance_id = None;
+        let player = ctx.controller;
+        add_play_watch(ctx, player, args.def_ids.clone(), resume, &args.label);
     })
 }
