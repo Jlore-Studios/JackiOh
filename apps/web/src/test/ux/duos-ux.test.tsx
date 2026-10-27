@@ -20,15 +20,20 @@ describe("R2095000 both boards styles", () => {
     expect(text).toMatch(/\.duos-both\s*\{\s*display:\s*flex;/);
     expect(text).toMatch(/\.duos-board-teammate\s*\{[^}]*flex:\s*0 0 40%;/);
 
-    // Wide: while both boards show the portal is hidden (it stays mounted as the narrow
-    // fallback's flip control).
-    expect(text).toMatch(/\.duos-board\[data-both="true"\] \.duos-portal\s*\{\s*display:\s*none;/);
+    // Wide: while both boards show the own board, which carries the rail, the portal is hidden
+    // (it stays mounted as the narrow fallback's flip control).
+    const wideHide = /\.duos-board\[data-both="true"\]\[data-showing="own"\] \.duos-portal\s*\{\s*display:\s*none;/;
+    expect(text).toMatch(wideHide);
 
-    // Narrow: at the Duos phone layout's breakpoint the toggle hides, the portal comes back,
-    // and only the showing board draws.
+    // Narrow: at the Duos phone layout's breakpoint the toggle hides, the portal comes back
+    // under the same selector (so it wins by source order), and only the showing board, which
+    // carries the rail (DuosBoard.test.tsx), draws.
     const narrow = text.slice(text.indexOf("@media (max-width: 600px)"));
+    expect(text.search(wideHide)).toBeLessThan(text.indexOf("@media (max-width: 600px)"));
     expect(narrow).toMatch(/\.duos-both-toggle\s*\{\s*display:\s*none;/);
-    expect(narrow).toMatch(/\.duos-board\[data-both="true"\] \.duos-portal\s*\{\s*display:\s*revert;/);
+    expect(narrow).toMatch(
+      /\.duos-board\[data-both="true"\]\[data-showing="own"\] \.duos-portal\s*\{\s*display:\s*revert;/,
+    );
     expect(narrow).toMatch(
       /\.duos-board\[data-both="true"\]\[data-showing="own"\] \.duos-board-teammate\s*\{\s*display:\s*none;/,
     );

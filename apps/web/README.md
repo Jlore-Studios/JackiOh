@@ -425,7 +425,8 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   card dragged onto it passing when `legal` lists it. The choice is kept per device in
   `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
   screen while both boards show, and below 600px the toggle hides and the board falls back to one
-  with the portal flipping;
+  with the portal flipping: the rail rides whichever board the portal names, so the one drawn
+  always carries it;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.

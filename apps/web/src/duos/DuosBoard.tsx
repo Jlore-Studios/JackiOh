@@ -11,7 +11,8 @@
 // On a wide screen R2095000's toggle (`duos-both`) shows that same read-only board beside the own
 // one instead, silent (Game's `silent`, so two mounted boards play one duel's cues), in
 // `duos-board-teammate` next to `duos-board-own`; the portal stays mounted and CSS hides it there.
-// On a narrowed screen CSS hides the toggle and one board, so the visible portal flips again.
+// On a narrowed screen CSS hides the toggle and draws only the board the portal names, which
+// carries the rail as the single board does, so the visible portal flips again.
 //
 // CLAUDE.md rule 7: nothing here decides a rule. The pass control is live exactly when `legal` lists
 // that card's `pass` (B19), the concede offer when it lists `concede` (B11), and a duel's own concede
@@ -485,11 +486,11 @@ export function DuosBoard({
             data-testid={duosTestid.both}
             aria-pressed={both}
             onClick={() => {
-              setBoth((current) => {
-                const next = !current;
-                storeBoth(next);
-                return next;
-              });
+              const next = !both;
+              setBoth(next);
+              storeBoth(next);
+              // Both boards open on the own one, which carries the rail.
+              if (next) setShowing("own");
             }}
           >
             {t("Both boards")}
@@ -529,6 +530,9 @@ export function DuosBoard({
       data-duel={shownDuel}
       data-both={showBoth}
     >
+      {/* R2095000: the rail, with the clock and the status, rides the board `showing` names, as
+          the single board's does, so a narrowed screen, which draws only that board, keeps the
+          portal to flip back. */}
       {showBoth ? (
         <div className="duos-both">
           <div className="duos-board-own" data-testid={duosTestid.boardOwn} ref={attach}>
@@ -542,9 +546,9 @@ export function DuosBoard({
               error={error ?? null}
               autoEndTurn={false}
               resultForm="chip"
-              turnClock={chrome?.clock}
-              matchStatus={chrome?.status}
-              boardRail={rail}
+              turnClock={showing === "own" ? chrome?.clock : undefined}
+              matchStatus={showing === "own" ? chrome?.status : undefined}
+              boardRail={showing === "own" ? rail : undefined}
               tradeBar={false}
             />
             <CardActions
@@ -570,6 +574,9 @@ export function DuosBoard({
               replay
               silent
               resultForm="chip"
+              turnClock={showing === "teammate" ? chrome?.clock : undefined}
+              matchStatus={showing === "teammate" ? chrome?.status : undefined}
+              boardRail={showing === "teammate" ? rail : undefined}
             />
             <CardActions
               key="actions-teammate"

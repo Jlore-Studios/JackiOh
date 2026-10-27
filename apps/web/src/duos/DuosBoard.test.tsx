@@ -58,6 +58,8 @@ const ID = {
   pingWheel: "duos-ping-wheel",
   pingMarker: "duos-ping-marker",
   round: "duos-round",
+  lifeStrip: "duos-life-strip",
+  concede: "duos-concede",
   ping: (kind: PingKind): string => `duos-ping-${kind}`,
 } as const;
 
@@ -1097,15 +1099,38 @@ describe("R2095000 the portal hides while both boards show", () => {
   });
 
   it("R2095000 the portal still flips while both boards show, for a narrowed screen", () => {
-    renderBoard();
+    renderBoard({ legal: [END_TURN, { kind: "concede" }] });
     toggleBoth();
     expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    // A narrowed screen draws only the showing board (duos.css), so the rail, the portal in it,
+    // must ride that board: the own board's while it shows...
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.portal)).toBeInTheDocument();
     flipPortal();
     expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
-    expect(screen.getByTestId(ID.portal)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getAllByTestId("game")).toHaveLength(2);
+    // ...and the teammate's once the portal flips to it, with the way back and the rest of the
+    // rail, none of it left on the own board that CSS now hides.
+    const own = screen.getByTestId(ID.boardOwn);
+    const mate = screen.getByTestId(ID.boardTeammate);
+    const back = within(mate).getByTestId(ID.portal);
+    expect(back).toHaveAttribute("aria-pressed", "true");
+    expect(within(mate).getByTestId(ID.lifeStrip)).toBeInTheDocument();
+    expect(within(mate).getByTestId(ID.concede)).toBeEnabled();
+    expect(within(own).queryByTestId(ID.portal)).toBeNull();
+    expect(within(own).queryByTestId(ID.lifeStrip)).toBeNull();
     flipPortal();
     expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.portal)).toBeInTheDocument();
+    expect(within(screen.getByTestId(ID.boardTeammate)).queryByTestId(ID.portal)).toBeNull();
+  });
+
+  it("R2095000 pressing Both boards while the teammate's board shows opens both on the own one", () => {
+    renderBoard();
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
+    toggleBoth();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.both)).toHaveAttribute("aria-pressed", "true");
   });
 
   it("R2095000 replay mode keeps the portal flip and draws no Both boards toggle", () => {
