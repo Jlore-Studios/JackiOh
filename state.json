@@ -3594,6 +3594,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2063": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-27T09:34:59Z",
+      "issue": 1863,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
