@@ -115,7 +115,7 @@ function removedLabel(view: PlayerView, player: PlayerId): string {
 }
 
 /** The log's own words ("your hero", "a unit") open a line with a capital; a card's name is as printed. */
-const OWN_WORDS = /^(?:a|an|your|the) /;
+const OWN_WORDS = /^(?:a|an|your|the)(?: |$)/;
 
 function capitalised(text: string): string {
   return OWN_WORDS.test(text) ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text;

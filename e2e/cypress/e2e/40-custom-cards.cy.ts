@@ -58,6 +58,9 @@ const DAMAGE = 2;
 /** The practice worker loads the engine, the AI and, for this game, the Luau module first. */
 const BOOT_TIMEOUT = 90_000;
 
+/** SPEC §6: damage a shielding unit does not take whole, so the Cry's target is never one of these. */
+const SHIELDING_KEYWORDS = ["Divine Shield", "Armor", "Indestructible"];
+
 /** Turns the human may pass before the card is in hand with an enemy unit to aim it at. */
 const TURN_BUDGET = 12;
 
@@ -89,7 +92,7 @@ function clearCustomCards(account: E2EAccount): void {
 
 // The practice page's dev handle (routes/practice.tsx), as far as this spec reads it.
 
-type UnitLike = { instanceId: string; defId: string; health: number } | null;
+type UnitLike = { instanceId: string; defId: string; health: number; armor: number; keywords: { kind: string }[] } | null;
 type ViewLike = {
   active: PlayerId;
   viewer: PlayerId;
@@ -194,11 +197,16 @@ function reachHumanTurn(prompts = PROMPT_BUDGET): void {
 
 type Play = { card: string; target: string; health: number; lane: number };
 
-/** The card in hand, an enemy unit to aim it at, an empty lane of the human's and the mana to pay. */
+/** SPEC §6: whether the Cry's damage reaches the unit whole: no Armor and no shielding keyword. */
+function takesWholeHit(unit: NonNullable<UnitLike>): boolean {
+  return unit.armor === 0 && !unit.keywords.some((keyword) => SHIELDING_KEYWORDS.includes(keyword.kind));
+}
+
+/** The card in hand, an enemy unit the Cry's damage reaches whole, an empty lane of the human's and the mana to pay. */
 function playable(view: ViewLike, customId: string, cost: number): Play | null {
   const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
   const card = hand.find((held) => held.defId === customId);
-  const enemy = view.opponent.units.find((unit): unit is NonNullable<UnitLike> => unit !== null);
+  const enemy = view.opponent.units.find((unit): unit is NonNullable<UnitLike> => unit !== null && takesWholeHit(unit));
   const lane = view.you.units.findIndex((unit) => unit === null);
   if (card === undefined || enemy === undefined || lane < 0 || view.you.mana.current < cost) return null;
   return { card: card.instanceId, target: enemy.instanceId, health: enemy.health, lane: lane + 1 };
