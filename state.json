@@ -834,7 +834,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "run_id": "pending:a005599c-1793081535",
+      "run_id": "40459765561",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T06:12:52Z",
       "stop_requested": false,
