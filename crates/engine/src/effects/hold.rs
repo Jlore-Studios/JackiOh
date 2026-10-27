@@ -8,14 +8,19 @@
 //! any way it leaves. The holder is the card running the script, or one this verb summons for it (the
 //! Sack). A face-down card is never held, so nothing hidden goes beneath a card, and a unit token
 //! ceases to exist as it leaves the field (R11), so there is nothing to hold.
+//!
+//! R1865000: Stinkyscape #112 Job Application's "send a card from your hand in as your resume" sets a
+//! hand card aside beneath the running card the same way (`set_aside_from_hand`), and its Interview's
+//! reward gives it back (`return_held_to_hand`); one whose holder leaves the field first is exiled.
 
 use serde::{Deserialize, Serialize};
 
 use crate::effects::summon::{SummonPlacement, summon_fresh};
-use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of};
+use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of, self_on_its_stay};
+use crate::effects::tune::{TuneDirection, tune_once};
 use crate::script::Effect;
-use crate::state::{CardInstance, HeldCard, find_instance};
-use crate::wire::GameEvent;
+use crate::state::{CardInstance, HeldCard, find_instance, find_instance_mut};
+use crate::wire::{GameEvent, ZoneName};
 
 /// Whom a held card is summoned for once its holder leaves: its controller as it was taken, or the
 /// holder's controller.
@@ -124,6 +129,108 @@ pub fn hold_beneath(args: HoldArgs) -> Effect {
             holder_mark,
             to,
             card: taken,
+            exile_on_release: None,
         });
+    })
+}
+
+/// `setAsideFromHand`'s argument: the hand card to take (the first chosen one by default).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SetAsideArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<TargetSpec>,
+}
+
+/// R1865000: take the hand card `target` names out of its owner's hand and hold it beneath the running
+/// card, which must be acting on the field on the stay its run began with, until `return_held_to_hand`
+/// gives it back or the holder leaves the field, when the next state check exiles it. It goes as it
+/// was, with no reset, and `held` reports it; it is in no pile while it waits, so both seats read it. A
+/// unit token ceases to exist as it leaves the hand (R11), so nothing is held. Nothing happens to a
+/// card in no hand.
+pub fn set_aside_from_hand(args: SetAsideArgs) -> Effect {
+    Effect::new("setAsideFromHand", move |ctx| {
+        let Some(card) = instance_by_id_or_spec(ctx, None, args.target.as_ref()) else {
+            return;
+        };
+        let Some(card) = find_instance(ctx.state, &card.id).cloned() else {
+            return;
+        };
+        if card.zone.z() != ZoneName::Hand {
+            return;
+        }
+        let Some(me) = self_on_its_stay(ctx).filter(|me| crate::zones::acts_on_field(ctx.state, me)) else {
+            return;
+        };
+        let token = crate::zones::is_unit_token(ctx.state, &card);
+        let mut taken: CardInstance = card.clone();
+        crate::zones::cease_to_exist(ctx.state, &mut taken);
+        ctx.events.push(GameEvent::Held {
+            player: card.owner,
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            holder_id: me.id.clone(),
+        });
+        // R11: a unit token ceased to exist as it left the hand; nothing is left to hold.
+        if token {
+            return;
+        }
+        let holder_mark = crate::stays::exit_mark(ctx.state);
+        ctx.state.held.get_or_insert_with(Vec::new).push(HeldCard {
+            holder_id: me.id,
+            holder_mark,
+            to: card.owner,
+            card: taken,
+            exile_on_release: Some(true),
+        });
+    })
+}
+
+/// `returnHeldToHand`'s argument: the price the card comes back at (`costOverride`, none keeping its
+/// own) and how many times it is Buffed in the hand.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ReturnHeldArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_override: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrades: Option<i32>,
+}
+
+/// R1865000: every card the running card holds on its stay, in the order they were taken, back to the
+/// hand of the player it returns to. With `cost_override` its price is reset (R766) and set to that
+/// number; once in the hand it is Buffed `upgrades` times (B3.4, `tune_once`). A full hand burns it
+/// unbuffed (§2.4), the printed card again as a burned hand card is (R215). Nothing happens while the
+/// running card is not acting on the field on the stay its run began with.
+pub fn return_held_to_hand(args: ReturnHeldArgs) -> Effect {
+    Effect::new("returnHeldToHand", move |ctx| {
+        let Some(me) = self_on_its_stay(ctx).filter(|me| crate::zones::acts_on_field(ctx.state, me)) else {
+            return;
+        };
+        let Some(held) = ctx.state.held.take() else {
+            return;
+        };
+        let (mine, kept): (Vec<HeldCard>, Vec<HeldCard>) = held.into_iter().partition(|entry| {
+            entry.holder_id == me.id && !crate::stays::left_field_after(ctx.state, entry.holder_mark, &entry.holder_id)
+        });
+        ctx.state.held = if kept.is_empty() { None } else { Some(kept) };
+        for entry in mine {
+            let mut card = entry.card;
+            if let Some(cost) = args.cost_override {
+                crate::zones::reset_price(&mut card);
+                card.cost_override = Some(cost.max(0));
+            }
+            if crate::draw::add_to_hand(&mut ctx.sink, &mut card) != crate::draw::AddToHandOutcome::Hand {
+                if let Some(burned) = find_instance_mut(ctx.state, &card.id) {
+                    crate::zones::reset_instance(burned);
+                }
+                continue;
+            }
+            for _ in 0..args.upgrades.unwrap_or(0).max(0) {
+                tune_once(ctx, &card, TuneDirection::Upgrade, true);
+            }
+        }
     })
 }

@@ -996,6 +996,226 @@ mod r1850003_hold_beneath {
     }
 }
 
+mod r1865000_set_aside_from_hand {
+    use super::*;
+
+    /// p1's ticket in backrow `lane`: the holder a card is set aside beneath.
+    fn holder(state: &mut GameState, lane: i32) -> CardInstance {
+        put(state, &ticket().id, slot(P1, Row::Backrow, lane), json!({}))
+    }
+
+    /// p1's `def_id`, put in p1's hand.
+    fn in_p1_hand(state: &mut GameState, def_id: &str) -> CardInstance {
+        in_hand(state, def_id, P1, 1)
+            .into_iter()
+            .next()
+            .expect("a hand card")
+    }
+
+    fn set_aside(state: &mut GameState, holder: &str, card: &str) -> Vec<GameEvent> {
+        apply(
+            state,
+            Some(holder),
+            P1,
+            effects::set_aside_from_hand(json_as(json!({ "target": instance(card) }))),
+        )
+    }
+
+    fn give_back(state: &mut GameState, holder: &str, args: Value) -> Vec<GameEvent> {
+        apply(
+            state,
+            Some(holder),
+            P1,
+            effects::return_held_to_hand(json_as(args)),
+        )
+    }
+
+    fn upgraded(events: &[GameEvent], id: &str) -> usize {
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == id))
+            .count()
+    }
+
+    fn in_hand_of(state: &GameState, player: PlayerId, id: &str) -> bool {
+        state.players[player].hand.iter().any(|card| card.id == id)
+    }
+
+    #[test]
+    fn r1865000_a_hand_card_set_aside_leaves_the_hand_and_waits_beneath_its_holder() {
+        let mut state = playing("set-aside");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        let events = set_aside(&mut state, &keeper.id, &card.id);
+        assert!(!in_hand_of(&state, P1, &card.id));
+        let held = state.held.clone().expect("one card held");
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].holder_id, keeper.id);
+        assert_eq!(held[0].card.id, card.id);
+        assert_eq!(held[0].to, P1);
+        assert_eq!(held[0].exile_on_release, Some(true));
+        assert!(events.iter().any(|event| matches!(
+            event,
+            GameEvent::Held { player: P1, instance_id, holder_id, .. }
+                if *instance_id == card.id && *holder_id == keeper.id
+        )));
+    }
+
+    #[test]
+    fn r1865000_it_comes_back_to_its_owners_hand_at_the_price_given_and_buffed() {
+        let mut state = playing("give-back");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        if let Some(live) = find_instance_mut(&mut state, &card.id) {
+            live.cost_mod = 1;
+        }
+        set_aside(&mut state, &keeper.id, &card.id);
+        let events = give_back(&mut state, &keeper.id, json!({ "costOverride": 0, "upgrades": 2 }));
+        assert!(in_hand_of(&state, P1, &card.id));
+        let back = find_instance(&state, &card.id).expect("in hand");
+        assert_eq!(back.cost_override, Some(0));
+        assert_eq!(back.cost_mod, 0, "R766: its price reset first");
+        assert_eq!(upgraded(&events, &card.id), 2);
+        assert_eq!(state.held, None);
+    }
+
+    #[test]
+    fn r1865000_a_full_hand_burns_it_unbuffed() {
+        let mut state = playing("burned");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        if let Some(live) = find_instance_mut(&mut state, &card.id) {
+            live.buffs = AttackHealth { attack: 1, health: 1 };
+        }
+        set_aside(&mut state, &keeper.id, &card.id);
+        let room = jackioh_engine::config::HAND_CAP - state.players.p1.hand.len() as i32;
+        in_hand(&mut state, &cheap().id, P1, room);
+        let events = give_back(&mut state, &keeper.id, json!({ "costOverride": 0, "upgrades": 2 }));
+        assert!(state.players.p1.graveyard.iter().any(|gone| gone.id == card.id));
+        assert!(events.iter().any(
+            |event| matches!(event, GameEvent::Burned { instance_id, .. } if *instance_id == card.id)
+        ));
+        assert_eq!(upgraded(&events, &card.id), 0);
+        let burned = find_instance(&state, &card.id).expect("in the graveyard");
+        assert_eq!(burned.buffs, AttackHealth { attack: 0, health: 0 }, "R215: the printed card");
+        assert_eq!(burned.cost_override, None);
+        assert_eq!(state.held, None);
+    }
+
+    #[test]
+    fn r1865000_it_is_exiled_reset_when_its_holder_leaves_the_field_first() {
+        let mut state = playing("exiled");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        if let Some(live) = find_instance_mut(&mut state, &card.id) {
+            live.cost_mod = 1;
+            live.buffs = AttackHealth { attack: 1, health: 1 };
+        }
+        set_aside(&mut state, &keeper.id, &card.id);
+        let events = destroy(&mut state, &keeper.id);
+        let exiled = state
+            .players
+            .p1
+            .exile
+            .iter()
+            .find(|gone| gone.id == card.id)
+            .expect("in p1's exile");
+        assert_eq!(exiled.cost_mod, 0);
+        assert_eq!(exiled.buffs, AttackHealth { attack: 0, health: 0 });
+        assert!(events.iter().any(
+            |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == card.id)
+        ));
+        assert!(!events.iter().any(
+            |event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == card.id)
+        ));
+        assert_eq!(state.held, None);
+    }
+
+    #[test]
+    fn r1865000_a_unit_token_ceases_to_exist_and_nothing_is_held() {
+        let mut state = playing("token");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &token().id);
+        let events = set_aside(&mut state, &keeper.id, &card.id);
+        assert_eq!(find_instance(&state, &card.id), None, "R11: it ceased to exist");
+        assert_eq!(state.held, None);
+        assert!(events.iter().any(
+            |event| matches!(event, GameEvent::Held { instance_id, .. } if *instance_id == card.id)
+        ));
+    }
+
+    #[test]
+    fn r1865000_nothing_is_set_aside_off_a_hand_or_by_a_holder_off_the_field() {
+        let mut state = playing("off-hand");
+        let keeper = holder(&mut state, 1);
+        let unit = put(&mut state, &cheap().id, slot(P1, Row::Units, 1), json!({}));
+        let events = set_aside(&mut state, &keeper.id, &unit.id);
+        assert!(on_field(&state, &unit.id), "a card on the field is no hand card");
+        assert_eq!(state.held, None);
+        assert!(events_of_type(&events, "held").is_empty());
+
+        let mut state = playing("off-field");
+        let keeper = in_p1_hand(&mut state, &ticket().id);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        set_aside(&mut state, &keeper.id, &card.id);
+        assert!(in_hand_of(&state, P1, &card.id), "a holder in a hand holds nothing");
+        assert_eq!(state.held, None);
+    }
+
+    #[test]
+    fn r1865000_it_returns_only_what_the_running_card_holds() {
+        let mut state = playing("two-holders");
+        let first = holder(&mut state, 1);
+        let second = holder(&mut state, 2);
+        let one = in_p1_hand(&mut state, &cheap().id);
+        let two = in_p1_hand(&mut state, &dear().id);
+        set_aside(&mut state, &first.id, &one.id);
+        set_aside(&mut state, &second.id, &two.id);
+        give_back(&mut state, &first.id, json!({}));
+        assert!(in_hand_of(&state, P1, &one.id));
+        assert!(!in_hand_of(&state, P1, &two.id));
+        let held = state.held.clone().expect("the second still held");
+        assert_eq!(
+            held.iter()
+                .map(|entry| (entry.holder_id.clone(), entry.card.id.clone()))
+                .collect::<Vec<_>>(),
+            vec![(second.id.clone(), two.id.clone())]
+        );
+        let back = find_instance(&state, &one.id).expect("in hand");
+        assert_eq!(back.cost_override, None, "no price given, none set");
+    }
+
+    #[test]
+    fn r1865000_a_set_aside_card_hides_nothing_from_either_seat() {
+        // I6, the fuzz's hidden-information monitor: a set-aside card is in no pile and reads to both
+        // seats there; back in its owner's hand, the events that named it read as that hand does (R97).
+        let mut state = playing("set-aside-i6");
+        let keeper = holder(&mut state, 1);
+        let card = in_p1_hand(&mut state, &cheap().id);
+        let mut events = set_aside(&mut state, &keeper.id, &card.id);
+        state.applied = vec![AppliedAction {
+            nonce: "set-aside".into(),
+            events: events.clone(),
+        }];
+        let monitor = create_invariant_monitor(&state);
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+
+        events.extend(give_back(&mut state, &keeper.id, json!({ "upgrades": 1 })));
+        assert!(in_hand_of(&state, P1, &card.id));
+        state.applied = vec![AppliedAction {
+            nonce: "given-back".into(),
+            events,
+        }];
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+        let shown = view_for(&state, P2);
+        let named = serde_json::to_string(&shown).unwrap_or_default();
+        assert!(
+            !named.contains(&card.id),
+            "p2 reads the card back in p1's hand by no id: {named}"
+        );
+    }
+}
+
 mod r1850004_cast_for_yourself {
     use super::*;
 
