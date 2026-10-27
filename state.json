@@ -865,7 +865,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
-      "run_id": "pending:6531fc0c-1793064928",
+      "run_id": "40433519586",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T01:35:53Z",
       "stop_requested": false,
