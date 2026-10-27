@@ -686,7 +686,7 @@ costs, stats and keywords are the proposal's; their texts are refined:
   2×) rather than two Radiant ones (4×).
 
 **How they are dealt.** #1853's Marketplace (pending PR #1963) offers one of the ten each cycle, S21's lot
-over their ids (stock 1 to 3, a Radiant one 20% of the time at twice the price). Once the set ships they join
+over their ids (stock 1 to 3, a Radiant one 20% of the time at twice the price), `MARKETPLACE_TABLE`'s last lot ([[R1881006]]). Once the set ships they join
 every AI pool ([[R1421]]): C+ #43 AI Slop (the (1) Cost ones), C+ #78 Claude's Datacenter, M #42's night
 market, M #53, M #59 and M #60, which grow to 24 cards (the release re-pins R480's list).
 
@@ -3554,7 +3554,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Gain a random Common or Rare Stinkyscape Resource.
 - **Radiant:** Gain a random Radiant Common or Rare Stinkyscape Resource.
 - **Engine:** Gain a Resource ([[§6.3]], `gain_resources`, [[R1840002]]) from a pool of the Common and Rare Resources, named by id (Reknite, Korrelite, Gellium): the rarity roll over those two (55 against 25), then one of the rolled rarity; into the tray, never the hand, one past 8 sold at once ([[R1840001]]); Radiant: a Radiant one. It makes no Credits: its average sale, about 4 Credits (Radiant 8), is below its Marketplace price, 5 (Radiant 10). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-2: the pool leaves Axnit, Narcor and Red Narcor out, so buying it to sell its Resource loses Credits.
+- **Rulings:** ST-S21-2: the pool leaves Axnit, Narcor and Red Narcor out, so buying it to sell its Resource loses Credits. Built by S21 (#1881) as [[R1881000]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: a Radiant Resource (2× its effect and its price).
 - **Class:** C (M03, the tray).
@@ -3566,8 +3566,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Discover a Starship Piece. It costs (1) less.
 - **Radiant:** Discover a Radiant Starship Piece. It costs (1) less.
-- **Engine:** A Discover ([[§6.3]]) over the non-token cards that print Starship Piece (NEW unless S03 or S19 builds it: a pool by keyword kind), three different, the pick at `costMod` −1; Radiant: the pick added Radiant ([[§5.2]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-3: "a Starship Piece" is a card that prints the keyword on its face, never a token.
+- **Engine:** A Discover ([[§6.3]]) over the non-token cards that print Starship Piece ([[R1878000]]'s pool, [[R1881001]]), three different, the pick at `costMod` −1; Radiant: the pick added Radiant ([[§5.2]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Rulings:** ST-S21-3: "a Starship Piece" is a card that prints the keyword on its face, never a token. Built by S21 (#1881) as [[R1881001]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: the piece Radiant (2× its stats).
 - **Class:** B.
@@ -3580,7 +3580,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker.
 - **Radiant:** Reveals when an enemy Unit attacks you or one of your Units: Cancel the attack and Freeze the attacker.
 - **Engine:** A face-down Trap in [[§4.2]] step 4's window, on a declared attack by an enemy Unit on a Unit of its controller's (Radiant: or on their hero): Cancel an attack ([[§6.3]], `cancelAttack`, [[R44]]), then Freeze the attacker ([[§6.3]]): its exertion spent on the declaration, it thaws at the cleanup of its controller's next turn, so it cannot attack then either ([[R1174000]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-4: a forced attack declares nothing, so it springs nothing.
+- **Rulings:** ST-S21-4: a forced attack declares nothing, so it springs nothing. Built by S21 (#1881) as [[R1881002]]: an attack by its own controller leaves it set too.
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: its controller's hero guarded too (a broader scope).
 - **Class:** B (a cancel and a Freeze).
@@ -3593,7 +3593,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Your Starship launch costs (1). Draw 1.
 - **Radiant:** Your Starship launch costs (0). Draw 2.
 - **Engine:** `starship_launch_costs { cost: 1 }` ([[R1852006]]): its player's next launch by the Activate costs (1) instead of (3), a public badge, spent by that launch; then a draw ([[§2.4]]). Radiant: (0), and draw 2. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-5: with no Starship yet, the price waits for the next launch.
+- **Rulings:** ST-S21-5: with no Starship yet, the price waits for the next launch. Built by S21 (#1881) as [[R1881003]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: (0) and two cards against (1) and one (2×).
 - **Class:** C (M02, the launch price).
@@ -3619,7 +3619,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Give each of your other Units a random Combat Keyword.
 - **Radiant:** Cry: Give each of your other Units 2 random Combat Keywords.
 - **Engine:** Cry ([[R1]]): each other Unit its controller has on the field gains one random Combat Keyword (Radiant: two), each drawn on its own from [[R21]]'s pool ([[§6.1]] Combat keyword), never one it has, an Indestructible one never offered Taunt ([[R347]]); granted, so gone with [[R78]]'s reset. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-6: each Unit draws its own keyword; a Dormant card is passed by ([[R1839000]]).
+- **Rulings:** ST-S21-6: each Unit draws its own keyword; a Dormant card is passed by ([[R1839000]]). Built by S21 (#1881) as [[R1881004]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: 4/4 and two keywords each against one.
 - **Class:** A.
@@ -3631,8 +3631,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** End of turn: Summon a Drone Interceptor. It gains Starship Piece.
 - **Radiant:** End of turn: Summon a Radiant Drone Interceptor. It gains Starship Piece.
-- **Engine:** End of turn ([[R62]]): a Drone Interceptor (Radiant: a Radiant one) summoned into the leftmost open unit zone ([[R64]]), then given Starship Piece (a granted keyword, kept until it leaves the field, [[R78]]): when it dies, a copy of it fuses into its owner's Dormant Starship, a granted piece fusing as a printed one does ([[R1852000]]). Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-7: the copy that fuses is a plain Drone Interceptor, the granted keyword not carried ([[R1852000]]).
+- **Engine:** End of turn ([[R62]]): a Drone Interceptor (Radiant: a Radiant one) summoned into the leftmost open unit zone ([[R64]]), given Starship Piece as it lands by the summon's `keywords` rider (a granted keyword, kept until it leaves the field, [[R78]], [[R1881005]]): when it dies, a copy of it fuses into its owner's Dormant Starship, a granted piece fusing as a printed one does ([[R1852000]]). Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Rulings:** ST-S21-7: the copy that fuses is a plain Drone Interceptor, the granted keyword not carried ([[R1852000]]). Built by S21 (#1881) as [[R1881005]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15): unlike S #168 Drone Hanger, its drones build the ship. R275: a Radiant drone each turn.
 - **Class:** B (a summon and a granted Starship Piece).
@@ -3644,7 +3644,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt.
 - **Radiant:** Reveals when your opponent plays a Unit: Summon 2 Drone Interceptors. Give them Taunt.
-- **Engine:** A face-down Trap on the opponent's Unit play (`cardPlayed`, [[§10.5]] step 4), going to the graveyard as it fires: a Drone Interceptor (Radiant: two) summoned into the leftmost open unit zones ([[R64]]), each given Taunt ([[§6.1]]), a decoy; one that rolled Taunt keeps it. Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Engine:** A face-down Trap on the opponent's Unit play (`cardPlayed`, [[§10.5]] step 4), going to the graveyard as it fires: a Drone Interceptor (Radiant: two) summoned into the leftmost open unit zones ([[R64]]), each given Taunt ([[§6.1]]) by the summon's `keywords` rider ([[R1881005]]), a decoy; one that rolled Taunt keeps it. Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
 - **Rulings:** none.
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: two decoys against one (2×).
