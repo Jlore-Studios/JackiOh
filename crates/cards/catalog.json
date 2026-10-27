@@ -24404,7 +24404,7 @@
       "stinkyscape-150",
       "stinkyscape-151"
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand."
@@ -24439,7 +24439,7 @@
       "stinkyscape-151",
       "stinkyscape-159"
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "One random effect: Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
@@ -24533,7 +24533,7 @@
       "stinkyscape-t-propagation-layer",
       "stinkyscape-t-meltdown-layer"
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos."
