@@ -3533,6 +3533,13 @@
     "2054": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T14:11:38Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Hard's 'the AI's search (crates/ai/src/)' line gave me pause, but this changes a scoring term in evaluate/reply, not the search loop, so medium holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
