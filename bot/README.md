@@ -439,7 +439,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-2` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
+| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week, and 90% of the week from Sunday 17:00 until it resets on Monday at 09:00 UTC (`late_week`) |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
@@ -503,6 +503,9 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
     a CLI that reports none.
 
   How the caps hold:
+  - **The last hour and the late week** lift or raise a cap only on a reading that shows them
+    (`last_hour`, `late_week`, below): the planner decides on the stored one, the run again on
+    its fresh one.
   - **A fresh reading before the run.** A capped Claude account is pinged (one Haiku turn)
     before any model work, since the stored reading is the last run's, or nothing once its
     window has reset; agy and Muse read their own `/usage`.
@@ -530,6 +533,19 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
     last reading had nearly full (85% or more), else an hour. A failed agy or Muse call whose
     reading after it has a window full is that window's refusal, whatever the CLI said: their
     caps are 100% (#798), so their own limit ends such a call.
+- `last_hour: true` (every Claude account with a 5-hour cap: all but claude-3): what is left of a
+  5-hour session is lost at its reset, so in the hour before it (`providers.LAST_HOUR`) the 5-hour
+  cap that holds then is lifted, as long as the reading is still at that cap or under it (a point
+  over, `LAST_HOUR_SLACK`, is the bot's own call stopping late). A reading further over means
+  somebody else is spending the session, and the cap holds. The account still runs one item at a
+  time, and a run that starts there goes on past the cap until the session resets
+  (`work.Worker.last_hour`), then under the new session's cap. The weekly cap still holds.
+  The status issue says "cap 100% now (its last hour)", and a capped account's "starts again"
+  time is its last hour's start when that comes before its reset.
+- `late_week` (`{"from": "Sun 17:00", "seven_day": 0.9}`, claude-5's): from that weekday and time
+  in the bot's time zone until the week resets, the weekly cap is this one. It holds only while
+  the reset is at most a day after its start (`LATE_WEEK_SPAN`; claude-5's is ten hours), so a
+  week whose reset moved never has its cap raised for days.
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
@@ -620,7 +636,7 @@ load balancer (below), the owner's order holds: spend claude-3 (any hour, no cap
 no weekly cap), claude-8 (any hour, up to 85% of its 5-hour session, no weekly cap) and
 claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
-no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
+no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week, 90% from Sunday 17:00 until its week resets); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back
 mostly for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin, the weak model,

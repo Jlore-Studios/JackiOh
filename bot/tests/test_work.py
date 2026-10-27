@@ -6,9 +6,11 @@ import dataclasses
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from harness.clock import iso
 from harness.runner import FakeRunner, RunRequest, RunResult
 from harness.work import Worker, _is_manifest
 
@@ -135,6 +137,56 @@ class WorkTests(unittest.TestCase):
                       result["reason"])
         self.assertEqual(runner.calls, [])
         self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.87)
+
+    def test_a_run_in_its_sessions_last_hour_goes_on_past_the_cap(self):
+        """`last_hour`: claude-2 at its 90% cap half an hour before its session resets starts
+        its build anyway, and its calls go on past the cap, to the whole session, until the
+        reset: the run holds the session it took (`Worker.last_hour`)."""
+        at = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
+        resets = "2026-09-30T03:30:00Z"
+        asked = {}
+
+        def build(request):
+            asked["at 97%"] = request.usage_stop({"five_hour": {"utilization": 0.97,
+                                                                "resets_at": resets}})
+            asked["at 100%"] = request.usage_stop({"five_hour": {"utilization": 1.0,
+                                                                 "resets_at": resets}})
+            result = builder({"src/game.txt": "rules v2\n"})(request)
+            result.usage = {"status": "allowed", "five_hour": {"utilization": 0.97,
+                                                               "resets_at": resets}}
+            return result
+
+        runner = FakeRunner({"build": build, "review": reviewer(APPROVE)})
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        worker = Worker(self.cfg, plan, runner, self.clone, self.root / "work", self.out,
+                        now=lambda: at)
+        worker.start_usage = {"status": "allowed", "five_hour": {"utilization": 0.9,
+                                                                 "resets_at": resets}}
+        result = worker.run()
+        self.assertEqual(result["status"], "approved", result.get("reason"))
+        self.assertIsNone(asked["at 97%"])
+        self.assertIn("at or over its 100% cap", asked["at 100%"])
+        self.assertEqual(iso(worker.last_hour), resets)
+        self.assertEqual([call.role for call in runner.calls], ["build", "review"])
+
+    def test_a_session_somebody_else_spent_keeps_its_cap_in_its_last_hour(self):
+        """The same half hour, but the session reads 95%, past what claude-2's own calls leave
+        it: somebody else is spending it, so the build never starts."""
+        at = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
+        runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
+                             "review": reviewer(APPROVE)})
+        plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
+                "thread": "Please make the rules v2.", "provider": "claude-2"}
+        worker = Worker(self.cfg, plan, runner, self.clone, self.root / "work", self.out,
+                        now=lambda: at)
+        worker.start_usage = {"status": "allowed", "five_hour": {
+            "utilization": 0.95, "resets_at": "2026-09-30T03:30:00Z"}}
+        result = worker.run()
+        self.assertEqual(result["interrupt"], "usage")
+        self.assertIn("5-hour usage is 95%", result["reason"])
+        self.assertEqual(runner.calls, [])
+        self.assertIsNone(worker.last_hour)
 
     def test_a_call_stopped_past_the_cap_stops_the_run(self):
         """Every call of a capped subscription carries the caps (`usage_stop`); the runner's

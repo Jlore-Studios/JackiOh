@@ -482,7 +482,7 @@ class DashboardTests(unittest.TestCase):
                                     "reviews only<br/>starts again 03:00"))
         self.assertEqual(dashboard._account(ctx, state, pool.get("claude-6")),
                          ("paused", "⏸️ 5-hour 45% of its 50% cap<br/>long runs start under 45%; "
-                                    "reviews only<br/>starts again 02:50"))
+                                    "reviews only<br/>starts again 01:50"))
         body = dashboard.render(ctx)
         self.assertNotIn("⚪ idle", body.split("## 📋 Queue")[0].split("claude-4")[1][:80])
         self.assertIn("| Subscription | Now | 5-hour session | 7-day week | Read | Models (tier) "
