@@ -702,7 +702,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"ls -la && head -c 3000 .bot-notes.md; echo; grep -n \\\"^## \\\" .bot-notes.md | head -50; wc -l .bot-notes.md .bot-journal.md\", \"description\": \"Read bot notes and list worktree\"}\n- Bash: {\"command\": \"grep -n \\\"^#\\\" .bot-journal.md | head -60; tail -60 .bot-journal.md\", \"description\": \"Survey the journal structure and its end\"}\n- Bash: {\"command\": \"sed -n 100,127p .bot-notes.md; git log --oneline -3; ls crates/cards/src/scripts/stinkyscape/ | head -100; ls crates/cards/src/scripts/stinkyscape | wc -l\", \"description\": \"Read the rest\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate='''## State\\n\\nRun 5 (build, opus, 2026-10-27): the first build run. Runs 1\\u20134 only planned; the plan below (from the is\u2026\n- Bash: {\"command\": \"cat crates/engine/src/starship.rs | head -400; wc -l crates/engine/src/starship.rs\", \"description\": \"Read the engine's starship module\"}\n- Bash: {\"command\": \"sed -n 400,420p crates/engine/src/starship.rs; grep -n \\\"with_when\\\\|pub fn new\\\\|pub struct TriggerDef\\\" -A3 crates/engine/src/script.rs | head -60\", \"description\": \"Read when_launched \u2026\n- Bash: {\"command\": \"cd crates/engine/src; grep -rn \\\"\\\\.when\\\\b\\\\|\\\\.when(\\\" --include=*.rs . | grep -v \\\"with_when\\\" | head -20; sed -n 295,345p script.rs\", \"description\": \"Check where TriggerDef.when is r\u2026\n- said: You've hit your session limit \u00b7 resets 5:50am (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
