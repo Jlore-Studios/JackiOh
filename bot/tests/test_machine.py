@@ -145,7 +145,7 @@ class RegisterRunnersTests(unittest.TestCase):
     def test_with_no_ids_every_machine_subscription_gets_its_lanes(self):
         handed = self.handed()
         self.assertEqual(handed[:4], ["OWNER/REPO", "REG", "REMOVE", ""])
-        self.assertIn("muse=night-vm-muse=2", handed)
+        self.assertIn("muse=night-vm-muse=4", handed)
         self.assertIn("agy=night-vm-agy=1", handed)
 
     def test_each_box_names_its_own_subscriptions_and_runners(self):
@@ -156,13 +156,14 @@ class RegisterRunnersTests(unittest.TestCase):
         self.assertEqual(self.handed("muse=0")[4:], ["muse=night-vm-muse=0"])
 
     def test_the_night_box_takes_muses_fill_in_runners(self):
-        """Muse's two lanes of its own are on the Muse box, and its fill-in runners
-        (providers.json `fill_in`) on the night box, one per lane of gpt's and agy's."""
+        """Muse's four lanes of its own are one on the night box and three on the Muse box,
+        and its fill-in runners (providers.json `fill_in`) on the night box, one per lane of
+        gpt's and agy's."""
         self.assertIn("muse:fill=night-vm-muse-fill=2", self.handed())
-        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=0", "muse:fill")[4:],
+        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=1", "muse:fill")[4:],
                          ["gpt=night-vm-gpt=1", "agy=night-vm-agy=1", "devin=night-vm-devin=6",
-                          "muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2"])
-        self.assertEqual(self.handed("muse=2", box="b2")[3:], ["b2", "muse=night-vm-muse=2"])
+                          "muse=night-vm-muse=1", "muse:fill=night-vm-muse-fill=2"])
+        self.assertEqual(self.handed("muse=3", box="b2")[3:], ["b2", "muse=night-vm-muse=3"])
         self.assertEqual(self.handed("muse:fill=1")[4:], ["muse:fill=night-vm-muse-fill=1"])
         self.assertNotEqual(self.run_script("gpt:fill").returncode, 0)
         # Its runners live apart from the subscription's own, which never count them as lanes.
@@ -285,10 +286,10 @@ class OnBoxTests(unittest.TestCase):
         again = self.register("muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2")
         self.assertEqual((again.returncode, again.stdout.count("active as agent-muse")), (0, 2))
 
-    def test_a_copy_linked_into_the_first_runner_is_made_again(self):
-        # What the copy of the links left on the night box: the fill-in runner's registration in
-        # the first runner's directory, its service under the first's name, and copies that run
-        # as the first.
+    def broken(self):
+        """What the copy of the links left on the night box on 2026-10-26: the fill-in runner's
+        registration in the first runner's directory, its service under the first's name, and
+        copies that run as the first."""
         self.shell(self.first, "./svc.sh stop && ./svc.sh uninstall && ./config.sh remove && "
                                "./config.sh --name night-vm-muse-fill --labels night-vm-muse-fill")
         for name in ("actions-runner-fill", "actions-runner-fill-2", "actions-runner-2"):
@@ -303,6 +304,9 @@ class OnBoxTests(unittest.TestCase):
                                                                      "night-vm-muse"))
         stale.chmod(0o755)
         (self.tmp / "units" / "actions.runner.night-vm-muse.service").write_text("")
+
+    def test_a_copy_linked_into_the_first_runner_is_made_again(self):
+        self.broken()
         done = self.register("muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(self.runner("actions-runner-fill")[:2], (False, "night-vm-muse-fill"))
@@ -312,6 +316,33 @@ class OnBoxTests(unittest.TestCase):
                          ["actions.runner.night-vm-muse-fill-2.service",
                           "actions.runner.night-vm-muse-fill.service"])
 
+    def test_the_first_runner_drops_the_registration_left_in_its_directory(self):
+        """Three jobs a box: the night box keeps one Muse runner of its own (`muse=1`), in the
+        directory that holds night-vm-muse-fill's registration. It drops that registration's
+        files (not the registration on GitHub, which the fill-in lane takes over with
+        `--replace`), so the order of the ids changes nothing."""
+        for order in (("muse=night-vm-muse=1", "muse:fill=night-vm-muse-fill=2"),
+                      ("muse:fill=night-vm-muse-fill=2", "muse=night-vm-muse=1")):
+            self.setUp()
+            self.broken()
+            done = self.register(*order)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn("night-vm-muse: dropped night-vm-muse-fill's registration", done.stdout)
+            self.assertNotIn("removal", done.stdout)
+            self.assertEqual(self.runner("actions-runner"),
+                             (True, "night-vm-muse", "actions.runner.night-vm-muse.service"))
+            self.assertEqual(self.runner("actions-runner-fill"),
+                             (False, "night-vm-muse-fill",
+                              "actions.runner.night-vm-muse-fill.service"))
+            self.assertEqual(self.runner("actions-runner-fill-2")[:2],
+                             (False, "night-vm-muse-fill-2"))
+            self.assertFalse((self.home / "actions-runner-2").exists())
+            self.assertEqual(sorted(p.name for p in (self.tmp / "units").iterdir()),
+                             ["actions.runner.night-vm-muse-fill-2.service",
+                              "actions.runner.night-vm-muse-fill.service",
+                              "actions.runner.night-vm-muse.service"])
+            self.assertEqual(self.register(*order).stdout.count("active as agent-muse"), 3)
+
     def test_a_job_on_a_linked_copy_is_left_alone(self):
         (self.tmp / "bin" / "pgrep").write_text(
             '#!/bin/bash\ncase "$*" in *bin.2.0/Runner.Worker*) exit 0;; esac\nexit 1\n')
@@ -319,12 +350,19 @@ class OnBoxTests(unittest.TestCase):
         self.assertIn("night-vm-muse: busy with a job", done.stdout)
         self.assertEqual(self.runner("actions-runner")[1], "night-vm-muse")
 
-    def test_the_muse_box_adds_its_second_runner(self):
-        done = self.register("muse=night-vm-muse=2", box="b2")
+    def test_the_muse_box_adds_its_second_and_third_runners(self):
+        self.shell(self.first, "./svc.sh stop && ./svc.sh uninstall && ./config.sh remove && "
+                               "./config.sh --name night-vm-muse-b2 --labels night-vm-muse && "
+                               "./svc.sh install && ./svc.sh start")
+        done = self.register("muse=night-vm-muse=3", box="b2")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(self.runner("actions-runner-2"),
-                         (False, "night-vm-muse-2-b2", "actions.runner.night-vm-muse-2-b2.service"))
-        self.assertEqual(self.runner("actions-runner")[1], "night-vm-muse")
+        for lane in (2, 3):
+            self.assertEqual(self.runner(f"actions-runner-{lane}"),
+                             (False, f"night-vm-muse-{lane}-b2",
+                              f"actions.runner.night-vm-muse-{lane}-b2.service"))
+        self.assertEqual(self.runner("actions-runner")[1:],
+                         ("night-vm-muse-b2", "actions.runner.night-vm-muse-b2.service"))
+        self.assertNotIn("dropped", done.stdout)
 
 
 class SetupTests(unittest.TestCase):

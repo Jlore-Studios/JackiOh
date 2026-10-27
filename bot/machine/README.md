@@ -7,10 +7,10 @@ night box: one virtual machine on AWS, where each subscription in
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
 GitHub write token. A second box, the training box (below), ran the two LLM training lanes
-outside the harness until #1677 stopped them on 2026-10-25. It is the Muse box now: it holds
-Muse's two lanes of its own, the night box holds gpt's and agy's, which Muse fills while either
-cannot start work, and each box runs two of these jobs at most. It still runs `gather`
-([The Muse box](#the-muse-box)).
+outside the harness until #1677 stopped them on 2026-10-25. It is the Muse box now, and each box
+runs three of these jobs at most: the Muse box three of Muse's own lanes, the night box gpt's,
+agy's and one of Muse's, and Muse fills gpt's or agy's while that one cannot start work. It still
+runs `gather` ([The Muse box](#the-muse-box)).
 
 **After the v0.3.0 cutover (#306), run `setup.sh` on the night box again, once**, with the same
 ids as before (Building it, step 2). The repository's checks are Rust now, and that run gives every
@@ -42,10 +42,10 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has two (#1273), both on the Muse box
-(`night-vm-muse-b2` and `night-vm-muse-2-b2`), plus two fill-in runners here in gpt's and agy's
-lanes (`night-vm-muse-fill`, `-fill-2`), each under that box's `agent-muse` and its login
-(#1677). A lane the harness counts but no
+`"lanes": 6` on the six runners here, and Muse has four (two since #1273): one here,
+`night-vm-muse`, and three on the Muse box (`night-vm-muse-b2`, `-2-b2`, `-3-b2`), plus two
+fill-in runners here in gpt's and agy's lanes (`night-vm-muse-fill`, `-fill-2`), each under that
+box's `agent-muse` and its login (#1677). A lane the harness counts but no
 runner serves only queues its job until another runner of that label is free, so after raising a
 subscription's `lanes`, run `register-runners.sh` (Building it, step 4) to add the new runners.
 
@@ -99,7 +99,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
    It prints each runner's state; they also appear under Settings → Actions → Runners. With the
    Muse box, name what each box carries instead ([The Muse box](#the-muse-box), step 4): here,
-   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill`.
+   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill`.
 5. **Deploy the starter**:
 
    ```sh
@@ -211,31 +211,35 @@ Running the lanes:
 Since #1677 the training box also carries Muse's runners. Two builds at once on one 8 GB box swap
 (`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse build that shared the box took a median
 57 minutes in its build call, against 34 alone, so each box held one Muse runner. Since 2026-10-26
-both boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB), and each runs two of these jobs at most:
+both boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB), and each runs three of these jobs at most:
 
-- **The Muse box** holds Muse's two lanes of its own (`runs_on` `night-vm-muse`, `"lanes": 2`):
-  `night-vm-muse-b2` and `night-vm-muse-2-b2`.
-- **The night box** holds gpt's lane and agy's, and Muse fills either while that subscription
-  cannot start work: capped, off, outside its hours or backing off (`fill_in` in
-  [`providers.json`](../../.harness/providers.json); `plan.fill_in_free`). Muse's two runners
-  here carry a label of their own, `night-vm-muse-fill`, which a Muse run takes only when the
-  planner puts it in such a lane (`plan.runner_for`; the item's record keeps it as `runs_on`).
-  gpt, agy and Muse's runs here share the two lanes: a subscription whose lane Muse holds waits
-  for that run to end, even once its own cap resets (`plan.fill_in_full`), so the night box never
-  runs three of them.
+- **The Muse box** holds three of Muse's four lanes of its own (`runs_on` `night-vm-muse`,
+  `"lanes": 4`): `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2`.
+- **The night box** holds the fourth, `night-vm-muse`, and gpt's lane and agy's, which Muse fills
+  while that subscription cannot start work: capped, off, outside its hours or backing off
+  (`fill_in` in [`providers.json`](../../.harness/providers.json); `plan.fill_in_free`). Muse's
+  two runners for that carry a label of their own, `night-vm-muse-fill`, which a Muse run takes
+  only when the planner puts it in such a lane, once its own four are held (`plan.runner_for`;
+  the item's record keeps it as `runs_on`). gpt, agy and Muse's runs there share the two lanes:
+  a subscription whose lane Muse holds waits for that run to end, even once its own cap resets
+  (`plan.fill_in_full`), so the night box never runs more than three of them.
 
-Muse has no login a secret can carry onto GitHub's runners, which is why both boxes are AWS's.
-Devin's six runners stay on the night box until its plan ends on 2026-11-02, outside those two
-lanes.
+So Muse runs six at once at most, and the two boxes six jobs together (`machine_parallel`). A
+job for `night-vm-muse` goes to whichever of the four runners with that label is free, so the
+runners each box holds are its limit. Muse has no login a secret can carry onto GitHub's runners,
+which is why both boxes are AWS's. Devin's six runners stay on the night box until its plan ends
+on 2026-11-02, outside those lanes; its jobs count in `machine_parallel` too.
 
 | | The night box (`jackioh-night-vm`) | The Muse box (`jackioh-train-box`) |
 |---|---|---|
 | Instance | `m7i-flex.xlarge` (4 vCPUs, 16 GB) | `m7i-flex.xlarge` (4 vCPUs, 16 GB) |
-| Runners | `night-vm-gpt`, `night-vm-agy`, Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2`, and `night-vm-devin` (until 2026-11-02) | `night-vm-muse-b2` and `night-vm-muse-2-b2` |
-| At once | gpt's lane and agy's, which Muse fills while either cannot start work; Devin's apart | Muse's two lanes |
+| Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-muse`, Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2`, and `night-vm-devin` (until 2026-11-02) | `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2` |
+| At once | three: gpt's lane and agy's, which Muse fills while either cannot start work, and one of Muse's own; Devin's apart | three of Muse's own |
 | Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
-| Starter | `jackioh-night-vm-starter`, for its own labels (step 6) | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
+| Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
+
+The status issue draws each box as its slots (`dashboard.BOX_SLOTS` in `bot/harness/`): the night box's gpt's, agy's and Muse's lanes, Devin's runners after them, and the Muse box's three of Muse's. Change it with the boxes.
 
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
 runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
@@ -257,42 +261,48 @@ repository admin:
    `sudo -iu agent-muse muse login` (a second login of the same account).
 4. **Register the runners**, the night box's first:
    ```sh
-   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill
-   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=2
+   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill
+   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=3
    ```
-   The first removes the night box's own Muse runners (`night-vm-muse`, and any of `-2` to `-4`
-   left from before #1677) and registers the fill-in ones, `~agent-muse/actions-runner-fill` and
-   `-fill-2`, copies of the unpacked runner under the same user and login; `muse:fill=1` would
-   register one. A runner in the middle of a job is left registered, and the same command run
-   again once it ends removes it. The second registers `night-vm-muse-2-b2` beside
-   `night-vm-muse-b2`. A copy takes the directories a self-updated runner's `bin` and
-   `externals` link to (`bin.<version>`), never the links: a copied link made the copy run as
-   the first runner, in its directory and with its registration ("already configured",
-   2026-10-26), and the script removes such a copy and makes it again.
+   The first keeps one of the night box's own Muse runners, `night-vm-muse` (it removes any of
+   `-2` to `-4` left from before #1677), and registers the fill-in ones,
+   `~agent-muse/actions-runner-fill` and `-fill-2`, copies of the unpacked runner under the same
+   user and login; `muse:fill=1` would register one. A runner in the middle of a job is left
+   registered, and the same command run again once it ends removes it. The second registers
+   `night-vm-muse-2-b2` and `night-vm-muse-3-b2` beside `night-vm-muse-b2`.
+
+   A copy takes the directories a self-updated runner's `bin` and `externals` link to
+   (`bin.<version>`), never the links: a copied link made the copy run as the first runner, in
+   its directory and with its registration ("already configured", 2026-10-26). The script
+   removes such a copy, with its service, before any lane registers, and makes it again; and a
+   lane whose directory holds another runner's registration (`night-vm-muse-fill`'s, left in
+   `~agent-muse/actions-runner`) drops those files and registers under its own name, leaving the
+   registration on GitHub to that runner's own lane, which takes it over (`--replace`).
 5. **Deploy its starter**:
    ```sh
    TAG=jackioh-train-box STARTER_NAME=jackioh-muse-box-starter STARTER_ROLE=jackioh-muse-box-starter \
      RUNNER_LABELS=night-vm-muse REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
-6. **Keep the night box's starter to its own labels**, or a job queued for the Muse box's
-   runners (`night-vm-muse`) starts the night box too, which then idles 30 minutes for nothing:
+6. **The night box's starter wakes for every `night-vm-*` label**, its default, since the night
+   box holds a `night-vm-muse` runner too. A job for that label queued while both boxes are off
+   starts both, and the one that takes no job stops again after 30 idle minutes. A starter
+   deployed with `RUNNER_LABELS` goes back to the default when deployed again without it:
    ```sh
-   RUNNER_LABELS=night-vm-gpt,night-vm-agy,night-vm-devin,night-vm-muse-fill \
-     REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
+   REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
 
-**Moving the boxes to two lanes each** (2026-10-26), once both instances are `m7i-flex.xlarge`
+**Moving the boxes to three jobs each** (2026-10-26), once both instances are `m7i-flex.xlarge`
 (stop each, change its type, start it again; neither the idle stop nor the starters change for
-that): run step 4's two commands and step 6. Until the night box's fill-in runners are
-registered, a Muse run the planner puts in gpt's or agy's lane waits queued for them.
+that): run step 4's two commands, in that order, and step 6. Until the night box's fill-in
+runners are registered, a Muse run the planner puts in gpt's or agy's lane waits queued for them.
 
 **Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`. Never
 `--training` on it: that takes the idle stop off again, and the box then stays on for good.
 
-**Going back to one box:** take `fill_in` out of Muse's entry in `providers.json`, run
+**Going back to one box:** take `fill_in` out of Muse's entry in `providers.json` and set its
+`lanes` to what the night box should hold, run
 `TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=0`, then
-`bot/machine/register-runners.sh OWNER/REPO muse=2 muse:fill=0` on the night box, and deploy its
-starter again without `RUNNER_LABELS`.
+`bot/machine/register-runners.sh OWNER/REPO muse muse:fill=0` on the night box.
 
 ## The local runner
 

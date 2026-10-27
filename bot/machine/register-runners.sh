@@ -19,8 +19,8 @@
 # A box keeps only the runners it is given: one past its count (or every one, at `id=0`) is
 # unregistered and its service removed, unless it holds a job, which a run once it ends removes.
 #
-#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill
-#   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=2
+#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1 muse:fill
+#   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=3
 #
 # `id:fill` is a subscription's fill-in runners (providers.json `fill_in`): labelled with the
 # fill-in's runs_on, in ~/actions-runner-fill (-2 …), one per lane of the subscriptions it fills
@@ -87,15 +87,31 @@ for entry in "$@"; do
   if [ ! -x "$first/config.sh" ]; then
     echo "$label: no runner unpacked for $user; run setup.sh with $id first"; failed=1; continue
   fi
+  # A copy `linked` into another runner, which an older copy step made of a self-updated runner,
+  # goes first, whatever its lane, with its service unless another runner of this user holds that
+  # service's name: it has no registration of its own (it wrote that one's), and its lane, if it
+  # still has one, is copied again below.
+  for dir in "$first"-*; do
+    linked "$dir" || continue
+    if busy "$dir"; then
+      echo "${dir##*/}: runs as ${first##*/}, busy with a job; run this again once it ends"
+      continue
+    fi
+    unit="$(cat "$dir/.service" 2>/dev/null || true)"; shared=""
+    for other in "$first"/.service "$first"-*/.service; do
+      [ "$other" != "$dir/.service" ] && [ -n "$unit" ] && [ "$(cat "$other" 2>/dev/null)" = "$unit" ] && shared=1
+    done
+    if [ -n "$unit" ] && [ -z "$shared" ]; then
+      (cd "$dir" && ./svc.sh stop >/dev/null 2>&1; ./svc.sh uninstall >/dev/null 2>&1)
+    fi
+    rm -rf "$dir"
+    echo "${dir##*/}: a copy that ran as ${first##*/}, removed"
+  done
   # Past this box's count: unregistered and gone, unless it holds a job (#1677). A lane is the
-  # base directory or base-<n>; ~/actions-runner-fill is never a lane of ~/actions-runner. So
-  # does a copy `linked` into another runner, which an older copy step made of a self-updated
-  # runner: its registration is that runner's, so it goes with its service and is copied again.
+  # base directory or base-<n>; ~/actions-runner-fill is never a lane of ~/actions-runner.
   for dir in "$base" "$base"-*; do
     lane="${dir#"$base"}"; lane="${lane#-}"; lane="${lane:-1}"
-    [[ "$lane" =~ ^[0-9]+$ ]] && [ -d "$dir" ] || continue
-    [ "$lane" -gt "$lanes" ] || linked "$dir" || continue
-    [ -f "$dir/.runner" ] || [ "$dir" != "$first" ] || continue
+    [[ "$lane" =~ ^[0-9]+$ ]] && [ "$lane" -gt "$lanes" ] && [ -f "$dir/.runner" ] || continue
     gone="$(jq -r '.agentName // empty' "$dir/.runner" 2>/dev/null || true)"; gone="${gone:-${dir##*/}}"
     if busy "$dir"; then
       echo "$gone: busy with a job, so still registered; run this again once it ends"; continue
@@ -129,6 +145,19 @@ for entry in "$@"; do
       rm -f "$dir/svc.sh"
     fi
     cd "$dir" || continue
+    held="$(jq -r '.agentName // empty' .runner 2>/dev/null || true)"
+    if [ -n "$held" ] && [ "$held" != "$name" ]; then
+      # Another runner's registration, which an older copy step wrote here (night-vm-muse-fill's
+      # in ~agent-muse/actions-runner, 2026-10-26). Its files go, not the registration on GitHub,
+      # which that runner's own lane takes over (`--replace`), so the order of the ids is free.
+      if busy "$dir"; then
+        echo "$name: holds $held's registration, busy with a job; run this again once it ends"
+        continue
+      fi
+      if [ -f .service ]; then ./svc.sh stop >/dev/null 2>&1; ./svc.sh uninstall >/dev/null 2>&1; fi
+      rm -f .runner .credentials .credentials_rsaparams .service
+      echo "$name: dropped $held's registration, which was here"
+    fi
     if [ ! -f .runner ]; then
       if ! out="$(sudo -u "$user" ./config.sh --unattended --url "https://github.com/$repo" \
           --token "$token" --name "$name" --labels "$label" --no-default-labels --work _work \
