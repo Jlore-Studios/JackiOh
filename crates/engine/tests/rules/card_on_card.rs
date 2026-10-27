@@ -1070,7 +1070,11 @@ mod r1865000_set_aside_from_hand {
             live.cost_mod = 1;
         }
         set_aside(&mut state, &keeper.id, &card.id);
-        let events = give_back(&mut state, &keeper.id, json!({ "costOverride": 0, "upgrades": 2 }));
+        let events = give_back(
+            &mut state,
+            &keeper.id,
+            json!({ "costOverride": 0, "upgrades": 2 }),
+        );
         assert!(in_hand_of(&state, P1, &card.id));
         let back = find_instance(&state, &card.id).expect("in hand");
         assert_eq!(back.cost_override, Some(0));
@@ -1090,14 +1094,24 @@ mod r1865000_set_aside_from_hand {
         set_aside(&mut state, &keeper.id, &card.id);
         let room = jackioh_engine::config::HAND_CAP - state.players.p1.hand.len() as i32;
         in_hand(&mut state, &cheap().id, P1, room);
-        let events = give_back(&mut state, &keeper.id, json!({ "costOverride": 0, "upgrades": 2 }));
+        let events = give_back(
+            &mut state,
+            &keeper.id,
+            json!({ "costOverride": 0, "upgrades": 2 }),
+        );
         assert!(state.players.p1.graveyard.iter().any(|gone| gone.id == card.id));
-        assert!(events.iter().any(
-            |event| matches!(event, GameEvent::Burned { instance_id, .. } if *instance_id == card.id)
-        ));
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::Burned { instance_id, .. } if *instance_id == card.id)
+            )
+        );
         assert_eq!(upgraded(&events, &card.id), 0);
         let burned = find_instance(&state, &card.id).expect("in the graveyard");
-        assert_eq!(burned.buffs, AttackHealth { attack: 0, health: 0 }, "R215: the printed card");
+        assert_eq!(
+            burned.buffs,
+            AttackHealth { attack: 0, health: 0 },
+            "R215: the printed card"
+        );
         assert_eq!(burned.cost_override, None);
         assert_eq!(state.held, None);
     }
@@ -1122,9 +1136,11 @@ mod r1865000_set_aside_from_hand {
             .expect("in p1's exile");
         assert_eq!(exiled.cost_mod, 0);
         assert_eq!(exiled.buffs, AttackHealth { attack: 0, health: 0 });
-        assert!(events.iter().any(
-            |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == card.id)
-        ));
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == card.id)
+            )
+        );
         assert!(!events.iter().any(
             |event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == card.id)
         ));
@@ -1139,9 +1155,11 @@ mod r1865000_set_aside_from_hand {
         let events = set_aside(&mut state, &keeper.id, &card.id);
         assert_eq!(find_instance(&state, &card.id), None, "R11: it ceased to exist");
         assert_eq!(state.held, None);
-        assert!(events.iter().any(
-            |event| matches!(event, GameEvent::Held { instance_id, .. } if *instance_id == card.id)
-        ));
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Held { instance_id, .. } if *instance_id == card.id))
+        );
     }
 
     #[test]
@@ -1158,7 +1176,10 @@ mod r1865000_set_aside_from_hand {
         let keeper = in_p1_hand(&mut state, &ticket().id);
         let card = in_p1_hand(&mut state, &cheap().id);
         set_aside(&mut state, &keeper.id, &card.id);
-        assert!(in_hand_of(&state, P1, &card.id), "a holder in a hand holds nothing");
+        assert!(
+            in_hand_of(&state, P1, &card.id),
+            "a holder in a hand holds nothing"
+        );
         assert_eq!(state.held, None);
     }
 

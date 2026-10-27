@@ -213,7 +213,8 @@ pub fn return_held_to_hand(args: ReturnHeldArgs) -> Effect {
             return;
         };
         let (mine, kept): (Vec<HeldCard>, Vec<HeldCard>) = held.into_iter().partition(|entry| {
-            entry.holder_id == me.id && !crate::stays::left_field_after(ctx.state, entry.holder_mark, &entry.holder_id)
+            entry.holder_id == me.id
+                && !crate::stays::left_field_after(ctx.state, entry.holder_mark, &entry.holder_id)
         });
         ctx.state.held = if kept.is_empty() { None } else { Some(kept) };
         for entry in mine {
