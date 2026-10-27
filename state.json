@@ -6575,13 +6575,13 @@
   "loop_tick": "2026-10-27T23:36:35Z",
   "machine_disk": {
     "reading": {
-      "at": "2026-10-27T22:54:18Z",
-      "free": 73540935680,
-      "percent": 41,
+      "at": "2026-10-27T23:41:54Z",
+      "free": 73697787904,
+      "percent": 40,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40590046423",
-    "runner": "night-vm-muse-fill-2"
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40596095197",
+    "runner": "night-vm-muse-fill"
   },
   "machine_memory": [
     {
