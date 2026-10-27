@@ -142,6 +142,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
         queue_readout: jackioh_server::api::queue::KeptReadout::default(),
         rematch_offers: jackioh_server::api::rematch::RematchOffers::default(),
+        duos_again_offers: jackioh_server::duos::again::DuosAgainOffers::default(),
         seats: jackioh_server::seats::Seats::default(),
         social: jackioh_server::social::Social::default(),
         engine_thread: test_engine_thread,
