@@ -16,7 +16,7 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, act, ai_options, dealt_game, is_legal, js, trace};
+use super::support::{AI, HUMAN, act, ai_options, dealt_game, is_legal, js, trace};
 
 const SKIPPED: &[ActionType] = &[
     ActionType::Concede,
@@ -564,6 +564,97 @@ mod candidate_actions_b14 {
         let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
         assert_eq!(switches(&expanded), 0, "{expanded:?}");
         assert_eq!(expanded.len(), width + 1);
+    }
+
+    /// R2021000: whether switching p1's Mr. Vanilla (core-008, a 4/4 in Attack Position) to Defense is a
+    /// stand-down facing p2's `archivist`, an Archivist (core-030, a 4/5 that kills the Vanilla and
+    /// survives), once `change` has changed the board (given the Vanilla's id and the Archivist's).
+    fn stands_down_facing(archivist: Value, change: impl FnOnce(&mut GameState, &str, &str)) -> bool {
+        jackioh_cards::register_all();
+        let mut state = scenario(json!({
+            "seed": "search-stand-down-ready",
+            "p1": { "field": ["core-008"] },
+            "p2": { "field": [archivist] },
+        }))
+        .state()
+        .clone();
+        let vanilla = active_units_of(&state, AI)[0].id.clone();
+        let enemy = active_units_of(&state, HUMAN)[0].id.clone();
+        change(&mut state, &vanilla, &enemy);
+        stands_down(&state, &ActionBody::SwitchPosition { instance_id: vanilla })
+    }
+
+    /// The state's copy of the card `id`, to change in place.
+    fn live<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
+        find_instance_mut(state, id).expect("the unit is on the field")
+    }
+
+    /// R2021000: an Archivist in Attack Position, ready next turn, beats the Vanilla: a stand-down, as
+    /// under R1759000.
+    #[test]
+    fn r2021000_a_ready_enemy_that_beats_the_unit_stands_it_down() {
+        assert!(stands_down_facing(json!("core-030"), |_, _, _| {}));
+    }
+
+    /// R2021000: in Defense Position without Deft it spends its next turn's exertion switching back.
+    #[test]
+    fn r2021000_an_enemy_in_defense_position_does_not_stand_it_down() {
+        let defending = json!({ "def": "core-030", "position": "DEF" });
+        assert!(!stands_down_facing(defending, |_, _, _| {}));
+    }
+
+    /// R2021000, R49: with Deft it switches to Attack and still attacks in the same turn.
+    #[test]
+    fn r2021000_an_enemy_with_deft_in_defense_position_stands_it_down() {
+        let defending = json!({ "def": "core-030", "position": "DEF" });
+        assert!(stands_down_facing(defending, |state, _, enemy| {
+            live(state, enemy).granted_keywords.push(Keyword::Deft);
+        }));
+    }
+
+    /// R2021000, R1174000: a Frozen unit of the player not on turn is Frozen through its next turn.
+    #[test]
+    fn r2021000_an_enemy_frozen_through_its_next_turn_does_not_stand_it_down() {
+        assert!(!stands_down_facing(json!("core-030"), |state, _, enemy| {
+            let turn = state.turn;
+            live(state, enemy).frozen = Some(turn);
+        }));
+    }
+
+    /// R2021000: an enemy granted "Can't attack" never attacks.
+    #[test]
+    fn r2021000_an_enemy_that_cannot_attack_does_not_stand_it_down() {
+        assert!(!stands_down_facing(json!("core-030"), |state, _, enemy| {
+            live(state, enemy).granted_keywords.push(Keyword::CantAttack);
+        }));
+    }
+
+    /// R2021000, R1839000: a Dormant enemy neither attacks nor is attacked.
+    #[test]
+    fn r2021000_a_dormant_enemy_does_not_stand_it_down() {
+        assert!(!stands_down_facing(json!("core-030"), |state, _, enemy| {
+            live(state, enemy).slumber = Some(Slumber { turns: Some(2) });
+        }));
+    }
+
+    /// R2021000, R783002: a Flying unit in Attack Position is attacked only by a unit with Flying or
+    /// Ranged, so a ground Archivist never reaches it and one with either keyword does.
+    #[test]
+    fn r2021000_a_flying_unit_is_stood_down_only_against_a_flying_or_ranged_enemy() {
+        let fly =
+            |state: &mut GameState, unit: &str| live(state, unit).granted_keywords.push(Keyword::Flying);
+        assert!(!stands_down_facing(json!("core-030"), |state, unit, _| fly(
+            state, unit
+        )));
+        for reach in [Keyword::Flying, Keyword::Ranged] {
+            assert!(
+                stands_down_facing(json!("core-030"), |state, unit, enemy| {
+                    fly(state, unit);
+                    live(state, enemy).granted_keywords.push(reach.clone());
+                }),
+                "{reach:?}"
+            );
+        }
     }
 
     /// B14: a seat answering its own prompt gets exactly the prompt's answers and no endTurn

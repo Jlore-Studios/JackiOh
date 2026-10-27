@@ -99,7 +99,7 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
 /// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
 /// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
 /// swings next turn).
-fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
+pub(crate) fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
     !has_keyword(&view.keywords, KeywordKind::CantAttack)
         && !cannot_attack(state, unit)
         && !frozen_next_turn(state, unit)
