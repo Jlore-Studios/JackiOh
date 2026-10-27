@@ -5582,9 +5582,12 @@
     "2135": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T20:43:53Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2092,
       "kind": "revise",
       "last_findings": [],
