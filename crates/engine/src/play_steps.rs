@@ -1326,6 +1326,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             } else {
                 Some(hidden_from)
             },
+            creator: None,
         });
 
         run.instance_id = fresh.id.clone();

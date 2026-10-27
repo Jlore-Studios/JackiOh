@@ -168,7 +168,9 @@ fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders
     let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
     let card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
     crate::generators::record_generator(ctx, &card);
+    let id = card.id.clone();
     put_in_hand_with(ctx, card, riders);
+    crate::generators::credit_creator(ctx, &id);
 }
 
 /// R57, R1242: what a copy made into a hand carries of the card copied, as `library_copies`'s do.
@@ -284,7 +286,9 @@ pub fn add_to_hand(args: AddToHandArgs) -> Effect {
             let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Hand { player });
             copy_riders(&mut copy, &source);
             crate::generators::record_generator(ctx, &copy);
+            let id = copy.id.clone();
             put_in_hand_with(ctx, copy, &riders);
+            crate::generators::credit_creator(ctx, &id);
             return;
         }
         if let Some(spec) = &args.instance {

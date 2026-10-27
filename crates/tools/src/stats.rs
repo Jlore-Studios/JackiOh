@@ -274,6 +274,8 @@ pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     let mut report = card_stats(&records, &filter_of(args));
     if let Some(only) = &args.card {
         report.cards.retain(|stats| &stats.card == only);
+        // R2089000: the Created table is filtered as the deck's is.
+        report.created.retain(|stats| &stats.card == only);
     }
     Ok(report)
 }
@@ -289,7 +291,9 @@ pub fn render(
     }
     let table = format_card_stats(report, name_of);
     match &args.card {
-        Some(card) if report.cards.is_empty() => format!("{table}\nNo deck the filter counts held {card}."),
+        Some(card) if report.cards.is_empty() && report.created.is_empty() => {
+            format!("{table}\nNo deck the filter counts held {card}.")
+        }
         _ => table,
     }
 }
@@ -406,6 +410,7 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
     );
     if let Some(only) = &args.card {
         report.cards.retain(|card| &card.stats.card == only);
+        report.created.retain(|card| &card.stats.card == only);
     }
     Ok(report)
 }
@@ -442,6 +447,7 @@ pub fn render_window(
             games: i32::try_from(report.games).unwrap_or(i32::MAX),
             decks: i32::try_from(report.decks).unwrap_or(i32::MAX),
             cards: report.cards.iter().map(|card| card.stats.clone()).collect(),
+            created: report.created.iter().map(|card| card.stats.clone()).collect(),
         },
         name_of,
     );
@@ -450,6 +456,12 @@ pub fn render_window(
         table,
     ];
     for card in report.cards.iter().filter(|card| card.window != report.patch) {
+        lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
+    }
+    // R2089000: a Created card's window, when no deck row above named it.
+    for card in report.created.iter().filter(|card| {
+        card.window != report.patch && report.card(&card.stats.card).is_none()
+    }) {
         lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
     }
     lines.join("\n")

@@ -18,14 +18,26 @@
 //! it was Radiant as `cardPlayed` placed it (R1147000), so step-3 Radiant (Gifted Program, Feng Shui
 //! per R0983, C+ #68) counts.
 //!
+//! R2089000: a Created card (R943) is no dealt card, so it is left out of `opening`, `drawn` and
+//! `played`, and each Created instance is credited instead to the seat that made it: the seat a
+//! minting event's `creator` names (an effect that made it for the other seat), else the controller
+//! of the card whose effect summoned it (R1088's `sourceId`), else the seat it went to (The Coin and
+//! every other card a rule mints). It is used the first time it is played, from a hand or anywhere
+//! else, cast, summoned or set by an effect, or takes a card's place on the field (a Transform), by
+//! either seat, and counts once however often it is used again; the rest the seat made are its
+//! never used ones. A Created card played from a hand is also kept as its player's (`createdPlayed`),
+//! which the quests count beside `played`.
+//!
 //! Port of `packages/engine/src/gameSummary.ts` (part 5).
 
 use indexmap::{IndexMap, IndexSet};
 
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
-use crate::state::{CreateGameOptions, GameState, create_recorded_game, find_instance};
-use crate::wire::{CounteredTo, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary};
+use crate::state::{CardInstance, CreateGameOptions, GameState, create_recorded_game, find_instance};
+use crate::wire::{
+    CounteredTo, CreatedUse, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary, Zone,
+};
 
 /// Each seat's hand as instance id → catalog id, in hand order.
 type Hands = PerPlayer<IndexMap<String, String>>;
@@ -50,6 +62,12 @@ struct Reading {
     /// R1256000: every instance id whose `radiantSet` already counted an upgrade.
     radiant_seen: IndexSet<String>,
     current_turn: i32,
+    /// R2089000: every Created instance seen, by instance id: the seat that made it and its catalog id.
+    made: IndexMap<String, (PlayerId, String)>,
+    /// R2089000: the Created instances already used, a fresh face-down id (R227) beside its former one.
+    used: IndexSet<String>,
+    created_used: PerPlayer<Vec<CreatedUse>>,
+    created_played: PerPlayer<Vec<CreatedUse>>,
 }
 
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
@@ -109,6 +127,53 @@ fn leave(hands: &mut Hands, instance_id: &str) {
     }
 }
 
+/// The card one of `ids` names, as the step left it or, for one that has left the state, as the step
+/// found it.
+fn card_of<'a>(before: &'a GameState, after: &'a GameState, ids: &[&str]) -> Option<&'a CardInstance> {
+    ids.iter()
+        .find_map(|id| find_instance(after, id))
+        .or_else(|| ids.iter().find_map(|id| find_instance(before, id)))
+}
+
+/// R943: whether the card is Created. One neither state holds was made and gone within the step: no
+/// dealt card is, for the deal put every one of them in the state before the first action.
+fn is_created(before: &GameState, after: &GameState, ids: &[&str]) -> bool {
+    card_of(before, after, ids).is_none_or(|card| card.created == Some(true))
+}
+
+fn is_radiant(before: &GameState, after: &GameState, ids: &[&str]) -> bool {
+    card_of(before, after, ids).is_some_and(|card| card.radiant)
+}
+
+/// R2089000: a Created instance's maker, kept the first time an event names it.
+fn make(reading: &mut Reading, id: &str, creator: PlayerId, card: &str) {
+    reading
+        .made
+        .entry(id.to_string())
+        .or_insert_with(|| (creator, card.to_string()));
+}
+
+/// R2089000: a Created instance is used, counted once for the seat that made it (`maker` when no event
+/// has named it before). `ids` are its id now and, for a card set face-down, the one it had (R227).
+fn use_created(reading: &mut Reading, ids: &[&str], maker: PlayerId, card: &str, radiant: bool) {
+    let creator = ids
+        .iter()
+        .find_map(|id| reading.made.get(*id))
+        .map_or(maker, |(creator, _)| *creator);
+    let first = !ids.iter().any(|id| reading.used.contains(*id));
+    for id in ids {
+        make(reading, id, creator, card);
+        reading.used.insert((*id).to_string());
+    }
+    if first {
+        reading.created_used[creator].push(CreatedUse {
+            card: card.to_string(),
+            turn: reading.current_turn,
+            radiant,
+        });
+    }
+}
+
 /// One step's events, in the order they happened.
 fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: &GameState) {
     // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
@@ -128,9 +193,16 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 // §2.1: the mulligans have resolved and The Coin is dealt; the first turn's draw comes next.
                 if reading.opening.is_none() {
                     reading.first = Some(*player);
+                    // R2089000: the dealt cards alone; The Coin is Created.
+                    let dealt = |hand: &IndexMap<String, String>| -> Vec<String> {
+                        hand.iter()
+                            .filter(|(id, _)| !is_created(before, after, &[id.as_str()]))
+                            .map(|(_, def_id)| def_id.clone())
+                            .collect()
+                    };
                     reading.opening = Some(PerPlayer::new(
-                        reading.hands.p1.values().cloned().collect(),
-                        reading.hands.p2.values().cloned().collect(),
+                        dealt(&reading.hands.p1),
+                        dealt(&reading.hands.p2),
                     ));
                 }
             }
@@ -147,7 +219,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     events.get(at + 1),
                     Some(GameEvent::AddedToHand { instance_id: next_id, .. }) if next_id == instance_id
                 );
-                if reading.opening.is_some() && reached_hand {
+                if reading.opening.is_some() && reached_hand && !is_created(before, after, &[instance_id]) {
                     reading.drawn[*player].push(def_id.clone());
                 }
             }
@@ -155,9 +227,56 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 player,
                 instance_id,
                 def_id,
+                creator,
             } => {
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
                 mark_radiant(reading, after, instance_id);
+                if is_created(before, after, &[instance_id]) {
+                    make(reading, instance_id, creator.unwrap_or(*player), def_id);
+                }
+            }
+            GameEvent::ShuffledIn {
+                player,
+                instance_id,
+                def_id,
+                creator,
+                ..
+            } => {
+                leave(&mut reading.hands, instance_id);
+                if is_created(before, after, &[instance_id]) {
+                    make(reading, instance_id, creator.unwrap_or(*player), def_id);
+                }
+            }
+            GameEvent::MarketBought {
+                player,
+                instance_id,
+                def_id,
+                ..
+            } => {
+                if is_created(before, after, &[instance_id]) {
+                    make(reading, instance_id, *player, def_id);
+                }
+            }
+            GameEvent::Summoned {
+                player,
+                instance_id,
+                def_id,
+                former_id,
+                source_id,
+                ..
+            } => {
+                let ids: Vec<&str> = std::iter::once(instance_id.as_str())
+                    .chain(former_id.as_deref())
+                    .collect();
+                if is_created(before, after, &ids) {
+                    // R1088: the card whose effect summoned it, as it stood when the step began.
+                    let maker = source_id
+                        .as_deref()
+                        .and_then(|source| find_instance(before, source).or_else(|| find_instance(after, source)))
+                        .map_or(*player, |source| source.controller);
+                    let radiant = is_radiant(before, after, &ids);
+                    use_created(reading, &ids, maker, def_id, radiant);
+                }
             }
             GameEvent::Fatigue { player, amount, .. } => {
                 // R1256000: one draw for the seat that took it, and the nominal pre-Armor hit.
@@ -199,17 +318,38 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             } => {
                 // R227: a Trap set face-down took a fresh id; the hand knew it by the old one.
                 let id = former_id.as_ref().unwrap_or(instance_id);
-                if !reading.hands[*player].contains_key(id) {
+                let from_hand = reading.hands[*player].contains_key(id);
+                let ids = [instance_id.as_str(), id.as_str()];
+                let created = is_created(before, after, &ids);
+                if created {
+                    // R2089000: a play from anywhere and a cast use it alike. A card no event named
+                    // before was made in this step for the seat that casts it.
+                    let radiant = if from_hand {
+                        reading.radiant.contains(id)
+                    } else {
+                        is_radiant(before, after, &ids)
+                    };
+                    use_created(reading, &ids, *player, def_id, radiant);
+                }
+                if !from_hand {
                     continue;
                 }
                 if stolen.contains(&id.as_str()) {
                     leave(&mut reading.hands, id);
                     continue;
                 }
-                reading.played[*player].push(def_id.clone());
                 let turn = reading.current_turn;
-                reading.played_turns[*player].push(turn);
-                reading.played_radiant[*player].push(reading.radiant.contains(id));
+                if created {
+                    reading.created_played[*player].push(CreatedUse {
+                        card: def_id.clone(),
+                        turn,
+                        radiant: reading.radiant.contains(id),
+                    });
+                } else {
+                    reading.played[*player].push(def_id.clone());
+                    reading.played_turns[*player].push(turn);
+                    reading.played_radiant[*player].push(reading.radiant.contains(id));
+                }
                 // R1256000, R227: a play that put the card face-down set a Trap.
                 if former_id.is_some() {
                     reading.traps_set[*player] += 1;
@@ -220,6 +360,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 instance_id,
                 to_def_id,
                 new_instance_id,
+                creator,
                 ..
             } => {
                 for player in PLAYER_IDS {
@@ -231,14 +372,28 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     hand.insert(new_instance_id.clone(), to_def_id.clone());
                     mark_radiant(reading, after, new_instance_id);
                 }
+                // R2089000: a Transform's new card is Created (a Vanilla keeps the card it changes).
+                // Taking a card's place on the field puts it there, which uses it.
+                let new = [new_instance_id.as_str()];
+                if new_instance_id != instance_id
+                    && is_created(before, after, &new)
+                    && let Some(card) = card_of(before, after, &new)
+                {
+                    let maker = creator.unwrap_or(card.controller);
+                    if matches!(card.zone, Zone::Field { .. }) {
+                        let radiant = card.radiant;
+                        use_created(reading, &new, maker, to_def_id, radiant);
+                    } else {
+                        make(reading, new_instance_id, maker, to_def_id);
+                    }
+                }
             }
             GameEvent::Fused { instance_ids, .. } => {
                 for id in instance_ids {
                     leave(&mut reading.hands, id);
                 }
             }
-            GameEvent::ShuffledIn { instance_id, .. }
-            | GameEvent::Discarded { instance_id, .. }
+            GameEvent::Discarded { instance_id, .. }
             | GameEvent::Exiled { instance_id, .. }
             | GameEvent::Bounced { instance_id, .. }
             | GameEvent::EnteredGraveyard { instance_id, .. } => {
@@ -249,19 +404,18 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
     }
 }
 
-fn seat_summary(
-    reading: &Reading,
-    decks: &(Vec<String>, Vec<String>),
-    player: PlayerId,
-    seat: usize,
-) -> SeatSummary {
-    let deck = match seat {
-        0 => decks.0.clone(),
-        1 => decks.1.clone(),
-        _ => Vec::new(),
-    };
-    let played_turns = &reading.played_turns[player];
-    let played_radiant = &reading.played_radiant[player];
+fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatSummary {
+    fn listed<T: Clone>(list: &[T]) -> Option<Vec<T>> {
+        if list.is_empty() { None } else { Some(list.to_vec()) }
+    }
+    // R2089000: the Created cards the seat made that no use reached, one per instance; a card set
+    // face-down is one instance under both its ids, which `used` holds together.
+    let unused: Vec<String> = reading
+        .made
+        .iter()
+        .filter(|(id, (creator, _))| *creator == player && !reading.used.contains(*id))
+        .map(|(_, (_, card))| card.clone())
+        .collect();
     SeatSummary {
         deck,
         opening: reading
@@ -271,16 +425,8 @@ fn seat_summary(
             .unwrap_or_default(),
         drawn: reading.drawn[player].clone(),
         played: reading.played[player].clone(),
-        played_turns: if played_turns.is_empty() {
-            None
-        } else {
-            Some(played_turns.clone())
-        },
-        played_radiant: if played_radiant.is_empty() {
-            None
-        } else {
-            Some(played_radiant.clone())
-        },
+        played_turns: listed(&reading.played_turns[player]),
+        played_radiant: listed(&reading.played_radiant[player]),
         // R1256000: a fresh summary always knows the counts; `None` stays reserved for
         // records written before the change.
         fatigue_draws: Some(reading.fatigue_draws[player]),
@@ -289,6 +435,64 @@ fn seat_summary(
         traps_fired: Some(reading.traps_fired[player]),
         position_switches: Some(reading.position_switches[player]),
         radiant_upgrades: Some(reading.radiant_upgrades[player]),
+        created_used: listed(&reading.created_used[player]),
+        created_unused: listed(&unused),
+        created_played: listed(&reading.created_played[player]),
+    }
+}
+
+/// R376: reads a game's record off its steps, one `(before, events, after)` at a time, as
+/// `summarize_game` folds a log; a test reads a `scenario()`'s verbs through it the same way.
+pub struct SummaryReader {
+    reading: Reading,
+}
+
+impl SummaryReader {
+    /// A reader of the game that begins at `start`.
+    pub fn new(start: &GameState) -> SummaryReader {
+        let hands = hands_of(start, None);
+        let radiant = radiant_of(start, &hands);
+        fn zero() -> PerPlayer<i32> {
+            PerPlayer::new(0, 0)
+        }
+        SummaryReader {
+            reading: Reading {
+                hands,
+                radiant,
+                first: None,
+                opening: None,
+                drawn: per_seat(),
+                played: per_seat(),
+                played_turns: per_seat(),
+                played_radiant: per_seat(),
+                fatigue_draws: zero(),
+                fatigue_damage: zero(),
+                traps_set: zero(),
+                traps_fired: zero(),
+                position_switches: zero(),
+                radiant_upgrades: zero(),
+                radiant_seen: IndexSet::new(),
+                current_turn: start.turn.max(1),
+                made: IndexMap::new(),
+                used: IndexSet::new(),
+                created_used: per_seat(),
+                created_played: per_seat(),
+            },
+        }
+    }
+
+    /// One step: the state as it began, the events it emitted, and the state it left.
+    pub fn step(&mut self, before: &GameState, events: &[GameEvent], after: &GameState) {
+        // The state's own hands as the step begins, so nothing the events do not spell out (a card
+        // whose control changed, say) carries from one action into the next, but a play still in flight.
+        self.reading.hands = hands_of(before, Some(&self.reading.hands));
+        self.reading.radiant = radiant_of(before, &self.reading.hands);
+        read(&mut self.reading, events, before, after);
+    }
+
+    /// The seat's summary so far, `deck` its decklist.
+    pub fn seat(&self, player: PlayerId, deck: Vec<String>) -> SeatSummary {
+        seat_summary(&self.reading, deck, player)
     }
 }
 
@@ -309,58 +513,31 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         glitch_boards: input.glitch_boards.clone(),
         ..Default::default()
     });
-    let hands = hands_of(&start, None);
-    let radiant = radiant_of(&start, &hands);
-    fn zero() -> PerPlayer<i32> {
-        PerPlayer::new(0, 0)
-    }
-
-    let mut reading = Reading {
-        hands,
-        radiant,
-        first: None,
-        opening: None,
-        drawn: per_seat(),
-        played: per_seat(),
-        played_turns: per_seat(),
-        played_radiant: per_seat(),
-        fatigue_draws: zero(),
-        fatigue_damage: zero(),
-        traps_set: zero(),
-        traps_fired: zero(),
-        position_switches: zero(),
-        radiant_upgrades: zero(),
-        radiant_seen: IndexSet::new(),
-        current_turn: 1,
-    };
+    let mut reader = SummaryReader::new(&start);
 
     let begun = begin_game(&start);
-    read(&mut reading, &begun.events, &start, &begun.state);
+    reader.step(&start, &begun.events, &begun.state);
     let mut state = begun.state;
 
     for action in &input.log {
-        // The state's own hands as the action begins, so nothing the events do not spell out (a card
-        // whose control changed, say) carries from one action into the next, but a play still in flight.
-        reading.hands = hands_of(&state, Some(&reading.hands));
-        reading.radiant = radiant_of(&state, &reading.hands);
         let result = reduce(&state, action);
         if result.error.is_some() {
             continue;
         }
-        read(&mut reading, &result.events, &state, &result.state);
+        reader.step(&state, &result.events, &result.state);
         state = result.state;
     }
 
     let outcome = state.result?;
     Some(GameSummary {
         // §2.1: Player 1 takes the first turn. A game that ended before any turn began names it too.
-        first: reading.first.unwrap_or(PLAYER_IDS[0]),
+        first: reader.reading.first.unwrap_or(PLAYER_IDS[0]),
         winner: outcome.winner,
         reason: outcome.reason,
         turns: state.turn,
         seats: PerPlayer::new(
-            seat_summary(&reading, &input.decks, PlayerId::P1, 0),
-            seat_summary(&reading, &input.decks, PlayerId::P2, 1),
+            reader.seat(PlayerId::P1, input.decks.0.clone()),
+            reader.seat(PlayerId::P2, input.decks.1.clone()),
         ),
     })
 }
@@ -390,6 +567,10 @@ mod tests {
             radiant_upgrades: zero(),
             radiant_seen: IndexSet::new(),
             current_turn: 1,
+            made: IndexMap::new(),
+            used: IndexSet::new(),
+            created_used: per_seat(),
+            created_played: per_seat(),
         }
     }
 

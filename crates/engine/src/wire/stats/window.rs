@@ -26,8 +26,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot, PilotFilter,
-    RecordsKey, SourceFilter, StatsTotals, add_stats, card_stats_of, game_figures,
+    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot,
+    PilotFilter, RecordsKey, SourceFilter, StatsTotals, add_created, add_stats, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -308,6 +308,18 @@ pub struct WindowedReport {
     pub decks: i64,
     /// Every card a counted deck held, in catalog-id order.
     pub cards: Vec<WindowedCard>,
+    /// R2089000: every card a counted seat made a Created copy of, in catalog-id order, each over its
+    /// own window as a deck card is.
+    #[serde(default)]
+    pub created: Vec<WindowedCreated>,
+}
+
+/// R2089000: one Created card's figures over its window.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowedCreated {
+    pub window: CardWindow,
+    pub stats: CreatedStats,
 }
 
 impl WindowedReport {
@@ -322,6 +334,7 @@ struct Part {
     games: i64,
     decks: i64,
     cards: IndexMap<String, CardStats>,
+    created: IndexMap<String, CreatedStats>,
 }
 
 /// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
@@ -372,6 +385,11 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             decks: i64::from(report.decks),
             cards: report
                 .cards
+                .into_iter()
+                .map(|stats| (stats.card.clone(), stats))
+                .collect(),
+            created: report
+                .created
                 .into_iter()
                 .map(|stats| (stats.card.clone(), stats))
                 .collect(),
@@ -435,12 +453,40 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             });
         }
     }
+    // R2089000: the Created cards, each over its family's window as above.
+    let mut ids: Vec<&str> = parts
+        .values()
+        .flat_map(|part| part.created.keys().map(String::as_str))
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut created: Vec<WindowedCreated> = Vec::new();
+    for id in ids {
+        let family = card_family(id);
+        let window = windows
+            .entry(family)
+            .or_insert_with(|| window_in(&history, at, Some(family), query.request, &live_games))
+            .clone();
+        let mut stats: Option<CreatedStats> = None;
+        for part in counted_parts(&window) {
+            if let Some(card) = part.created.get(id) {
+                match stats.as_mut() {
+                    None => stats = Some(card.clone()),
+                    Some(held) => add_created(held, card),
+                }
+            }
+        }
+        if let Some(stats) = stats {
+            created.push(WindowedCreated { window, stats });
+        }
+    }
     WindowedReport {
         at: query.at.to_string(),
         patch,
         games,
         decks,
         cards,
+        created,
     }
 }
 

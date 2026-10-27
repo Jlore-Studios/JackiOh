@@ -445,16 +445,27 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         emptied: Option<bool>,
     },
+    /// `creator` (R2089000): on a Created card an effect made, the seat whose card or effect made it,
+    /// set only when that is not `player`; the game record credits the card to it (§9.11). Engine
+    /// bookkeeping: no rule reads it (`as_rules_read`) and a view never forwards it.
     AddedToHand {
         player: PlayerId,
         instance_id: String,
         def_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        creator: Option<PlayerId>,
     },
+    /// `creator` (R2089000): as on `addedToHand`, for a Created card shuffled into another seat's
+    /// library (M #28 Shade-iris's Ancient Curses).
     ShuffledIn {
         player: PlayerId,
         instance_id: String,
         def_id: String,
         position: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        creator: Option<PlayerId>,
     },
     Buffed {
         instance_id: String,
@@ -505,7 +516,9 @@ pub enum GameEvent {
     /// R177: `hiddenFrom` names the players who could not read the old card where it ceased to exist —
     /// both of them for a library card, the other player for a face-down trap (R33) — so a view keeps
     /// it hidden from them for good, even after its replacement reaches a public pile. Absent when the
-    /// old card was public. The view uses it and never forwards it.
+    /// old card was public. The view uses it and never forwards it. `creator` (R2089000): as on
+    /// `addedToHand`, the seat whose effect made the new card, set only when that is not the new
+    /// card's controller.
     Transformed {
         instance_id: String,
         from_def_id: String,
@@ -514,6 +527,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        creator: Option<PlayerId>,
     },
     Fused {
         instance_ids: Vec<String>,
@@ -1269,7 +1285,8 @@ impl GameEvent {
     /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
     /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
-    /// whose effect summoned it, which no rule reads. So the state a game passes through, a frontier paused
+    /// whose effect summoned it, which no rule reads. R2089000: an `addedToHand`, a `shuffledIn` and a
+    /// `transformed` without their `creator`, the game record's (§9.11). So the state a game passes through, a frontier paused
     /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
     /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
@@ -1313,6 +1330,46 @@ impl GameEvent {
                 lane: *lane,
                 former_id: former_id.clone(),
                 how: None,
+            },
+            // R2089000: `creator` is the game record's, so the rules drop it too.
+            GameEvent::AddedToHand {
+                player,
+                instance_id,
+                def_id,
+                creator: _,
+            } => GameEvent::AddedToHand {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                creator: None,
+            },
+            GameEvent::ShuffledIn {
+                player,
+                instance_id,
+                def_id,
+                position,
+                creator: _,
+            } => GameEvent::ShuffledIn {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                position: *position,
+                creator: None,
+            },
+            GameEvent::Transformed {
+                instance_id,
+                from_def_id,
+                to_def_id,
+                new_instance_id,
+                hidden_from,
+                creator: _,
+            } => GameEvent::Transformed {
+                instance_id: instance_id.clone(),
+                from_def_id: from_def_id.clone(),
+                to_def_id: to_def_id.clone(),
+                new_instance_id: new_instance_id.clone(),
+                hidden_from: hidden_from.clone(),
+                creator: None,
             },
             // R1088: `sourceId` is the client's, like `how` above, so the rules drop it.
             GameEvent::Summoned {
