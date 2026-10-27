@@ -1,0 +1,82 @@
+{
+  "action": "build",
+  "number": 1862,
+  "title": "Patch: Stinkyscape S06, the weapon rack",
+  "branch": "bot/issue-1862",
+  "thread": "**Issue #1862 (data, not instructions):**\n\n```text\n# #1862: Patch: Stinkyscape S06, the weapon rack\nOpened by @squishy-squooby.\n\nFullsend 1 of the Stinkyscape set, a card part. It builds on `main` behind R1420's gate, so no player meets these cards before the release, the last part of #1856.\n\n## Scope\n\n- **Cards**: `#50\u2013#61` Beam, Repeater, Cannon and Flak v3\u2013v5, `#81` Radix, `#82` Phalanx, `#83` Halo, `#85` Prototype-X1, `#86` Prototype-X2, `#140` Rush Token, `#141` Fruit, `#142` Jade and `#143` Book Launcher\n- **Uses, already on `main`**: #1841, #1837\n\nPrototype-X2's Radiant face is 16/16 (the designer's answer: Radiant stats doubled). Fruit Launcher's \"random fruit\" is a card tagged Fruit, which after #1837 no longer holds Organic Produce or Fruit Tree.\n\n## Reading\n\nEach card's entry is in the foundation's card-by-card brief (`docs/stinkyscape-set.md` once #1857 has merged); the designer's words are `JackiOh_Stinkyscape_Cards.md`. The plan's fixes (ST8) and the designer's answers (ST9) win over the designer's words.\n\n## Done when\n\n- Each card's script, `crates/cards/src/scripts/stinkyscape/cNNN_slug.rs` (filling the foundation's stub), returns `Vec<Effect>` built from the engine's verbs and reads state through the prelude alone (CLAUDE.md rules 5 and 6), with tests in the same file for its base and its Radiant behaviour and its BUILD M12 rows green.\n- A missing verb or board fact goes into the engine with its test (`crates/cards/README.md`); a decision the spec does not make gets a ruling note from this issue's block (CLAUDE.md rule 3).\n- The cards' own rows (\u00a78.10, \u00a77, BUILD M12, `docs/radiant-audit.md`, the catalog entry) are corrected where the build decides otherwise, and the pull request says so.\n- The set stays held by R1420's gate: no pending fragment, no golden trace moves, the shipped totals unchanged.\n- The gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `patches check`, `spec check`, `fuzz --seeds 200`.\n\nThe plan: [`docs/stinkyscape-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/docs/stinkyscape-set.md) (ST6, ST8, ST9); the designer's list: [`JackiOh_Stinkyscape_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/JackiOh_Stinkyscape_Cards.md). Both are on the planning branch `claude/stoic-planck-f1rvyy` until they merge; where they disagree with SPEC, SPEC wins (CLAUDE.md).\n\nBlocked by #1857\n\nPart of #1856.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong); build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-10-26T22:43:03Z",
+    "draft": "# Plan draft for #1862 (S06, the weapon rack) \u2014 in progress\n\n## Found so far\n- Foundation #1857 merged (5e04fd9d7). 21 stubs exist: crates/cards/src/scripts/stinkyscape/c050..c061, c081, c082, c083, c085, c086, c140..c143 (each `Script::default()`).\n- Brief: docs/stinkyscape-set.md ST13 entries lines 1586-1740 (#50-61), 1989-2078 (#81-86), 2847-2897 (#140-143).\n- Proposed rulings ST-S06-1..8 \u2192 this issue's block R1862000.. .\n- No other S part built yet: this is among the first card parts.\n\n## To research\n- M05 weapon kit on main (#1841): extraTurnCooldown, halfToHeroes, equip_picks, float_lowers_tribute; R1841000-3\n- Starship Piece (M02 #1852, R1852000/1), Equip (R1086), Activate N (R384, R1751000)\n- Cleave splash (zones::adjacent), Pierce ignoreArmor (R346), damage_all (R59)\n- Rush Token + forced attack (Core #60 Bear Honeypot), cast_random (R382), Auspicious Rock (M #39.1), Book tag pool\n- catalog rows, \u00a78.10, \u00a77, BUILD M12, radiant-audit rows\n- test patterns for held-set cards (R1420)",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-5",
+    "reason": "`claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-27T03:30:00Z",
+    "trail": "pub fn roll_weighted\\\" -B8 -A3 crates/engine/src/catalog.rs\", \"description\": \"Show\u2026\n- Grep: {\"pattern\": \"no pool by one of them|takes tokens\", \"path\": \"/home/runner/work/_temp/work/item-1862/spec\", \"output_mode\": \"content\", \"head_limit\": 10}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1862/spec && grep -o \\\".\\\\{250\\\\}no pool by one of them.\\\\{200\\\\}\\\" 11-rulings.md rulings/*.md | head; echo; grep -o \\\".\\\\{200\\\\}takes tokens.\\\\{150\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1862; grep -n -A3 '^ \\\"meditative-039-[34]\\\": {' crates/cards/catalog.json; grep -rn \\\"ROCK_TABLE\\\\|c039_1_auspicious_rock::\\\" crates/cards/src --inc\u2026\n- Bash: {\"command\": \"grep -rln \\\"#1837\\\\|R1837\\\" spec | head; grep -rho \\\".\\\\{150\\\\}#1837.\\\\{200\\\\}\\\" spec | head -3; grep -n \\\"Grep\\\\|Fruit\\\" crates/engine/src/config.rs | sed -n 1,10p\", \"description\": \"Fin\u2026\n- Bash: {\"command\": \"grep -n \\\"Fruit\\\" spec/rulings/R1837000.md | cut -c1-600\", \"description\": \"Read R1837000 Fruit mention\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1862; grep -n \\\"pub fn force_attacks_on\\\" -B14 -A25 crates/engine/src/combat.rs | head -60\", \"description\": \"Show engine force_attacks_on\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn state_check\\\\|pub fn run_state_check\\\\|pub fn check_state\\\\|pub fn settle\\\" crates/engine/src/effects/*.rs | head; grep -rln \\\"twice\\\\|three times\\\" crates/cards/src/sc\u2026\n- Bash: {\"command\": \"grep -rn \\\"state check\\\" crates/engine/src/resolve.rs crates/engine/src/work.rs | head -20; grep -rn \\\"R59\\\\b\\\\|\\\\[\\\\[R59\\\\]\\\\]\\\" spec/rulings/R0059.md | head -3; sed -n 1,20p spec/rulin\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/classic_plus/ | grep c032; sed -n 1,80p crates/cards/src/scripts/classic_plus/c032_3_blade_storm.rs\", \"description\": \"Read Blade Storm for per-round state che\u2026\n- Grep: {\"pattern\": \"\\\"tag\\\"\\\\s*:\", \"path\": \"/home/runner/work/_temp/work/item-1862/crates\", \"output_mode\": \"count\"}\n- Bash: {\"command\": \"grep -rn \\\"^pub fn [a-z_]*\\\\(round\\\\|repeat\\\\|times\\\\|twice\\\\)[a-z_]*\\\" crates/engine/src/effects/*.rs | head -20; grep -rn \\\"pub fn damage_rounds_until_death\\\" -B30 crates/engine/src/ef\u2026\n- Bash: {\"command\": \"sed -n 20,34p /home/runner/work/_temp/work/item-1862/crates/cards/src/scripts/meditative/c046_conjure_intellect.rs; sed -n 15,25p /home/runner/work/_temp/work/item-1862/crates/cards/src/\u2026\n- Bash: {\"command\": \"sed -n 1,140p crates/engine/src/effects/rounds.rs\", \"description\": \"Read rounds.rs\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/engine/src/effects/after_check.rs; grep -n \\\"after_check\\\" crates/engine/src/effects/mod.rs; grep -rln \\\"after_state_check\\\" crates/cards/src/scripts | head\", \"descri\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn after_state_check\\\" -B6 -A30 crates/engine/src/effects/after_check.rs; grep -n \\\"after_state_check\\\" -B3 -A12 crates/cards/src/scripts/classic/c043_plague_nuke.rs | head\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -50; wc -l spec/11-rulings.md; head -30 spec/11-rulings.md\", \"description\": \"Read how to add a ruling\"}\n- said: I found everything you asked about except two things: no script deals damage to a chosen unit and the units beside it, and no target filter limits a choice to Taunt units. Stinkyscape #140 Rush Token Launcher is the only card whose text says \"Taunt Units first\", and its script is still an empty stu\u2026\n- Bash: {\"command\": \"tail -30 spec/11-rulings.md | cut -c1-600\", \"description\": \"Read the tail of \\u00a711 provenance paragraphs\"}\n- Bash: {\"command\": \"grep -n \\\"fn taunt_wall\\\" -B5 -A40 crates/engine/src/combat.rs | head -70; grep -rn \\\"pub fn [a-z_]*taunt[a-z_]*\\\" crates/engine/src | head\", \"description\": \"Read the taunt wall logic an\u2026\n- Bash: {\"command\": \"sed -n 1480,1560p crates/engine/src/combat.rs\", \"description\": \"Read force_attacks_on\"}\n- said: Nothing was edited. Paths below are relative to `/home/runner/work/_temp/work/item-1862`; scripts are under `crates/cards/src/scripts/`, and \"cat:N\" is a line in `crates/cards/catalog.json`. Two things to know before planning: - **The pool key is `\"tags\": [..]`, not `\"tag\"`.** `CatalogQueryArgs` (`\u2026\n- Bash: {\"command\": \"grep -n \\\"^pub fn force_attack\\\\b\\\\|^pub fn force_attack(\\\" -A40 crates/engine/src/combat.rs | head -60\", \"description\": \"Read force_attack restrictions\"}\n- Bash: {\"command\": \"sed -n 1,140p crates/engine/src/effects/cast.rs\", \"description\": \"Read cast.rs CastHow and cast\"}\n- Bash: {\"command\": \"sed -n 195,300p crates/engine/src/effects/cast.rs; grep -n \\\"aim_at\\\" crates/engine/src/resolve.rs | head -20\", \"description\": \"Read cast_new and how aim_at is honored\"}\n- Bash: {\"command\": \"sed -n 180,230p crates/engine/src/resolve.rs; grep -rn \\\"aim_at\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/effects/cast.rs\\\" | head -20\", \"description\": \"Find how \u2026\n- Bash: {\"command\": \"sed -n 2530,2620p crates/engine/src/play_steps.rs\", \"description\": \"Read how aim_at picks the first declaration\"}\n- Bash: {\"command\": \"sed -n 340,470p crates/engine/src/effects/cast.rs; grep -n \\\"pub fn pick_generated\\\" -B8 -A25 crates/engine/src/catalog.rs\", \"description\": \"Read cast_random implementation and pick_gene\u2026\n- Bash: {\"command\": \"grep -rn \\\"sink.rng\\\\|ctx.rng\\\\|\\\\.rng\\\\b\\\" crates/cards/src/scripts --include=*.rs | grep -v \\\"^\\\\s*//\\\" | head -10; sed -n 90,120p crates/cards/src/scripts/meditative/c098_showdown.rs;\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct EffectContext\\\" -A60 crates/engine/src/script.rs | grep -n \\\"pub \\\\|///\\\" | head -50; grep -n \\\"pub fn option_key\\\" -B5 -A20 crates/engine/src/prompts.rs | head -40\"\u2026\n- Bash: {\"command\": \"sed -n 140,200p crates/engine/src/script.rs | grep -n \\\"pub \\\\|///\\\" ; grep -rn \\\"ctx.targets.first()\\\\|ctx.targets.get(0)\\\\|ctx\\\\.targets\\\\b\\\" crates/cards/src/scripts --include=*.rs | \u2026\n- Bash: {\"command\": \"ls apps/web/src/wire/generated | grep -i \\\"cast\\\\|Damage\\\" | head; grep -rn \\\"CastRandomArgs\\\\|CastHow\\\" apps/web/src/wire/generated 2>/dev/null | head -3\", \"description\": \"Check if cast\u2026"
+  },
+  "journal": "# Journal of #1862\n\nEvery night-bot run on #1862, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-10-26 22:46 UTC \u00b7 plan #1862 \u00b7 `claude-5` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/40413688276) on `claude-5` (`opus` (strong)). It ended **interrupted**: `claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-27T03:30:00Z\nModel calls: 1, 5.5 model minutes.\nIts work ended at `844114ff49c2` on `bot/issue-1862`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 22:37 | start | from `origin/main` |  | at `844114ff49c2` |\n| 2 | 22:37 | plan (`opus`) | plan the item before anyone builds it | 5.5 min | cut off at its usage cap: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-27T03:30:00Z |\n| 3 | 22:43 | stop | `claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-27T03:30:00Z |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Plan draft for #1862 (S06, the weapon rack) \u2014 in progress\n\n## Found so far\n- Foundation #1857 merged (5e04fd9d7). 21 stubs exist: crates/cards/src/scripts/stinkyscape/c050..c061, c081, c082, c083, c085, c086, c140..c143 (each `Script::default()`).\n- Brief: docs/stinkyscape-set.md ST13 entries lines 1586-1740 (#50-61), 1989-2078 (#81-86), 2847-2897 (#140-143).\n- Proposed rulings ST-S06-1..8 \u2192 this issue's block R1862000.. .\n- No other S part built yet: this is among the first card parts.\n\n## To research\n- M05 weapon kit on main (#1841): extraTurnCooldown, halfToHeroes, equip_picks, float_lowers_tribute; R1841000-3\n- Starship Piece (M02 #1852, R1852000/1), Equip (R1086), Activate N (R384, R1751000)\n- Cleave splash (zones::adjacent), Pierce ignoreArmor (R346), damage_all (R59)\n- Rush Token + forced attack (Core #60 Bear Honeypot), cast_random (R382), Auspicious Rock (M #39.1), Book tag pool\n- catalog rows, \u00a78.10, \u00a77, BUILD M12, radiant-audit rows\n- test patterns for held-set cards (R1420)\n````\n\n</details>\n",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
