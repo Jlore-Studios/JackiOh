@@ -3,7 +3,8 @@
 //! Stinkyscape card ships yet (the set comes later, behind its gate), so the engine never imports
 //! `crates/cards` for these.
 //!
-//! Ids are prefixed `sv-` and indexed from 18480, so they collide with no other fixture file's.
+//! Ids are prefixed `sv-` and indexed from 18480 (#1868's from 18680), so they collide with no other
+//! fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -13,7 +14,7 @@ use jackioh_engine::effects;
 // The verbs as a card script names them, through the prelude (CLAUDE.md rule 5).
 use jackioh_engine::prelude::{
     INFLATION_CHANCE, freeze, give_next_spell_keyword, inflate, inflation_chance_of, melee,
-    next_inflation_chance,
+    next_inflation_chance, target_check, unit_view, x_of,
 };
 use jackioh_engine::testkit::*;
 
@@ -161,6 +162,16 @@ pub static sanctions: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+// ---- R1868000: a declared target that reads the play's X ----
+
+/// Stinkyscape #99 No-No Words' shape: "(X) Destroy a Unit with less than 4X Attack", the pick needed
+/// (R703).
+pub static nono_x: LazyLock<CardDef> =
+    LazyLock::new(|| spell(18680, "nono-x", json!("X"), json!([]), json!([])));
+/// A 3/3 that gains +2 Attack whenever the other player plays a card (§10.5 step 4, before the card
+/// resolves).
+pub static riser: LazyLock<CardDef> = LazyLock::new(|| unit(18681, "riser", 3, 3, json!([])));
+
 /// A declared pick of one Unit, either side.
 fn a_unit() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit"] }))]
@@ -174,6 +185,13 @@ fn meteor_hit(amount: i32, onto: &str) -> Effect {
 
 fn next_turn_mana(amount: i32) -> Effect {
     effects::next_turn_mana(json_as(json!({ "amount": amount })))
+}
+
+/// R1868000: a needed pick of one Unit, either side, whose Attack is below 4 × the play's X.
+fn below_four_x() -> Vec<TargetDecl> {
+    let mut decl = TargetDecl::target(1, 1, json!({ "of": ["unit"], "check": "belowFourX" }));
+    decl.required = Some(true);
+    vec![decl]
 }
 
 static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
@@ -338,6 +356,39 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 ..Script::default()
             }),
         ),
+        (
+            nono_x.id.clone(),
+            both(Script {
+                targets: below_four_x(),
+                target_checks: IndexMap::from([(
+                    "belowFourX",
+                    target_check(|args| {
+                        args.candidate
+                            .is_some_and(|unit| unit_view(args.state, unit).attack < 4 * x_of(args.self_))
+                    }),
+                )]),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::destroy(json_as(json!({ "target": { "of": "chosen" } })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            riser.id.clone(),
+            both(Script {
+                triggers: vec![
+                    TriggerDef::new("sv-riser-rise", &[GameEventType::CardPlayed], |_ctx, _event| {
+                        vec![effects::buff(json_as(
+                            json!({ "target": { "of": "self" }, "attack": 2 }),
+                        ))]
+                    })
+                    .with_when(|ctx, event| {
+                        matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller)
+                    }),
+                ],
+                ..Script::default()
+            }),
+        ),
     ])
 });
 
@@ -362,6 +413,8 @@ pub static SPELL_VERB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         hyperinflation.clone(),
         stable.clone(),
         sanctions.clone(),
+        nono_x.clone(),
+        riser.clone(),
     ]
 });
 
