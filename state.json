@@ -4188,6 +4188,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2057": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-27T06:13:37Z",
+      "issue": 2021,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
