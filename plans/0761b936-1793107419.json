@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2048,
+  "title": "Patch: spec check holds every `(ruling)` and `Ruling:` marker in \u00a72\u2013\u00a710 to a `[[R\u2026]]` link",
+  "branch": "bot/issue-2048",
+  "thread": "**Issue #2048 (data, not instructions):**\n\n```text\n# #2048: Patch: spec check holds every `(ruling)` and `Ruling:` marker in \u00a72\u2013\u00a710 to a `[[R\u2026]]` link\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe rulebook is dotted with phrases like \"Cap 10 (ruling)\" and \"Ruling: name it Bread Token\" \u2014 markers saying a numbered ruling decides this point. Most link to their ruling note; about a dozen link nowhere, so a reader cannot follow them, and the audit checklist that requires every marker to map to a ruling is enforced only by hand. After this patch every marker links to its ruling and the checker keeps it that way.\n\n## Why\n\nREVIEW.md's A2.3 requires every `(ruling)`/`Ruling:` marker in \u00a72\u2013\u00a710 to map to a \u00a711 row; nothing enforces it. Verified unlinked markers whose notes exist: `spec/03-zones.md:7` (\"Cap 10 (ruling)\" \u2014 `R0317.md` exists), `spec/06-keywords.md:101` (Fatigue's \"(ruling)\" \u2014 `R0003.md`), `spec/07-tokens.md:159-160` (\"Ruling: name it Bread Token\" \u2014 `R0037.md`; the Reminisce ruling beside it), plus more across \u00a73\u2013\u00a78. The convention already exists: `spec/03-zones.md:22` ends its marker `([[R5]])`.\n\n## Proposal\n\nA new spec-check rule beside `unresolved_markers` (crates/tools/src/spec.rs:114): every `(ruling)`/`Ruling:` marker in spec/02\u201310 must carry a `[[R\u2026]]` link that resolves. Add the missing links in the same PR; if a marker genuinely has no ruling note, either write one (numbered from the PR's issue block, with its proving test per CLAUDE.md rule 3) or reword the marker \u2014 a small number of sites, decided case by case and recorded in the PR.\n\n## Where it lands\n\n`crates/tools/src/spec.rs`, `spec/02`\u2013`10` marker lines, possibly one or two new `spec/rulings/R*.md`.\n\n## Acceptance criteria\n\n- [ ] `cargo jackioh spec check` fails on an unlinked `(ruling)`/`Ruling:` marker\n- [ ] Every existing marker links to a resolving ruling\n- [ ] Any new ruling note has a proving test and a `proven_in` entry, with `spec index` regenerated\n\n## Size and risks\n\nSmall-medium: a checker rule plus link fixes. The only open end is a marker with no ruling \u2014 the PR writes the note or removes the marker, each recorded.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:48:32Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2048: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
