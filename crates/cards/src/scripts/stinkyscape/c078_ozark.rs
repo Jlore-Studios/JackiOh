@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn radiant_8_8_and_two_different_radiant_miners() {
         for seed in 0..8 {
-            let (s, host) = prospected(true, &format!("s078-radiant-{seed}"));
+            let (mut s, host) = prospected(true, &format!("s078-radiant-{seed}"));
             assert!(s.state().pending.is_none());
             assert_eq!(fusions(&s), 2);
             let miners = miners_in(&s, &host);

@@ -120,10 +120,10 @@ mod tests {
             s.activate(ID, dig());
         }
         s.expect_refused_with(|s| s.activate(ID, dig()), "already been used");
-        assert_eq!(tray(&s).len(), 1 as usize);
+        assert_eq!(tray(&s).len(), 1);
         next_turn_of(&mut s, P1);
         s.activate(ID, dig());
-        assert_eq!(tray(&s).len(), 1 as usize + 1);
+        assert_eq!(tray(&s).len(), 2);
     }
 
     #[test]

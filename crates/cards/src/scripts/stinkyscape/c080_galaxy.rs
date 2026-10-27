@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn radiant_20_20_and_all_five_radiant_miners_fused_asking_nothing() {
-        let (s, host) = played(true);
+        let (mut s, host) = played(true);
         assert!(s.state().pending.is_none());
         let fusions = s
             .last_events()

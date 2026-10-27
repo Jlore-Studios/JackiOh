@@ -122,7 +122,8 @@ mod tests {
         for _ in 0..super::USES {
             s.activate(ID, dig());
         }
-        s.expect_refused_with(|s| s.activate(ID, dig()), "already been used");
+        let refusal = format!("used {} times this turn", super::USES);
+        s.expect_refused_with(|s| s.activate(ID, dig()), &refusal);
         assert_eq!(tray(&s).len(), super::USES as usize);
         next_turn_of(&mut s, P1);
         s.activate(ID, dig());
