@@ -3748,22 +3748,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/wire/generated/ModifierKind.ts",
-            "apps/web/src/wire/generated/PlayerModifier.ts",
-            "spec/10-engine-guide.md"
+            "spec/11-rulings.md"
           ],
-          "from": "39ef561cda9ab125421acdb187442664af9a0611",
-          "main": "0e9a8161383eaae46d24f8f738c87f7ec4a537d9"
+          "from": "56f23dbfdd39a7c0923ae6797e01c22de25cd801",
+          "main": "b6018e34115a1492ce24540dcc0a3251639d52a1"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40516884434",
+            "run": "40531432690",
             "tier": "strong"
           }
         ],
-        "sha": "56f23dbfdd39a7c0923ae6797e01c22de25cd801",
+        "sha": "4fe03f6c4ece06c0dc2d923f5b91c0f3ef7a367c",
         "tiers": {
           "claude": "strong"
         }
