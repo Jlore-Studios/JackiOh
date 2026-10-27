@@ -1,7 +1,7 @@
 // The replay player (#511, SPEC §9.3, §10.8, R768): a finished game, a step at a time. It reads a
 // `ReplaySource` and nothing else (CLAUDE.md rule 7), draws each step's view with `Game` as a board
 // to look at (`replay`: no legal action, glow or prompt, and a click changes nothing) and holds the
-// controls in the board's notice slot.
+// controls (`ReplayToolbar.tsx`, which the co-op replay shares) in the board's notice slot.
 //
 // A step forward hands `Game` the next view with the same key, so its animation queue, effects and
 // sound run as live play's do (R201's speed included). Any other move, a step back or a jump, gives
@@ -30,30 +30,15 @@ import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
+import { ReplayToolbar, isTyping, replayTestid } from "./ReplayToolbar.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 import { ShareGif, useGifExport } from "./ShareGif.tsx";
 import { createStepCache } from "./steps.ts";
 import "./replay.css";
 
-export const replayTestid = {
-  player: "replay-player",
-  controls: "replay-controls",
-  start: "replay-start",
-  backTurn: "replay-back-turn",
-  backStep: "replay-back-step",
-  play: "replay-play",
-  forwardStep: "replay-forward-step",
-  forwardTurn: "replay-forward-turn",
-  end: "replay-end",
-  scrubber: "replay-scrubber",
-  readout: "replay-readout",
-  back: "replay-back",
-  loading: "replay-loading",
-  failure: "replay-failure",
-  /** #1568: a failed page offers Try again beside the alert. */
-  retry: "replay-retry",
-} as const;
+// The toolbar owns the ids; the routes, their tests and e2e read them from here.
+export { replayTestid };
 
 export type ReplayPlayerProps = {
   /** One replay. A different replay is a different player: the route keys this by what it opens. */
@@ -105,14 +90,6 @@ export function useBoardBusy(root: HTMLElement | null): boolean {
   return busy;
 }
 
-/** A key the arrow keys must leave to its own control: a text field, a select, the scrubber. */
-function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
-  );
-}
-
 /** The control inside the player that has focus, by test id: a fresh board takes its element away. */
 function focusedControl(): string | null {
   const active = document.activeElement;
@@ -135,8 +112,6 @@ export default function ReplayPlayer({
   const [failure, setFailure] = useState<ReplayFailure | null>(null);
   const [playing, setPlaying] = useState(false);
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
-  /** Where the scrubber is while it is held: the board moves when it is let go, not at every tick. */
-  const [scrub, setScrub] = useState<number | null>(null);
   /** The newest move asked for: an answer from an older one (a slow page) is dropped. */
   const wanted = useRef(0);
   /** The step on the board as the newest move left it, which a held-back answer has not reached yet. */
@@ -212,31 +187,6 @@ export default function ReplayPlayer({
     setFailure(null);
     retryMove.current();
   }
-
-  // The scrubber let go, wherever the pointer is: the board goes to where it was left. Until then it
-  // stays, since a board mounted afresh at every tick would take the scrubber from under the pointer.
-  const dropScrub = useRef<() => void>(IGNORE);
-  dropScrub.current = () => {
-    if (scrub === null) return;
-    setScrub(null);
-    goTo(scrub);
-  };
-  const scrubbing = scrub !== null;
-  useEffect(() => {
-    if (!scrubbing) return;
-    const drop = (): void => {
-      dropScrub.current();
-    };
-    const cancel = (): void => {
-      setScrub(null);
-    };
-    window.addEventListener("pointerup", drop);
-    window.addEventListener("pointercancel", cancel);
-    return () => {
-      window.removeEventListener("pointerup", drop);
-      window.removeEventListener("pointercancel", cancel);
-    };
-  }, [scrubbing]);
 
   const keys = useRef<(event: KeyboardEvent) => void>(IGNORE);
   keys.current = (event) => {
@@ -326,62 +276,6 @@ export default function ReplayPlayer({
     );
   }
 
-  const atStart = current <= 0;
-  const atEnd = current >= last;
-  const controls = (
-    <div className="replay-controls" role="toolbar" aria-label={t("Replay controls")} data-testid={replayTestid.controls}>
-      <button type="button" data-testid={replayTestid.start} aria-label={t("To the start")} disabled={atStart} onClick={() => goTo(0)}>
-        ⏮
-      </button>
-      <button type="button" data-testid={replayTestid.backTurn} aria-label={t("Back a turn")} disabled={atStart} onClick={() => goTurn(-1)}>
-        ⏪
-      </button>
-      <button type="button" data-testid={replayTestid.backStep} aria-label={t("Back a step")} disabled={atStart} onClick={() => goTo(current - 1)}>
-        ‹
-      </button>
-      <button
-        type="button"
-        data-testid={replayTestid.play}
-        aria-label={playing ? t("Pause") : t("Play")}
-        aria-pressed={playing}
-        disabled={atEnd}
-        onClick={() => setPlaying(!playing)}
-      >
-        {playing ? "⏸" : "▶"}
-      </button>
-      <button type="button" data-testid={replayTestid.forwardStep} aria-label={t("Forward a step")} disabled={atEnd} onClick={() => goTo(current + 1)}>
-        ›
-      </button>
-      <button type="button" data-testid={replayTestid.forwardTurn} aria-label={t("Forward a turn")} disabled={atEnd} onClick={() => goTurn(1)}>
-        ⏩
-      </button>
-      <button type="button" data-testid={replayTestid.end} aria-label={t("To the end")} disabled={atEnd} onClick={() => goTo(last)}>
-        ⏭
-      </button>
-      <input
-        type="range"
-        data-testid={replayTestid.scrubber}
-        aria-label={t("Step")}
-        min={0}
-        max={last}
-        step={1}
-        value={scrub ?? current}
-        onPointerDown={() => {
-          setPlaying(false);
-          setScrub(current);
-        }}
-        onChange={(event) => {
-          const value = Number(event.currentTarget.value);
-          if (scrub === null) goTo(value);
-          else setScrub(value);
-        }}
-      />
-      <span className="replay-readout" data-testid={replayTestid.readout}>
-        {t("Step {step} of {steps} · Turn {turn}", { step: current + 1, steps: total, turn: at.step.turn })}
-      </span>
-    </div>
-  );
-
   return (
     <div
       className="app-shell app-shell--wide replay-player"
@@ -407,7 +301,15 @@ export default function ReplayPlayer({
         }
         boardNotice={
           <>
-            {controls}
+            <ReplayToolbar
+              at={current}
+              last={last}
+              playing={playing}
+              onPlaying={setPlaying}
+              onGoTo={goTo}
+              onTurn={goTurn}
+              readout={t("Step {step} of {steps} · Turn {turn}", { step: current + 1, steps: total, turn: at.step.turn })}
+            />
             <ShareGif gif={gif} />
             {actions}
           </>
