@@ -652,7 +652,11 @@ def block(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
     closed_unmerged = sum(1 for p in pulls if p.get("state") == "closed" and not p.get("merged_at"))
     ended = Counter(conclusion for _, conclusion in facts.runs)
     counted = _local(ctx, now).strftime("%H:%M")
+    # Under the heading, a dropdown that starts open (dashboard.fold, which this module cannot
+    # import: dashboard imports it).
     lines = [BLOCK_START, "## 📊 What it has done", "",
+             "<details open><summary>Runs, pull requests, lines and model time, over the last 6 "
+             "hours, day, week and all time</summary>", "",
              f"_Counted at {counted}, afresh every {int(STATS_EVERY.total_seconds() // 60)} "
              "minutes. Active since "
              f"{_local(ctx, first).strftime('%Y-%m-%d') if first else '—'}. Now: "
@@ -676,7 +680,7 @@ def block(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
     lines += merged_table(ctx, windows[-1].merged, who, shown=shown)
     for part in extra:
         lines += [part.strip(), ""]
-    return "\n".join(lines + [BLOCK_END])
+    return "\n".join(lines + ["", "</details>", BLOCK_END])
 
 
 def kept(body: str | None) -> str | None:

@@ -130,6 +130,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | Read | Answers |
 | --- | --- |
 | `hero_of(state, player)` | `HeroView { health, armor }`, copied |
+| `starting_health_of(state, player)` | the health the player's hero started with: its handicap's `heroHealth`, else `HERO_HEALTH` (R290, R1866002) |
 | `zone_cards(state, player, zone)` / `zone_count(…)` | one off-field pile (`OffFieldZone`: hand, library, graveyard, exile) as a copy, `library[0]` on top; its size |
 | `cards_played_this_turn(state, player)` | §10.5 step 4's counter, counting the card being played |
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
@@ -152,6 +153,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts (R426) |
 | `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
+| `traded_card_of(ctx)` | in a trigger on `traded`, the card that Trade put into a deck (R1864003) |
 | `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
 | `player_spell_damage(state, player)` | the player's Spell Damage, the one sum §4.4 step 0 reads: Units, auras for one player or both, "this turn" modifiers (R1180000, R1180001) |
 | `heal_multiplier_of(state, player)` | how many times as large a heal of the player's hero or Units is now (R1180003, Meditative+ #7) |

@@ -54,10 +54,10 @@ use jackioh_server::db::store::{
     Db, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
-    SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource,
-    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord, UsernameClaim,
-    UsernameClaimOutcome,
+    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
+    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery,
+    StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -6476,7 +6476,184 @@ mod replays {
         }
     }
 
-    both_stores!(r768_lists_finished_matches_with_a_kept_log_newest_first);
+    /// One finished match's tail, as `a_match` leaves it: its actions, its result, then over.
+    async fn finish_match(harness: &StoreHarness, match_id: &str, (p1, p2): (&str, &str), ended_at: i64) {
+        q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", harness.now())]));
+        let row: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [p1, p2],
+            "winnerProfileId": p1,
+            "reason": "concede",
+            "turns": 3,
+            "endedAt": ended_at,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1000, 1000],
+        }));
+        q!(harness, t => t.results_insert(&row));
+        q!(harness, t => t.matches_finish(match_id, ended_at));
+    }
+
+    /// The batched read answers what the per-row reads answer: the same rows in the same order for
+    /// every limit and offset, each paired with its mode — a series' game, a rematch's own mode, a
+    /// room, queue tickets, none — a deleted opponent's replay kept, and the resultless, logless,
+    /// live and foreign rows left out.
+    async fn replays_list_with_modes_matches_the_per_row_reads(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+
+        // Sourceless: no room, ticket, series or own mode reads as none.
+        let plain = a_match(harness, (&a.id, &b.id), 2, Some(now - 9_000), true).await;
+
+        // A rematch states its own mode (R672).
+        let rematch_id = id();
+        let rematch: MatchRow = from(spread(
+            j(&match_row(&rematch_id, &a.id, &b.id, harness, now)),
+            json!({ "mode": "random" }),
+        ));
+        q!(harness, t => t.matches_create(&rematch));
+        finish_match(harness, &rematch_id, (&a.id, &b.id), now - 8_000).await;
+
+        // A room's match reads as the room's mode.
+        let room: Room = from(json!({
+            "code": "ABC234",
+            "hostProfileId": a.id,
+            "mode": "bo1",
+            "hostDeck": deck_of(harness, 0),
+            "hostTrio": null,
+            "catalogVersion": harness.catalog_version,
+            "createdAt": now,
+            "expiresAt": now + 600_000,
+            "guestProfileId": null,
+            "matchId": null,
+        }));
+        q!(harness, t => t.rooms_create(&room));
+        let room_match = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &b.id, &room_match, now)),
+            "the claim",
+        );
+        q!(harness, t => t.matches_create(&match_row(&room_match, &a.id, &b.id, harness, now)));
+        finish_match(harness, &room_match, (&a.id, &b.id), now - 7_000).await;
+
+        // A queue match reads as its tickets' mode.
+        let tickets: Vec<Ticket> = [&a.id, &b.id]
+            .into_iter()
+            .map(|profile_id| {
+                from(json!({
+                    "id": id(),
+                    "profileId": profile_id,
+                    "rating": 1000,
+                    "mode": "random",
+                    "deck": [],
+                    "trio": null,
+                    "catalogVersion": harness.catalog_version,
+                    "enqueuedAt": now,
+                    "status": "open",
+                    "matchId": null,
+                }))
+            })
+            .collect();
+        for row in &tickets {
+            q!(harness, t => t.tickets_insert(row));
+        }
+        let queue_match = id();
+        assert!(q!(harness, t => t.tickets_claim_pair(&tickets[0].id, &tickets[1].id, &queue_match, now)));
+        q!(harness, t => t.matches_create(&match_row(&queue_match, &a.id, &b.id, harness, now)));
+        finish_match(harness, &queue_match, (&a.id, &b.id), now - 6_000).await;
+
+        // A game of a Conquest series reads as bo3, whatever made the series.
+        let series_game = id();
+        let series: SeriesRow = from(json!({
+            "id": id(),
+            "sides": [
+                { "profileId": a.id, "trio": j(&frozen_trio(harness, Some("Mine"))), "wins": 0, "pick": null },
+                { "profileId": b.id, "trio": j(&frozen_trio(harness, Some("Theirs"))), "wins": 0, "pick": null },
+            ],
+            "catalogVersion": harness.catalog_version,
+            "seedBase": "series-seed",
+            "status": "playing",
+            "games": [{ "gameNo": 2, "matchId": series_game, "slots": [0, 1], "first": "p2", "winner": null, "reason": null }],
+            "nextMatchId": series_game,
+            "pickDeadline": null,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": now,
+            "updatedAt": now,
+            "endedAt": null,
+            "version": 1,
+        }));
+        q!(harness, t => t.series_create(&series));
+        q!(harness, t => t.matches_create(&match_row(&series_game, &b.id, &a.id, harness, now)));
+        finish_match(harness, &series_game, (&b.id, &a.id), now - 5_000).await;
+
+        // A deleted opponent's replay is kept (KNOWN DIVERGENCES, deleted accounts).
+        let deleted = a_match(harness, (&a.id, &gone.id), 1, Some(now - 4_000), true).await;
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        let no_result = a_match(harness, (&a.id, &b.id), 1, Some(now - 3_000), false).await;
+        let no_log = a_match(harness, (&a.id, &b.id), 0, Some(now - 2_000), true).await;
+        let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
+        let others = a_match(harness, (&b.id, &c.id), 1, Some(now - 1_000), true).await;
+
+        // Every page answers what the per-row reads answer.
+        for (limit, offset) in [(10, 0), (3, 0), (3, 2), (2, 4), (10, 4), (2, 10)] {
+            let listed = q!(harness, t => t.replays_list(&a.id, limit, offset));
+            let mut modes = Vec::with_capacity(listed.len());
+            for replay in &listed {
+                modes.push(q!(harness, t => t.matches_mode_of(&replay.row.id)));
+            }
+            let expected: Vec<ReplayWithMode> = listed
+                .into_iter()
+                .zip(modes)
+                .map(|(replay, mode)| ReplayWithMode { replay, mode })
+                .collect();
+            assert_eq!(
+                q!(harness, t => t.replays_list_with_modes(&a.id, limit, offset)),
+                expected,
+                "limit {limit} offset {offset}",
+            );
+        }
+
+        // Each mode source, and the rows left out, by id.
+        let batched = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
+        let ids: Vec<&str> = batched.iter().map(|entry| entry.replay.row.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                deleted.as_str(),
+                series_game.as_str(),
+                queue_match.as_str(),
+                room_match.as_str(),
+                rematch_id.as_str(),
+                plain.as_str(),
+            ]
+        );
+        for missing in [&no_result, &no_log, &live, &others] {
+            assert!(!ids.contains(&missing.as_str()), "{missing}");
+        }
+        let mode_of = |id: &str| {
+            batched
+                .iter()
+                .find(|entry| entry.replay.row.id == id)
+                .map(|entry| j(&entry.mode))
+        };
+        assert_eq!(mode_of(&plain), Some(Value::Null));
+        assert_eq!(mode_of(&rematch_id), Some(json!("random")));
+        assert_eq!(mode_of(&room_match), Some(json!("bo1")));
+        assert_eq!(mode_of(&queue_match), Some(json!("random")));
+        assert_eq!(mode_of(&series_game), Some(json!("bo3")));
+        assert_eq!(mode_of(&deleted), Some(Value::Null));
+    }
+
+    both_stores!(
+        r768_lists_finished_matches_with_a_kept_log_newest_first,
+        replays_list_with_modes_matches_the_per_row_reads
+    );
 }
 
 mod purge_expired {

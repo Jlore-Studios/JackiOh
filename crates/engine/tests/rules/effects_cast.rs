@@ -8,7 +8,7 @@
 
 use std::collections::BTreeSet;
 
-use jackioh_engine::effects::{cast, cast_new, cast_random, damage, heal};
+use jackioh_engine::effects::{cast, cast_new, cast_random, cast_random_at, damage, heal};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
@@ -943,6 +943,70 @@ mod e12_random_casts_r452 {
             modes.insert(if hits.is_empty() { "heal" } else { "hit" });
         }
         assert_eq!(modes, BTreeSet::from(["heal", "hit"]));
+    }
+
+    /// R1862004: a random cast of the target Spell aimed by `aim` (handed the p2 Unit and the p2 Trap it
+    /// may name), on a board of four Units and a Trap.
+    fn aimed_at(
+        seed: &str,
+        aim: impl FnOnce(&CardInstance, &CardInstance) -> String,
+    ) -> (GameState, CardInstance, Vec<GameEvent>) {
+        let mut state = playing(seed);
+        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let trap = put(
+            &mut state,
+            &cast_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let aimed = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3), json!({}));
+        let aim = aim(&aimed, &trap);
+        let events = run(
+            &mut state,
+            vec![cast_random_at(
+                json_as(json!({ "query": { "defId": target_spell().id } })),
+                aim,
+            )],
+            None,
+        );
+        (state, aimed, events)
+    }
+
+    #[test]
+    fn r1862004_an_aimed_random_cast_takes_the_aim_for_its_first_target_by_id_or_by_prompt_key() {
+        for seed in 1..=4 {
+            let (state, aimed, events) = aimed_at(&format!("r1862004-aim-{seed}"), |unit, _| unit.id.clone());
+            assert!(state.pending.is_none());
+            assert!(events_of_type(&events, GameEventType::PromptOpened).is_empty());
+            assert_eq!(played_events(&events).len(), 1);
+            assert_eq!(damage_targets(&events), vec![aimed.id], "seed {seed}");
+
+            let (_, _, events) = aimed_at(&format!("r1862004-key-{seed}"), |_, _| {
+                option_key(&Selection::Hero { player: PlayerId::P2 })
+            });
+            assert_eq!(
+                damage_targets(&events),
+                vec!["hero-p2".to_string()],
+                "seed {seed}"
+            );
+        }
+    }
+
+    #[test]
+    fn r1862004_an_aim_the_cast_card_cannot_take_is_passed_and_its_pick_is_random() {
+        let mut hit: BTreeSet<String> = BTreeSet::new();
+        for seed in 1..=8 {
+            // The target Spell takes a Unit or a hero, never a backrow card: the aim at the trap is passed.
+            let (state, _, events) = aimed_at(&format!("r1862004-trap-{seed}"), |_, trap| trap.id.clone());
+            assert!(state.pending.is_none());
+            assert!(events_of_type(&events, GameEventType::PromptOpened).is_empty());
+            let hits = damage_targets(&events);
+            assert_eq!(hits.len(), 1, "seed {seed}: {hits:?}");
+            hit.extend(hits);
+        }
+        assert!(hit.len() > 1, "{hit:?}");
     }
 }
 

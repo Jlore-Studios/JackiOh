@@ -375,6 +375,27 @@ pub fn add_lane_watch(
     )
 }
 
+/// R1863000: Great Replacement Theory's watcher — a `never` modifier on `player` that answers the first
+/// resolved play of theirs of each of `def_ids` (Stinkyscape #44).
+pub fn add_play_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    def_ids: Vec<String>,
+    resume: Resume,
+    label: &str,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::Never,
+        ModifierKind::PlayWatch {
+            def_ids,
+            resume,
+            label: label.to_string(),
+        },
+    )
+}
+
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
 /// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage). Its `seq`
 /// is the one its id is numbered from (`addModifier`), R68's creation order among the delayed effects.

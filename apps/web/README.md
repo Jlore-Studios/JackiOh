@@ -293,7 +293,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; moved from /account (#1307)
+                        reward, and the countdown to the next; moved from /account (#1307). The landing's bookmark
+                        shares `useQuests` and `QuestsView` (R2035000)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
                         read the owned cosmetics again; the page never scrolls, its body does
@@ -346,7 +347,7 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
-                        refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
+                        refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
@@ -406,7 +407,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
-The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
+The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short. Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:

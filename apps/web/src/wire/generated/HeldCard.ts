@@ -7,4 +7,10 @@ import type { PlayerId } from "./PlayerId";
  * after `holder_mark` (`stays::exit_mark` as it was taken), then summoned for `to`. `card` is the
  * card as it left the field, reset as R78 resets a card that leaves it.
  */
-export type HeldCard = { holderId: string, holderMark: number, to: PlayerId, card: CardInstance, };
+export type HeldCard = { holderId: string, holderMark: number, to: PlayerId, card: CardInstance, 
+/**
+ * R1865000: a hand card set aside beneath its holder (`effects::hold::set_aside_from_hand`), held as
+ * it was in the hand, with no reset, and exiled rather than summoned once the holder leaves the
+ * field. Only ever `Some(true)`.
+ */
+exileOnRelease?: true, };

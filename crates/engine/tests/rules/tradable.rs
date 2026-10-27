@@ -4,13 +4,18 @@
 //! counted over all their Tradable cards. `legal_actions`, the reducer and the view all read
 //! `trade::why_trade_refused`. The trade is hidden like a draw, its draw is a draw for every rule, it
 //! is no play, and a Trade left keeps a turn from ending by itself. The fixtures in
-//! `fixtures/tradable.rs` stand in for Meditative #53 and #98, which test it again in their own files.
+//! `fixtures/tradable.rs` stand in for Meditative #53 and #98, which test it again in their own files,
+//! and for Stinkyscape #164 and #165 (R1864002–R1864004): an aura lends Tradable to a hand, a card on
+//! the field gives Trades a turn, and a trigger on `traded` is handed the card the Trade put in.
 
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{in_hand, put, slot};
 use super::fixtures::prompt_harness::board;
-use super::fixtures::tradable::{no_draws, plain_unit, register_tradable, tradable_spell};
+use super::fixtures::tradable::{
+    FIXTURE_TRADES, lender, no_draws, plain_unit, register_tradable, tradable_spell, trade_watcher,
+    two_trades,
+};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -348,5 +353,98 @@ fn r1838003_the_random_policy_may_trade_and_the_timeout_never_does() {
     assert_eq!(
         timed_out.state.active, P2,
         "the clock ends the turn and trades nothing"
+    );
+}
+
+#[test]
+fn r1864002_an_aura_lends_tradable_to_its_controllers_hand_while_it_acts() {
+    let (mut state, _spell, unit) = holding("r1864002-lent");
+    let theirs = state.players.p2.hand[0].id.clone();
+    let is_tradable_now = |state: &GameState, id: &str| {
+        let card = find_instance(state, id).expect("the card in a hand");
+        is_tradable(state, card)
+    };
+    assert!(
+        !is_tradable_now(&state, &unit),
+        "the plain Unit prints no Tradable"
+    );
+
+    // A lender on p2's side lends p1's hand nothing.
+    let mut across = state.clone();
+    put(&mut across, &lender().id, slot(P2, Row::Backrow, 1), json!({}));
+    assert!(!is_tradable_now(&across, &unit));
+    assert!(
+        is_tradable_now(&across, &theirs),
+        "it lends its own controller's hand"
+    );
+
+    put(&mut state, &lender().id, slot(P1, Row::Backrow, 1), json!({}));
+    assert!(is_tradable_now(&state, &unit), "lent by the aura while it acts");
+    assert!(trades_listed(&state, P1).contains(&unit));
+    assert!(
+        !is_tradable_now(&state, &theirs),
+        "the other player's hand is not lent it"
+    );
+    assert_eq!(trade(&state, P1, &unit, "t1").error, None);
+}
+
+#[test]
+fn r1864003_a_trigger_on_traded_is_handed_the_card_the_trade_put_into_the_deck() {
+    let (mut state, spell, _unit) = holding("r1864003-handed");
+    put(
+        &mut state,
+        &trade_watcher().id,
+        slot(P1, Row::Backrow, 1),
+        json!({}),
+    );
+    let out = trade(&state, P1, &spell, "t1");
+    assert_eq!(out.error, None);
+    assert!(
+        out.state.players.p1.exile.iter().any(|card| card.id == spell),
+        "the watcher exiled the traded card"
+    );
+    assert!(out.events.iter().any(|event| matches!(
+        event,
+        GameEvent::Exiled { instance_id, .. } if *instance_id == spell
+    )));
+    // The id rode on the queue entry alone: the public `traded` still names no card (R1838001).
+    assert!(out.events.contains(&GameEvent::Traded { player: P1 }));
+}
+
+#[test]
+fn r1864004_a_card_acting_on_the_field_gives_trades_a_turn_the_most_holding() {
+    let (mut state, spell, _unit) = holding("r1864004-given");
+    let second = in_hand(&mut state, &tradable_spell().id, P1, 1).remove(0).id;
+    let third = in_hand(&mut state, &tradable_spell().id, P1, 1).remove(0).id;
+    put(&mut state, &two_trades().id, slot(P1, Row::Backrow, 1), json!({}));
+    assert_eq!(trades_per_turn_of(&state, P1), FIXTURE_TRADES);
+    assert_eq!(
+        trades_per_turn_of(&state, P2),
+        TRADES_PER_TURN,
+        "it gives only its controller"
+    );
+
+    // A second one changes nothing: the most holds, never a sum.
+    let mut doubled = state.clone();
+    put(
+        &mut doubled,
+        &two_trades().id,
+        slot(P1, Row::Backrow, 2),
+        json!({}),
+    );
+    assert_eq!(trades_per_turn_of(&doubled, P1), FIXTURE_TRADES);
+
+    // A larger figure of the player's own wins.
+    let mut own = state.clone();
+    own.players.p1.trades_per_turn = Some(FIXTURE_TRADES + 1);
+    assert_eq!(trades_per_turn_of(&own, P1), FIXTURE_TRADES + 1);
+
+    let once = trade(&state, P1, &spell, "t1").state;
+    let twice = trade(&once, P1, &second, "t2");
+    assert_eq!(twice.error, None, "two Trades a turn");
+    let thrice = trade(&twice.state, P1, &third, "t3");
+    assert_eq!(
+        thrice.error.as_deref(),
+        Some(format!("you have made this turn's {FIXTURE_TRADES} Trades").as_str())
     );
 }
