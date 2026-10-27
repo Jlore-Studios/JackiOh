@@ -117,7 +117,7 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   const next = sequence(0x43524f57); // "CROW"
   let running = false;
   let ending = false;
-  let output: CrowdOutput | null = null;
+  let connected = false;
   let timer: Cancel | null = null;
   let debounce: Cancel | null = null;
   const reactionTimers = new Set<Cancel>();
@@ -135,18 +135,23 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
     reactionTimers.clear();
   };
 
+  // §10.11 Autoplay: the crowd bus only while its context runs, read afresh at each sound so the
+  // crowd follows a context the engine rebuilt. A murmur or reaction that comes due on a suspended,
+  // interrupted or closed context is dropped, never saved up to burst out when it resumes.
+  const live = (): CrowdOutput | null => {
+    const output = (options.engine as Partial<CrowdCapableEngine>).crowdOutput?.() ?? null;
+    return output !== null && output.context.state === "running" ? output : null;
+  };
+
   const connect = (): void => {
-    if (!running || ending || output !== null) return;
-    output = (options.engine as Partial<CrowdCapableEngine>).crowdOutput?.() ?? null;
-    if (output === null || output.context.state !== "running") {
-      output = null;
-      return;
-    }
+    if (!running || ending || connected || live() === null) return;
+    connected = true;
     const schedulePatron = (): void => {
-      if (!running || ending || output === null) return;
+      if (!running || ending || !connected) return;
       const span = CROWD_FEEL.patronMaxMs - CROWD_FEEL.patronMinMs;
       const wait = CROWD_FEEL.patronMinMs + Math.round(next() * span);
       timer = later(wait, () => {
+        const output = live();
         if (output !== null) {
           patron(
             output,
@@ -164,7 +169,7 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
   // makes one resolution settle on its strongest moment (its largest hit, its heaviest landing)
   // rather than reacting midway.
   const observe = (kind: CrowdReaction, tails: boolean): void => {
-    if (!running || ending) return;
+    if (!running || ending || live() === null) return;
     if (pending === null || REACTION_RANK[kind] > REACTION_RANK[pending.kind] || (REACTION_RANK[kind] === REACTION_RANK[pending.kind] && tails)) {
       pending = { kind, tails };
     }
@@ -173,13 +178,15 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       debounce = null;
       const due = pending;
       pending = null;
+      const output = live();
       if (output === null || due === null) return;
       reaction(output, due.kind, next() * 2 - 1);
       const addTail = (delayMs: number, tail: ReactionKind): void => {
         let cancel: Cancel = () => undefined;
         cancel = later(delayMs, () => {
           reactionTimers.delete(cancel);
-          if (running && !ending && output !== null) reaction(output, tail, next() * 2 - 1);
+          const tailOutput = live();
+          if (running && !ending && tailOutput !== null) reaction(tailOutput, tail, next() * 2 - 1);
         });
         reactionTimers.add(cancel);
       };
@@ -215,7 +222,7 @@ export function createCrowdDirector(options: CrowdDirectorOptions): CrowdDirecto
       clearTimers();
       clearReactionTimers();
       stateOff();
-      output = null;
+      connected = false;
     },
   };
 }
