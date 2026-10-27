@@ -10,6 +10,7 @@ import {
   MUSIC_BAR_WAIT_MAX_S,
   MUSIC_DUCK_GAIN,
   MUSIC_FADE_S,
+  MUSIC_FOCUS_TC_S,
   MUSIC_HANDOFF_FADE_S,
   MUSIC_INTRO_CUT_FADE_S,
   MUSIC_INTRO_DUCK_GAIN,
@@ -698,5 +699,67 @@ describe("R1351 what cuts an intro short", () => {
     r.fetch.release("/audio/music/intro-a.m4a");
     await settle();
     expect(introGains(r)).toHaveLength(0);
+  });
+});
+
+describe("background: the OS closes the context mid-game (issue #2034)", () => {
+  /** The focus gain: the last gain in the bed → filter → turn → focus chain into the music bus. */
+  function focusGainOf(audio: FakeAudio): FakeNode {
+    const filter = filterOf(audio);
+    const turn = filter.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+    const focus = turn?.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+    if (focus === undefined) throw new Error("no focus gain");
+    return focus;
+  }
+
+  it("background: after the context is closed and rebuilt, the wanted track starts on the new context", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    const before = r.audio;
+    expect(voices(before)).toHaveLength(1);
+
+    before.state = "closed";
+    r.engine.unlock();
+    await settle();
+
+    const after = r.audio;
+    expect(after).not.toBe(before);
+    // The wanted track restarts on the new context, through the music chain …
+    expect(voices(after)).toHaveLength(1);
+    expect(started(r)).toEqual(["tavern-1", "tavern-1"]);
+    // … and the focus target ends back at 1.
+    const focus = focusGainOf(after);
+    expect(focus.param("gain").targets().at(-1)?.value).toBe(1);
+    expect(after.violations).toEqual([]);
+    expect(before.violations).toEqual([]);
+  });
+
+  it("background: focus loss then resume re-issues the focus ramp from silence", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    const focus = focusGainOf(r.audio);
+
+    r.focus.focused = false;
+    r.focus.fire();
+    expect(focus.param("gain").targets().at(-1)?.value).toBe(0);
+    r.audio.state = "suspended";
+
+    r.focus.focused = true;
+    r.focus.fire();
+    r.engine.unlock();
+    await settle();
+
+    // The resume is a cancel plus a ramp to 1 over MUSIC_FOCUS_TC_S at the resumed clock …
+    const events = focus.param("gain").events;
+    const cancel = events.at(-2);
+    const ramp = events.at(-1);
+    expect(cancel).toMatchObject({ method: "cancelScheduledValues", time: r.audio.currentTime });
+    expect(ramp).toMatchObject({ method: "setTargetAtTime", value: 1, time: r.audio.currentTime, timeConstant: MUSIC_FOCUS_TC_S });
+    // … never a jump straight to full volume.
+    expect(events.filter((e) => (e.method === "setValueAtTime" || e.method === "linearRampToValueAtTime") && e.value === 1)).toEqual([]);
+    expect(r.audio.violations).toEqual([]);
   });
 });
