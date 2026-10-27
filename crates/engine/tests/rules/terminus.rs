@@ -60,7 +60,7 @@ mod r1870000_win_on_play {
         );
         assert!(s.state().result.is_none(), "holding it wins nothing");
         s.play(carrier.id.as_str(), json!({}));
-        let result = s.state().result.clone().expect("the play wins");
+        let result = s.state().result.expect("the play wins");
         assert_eq!(result.winner, Winner::P1);
         assert_eq!(result.reason, GameOverReason::WonByEffect);
         assert_eq!(s.state().players[P1].won_by_effect, Some(true));
@@ -85,8 +85,12 @@ mod r1870000_win_on_play {
         let carrier = in_hand(&s, P1, PLAIN);
         s.state_mut().players[P1].hero.health = 0;
         s.play(carrier.id.as_str(), json!({}));
-        let result = s.state().result.clone().expect("the game is over");
-        assert_eq!(result.winner, Winner::P2, "a hero at 0 loses before a win is held");
+        let result = s.state().result.expect("the game is over");
+        assert_eq!(
+            result.winner,
+            Winner::P2,
+            "a hero at 0 loses before a win is held"
+        );
     }
 }
 
@@ -146,10 +150,7 @@ mod r1870002_gain_echo {
         s.play(EXAM, json!({}));
         s.expect_health(P2, HERO_HEALTH - EXAM_DAMAGE * (1 + SELF_ECHO_GAIN_CAP));
         s.expect_in_zone(exam.as_str(), "graveyard");
-        assert!(
-            s.state().echo_queue.is_empty(),
-            "nothing is owed once it lands"
-        );
+        assert!(s.state().echo_queue.is_empty(), "nothing is owed once it lands");
         assert!(
             !s.card(exam.as_str())
                 .memory
@@ -197,7 +198,10 @@ mod r1870004_units_keyword {
             unit_has(s.state(), s.card(second.as_str()), KeywordKind::Charge),
             "a Unit that lands has Charge"
         );
-        assert!(may_attack_hero(&s, &second), "and may attack the hero the turn it lands");
+        assert!(
+            may_attack_hero(&s, &second),
+            "and may attack the hero the turn it lands"
+        );
 
         s.end_turn();
         s.end_turn();
@@ -237,7 +241,7 @@ mod r1870007_keyword_for_good {
         s.play(CHARM, json!({}));
         s.expect_in_zone(charm.as_str(), "graveyard");
         let landed = s.card(charm.as_str());
-        assert_eq!(lucky_on(s.state(), &landed), 1, "R215's reset keeps tuning");
+        assert_eq!(lucky_on(s.state(), landed), 1, "R215's reset keeps tuning");
         assert!(
             s.last_events()
                 .iter()

@@ -284,9 +284,10 @@ pub fn units_keywords_of(state: &GameState, player: PlayerId) -> Vec<Keyword> {
     state.players[player]
         .mods
         .iter()
-        .filter(|modifier| crate::mana::modifier_is_live(state, modifier))
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsKeyword { keyword } => Some(keyword.clone()),
+            ModifierKind::UnitsKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+                Some(keyword.clone())
+            }
             _ => None,
         })
         .collect()

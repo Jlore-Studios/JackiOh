@@ -217,7 +217,7 @@ mod tests {
             assert_eq!(s.state().turn, turn + 1);
             // The extra turn's end: p1 loses.
             s.end_turn();
-            let result = s.state().result.clone().expect("the game is over");
+            let result = s.state().result.expect("the game is over");
             assert_eq!(result.winner, Winner::P2);
             assert_eq!(result.reason, GameOverReason::WonByEffect);
         }
@@ -239,7 +239,7 @@ mod tests {
             let mut s = lethal_attack(4, false);
             assert!(s.state().result.is_none(), "the turn plays out");
             s.end_turn();
-            let result = s.state().result.clone().expect("the game is over");
+            let result = s.state().result.expect("the game is over");
             assert_eq!(result.winner, Winner::P2);
             assert_eq!(result.reason, GameOverReason::WonByEffect);
         }
@@ -258,7 +258,7 @@ mod tests {
             s.play(vanilla.id.as_str(), json!({}));
             assert!(may_attack_hero(&s, &vanilla.id), "Charge on that turn");
             s.end_turn();
-            assert_eq!(s.state().result.clone().map(|result| result.winner), Some(Winner::P2));
+            assert_eq!(s.state().result.map(|result| result.winner), Some(Winner::P2));
         }
 
         #[test]

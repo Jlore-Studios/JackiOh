@@ -13,10 +13,11 @@
 //! every Spell in their hand, the non-permanents (§5.1), its controller first, in hand order, one
 //! `discard` each, no choice (a guarded hand keeps them, R800); Units, Field Spells and Traps stay. The
 //! Radiant face then fills its controller's hand (their hand size less the cards left after the
-//! discards, §2.4) with C+ #71 Book of Buff, each at `costOverride` 0. Its controller's turn comes
-//! next, so they strike first (R1870005).
+//! discards, a guarded hand's Spells among them, §2.4) with C+ #71 Book of Buff, each at
+//! `costOverride` 0. Its controller's turn comes next, so they strike first (R1870005).
 
 use jackioh_engine::effects::{add_to_hand, discard, lock_lane, set_health};
+use jackioh_engine::draw::discard_guarded;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004-5";
@@ -49,7 +50,9 @@ fn final_destination(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> 
     let mut discarded = 0;
     for player in [controller, opponent_of(controller)] {
         let spells = spells_in_hand(ctx.state, player);
-        if player == controller {
+        // R800: it fires on the opponent's turn, so a discard guard of its controller's keeps their
+        // Spells, and the fill counts them as held.
+        if player == controller && !discard_guarded(ctx.state, player) {
             discarded = spells.len() as i32;
         }
         effects.extend(
@@ -112,17 +115,25 @@ mod tests {
     const WELL: &str = "core-006"; // (3) Field Spell.
     const GAMBIT: &str = "classic-052"; // (2) Trap.
     const BOOK_OF_BUFF: &str = "classicplus-071";
+    const DISRUPTOR: &str = "meditative-001"; // (2) Field Spell, a discard guard (R800).
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
     /// p1 holds 1v1 Final Destination set face-down, and each hand mixes Spells and permanents; it is
     /// `active`'s turn.
     fn board(seed: &str, active: &str, radiant: bool) -> Scenario {
+        board_with(seed, active, radiant, json!([]))
+    }
+
+    /// `board`, with `backrow` beside the trap in p1's backrow.
+    fn board_with(seed: &str, active: &str, radiant: bool, backrow: Value) -> Scenario {
+        let mut backrow = backrow.as_array().cloned().unwrap_or_default();
+        backrow.push(json!({ "def": ID, "radiant": radiant, "faceUp": false, "lane": 3 }));
         let mut s = scenario(json!({
             "seed": seed,
             "active": active,
             "p1": {
                 "hand": [FILLER, VANILLA, LUNAR, WELL, GAMBIT],
-                "backrow": [{ "def": ID, "radiant": radiant, "faceUp": false, "lane": 3 }],
+                "backrow": backrow,
                 "library": DECK,
             },
             "p2": { "hand": [LUNAR, VANILLA, FILLER, GAMBIT], "library": DECK },
@@ -260,6 +271,32 @@ mod tests {
             // The base face fills nothing.
             let s = fired("final-destination-base", false);
             assert!(s.hand(P1).iter().all(|card| card.def_id != BOOK_OF_BUFF));
+        }
+
+        #[test]
+        fn r1870005_radiant_fill_counts_a_guarded_hand_as_held() {
+            // M #1 Disruptive Disruptor guards p1 on p2's turn: p1 keeps its Spells, and the fill is
+            // counted with them held, so no Book burns.
+            let mut s = board_with(
+                "final-destination-guarded",
+                "p2",
+                true,
+                json!([{ "def": DISRUPTOR, "faceUp": true, "lane": 1 }]),
+            );
+            s.end_turn();
+            let mut kept = hand_defs(&s, P1);
+            kept.retain(|def| def != BOOK_OF_BUFF);
+            kept.sort();
+            assert_eq!(kept, vec![GAMBIT, FILLER, WELL, VANILLA, LUNAR]);
+            assert_eq!(s.hand(P1).len(), HAND_CAP as usize, "filled");
+            // p1's turn's draw then burns a Vanilla, as in the unguarded fill.
+            assert!(
+                !s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == BOOK_OF_BUFF)),
+                "no Book burned"
+            );
+            assert_eq!(hand_defs(&s, P2), vec![VANILLA, GAMBIT], "the unguarded hand still discards");
         }
     }
 }

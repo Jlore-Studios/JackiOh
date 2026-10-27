@@ -219,7 +219,10 @@ pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
         add_modifier(
             ctx,
             player,
-            ModifierExpiry::NextTurnOf { player, from_turn: turn },
+            ModifierExpiry::NextTurnOf {
+                player,
+                from_turn: turn,
+            },
             ModifierKind::UnitsKeyword {
                 keyword: args.keyword.clone(),
             },

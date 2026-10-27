@@ -211,7 +211,7 @@ mod tests {
             assert_eq!(card.cost_override, Some(0));
             assert!(s.state().result.is_none(), "holding it wins nothing");
             s.play(card.id.as_str(), json!({}));
-            let result = s.state().result.clone().expect("its play wins");
+            let result = s.state().result.expect("its play wins");
             assert_eq!(result.winner, Winner::P1);
             assert_eq!(result.reason, GameOverReason::WonByEffect);
         }
@@ -232,7 +232,7 @@ mod tests {
             let card = pick(&mut s).expect("the pick is in hand");
             s.state_mut().players.p1.hero.health = 0;
             s.play(card.id.as_str(), json!({}));
-            let result = s.state().result.clone().expect("the game is over");
+            let result = s.state().result.expect("the game is over");
             assert_eq!(result.winner, Winner::P2, "a hero at 0 loses before a win is held");
         }
     }

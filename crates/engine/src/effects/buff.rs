@@ -272,8 +272,10 @@ pub fn gain_echo(args: GainEchoArgs) -> Effect {
         let controller = ctx.controller;
         crate::echo::add_echo_repeats(&mut ctx.sink, &card, controller, amount);
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
-            live.memory
-                .insert(ECHO_GAINED_KEY.to_string(), serde_json::Value::from(gained + amount));
+            live.memory.insert(
+                ECHO_GAINED_KEY.to_string(),
+                serde_json::Value::from(gained + amount),
+            );
         }
     })
 }
