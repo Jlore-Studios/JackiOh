@@ -3384,7 +3384,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Ranged, Flying / Aura: Has {keywords|random combat keyword|random combat keywords}.
 - **Radiant:** Ranged, Flying / Aura: Has {keywords|random combat keyword|random combat keywords}.
-- **Engine:** Ranged and Flying ([[§6.1]]). Keymaster Keenus's Aura ([[R781004]]): random combat keywords from [[R21]]'s pool, drawn with the match rng as it arrives on the field and kept until it leaves ([[R78]]), never one it has (so neither Ranged nor Flying), no Taunt beside Indestructible ([[R347]]). A unit token: it ceases to exist off the field ([[R11]]).
+- **Engine:** Ranged and Flying ([[§6.1]]). Keymaster Keenus's Aura ([[R781004]]): random combat keywords from [[R21]]'s pool, drawn with the match rng as it arrives on the field and kept until it leaves ([[R78]]), never one it has (so neither Ranged nor Flying), no Taunt beside Indestructible ([[R347]]); a card it is fused into carries the Aura and draws its own as it fuses (`fusedInto`). A unit token: it ceases to exist off the field ([[R11]]).
 - **Rulings:** ST-S07-6: "<has 1 random combat keyword>" is Keymaster Keenus's Aura ([[R781004]]): drawn as the drone arrives, kept until it leaves, never one it has.
 - **Numbers:** keywords 1 ↑ (Radiant 2).
 - **Check:** R275: 4/4 and two keywords against 2/2 and one.
@@ -3397,7 +3397,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Ranged, Flying / Aura: Has {keywords|random combat keyword|random combat keywords}.
 - **Radiant:** Ranged, Flying / Aura: Has {keywords|random combat keyword|random combat keywords}.
-- **Engine:** As the Drone Interceptor ([[R781004]], [[R21]], [[R347]]), two keywords drawn as it arrives. A unit token ([[R11]]).
+- **Engine:** As the Drone Interceptor ([[R781004]], [[R21]], [[R347]]), two keywords drawn as it arrives or by a card it is fused into. A unit token ([[R11]]).
 - **Rulings:** none new: every reading is a ruling on `main` or the card's text.
 - **Numbers:** keywords 2 ↑ (Radiant 4).
 - **Check:** R275: 16/16 and four keywords against 8/8 and two.

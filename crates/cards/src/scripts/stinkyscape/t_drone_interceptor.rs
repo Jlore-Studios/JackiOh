@@ -6,8 +6,9 @@
 //!   layers read with no rng, so its keywords are drawn with the match rng as it arrives on the field
 //!   (summoned, as every drone arrives, or played) and kept on the card until it leaves (R78), from R21's
 //!   combat keyword pool, none it has (so neither Ranged nor Flying) and no Taunt beside Indestructible
-//!   (R347); the Aura reads them back (`conditional_keywords`). A unit token: it ceases to exist off the
-//!   field (R11).
+//!   (R347); the Aura reads them back (`conditional_keywords`). A Fuse that eats it (M #47 饕餮's, from the
+//!   enemy field) gives the kept card the Aura, which draws its own as it fuses (`fused_into`, R781004).
+//!   A unit token: it ceases to exist off the field (R11).
 
 use jackioh_engine::effects::{DrawCombatKeywordsArgs, draw_combat_keywords, drawn_combat_keywords};
 use jackioh_engine::prelude::*;
@@ -43,6 +44,8 @@ fn draw_for(count: i32) -> Effect {
 fn interceptor() -> Script {
     Script {
         triggers: vec![draw_on_arrival()],
+        // A Fuse that keeps another card makes it carry the Aura, and it draws its own (R781004).
+        fused_into: Some(hook(|ctx| vec![draw_for(param(&*ctx, "keywords"))])),
         conditional_keywords: Some(read_hook(|args| drawn_combat_keywords(args.self_, None))),
         ..Script::default()
     }
@@ -59,7 +62,8 @@ pub fn script() -> CardScripts {
 
 // S T-drone-interceptor — SPEC §8.10 row T-drone-interceptor, BUILD M12 row S T-drone-interceptor:
 // "summoned, it has Ranged, Flying and one more combat keyword from the pool, never Ranged or Flying
-// again, a different one over the seeds; keywords reads through `param()`; radiant 4/4 and two keywords".
+// again, a different one over the seeds; keywords reads through `param()`; fused into another card, the
+// kept card draws its own (R781004); radiant 4/4 and two keywords".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,11 +71,14 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     /// S #28 Drone Core II: summon a Drone Interceptor.
     const CORE_II: &str = "stinkyscape-028";
     const FILLER: &str = "core-005";
+    /// M #47 饕餮: "End of turn: Fuse a random enemy permanent into this."
+    const TAOTIE: &str = "meditative-047";
 
     /// p1 casts Drone Core II (Radiant on `radiant`) under `seed`; the Interceptor lands in lane 1.
     fn summoned(seed: &str, radiant: bool) -> (Scenario, String) {
@@ -155,5 +162,32 @@ mod tests {
         assert_eq!(drawn.len(), 2, "{drawn:?}");
         drawn.dedup();
         assert_eq!(drawn.len(), 2, "different ones");
+    }
+
+    #[test]
+    fn r781004_fused_into_another_card_the_kept_card_draws_its_own() {
+        // M #47 饕餮 eats an enemy permanent at its end of turn: the kept 饕餮 carries the Aura and draws
+        // its number for itself, Ranged and Flying already its own. The fusion wears the kept card's face
+        // (R77), so a Radiant 饕餮 draws the Radiant number; p2's empty deck leaves its second meal out.
+        for (radiant, count) in [(false, 1), (true, 2)] {
+            let mut s = scenario(json!({
+                "seed": "interceptor-fused",
+                "p1": {
+                    "field": [{ "def": TAOTIE, "lane": 1, "radiant": radiant }],
+                    "library": filler(4),
+                },
+                "p2": { "field": [{ "def": INTERCEPTOR, "lane": 1 }], "library": [] },
+            }));
+            let taotie = s.unit(P1, 1).expect("饕餮").id;
+            s.end_turn();
+            assert!(s.unit(P2, 1).is_none(), "eaten");
+            let drawn = drawn(&s, &taotie);
+            assert_eq!(drawn.len(), count, "radiant {radiant}: {drawn:?}");
+            let acting: Vec<KeywordKind> =
+                keywords_of(s.state(), s.card(taotie.as_str())).iter().map(Keyword::kind).collect();
+            for kind in [KeywordKind::Ranged, KeywordKind::Flying].iter().chain(&drawn) {
+                assert!(acting.contains(kind), "it has {kind:?}: {acting:?}");
+            }
+        }
     }
 }

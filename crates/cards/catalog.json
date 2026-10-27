@@ -25502,7 +25502,7 @@
         "min": 1
       }
     ],
-    "loc": 36,
+    "loc": 37,
     "base": {
       "attack": 2,
       "health": 2,
@@ -25554,7 +25554,7 @@
         "min": 1
       }
     ],
-    "loc": 36,
+    "loc": 37,
     "base": {
       "attack": 8,
       "health": 8,
