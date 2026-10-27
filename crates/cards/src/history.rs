@@ -27,7 +27,7 @@ use crate::scripts::classic_plus::{
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c069_call_to_arms, c080_zao_gao,
+    c069_call_to_arms, c075_infinite_reserves, c080_zao_gao,
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
@@ -233,6 +233,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     (c053_prestige::ID, "v0.4.11", c053_prestige::script_v0_4_11),
     (c014_shadowstep::ID, "v0.4.12b", c014_shadowstep::script_v0_4_12b),
+    (
+        c075_infinite_reserves::ID,
+        "v0.4.12c",
+        c075_infinite_reserves::script_v0_4_12c,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

@@ -1,5 +1,5 @@
 //! #75 Infinite Reserves (SPEC §8.3): an empty-library draw gives a Rush Token card instead of
-//! fatigue; radiant "Cry: draw 3; same" keeps the replacement and ADDS a Cry (§8 Conventions).
+//! fatigue; both faces add "Cry: draw {draw}" (1, Radiant 3, R386) on top of the replacement.
 //!
 //! The replacement is a draw hook: `static_flags.infinite_reserves` is the whole of it. `draw_one`
 //! (engine/src/draw.rs) reads it off the BACKROW before taking fatigue and `add_to_hand`s the §5 index
@@ -8,8 +8,8 @@
 //! hand or library ceases to exist if it leaves other than drawn or played). It is a Field Spell, so
 //! §3.2 makes it public and permanent.
 //!
-//! The radiant Cry is an ordinary draw of 3 (R1), deliberately NOT special-cased against its own flag:
-//! played on an empty library it draws three Rush Token cards, since §10.5 puts the card on the field
+//! The Cry is an ordinary draw of `draw` (R1), deliberately NOT special-cased against its own flag:
+//! played on an empty library it draws Rush Token cards, since §10.5 puts the card on the field
 //! at step 4, before the Cry fires at step 5.
 
 use jackioh_engine::effects::draw;
@@ -17,24 +17,45 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-075";
 
-/// The replacement both faces share; the radiant face adds the Cry on top of it ("same").
+/// The replacement both faces share, plus the Cry both faces run ("Cry: Draw {draw}"): the declared
+/// number `draw` (R386), 1 and 3 on the Radiant face.
 fn infinite_reserves() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             infinite_reserves: Some(true),
             ..StaticFlags::default()
         }),
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
+    let base = infinite_reserves();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.4.12c only the Radiant face had the Cry (base with no Cry, Radiant drawing 3);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12c() -> CardScripts {
     CardScripts {
-        base: infinite_reserves(),
+        base: Script {
+            static_flags: Some(StaticFlags {
+                infinite_reserves: Some(true),
+                ..StaticFlags::default()
+            }),
+            ..Script::default()
+        },
         radiant: Script {
-            // "Cry: Draw 3": the declared number `draw` (R386).
             cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
-            ..infinite_reserves()
+            ..Script {
+                static_flags: Some(StaticFlags {
+                    infinite_reserves: Some(true),
+                    ..StaticFlags::default()
+                }),
+                ..Script::default()
+            }
         },
     }
 }
@@ -47,7 +68,6 @@ pub fn script() -> CardScripts {
 // card (§8.3 Engine cell), the catalog's own core-t-rush at 3/3 with no stat override, and playable.
 #[cfg(test)]
 mod tests {
-    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -146,20 +166,19 @@ mod tests {
         }
 
         #[test]
-        fn the_base_face_has_no_cry_playing_it_draws_nothing() {
+        fn base_cry_draws_exactly_1() {
             let mut s = setup(json!({
-                "seed": "core-075-no-cry",
+                "seed": "core-075-base-cry",
                 "p1": { "hand": ["core-075", "core-005"], "library": ["core-035", "core-036"] },
                 "p2": { "hand": ["core-005"] },
             }));
 
             s.play("core-075", json!({}));
 
-            // One card played out of two and nothing drawn.
-            assert_eq!(s.hand(P1).len(), 1);
-            assert_eq!(s.pile(P1, "library").len(), 2);
-            let last: Vec<Value> = s.last_events().iter().map(js).collect();
-            assert!(!last.iter().any(|event| event["type"] == "drawn"));
+            // Two in hand, one played, one drawn.
+            assert_eq!(s.hand(P1).len(), 2);
+            assert_eq!(s.pile(P1, "library").len(), 1);
+            s.expect_events(json!(["cardPlayed", "summoned", "drawn", "addedToHand"]));
             // Cost 0, so the mana is untouched.
             s.expect_mana(P1, 4);
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some("core-075".to_string()));
@@ -225,11 +244,16 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_draws_4_and_a_degrade_2() {
-            for (upgrade, draws) in [(true, 4), (false, 2)] {
+        fn r386_base_draw_1_upgrades_to_2_and_radiant_3_upgrades_to_4_degrades_to_2() {
+            // (radiant face, upgrade?, moved value, draws on play)
+            for (radiant, upgrade, moved_value, draws) in [
+                (false, true, 2, 2),
+                (true, true, 4, 4),
+                (true, false, 2, 2),
+            ] {
                 let mut s = setup(json!({
                     "seed": "core-075-tuned",
-                    "p1": { "hand": [{ "def": "core-075", "radiant": true }, "core-005"], "library": [] },
+                    "p1": { "hand": [{ "def": "core-075", "radiant": radiant }, "core-005"], "library": [] },
                     "p2": { "hand": ["core-005"] },
                 }));
                 let moved = if upgrade {
@@ -237,10 +261,27 @@ mod tests {
                 } else {
                     crate::degrade_number(&mut s, "core-075", "draw")
                 };
-                assert_eq!(moved, draws);
+                assert_eq!(moved, moved_value);
                 s.play("core-075", json!({}));
+                // §10.5 puts the card on the field before the Cry, so the Cry's own draws
+                // take the replacement: Rush Token cards, never fatigue.
                 assert_eq!(rush_tokens_in_hand(&s, P1).len(), draws as usize);
+                assert_eq!(s.state().players.p1.fatigue_count, 0);
             }
+        }
+
+        #[test]
+        fn r386_base_draw_1_is_the_floor_no_degrade_moves_it() {
+            let mut s = setup(json!({
+                "seed": "core-075-floor",
+                "p1": { "hand": ["core-075", "core-005"], "library": [] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            // An amount never drops below 1: no degrade step offers `draw`.
+            assert!(!crate::can_degrade_number(&s, "core-075", "draw"));
+            s.play("core-075", json!({}));
+            assert_eq!(rush_tokens_in_hand(&s, P1).len(), 1);
+            assert_eq!(s.state().players.p1.fatigue_count, 0);
         }
     }
 }

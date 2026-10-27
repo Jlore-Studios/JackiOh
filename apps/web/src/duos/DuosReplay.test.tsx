@@ -225,6 +225,37 @@ describe("the co-op replay screen", () => {
     expect(shownStep()).toBe(0);
   });
 
+  it("B41 the scrubber moves the board when it is let go, not at every tick", async () => {
+    serve();
+    await open();
+    const scrubber = screen.getByTestId(replayTestid.scrubber);
+    const board = shownBoard();
+    const mounted = screen.getByTestId(duosTestid.board);
+    fireEvent.pointerDown(scrubber);
+    fireEvent.change(scrubber, { target: { value: "3" } });
+    fireEvent.change(scrubber, { target: { value: "5" } });
+    await flush();
+    expect(scrubber).toHaveValue("5");
+    expect(shownStep(), "nothing moved yet").toBe(0);
+    expect(shownBoard()).toBe(board);
+    expect(screen.getByTestId(duosTestid.board), "the same board, never mounted afresh").toBe(mounted);
+    fireEvent.pointerUp(scrubber);
+    await flush();
+    expect(shownStep()).toBe(5);
+    expect(shownBoard(), "mounted exactly once more").toBe(board + 1);
+    expect(screen.getByTestId(duosTestid.board)).not.toBe(mounted);
+    expect(screen.getByTestId(replayTestid.scrubber), "the controls outlive the board").toBe(scrubber);
+
+    // A cancelled pointer leaves the board where it is.
+    fireEvent.pointerDown(scrubber);
+    fireEvent.change(scrubber, { target: { value: "2" } });
+    fireEvent.pointerCancel(scrubber);
+    await flush();
+    expect(shownStep()).toBe(5);
+    expect(shownBoard()).toBe(board + 1);
+    expect(scrubber).toHaveValue("5");
+  });
+
   it("B41 the arrow keys move a step and shift+arrow a round", async () => {
     serve();
     await open();
