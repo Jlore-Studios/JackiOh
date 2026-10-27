@@ -920,7 +920,7 @@
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
       "provider": "claude-5",
-      "run_id": "pending:a4e0d2d8-1793090128",
+      "run_id": "40474661633",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T08:36:10Z",
       "stop_requested": false,
