@@ -113,11 +113,11 @@ class BuilderTests(unittest.TestCase):
     def test_a_hard_item_takes_a_strong_model_only(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
-        # Room past the Claude accounts' twelve lanes, so the medium models are free to refuse it.
+        # Room past the Claude accounts' fourteen runs, so the medium models are free to refuse it.
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20)))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 54), ("claude-7", 72), ("claude-7", 73),
-             ("claude-8", 74), ("claude-1", 51),
+             ("claude-8", 74), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 55), ("claude-4", 52), ("claude-6", 71), ("claude-5", 70),
              ("claude-2", 53), ("claude-2", 56))
         queue(gh, ctx, 3, HARD)
@@ -130,13 +130,13 @@ class BuilderTests(unittest.TestCase):
         has a lane, Devin; then the medium models, Muse on its four lanes (#1273), agy on its one
         and Codex on its one;
         then the Sonnet seats in usage order, claude-3, claude-7, claude-8, claude-1, claude-4,
-        claude-6 and claude-5 once each, and only then claude-3's second lane (two lanes, uncapped): with
-        every account's room level, the load balancer gives the next run to one holding none
-        (`plan.balance`); and claude-2 builds only after all of them (`build_last`). Past that
-        every lane is held, and the rest wait."""
+        claude-6 and claude-5 once each, and only then claude-3's second lane (two lanes, uncapped)
+        and claude-8's second and third (three lanes): with every account's room level, the load
+        balancer gives the next run to one holding none (`plan.balance`); and claude-2 builds only
+        after all of them (`build_last`). Past that every lane is held, and the rest wait."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 21):
+        for number in range(3, 23):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -146,7 +146,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(18):
+        for _ in range(20):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -161,6 +161,7 @@ class BuilderTests(unittest.TestCase):
                                  ("claude-8", "sonnet"), ("claude-1", "sonnet"),
                                  ("claude-4", "sonnet"), ("claude-6", "sonnet"),
                                  ("claude-5", "sonnet"), ("claude-3", "sonnet"),
+                                 ("claude-8", "sonnet"), ("claude-8", "sonnet"),
                                  ("claude-2", "sonnet")])
 
     def test_a_sonnet_stand_in_builds_only_easy_items_devin_cannot_take(self):
@@ -192,7 +193,7 @@ class BuilderTests(unittest.TestCase):
         gh = FakeGitHub()
         ctx = stand_in(gh, ("devin",))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-7", 57), ("claude-7", 67),
-             ("claude-8", 68), ("claude-1", 51),
+             ("claude-8", 68), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 58),
              *[("devin", n) for n in range(60, 66)])
         queue(gh, ctx, 3, EASY)
@@ -200,7 +201,7 @@ class BuilderTests(unittest.TestCase):
         gh = FakeGitHub()
         ctx = stand_in(gh, ())
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-7", 57), ("claude-7", 67),
-             ("claude-8", 68), ("claude-1", 51),
+             ("claude-8", 68), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 58), ("claude-6", 71), ("claude-5", 70),
              ("claude-2", 53), ("claude-2", 56))
         queue(gh, ctx, 3, MEDIUM)
@@ -225,12 +226,14 @@ class BuilderTests(unittest.TestCase):
                 self.assertEqual(seats(plan_mod.make(ctx))["build"], (account, "opus", "strong"))
 
     def test_sonnet_only_while_claude_1_or_claude_3_is_open(self):
-        # claude-3, claude-7 and claude-8 full (both lanes of the first, one of the others),
+        # claude-3, claude-7 and claude-8 full (claude-3's two lanes, claude-7's one, claude-8's
+        # three),
         # claude-1 open and Devin full: claude-1 builds the easy item with Sonnet.
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=("devin",))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 59), ("claude-7", 72), ("claude-7", 73),
-             ("claude-8", 74), *[("devin", n) for n in range(60, 66)])
+             ("claude-8", 74), ("claude-8", 75), ("claude-8", 76),
+             *[("devin", n) for n in range(60, 66)])
         queue(gh, ctx, 3, EASY)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-1", "sonnet", "medium"))
         # Neither open and the medium models busy: Devin builds it, the default, while claude-2
@@ -238,7 +241,7 @@ class BuilderTests(unittest.TestCase):
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 63), ("claude-7", 72), ("claude-7", 73),
-             ("claude-8", 74), ("claude-1", 51),
+             ("claude-8", 74), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 64), ("claude-4", 52), ("claude-6", 71), ("claude-5", 70), ("agy", 53))
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
@@ -262,7 +265,7 @@ class BuilderTests(unittest.TestCase):
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 57), ("claude-7", 72), ("claude-7", 73),
-             ("claude-8", 74), ("claude-1", 51),
+             ("claude-8", 74), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 58), ("claude-4", 52), ("claude-6", 71), ("claude-5", 70), ("agy", 53),
              ("muse", 54), ("muse", 56), ("muse", 60), ("muse", 61), ("gpt", 55))
         queue(gh, ctx, 3, MEDIUM)
@@ -435,7 +438,7 @@ class ReviewRunTests(unittest.TestCase):
         self.assertEqual((planned["action"], seats(planned)["review"]),
                          ("review", ("claude-3", "opus", "strong")))
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 57), ("claude-7", 72), ("claude-7", 73),
-             ("claude-8", 74), ("claude-1", 51),
+             ("claude-8", 74), ("claude-8", 75), ("claude-8", 76), ("claude-1", 51),
              ("claude-1", 58))
         gh.threads[9]["labels"] = [{"name": LABEL_PR}, {"name": LABEL_CROSS}]
         self.assertEqual(seats(plan_mod.make(ctx))["review"][0], "claude-4")
