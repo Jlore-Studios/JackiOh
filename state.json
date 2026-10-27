@@ -3393,6 +3393,13 @@
     "2048": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T13:55:36Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 3 fails: the change edits the spec's notes (twenty link fixes in spec/02\u201308 plus spec/README.md), even though it adds no ruling"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
