@@ -4311,15 +4311,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/INDEX.md"
+          ],
+          "from": "df65975150cc0728869bae8961f4d7b0954c523b",
+          "main": "b73d5ba789b389bcb77eaa03951d947697ee9eea"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40460859571",
+            "run": "40470731426",
             "tier": "strong"
           }
         ],
-        "sha": "df65975150cc0728869bae8961f4d7b0954c523b",
+        "sha": "6e3901551ff0b7a97d80f6157ef9d9750c11ab4f",
         "tiers": {
           "claude": "strong"
         }
