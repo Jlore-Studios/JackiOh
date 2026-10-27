@@ -21,7 +21,7 @@ use super::fixtures::prompt_harness::{
     resolving_card, round_trip,
 };
 use super::fixtures::prompts::{
-    aimer, asker, crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
+    aimer, asker, crier, field_crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
 };
 use crate::rules::fixtures::harness::{act_logged, json_of, live};
 
@@ -364,6 +364,51 @@ mod e13_trigger_a_cry {
         expect_replays("cry-replay", &decks, &log, &state);
         let pile = must(state.players.p1.units[0].clone(), "the aimer's pile");
         assert_eq!(pile.first().map(|card| card.id.clone()), Some(unit.id.clone()));
+    }
+}
+
+// R1873003 (Stinkyscape #6 Tylannt's Radiant summon of #7 The Greatest Heist): a face-up Field Spell on
+// the field has its Cry triggered where it stands, as itself; out of a graveyard only a Unit's is.
+mod r1873003_a_field_spell_on_the_field {
+    use super::*;
+    use jackioh_engine::Row::Backrow;
+
+    /// `trigger_cry` aimed at `card` by id, for p1, settled.
+    fn trigger(state: &mut GameState, card: &CardInstance) {
+        let mut sink = sink_for(state);
+        {
+            let mut inner = sink.sink();
+            let mut ctx = make_context(
+                &mut inner,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
+        }
+        settle(&mut sink.sink(), Default::default());
+        let cursor = sink.rng.cursor();
+        state.rng_cursor = cursor;
+    }
+
+    #[test]
+    fn r1873003_a_face_up_field_spells_cry_is_triggered_where_it_stands() {
+        let mut state = board("cry-field-spell");
+        let field = put(&mut state, &field_crier().id, slot(P1, Backrow, 1), json!({}));
+        assert!(has_triggerable_cry(&state, &live(&state, &field)));
+        trigger(&mut state, &field);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
+    }
+
+    #[test]
+    fn r1873003_one_in_a_graveyard_has_no_cry_to_trigger() {
+        let mut state = board("cry-field-spell-grave");
+        let dead = grave_unit(&mut state, P1, &field_crier().id);
+        assert!(!has_triggerable_cry(&state, &live(&state, &dead)));
+        trigger(&mut state, &dead);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
     }
 }
 
