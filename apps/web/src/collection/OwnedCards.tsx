@@ -12,6 +12,7 @@ import { useId, useState, type ReactElement } from "react";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, SetName } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { CardDefsProvider, CardFace, closeInspect, faceModel } from "../cards/index.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse } from "../net/api.ts";
@@ -65,7 +66,7 @@ export default function OwnedCards({
                       className="collection-card"
                       data-testid={collectionTestid.card(def.id)}
                       data-owned={String(held)}
-                      aria-label={held ? def.name : t("{name}, not owned yet", { name: def.name })}
+                      aria-label={held ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
                       onClick={() => {
                         closeInspect();
                         setInspected({ def, owned: held });

@@ -437,29 +437,27 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     let offset = i64::try_from(offset).map_err(|_| bad_request("offset is too large"))?;
     let page = REPLAY_LIST_PAGE as i64;
 
-    // One past the page, to know whether another follows. No row's log is read and no replay opened:
-    // `known_refusal` folds nothing (#1825).
+    // One past the page, to know whether another follows, each row already paired with its mode
+    // in that one batched read. No row's log is read and no replay opened: `known_refusal` folds
+    // nothing (#1825).
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
-    let mut rows = tx.replays_list(&profile.id, page + 1, offset).await?;
-    let more = rows.len() > REPLAY_LIST_PAGE;
-    rows.truncate(REPLAY_LIST_PAGE);
-    let mut modes = Vec::with_capacity(rows.len());
-    for replay in &rows {
-        modes.push(tx.matches_mode_of(&replay.row.id).await?);
-    }
+    let mut entries = tx.replays_list_with_modes(&profile.id, page + 1, offset).await?;
+    let more = entries.len() > REPLAY_LIST_PAGE;
+    entries.truncate(REPLAY_LIST_PAGE);
     // R1436: every read joins the username in, so a rename shows on past games too.
-    let opponents: Vec<String> = rows
+    let opponents: Vec<String> = entries
         .iter()
-        .map(|replay| opponent_of(replay, &profile.id))
+        .map(|entry| opponent_of(&entry.replay, &profile.id))
         .filter(|opponent| !opponent.is_empty())
         .map(str::to_string)
         .collect();
     let profiles: Vec<Profile> = tx.profiles_get_many(&opponents).await?;
     tx.commit().await?;
 
-    let mut replays = Vec::with_capacity(rows.len());
-    for (replay, mode) in rows.iter().zip(modes) {
+    let mut replays = Vec::with_capacity(entries.len());
+    for entry in &entries {
+        let (replay, mode) = (&entry.replay, entry.mode);
         let opponent = opponent_of(replay, &profile.id);
         let portraits = replay
             .row

@@ -16,6 +16,10 @@ export const landingTestid = {
   collection: "landing-collection",
   /** #1577: the Shop door, to the shop. */
   shop: "landing-shop",
+  /** R2035000: the quests bookmark on the doors' box, its count and its parchment. */
+  questsBookmark: "landing-quests-bookmark",
+  questsCount: "landing-quests-count",
+  questsPanel: "landing-quests-panel",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",

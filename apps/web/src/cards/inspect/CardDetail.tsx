@@ -8,7 +8,7 @@ import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace, faceText } from "../CardFace.tsx";
-import { readerTerms } from "../chinese.ts";
+import { readerName, readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
@@ -144,7 +144,7 @@ export function CardDetail({
         data-card={def.id}
         role="dialog"
         aria-modal="true"
-        aria-label={def.name}
+        aria-label={readerName(def)}
       >
         {/* The faces and everything about them scroll; the actions row is pinned under them, so
             Add and Close are on screen as the dialog opens, whatever the card's length. */}

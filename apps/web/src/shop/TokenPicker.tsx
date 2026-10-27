@@ -6,10 +6,12 @@
 // THE SERVER DECIDES (CLAUDE.md rule 7). The bars, their sizes, the next step and the held
 // counts come from `GET /api/tokens`; the filter only chooses what to browse. A redemption sends
 // intent and renders the answer: success re-reads the bars (and the collection, so the unlocked
-// card leaves the list), refusal shows the server's words verbatim with nothing changed on screen.
+// card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
+// changed on screen.
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
 import { getCollection, getTokens, redeemCardToken, type CollectionResponse, type TokenBarsResponse } from "../net/api.ts";
@@ -100,7 +102,7 @@ export default function TokenPicker({
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.tokenLoadError}>
-            {loadError}
+            {t(loadError)}
           </p>
           <div className="account-actions">
             <button
@@ -127,7 +129,7 @@ export default function TokenPicker({
       )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={shopTestid.tokenError}>
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
@@ -176,7 +178,7 @@ function TokenBody({
       ) : (
         cards.map((card) => (
           <div key={card.id} className="token-row">
-            <span>{card.name}</span>
+            <span>{readerName(card)}</span>
             <div className="account-actions">
               <button
                 type="button"
