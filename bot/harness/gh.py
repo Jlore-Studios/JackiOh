@@ -499,7 +499,14 @@ class GitHub:
             raise
         if not isinstance(data, dict) or data.get("type") != "file":
             return None, None
-        text = base64.b64decode(data.get("content", "")).decode("utf-8", "replace")
+        content = data.get("content") or ""
+        if not content and data.get("size") and data.get("sha"):
+            # Over 1 MB the contents API leaves `content` empty (`encoding: "none"`); the blob
+            # API serves up to 100 MB. Read as empty, state.json was wiped on 2026-10-25
+            # (reviews/2026-10-27-muse-usage.md, finding 5).
+            blob = self.request("GET", f"{self._r}/git/blobs/{data['sha']}")
+            content = (blob.get("content") or "") if isinstance(blob, dict) else ""
+        text = base64.b64decode(content).decode("utf-8", "replace")
         return text, data.get("sha")
 
     def put_file(self, path: str, text: str, *, branch: str, sha: str | None, message: str) -> None:

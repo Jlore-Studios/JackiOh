@@ -28,5 +28,9 @@ class StateConflict(HarnessError):
     """The state file changed under an update more times than the retry allows."""
 
 
+class StateUnreadable(HarnessError):
+    """The state file exists but is not JSON, so nothing reads or writes over it."""
+
+
 class LoginError(HarnessError):
     """A provider's secret could not be turned into a login its CLI reads."""

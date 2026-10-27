@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import json
 import unittest
 from datetime import datetime, timedelta, timezone
 
 from harness import clock, commands, config, prompts, redact, state, verdicts
-from harness.errors import ConfigError, StateConflict
+from harness.errors import ConfigError, StateConflict, StateUnreadable
+from harness.gh import GitHub
 from harness.trust import Trust
 from harness.work import check_templates
 
@@ -396,6 +400,39 @@ class StateTests(unittest.TestCase):
         gh.conflicts_to_inject = 99
         with self.assertRaises(StateConflict):
             store.update(lambda s: s.update(halted=True), "y")
+
+    def test_a_state_that_is_not_json_is_never_written_over(self):
+        """On 2026-10-25 the state read as empty and the next write replaced all of it."""
+        gh = FakeGitHub()
+        store = state.StateStore(gh)
+        store.update(lambda s: s.update(halted=True), "x")
+        for text in ("", '{"items": {"5": '):
+            gh.files[("bot-state", "state.json")] = (text, "sha-kept")
+            with self.assertRaises(StateUnreadable):
+                store.load()
+            with self.assertRaises(StateUnreadable):
+                store.update(lambda s: s.update(halted=False), "y")
+            self.assertEqual(gh.files[("bot-state", "state.json")], (text, "sha-kept"))
+
+    def test_a_file_over_1_mb_is_read_from_its_blob(self):
+        """Over 1 MB the contents API answers with an empty `content`; state.json passed that on
+        2026-10-25, read as empty and was written over."""
+        big = json.dumps({"items": {"5": {"note": "x" * 1_100_000}}})
+        asked = []
+
+        def opener(req, timeout=60):
+            asked.append(req.full_url)
+            if "/contents/" in req.full_url:
+                body = {"type": "file", "encoding": "none", "content": "", "size": len(big),
+                        "sha": "abc123"}
+            else:
+                body = {"sha": "abc123", "encoding": "base64", "size": len(big),
+                        "content": base64.b64encode(big.encode()).decode()}
+            return io.BytesIO(json.dumps(body).encode())
+
+        text, sha = GitHub("o/r", "token", opener=opener).get_file("state.json", "bot-state")
+        self.assertEqual((text, sha), (big, "abc123"))
+        self.assertTrue(asked[-1].endswith("/repos/o/r/git/blobs/abc123"), asked)
 
 
 if __name__ == "__main__":

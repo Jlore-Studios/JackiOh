@@ -14,7 +14,7 @@ import time
 from typing import Any, Callable
 
 from harness.config import NO_DEPLOY, STATE_BRANCH, STATE_FILE
-from harness.errors import GitHubError, StateConflict
+from harness.errors import GitHubError, StateConflict, StateUnreadable
 
 MAX_ATTEMPTS = 6
 
@@ -62,12 +62,7 @@ class StateStore:
 
     def load(self) -> dict[str, Any]:
         text, _ = self.gh.get_file(self.path, self.branch)
-        if text is None:
-            return default_state()
-        try:
-            return normalise(json.loads(text))
-        except ValueError:
-            return default_state()
+        return default_state() if text is None else normalise(self._loads(text))
 
     def ensure(self) -> bool:
         """Create the branch with an empty state when it does not exist. True when created."""
@@ -83,7 +78,7 @@ class StateStore:
         """Apply `change` (which mutates its argument) and write the result. Returns the state."""
         for _ in range(MAX_ATTEMPTS):
             text, sha = self.gh.get_file(self.path, self.branch)
-            before = default_state() if text is None else normalise(_loads(text))
+            before = default_state() if text is None else normalise(self._loads(text))
             after = copy.deepcopy(before)
             change(after)
             if after == before and text is not None:
@@ -106,12 +101,14 @@ class StateStore:
         raise StateConflict(f"{self.path} on {self.branch} kept changing; gave up after "
                             f"{MAX_ATTEMPTS} attempts")
 
-
-def _loads(text: str) -> Any:
-    try:
-        return json.loads(text)
-    except ValueError:
-        return {}
+    def _loads(self, text: str) -> Any:
+        """The file's JSON. A file that is there but not JSON stops the caller: taken for an
+        empty state, the next write put one over the whole of it (2026-10-25)."""
+        try:
+            return json.loads(text)
+        except ValueError as exc:
+            raise StateUnreadable(f"{self.path} on {self.branch} is not JSON ({len(text)} "
+                                  f"characters read); left as it is") from exc
 
 
 def _dump(state: dict[str, Any]) -> str:

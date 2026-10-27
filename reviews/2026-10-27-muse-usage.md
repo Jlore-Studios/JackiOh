@@ -131,10 +131,14 @@ more in 4 and 5 runs. The night box's longest stall was **766 s**. Single readin
 show 18 million pages swapped on the night box (20:10Z to 20:22Z) and 5.1 million on `b2` (17:52Z).
 The 10-19 audit found that two building jobs already overfill 7.6 GB. #2069 now allows three a box.
 
-Either the instance types were never changed ("stop each, change its type, start it again",
-`bot/machine/README.md`, Moving the boxes to three jobs each), or they were changed back. A person
-with AWS access should check both instances' type. Until they really are `xlarge`, three jobs a box
-makes Muse's runs slower than they need to be.
+The likely cause is the account's plan. The project is on AWS's Free plan (`bot/machine/README.md`,
+the credits watch), which "refused instance types outside the Free Tier" when the training box was
+built. Its largest m7i type is `m7i-flex.large`, and `m7i-flex.xlarge` is not on the list
+(AWS's EC2 Free Tier page). So the type change ("stop each, change its type, start it again",
+`bot/machine/README.md`, Moving the boxes to three jobs each) most likely never took. A person with
+AWS access should check both instances' type. Until they really are `xlarge`, three jobs a box makes
+Muse's runs slower than they need to be. Upgrading to the Paid plan lifts the limit, and AWS's
+Free Tier FAQ says the credits left keep applying to the bills until they expire.
 
 ## 5. A state write wiped `bot-state` on 10-25 (bug, every subscription)
 
@@ -160,8 +164,11 @@ returns without content would hold it.
 ## What to do
 
 1. **Fix finding 5 first.** It will happen again, to every subscription, and it caused the wasted
-   runs in finding 3.
-2. **Fix finding 3,** so a real cap parks Muse until its reset instead of reading as infra.
+   runs in finding 3. Done on this branch: `get_file` reads a file over 1 MB from its blob, and
+   `StateStore` raises `StateUnreadable` before it reads or writes over a state that is not JSON.
+2. **Fix finding 3,** so a real cap parks Muse until its reset instead of reading as infra. Done on
+   this branch: `RATE_LIMIT_WORDS` knows Muse's words, `park_for` reads a reset given as a time, and
+   a refusal is never infra.
 3. **Check the instance types (finding 4).** If they are 8 GB, either resize them as the README
    says, or set the box runners back to two jobs each until someone does.
 4. **Leave Muse's plan as it is.** On this week's rate it cannot reach its cap from the boxes

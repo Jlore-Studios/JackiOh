@@ -146,6 +146,11 @@ FAKE_MUSE = PRELUDE + textwrap.dedent('''\
     if mode == "limit":
         print("Error: usage limit reached. Wait for usage to reset at 18:00.", file=sys.stderr)
         sys.exit(1)
+    if mode == "quota":
+        print("agent loop failed: model failed: API error 429 [request_id=556661e6]: "
+              "Subscription quota exhausted. Your usage window resets at "
+              "2026-10-26T00:00:00Z. (rate_limit_error)", file=sys.stderr)
+        sys.exit(2)
     if mode in ("full", "broken"):
         print("Error: the request could not be completed.", file=sys.stderr)
         sys.exit(1)
@@ -329,12 +334,17 @@ class AgyTests(Base):
         self.assertEqual(park_for("Your limit resets in 3h"), "+PT181M")
         self.assertEqual(park_for("resets in 12m"), "+PT13M")
         self.assertEqual(park_for("Usage limit reached."), "+PT60M")
+        self.assertEqual(park_for("Your usage window resets at 2026-10-26T00:00:00Z."),
+                         "2026-10-26T00:00:00Z")
+        self.assertEqual(park_for("resets at 2026-10-25T19:00:00-05:00"), "2026-10-26T00:00:00Z")
         at = datetime(2026, 10, 3, 23, 33, tzinfo=timezone.utc)
         state = {"providers": {}}
         providers_mod.note_usage(state, "agy", None, "+PT106M", at)
         self.assertEqual(state["providers"]["agy"]["refused_until"], "2026-10-04T01:19:00Z")
         providers_mod.note_usage(state, "agy", None, "+PT1H30M", at)
         self.assertEqual(state["providers"]["agy"]["refused_until"], "2026-10-04T01:03:00Z")
+        providers_mod.note_usage(state, "muse", None, "2026-10-05T00:00:00Z", at)
+        self.assertEqual(state["providers"]["muse"]["refused_until"], "2026-10-05T00:00:00Z")
         self.assertEqual(providers_mod._duration("+PT2H"), timedelta(hours=2))
         # Codex names days: gpt's weekly limit holds it until the week resets, not an hour.
         self.assertEqual(park_for("You've hit your usage limit. Upgrade to Pro or try again in "
@@ -388,6 +398,14 @@ class MuseTests(Base):
         result = self.run_fake(self.backend(), "limit")
         self.assertTrue(result.rate_limited)
         self.assertIn("usage limit reached", result.error)
+
+    def test_its_spent_week_parks_it_until_the_reset_it_names(self):
+        """Muse's own words once its week is spent (2026-10-25). Unread, they ended six runs as
+        infra, each of which took an item and handed it on, until the week reset."""
+        result = self.run_fake(self.backend(), "quota")
+        self.assertTrue(result.rate_limited)
+        self.assertFalse(result.infra)
+        self.assertEqual(result.reset_at, "2026-10-26T00:00:00Z")
 
     def test_an_api_key_secret_is_handed_over_as_one(self):
         self.run_fake(self.backend("meta-key-" + "k" * 30))
