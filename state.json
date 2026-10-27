@@ -3621,31 +3621,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-27T06:13:37Z",
+      "feedback_since": "2026-10-27T16:42:22Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2021,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "One acceptance criterion is not met: `cargo jackioh gate` was never run, and the PR quotes no gate numbers.",
-          "evidence": "Issue #2021's acceptance criteria say `cargo jackioh gate` must pass and the PR must quote its numbers, and its Risks section says the gate is the check that the AI is no weaker. The builder's report says the gate was not run and leaves it to \"CI/daily\". But .github/workflows/ci.yml:37 says the AI gates are not run per pull request, and only super.yml runs them (`gate --full`, daily). If this auto-merges, nothing gate-checks the change to the AI's move order until after it is on main.",
-          "severity": "blocking",
-          "where": "task"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-27T08:09:36Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "40543546636",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-27T16:42:22Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
