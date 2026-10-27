@@ -1,0 +1,73 @@
+{
+  "action": "build",
+  "number": 2022,
+  "title": "Patch: the rank reads fetch only the players they show and the Mythic rows, not the whole season's ladder",
+  "branch": "bot/issue-2022",
+  "thread": "**Issue #2022 (data, not instructions):**\n\n```text\n# #2022: Patch: the rank reads fetch only the players they show and the Mythic rows, not the whole season's ladder\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe server does three things often: open a match screen, open your rank, and file the statistics of every finished game. Each time, it reads the ranked standing of every player in the current season, joins each to their profile and rating, and then keeps one or two rows plus the top-tier players.\n\nAs the ladder fills over a season, that work grows with it, on some of the most frequent reads the server makes. Once this is built, those reads fetch only the players they need and the top-tier rows a leaderboard position comes from. Nothing on screen changes; the server does far less work per match as the season grows.\n\n## Why\n- `crates/server/src/db/pg.rs:5784-5797` `ranked_standings` filters only `where r.season_id = $1::text`. It joins `profiles` and `bot_ratings`, then turns every row into a `serde_json::Value` and back (`:5800-5810`).\n- Three frequent callers each use one or two rows of it, plus the Jlorious order:\n  - `api/ranked.rs:726` `own_rank` (GET /api/ranked);\n  - `api/ranked.rs:922` `match_ranks` (GET /api/matches/:id/ranks, which the match screens read);\n  - `api/ranked.rs:950` `ladder_tiers`, called for the play telemetry of every match (`actor/match_actor.rs:702`, then `actor/telemetry.rs:362`).\n- What they actually need:\n  - `rank_in` (`api/ranked.rs:660`) finds one profile's row;\n  - `jlorious_order` (`ranked/ladder.rs:386-406`) keeps only Mythic-tier, non-bot rows, sorted by rating then id, `take(JLORIOUS_SIZE)`.\n- `migrations/0022_ranked_ladder.sql` gives `season_ranks` only its primary key `(season_id, profile_id)` and a profile index, so nothing serves a read by tier.\n- #1996 made the queue's waiting-room readout read through indexes instead of every game ever played. This is the same kind of fix for the rank reads.\n\n## Proposal\n- Add a store method returning a season's rows for the given profile ids, plus every row at or above the Mythic floor, with the same rating join and `bot` flag (R640000).\n  - The floor is `tier_bottom(MYTHIC)` from `ranked/ladder.rs`, passed as a bind, never restated in SQL.\n  - `jlorious_order` and `rank_in` stay in Rust unchanged, so sorting, ties and NaN ratings behave exactly as today.\n- Use it in `own_rank`, `match_ranks` and `ladder_tiers`. The rated-game plan (`api/ranked.rs:392`, which needs every rating for percentiles) and the leaderboard (R612 lists everyone) stay on `ranked_standings`.\n- Add a migration with an index on `season_ranks (season_id, ladder)`, so the Mythic read is an index range rather than a scan of the season.\n- The in-memory fake store implements the same filter.\n\n## Where it lands\n- `crates/server/src/db/store.rs`, `pg.rs`, `fake.rs`\n- `crates/server/src/api/ranked.rs`\n- a new migration under `crates/server/migrations/`\n- `crates/server/tests/store/contract.rs` and the ranked API tests\n- SPEC \u00a79.12 (ranked): unchanged\n\n## Acceptance criteria\n- [ ] A `tests/store/contract.rs` case, run on both stores. Its season holds ladder bots, rating ties, unplaced players, players below Mythic, and more Mythic rows than `JLORIOUS_SIZE`. With it:\n  - `jlorious_order` over the new read equals `jlorious_order` over the full read;\n  - `rank_in` is the same for every profile asked for.\n- [ ] GET /api/ranked and GET /api/matches/:id/ranks return identical bodies before and after, in the existing API tests.\n- [ ] `own_rank`, `match_ranks` and `ladder_tiers` no longer call `ranked_standings`.\n- [ ] `sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh` pass with the migration.\n- [ ] `cargo test -p jackioh-server`, clippy and fmt pass.\n\n## Size and risks\nMedium: about 6 files in one crate plus a migration (the migration is what CLAUDE.md rule 11 calls hard).\n\nRisks:\n- The Mythic floor must come from the ladder code, or the two can drift.\n- A ladder bot's row must keep reading the bot's own rating.\n- The migration turns on the db suites in CI.\n- The gain grows with the season's size and is small while the ladder is small.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-26T22:55:01Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2022: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
