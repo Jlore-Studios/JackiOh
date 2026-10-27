@@ -3,7 +3,8 @@
 //!
 //! The rules, in the order the sequence meets them:
 //!   - Which card. A Unit whose running face has a Cry: the top of a unit pile (a dormant card under a
-//!     Stack is not on the field, R13) or a Unit card in a graveyard. Anything else triggers nothing.
+//!     Stack is not on the field, R13) or a Unit card in a graveyard; or a face-up Field Spell with a
+//!     Cry on the field (R1873003). Anything else triggers nothing.
 //!   - Who. The triggering card's controller runs it and makes its choices (R70), whoever controls or
 //!     owns the Unit — Rewind's Radiant reaches the other player's Units too.
 //!   - Its choices. A Cry's declared targets and modes (R81) travel in the play that played the Unit,
@@ -118,8 +119,9 @@ fn name_of(state: &GameState, def_id: &str) -> String {
 
 /// Where a card's Cry could be triggered from, or `None`: a Unit (its running face's type, B2.7) with a
 /// Cry on its running face, on top of its unit pile, standing in a backrow zone (R1081000) or in a
-/// graveyard. A Vanilla card has no text (§6.3), so no Cry. A pure read: the reader a card's target
-/// check uses (Classic #54's "a Unit that has a Cry").
+/// graveyard, or a face-up Field Spell with one in its backrow zone (R1873003). A Vanilla card has no
+/// text (§6.3), so no Cry. A pure read: the reader a card's target check uses (Classic #54's "a Unit
+/// that has a Cry").
 pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> {
     // ME-ALTPLAY, R1044: a set Spell whose text is resolving runs from the backrow first.
     if matches!(
@@ -133,7 +135,15 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
         crate::scripts::script_of(state, card).cry.as_ref()?;
         return Some(CryPlace::Backrow);
     }
-    if crate::faces::card_type_of(state, card) != CardType::Unit {
+    let card_type = crate::faces::card_type_of(state, card);
+    // R1873003: a face-up Field Spell on the field runs its Cry as itself, as a Unit there does (Radiant
+    // S #6 Tylannt's summon names S #7 The Greatest Heist, R411). A face-down one reads as the Trap it
+    // was set as (`card_type_of`), and out of a graveyard only a Unit's Cry is triggered.
+    if card_type == CardType::FieldSpell && matches!(card.zone, Zone::Field { .. }) {
+        crate::scripts::script_of(state, card).cry.as_ref()?;
+        return Some(CryPlace::Field);
+    }
+    if card_type != CardType::Unit {
         return None;
     }
     crate::scripts::script_of(state, card).cry.as_ref()?;
