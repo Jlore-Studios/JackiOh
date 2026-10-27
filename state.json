@@ -3576,6 +3576,13 @@
     "2021": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-27T04:16:00Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Never-easy: it adds ruling R2021000 and changes crates/ai/src; not hard, as it is one predicate in candidates.rs, not the search loop or a design across crates"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
