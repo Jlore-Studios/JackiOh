@@ -3833,7 +3833,7 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-27T12:14:46Z",
+      "queued_at": "2026-10-27T14:12:52Z",
       "round_tier": "medium",
       "run_id": "40502506298",
       "runs_on": "night-vm-muse",
