@@ -2432,6 +2432,7 @@ defId: string?,
 rememberAs: string?,
 instance: TargetSpec?,
 randomKeywords: number?,
+keywords: {Keyword}?,
 }
 
 export type SummonCopyArgs = {
