@@ -4242,7 +4242,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-27T07:59:21Z",
-      "run_id": "pending:be796f2f-1793088061",
+      "run_id": "40470731426",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
