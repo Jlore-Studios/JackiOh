@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 2053,
+  "title": "Patch: the shop, pack and collection screens speak the reader's language \u2014 translated refusals and card names",
+  "branch": "bot/issue-2053",
+  "thread": "**Issue #2053 (data, not instructions):**\n\n```text\n# #2053: Patch: the shop, pack and collection screens speak the reader's language \u2014 translated refusals and card names\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA reader playing in Chinese still hits English on the screens where they spend currency and manage their collection: server refusal messages on the shop, pack-opening and token pages render raw English (\"that card is not yours\" stays English even though the dictionary translates it), and card names on collection buttons, cosmetic labels and pickers render English while the card face beside them is drawn in Chinese. After this patch those surfaces speak the reader's language like the rest of the client.\n\n## Why\n\nTwo gaps, one fix pattern. First: `wordsOf` (`apps/web/src/shop/Shop.tsx:31-33`) returns raw `cause.message`, rendered untranslated at `Shop.tsx:121,202`, `TokenPicker.tsx:103,130`, `CosmeticPacks.tsx:174,286`, `PackOpening.tsx:339,485` and `collection/TokenOffer.tsx:127` \u2014 while the convention wraps server sentences in `t()` (`auth/AccountError.tsx:67`, `game/Game.tsx:697`, `duos/CoopPanel.tsx:66`, `Marketplace.tsx:68`), the dictionary already holds the keys (`zh-CN.json:183` translates \"that card is not yours\"), and `t()` identity-falls back on unknown strings so wrapping is strictly non-regressive. Second: `def.name`/raw catalog names render at `OwnedCards.tsx:68` (aria-label), `CardCosmeticsView.tsx:112,308,319`, `CosmeticsPanel.tsx:27`, `TokenPicker.tsx:179`, `CosmeticPacks.tsx:58-59` and `cards/inspect/CardDetail.tsx:147` \u2014 while `readerName`/`chineseName` is the convention everywhere else (`PoolGrid.tsx:159`, `DeckSidebar.tsx:138`, `PatchNotes.tsx:69`), which R711000 covers \"in the collection alike\".\n\n## Proposal\n\nWrap the refusal renders in `t()`; render card names through `readerName(def)` (or `chineseName(id, name, def)` where only an id and name are held), matching the neighbouring convention. Any new client literal gains its `zh-CN.json` entry, which `i18n.test.ts` enforces.\n\n## Where it lands\n\n`apps/web/src/shop/`, `apps/web/src/packs/PackOpening.tsx`, `apps/web/src/collection/`, `apps/web/src/cards/inspect/CardDetail.tsx`, `apps/web/src/i18n/zh-CN.json`.\n\n## Acceptance criteria\n\n- [ ] Every listed error render goes through `t()`\n- [ ] Every listed card-name render goes through `readerName`/`chineseName`, aria-labels included\n- [ ] New client literals have dictionary entries; engine and server sentences keep their `{name}`-template fallback\n- [ ] English rendering is unchanged\n\n## Size and risks\n\nSmall: mechanical wrapping at about a dozen sites plus dictionary entries. No behaviour change for English readers; the only risk is a missed site, which a pass over `{error}`/`{loadError}` renders in the same directories closes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:45:43Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2053: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2053 needs a plan",
+    "#2054 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
