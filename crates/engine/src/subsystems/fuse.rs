@@ -928,8 +928,9 @@ fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadLi
     }
 }
 
-/// R1045: a number read of `{ state, self, radiant }` that several ingredients give (`revealEcho`): the
-/// largest of their answers, as several Radiant Paranoias add one Echo, not their sum.
+/// R1045: a number read of `{ state, self, radiant }` that several ingredients give (`revealEcho`, and
+/// R1864004's `tradesPerTurn`): the largest of their answers, as several Radiant Paranoias add one Echo,
+/// not their sum.
 fn largest_read(values: Vec<Option<crate::script::RevealEchoHook>>) -> Option<crate::script::RevealEchoHook> {
     let defined: Vec<crate::script::RevealEchoHook> = values.into_iter().flatten().collect();
     match defined.len() {
@@ -1308,6 +1309,8 @@ fn combine_objects(records: &[Script]) -> Script {
         // R1850002, R1850005: every ingredient's exile auras, and the first keyword count printed.
         exile_auras: concat(records.iter().map(|s| s.exile_auras.clone())),
         radiant_at_keywords: records.iter().find_map(|s| s.radiant_at_keywords),
+        // R1864004: the most Trades a turn any ingredient gives.
+        trades_per_turn: largest_read(records.iter().map(|s| s.trades_per_turn.clone()).collect()),
     }
 }
 
