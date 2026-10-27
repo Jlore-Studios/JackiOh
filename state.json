@@ -4317,9 +4317,15 @@
     "what": "review #2071 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-27T14:54:02Z",
+    "at": "2026-10-27T15:02:41Z",
     "notes": [
-      "delivered build #2051 on muse (run 40506782231): approved"
+      "delivered build #1870 on claude-1 (run 40517204341): interrupted",
+      "delivered plan #2067 on claude-4 (run 40514086137): failed",
+      "delivered build #1871 on claude-3 (run 40504187628): approved",
+      "started plan #2067 on claude-4 (run 40527678132)",
+      "started review #2061 on claude-3 (run 40527841829)",
+      "started review #2071 on claude-2 (run 40528004465)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T18:20:00Z; it can start a build or a plan again in 2h 10m; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is idle, but nothing queued is for it; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 78h 50m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -5025,7 +5031,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T14:54:02Z",
+  "loop_tick": "2026-10-27T15:02:41Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T14:47:41Z",
