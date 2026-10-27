@@ -3738,20 +3738,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
+            "spec/08-catalog.md",
             "spec/11-rulings.md"
           ],
-          "from": "4b76bd931893cf6343f2a13b8b4506dd46399f34",
-          "main": "e03ef72ffeded4c61c613fa9d3d577d6faa23c27"
+          "from": "5e23fae12579bba3c53a14d57edce73dfeeb34b8",
+          "main": "70a8e2e31537130b745ee854e01a4d8f68ed0d39"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40568315307",
+            "run": "40582236102",
             "tier": "strong"
           }
         ],
-        "sha": "5e23fae12579bba3c53a14d57edce73dfeeb34b8",
+        "sha": "c69cf413f678ce929460caebbadee1fe5ac1a349",
         "tiers": {
           "claude": "strong"
         }
