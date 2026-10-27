@@ -3639,7 +3639,25 @@
       "feedback_since": "2026-10-27T08:53:03Z",
       "issue": 1868,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40476649836",
+            "tier": "strong"
+          }
+        ],
+        "sha": "6edf2763c6dcccbf86640ca9c5744d3379688d85",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
