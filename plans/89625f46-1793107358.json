@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2050,
+  "title": "Patch: classify counts a `use`-only change in a non-script Rust file as a code change",
+  "branch": "bot/issue-2050",
+  "thread": "**Issue #2050 (data, not instructions):**\n\n```text\n# #2050: Patch: classify counts a `use`-only change in a non-script Rust file as a code change\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a pull request only moves code between files \u2014 a function moves from one module to another, so one file's `use` lines change and nothing else does \u2014 the tool that decides \"did game behaviour change?\" reports \"no\". CI then skips its deeper check and passes the PR as an internal change even if the move changed which code actually runs. After this patch an import-only change in engine, cards or AI source still counts as a code change and gets the full check.\n\n## Why\n\n`classify::code_changed` (`crates/tools/src/classify.rs:212-221`) runs `catalog::code_lines` on every `.rs` path; `code_lines` (`crates/tools/src/catalog.rs:1732-1841`) strips `use` declarations and everything at or below `#[cfg(test)]` \u2014 right for counting a card script's LOC (the `Area::Script` case), wrong for `crates/engine/src/`, `crates/cards/src/` non-scripts and `crates/ai/src/` (`area()`, classify.rs:166-208). A use-only diff leaves `play_code`/`ai` unset, `unchecked` stays empty (classify.rs:399-407), CI's `rust (classify)` never builds or runs stage 2, and `--claims` passes a genuine behaviour change as `kind:internal` \u2014 exactly the gap the claims check exists to close (R1370000).\n\n## Proposal\n\nKeep the LOC normalizer for `Area::Script` paths; for non-script `.rs` paths use a second normalizer that keeps `use` lines (still dropping comments and test modules). Fold in a small adjacent fix: assert each `AI_TOOLING` entry (classify.rs:57) names a real file, so a rename can't leave a dead entry and a spurious `Area::Ai`.\n\n## Where it lands\n\n`crates/tools/src/classify.rs` (and `catalog.rs` if the second normalizer lives there), `crates/tools/tests/`.\n\n## Acceptance criteria\n\n- [ ] A `use`-only diff in `crates/engine/src/` or `crates/ai/src/` marks its area changed and triggers stage 2\n- [ ] A `use`-only diff in a card script still reports no LOC change\n- [ ] Comment-only and test-only diffs still count as no code change\n- [ ] `AI_TOOLING` entries are checked against real files\n\n## Size and risks\n\nSmall-medium. Care is needed not to reclassify comment or test churn as code changes; the two-normalizer split keeps the LOC semantics intact where they are load-bearing (Area::Script, `catalog loc`).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:47:53Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2050: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
