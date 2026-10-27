@@ -10,7 +10,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{grunt, pawn, playing};
 use crate::rules::fixtures::generation::{immutable, register_generation};
-use crate::rules::fixtures::harness::{put, sink_for, slot};
+use crate::rules::fixtures::harness::{events_json, put, set_library, sink_for, slot};
 
 /// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
@@ -168,5 +168,77 @@ mod r1020_a_random_enemy_permanent_fused_in {
             "the library card's id leaked"
         );
         assert!(find_instance(sink.state, &kept.id).is_some());
+    }
+
+    /// The `kind` events each seat's view shows, read by their TS field names.
+    fn seen(state: &GameState, kind: &str) -> Vec<(PlayerId, Value)> {
+        [P1, P2]
+            .into_iter()
+            .flat_map(|viewer| {
+                events_json(&view_for(state, viewer).events, kind)
+                    .into_iter()
+                    .map(move |event| (viewer, event))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r1020_a_card_shuffled_into_the_library_and_then_fused_away_never_reads() {
+        let mut state = playing("dc-fuse-random-shuffled-in");
+        let kept = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
+        let card = set_library(&mut state, P2, &[grunt.id.as_str()]).remove(0);
+        state.applied.push(AppliedAction {
+            nonce: "dc-fuse-random-shuffled-in".into(),
+            events: vec![GameEvent::ShuffledIn {
+                player: P2,
+                instance_id: card.id.clone(),
+                def_id: card.def_id.clone(),
+                position: 0,
+            }],
+        });
+        fuse_random(
+            &mut state,
+            &kept.id,
+            json!({ "side": "enemy", "zones": ["library"] }),
+        );
+        assert!(find_instance(&state, &card.id).is_none());
+        let shown = seen(&state, "shuffledIn");
+        assert_eq!(shown.len(), 2);
+        for (_, event) in &shown {
+            assert_eq!(event["instanceId"], json!(HIDDEN_ID));
+            assert_eq!(event["defId"], json!(HIDDEN_ID));
+        }
+    }
+
+    #[test]
+    fn r1020_a_library_card_replaced_and_then_fused_away_never_reads() {
+        let mut state = playing("dc-fuse-random-replaced");
+        let kept = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
+        let old = set_library(&mut state, P2, &[pawn.id.as_str()]).remove(0);
+        let card = set_library(&mut state, P2, &[grunt.id.as_str()]).remove(0);
+        state.applied.push(AppliedAction {
+            nonce: "dc-fuse-random-replaced".into(),
+            events: vec![GameEvent::Transformed {
+                instance_id: old.id.clone(),
+                from_def_id: old.def_id.clone(),
+                to_def_id: card.def_id.clone(),
+                new_instance_id: card.id.clone(),
+                hidden_from: Some(vec![P1, P2]),
+            }],
+        });
+        fuse_random(
+            &mut state,
+            &kept.id,
+            json!({ "side": "enemy", "zones": ["library"] }),
+        );
+        assert!(find_instance(&state, &card.id).is_none());
+        let shown = seen(&state, "transformed");
+        assert_eq!(shown.len(), 2);
+        for (_, event) in &shown {
+            assert_eq!(event["instanceId"], json!(HIDDEN_ID));
+            assert_eq!(event["fromDefId"], json!(HIDDEN_ID));
+            assert_eq!(event["newInstanceId"], json!(HIDDEN_ID));
+            assert_eq!(event["toDefId"], json!(HIDDEN_ID));
+        }
     }
 }

@@ -15,7 +15,8 @@
 // answer, plays a card still to play, or ends the turn. A card another card turned into something
 // else (Spiritually 中国 makes a hand Gachaholics) goes into the next game, until every card is done.
 // A card cast as it is drawn (Meditative #37 CN in a Bottle, R58) is never played from a hand: it is
-// done once it lands in a graveyard.
+// done once it lands in a graveyard. Prestige (Meditative #53, R1851003) De-Radiants a Radiant card,
+// so its seat is dealt CN in a Bottle too, which casts as it is drawn and leaves a Radiant card in hand.
 //
 // After every play:
 //   - `cy.settled()`: the play's animations and cues (which ride the runner's entries, SPEC §10.11)
@@ -41,6 +42,7 @@ import {
   owedPromptKind,
   playStep,
   printedCost,
+  radiantSource,
   type CatalogRow,
   type PlayStep,
 } from "../../support/playthrough.ts";
@@ -69,6 +71,7 @@ type Handle = Parameters<typeof playStep>[0];
 /** The deckable Meditative cards, and those not yet played (or, for a Cast on draw card, not yet cast). */
 let cards: CatalogRow[] = [];
 let filler: CatalogRow | undefined;
+let source: CatalogRow | undefined;
 const remaining = new Set<string>();
 
 /** The dearest price a card can ask, an Embiggen card's bigger one included. */
@@ -215,6 +218,7 @@ describe("36 — every Meditative card plays once on /dev/hotseat with the set p
     cy.readFile(CATALOG_PATH, { log: false }).then((catalog: Record<string, CatalogRow>) => {
       cards = deckableOf(catalog, SET);
       filler = deckableOf(catalog, FILLER_SET)[0];
+      source = cards.find(radiantSource);
       remaining.clear();
       for (const def of cards) remaining.add(def.id);
     });
@@ -231,6 +235,7 @@ describe("36 — every Meditative card plays once on /dev/hotseat with the set p
       const [a, b] = nextGame(
         cards.filter((def) => remaining.has(def.id)),
         filler,
+        source,
       );
       const dealt = [...a, ...b];
       const mana = Math.max(constants.MAX_MANA, ...dealt.map(ceiling));

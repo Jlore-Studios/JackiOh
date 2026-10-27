@@ -4,8 +4,11 @@
 //
 // AN INCOMING CHALLENGE is a toast with the challenge's mode and, but for All Random, a picker of
 // the player's deck (or trio) that starts on the one they last used for it in this browser
-// (`challengeChoice.ts`). Accept joins the room by its code with that pick, which accepts the
-// challenge (B49), and takes the player to the game: one press (R1831000). Decline declines it.
+// (`challengeChoice.ts`); for All Random, "More cards from" (R924000) for the player's own dealt
+// deck, starting from the device's online pick (`readPlayLean`, R2031000), shown once the engine is in
+// (`LeanSetPickerLazy.tsx`: the shell mounts the toast on every screen, #778). Accept joins the room by
+// its code with that pick, which accepts the challenge (B49), and takes the player to the game: one
+// press (R1831000). Decline declines it.
 // Either way the toast goes. A screen holding unsaved work asks first, and the toast stays until
 // the player goes (R1754000). A join the server refuses is shown in its words, with "Open in lobby",
 // the way a room link opens `/play` with the room's code and mode filled in (R767), as it does when
@@ -23,7 +26,10 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { MATCH_FOUND_NAV_DELAY_MS } from "@jackioh/server-config";
+import type { LeanPick } from "@jackioh/shared";
 
+import { LeanSetPickerLazy } from "../game/LeanSetPickerLazy.tsx";
+import { readPlayLean, writePlayLean } from "../game/playLean.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getDecks, getMe, joinRoom, type ModeChoice, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { withSession } from "../net/gate.ts";
@@ -73,6 +79,8 @@ export function ChallengeToast(): ReactElement {
   const [saved, setSaved] = useState<Saved | "failed" | null>(null);
   /** The deck or trio picked in a toast, by challenge; until then the one last used. */
   const [picks, setPicks] = useState<Readonly<Record<string, string>>>({});
+  /** R2031000: the "More cards from" pick made in a toast, by challenge; until then the device's online pick. */
+  const [leans, setLeans] = useState<Readonly<Record<string, LeanPick | null>>>({});
   /** The last read held an open challenge of the player's own. */
   const hadOutgoing = useRef(false);
 
@@ -149,6 +157,12 @@ export function ChallengeToast(): ReactElement {
     return pickDeck(saved.decks, chosen ?? remembered.deckId)?.id ?? null;
   };
 
+  /** R2031000: the pick an All Random `challenge` joins with, read afresh until one is made in its toast. */
+  const leanFor = (challenge: Challenge): LeanPick | null => {
+    const chosen = leans[challenge.challengeId];
+    return chosen === undefined ? readPlayLean() : chosen;
+  };
+
   /** Joins the room by its code with `choice`, which accepts the challenge, and takes the player to its game (R1831000). */
   const join = (challenge: Challenge, choice: ModeChoice): void => {
     if (joining !== null) return;
@@ -214,7 +228,8 @@ export function ChallengeToast(): ReactElement {
         {shown.map((challenge) => {
           const id = challenge.challengeId;
           const pick = pickedFor(challenge);
-          const choice = choiceOf(challenge.mode, pick, pick);
+          const lean = challenge.mode === "random" ? leanFor(challenge) : null;
+          const choice = choiceOf(challenge.mode, pick, pick, lean);
           const list = saved === null || saved === "failed" ? [] : challenge.mode === "bo3" ? saved.trios : saved.decks;
           const busy = joining === id || declining === id;
           // Nothing to join with, or the join was refused: the lobby is the way in.
@@ -260,6 +275,17 @@ export function ChallengeToast(): ReactElement {
                     ))}
                   </select>
                 </label>
+              ) : null}
+              {challenge.mode === "random" ? (
+                <LeanSetPickerLazy
+                  value={lean}
+                  disabled={busy}
+                  testid={challengeToastTestid.lean}
+                  onChange={(next) => {
+                    setLeans((before) => ({ ...before, [id]: next }));
+                    writePlayLean(next);
+                  }}
+                />
               ) : null}
               {refusedId === id && error !== null ? (
                 <p className="challenge-toast__refusal" data-testid={challengeToastTestid.error} role="alert">

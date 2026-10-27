@@ -1,9 +1,13 @@
 // #1568: the challenge dialog's deck read offers Try again when it fails, and reads again.
 // #1831: it opens on the last mode and pick, with Send focused, and remembers what it sent.
+// R2031000: All Random offers "More cards from" on the device's online pick, sent as `leanSet`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LEAN_NEWEST } from "@jackioh/shared";
+
+import { PLAY_LEAN_SET_KEY, leanLabel, readPlayLean } from "../game/LeanNewest.tsx";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { refusal, stubServer } from "../test/stubServer.ts";
 import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
@@ -143,5 +147,53 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     });
     expect(server.to("POST", "/api/challenges")[0]?.body).toEqual({ mode: "bo1", deckId: "d-control", friendId: "f-ann" });
     expect(readChallengeChoice()).toEqual({ mode: "bo1", deckId: "d-control", trioId: null });
+  });
+});
+
+describe("R2031000 an All Random challenge's more cards from", () => {
+  it("R2031000 the picker is All Random's alone and starts on the device's online pick", async () => {
+    window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
+    serveDecks();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
+
+    await screen.findByTestId(togetherTestid.challengeDeck);
+    expect(screen.queryByTestId(togetherTestid.challengeLean)).toBeNull();
+    fireEvent.click(screen.getByTestId(challengeModeTestid("random")));
+    const picker = await screen.findByTestId<HTMLSelectElement>(togetherTestid.challengeLean);
+    expect(picker.value).toBe("Classic");
+    expect(picker.closest("label")).toHaveTextContent(leanLabel());
+    fireEvent.click(screen.getByTestId(challengeModeTestid("bo3")));
+    expect(screen.queryByTestId(togetherTestid.challengeLean)).toBeNull();
+  });
+
+  it("R2031000 with a pick the challenge carries leanSet and the device keeps it; with none it carries no lean", async () => {
+    window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "random", deckId: null, trioId: null }));
+    const server = serveDecks();
+    const sent = vi.fn();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={sent} />);
+
+    const picker = await screen.findByTestId<HTMLSelectElement>(togetherTestid.challengeLean);
+    expect(picker.value).toBe("");
+    fireEvent.change(picker, { target: { value: LEAN_NEWEST } });
+    expect(readPlayLean()).toBe(LEAN_NEWEST);
+    fireEvent.click(screen.getByTestId(togetherTestid.challengeSend));
+    await waitFor(() => {
+      expect(sent).toHaveBeenCalledTimes(1);
+    });
+    expect(server.to("POST", "/api/challenges")[0]?.body).toEqual({ mode: "random", leanSet: LEAN_NEWEST, friendId: "f-ann" });
+    cleanup();
+
+    // The next challenge opens on the pick; none sends no lean at all.
+    const sentAgain = vi.fn();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={sentAgain} />);
+    const again = await screen.findByTestId<HTMLSelectElement>(togetherTestid.challengeLean);
+    expect(again.value).toBe(LEAN_NEWEST);
+    fireEvent.change(again, { target: { value: "" } });
+    fireEvent.click(screen.getByTestId(togetherTestid.challengeSend));
+    await waitFor(() => {
+      expect(sentAgain).toHaveBeenCalledTimes(1);
+    });
+    expect(server.to("POST", "/api/challenges")[1]?.body).toEqual({ mode: "random", friendId: "f-ann" });
+    expect(readPlayLean()).toBeNull();
   });
 });

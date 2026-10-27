@@ -165,6 +165,16 @@ export function castOnDraw(def: CatalogRow): boolean {
   return /^Cast on draw:/.test(def.base.text);
 }
 
+/** R1851003: Meditative #53 Prestige's base face De-Radiants a Radiant card, so its seat needs one in hand. */
+export function needsRadiant(def: CatalogRow): boolean {
+  return /De-Radiant a Radiant card/.test(def.base.text);
+}
+
+/** CN in a Bottle casts as it is drawn (R58) and adds a random Radiant card to the hand: Prestige's source. */
+export function radiantSource(def: CatalogRow): boolean {
+  return castOnDraw(def) && /Add a random Radiant card to your hand/.test(def.base.text);
+}
+
 /** A seat's share of one game: few enough Units and backrow cards that its zones never fill. */
 export const SEAT_SHARE = { units: 3, backrow: 2, cards: 7 } as const;
 
@@ -176,8 +186,10 @@ function share(def: CatalogRow): "units" | "backrow" | "spells" {
 /**
  * The next game's two decks out of the cards still to play, in catalog order, each seat within
  * SEAT_SHARE. A seat left with nothing holds `filler`, a card of a set that ships, so every deck has a card.
+ * A seat holding a card that needs a Radiant card in hand (Prestige) is dealt `source` too, when given,
+ * unless it already holds a Radiant source of its own.
  */
-export function nextGame(cards: readonly CatalogRow[], filler: CatalogRow): [CatalogRow[], CatalogRow[]] {
+export function nextGame(cards: readonly CatalogRow[], filler: CatalogRow, source?: CatalogRow): [CatalogRow[], CatalogRow[]] {
   const seats: [CatalogRow[], CatalogRow[]] = [[], []];
   for (const def of cards) {
     const seat = seats.find((held) => {
@@ -188,6 +200,9 @@ export function nextGame(cards: readonly CatalogRow[], filler: CatalogRow): [Cat
     seat?.push(def);
   }
   if (seats[1].length === 0) seats[1].push(filler);
+  if (source !== undefined) {
+    for (const held of seats) if (held.some(needsRadiant) && !held.some(radiantSource)) held.push(source);
+  }
   return seats;
 }
 
