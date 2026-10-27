@@ -960,6 +960,8 @@ describe("R2095000 both boards render side by side with the teammate's read-only
     expect(screen.getAllByTestId("game")).toHaveLength(2);
     const own = screen.getByTestId(ID.boardOwn);
     const mate = screen.getByTestId(ID.boardTeammate);
+    expect(own).toHaveClass("duos-board-own");
+    expect(mate).toHaveClass("duos-board-teammate");
     expect(within(own).getByTestId(testid.handCard("h1"))).toBeInTheDocument();
     expect(within(mate).getByTestId(testid.handCard("t1"))).toBeInTheDocument();
     expect(within(own).queryByTestId(testid.handCard("t1"))).toBeNull();

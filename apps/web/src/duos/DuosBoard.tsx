@@ -526,7 +526,7 @@ export function DuosBoard({
     >
       {showBoth ? (
         <div className="duos-both">
-          <div data-testid={duosTestid.boardOwn} ref={attach}>
+          <div className="duos-board-own" data-testid={duosTestid.boardOwn} ref={attach}>
             <Game
               key="board-own"
               view={view.own}
@@ -556,7 +556,7 @@ export function DuosBoard({
               markers={markersOwn}
             />
           </div>
-          <div data-testid={duosTestid.boardTeammate} ref={mateAttach}>
+          <div className="duos-board-teammate" data-testid={duosTestid.boardTeammate} ref={mateAttach}>
             <Game
               key="board-teammate"
               view={view.teammate}
