@@ -17,13 +17,21 @@
 //!
 //! Both prompts are ordinary ones, so `legalActions`, the reducer's refusal, the view, the random policy,
 //! the timeout and the AI answer them as they answer any other.
+//!
+//! R1877001 (#77 Yuma's Radiant Lucky 1): the offer carries the Lucky its card has as it is made
+//! (`lucky_on`, R1438), under `TRADE_OFFER_LUCKY_KEY`, so it holds whatever becomes of the card (R76).
+//! With Lucky X, step 2 draws the Discover's options 1 + X times and keeps the set best for the offerer:
+//! the one whose cheapest card costs most (R65's cost, `effective_cost`), the earlier draw on a tie. A
+//! hand with no more cards than the options draws them once, since every draw offers the same cards.
 
 use indexmap::IndexMap;
 
 use crate::catalog::def_of;
 use crate::config::{DISCOVER_OPTIONS, TRADE_OFFER_TURNS};
+use crate::mana::effective_cost;
 use crate::ownership::take_into_hand;
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
+use crate::query::lucky_on;
 use crate::script::{Effect, EffectContext, Hook, hook};
 use crate::state::{CardInstance, GameState, PromptOption, Resume, find_instance};
 use crate::wire::{Phase, PlayerId, PromptKind, Selection, Zone, opponent_of};
@@ -38,6 +46,8 @@ const OFFER_STEP: &str = "offer";
 const GIVE_STEP: &str = "give";
 /// The opponent's answer: their card comes back.
 const TAKE_STEP: &str = "take";
+/// R1877001: the data key the offer's Lucky rides under, from the card that made it to the Discover.
+pub const TRADE_OFFER_LUCKY_KEY: &str = "tradeLucky";
 /// R169: the countdown badge's caption on the offerer's side while the offer waits.
 pub const TRADE_OFFER_LABEL: &str = "Trade offer";
 /// The offerer's prompt.
@@ -45,22 +55,28 @@ pub const TRADE_OFFER_GIVE_PROMPT: &str = "Trade offer: give your opponent a car
 /// The opponent's prompt.
 pub const TRADE_OFFER_TAKE_PROMPT: &str = "Trade offer: Discover a card in your hand to give your opponent";
 
-/// R1845002: "trade offer your opponent at the start of their turn", made for this card's controller.
+/// R1845002: "trade offer your opponent at the start of their turn", made for this card's controller,
+/// carrying the Lucky the card has now (R1877001).
 pub fn trade_offer() -> Effect {
-    delay(DelayArgs {
-        at: DelayAt {
-            phase: Phase::Start,
-            player: DelayPlayer::Enemy,
-        },
-        step: OFFER_STEP.into(),
-        hook: Some(TRADE_OFFER_HOOK.into()),
-        data: None,
-        watch: None,
-        next: None,
-        mark: None,
-        hand_watch: None,
-        turns: Some(TRADE_OFFER_TURNS),
-        label: Some(TRADE_OFFER_LABEL.into()),
+    Effect::new("tradeOffer", |ctx| {
+        let lucky = ctx.self_.as_ref().map_or(0, |card| lucky_on(ctx.state, card));
+        let data = (lucky > 0).then(|| IndexMap::from([(TRADE_OFFER_LUCKY_KEY.to_string(), lucky.into())]));
+        let offer = delay(DelayArgs {
+            at: DelayAt {
+                phase: Phase::Start,
+                player: DelayPlayer::Enemy,
+            },
+            step: OFFER_STEP.into(),
+            hook: Some(TRADE_OFFER_HOOK.into()),
+            data,
+            watch: None,
+            next: None,
+            mark: None,
+            hand_watch: None,
+            turns: Some(TRADE_OFFER_TURNS),
+            label: Some(TRADE_OFFER_LABEL.into()),
+        });
+        (offer.apply)(ctx);
     })
 }
 
@@ -157,12 +173,29 @@ fn give(ctx: &mut EffectContext<'_>) {
     if pool.is_empty() {
         return;
     }
-    // R50, R60: as `offer_instances` draws a Discover's options out of real instances.
-    let offered = ctx.rng.shuffle(&pool);
+    let shown = DISCOVER_OPTIONS.max(0) as usize;
+    let lucky = ctx
+        .data
+        .get(TRADE_OFFER_LUCKY_KEY)
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(0) as i32;
+    let lucky = if pool.len() > shown { lucky } else { 0 };
+    let costs: Vec<i32> = pool
+        .iter()
+        .map(|card| effective_cost(ctx.state, card, Default::default()))
+        .collect();
+    let indices: Vec<usize> = (0..pool.len()).collect();
+    // R50, R60: as `offer_instances` draws a Discover's options out of real instances; R1877001: Lucky
+    // draws them again and keeps the set whose cheapest card costs most, the earlier on a tie.
+    let cheapest = |set: &[usize]| set.iter().map(|&i| costs[i]).min().unwrap_or(0);
+    let offered = ctx.rng.lucky(
+        lucky,
+        |rng| rng.shuffle(&indices).into_iter().take(shown).collect::<Vec<usize>>(),
+        |best, next| if cheapest(&next) > cheapest(&best) { next } else { best },
+    );
     let options: Vec<PromptOption> = offered
         .iter()
-        .take(DISCOVER_OPTIONS.max(0) as usize)
-        .map(|card| hand_option(ctx.state, card))
+        .map(|&i| hand_option(ctx.state, &pool[i]))
         .collect();
     let resume = step_resume(ctx, TAKE_STEP);
     open_prompt(
