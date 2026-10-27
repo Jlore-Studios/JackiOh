@@ -4447,9 +4447,12 @@
         "sha": "144794e5a4cc65b8cd752fdfcb60bee9f22e3fb3"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T14:15:05Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2048,
       "kind": "review",
       "pending_request": false,
