@@ -239,6 +239,8 @@ on 2026-11-02, outside those lanes; its jobs count in `machine_parallel` too.
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
 | Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
+The status issue draws each box as its slots (`dashboard.BOX_SLOTS` in `bot/harness/`): the night box's gpt's, agy's and Muse's lanes, Devin's runners after them, and the Muse box's three of Muse's. Change it with the boxes.
+
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
 runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
 line gives each box its own verdict.

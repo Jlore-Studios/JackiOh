@@ -10,6 +10,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import { resetCosmeticsForTests, type OwnedByCard } from "../cards/cosmetics.ts";
 import { ViewerAccountCosmetics, ViewerFullArt, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { TokenBarsResponse } from "../net/api.ts";
 import { collectionOf, tokenBars } from "../shop/fixtures.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
@@ -33,6 +34,7 @@ afterEach(() => {
   localStorage.clear();
   resetCosmeticsForTests();
   resetOwnedFullArtForTests();
+  resetLocaleForTests();
 });
 
 /** Held cosmetic tokens, none but those given. */
@@ -152,6 +154,16 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.getByTestId(T.stripItem("foil-galaxy"))).toHaveAttribute("data-owned", "false");
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
     expect(read, "nothing was granted, so ownership is not read again").toHaveBeenCalledTimes(1);
+  });
+
+  it("#2053 a refusal says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    tokenServer({ cosmeticEpic: 1 }, { status: 500 });
+    cardViewOf(vi.fn<(token: string) => Promise<OwnedByCard>>().mockResolvedValue(new Map()));
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-galaxy")));
+
+    expect(await screen.findByTestId(T.tokenOfferError("foil-galaxy"))).toHaveTextContent("服务器返回了 500");
   });
 
   it("R1953001 a locked playmat tile offers an Epic token", async () => {

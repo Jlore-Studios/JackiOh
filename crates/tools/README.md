@@ -61,7 +61,7 @@ cargo jackioh golden check
 cargo test -p jackioh-tools                    # the tools' own tests
 ```
 
-`spec check` holds seven rules: every ruling note's `id` matches its file name and is unique; every
+`spec check` holds eight rules: every ruling note's `id` matches its file name and is unique; every
 `proven_in` path exists and holds a proof that runs (#1718): a Rust `#[test]` or `#[tokio::test]`
 `fn`, not `#[ignore]`d but for a `daily:` reason, or a `fn` a test macro of the same file lists, or a
 `mod` holding one, whose name has the `_`-delimited token `r<n>`; a TypeScript `it(`, `test(` or
@@ -69,6 +69,8 @@ cargo test -p jackioh-tools                    # the tools' own tests
 a call around it; or an SQL script's `\echo '### R<n>: … ###'` heading; every `r<n>` test token and
 every `R<n>` cited in `crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in
 `spec/` resolves; every note's `title` and `cards` are filled in; `spec/INDEX.md` is what
-`spec index` writes from the notes; and no code file under those three roots still says its ruling
-is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243). It reads ids, file
-names and test names, and of the wording only those two phrases.
+`spec index` writes from the notes; no code file under those three roots still says its ruling
+is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243); and every ruling
+marker in the notes of §2 to §10, a `(ruling)` or a `Ruling:`, links its ruling (`[[R<n>]]`)
+before its sentence ends (REVIEW A2.3, #2048). It reads ids, file names and test names, and of
+the wording only those two phrases and the ruling markers.

@@ -26,7 +26,7 @@ cargo build --release -p jackioh-tools    # target/release/jackioh, whose `repla
 cd e2e && pnpm install                    # on its own, as above; the postinstall fetches the Cypress binary
 pnpm exec cypress verify
 pnpm exec tsc -p tsconfig.json
-pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved
+pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved (`pnpm typecheck` runs it too, as CI does)
 ```
 
 ## Run
