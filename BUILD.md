@@ -63,7 +63,7 @@ jackioh/
       src/replay.rs            fold(seed, log) -> state; the state hash
       src/validator.rs         deck, trio and queue rules (D1–D4, T1–T3, L1–L6, §9.4), used by the server and, as WASM, the client
       src/testkit/             feature `testkit`: scenario() and its verbs, the I1–I4 invariant monitor, the glow helpers
-      tests/rules.rs, rules/   the engine's tests; rules/fixtures/ holds test-only card scripts
+      tests/rules*.rs, rules/  the engine's tests, in two binaries (a–o, p–z); rules/fixtures/ holds test-only card scripts
       tests/golden.rs, golden/ the golden traces recorded from the TypeScript engine before it was deleted
       tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
     cards/                     jackioh-cards

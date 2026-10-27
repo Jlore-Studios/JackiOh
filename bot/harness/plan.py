@@ -300,15 +300,20 @@ class Lanes:
         """Every run this provider holds now, its planning runs and fill-ins too."""
         return sum(1 for held in self.held.values() if held == provider_id)
 
-    def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
-        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
-        the bot's from its owner, and two runs deciding from one reading go past a cap together
-        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
+    def used(self, provider: Provider) -> int:
+        """How many of its own `lanes` it holds now: its runs, those in other subscriptions'
+        lanes (`fill_in`) aside. A subscription the quiet check guards, or one with usage caps,
+        counts its planning run too: the quiet check cannot tell a second run of the bot's from
+        its owner, and two runs deciding from one reading go past a cap together (claude-2
+        planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
         held = self.count(provider.id) - self.filling_by(provider.id)
         if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
-        return held >= provider.lanes
+        return held
+
+    def full(self, provider: Provider) -> bool:
+        """It holds as many runs as its `lanes` (`used`)."""
+        return self.used(provider) >= provider.lanes
 
     def on_machine(self, pool: providers_mod.Pool) -> int:
         """How many of the held runs are on the bot's machine."""
