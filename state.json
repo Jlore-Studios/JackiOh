@@ -4162,7 +4162,25 @@
       "feedback_since": "2026-10-27T02:55:18Z",
       "issue": 2034,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40441221912",
+            "tier": "medium"
+          }
+        ],
+        "sha": "ff0454871d67e0e6973e3e71a5d1bfea317dcb94",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
