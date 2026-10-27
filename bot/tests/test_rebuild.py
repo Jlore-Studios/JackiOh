@@ -169,16 +169,16 @@ class RebuildTests(unittest.TestCase):
 
 class ConflictRoutingTests(unittest.TestCase):
     def test_a_conflict_revision_waits_for_a_builder_that_reviews_in_its_own_run(self):
-        """#315: with only Devin free, a conflict revision is not assigned at all; with Muse
+        """#315: with only the weak one free, a conflict revision is not assigned at all; with Muse
         free too, Muse takes it."""
         gh = FakeGitHub()
         ctx = make_ctx(gh, at=DAY, cfg=make_config(env={"HARNESS_SECRETS_SET": ""},
-                                                   machine=("devin",)))
+                                                   machine=("lite",)))
         gh.add_pull(9, "bot/issue-2", labels=(LABEL_PR, LABEL_REVISE, "difficulty:easy"))
         ctx.store.update(lambda s: state_item(s, 9).update(kind="revise", source="conflict"))
         self.assertEqual(plan_mod.make(ctx)["action"], "none")
         ctx = make_ctx(gh, at=DAY, cfg=make_config(env={"HARNESS_SECRETS_SET": ""},
-                                                   machine=("devin", "muse")))
+                                                   machine=("lite", "muse")))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("revise", "muse"))
 

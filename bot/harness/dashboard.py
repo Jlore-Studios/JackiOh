@@ -414,7 +414,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
 
 #: The lanes table's order after the Claude accounts, which come first by number: the AWS boxes'
 #: subscriptions, as the owner reads them. Any other follows by name, and the other bots' last.
-LANE_ORDER = ("agy", "gpt", "devin", "muse")
+LANE_ORDER = ("agy", "gpt", "muse")
 #: How a bot's section carries its lanes to the night bot's table (`lanes_mark`): JSON in an HTML
 #: comment, which GitHub draws for nobody.
 LANES_MARK = "<!-- jackioh-bot:lanes "
@@ -706,8 +706,9 @@ def usage_charts(ctx: Context, state: dict[str, Any]) -> list[str]:
 def difficulty_legend(pool: Any) -> str:
     """What each difficulty may be built by, in one line above the queue."""
     names = {tier: waiting_mod.tier_names(pool, tier) for tier in ("weak", "medium", "strong")}
-    return ("<sub>🟢 **easy**: any model, the weak ones first "
-            f"({names['weak']}) · 🟡 **medium**, and ⚪ **unrated** until its planner rates it: "
+    weak = f", the weak ones first ({names['weak']})" if names["weak"] != "none" else ""
+    return (f"<sub>🟢 **easy**: any model{weak} · 🟡 **medium**, and ⚪ **unrated** until its "
+            "planner rates it: "
             f"a medium or strong model ({names['medium']}, then {names['strong']}) · 🔴 **hard**: "
             f"a strong model only ({names['strong']}). A build needs a plan first, by a medium "
             "or strong model (strong for a hard one); a review run of a medium or hard change "
@@ -1456,10 +1457,10 @@ def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tupl
 
 #: Each AWS box as its slots, as register-runners.sh lays the runners out (its header, and
 #: bot/machine/README.md, The Muse box; #2069): the place `_where` names it, the subscription whose
-#: lane each slot is, and the subscriptions whose runners there take no slot of their own (Devin's,
-#: until its plan ends), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
+#: lane each slot is, and the subscriptions whose runners there take no slot of their own (none
+#: now), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
 #: the slot of a subscription it fills while that one has no job in it. Change it with the boxes.
-BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ("devin",)),
+BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ()),
              ("Muse box", ("muse", "muse", "muse"), ()))
 _PLACE_ORDER = {"night box": 1, "Muse box": 2}
 
@@ -1506,7 +1507,7 @@ def _box_slots(ctx: Context, state: dict[str, Any], items: dict[str, int], place
             slots.append(([head, "⚪ free", f"{_text(fill[0])} may fill it" if fill else ""],
                           "idle"))
     busy = sum(1 for _, style in slots if style == "busy")
-    for pair in left:  # its other runners' jobs (Devin's), and any no slot names
+    for pair in left:  # its other runners' jobs, and any no slot names
         run, job = pair
         slots.append(([f"<b>{_text(job.get('runner_name'))}</b>",
                        f"🟢 {_text(_job_name(run, job))}", *working(pair)], "busy"))

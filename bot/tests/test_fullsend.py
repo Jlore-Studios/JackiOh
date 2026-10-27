@@ -327,7 +327,7 @@ class EasyPartTests(unittest.TestCase):
     def test_a_weak_builders_part_is_measured_against_the_branch(self):
         """The easy rule counts only the part's own change, not the parts that landed before
         it: here one file is the limit, and an earlier part already added another."""
-        world = World(env={"HARNESS_SECRETS_SET": ""}, machine=("devin",),
+        world = World(env={"HARNESS_SECRETS_SET": ""}, machine=("lite",),
                       easy={"max_files": 1, "max_lines": 400})
         world.gh.add_issue(PARENT, labels=(LABEL_TREE,))
         push_branch(world.origin, world.root, ONTO, {"src/rules.txt": "rules\n"})
@@ -339,7 +339,7 @@ class EasyPartTests(unittest.TestCase):
             onto=ONTO, part_of=PARENT))
         runner = builds({"src/client.txt": "ui\n"})
         planned, result = world.run(runner)
-        self.assertEqual((planned["provider"], result["status"]), ("devin", "part"))
+        self.assertEqual((planned["provider"], result["status"]), ("lite", "part"))
         self.assertEqual([call.role for call in runner.calls], ["build"])  # no self check
         self.assertTrue(world.has(ONTO, "src/client.txt"))
         self.assertEqual(world.gh.get_issue(CLIENT)["state"], "closed")
@@ -442,8 +442,8 @@ class AdoptTests(unittest.TestCase):
 
 class PartBuilderTests(unittest.TestCase):
     def test_a_part_goes_to_the_medium_subscriptions_first_and_never_to_sonnet_at_hard(self):
-        pool = make_config(machine=("muse", "devin")).pool
-        claude, muse, devin = pool.get("claude-3"), pool.get("muse"), pool.get("devin")
+        pool = make_config(machine=("muse", "lite")).pool
+        claude, muse, lite = pool.get("claude-3"), pool.get("muse"), pool.get("lite")
 
         def who(providers, difficulty, part):
             seat, note = plan_mod.builder_seat(pool, providers, difficulty, part=part)
@@ -455,7 +455,7 @@ class PartBuilderTests(unittest.TestCase):
         self.assertEqual(who([claude], "hard", True), (("claude-3", "strong"), ""))
         self.assertEqual(who([claude, muse], "medium", False)[0], ("muse", "medium"))
         self.assertEqual(who([claude, muse], "medium", True), (("muse", "medium"), ""))
-        self.assertEqual(who([devin], "hard", True), (None, ""))  # never under PART_FLOOR
+        self.assertEqual(who([lite], "hard", True), (None, ""))  # never under PART_FLOOR
 
 
 class ReconcileTests(unittest.TestCase):
