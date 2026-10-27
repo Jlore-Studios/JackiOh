@@ -677,14 +677,22 @@ pub enum WouldDie {
 /// §4.5 step 1, before any card moves: the units the check collected would die, and a `wouldDie`
 /// replacement takes its controller's among them — one firing for all of them — and flickers them
 /// instead (Classic #14's Radiant face), or resolves its follow-up at once (`resolveFirst`, Stinkyscape
-/// #138, R1875006). Returns the cards that still die, or that the check must start over. R462: the
-/// check's own collection only; a Sacrifice is an effect's (§6.3) and is not offered.
-pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> WouldDie {
+/// #138, R1875006), once a check: `resolved_first` holds the cards that did so earlier in it (R460).
+/// Returns the cards that still die, or that the check must start over. R462: the check's own
+/// collection only; a Sacrifice is an effect's (§6.3) and is not offered.
+pub fn would_die_window(
+    sink: &mut EngineSink<'_>,
+    dying: &[CardInstance],
+    resolved_first: &mut Vec<String>,
+) -> WouldDie {
     let mut left: Vec<CardInstance> = dying.to_vec();
     if !left.iter().any(|card| in_unit_zone(sink.state, card)) {
         return WouldDie::Die(left);
     }
     for mut cand in candidates(sink.state, None) {
+        if resolved_first.contains(&cand.card.id) {
+            continue;
+        }
         let theirs: Vec<CardInstance> = left
             .iter()
             .filter(|card| in_unit_zone(sink.state, card) && card.controller == cand.controller)
@@ -709,6 +717,7 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Wo
         };
         let fired = fire(sink, &mut cand);
         if def.instead.resolve_first == Some(true) {
+            resolved_first.push(cand.card.id.clone());
             let record = ReplacementRecord {
                 event,
                 redirected_to: None,
