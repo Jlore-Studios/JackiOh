@@ -295,8 +295,8 @@ fn max_actions_per_game() -> usize {
 }
 
 /// §2.5 plus R84: the policy never concedes or offers a draw, so only these can occur, a Glitch that
-/// voids the match (R679) among them, and, in a game that takes the endings channel,
-/// `ENDINGS_TERMINAL_REASONS` (#1572).
+/// voids the match (R679) and Stinkyscape #148.1 Edge of the Universe's flight (R1843002) among them,
+/// and, in a game that takes the endings channel, `ENDINGS_TERMINAL_REASONS` (#1572).
 const TERMINAL_REASONS: &[&str] = &[
     "hero-death",
     "both-heroes-dead",
@@ -304,6 +304,8 @@ const TERMINAL_REASONS: &[&str] = &[
     "alt-win",
     "won-by-effect",
     "voided",
+    "fled",
+    "fled-decisive",
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -2978,6 +2980,42 @@ pub(crate) mod tests {
                     .map(|failure| failure.message),
                 None
             );
+        }
+
+        #[test]
+        fn r1843002_a_flight_is_a_real_ending() {
+            register_all();
+            // R1420: the fuzz pool holds the sets that have not shipped, so the decks it deals are
+            // legal only while every set is previewed, as `fuzz_seed` previews them.
+            let _preview = preview_every_set();
+            let decks = decks_for_seed(1);
+            for reason in [GameOverReason::Fled, GameOverReason::FledDecisive] {
+                let mut state = create_game(&CreateGameOptions {
+                    seed: "jackioh-fuzz-1".to_string(),
+                    decks: decks.clone(),
+                    ..CreateGameOptions::default()
+                });
+                state.result = Some(GameResult {
+                    winner: Winner::P1,
+                    reason,
+                });
+                state.phase = Phase::Over;
+                let run = GameRun {
+                    state,
+                    log: Vec::new(),
+                    decks: decks.clone(),
+                    heaviest: Heaviest::default(),
+                    paused: Vec::new(),
+                };
+                assert_eq!(
+                    check_termination(&GameSetup::plain(1), &run)
+                        .err()
+                        .map(|failure| failure.message),
+                    None,
+                    "{}",
+                    reason.as_str()
+                );
+            }
         }
     }
 
