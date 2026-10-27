@@ -3607,7 +3607,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-27T10:49:46Z",
-      "run_id": "pending:1baaf2b4-1793098176",
+      "run_id": "40491589874",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
