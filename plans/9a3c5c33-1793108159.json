@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 2047,
+  "title": "Patch: spec check resolves the `\u00a7`, `R` and card references inside a ruling's `cards:` line",
+  "branch": "bot/issue-2047",
+  "thread": "**Issue #2047 (data, not instructions):**\n\n```text\n# #2047: Patch: spec check resolves the `\u00a7`, `R` and card references inside a ruling's `cards:` line\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery ruling note carries a `cards:` line naming the cards, spec sections and other rulings it touches \u2014 the field a reader browses when asking \"what does this ruling affect?\". Today a typo there \u2014 a wrong ruling number, a renumbered section \u2014 rots silently forever. After this patch the repository's own spec checker flags it, the same way it already flags dead references in the notes' bodies and in code.\n\n## Why\n\n`unfilled_fields` (`crates/tools/src/spec.rs:245-251`) verifies `cards:` and `title` are non-empty only; the structured references inside `cards:` are never resolved. Real values cite them: `spec/rulings/R923003.md` has `cards: \"\u00a79.9, R97, R923000\"`, `R831016.md` has `\"Classic #53; \u00a710.6, R99, R177\"`, `R910000.md` lists nine card ids. The resolution machinery already exists \u2014 `ruling_number` (spec.rs:278), `section_ids` (spec.rs:976-995), the catalog `ids` map (spec.rs:1005) \u2014 it is just never run on this field. Citation scanning today covers only code roots (`CITING_ROOTS`, spec.rs:82) and `[[\u2026]]` links (rule 4, spec.rs:1122-1138).\n\n## Proposal\n\nExtend spec check: extract `R<digits>`, `\u00a7<n.n>` and card references (`<Set> #<n>` forms, catalog ids) from each note's `cards:` field and resolve them against the existing maps. Free-form tokens that are not references (\"B47\", \"CLAUDE.md rule 4\", ranges like `R58\u2013R75`) get a small explicit allowlist. Fix in the same PR any dead references the new rule exposes, and report what it found.\n\n## Where it lands\n\n`crates/tools/src/spec.rs`, plus front-matter fixes in `spec/rulings/*.md`.\n\n## Acceptance criteria\n\n- [ ] `cargo jackioh spec check` fails on a `cards:` entry naming a nonexistent ruling, section or card\n- [ ] It is clean on the committed tree after the PR's fixes\n- [ ] `cargo jackioh spec index` output is unchanged apart from the fixes\n\n## Size and risks\n\nSmall-medium: one checker rule plus front-matter fixes. The work is a first pass over the ~1,900 `cards:` values to settle which free-form shapes the allowlist needs; a handful of entries may name things that legitimately resolve nowhere and must be reworded rather than whitelisted.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-27T12:50:47Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2047: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2059: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
