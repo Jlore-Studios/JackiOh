@@ -16,6 +16,12 @@ eitherPlayer: boolean?,
 extraTurnCooldown: boolean?,
 }
 
+export type ActivationOfArgs = {
+instanceId: string?,
+target: TargetSpec?,
+ability: string?,
+}
+
 export type ActivationUses = number | "unlimited"
 
 export type AddCostRuleArgs = {
