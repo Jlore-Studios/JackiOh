@@ -4565,9 +4565,12 @@
     "2085": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T16:51:12Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2050,
       "kind": "revise",
       "last_findings": [],
