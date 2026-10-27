@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2124,
+  "title": "Patch: idempotency keys so a retried pack buy or opening never runs twice",
+  "branch": "bot/issue-2124",
+  "thread": "**Issue #2124 (data, not instructions):**\n\n```text\n# #2124: Patch: idempotency keys so a retried pack buy or opening never runs twice\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## The bug\n\nThe client gives up on a request after `API_REQUEST_TIMEOUT_SECONDS` (75). If the server finished a `POST /api/packs/buy` after that point, pressing Buy again buys a second pack and spends Jlore twice. The same can happen with `/api/packs/open`, `/api/cosmetic-packs/open`, `/api/tokens/redeem-card` and `/api/codes/redeem`.\n\n## What\n\n- **The header.** Each of those routes, and any other `POST` under `crates/server/src/economy/` that spends or grants, accepts an optional `Idempotency-Key` header holding a UUID. A request without one behaves as it does today, so an old client in a cached tab still works.\n- **On the server, under the account's lock:**\n  - a known (account, key) with the same route and body hash replays the stored status and body;\n  - a known key with a different route or body is refused with its own error code;\n  - an unknown key runs the request, and its answer is stored **in the same transaction** as the grant, so a crash can never leave one without the other.\n- **Retention.** Keys are kept for `IDEMPOTENCY_KEY_TTL_HOURS` = 24, a named constant in `crates/server/src/config.rs`. Expired rows are swept.\n- **The store.** Add a migration for the key table, its RLS (server only), the store's in-memory fake, a case in `tests/store/contract.rs`, and cases in the Docker suites (`crates/server/tests/sql`, `tests/db`). Read `crates/server/README.md` first.\n- **The client.** `net/api.ts` makes a key (`crypto.randomUUID()`) when the player presses Buy, Open, Redeem token or Redeem code, and reuses it for that press's retries, including \"Try again\" after a timeout. A new press gets a new key.\n- **Unchanged.** Deck saves (a client id plus `PUT`) and match actions (nonces, \u00a79.3) already work this way and stay as they are.\n- **Ruling.** Add a ruling note from this issue's block.\n\n## Done when\n\n- Rust tests check that:\n  - the same key sent twice makes one purchase and returns the same answer;\n  - the same key with a different body is refused;\n  - a request with no key behaves as today;\n  - the same key under two accounts makes two independent purchases.\n- vitest checks that a retry reuses its key and a new press makes a new one.\n- Gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `sh crates/server/tests/sql/run.sh`, `sh crates/server/tests/db/run.sh`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2124: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
