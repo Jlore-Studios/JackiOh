@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 2023,
+  "title": "Patch: the tests' must helper comes from the testkit, and the check keeps it so",
+  "branch": "bot/issue-2023",
+  "thread": "**Issue #2023 (data, not instructions):**\n\n```text\n# #2023: Patch: the tests' must helper comes from the testkit, and the check keeps it so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSixty-two test files each define their own copy of the same three-line helper. It says \"this card must be in the scenario\" and fails the test with a message if it is not. Once this is built there is one copy, next to the other shared test helpers, and the repository's own check refuses a new one. Players see nothing; the code sheds about two hundred lines, and new card tests stop copying the helper.\n\n## Why\n- `grep -rnE 'fn must(<T>)?\\(' crates | wc -l` gives 62:\n  - 26 in card scripts' test modules, for example `crates/cards/src/scripts/core/c032_prem_panther.rs:70`, `c034_collateral_damage.rs:67` and `c035_lunar_eclipse.rs:75`;\n  - 15 in `crates/cards/tests/cross`;\n  - 17 in `crates/engine/tests/rules`, one of them already `pub` in `fixtures/prompt_harness.rs:80`;\n  - 4 in `crates/server/tests`.\n- Each takes an `Option<T>` (or `Option<CardInstance>`) and a label and returns `T`. They differ only in the panic text (\"the scenario has no \u2026\", \"missing: \u2026\", \"expected \u2026\").\n- #1978 and #2011 moved `unit_at`, `pick`, the fixtures and the act/live runners into the shared kits. They added rows to `SHARED_TEST_HELPERS` (`crates/tools/tests/acceptance.rs:982-1022`) so that copies are refused. `must` is in no row.\n\n## Proposal\n- Add `pub fn must<T>(value: Option<T>, what: &str) -> T` to the engine's testkit, beside `unit_at` (`crates/engine/src/testkit/scenario.rs`). The card tests and the cross tests reach it through the `testkit` imports they already have.\n- Delete the copies under `KIT_READERS` (`crates/engine/tests`, `crates/cards`, `crates/luau/tests`, `crates/ai/tests`).\n  - That includes `prompt_harness.rs`'s copy, since two glob imports of one name clash.\n  - The one-argument variant (`crates/cards/tests/cross/my_pawn.rs:543`) gets the label, or a name of its own.\n- Add `\"must\"` to the `scenario.rs` row of `SHARED_TEST_HELPERS`.\n- The 4 server copies move too, or stay as they are (the server tests are not kit readers). The PR says which.\n- No call site changes.\n\n## Where it lands\n- `crates/engine/src/testkit/scenario.rs`\n- the test modules of 26 card scripts under `crates/cards/src/scripts/`\n- `crates/cards/tests/cross/`\n- `crates/engine/tests/rules/`\n- `crates/tools/tests/acceptance.rs`\n\n## Acceptance criteria\n- [ ] `grep -rnE 'fn must(<T>)?\\(' crates/engine/tests crates/cards crates/luau/tests crates/ai/tests` finds nothing, and the testkit holds the one definition.\n- [ ] The acceptance check refuses a `must` defined under a kit reader, as it does for the row's other names.\n- [ ] `cargo test \u2026 -- --list` gives the same tests before and after for the engine's rules (with `testkit`), `jackioh-cards`' lib and its `cards` test.\n- [ ] All of those pass, along with the tools' acceptance test, fmt and clippy.\n\n## Size and risks\nAbout 60 files, mechanical and test-only, apart from the testkit itself.\n\nRisks:\n- One small hunk in each of 26 card scripts, so it conflicts with any card PR open on one of them. It is a rebase, not a redesign.\n- Editing the testkit turns on every `rust (test \u2026)` group in CI.\n- `acceptance.rs`'s table is a shared hot spot, so build this one at a time with the next suggestion (the rules tests' bench), not in parallel.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-26T22:55:35Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-5",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-5",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2023: needs a plan; `claude-5` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-5` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
