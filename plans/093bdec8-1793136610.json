@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2120,
+  "title": "Patch: chat messages appear at once while they send",
+  "branch": "bot/issue-2120",
+  "thread": "**Issue #2120 (data, not instructions):**\n\n```text\n# #2120: Patch: chat messages appear at once while they send\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## What\n\nThis is the \"optimistic updates\" tip, applied to chat only. Today `together/ChatPanel.tsx` disables Send (`sending`) until `sendChat` (`net/social.ts`) answers, and the message appears only then.\n\n- **On Send** the message appears at once at the end of the list, marked as sending (`data-state=\"sending\"`, with a quiet \"Sending\u2026\"). The draft clears, and the player can keep typing and sending.\n- **When the answer comes**, the server's message replaces the pending one (`mergeMessages`). If a poll brings the message back before the send's answer does, it still shows only once.\n- **On failure** (refused or failed), the message is marked failed (`data-state=\"failed\"`) with the server's words, a Retry that sends the same body again, and a Discard.\n- **Order.** Messages still sending stay after every message the server already has, in the order they were sent.\n- **Nothing else becomes optimistic:**\n  - game actions wait for `viewFor` (CLAUDE.md rule 7);\n  - the shop and pack openings wait for the server on purpose (`Shop.tsx`'s header);\n  - deck saves are already local-first (`deckbuilder/sync.ts`).\n\n## Done when\n\nvitest checks that:\n- a sent message shows at once as sending and the draft clears;\n- the answer replaces it with no duplicate, even when a poll lands first;\n- a refusal shows failed with the server's words, and Retry sends the same body;\n- two quick sends keep their order.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2120: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
