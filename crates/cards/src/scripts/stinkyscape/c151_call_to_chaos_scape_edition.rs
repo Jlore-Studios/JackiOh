@@ -10,14 +10,81 @@
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_SCAPE_EFFECTS`,
-//! `subsystems/call_to_chaos_scape.rs`): the roll, the announcement both players read (R436), the
-//! chain cap counting casts of every edition (R28) and the order the Radiant's three resolve in (R423)
-//! are the one rule every edition shares. The face is passed explicitly, as C+ #73's file does.
+//! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_SCAPE_EFFECTS`):
+//! the roll, the announcement both players read (R436), the chain cap counting casts of every edition
+//! (R28) and the order the Radiant's three resolve in (R423) are the one rule every edition shares. The
+//! table is the card's, not the engine's, because its first entry lays one of the ten Anomaly boards,
+//! the cards crate's data (`t_anomaly_found::ALL_BOARDS`, S20); the other nine are the engine's builders
+//! (`subsystems/call_to_chaos_scape.rs`). The face is passed explicitly, as C+ #73's file does.
 
 use jackioh_engine::prelude::*;
 
+use super::t_anomaly_found::{ALL_BOARDS, replace_with_random};
+
 pub const ID: &str = "stinkyscape-151";
+
+/// 1. R1882005: "Trigger any Anomaly" — its caster's side replaced by one of all ten Anomaly boards,
+///    rich ones included, drawn from the match rng as the entry resolves, every laid Cry firing with
+///    its choices random, as Anomaly Found! does (R1855000, R1855001); no Anomaly Found! card is made.
+fn build_anomaly() -> Effect {
+    subsystems::scape_entry("anomaly", |ctx| replace_with_random(&mut *ctx.rng, &ALL_BOARDS))
+}
+
+/// §8.10 row 151's ten entries, in the order the card prints them. Each `label` is the clause as the
+/// card prints it, which `chaosRolled` names to both players (R436).
+pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
+    subsystems::ChaosEffectDef {
+        name: "anomaly",
+        label: "Replace your side of the field with a random Anomaly, any of the ten",
+        build: build_anomaly,
+    },
+    subsystems::ChaosEffectDef {
+        name: "corvettes",
+        label: "Summon 3 Drone Corvettes",
+        build: subsystems::scape_corvettes,
+    },
+    subsystems::ChaosEffectDef {
+        name: "battleship",
+        label: "Summon the Drone Battleship",
+        build: subsystems::scape_battleship,
+    },
+    subsystems::ChaosEffectDef {
+        name: "systems",
+        label: "Cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random",
+        build: subsystems::scape_systems,
+    },
+    subsystems::ChaosEffectDef {
+        name: "pieces",
+        label: "Add 4 random Starship Pieces to your hand, which cost (0)",
+        build: subsystems::scape_pieces,
+    },
+    subsystems::ChaosEffectDef {
+        name: "interceptors",
+        label: "Summon a Drone Interceptor into each of your unit zones, on top of any Unit there",
+        build: subsystems::scape_interceptors,
+    },
+    subsystems::ChaosEffectDef {
+        name: "launch",
+        label: "Fuse 4 random Starship Pieces into your Dormant Starship, then launch it",
+        build: subsystems::scape_launch,
+    },
+    subsystems::ChaosEffectDef {
+        name: "weapons",
+        label: "Add 2 random Radiant Weapons to your hand, which cost (0)",
+        build: subsystems::scape_weapons,
+    },
+    subsystems::ChaosEffectDef {
+        name: "market",
+        label: "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle",
+        build: subsystems::scape_market,
+    },
+    // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R452).
+    subsystems::ChaosEffectDef {
+        name: "recast",
+        label: "Cast a random Call to Chaos",
+        build: subsystems::cast_random_call_to_chaos,
+    },
+];
 
 pub fn script() -> CardScripts {
     // §8.10: "One random effect" of the ten.
@@ -25,7 +92,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| {
             vec![subsystems::call_to_chaos(subsystems::CallToChaosArgs {
                 radiant: Some(false),
-                table: Some(subsystems::CHAOS_SCAPE_EFFECTS),
+                table: Some(CHAOS_SCAPE_EFFECTS),
             })]
         })),
         ..Script::default()
@@ -36,7 +103,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| {
             vec![subsystems::call_to_chaos(subsystems::CallToChaosArgs {
                 radiant: Some(true),
-                table: Some(subsystems::CHAOS_SCAPE_EFFECTS),
+                table: Some(CHAOS_SCAPE_EFFECTS),
             })]
         })),
         ..Script::default()
@@ -73,10 +140,12 @@ mod tests {
     const SEED: &str = "chaos-scape";
     /// How many cursors the sweeps of the table walk.
     const SWEEP: u32 = 800;
+    /// The most games the board sweep plays before every board has been laid.
+    const ANOMALY_GAMES: u32 = 200;
 
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
         let mut rng = Rng::new(seed, cursor);
-        subsystems::roll_chaos_effects(&mut rng, radiant, Some(subsystems::CHAOS_SCAPE_EFFECTS))
+        subsystems::roll_chaos_effects(&mut rng, radiant, Some(CHAOS_SCAPE_EFFECTS))
             .iter()
             .map(|effect| effect.name)
             .collect()
@@ -87,7 +156,7 @@ mod tests {
     }
 
     fn label_of(name: &str) -> &'static str {
-        subsystems::CHAOS_SCAPE_EFFECTS
+        CHAOS_SCAPE_EFFECTS
             .iter()
             .find(|entry| entry.name == name)
             .map(|entry| entry.label)
@@ -171,14 +240,14 @@ mod tests {
         let def = crate::card_def(ID);
         for text in [def.base.text.to_lowercase(), def.radiant.text.to_lowercase()] {
             let mut from = 0;
-            for entry in subsystems::CHAOS_SCAPE_EFFECTS {
+            for entry in CHAOS_SCAPE_EFFECTS {
                 let label = entry.label.to_lowercase();
                 let at = text[from..].find(&label).map(|at| at + from);
                 assert!(at.is_some(), "{}", entry.label);
                 from = at.unwrap_or(from) + label.len();
             }
         }
-        assert_eq!(subsystems::CHAOS_SCAPE_EFFECTS.len(), 10);
+        assert_eq!(CHAOS_SCAPE_EFFECTS.len(), 10);
     }
 
     #[test]
@@ -187,7 +256,7 @@ mod tests {
         for cursor in 0..SWEEP {
             seen.extend(rolled_names(SEED, cursor, false));
         }
-        for entry in subsystems::CHAOS_SCAPE_EFFECTS {
+        for entry in CHAOS_SCAPE_EFFECTS {
             assert!(seen.contains(&entry.name), "{} never rolled", entry.name);
         }
     }
@@ -210,6 +279,80 @@ mod tests {
                 assert_eq!(rolled[0]["effects"], json!([label_of("corvettes")]));
             }
             s.expect_in_zone(ID, "graveyard");
+        }
+
+        /// The board a play laid: the one of the ten whose cards head the step's summons, in list order.
+        fn laid(s: &Scenario) -> &'static str {
+            let summons: Vec<(String, Row, i32)> = s
+                .last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Summoned { def_id, row, lane, .. } => Some((def_id.clone(), *row, *lane)),
+                    _ => None,
+                })
+                .collect();
+            let found: Vec<&'static str> = ALL_BOARDS
+                .iter()
+                .filter(|board| {
+                    let cards: Vec<(String, Row, i32)> = board
+                        .cards
+                        .iter()
+                        .map(|lay| (lay.def_id.to_string(), lay.row, lay.lane))
+                        .collect();
+                    summons.len() >= cards.len() && summons[..cards.len()] == cards[..]
+                })
+                .map(|board| board.code)
+                .collect();
+            assert_eq!(found.len(), 1, "one board was laid: {summons:?}");
+            found[0]
+        }
+
+        #[test]
+        fn r1882005_entry_anomaly_replaces_its_caster_s_side_and_no_other() {
+            let mut p1 = side(false, json!([]));
+            p1["field"] = json!([{ "def": MENACE, "lane": 1 }]);
+            let mut s = chaos(
+                "anomaly",
+                p1,
+                json!({ "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }] }),
+            );
+            let replaced = events_of(&s, "boardReplaced");
+            assert_eq!(replaced.len(), 1);
+            assert_eq!(replaced[0]["player"], json!("p1"));
+            s.expect_in_zone(MENACE, "exile");
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
+            // No Anomaly Found! card is made.
+            assert!(
+                !s.events()
+                    .iter()
+                    .any(|event| js(event)["defId"] == json!("stinkyscape-t-anomaly-found"))
+            );
+            laid(&s);
+        }
+
+        #[test]
+        fn r1882005_every_one_of_the_ten_boards_is_laid_over_the_seeds() {
+            let mut seen: Vec<&str> = Vec::new();
+            for n in 0..ANOMALY_GAMES {
+                if seen.len() == ALL_BOARDS.len() {
+                    break;
+                }
+                let seed = format!("{SEED}-anomaly-{n}");
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": side(false, json!([])),
+                    "p2": { "hand": [VANILLA], "library": filler(6) },
+                }));
+                s.state_mut().rng_cursor = cursor_in(&seed, "anomaly");
+                s.play(ID, json!({}));
+                let code = laid(&s);
+                if !seen.contains(&code) {
+                    seen.push(code);
+                }
+            }
+            for board in ALL_BOARDS {
+                assert!(seen.contains(&board.code), "{} never laid", board.code);
+            }
         }
 
         #[test]
@@ -409,7 +552,7 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(CORVETTE.to_string()));
             let added = added_to(&s, P1);
             assert_eq!(added.len() as i32, CHAOS_SCAPE_HAND_PIECES + CHAOS_SCAPE_WEAPONS);
-            let order: Vec<&str> = subsystems::CHAOS_SCAPE_EFFECTS.iter().map(|entry| entry.name).collect();
+            let order: Vec<&str> = CHAOS_SCAPE_EFFECTS.iter().map(|entry| entry.name).collect();
             for at in 0..SWEEP {
                 let names = rolled_names(SEED, at, true);
                 assert_eq!(names.len(), 3);
