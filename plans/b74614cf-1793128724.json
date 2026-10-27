@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 2106,
+  "title": "Patch: player-facing text in one voice, with no developer jargon",
+  "branch": "bot/issue-2106",
+  "thread": "**Issue #2106 (data, not instructions):**\n\n```text\n# #2106: Patch: player-facing text in one voice, with no developer jargon\nOpened by @MaxGoetzmann.\n\n### What it does\n\nSome of the client's text reads the way a developer thinks about a screen rather than how a player reads it, for example \"No card is 3 standard errors from 50% yet.\" and \"Your decks: 1 of 3 decks have won\". Write a short voice guide for player-facing text (warm, plain, short, consistent casing and punctuation, no developer jargon) and bring the client's text in line with it, translations included.\n\n### Acceptance\n\n- The client has a short voice guide.\n- Player-facing text follows it, and the worst offenders are rewritten.\n\n### Blocked by, part of\n\n_No response_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2106: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #2106\n\nEvery night-bot run on #2106, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-10-27 19:16 UTC \u00b7 plan #2106 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/40565908960) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 38%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T23:20:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 19:06 | stop | `claude-1` stops before it starts: 5-hour usage is 38%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T23:20:00Z |  |  |\n",
+  "housekeeping": [
+    "queued #2085: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2090 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1860, #1861, #1870, #1872, #1873, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first",
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
