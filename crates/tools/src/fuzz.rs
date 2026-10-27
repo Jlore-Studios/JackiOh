@@ -295,8 +295,9 @@ fn max_actions_per_game() -> usize {
 }
 
 /// §2.5 plus R84: the policy never concedes or offers a draw, so only these can occur, a Glitch that
-/// voids the match (R679) and Stinkyscape #148.1 Edge of the Universe's flight (R1843002) among them,
-/// and, in a game that takes the endings channel, `ENDINGS_TERMINAL_REASONS` (#1572).
+/// voids the match (R679), the Brains' votes (R1843001) and Stinkyscape #148.1 Edge of the
+/// Universe's flight (R1843002) among them, and, in a game that takes the endings channel,
+/// `ENDINGS_TERMINAL_REASONS` (#1572).
 const TERMINAL_REASONS: &[&str] = &[
     "hero-death",
     "both-heroes-dead",
@@ -304,6 +305,8 @@ const TERMINAL_REASONS: &[&str] = &[
     "alt-win",
     "won-by-effect",
     "voided",
+    "voted-out",
+    "both-voted-out",
     "fled",
     "fled-decisive",
 ];
@@ -4423,6 +4426,42 @@ pub(crate) mod tests {
                         .err()
                         .map(|failure| failure.message),
                     None
+                );
+            }
+        }
+
+        /// R1843001: the Brains (Stinkyscape #18) vote by their own start-of-turn hooks, so a policy
+        /// game reaches both vote endings with no channel.
+        #[test]
+        fn a_game_without_the_channel_may_end_by_a_vote() {
+            register_all();
+            let _preview = preview_every_set();
+            let decks = decks_for_seed(1);
+            for reason in [GameOverReason::VotedOut, GameOverReason::BothVotedOut] {
+                let mut state = create_game(&CreateGameOptions {
+                    seed: "jackioh-fuzz-1".to_string(),
+                    decks: decks.clone(),
+                    ..CreateGameOptions::default()
+                });
+                state.result = Some(GameResult {
+                    winner: Winner::Draw,
+                    reason,
+                });
+                state.phase = Phase::Over;
+                let run = GameRun {
+                    state,
+                    log: Vec::new(),
+                    decks: decks.clone(),
+                    heaviest: Heaviest::default(),
+                    paused: Vec::new(),
+                };
+                assert_eq!(
+                    check_termination(&GameSetup::plain(1), &run)
+                        .err()
+                        .map(|failure| failure.message),
+                    None,
+                    "{}",
+                    reason.as_str()
                 );
             }
         }
