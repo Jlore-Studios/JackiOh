@@ -1041,18 +1041,23 @@ BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "agy"
 
 
 PING_PROMPT = "Reply with the word ok."
+#: The ping's whole system prompt. With it, and no tools, skills or commands, the call is a few
+#: hundred tokens of input rather than the CLI's default ~18,000.
+PING_SYSTEM = "Answer in one word."
 PING_TIMEOUT_S = 180
 
 
-def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run,
-               token: str = "", effort: str = "") -> dict | None:
-    """The Claude subscription's usage now, read off the smallest call there is: one turn of
-    `model` (at `effort`, when one is named) in an empty directory, signed in with `token` (else
-    this process's own). None when the CLI gave no reading."""
+def ping(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run,
+         token: str = "", effort: str = "") -> tuple[dict | None, dict | None]:
+    """`(result line, usage reading)` of the smallest call there is: one turn of `model` (at
+    `effort`, when one is named) in an empty directory, with no tools, skills, commands, MCP
+    servers or saved session and a one-line system prompt, signed in with `token` (else this
+    process's own). `(None, None)` when the CLI could not run."""
     import tempfile
 
     argv = [claude_bin, "--print", "--output-format", "stream-json", "--verbose",
-            "--model", model, "--max-turns", "1", "--strict-mcp-config"]
+            "--model", model, "--max-turns", "1", "--strict-mcp-config", "--tools", "",
+            "--disable-slash-commands", "--no-session-persistence", "--system-prompt", PING_SYSTEM]
     if effort:
         argv += ["--effort", effort]
     env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
@@ -1068,9 +1073,15 @@ def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess
             proc = run(argv, cwd=empty, env=env, input=PING_PROMPT, capture_output=True,
                        text=True, encoding="utf-8", errors="replace", timeout=PING_TIMEOUT_S)
         except (OSError, subprocess.TimeoutExpired):
-            return None
-    _, usage = parse_stream((proc.stdout or "").splitlines())
-    return usage
+            return None, None
+    return parse_stream((proc.stdout or "").splitlines())
+
+
+def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run,
+               token: str = "", effort: str = "") -> dict | None:
+    """The Claude subscription's usage now, read off `ping`. None when the CLI gave no
+    reading."""
+    return ping(claude_bin, model, run, token, effort)[1]
 
 
 def _exhausted_reset(usage: dict[str, Any] | None) -> str | None:

@@ -1,10 +1,15 @@
 // `/almanac`: the public Card Almanac (R630). Every card in the catalog, tokens included, to browse
 // without signing in: the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) with nothing
-// that edits a deck, no collection and no ownership. Public like the Patch notes page: the catalog
-// is public (§5.1) and ships in the bundle, so the page reads `@jackioh/cards/catalog.json`, as the
-// landing's fan does, and asks no server and no account anything for the catalog. The card detail's
-// statistics block (R654) reads the public card aggregates, like the deck builder's. `?card=<id>`
-// opens one card's detail, and the URL names the detail that is open.
+// that edits a deck. Public like the Patch notes page: the catalog is public (§5.1) and ships in the
+// bundle, so the page reads `@jackioh/cards/catalog.json`, as the landing's fan does, and asks no
+// server and no account anything for the catalog. The card detail's statistics block (R654) reads
+// the public card aggregates, like the deck builder's. `?card=<id>` opens one card's detail, and the
+// URL names the detail that is open.
+//
+// R1956000: signed in to an active account, the page also reads the account, its collection and the
+// session's cosmetics ledger (almanacOwnership.ts), and a card the viewer owns is drawn as their own
+// copy, wearing their picks behind that ledger. Signed out it reads none of them, and every card is
+// drawn as before.
 //
 // The page decides nothing (CLAUDE.md rule 7): what the filter and the sort keep is filters.ts's,
 // the faces and the detail view are the cards module's. It wears the deck builder's look
@@ -29,7 +34,9 @@ import {
 } from "../game/deckbuilder/filters.ts";
 import { useCardWinRates } from "../game/deckbuilder/useCardWinRates.ts";
 import { useLocale, t } from "../i18n/i18n.ts";
+import { useAccount } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -73,6 +80,9 @@ export default function AlmanacRoute(): ReactElement {
     return linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
   });
   const winRates = useCardWinRates(sort.key);
+  // R1956000: an active account's own cards, as the gated screens' ownership has them (main.tsx).
+  const account = useAccount();
+  const own = useAlmanacOwnCopies(account.kind === "ready" && account.me.profile.status === "active" ? account.token : null);
 
   const pool = useMemo(
     () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates.rates ?? undefined),
@@ -109,6 +119,7 @@ export default function AlmanacRoute(): ReactElement {
             ownedControl={false}
             tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}
+            own={own ?? undefined}
             detail={
               detailCardId === null || detailDef === undefined
                 ? null

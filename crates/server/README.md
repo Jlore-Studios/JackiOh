@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
-| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), each spent slot adding its rolled rarity's points to both, its `slot_points` (R1953000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
+| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -179,7 +179,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001). The activation grants the starter cards (R111) and pays the newest set's track its first level (R1310000) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
-| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters and their thresholds, one roll's odds of a slot, of the floored slot and of a duplicate's cosmetic, the fallback included (R1339000), and of a duplicate's global roll, `odds.globalCosmetic` (its `chance` and its `tiers` floored at Epic, R1661001), and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it, the packs left and `bars`, each token bar's points `before` and `after`, `size` and `pays` with the cosmetic cycle's steps it paid (`cosmeticPaid`, R1305000, R1305001) and the points each slot added to each bar (`slotPoints`, 0 for one not spent, R1953000) (R1301001–R1301003, R1339000–R1339002, R1661001) |
+| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters and their thresholds, one roll's odds of a slot, of the floored slot and of a duplicate's cosmetic, the fallback included (R1339000), and of a duplicate's global roll, `odds.globalCosmetic` (its `chance` and its `tiers` floored at Epic, R1661001), and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it, the packs left and `bars`, each token bar's points `before` and `after`, `size` and `pays` with the cosmetic cycle's steps it paid (`cosmeticPaid`, R1305000, R1305001) and the points each slot added to each bar (`slotPoints`, every slot's its rolled rarity's, R1953000, R1999000) (R1301001–R1301003, R1339000–R1339002, R1661001) |
 | `GET` | `/api/tokens` | active | both token bars' points and sizes, the cosmetic cycle's next step and the tokens held (§14.5; R1305000, R1305001, R1305004) |
 | `POST` | `/api/tokens/redeem-card` | active | `{ cardId }`: a card token unlocks one chosen unowned card of a set that ships, 409 for a choice it cannot pay for, answering the tokens after it (R1305002) |
 | `POST` | `/api/tokens/redeem-cosmetic` | active | `{ token, cosmeticId, cardId? }`: a Rare or Epic token buys one cosmetic at its tier or below, 409 for a choice it cannot pay for, answering the tokens after it (R1305003) |
@@ -203,15 +203,16 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
-| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
-| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672); 409 `update_required` for a match played on another catalog version (R1638000) |
+| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
+| `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) |
@@ -374,7 +375,7 @@ Once the match is over, a watcher that has been sent the view with the result is
 match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
 with `MATCH_VOIDED_CLOSE_CODE`.
 
-## Card statistics (§9.11, R376–R378, R1044000, R1044001)
+## Card statistics (§9.11, R376–R378, R1044000, R1044001, R1994000)
 
 ```
 target/release/jackioh-server stats-cards                                   # live games of every mode and patch, their human seats
@@ -404,7 +405,11 @@ checks, then one transaction folds every record into the totals and writes no ro
 and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
-learn lane and the gather workflow keep as their runs' artifacts. A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
+learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
+whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
+Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
+outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill
+(R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
 
@@ -554,19 +559,19 @@ series still makes its picks.
   holding decks and for Conquest a trio dealt for this catalog, the closest in rating; for a
   player rated above every bot, only a grinder within `MAX_FAIR_GAP`, R1555000). The queue's sweep
   (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
-  single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
-  the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
+  single-shot like a pair's claim) and starts the match, ranked, seated by the match seed's coin
+  (`seat_coin_p1_first`, R1989000) like a pair, not the person always p1 (R1453); a start that fails lets both go. A Conquest ticket and its
   bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
   `tickets_claim_for_bot_series`, which puts the bot in no match, then `start_series`): between
   games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
   it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
-  so it reads what an earlier claim committed). The person is series p1; the series is ranked and
+  so it reads what an earlier claim committed). The series' p1 is the coin's (R1989000), not always the person; the series is ranked and
   rated once as it ends, the bot's side as the bot it is (`plan_series_rating`). While the top bots
   grind (R1555000), a sweep that finds no ticket open at all then kicks off a ranked Best-of-1 match
   between two bots (`kick_off_bot_match`): the pair is `choose_bot_pair`'s (the lowest-rated ready
   grinder and the ready bot closest to it, not one of its recent opponents), at most
   `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
-  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), the grinder p1, and
+  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), seated by the same coin (R1989000), and
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
   whose actor is not in memory, which no socket would come back to rebuild after a restart.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
@@ -913,6 +918,20 @@ each deck of `frozen_trio` freeze a deck's three slots with it, as the portrait 
 every reader takes as all defaults (R1834002); and `bots.cosmetics` a ladder bot's wardrobe and
 picks, never in the ledger (R1834005). Its checks pin a slug of at most 40 characters and the jsonb
 shapes; what an id names is the server's to check, against `cosmetics.json` (R1834001).
+
+Migration 0062 indexes the three reads of a recent window of a table nothing purges (#1996), and
+only adds indexes: `tickets (claimed_at) where status = 'claimed'` for `tickets_recent_waits` and
+`results (ended_at)` for `results_count_since`, the queue readout's two counts (R640002), and
+`matches (ended_at) where status = 'over'` for `game_records_unfiled`, the refile sweep's
+(R1596000). `tests/sql/01_schema_invariants.sql` CHECK 20 plans each query with sequential scans
+off, and fails when one reads its table whole or does not use its index.
+
+Migration 0063 adds `game_totals` (R1994000) and only adds objects: one row per `record_totals` key,
+its `total` the engine's `GameTotal` as JSON (games, draws, first-seat wins, games per ending and per
+turn count, R1256000's sums with the count of records that carry them), written whole by
+`stats_totals_add` under 0041's advisory locks. Its checks pin the source, mode and pilots as
+`record_totals`' do, and a total of at least one game. RLS is on with no policy and no grant, as the
+other totals: the server alone reads it.
 
 ## Tests
 

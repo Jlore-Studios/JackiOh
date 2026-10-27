@@ -377,6 +377,55 @@ describe("R1655000 the board's cards and the picks of each card", () => {
   });
 });
 
+describe("R1956001 the board's Created cards and their generator's picks", () => {
+  /** The card that generated the Created card, and the Created card. */
+  const GENERATOR = "core-004";
+  const CREATED = "core-002";
+  const [, GENERATOR_BORDER, CREATED_BORDER] = cosmeticsOf("border")
+    .filter((cosmetic) => !cosmetic.default)
+    .map((cosmetic) => cosmetic.id);
+
+  /** The viewer's Created card in hand and on the field, and the opponent's copy of it. */
+  function createdView(): PlayerView {
+    resetIds();
+    const made = { defId: CREATED, created: true, createdBy: GENERATOR } as const;
+    return baseView({
+      you: emptySide("p1", { hand: [card(made)], units: [unit("p1", made), null, null, null, null] }),
+      opponent: emptySide("p2", { hand: { count: 3 }, units: [unit("p2", made), null, null, null, null] }),
+    });
+  }
+
+  it("R1956001 the viewer's Created card wears its generator's picks; the opponent's copy and a board that wears none draw the defaults", () => {
+    if (GENERATOR_BORDER === undefined || CREATED_BORDER === undefined) throw new Error("too few borders");
+    writeCardPick(GENERATOR, "border", GENERATOR_BORDER);
+    // The Created card's own picks give way to its generator's.
+    writeCardPick(CREATED, "border", CREATED_BORDER);
+    render(<Board view={createdView()} wearCosmetics />);
+
+    const hand = screen.getByTestId("hand-you").querySelector<HTMLElement>(`.card[data-def-id="${CREATED}"] > .cf`);
+    expect(hand?.getAttribute("data-frame")).toBe(GENERATOR_BORDER);
+    const yours = facesOwnedBy("p1");
+    expect(yours).toHaveLength(1);
+    expect(yours[0]?.getAttribute("data-frame")).toBe(GENERATOR_BORDER);
+    const theirs = facesOwnedBy("p2");
+    expect(theirs).toHaveLength(1);
+    expect(theirs[0]?.getAttribute("data-frame")).toBeNull();
+
+    // A board that wears none draws the defaults.
+    cleanup();
+    render(<Board view={createdView()} />);
+    expect(document.querySelectorAll(".cf[data-frame]")).toHaveLength(0);
+
+    // R1834004: a replayed or watched board dresses each seat in its loadout, which reaches a Created
+    // card by its own card's entry alone, never its generator's.
+    cleanup();
+    const generators: SeatLoadout = { seat: { ...DEFAULT_CARD_COSMETICS }, cards: { [GENERATOR]: { border: GENERATOR_BORDER } } };
+    render(<Board view={createdView()} loadouts={{ p1: generators, p2: generators }} />);
+    expect(facesOwnedBy("p1")).toHaveLength(1);
+    expect(document.querySelectorAll(".cf[data-frame]")).toHaveLength(0);
+  });
+});
+
 describe("R1834004 the other seat wears its frozen loadout", () => {
   /** The registry's second and third entries of `kind` that are not its default (`item` is the first). */
   function others(kind: CosmeticKind): [CosmeticId, CosmeticId] {

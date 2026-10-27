@@ -50,8 +50,8 @@ use jackioh_ai::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
-    GameResult, GameState, PerPlayer, PlayerId, RecordBuild, Rng, Winner, begin_game, create_game, fold,
-    hash_state, legal_actions, reduce, seat_to_act, subsystems, summarize_game,
+    GameResult, GameState, PerPlayer, PlayerId, RecordBuild, Rng, STATS_INTERVAL_Z, Winner, begin_game,
+    create_game, fold, hash_state, legal_actions, reduce, seat_to_act, subsystems, summarize_game,
 };
 use rayon::prelude::*;
 use serde::Serialize;
@@ -120,12 +120,6 @@ pub(crate) fn watch_unsettled<T: Send + 'static>(work: impl FnOnce() -> T + Send
 pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
 
 const DUEL_PERCENTILE: f64 = 0.95;
-
-/// The normal quantile of a two-sided 95% interval, for the tally's Wilson interval.
-pub(crate) const WILSON_Z: f64 = 1.96;
-
-/// The tally's shares are rounded to this many parts of one (three decimals).
-const SHARE_PRECISION: f64 = 1000.0;
 
 /// R850001: the fewest games a screen on a seed set plays, and what it plays when `--games` names
 /// none: 200 deals, each played twice.
@@ -1187,20 +1181,11 @@ pub(crate) struct Paired {
     pub edge_high: f64,
 }
 
-/// The 95% Wilson score interval of `wins` in `games`: the range a true win rate can sit in and still
-/// give this result. It stays inside [0, 1] and is sound at 0 or every win, where the normal
-/// approximation is not. No games is no information: [0, 1].
+/// The 95% Wilson score interval of `wins` in `games`, the engine's (R1994000), which the game
+/// figures read too.
 pub(crate) fn wilson_interval(wins: usize, games: usize) -> (f64, f64) {
-    if games == 0 {
-        return (0.0, 1.0);
-    }
-    let n = games as f64;
-    let p = wins as f64 / n;
-    let z2 = WILSON_Z * WILSON_Z;
-    let denominator = 1.0 + z2 / n;
-    let centre = (p + z2 / (2.0 * n)) / denominator;
-    let half = WILSON_Z * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt() / denominator;
-    ((centre - half).max(0.0), (centre + half).min(1.0))
+    let count = |n: usize| i64::try_from(n).unwrap_or(i64::MAX);
+    jackioh_engine::wire::stats::wilson_interval(count(wins), count(games))
 }
 
 /// R850000: each deal's edge for the agent whose seat each game names, over games given as (result,
@@ -1223,7 +1208,7 @@ pub(crate) fn deal_edges(games: &[(Option<GameResult>, PlayerId)]) -> Vec<f64> {
         .collect()
 }
 
-/// R850000: the mean of the deals' edges and its 95% interval, the mean plus or minus `WILSON_Z`
+/// R850000: the mean of the deals' edges and its 95% interval, the mean plus or minus `STATS_INTERVAL_Z`
 /// standard errors (the sample deviation over the root of the deals), inside [−1, 1]. Fewer than two
 /// deals have no spread to read, so their interval is all of [−1, 1].
 pub(crate) fn paired_interval(edges: &[f64]) -> (f64, f64, f64) {
@@ -1236,13 +1221,12 @@ pub(crate) fn paired_interval(edges: &[f64]) -> (f64, f64, f64) {
         return (mean, -1.0, 1.0);
     }
     let variance = edges.iter().map(|edge| (edge - mean).powi(2)).sum::<f64>() / (n - 1.0);
-    let half = WILSON_Z * (variance / n).sqrt();
+    let half = STATS_INTERVAL_Z * (variance / n).sqrt();
     (mean, (mean - half).max(-1.0), (mean + half).min(1.0))
 }
 
-pub(crate) fn round_share(share: f64) -> f64 {
-    (share * SHARE_PRECISION).round() / SHARE_PRECISION
-}
+/// A tally's shares to three places, as the game figures round theirs (R1994000).
+pub(crate) use jackioh_engine::wire::stats::round_share;
 
 pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome], paired: bool) -> Tally {
     let games = outcomes.len();

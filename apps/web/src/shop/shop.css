@@ -151,9 +151,10 @@
 }
 
 /* R1953000: while a cosmetic pack's token bars are pinned at the top (economy/OpeningBars.tsx), the
-   page starts below them, as the card pack's scene does (packs.css). */
+   page starts below them, as the card pack's scene does (packs.css), by the room economy.css sets
+   aside for them (#1999: less on a phone). */
 .tavern.app-shell.shop-screen:has(.cosmetic-packs-panel .opening-hud) {
-  padding-top: 10rem;
+  padding-top: var(--opening-hud-clearance, 10rem);
 }
 
 .tavern.app-shell.shop-screen .panel--auth {
@@ -161,12 +162,15 @@
   min-height: 0;
 }
 
+/* #1999: it scrolls up and down only: a full Chase Shard bar's burst, which rides past the bar's
+   right end, is clipped at its edge rather than scrolling it sideways on a phone. */
 .tavern.app-shell .shop-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
   flex: 0 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

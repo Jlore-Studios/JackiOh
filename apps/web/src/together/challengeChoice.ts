@@ -6,8 +6,12 @@
 //
 // CLAUDE.md rule 7: a pick is only what the player chose; whether a deck may be played is the
 // server's, at the room.
+//
+// R2031000: All Random's "More cards from" pick is not kept here but in the device's online pick
+// (`readPlayLean`, `game/LeanNewest.tsx`), the lobby's and the rematch's.
 
 import { DECK_SIZE } from "@jackioh/engine/config";
+import type { LeanPick } from "@jackioh/shared";
 
 import type { ModeChoice, QueueMode, SavedDeck, SavedTrio } from "../net/api.ts";
 
@@ -35,11 +39,19 @@ export function pickTrio(trios: readonly SavedTrio[], id: string | null): SavedT
   return trios.find((trio) => trio.id === id) ?? firstTrio(trios);
 }
 
-/** What a room is made with for `mode`, or null while its pick is missing (`choiceFor` in `routes/play.tsx`). */
-export function choiceOf(mode: QueueMode, deckId: string | null, trioId: string | null): ModeChoice | null {
+/**
+ * What a room is made with for `mode`, or null while its pick is missing (`choiceFor` in `routes/play.tsx`).
+ * R2031000: All Random carries `lean` as `leanSet` when there is one (R924000).
+ */
+export function choiceOf(
+  mode: QueueMode,
+  deckId: string | null,
+  trioId: string | null,
+  lean: LeanPick | null = null,
+): ModeChoice | null {
   switch (mode) {
     case "random":
-      return { mode: "random" };
+      return lean === null ? { mode: "random" } : { mode: "random", leanSet: lean };
     case "bo1":
       return deckId === null ? null : { mode: "bo1", deckId };
     case "bo3":

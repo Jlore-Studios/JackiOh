@@ -3,8 +3,6 @@
 //! beneath a card until it leaves, a beneficial Spell cast for yourself instead, and Radiant on reaching
 //! N keywords. Crater on a Field Spell (R1850006) is in `crater.rs`, with the rest of Crater.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce};
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
@@ -16,23 +14,7 @@ use super::fixtures::card_on_card::{
     register_card_on_card, rod, rod_field, sack, sacker, tag_exiler, ticket, token, wormhole,
 };
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
-
-/// Every action this file sends gets a fresh nonce.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `reduce` with a fresh nonce, refused actions panicking with their reason.
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("coc{nonce}"));
-    let action: Action = json_as(action);
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
+use super::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, new_game, put, slot};
 
 /// p1's first main phase, both mulligans kept, ten mana a side and #1850's cards registered.
 fn playing(seed: &str) -> GameState {
@@ -44,7 +26,7 @@ fn playing(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         )
@@ -77,7 +59,7 @@ fn play(state: &GameState, player: PlayerId, def_id: &str, radiant: bool, extra:
             body.insert(key.clone(), value.clone());
         }
     }
-    act(&state, body)
+    act_ok(&state, body)
 }
 
 /// A play's zone and its one target, as the action carries them.
@@ -90,7 +72,7 @@ fn at(row: &str, lane: i32, target: &str) -> Value {
 
 /// End the active player's turn.
 fn pass(state: &GameState) -> ReduceResult {
-    act(state, json!({ "type": "endTurn", "playerId": state.active }))
+    act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }
 
 /// Apply one effect as `self_id`'s (none: no card) for `controller`, then settle, as a resolving
@@ -208,7 +190,7 @@ mod r1850000_copy_a_units_text {
         assert_eq!(state.players.p2.hero.health, before - 2 * LEGEND_PING);
         // The copied Activate is the copier's to use.
         let before = state.players.p2.hero.health;
-        let state = act(
+        let state = act_ok(
             &state,
             json!({ "type": "activate", "instanceId": me.id, "ability": "ping", "playerId": "p1" }),
         )
@@ -1096,7 +1078,7 @@ mod r1850004_cast_for_yourself {
             })),
         );
         assert!(refused.error.is_some());
-        let answered = act(
+        let answered = act_ok(
             &played.state,
             json!({
                 "type": "answer",
@@ -1148,7 +1130,7 @@ mod r1850004_cast_for_yourself {
         let theirs = put(&mut state, &dear().id, slot(P2, Row::Units, 1), json!({}));
         let played = boost_on(&state, &mine.id);
         let pending = played.state.pending.clone().expect("the cast's target prompt");
-        let answered = act(
+        let answered = act_ok(
             &played.state,
             json!({
                 "type": "answer",

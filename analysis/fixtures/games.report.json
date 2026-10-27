@@ -27,7 +27,11 @@
         "match-ceiling": 0,
         "voided": 0,
         "alt-win": 0,
-        "won-by-effect": 0
+        "won-by-effect": 0,
+        "voted-out": 0,
+        "both-voted-out": 0,
+        "fled": 0,
+        "fled-decisive": 0
       },
       "turnQuartiles": [
         12,
@@ -66,7 +70,11 @@
         "match-ceiling": 0,
         "voided": 0,
         "alt-win": 0,
-        "won-by-effect": 0
+        "won-by-effect": 0,
+        "voted-out": 0,
+        "both-voted-out": 0,
+        "fled": 0,
+        "fled-decisive": 0
       },
       "turnQuartiles": [
         10,
@@ -105,7 +113,11 @@
         "match-ceiling": 0,
         "voided": 0,
         "alt-win": 0,
-        "won-by-effect": 0
+        "won-by-effect": 0,
+        "voted-out": 0,
+        "both-voted-out": 0,
+        "fled": 0,
+        "fled-decisive": 0
       },
       "turnQuartiles": [
         10,
@@ -144,7 +156,11 @@
         "match-ceiling": 0,
         "voided": 0,
         "alt-win": 0,
-        "won-by-effect": 0
+        "won-by-effect": 0,
+        "voted-out": 0,
+        "both-voted-out": 0,
+        "fled": 0,
+        "fled-decisive": 0
       },
       "turnQuartiles": [
         13,
@@ -183,7 +199,11 @@
         "match-ceiling": 0,
         "voided": 0,
         "alt-win": 0,
-        "won-by-effect": 0
+        "won-by-effect": 0,
+        "voted-out": 0,
+        "both-voted-out": 0,
+        "fled": 0,
+        "fled-decisive": 0
       },
       "turnQuartiles": [
         13,

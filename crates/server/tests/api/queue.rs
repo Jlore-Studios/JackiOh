@@ -22,6 +22,8 @@
 //!    further apart than that never pair.
 //!  - **R640002**: the queue readout is each mode's expected wait and the last hour's games, every
 //!    number counted; no read answers a count of open tickets.
+//!  - **R1996000**: the readout is counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS`; a
+//!    readout inside it reaches no store.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, so `enqueuedAt` and the widening
 //! window are set by this file rather than by the host clock (`app::now_ms()` reads tokio's clock).
@@ -51,14 +53,16 @@ use jackioh_engine::{
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
-use jackioh_server::api::queue::{e2e_seed_count, expected_wait_seconds, try_pair};
+use jackioh_server::api::queue::{
+    e2e_seat_count, e2e_seed_count, expected_wait_seconds, seat_coin_p1_first, try_pair,
+};
 use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, RATING_WINDOW_FULL_AFTER_SECONDS,
-    RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
-    STARTER_CARDS, rating_window,
+    QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
+    RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY,
+    RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS, STARTER_CARDS, rating_window,
 };
 use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::fake::{
@@ -82,7 +86,8 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
 
 /// R143's seeds are held in `queue.rs`'s process-wide map, which every test of this binary shares.
 /// The tests that send a seed, or count the map, take this, so `e2e_seed_count()` sees only their own.
-static SEED_MAP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+/// R1989000's bot-door tests send seeds too, from `api::bots`, so the lock is shared with them.
+pub(crate) static SEED_MAP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// `{ status, body }` of one request.
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
@@ -110,12 +115,13 @@ fn deck_size() -> usize {
     usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size")
 }
 
-/// The catalog's playable ids (no tokens), in catalog order.
+/// The catalog's playable ids (no tokens, and no set that has not shipped, which the server does not
+/// know of: R1420), in catalog order.
 fn pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .values()
-        .filter(|def| !def.token)
+        .filter(|def| !def.token && jackioh_engine::set_ships(def.set))
         .map(|def| def.id.clone())
         .collect()
 }
@@ -336,12 +342,17 @@ fn trio_named(owner: &str) -> Value {
     json!({ "name": format!("{owner}'s trio"), "decks": [deck(1), deck(2), deck(3)] })
 }
 
-/// The two profile ids of every match the sweeps created, in seat order.
+/// The two profile ids of every match the sweeps created, each pair sorted: R166's tests pair by
+/// age and window, and R1989000's coin seats the pair, so seat order is the coin's to decide.
 async fn paired_profiles(app: &App) -> Vec<Value> {
     matches_table(app)
         .await
         .iter()
-        .map(|row| row["players"].clone())
+        .map(|row| {
+            let mut players: Vec<Value> = row["players"].as_array().cloned().unwrap_or_default();
+            players.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+            Value::Array(players)
+        })
         .collect()
 }
 
@@ -513,7 +524,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
         // PREMISE: exactly one pair was made.
         assert_eq!(made, 1);
-        assert_eq!(paired_profiles(&app).await, vec![json!(["oldest", "mid"])]);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["mid", "oldest"])]);
 
         // The closer-rated newcomer still waits: a closest-rating matcher would have left `mid`.
         let still_waiting = ticket(&app, "t-near").await;
@@ -550,7 +561,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         assert_eq!(made, 2);
         assert_eq!(
             paired_profiles(&app).await,
-            vec![json!(["first", "second"]), json!(["third", "fourth"])]
+            vec![json!(["first", "second"]), json!(["fourth", "third"])]
         );
         assert_eq!(open_count(&app).await, 0);
     }
@@ -586,7 +597,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         assert_eq!(open, vec![json!("t-oldest"), json!("t-zebra"), json!("t-alpha")]);
 
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-        assert_eq!(paired_profiles(&app).await, vec![json!(["oldest", "alpha"])]);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["alpha", "oldest"])]);
         assert_eq!(ticket(&app, "t-zebra").await["status"], "open");
     }
 
@@ -628,7 +639,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         app.queue_presence.touch("low", now_ms());
         app.queue_presence.touch("high", now_ms());
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-        assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["high", "low"])]);
     }
 }
 
@@ -1268,9 +1279,22 @@ mod r257_queue_modes {
             .as_array()
             .map(|sides| sides.iter().map(|side| side["profileId"].clone()).collect())
             .unwrap_or_default();
-        assert_eq!(sides, vec![json!("older"), json!("younger")]);
-        assert_eq!(series["sides"][0]["trio"], frozen["trio"]);
-        assert_eq!(series["sides"][1]["trio"]["name"], "younger's trio");
+        // R1989000: sides index 0 is the coin winner on the seed base, not the older ticket;
+        // each side carries its own profile's trio.
+        let older_is_p1 = seat_coin_p1_first("series-seed");
+        let (first, second) = if older_is_p1 {
+            ("older", "younger")
+        } else {
+            ("younger", "older")
+        };
+        assert_eq!(sides, vec![json!(first), json!(second)]);
+        if older_is_p1 {
+            assert_eq!(series["sides"][0]["trio"], frozen["trio"]);
+            assert_eq!(series["sides"][1]["trio"]["name"], "younger's trio");
+        } else {
+            assert_eq!(series["sides"][0]["trio"]["name"], "younger's trio");
+            assert_eq!(series["sides"][1]["trio"], frozen["trio"]);
+        }
         // R263: game 1's match id is the one the claim reserved on both tickets.
         assert_eq!(
             series["nextMatchId"],
@@ -1345,7 +1369,7 @@ mod r640001_the_window_stops_at_max_fair_gap {
             (1000 + MAX_FAIR_GAP, RATING_WINDOW_FULL_AFTER_SECONDS * 1000),
         );
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-        assert_eq!(paired_profiles(&app).await, vec![json!(["low", "edge"])]);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["edge", "low"])]);
         assert_eq!(ticket(&app, "t-far").await["status"], "open");
     }
 }
@@ -1460,6 +1484,52 @@ mod r640002_the_queue_readout {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r1996000_readouts_inside_the_ttl_share_one_count_and_the_next_one_counts_again() {
+        let app = test_app().await;
+        let token = active_profile(&app, "watcher", 1000.0).await;
+        let calls = record_calls(&mut *fake_lock(&app).await, |_, _| false);
+        let reads = || {
+            let seen = calls.lock().expect("calls");
+            let n = |name: &str| seen.iter().filter(|method| *method == name).count();
+            (n("tickets.recentWaits"), n("results.countSince"))
+        };
+        let empty = json!({
+            "gamesLastHour": 0,
+            "expectedWaitSeconds": { "bo1": null, "bo3": null, "random": null },
+        });
+
+        let (status, first) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(first, empty);
+        assert_eq!(reads(), (1, 1));
+
+        // A game ends, but the next readout inside the TTL answers what was kept, reading nothing.
+        claimed_pair(&app, ["t-1", "t-2"], "bo1", [4_000, 8_000]).await;
+        ended(&app, "m-1", ["t-1", "t-2"]).await;
+        tokio::time::advance(
+            Duration::from_secs(QUEUE_READOUT_CACHE_TTL_SECONDS as u64) - Duration::from_millis(1),
+        )
+        .await;
+        let (status, kept) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(kept, empty);
+        assert_eq!(reads(), (1, 1));
+
+        // Once the TTL has run, the next readout counts again and sees the game.
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (status, recounted) = request(&app, "GET", "/api/queue/population", &token, None).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            recounted,
+            json!({
+                "gamesLastHour": 1,
+                "expectedWaitSeconds": { "bo1": null, "bo3": null, "random": null },
+            })
+        );
+        assert_eq!(reads(), (2, 2));
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r640002_enqueue_answers_its_ticket_and_no_queue_count() {
         let app = test_app().await;
         let token = active_profile(&app, "lone", 1000.0).await;
@@ -1504,8 +1574,9 @@ mod r258_all_random {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"],
             json!([])
         );
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
 
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
@@ -1523,8 +1594,16 @@ mod r258_all_random {
         let seed = row["seed"].as_str().expect("a seed").to_string();
         let p1_deck = json!(deal_random_deck(&format!("{seed}:p1-deck"), None));
         let p2_deck = json!(deal_random_deck(&format!("{seed}:p2-deck"), None));
-        assert_eq!(seat_deck(&app, &match_id, "rng-one").await, p1_deck);
-        assert_eq!(seat_deck(&app, &match_id, "rng-two").await, p2_deck);
+        // R1989000: the coin on the match seed seats the older ticket; each seat's deal leans on
+        // its own ticket's pick.
+        let one_is_p1 = seat_coin_p1_first(&seed);
+        let (one_deck, two_deck) = if one_is_p1 {
+            (p1_deck.clone(), p2_deck.clone())
+        } else {
+            (p2_deck.clone(), p1_deck.clone())
+        };
+        assert_eq!(seat_deck(&app, &match_id, "rng-one").await, one_deck);
+        assert_eq!(seat_deck(&app, &match_id, "rng-two").await, two_deck);
         // Two seats, two different deals.
         assert_ne!(p1_deck, p2_deck);
         // Frozen into the match row, so `(seed, decks, log)` replays it.
@@ -1539,8 +1618,9 @@ mod r258_all_random {
         let two = active_profile(&app, "pin-two", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "spec-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
@@ -1549,13 +1629,20 @@ mod r258_all_random {
             .map(|row| to_json(&row))
             .expect("the match row");
         assert_eq!(row["seed"], "spec-seed");
+        // R1989000: the older ticket's seat is the coin's on the pinned seed.
+        let one_is_p1 = seat_coin_p1_first("spec-seed");
+        let (one_stream, two_stream) = if one_is_p1 {
+            ("spec-seed:p1-deck", "spec-seed:p2-deck")
+        } else {
+            ("spec-seed:p2-deck", "spec-seed:p1-deck")
+        };
         assert_eq!(
             seat_deck(&app, &match_id, "pin-one").await,
-            json!(deal_random_deck("spec-seed:p1-deck", None))
+            json!(deal_random_deck(one_stream, None))
         );
         assert_eq!(
             seat_deck(&app, &match_id, "pin-two").await,
-            json!(deal_random_deck("spec-seed:p2-deck", None))
+            json!(deal_random_deck(two_stream, None))
         );
     }
 }
@@ -1596,7 +1683,7 @@ mod r1372_more_cards_from_the_newest_set {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
             "newest"
         );
-        // The older ticket is p1 (R166), as in R258's test above.
+        // R1989000's coin seats the older ticket (R166), as in R258's test above.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(
@@ -1609,20 +1696,36 @@ mod r1372_more_cards_from_the_newest_set {
             .map(|row| to_json(&row))
             .expect("the match row");
         let seed = row["seed"].as_str().expect("a seed").to_string();
+        // R1989000: the coin seats the older ticket; each seat's deal leans on its own ticket's
+        // pick, the asking seat on the newest set and the other on nothing.
+        let one_is_p1 = seat_coin_p1_first(&seed);
+        let (one_stream, two_stream) = if one_is_p1 {
+            ("p1-deck", "p2-deck")
+        } else {
+            ("p2-deck", "p1-deck")
+        };
         let leaned = json!(deal_random_deck(
-            &format!("{seed}:p1-deck"),
+            &format!("{seed}:{one_stream}"),
             Some(newest_shipped_set())
         ));
-        let plain = json!(deal_random_deck(&format!("{seed}:p2-deck"), None));
+        let plain = json!(deal_random_deck(&format!("{seed}:{two_stream}"), None));
         assert_eq!(seat_deck(&app, &match_id, "lean-one").await, leaned);
         assert_eq!(seat_deck(&app, &match_id, "lean-two").await, plain);
         // Frozen into the match row like any dealt deck, so `(seed, decks, log)` replays it (R258).
-        assert_eq!(row["decks"], json!([leaned, plain]));
+        let (p1_deck, p2_deck) = if one_is_p1 {
+            (leaned.clone(), plain.clone())
+        } else {
+            (plain.clone(), leaned.clone())
+        };
+        assert_eq!(row["decks"], json!([p1_deck, p2_deck]));
         // R1370: at least half of the asking seat's deck is of the newest set.
         let floor =
             (f64::from(jackioh_engine::config::DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil();
         assert!(newest_in(&leaned) as f64 >= floor, "{leaned}");
-        assert_ne!(leaned, json!(deal_random_deck(&format!("{seed}:p1-deck"), None)));
+        assert_ne!(
+            leaned,
+            json!(deal_random_deck(&format!("{seed}:{one_stream}"), None))
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1680,12 +1783,19 @@ mod r1372_more_cards_from_the_newest_set {
             .map(|row| to_json(&row))
             .expect("the match row");
         let seed = row["seed"].as_str().expect("a seed").to_string();
+        // R1989000: the coin seats the older ticket; each seat's deal leans on its own ticket's set.
+        let one_is_p1 = seat_coin_p1_first(&seed);
+        let (one_stream, two_stream) = if one_is_p1 {
+            ("p1-deck", "p2-deck")
+        } else {
+            ("p2-deck", "p1-deck")
+        };
         let classic = json!(deal_random_deck(
-            &format!("{seed}:p1-deck"),
+            &format!("{seed}:{one_stream}"),
             Some(SetName::Classic)
         ));
         let newest = json!(deal_random_deck(
-            &format!("{seed}:p2-deck"),
+            &format!("{seed}:{two_stream}"),
             Some(newest_shipped_set())
         ));
         assert_eq!(seat_deck(&app, &match_id, "pick-one").await, classic);
@@ -2078,8 +2188,9 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
             .unwrap_or(Value::Null);
         assert_eq!(deck["portrait"], "timmy");
         assert_eq!(ticket(&app, &ticket_id).await["portrait"], "gary");
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // The first enqueue pairs first (R166: oldest first, ties on the ticket id; the server's ids
+        // are random, so a millisecond of the paused clock makes it older). The seats are R1989000's
+        // coin on the match seed.
         tokio::time::advance(Duration::from_millis(1)).await;
 
         // The pairing: each seat carries what its ticket froze.
@@ -2087,8 +2198,15 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         assert_eq!(paired["status"], "matched");
 
         let row = matches_table(&app).await.last().cloned().expect("the match row");
-        assert_eq!(row["players"], json!(["swapper", "rival"]));
-        assert_eq!(row["portraits"], json!(["gary", "shredder"]));
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let swapper_is_p1 = seat_coin_p1_first(&seed);
+        let (first, second, first_portrait, second_portrait) = if swapper_is_p1 {
+            ("swapper", "rival", "gary", "shredder")
+        } else {
+            ("rival", "swapper", "shredder", "gary")
+        };
+        assert_eq!(row["players"], json!([first, second]));
+        assert_eq!(row["portraits"], json!([first_portrait, second_portrait]));
     }
 
     #[tokio::test(start_paused = true)]
@@ -2123,8 +2241,9 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let two = active_profile(&app, "rng-p2", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "portrait-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(paired["status"], "matched");
@@ -2138,9 +2257,16 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         assert_eq!(portraits, vec![Value::Null, Value::Null]);
 
         let row = matches_table(&app).await.last().cloned().expect("the match row");
-        // PREMISE: the seed really is the one the enqueue supplied (R143), seat order as paired.
+        // PREMISE: the seed really is the one the enqueue supplied (R143); R1989000's coin on it
+        // seats the older ticket.
         assert_eq!(row["seed"], "portrait-seed");
-        assert_eq!(row["players"], json!(["rng-p1", "rng-p2"]));
+        let one_is_p1 = seat_coin_p1_first("portrait-seed");
+        let (first, second) = if one_is_p1 {
+            ("rng-p1", "rng-p2")
+        } else {
+            ("rng-p2", "rng-p1")
+        };
+        assert_eq!(row["players"], json!([first, second]));
         // Each seat's pick is `pick_portrait_from_seed` on its seat-keyed suffix, as the decks are dealt.
         let expected = json!([
             pick_portrait_from_seed("portrait-seed:portrait:p1"),
@@ -2310,29 +2436,39 @@ mod r1834002_the_loadout_the_ticket_freezes {
         assert_eq!(paired["status"], "matched");
 
         let row = matches_table(&app).await.last().cloned().expect("the match row");
-        assert_eq!(row["players"], json!(["dresser", "plain"]));
+        // R1989000: the coin on the match seed seats the pair; each seat's loadout travels with its
+        // profile.
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let dresser_is_p1 = seat_coin_p1_first(&seed);
+        let (first, second) = if dresser_is_p1 {
+            ("dresser", "plain")
+        } else {
+            ("plain", "dresser")
+        };
+        assert_eq!(row["players"], json!([first, second]));
         let mut cards = vec![
             json!({ "cardId": full_art_card, "fullArt": true }),
             json!({ "cardId": plain_card, "border": "border-bone" }),
         ];
         cards.sort_by(|a, b| a["cardId"].as_str().cmp(&b["cardId"].as_str()));
-        assert_eq!(
-            row["loadouts"],
-            json!([
-                {
-                    "seat": {
-                        "table": "table-felt",
-                        "field": "field-rain",
-                        "cardBack": "card-back-lacquer",
-                        "foil": "foil-none",
-                        "finish": "finish-plain",
-                        "border": "border-standard",
-                    },
-                    "cards": cards,
-                },
-                { "seat": defaults(), "cards": [] },
-            ])
-        );
+        let dresser_loadout = json!({
+            "seat": {
+                "table": "table-felt",
+                "field": "field-rain",
+                "cardBack": "card-back-lacquer",
+                "foil": "foil-none",
+                "finish": "finish-plain",
+                "border": "border-standard",
+            },
+            "cards": cards,
+        });
+        let plain_loadout = json!({ "seat": defaults(), "cards": [] });
+        let (first_loadout, second_loadout) = if dresser_is_p1 {
+            (dresser_loadout, plain_loadout)
+        } else {
+            (plain_loadout, dresser_loadout)
+        };
+        assert_eq!(row["loadouts"], json!([first_loadout, second_loadout]));
     }
 
     #[tokio::test(start_paused = true)]
@@ -2372,12 +2508,22 @@ mod r1834002_the_loadout_the_ticket_freezes {
         }
 
         let row = matches_table(&app).await.last().cloned().expect("the match row");
-        assert_eq!(row["players"], json!(["random-dresser", "random-plain"]));
+        // R1989000: the coin on the pinned seed seats the older ticket; the dresser's loadout rides
+        // whichever seat the coin gave them.
+        assert_eq!(row["seed"], "loadout-seed");
+        let dresser_is_p1 = seat_coin_p1_first("loadout-seed");
+        let dresser_seat = usize::from(!dresser_is_p1);
+        let (first, second) = if dresser_is_p1 {
+            ("random-dresser", "random-plain")
+        } else {
+            ("random-plain", "random-dresser")
+        };
+        assert_eq!(row["players"], json!([first, second]));
         let mut seat = defaults();
         seat["table"] = json!("table-wood");
         seat["cardBack"] = json!("card-back-starfield");
-        assert_eq!(row["loadouts"][0]["seat"], seat);
-        let mut dealt: Vec<String> = row["decks"][0]
+        assert_eq!(row["loadouts"][dresser_seat]["seat"], seat);
+        let mut dealt: Vec<String> = row["decks"][dresser_seat]
             .as_array()
             .into_iter()
             .flatten()
@@ -2390,8 +2536,11 @@ mod r1834002_the_loadout_the_ticket_freezes {
             .map(|card| json!({ "cardId": card, "border": "border-wood" }))
             .collect();
         assert!(!frozen.is_empty());
-        assert_eq!(row["loadouts"][0]["cards"], Value::Array(frozen));
-        assert_eq!(row["loadouts"][1], json!({ "seat": defaults(), "cards": [] }));
+        assert_eq!(row["loadouts"][dresser_seat]["cards"], Value::Array(frozen));
+        assert_eq!(
+            row["loadouts"][1 - dresser_seat],
+            json!({ "seat": defaults(), "cards": [] })
+        );
     }
 }
 
@@ -2845,5 +2994,205 @@ mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
         assert_eq!(in_match_of(&app, "r89-b").await, Value::Null);
         assert_eq!(ticket(&app, "t-r89-a").await["status"], "matched");
         assert_eq!(ticket(&app, "t-r89-b").await["status"], "matched");
+    }
+}
+
+// R1989000 — the match seed's coin seats every 1v1 door
+
+/// R1989000, the queue half: a fixed seed set seats both orders, the same seed seats the same way
+/// twice, and an end-to-end `seat` pin skips the coin with the older ticket winning a conflict.
+mod r1989000_the_seed_coin_seats_the_pair {
+    use super::*;
+
+    /// A fixed set of seeds. The coin test below asserts it deals both seat orders, so the set is
+    /// pinned without pinning the answer: it fails if the stream ever stops varying.
+    const SEEDS: [&str; 8] = [
+        "coin-alpha",
+        "coin-bravo",
+        "coin-charlie",
+        "coin-delta",
+        "coin-echo",
+        "coin-foxtrot",
+        "coin-golf",
+        "coin-hotel",
+    ];
+
+    /// Two profiles queued on Best of 1, the first carrying `seed` (and maybe `seat`): the match
+    /// they pair into, oldest first.
+    async fn paired_on(app: &Arc<App>, first: &str, second: &str, seed: &str, seat: Option<&str>) -> Value {
+        let [one, ..] = decks_from();
+        let two = decks_from()[1].clone();
+        let deck_one = save_deck_for(app, first, &one, &format!("{first}'s deck")).await;
+        let deck_two = save_deck_for(app, second, &two, &format!("{second}'s deck")).await;
+        let mut first_body = json!({ "mode": "bo1", "deckId": deck_one, "seed": seed });
+        if let Some(seat) = seat {
+            first_body["seat"] = json!(seat);
+        }
+        let token_one = active_profile(app, first, 1000.0).await;
+        let token_two = active_profile(app, second, 1000.0).await;
+        let (_, queued) = enqueue_with(app, &token_one, first_body).await;
+        assert_eq!(queued["status"], "open");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, paired) = enqueue_with(app, &token_two, json!({ "mode": "bo1", "deckId": deck_two })).await;
+        assert_eq!(paired["status"], "matched", "{paired}");
+        let match_id = paired["matchId"].as_str().expect("a match id").to_string();
+        q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row")
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_fixed_seed_set_seats_both_orders_and_the_same_seed_seats_the_same_way() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app().await;
+        let mut seen_p1_first = false;
+        let mut seen_p2_first = false;
+        for (index, seed) in SEEDS.into_iter().enumerate() {
+            // The older ticket carries the seed, so it is the match seed.
+            let row = paired_on(
+                &app,
+                &format!("coin-a-{index}"),
+                &format!("coin-b-{index}"),
+                seed,
+                None,
+            )
+            .await;
+            assert_eq!(row["seed"], seed);
+            let older_is_p1 = seat_coin_p1_first(seed);
+            let (first, second) = if older_is_p1 {
+                (format!("coin-a-{index}"), format!("coin-b-{index}"))
+            } else {
+                (format!("coin-b-{index}"), format!("coin-a-{index}"))
+            };
+            assert_eq!(row["players"], json!([first, second]), "seed {seed}");
+            seen_p1_first |= older_is_p1;
+            seen_p2_first |= !older_is_p1;
+            // The same seed run again seats the same way.
+            let again = paired_on(
+                &app,
+                &format!("coin-c-{index}"),
+                &format!("coin-d-{index}"),
+                seed,
+                None,
+            )
+            .await;
+            let (first, second) = if older_is_p1 {
+                (format!("coin-c-{index}"), format!("coin-d-{index}"))
+            } else {
+                (format!("coin-d-{index}"), format!("coin-c-{index}"))
+            };
+            assert_eq!(again["players"], json!([first, second]), "seed {seed} again");
+        }
+        assert!(
+            seen_p1_first && seen_p2_first,
+            "the fixed set must deal both seat orders"
+        );
+        assert_eq!(e2e_seed_count(), 0);
+        assert_eq!(e2e_seat_count(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_seat_pin_skips_the_coin_with_the_older_ticket_winning_a_conflict() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app().await;
+        // A pin against the coin proves the pin skipped it: the older takes the pinned seat either
+        // way the coin would have seated them.
+        for seed in SEEDS {
+            let older_pin = if seat_coin_p1_first(seed) { "p2" } else { "p1" };
+            let row = paired_on(
+                &app,
+                &format!("pin-a-{seed}"),
+                &format!("pin-b-{seed}"),
+                seed,
+                Some(older_pin),
+            )
+            .await;
+            let (first, second) = if older_pin == "p1" {
+                (format!("pin-a-{seed}"), format!("pin-b-{seed}"))
+            } else {
+                (format!("pin-b-{seed}"), format!("pin-a-{seed}"))
+            };
+            assert_eq!(row["players"], json!([first, second]), "seed {seed}");
+        }
+        assert_eq!(e2e_seat_count(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_younger_only_pin_seats_the_younger_and_the_older_takes_the_free_seat() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app().await;
+        let [one, ..] = decks_from();
+        let [two, ..] = [decks_from()[1].clone()];
+        let deck_one = save_deck_for(&app, "young-old", &one, "old's deck").await;
+        let deck_two = save_deck_for(&app, "young-new", &two, "young's deck").await;
+        let token_old = active_profile(&app, "young-old", 1000.0).await;
+        let token_new = active_profile(&app, "young-new", 1000.0).await;
+        let (_, queued) = enqueue_with(&app, &token_old, json!({ "mode": "bo1", "deckId": deck_one })).await;
+        assert_eq!(queued["status"], "open");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        // Only the younger asks, for p1: they take it, and the older takes p2.
+        let (_, paired) = enqueue_with(
+            &app,
+            &token_new,
+            json!({ "mode": "bo1", "deckId": deck_two, "seat": "p1" }),
+        )
+        .await;
+        assert_eq!(paired["status"], "matched", "{paired}");
+        let match_id = paired["matchId"].as_str().expect("a match id").to_string();
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
+        assert_eq!(row["players"], json!(["young-new", "young-old"]));
+        assert_eq!(e2e_seat_count(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_a_seat_pin_is_forgotten_with_its_ticket_on_cancel() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app().await;
+        let token = active_profile(&app, "pin-cancel", 1000.0).await;
+        let [one, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "pin-cancel", &one, "pin-cancel's deck").await;
+        let (status, queued) = enqueue_with(
+            &app,
+            &token,
+            json!({ "mode": "bo1", "deckId": deck_id, "seat": "p1" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{queued}");
+        assert_eq!(e2e_seat_count(), 1);
+        let (status, body) = cancel(&app, &token).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(e2e_seat_count(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1989000_seat_is_refused_outside_end_to_end_mode() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app_with(TestAppOptions {
+            e2e: false,
+            skip_fixtures: true,
+            ..TestAppOptions::default()
+        })
+        .await;
+        let token = active_profile(&app, "prod-seat", 1000.0).await;
+        let [one, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "prod-seat", &one, "prod-seat's deck").await;
+        let (status, refused) = enqueue_with(
+            &app,
+            &token,
+            json!({ "mode": "bo1", "deckId": deck_id, "seat": "p1" }),
+        )
+        .await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("seat"),
+            "{refused}"
+        );
+        assert!(tickets_table(&app).await.is_empty());
+        assert_eq!(e2e_seat_count(), 0);
     }
 }

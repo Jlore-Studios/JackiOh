@@ -11,6 +11,10 @@ export const statsTestid = {
   setsOutliers: "stats-sets-outliers",
   setsRetry: "stats-sets-retry",
   summaryTiles: "stats-summary-tiles",
+  /** R1994000: the Games panel, its note of too few games and its Try again. */
+  gamesPanel: "stats-games-panel",
+  gamesFew: "stats-games-few",
+  gamesRetry: "stats-games-retry",
   /** R1973002: the patch bar, its picker and the patch before and after. */
   patchBar: "stats-patch-bar",
   patchSelect: "stats-patch-select",

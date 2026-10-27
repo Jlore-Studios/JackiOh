@@ -37,22 +37,28 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; no set is held now) differs in five places, the Meditative+ paths below standing for any held set's:
-- Its script goes in `src/scripts/meditative_plus/` (id `meditativeplus-NNN`, a token's `meditativeplus-NNN-k`).
-- Rows 1, 4, 5, 6 and 7 are already written. §8.9, §7, the `MEDITATIVE_PLUS` fixture, the census in `crates/tools/src/catalog.rs`,
-  `docs/radiant-audit.md` and BUILD M11 list every card of the set, so a card part corrects its rows only where its build
-  decided otherwise.
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set is held now, issue #1836, R1857000) differs in five places, the Stinkyscape paths below standing for any held set's:
+- Its script goes in `src/scripts/stinkyscape/` (id `stinkyscape-NNN`, a token's `stinkyscape-NNN-k`, an entry outside the numbers
+  `stinkyscape-t-<name>`). The foundation (issue #1857) wrote a stub for every entry there, `STUB (#1857):` in its header: a card
+  part **replaces its stub** with the script and its tests, and updates its own entry's `loc` in `catalog.json` (`cargo jackioh
+  catalog loc <path>`), the one line of the catalog it touches.
+- Rows 1, 2, 4, 5, 6, 7, 8, 9 and 13 are already written. §8.10, §7's held table, the `STINKYSCAPE` fixture, the census in
+  `crates/tools/src/catalog.rs`, `docs/radiant-audit.md`, BUILD M12, `card-audio.json5`, `flavour.json` and `chinese.json` list
+  every card of the set (`docs/stinkyscape-set.md` is its brief), so a card part corrects its rows only where its build decided
+  otherwise.
 - There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
   claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
-  with the engine testkit's `preview_sets(&[SetName::MeditativePlus])` (one thread, until its guard drops).
+  with the engine testkit's `preview_sets(&[SetName::Stinkyscape])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
-- Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
-  `docs/meditative-plus-set.md` MP3 says the rest (`docs/meditative-set.md` M3 for the Meditative set's build).
+- Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
+  test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
+  `tests/cross/catalog.rs`, R1857000). `docs/stinkyscape-set.md` says the rest (`docs/meditative-plus-set.md` MP3 and
+  `docs/meditative-set.md` M3 for the earlier held sets' builds).
 
 ## 2. Templates
 

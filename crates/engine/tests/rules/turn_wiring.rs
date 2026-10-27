@@ -9,7 +9,6 @@
 //! `mock_animate_at_turn_start`, `mock_return_at_cleanup`); each `#[test]` is its own thread, so a
 //! double never leaks. Surface contract: docs/v0.3.0/SURFACE.md §8.
 
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 
 use jackioh_engine::testkit::*;
@@ -17,7 +16,7 @@ use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, moc
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    in_hand, matches_object, new_game, put, round_trip, set_library, setup_catalog, slot,
+    act, act_ok, in_hand, matches_object, new_game, put, round_trip, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder,
@@ -92,18 +91,6 @@ fn recording_doubles() -> StageCalls {
     StageCalls { brittle, returned }
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> (GameState, Vec<GameEvent>) {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    let result = reduce(state, &input.with_nonce(format!("tw{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    (result.state, result.events)
-}
-
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -117,8 +104,7 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
-        )
-        .0;
+        );
     }
     put(
         &mut state,
@@ -145,24 +131,25 @@ fn staged(seed: &str) -> GameState {
     state = act(
         &state,
         json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
-    )
-    .0;
+    );
     set_library(&mut state, PlayerId::P1, &[cast_spell().id, "fx-9".to_string()]);
     state
 }
 
 /// p1 ends turn 1 and p2 turn 2: p1's turn 3 is starting.
 fn to_turn_three(state: &GameState) -> (GameState, Vec<GameEvent>) {
-    let theirs = act(state, json!({ "type": "endTurn", "playerId": "p1" })).0;
-    act(&theirs, json!({ "type": "endTurn", "playerId": "p2" }))
+    let theirs = act(state, json!({ "type": "endTurn", "playerId": "p1" }));
+    let result = act_ok(&theirs, json!({ "type": "endTurn", "playerId": "p2" }));
+    (result.state, result.events)
 }
 
 fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
     let pending = state.pending.as_ref().expect("expected a prompt");
-    act(
+    let result = act_ok(
         state,
         json!({ "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": pending.player_id }),
-    )
+    );
+    (result.state, result.events)
 }
 
 /// The notes from `from` on, so a test reads one turn's stages.
@@ -427,7 +414,9 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
             slot(PlayerId::P1, Row::Backrow, 1),
             Default::default(),
         );
-        let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
             notes(&after)
                 .into_iter()
@@ -459,7 +448,7 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
                 ask(sink, player, "returned");
             }
         });
-        let paused = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).0;
+        let paused = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(paused.active, PlayerId::P1);
         assert_eq!(paused.phase, Phase::End);
         assert_eq!(

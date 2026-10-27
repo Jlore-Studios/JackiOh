@@ -7,13 +7,14 @@
 
 import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
+import { resetCosmeticsForTests, writeCardPick } from "../cards/cosmetics.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -38,8 +39,10 @@ import {
 } from "../game/deckbuilder/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
-import { at } from "../test/stubServer.ts";
+import { collectionOwning } from "../collection/fixtures.ts";
+import { at, meBody, signIn, stubServer } from "../test/stubServer.ts";
 import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
+import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
 import { siteFooterTestid } from "./SiteFooter.tsx";
@@ -384,5 +387,92 @@ describe("R654 the almanac's card statistics block", () => {
       "href",
       `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`,
     );
+  });
+});
+
+describe("R1956000 the viewer's own cards in the Almanac", () => {
+  const OWNED = "core-002";
+  const UNOWNED = "core-004";
+  /** The frame a pool card's face wears, null for the default. */
+  const frameOf = (id: string): string | null =>
+    screen.getByTestId(poolCardId(id)).querySelector(".cf")?.getAttribute("data-frame") ?? null;
+
+  beforeEach(() => {
+    resetCosmeticsForTests();
+    for (const id of [OWNED, UNOWNED]) {
+      writeCardPick(id, "border", "border-bone");
+      writeCardPick(id, "finish", "finish-linen");
+    }
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  it("R1956000 signed out, the Almanac reads nothing and draws every card with the defaults", () => {
+    render(<AlmanacRoute />);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    const pool = screen.getByTestId(CARD_POOL);
+    expect(pool.querySelectorAll(".cf").length).toBe(CARDS.length);
+    expect(pool.querySelectorAll(".cf[data-frame], .cf[data-finish], .cf[data-cosmetic-foil]")).toHaveLength(0);
+  });
+
+  it("R1956000 signed in, a card the collection holds wears the viewer's picks and every other card the defaults", async () => {
+    signIn();
+    const server = stubServer((call) => {
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody() };
+      if (call.path === "/api/collection") return { status: 200, body: collectionOwning([OWNED]) };
+      return undefined;
+    });
+    render(<AlmanacRoute />);
+    await waitFor(() => expect(frameOf(OWNED)).toBe("border-bone"), SLOW);
+    expect(screen.getByTestId(poolCardId(OWNED)).querySelector(".cf")?.getAttribute("data-finish")).toBe("finish-linen");
+    expect(frameOf(UNOWNED)).toBeNull();
+    expect(screen.getByTestId(CARD_POOL).querySelectorAll(".cf[data-finish]")).toHaveLength(1);
+    // The account and its collection, with the token; a build where ownership does not decide reads no ledger.
+    expect(server.to("GET", "/api/collection")).toHaveLength(1);
+    expect(server.to("GET", "/api/collection")[0]?.headers["authorization"]).toBe("Bearer e2e-token");
+    expect(server.to("GET", "/api/cosmetics")).toHaveLength(0);
+  });
+
+  it("R1956000 useAlmanacOwnCopies reads the collection and, while gated, the ledger for a token, and nothing for none", async () => {
+    const ledger = new Map([[OWNED, new Set(["foil-glitter"])]]);
+    const readCollection = vi.fn(() => Promise.resolve(collectionOwning([OWNED, UNOWNED])));
+    const readOwned = vi.fn(() => Promise.resolve(ledger));
+    const reads = { gated: true, readCollection, readOwned };
+    const signedOut: { token: string | null } = { token: null };
+    const { result, rerender } = renderHook(({ token }: { token: string | null }) => useAlmanacOwnCopies(token, reads), {
+      initialProps: signedOut,
+    });
+    expect(result.current).toBeNull();
+    expect(readCollection).not.toHaveBeenCalled();
+    expect(readOwned).not.toHaveBeenCalled();
+
+    rerender({ token: "token-a" });
+    await waitFor(() => expect(result.current).not.toBeNull());
+    expect(result.current?.cards).toEqual(new Set([OWNED, UNOWNED]));
+    expect(result.current?.owned).toBe(ledger);
+    expect(readCollection).toHaveBeenCalledWith("token-a");
+    expect(readOwned).toHaveBeenCalledWith("token-a");
+
+    // Signed out again: no card is the viewer's.
+    rerender({ token: null });
+    expect(result.current).toBeNull();
+
+    // Before ownership decides, every cosmetic counts as owned and no ledger is read.
+    const ungatedOwned = vi.fn(() => Promise.resolve(ledger));
+    const ungated = { gated: false, readCollection, readOwned: ungatedOwned };
+    const open = renderHook(() => useAlmanacOwnCopies("token-b", ungated));
+    await waitFor(() => expect(open.result.current).not.toBeNull());
+    expect(open.result.current?.owned).toBe("every");
+    expect(ungatedOwned).not.toHaveBeenCalled();
+
+    // A read that fails leaves every card drawn as before.
+    const failing = { gated: true, readCollection: () => Promise.reject(new Error("down")), readOwned };
+    const failed = renderHook(() => useAlmanacOwnCopies("token-c", failing));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(failed.result.current).toBeNull();
   });
 });

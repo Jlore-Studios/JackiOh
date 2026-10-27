@@ -890,6 +890,7 @@ pub fn fresh_face_down_id(state: &mut GameState, instance: &mut CardInstance) ->
     state.next_id += 1;
     // R419: C+ #35's history names the card by the id it has now.
     rename_in_board_history(state, &former, &instance.id);
+    crate::generators::rename_generator(state, &former, &instance.id);
     former
 }
 

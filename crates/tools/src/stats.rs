@@ -62,19 +62,18 @@ use std::time::Instant;
 use anyhow::{Context, Result, anyhow};
 use indexmap::{IndexMap, IndexSet};
 use rayon::prelude::*;
-use serde::Serialize;
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
     CardStatsFilter, CardStatsReport, CardWindow, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX,
-    FORCED_SERIES_PREFIX, GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource,
-    GameSummary, PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
-    WindowQuery, WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats,
-    record_matches, seats_counted, sources_of, windowed_card_stats,
+    FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord, GameReport,
+    PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, WindowQuery,
+    WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats, game_report,
+    windowed_card_stats,
 };
 
-use crate::arena::{self, paired_interval, wilson_interval};
+use crate::arena::{paired_interval, wilson_interval};
 use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
 use crate::{dealt_fit, golden, selfplay_records};
 
@@ -89,9 +88,6 @@ const MEAN_DECIMALS: usize = 2;
 
 /// A share as a percentage.
 const PERCENT: f64 = 100.0;
-
-/// The turns are cut into this many parts by their quartiles.
-const QUARTERS: usize = 4;
 
 /// `crates/cards/patches/patches.json`, the card patch history (R388), where this checkout keeps it.
 const PATCHES_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/patches/patches.json");
@@ -298,182 +294,6 @@ pub fn render(
     }
 }
 
-/// `stats report --games`: one patch's figures in one mode from one source. A game is read whole,
-/// whichever of its seats `--pilot` counts.
-#[derive(Serialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct GameGroup {
-    /// The patch the games were played with.
-    pub patch: String,
-    /// The match type.
-    pub mode: GameMode,
-    /// Where the games were played: live matches or an AI development run's.
-    pub source: GameSource,
-    /// How many games.
-    pub games: usize,
-    /// How many of them nobody won.
-    pub draws: usize,
-    /// How many the seat that took the first turn won.
-    pub first_wins: usize,
-    /// `first_wins` over `games`, to three places.
-    pub first_share: f64,
-    /// The low end of the 95% Wilson interval of `first_share`.
-    pub first_low: f64,
-    /// The high end of the 95% Wilson interval of `first_share`.
-    pub first_high: f64,
-    /// Games per ending, every `GameOverReason` in its declared order, the ones no game had at 0.
-    pub reasons: IndexMap<GameOverReason, usize>,
-    /// The turn counter at the end: the first, second and third quartiles, nearest rank.
-    pub turn_quartiles: [i32; QUARTERS - 1],
-    /// How many of the games have R1256000's counts: the figures below are over these only.
-    pub counted: usize,
-    /// How many of the counted games had a draw from an empty library, or null when none is counted.
-    pub fatigue_games: Option<usize>,
-    /// `fatigue_games` over `counted`, to three places.
-    pub fatigue_share: Option<f64>,
-    /// The mean of the nominal fatigue damage a counted game dealt, both seats added, to three places.
-    pub fatigue_damage_mean: Option<f64>,
-    /// Traps set from a hand over the counted games, both seats.
-    pub traps_set: Option<i32>,
-    /// Traps that fired over the counted games, both seats.
-    pub traps_fired: Option<i32>,
-    /// `traps_fired` over `traps_set` to three places, or null when no Trap was set.
-    pub traps_fired_per_set: Option<f64>,
-    /// Position switches by units over the counted games, both seats.
-    pub position_switches: Option<i32>,
-    /// The mean of `position_switches` over the counted games, to three places.
-    pub position_switches_mean: Option<f64>,
-    /// Cards an effect made Radiant over the counted games, both seats.
-    pub radiant_upgrades: Option<i32>,
-    /// The mean of `radiant_upgrades` over the counted games, to three places.
-    pub radiant_upgrades_mean: Option<f64>,
-}
-
-/// `stats report --games`: the groups a filter reads and the records it left to another source.
-#[derive(Serialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct GameReport {
-    /// What the report read.
-    pub filter: CardStatsFilter,
-    /// How many records came from a source the filter does not read (R378).
-    pub other_sources: usize,
-    /// One group per patch, mode and source, in the order a record of it was first read.
-    pub groups: Vec<GameGroup>,
-}
-
-/// R1256000's counts of one game, both seats added.
-#[derive(Clone, Copy, Default)]
-struct Counts {
-    fatigue_draws: i32,
-    fatigue_damage: i32,
-    traps_set: i32,
-    traps_fired: i32,
-    position_switches: i32,
-    radiant_upgrades: i32,
-}
-
-/// R1256000: a game's counts, or `None` when either seat's record lacks one (written before them).
-fn counts(game: &GameSummary) -> Option<Counts> {
-    let mut sum = Counts::default();
-    for seat in PLAYER_IDS {
-        let seat = &game.seats[seat];
-        sum.fatigue_draws += seat.fatigue_draws?;
-        sum.fatigue_damage += seat.fatigue_damage?;
-        sum.traps_set += seat.traps_set?;
-        sum.traps_fired += seat.traps_fired?;
-        sum.position_switches += seat.position_switches?;
-        sum.radiant_upgrades += seat.radiant_upgrades?;
-    }
-    Some(sum)
-}
-
-/// One group's figures over its records, which are never none.
-fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> GameGroup {
-    let (patch, mode, source) = key;
-    let n = records.len();
-    let draws = records
-        .iter()
-        .filter(|record| record.game.winner == Winner::Draw)
-        .count();
-    let first_wins = records
-        .iter()
-        .filter(|record| record.game.winner.player() == Some(record.game.first))
-        .count();
-    let (low, high) = wilson_interval(first_wins, n);
-
-    let mut reasons: IndexMap<GameOverReason, usize> =
-        GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
-    for record in records {
-        *reasons.entry(record.game.reason).or_default() += 1;
-    }
-
-    let mut turns: Vec<i32> = records.iter().map(|record| record.game.turns).collect();
-    turns.sort_unstable();
-    let turn_quartiles = std::array::from_fn(|cut| turns[((cut + 1) * n).div_ceil(QUARTERS) - 1]);
-
-    let known: Vec<Counts> = records.iter().filter_map(|record| counts(&record.game)).collect();
-    let counted = known.len();
-    let any = counted > 0;
-    let fatigue_games = known.iter().filter(|counts| counts.fatigue_draws > 0).count();
-    let damage: i32 = known.iter().map(|counts| counts.fatigue_damage).sum();
-    let traps_set: i32 = known.iter().map(|counts| counts.traps_set).sum();
-    let traps_fired: i32 = known.iter().map(|counts| counts.traps_fired).sum();
-    let switches: i32 = known.iter().map(|counts| counts.position_switches).sum();
-    let upgrades: i32 = known.iter().map(|counts| counts.radiant_upgrades).sum();
-    GameGroup {
-        patch,
-        mode,
-        source,
-        games: n,
-        draws,
-        first_wins,
-        first_share: arena::round_share(first_wins as f64 / n as f64),
-        first_low: arena::round_share(low),
-        first_high: arena::round_share(high),
-        reasons,
-        turn_quartiles,
-        counted,
-        fatigue_games: any.then_some(fatigue_games),
-        fatigue_share: any.then(|| arena::round_share(fatigue_games as f64 / counted as f64)),
-        fatigue_damage_mean: any.then(|| arena::round_share(f64::from(damage) / counted as f64)),
-        traps_set: any.then_some(traps_set),
-        traps_fired: any.then_some(traps_fired),
-        traps_fired_per_set: (any && traps_set > 0)
-            .then(|| arena::round_share(f64::from(traps_fired) / f64::from(traps_set))),
-        position_switches: any.then_some(switches),
-        position_switches_mean: any.then(|| arena::round_share(f64::from(switches) / counted as f64)),
-        radiant_upgrades: any.then_some(upgrades),
-        radiant_upgrades_mean: any.then(|| arena::round_share(f64::from(upgrades) / counted as f64)),
-    }
-}
-
-/// The game figures over the records the filter reads: a game counts as `CardStatsReport.games`
-/// counts it (the filter's source, mode and patch, and a seat its pilot reads), and a record of a
-/// source the filter does not read is only tallied (R378).
-pub fn game_report(records: &[GameRecord], filter: &CardStatsFilter) -> GameReport {
-    let sources = sources_of(filter.source);
-    let mut other_sources = 0;
-    let mut grouped: IndexMap<(String, GameMode, GameSource), Vec<&GameRecord>> = IndexMap::new();
-    for record in records {
-        if !sources.contains(&record.source) {
-            other_sources += 1;
-        } else if record_matches(record, filter) && !seats_counted(record, filter.pilot).is_empty() {
-            grouped
-                .entry((record.patch.clone(), record.mode, record.source))
-                .or_default()
-                .push(record);
-        }
-    }
-    GameReport {
-        filter: filter.clone(),
-        other_sources,
-        groups: grouped
-            .into_iter()
-            .map(|(key, records)| game_group(key, &records))
-            .collect(),
-    }
-}
-
 /// The game report as `stats report --games` prints it: lines of text, or JSON.
 pub fn render_games(report: &GameReport, json: bool) -> String {
     if json {
@@ -488,31 +308,31 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
             patch,
             mode,
             source,
-            games,
-            ..
+            figures,
         } = group;
+        let GameFigures { games, .. } = figures;
         lines.push(String::new());
         lines.push(format!(
             "{patch} {mode} {source}: {games} games, {} drawn",
-            group.draws
+            figures.draws
         ));
         lines.push(format!(
             "  first seat won {} of {games}: {}, 95% interval {} to {}",
-            group.first_wins,
-            percent(group.first_share),
-            percent(group.first_low),
-            percent(group.first_high)
+            figures.first_wins,
+            percent(figures.first_share),
+            percent(figures.first_low),
+            percent(figures.first_high)
         ));
-        let endings: Vec<String> = group
+        let endings: Vec<String> = figures
             .reasons
             .iter()
             .filter(|(_, count)| **count > 0)
             .map(|(reason, count)| format!("{reason} {count}"))
             .collect();
         lines.push(format!("  endings: {}", endings.join(", ")));
-        let [first, second, third] = group.turn_quartiles;
+        let [first, second, third] = figures.turn_quartiles;
         lines.push(format!("  turns, quartiles: {first}, {second}, {third}"));
-        if group.counted == 0 {
+        if figures.counted == 0 {
             lines.push(
                 "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts"
                     .to_string(),
@@ -521,17 +341,17 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
         }
         lines.push(format!(
             "  fatigue: a draw from an empty library in {} of {} games ({}), {:.*} damage a game",
-            group.fatigue_games.unwrap_or_default(),
-            group.counted,
-            percent(group.fatigue_share.unwrap_or_default()),
+            figures.fatigue_games.unwrap_or_default(),
+            figures.counted,
+            percent(figures.fatigue_share.unwrap_or_default()),
             MEAN_DECIMALS,
-            group.fatigue_damage_mean.unwrap_or_default()
+            figures.fatigue_damage_mean.unwrap_or_default()
         ));
-        lines.push(match group.traps_fired_per_set {
+        lines.push(match figures.traps_fired_per_set {
             Some(per_set) => format!(
                 "  traps: {} fired of {} set, {:.*} a set",
-                group.traps_fired.unwrap_or_default(),
-                group.traps_set.unwrap_or_default(),
+                figures.traps_fired.unwrap_or_default(),
+                figures.traps_set.unwrap_or_default(),
                 MEAN_DECIMALS,
                 per_set
             ),
@@ -539,20 +359,20 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
         });
         lines.push(format!(
             "  position switches: {}, {:.*} a game",
-            group.position_switches.unwrap_or_default(),
+            figures.position_switches.unwrap_or_default(),
             MEAN_DECIMALS,
-            group.position_switches_mean.unwrap_or_default()
+            figures.position_switches_mean.unwrap_or_default()
         ));
         lines.push(format!(
             "  Radiant upgrades: {}, {:.*} a game",
-            group.radiant_upgrades.unwrap_or_default(),
+            figures.radiant_upgrades.unwrap_or_default(),
             MEAN_DECIMALS,
-            group.radiant_upgrades_mean.unwrap_or_default()
+            figures.radiant_upgrades_mean.unwrap_or_default()
         ));
-        if group.counted < *games {
+        if figures.counted < *games {
             lines.push(format!(
                 "  (fatigue, traps, switches and upgrades over the {} of {games} games whose records carry R1256000's counts)",
-                group.counted
+                figures.counted
             ));
         }
     }
@@ -1354,7 +1174,7 @@ mod tests {
                 &parse_game_record_lines(&line).unwrap(),
                 &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
             );
-            let group = &report.groups[0];
+            let group = &report.groups[0].figures;
             (group.position_switches, group.radiant_upgrades)
         };
         let (p1, p2) = ([0, 0, 0, 0, 3, 1], [0, 0, 0, 0, 1, 2]);
@@ -1385,7 +1205,7 @@ mod tests {
             &parse_game_record_lines(&lines.join("\n")).unwrap(),
             &filter_of(&args),
         );
-        let group = &report.groups[0];
+        let group = &report.groups[0].figures;
         assert_eq!((group.games, group.counted), (4, 2));
         assert_eq!(group.fatigue_games, Some(1));
         assert_eq!(
@@ -1395,6 +1215,43 @@ mod tests {
         assert!(render_games(&report, false).contains(
             "  (fatigue, traps, switches and upgrades over the 2 of 4 games whose records carry R1256000's counts)"
         ));
+    }
+
+    #[test]
+    fn r1994000_games_report_over_the_analysis_fixtures_is_their_committed_report() {
+        let dev = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../analysis/fixtures/dev-40.jsonl"
+        ));
+        let live = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../analysis/fixtures/live-40.jsonl"
+        ));
+        let games = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../analysis/fixtures/games.report.json"
+        );
+        let counts = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../analysis/fixtures/counts.jsonl"
+        ));
+        let counts_report = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../analysis/fixtures/counts.report.json"
+        );
+        // `analysis/README.md`'s two `stats report --games --source=all --json` lines.
+        let all = CardStatsFilter {
+            source: SourceFilter::All,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        };
+        for (files, report) in [(vec![dev, live], games), (vec![counts], counts_report)] {
+            let committed = std::fs::read_to_string(report).unwrap();
+            let figures = game_report(&read_records(&files).unwrap(), &all);
+            // As the command prints it, byte for byte.
+            assert_eq!(render_games(&figures, true), committed.trim_end(), "{report}");
+        }
     }
 
     #[test]

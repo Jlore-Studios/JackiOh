@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::indestructible;
-use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -194,15 +194,6 @@ impl Runner {
 
 fn chosen() -> Value {
     json!({ "of": "chosen" })
-}
-
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
 }
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {

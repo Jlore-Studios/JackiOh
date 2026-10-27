@@ -12,9 +12,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::craft::register_craft_fixtures;
-use crate::rules::fixtures::harness::{setup_catalog, sink_for};
+use crate::rules::fixtures::harness::{act, act_logged, setup_catalog, sink_for};
 use crate::rules::fixtures::prompt_harness::{
-    AnswerResult, Replayable, act, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
+    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
     round_trip,
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
@@ -328,17 +328,19 @@ fn replayable_with_crafter(seed: &str) -> Replayable {
     }))
     .state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "mulligan", "playerId": "p1", "keep": keep }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "mulligan", "playerId": "p2", "keep": keep }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     Replayable { state, log, decks }
 }
 
@@ -350,17 +352,14 @@ fn r882_a_crafted_card_survives_a_json_round_trip_and_replays_exactly() {
     let mut state = game.state;
 
     let crafter = hand_card(&state, P1, "pm-crafter-qd").id.clone();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "play", "playerId": "p1", "instanceId": crafter }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     let cost_id = must(state.pending.clone(), "the cost prompt").id.clone();
-    state = act(
-        &state,
-        json!({ "type": "answer", "playerId": "p1", "choiceId": cost_id, "selection": [{ "pick": "mode", "option": "1" }] }),
-        Some(&mut log),
-    );
+    state = act_logged(&state, json!({ "type": "answer", "playerId": "p1", "choiceId": cost_id, "selection": [{ "pick": "mode", "option": "1" }] }), &mut log).state;
     // The Unit preset, whatever the seed's offer (R1563007): a recipe the editor could send.
     let pending = must(state.pending.clone(), "the craft prompt");
     let recipe = match &pending.options[0].selection {
@@ -368,11 +367,7 @@ fn r882_a_crafted_card_survives_a_json_round_trip_and_replays_exactly() {
         other => panic!("a preset is a recipe, not {other:?}"),
     };
     let craft_id = pending.id.clone();
-    state = act(
-        &state,
-        json!({ "type": "answer", "playerId": "p1", "choiceId": craft_id, "selection": [{ "pick": "craft", "recipe": recipe }] }),
-        Some(&mut log),
-    );
+    state = act_logged(&state, json!({ "type": "answer", "playerId": "p1", "choiceId": craft_id, "selection": [{ "pick": "craft", "recipe": recipe }] }), &mut log).state;
 
     // The card is played after the round trip, and the fold rebuilds the live state exactly.
     let tripped = round_trip(&state);
@@ -384,11 +379,7 @@ fn r882_a_crafted_card_survives_a_json_round_trip_and_replays_exactly() {
         "the crafted card",
     )
     .clone();
-    let live = act(
-        &tripped,
-        json!({ "type": "play", "playerId": "p1", "instanceId": crafted.id, "zone": { "row": "units", "lane": 1 } }),
-        Some(&mut log),
-    );
+    let live = act_logged(&tripped, json!({ "type": "play", "playerId": "p1", "instanceId": crafted.id, "zone": { "row": "units", "lane": 1 } }), &mut log).state;
     expect_replays("craft-replay", &decks, &log, &live);
 }
 
@@ -591,15 +582,14 @@ fn r883_each_hat_compiles_to_its_hook_and_a_reveal_hat_fires_on_its_event() {
     state = act(
         &state,
         json!({ "type": "play", "playerId": "p1", "instanceId": crafted, "zone": { "row": "backrow", "lane": 1 } }),
-        None,
     );
     // p1 has nothing left to do, so the turn may already have ended on its own.
     if state.active == P1 {
-        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }), None);
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
     }
     assert_eq!(state.active, P2);
     let p2 = state.players[P2].hero.health;
-    state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }), None);
+    state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
     assert_eq!(
         state.players[P2].hero.health,
         p2 - 2,

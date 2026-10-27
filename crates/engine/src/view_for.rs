@@ -168,6 +168,9 @@ struct Replacements {
     voided: bool,
     /// R1074000: `Some` in a duel, where a pass (B20) takes a hand card out of the state unseen.
     duel: Option<DuelGone>,
+    /// R1020: the cards the events last put into a library (`in_library_of`). A Fuse eats a library
+    /// card unseen, so one of these the state no longer holds ceased to exist there and reads to nobody.
+    in_library: IndexSet<String>,
 }
 
 /// R1074000: what a duel's events say of the cards in no pile that took no successor.
@@ -243,7 +246,41 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
         to_library: to_library.filter(|set| !set.is_empty()),
         voided: false,
         duel: state.and_then(|state| duel_gone(events, state)),
+        in_library: in_library_of(events),
     }
+}
+
+/// R1020: the cards the events last put into a library and taken out of it by no move since. A
+/// `shuffledIn` puts one there, and a library card's replacement (`transformed`, hidden from every
+/// seat, R177) takes its place; any other move (`stays::moved_by`), a steal or an announcement takes
+/// one out. A card of the opening deck that no event named needs nothing: no event names it either.
+fn in_library_of(events: &[&GameEvent]) -> IndexSet<String> {
+    let mut in_library: IndexSet<String> = IndexSet::new();
+    for event in events {
+        match event {
+            GameEvent::ShuffledIn { instance_id, .. } => {
+                in_library.insert(instance_id.clone());
+            }
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                hidden_from: Some(hidden),
+                ..
+            } if PLAYER_IDS.iter().all(|player| hidden.contains(player)) => {
+                in_library.shift_remove(instance_id);
+                in_library.insert(new_instance_id.clone());
+            }
+            GameEvent::Stolen { instance_id, .. } | GameEvent::CardAnnounced { instance_id, .. } => {
+                in_library.shift_remove(instance_id);
+            }
+            _ => {
+                for id in crate::stays::moved_by(event) {
+                    in_library.shift_remove(&id);
+                }
+            }
+        }
+    }
+    in_library
 }
 
 /// R1074000: a pass (B20) takes a card out of its duel's hand with no event, so in a duel a card in no
@@ -468,7 +505,8 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     // R764: so is one a Glitch took off the board or out of the match before it was ever revealed.
     let Some(card) = card else {
         let to_library = replaced.to_library.as_ref().is_some_and(|ids| ids.contains(&id));
-        if to_library || replaced.voided {
+        // R1020: so is one a Fuse ate out of a library.
+        if to_library || replaced.voided || replaced.in_library.contains(&id) {
             return false;
         }
         // R1074000: in a duel, a card a pass took out of a hand is as hidden as it was there, and one
@@ -503,6 +541,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         radiant,
         chinese: None,
         created: None,
+        created_by: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -535,7 +574,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
 /// R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
 /// v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
 /// the viewer may read where it is.
-fn card_view(state: &GameState, card: &CardInstance) -> CardView {
+fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
     let data = instance_data_view(state, card);
@@ -560,6 +599,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.chinese = card.chinese;
     // MD-B6, R943: Created is public the same way.
     view.created = card.created;
+    // R1956001: and the card that generated it, to its owner alone.
+    view.created_by = crate::generators::generator_shown_to(state, card, viewer);
     // R1848003: a set X is the card's price, read where the card is.
     view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
     view
@@ -577,8 +618,8 @@ fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
 /// layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
 /// floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
 /// R151), which its cost alone does not.
-fn hand_card_view(state: &GameState, card: &CardInstance) -> CardView {
-    let mut view = with_copies(card_view(state, card), state, card);
+fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
+    let mut view = with_copies(card_view(state, card, viewer), state, card);
     let stats = if card_type_of(state, card) == CardType::Unit {
         Some(stats_with_buffs(state, card))
     } else {
@@ -774,7 +815,7 @@ fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
     with_activations(
         with_preview(
             with_condition(
-                card_view(state, card),
+                card_view(state, card, viewer),
                 condition_active(state, card, viewer, ConditionZone::Field),
             ),
             preview_of(state, card, viewer, ConditionZone::Field),
@@ -871,6 +912,7 @@ fn unit_view_of(
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
         created: card.created,
+        created_by: card.created_by,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from the turn the unit entered and its
@@ -996,6 +1038,7 @@ fn backrow_view(
         radiant: view.radiant,
         chinese: view.chinese,
         created: view.created,
+        created_by: view.created_by,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -1396,7 +1439,11 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                                 with_play_reason(
                                     with_counter_warning(
                                         with_condition(
-                                            with_embiggen_cost(hand_card_view(state, card), state, card),
+                                            with_embiggen_cost(
+                                                hand_card_view(state, card, viewer),
+                                                state,
+                                                card,
+                                            ),
                                             condition_active(state, card, viewer, ConditionZone::Hand),
                                         ),
                                         countered.contains(&card.id),
@@ -1418,7 +1465,12 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 .collect(),
         )
     } else if state.result.is_some() {
-        HandView::Cards(side.hand.iter().map(|card| hand_card_view(state, card)).collect())
+        HandView::Cards(
+            side.hand
+                .iter()
+                .map(|card| hand_card_view(state, card, viewer))
+                .collect(),
+        )
     } else {
         HandView::Count {
             count: side.hand.len() as i32,
@@ -1466,13 +1518,17 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             .iter()
             .map(|card| {
                 if player == viewer {
-                    with_play_reason(card_view(state, card), state, card, viewer)
+                    with_play_reason(card_view(state, card, viewer), state, card, viewer)
                 } else {
-                    card_view(state, card)
+                    card_view(state, card, viewer)
                 }
             })
             .collect(),
-        exile: side.exile.iter().map(|card| card_view(state, card)).collect(),
+        exile: side
+            .exile
+            .iter()
+            .map(|card| card_view(state, card, viewer))
+            .collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
         // card announced to be set face-down waits here too, and the other player sees a card back.
         resolving: side
@@ -1482,7 +1538,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 if announced_face_down_to(state, card, viewer) {
                     bare_card_view(HIDDEN_ID.to_string(), HIDDEN_ID.to_string(), false, HIDDEN_COST)
                 } else {
-                    with_copies(card_view(state, card), state, card)
+                    with_copies(card_view(state, card, viewer), state, card)
                 }
             })
             .collect(),
@@ -1515,7 +1571,11 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         // both in full once the game is over (R434); absent with no tray (D14).
         resource_tray: side.resource_tray.as_ref().map(|tray| {
             if player == viewer || state.result.is_some() {
-                HandView::Cards(tray.iter().map(|card| hand_card_view(state, card)).collect())
+                HandView::Cards(
+                    tray.iter()
+                        .map(|card| hand_card_view(state, card, viewer))
+                        .collect(),
+                )
             } else {
                 HandView::Count {
                     count: tray.len() as i32,
@@ -2430,17 +2490,33 @@ fn redact_event(
         | GameEventType::MarketCreditsChanged
         // R1853003: so did a Resource sold at the Marketplace.
         | GameEventType::MarketSold => event.clone(),
-        // R1852000, R1852003: a piece's fusion names the dead card in its graveyard and the Dormant
-        // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
-        // the Starship's memory is on both seats' views.
-        | GameEventType::StarshipFused
-        | GameEventType::StarshipLaunched
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
         // R1847001: a starscape travel names a player, a node and its reward, all public.
         | GameEventType::StarscapeTravelled
         // R1855000: a board replacement names its player alone.
         | GameEventType::BoardReplaced => event.clone(),
+
+        // R1852000, R97: a fusion names the dead piece with its definition and the Dormant Starship it
+        // fused into, each judged by where it is now: a piece since returned to a hand, or a Starship
+        // since bounced into one, reads to that hand's player alone. The count is the Starship's.
+        GameEventType::StarshipFused => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId"]);
+            }
+            if hidden(&text_at(&shown, "pieceId")) {
+                hide(&mut shown, &["pieceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+        // R1852003, R97: a launch names the Starship, judged as the card itself is; its name and the
+        // pieces it held are the public memory of a public launch (R1852005).
+        GameEventType::StarshipLaunched => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            rebuild(shown)
+        }
 
         // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
         // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps

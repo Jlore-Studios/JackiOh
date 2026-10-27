@@ -4980,11 +4980,11 @@ fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
         .collect()
 }
 
-/// R1044000: adds `delta` into the stored totals. The record counts are added in SQL; each card row
-/// and decklist the delta touches is read, added to in Rust (`StatsTotals::add`, the engine's
-/// counting) and written back. A transaction-level advisory lock on each patch and source the delta
-/// touches, taken in order, keeps two folds into the same rows from interleaving; the lock ends with
-/// the transaction.
+/// R1044000: adds `delta` into the stored totals. The record counts are added in SQL; each card row,
+/// decklist and (R1994000) key's whole games the delta touches is read, added to in Rust
+/// (`StatsTotals::add`, the engine's counting) and written back. A transaction-level advisory lock
+/// on each patch and source the delta touches, taken in order, keeps two folds into the same rows
+/// from interleaving; the lock ends with the transaction.
 async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), StoreError> {
     if delta.records.is_empty() {
         return Ok(());
@@ -5109,6 +5109,38 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
         }
     }
 
+    // R1994000: the whole games under the keys the delta touches, as stored.
+    let mut keys: [Vec<String>; 5] = Default::default();
+    for key in delta.game_totals.keys() {
+        keys[0].push(key.patch.clone());
+        keys[1].push(literal(&key.source)?);
+        keys[2].push(literal(&key.mode)?);
+        keys[3].push(literal(&key.pilots.0)?);
+        keys[4].push(literal(&key.pilots.1)?);
+    }
+    let [patches, sources, modes, p1_pilots, p2_pilots] = keys;
+    let rows = sqlx::query(
+        "select g.patch, g.source, g.mode, g.p1_pilot, g.p2_pilot, g.total
+           from public.game_totals g
+           join unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[])
+             as k(patch, source, mode, p1_pilot, p2_pilot)
+             on g.patch = k.patch and g.source = k.source and g.mode = k.mode
+            and g.p1_pilot = k.p1_pilot and g.p2_pilot = k.p2_pilot",
+    )
+    .bind(&patches)
+    .bind(&sources)
+    .bind(&modes)
+    .bind(&p1_pilots)
+    .bind(&p2_pilots)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in &rows {
+        stored
+            .game_totals
+            .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
+    }
+
     stored.add(delta);
 
     // Every card row touched, written back whole.
@@ -5143,6 +5175,35 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
     .bind(stats)
     .bind(turns)
     .bind(co)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+
+    // R1994000: every key's whole games touched, written back whole.
+    let mut columns: [Vec<String>; 6] = Default::default();
+    for (key, total) in &stored.game_totals {
+        columns[0].push(key.patch.clone());
+        columns[1].push(literal(&key.source)?);
+        columns[2].push(literal(&key.mode)?);
+        columns[3].push(literal(&key.pilots.0)?);
+        columns[4].push(literal(&key.pilots.1)?);
+        columns[5].push(json(total)?);
+    }
+    let [patches, sources, modes, p1_pilots, p2_pilots, totals] = columns;
+    sqlx::query(
+        "insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
+         select k.patch, k.source, k.mode, k.p1_pilot, k.p2_pilot, k.total::jsonb
+           from unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
+             as k(patch, source, mode, p1_pilot, p2_pilot, total)
+         on conflict (patch, source, mode, p1_pilot, p2_pilot)
+         do update set total = excluded.total",
+    )
+    .bind(patches)
+    .bind(sources)
+    .bind(modes)
+    .bind(p1_pilots)
+    .bind(p2_pilots)
+    .bind(totals)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5208,7 +5269,21 @@ fn list_total_of(row: &PgRow) -> Result<ListTotal, StoreError> {
     })
 }
 
+/// A `record_totals` or `game_totals` row's key: its patch, source, mode and both seats' pilots.
+fn records_key_of(row: &PgRow) -> Result<RecordsKey, StoreError> {
+    Ok(RecordsKey {
+        patch: get(row, "patch")?,
+        source: from_literal(&get::<String>(row, "source")?)?,
+        mode: from_literal(&get::<String>(row, "mode")?)?,
+        pilots: (
+            from_literal(&get::<String>(row, "p1_pilot")?)?,
+            from_literal(&get::<String>(row, "p2_pilot")?)?,
+        ),
+    })
+}
+
 /// R1044000: the totals the query reads, each card's turn and co-played counts only with `drills`.
+/// R1994000: and each key's whole games.
 pub async fn stats_totals_load(
     t: &mut PgTx<'_>,
     query: &StatsTotalsQuery,
@@ -5233,16 +5308,25 @@ pub async fn stats_totals_load(
     .await
     .map_err(db_error)?;
     for row in &rows {
-        let key = RecordsKey {
-            patch: get(row, "patch")?,
-            source: from_literal(&get::<String>(row, "source")?)?,
-            mode: from_literal(&get::<String>(row, "mode")?)?,
-            pilots: (
-                from_literal(&get::<String>(row, "p1_pilot")?)?,
-                from_literal(&get::<String>(row, "p2_pilot")?)?,
-            ),
-        };
-        totals.records.insert(key, get(row, "records")?);
+        totals.records.insert(records_key_of(row)?, get(row, "records")?);
+    }
+    // R1994000: the whole games under the same keys.
+    let rows = sqlx::query(
+        "select patch, source, mode, p1_pilot, p2_pilot, total from public.game_totals
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)",
+    )
+    .bind(&sources)
+    .bind(mode.as_deref())
+    .bind(query.patch.as_deref())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in &rows {
+        totals
+            .game_totals
+            .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
     }
     let rows = sqlx::query(
         "select patch, source, mode, pilot, card, stats,

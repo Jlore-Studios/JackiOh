@@ -65,8 +65,8 @@ use crate::bots::fallback::{
 };
 use crate::config::{
     BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE,
-    QUEUE_WAIT_STEP_SECONDS, rating_window,
+    QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
+    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, SEAT_COIN_LABEL, rating_window,
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
@@ -149,6 +149,92 @@ fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
 }
 
+// R1989000 — the end-to-end mode's optional seat
+
+/// SPEC §11 R1989000: the match or series seed's coin decides every 1v1 door's seats, so a networked
+/// spec pins the seats it was written for the way it pins the seed (R143): `seat: "p1"` asks for
+/// Player 1's seat, `"p2"` for Player 2's, beside the seed, on the queue and room endpoints, and is
+/// refused outside end-to-end mode like the seed is. A honored pin skips the coin; a conflict pins
+/// the precedence-first profile (the older ticket, the host) and the other takes the free seat.
+///
+/// Rejected, not ignored, like the seed: a client that sends a seat to a production server is told
+/// its request was not understood.
+///
+/// Public because R1989000 names four doors: `actor/rooms.rs` reads the field through this same
+/// function, so the rule is decided in one place.
+pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine::PlayerId>, ApiError> {
+    use jackioh_engine::PlayerId;
+    let Some(value) = body.get("seat") else {
+        return Ok(None);
+    };
+    if !app.env.e2e {
+        return Err(bad_request(
+            "\"seat\" is only accepted by an end-to-end test server; the seats come from the match seed",
+        ));
+    }
+    match value.as_str() {
+        Some("p1") => Ok(Some(PlayerId::P1)),
+        Some("p2") => Ok(Some(PlayerId::P2)),
+        _ => Err(bad_request("\"seat\" must be \"p1\" or \"p2\"")),
+    }
+}
+
+/// ticket id -> the seat its enqueue asked for, until the ticket is paired or cancelled.
+///
+/// Module state beside `E2E_SEAT_BY_TICKET`, for the same reason: the R1989000 pin is a test-mode
+/// field and `Ticket` must not carry it. `actor/rooms.rs` holds `room code -> seat` the same way.
+static E2E_SEAT_BY_TICKET: LazyLock<Mutex<IndexMap<String, jackioh_engine::PlayerId>>> =
+    LazyLock::new(|| Mutex::new(IndexMap::new()));
+
+fn seat_pins() -> std::sync::MutexGuard<'static, IndexMap<String, jackioh_engine::PlayerId>> {
+    E2E_SEAT_BY_TICKET
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// For the R1989000 tests; nothing in `src/` calls it.
+pub fn e2e_seat_count() -> usize {
+    seat_pins().len()
+}
+
+fn forget_seat(ticket_id: &str) {
+    seat_pins().shift_remove(ticket_id);
+}
+
+/// SPEC §11 R1989000: one draw of the match or series seed on `{seed}:seats` at cursor 0. True
+/// means the precedence-first profile (the older ticket, the host, the person a bot pairs with,
+/// the grinder a kickoff names first) takes Player 1's seat; false hands it to the other side.
+/// Only the seed goes in, so the same seed always seats the same way and a replay folds unchanged.
+///
+/// Public for the R1989000 tests, which derive the seats a fixed seed deals; `src/` calls it at
+/// every 1v1 door.
+pub fn seat_coin_p1_first(seed: &str) -> bool {
+    jackioh_engine::Rng::new(&format!("{seed}:{SEAT_COIN_LABEL}"), 0).int(2) == 0
+}
+
+/// R1989000: the seat pin for a pair of tickets, consumed. The older ticket's pin wins over the
+/// younger's, mirroring `take_seed_for_pair`'s precedence; a pin for the younger ticket alone pins
+/// the younger and hands the older the free seat. Answers whether the older ticket takes P1, or
+/// `None` when neither ticket asked, and drops both entries either way.
+fn take_seat_pin_for_pair(a: &Ticket, b: &Ticket) -> Option<bool> {
+    use jackioh_engine::PlayerId;
+    let (older, younger) = older_first(a, b);
+    let mut map = seat_pins();
+    let older_pin = map.get(&older.id).copied();
+    let pin = older_pin.or_else(|| map.get(&younger.id).copied());
+    map.shift_remove(&a.id);
+    map.shift_remove(&b.id);
+    pin.map(|seat| {
+        if older_pin.is_some() {
+            seat == PlayerId::P1
+        } else {
+            // The younger asked alone: it takes its pin, so the older takes P1 exactly when the
+            // younger takes P2.
+            seat == PlayerId::P2
+        }
+    })
+}
+
 // R897000 — a queued ticket's presence
 
 /// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms.
@@ -225,6 +311,36 @@ impl Default for QueuePresence {
     }
 }
 
+// R1996000 — the readout, kept
+
+/// SPEC §11 R1996000: the queue readout last counted, with when, in epoch ms, kept for
+/// `QUEUE_READOUT_CACHE_TTL_SECONDS` so the polls of every waiting client inside it share one
+/// count. One answer for every caller: the readout names nobody (R640002). Not shared in flight:
+/// readouts that miss together each count, and the last to finish is kept. One per `App`, so a
+/// restart or a test starts with none.
+#[derive(Default)]
+pub struct KeptReadout {
+    kept: Mutex<Option<(i64, Value)>>,
+}
+
+impl KeptReadout {
+    /// The answer counted less than `QUEUE_READOUT_CACHE_TTL_SECONDS` before `now`, if one was.
+    fn fresh(&self, now: i64) -> Option<Value> {
+        let ttl_ms = QUEUE_READOUT_CACHE_TTL_SECONDS * MS_PER_SECOND as i64;
+        self.kept
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .as_ref()
+            .filter(|(counted_at, _)| now - counted_at < ttl_ms)
+            .map(|(_, body)| body.clone())
+    }
+
+    /// `body` was counted at `now`: it replaces what was kept.
+    fn keep(&self, now: i64, body: Value) {
+        *self.kept.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((now, body));
+    }
+}
+
 /// The older of two tickets first: R166's "oldest first", ties on ticket id.
 fn older_first<'a>(a: &'a Ticket, b: &'a Ticket) -> (&'a Ticket, &'a Ticket) {
     let a_first = a.enqueued_at < b.enqueued_at || (a.enqueued_at == b.enqueued_at && a.id <= b.id);
@@ -266,12 +382,14 @@ fn take_seed_for_pair(a: &Ticket, b: &Ticket) -> Option<String> {
 /// §9.5 writes them, and it matters: a player already in a match (or a series, R264) or already
 /// queued is told so before their deck is validated, so a stale client gets the useful error.
 ///
-/// `seed` is R143's: the seed this enqueue asked for, or `None`. Only ever `Some` in end-to-end mode.
+/// `seed` is R143's: the seed this enqueue asked for, or `None`. `seat` is R1989000's: the
+/// seat it asked for, or `None`. Only ever `Some` in end-to-end mode.
 async fn enqueue_ticket(
     app: &App,
     profile: &Profile,
     choice: &ModeChoiceInput,
     seed: Option<String>,
+    seat: Option<jackioh_engine::PlayerId>,
 ) -> Result<Ticket, ApiError> {
     // §9.5's "not in a match or a series": a 1v1 match, a series not over (R264) or a live co-op
     // match (R1065000). `AuthLevel::Active` did the account half (§9.4's gate, in the router).
@@ -345,6 +463,11 @@ async fn enqueue_ticket(
     // consumed and never dropped.
     if let Some(seed) = seed {
         seeds().insert(ticket.id.clone(), seed);
+    }
+    // R1989000, the same: a pin remembered for a ticket that does not exist would never be
+    // consumed and never dropped.
+    if let Some(seat) = seat {
+        seat_pins().insert(ticket.id.clone(), seat);
     }
 
     tracing::info!(
@@ -430,7 +553,7 @@ pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiErr
 /// R259: a Conquest pair becomes a series, not a match. Its first game's match id is the one
 /// `tickets_claim_pair` just reserved (R263), and nobody is put in a match yet: the series opens on
 /// a pick phase, and `series.rs` starts game 1 once both players have chosen a deck. Series seat p1
-/// is the older ticket, who goes first in odd games.
+/// is R1989000's coin winner, who goes first in odd games.
 async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
     let (older, younger) = older_first(a, b);
     // R1523000: both sides' seats in the series, or neither, before anything is written: a side
@@ -453,20 +576,28 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
         }
     };
     // R143 and R259: the server mints the series seed (each game's is `{seed_base}:{n}`), unless an
-    // end-to-end enqueue supplied one.
+    // end-to-end enqueue supplied one. R1989000: sides index 0 is the coin winner on the seed base
+    // (an end-to-end pin honored before the coin, the older ticket's first), and R335's alternation
+    // runs from there.
     let seed_base = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
+    let older_is_p1 = take_seat_pin_for_pair(a, b).unwrap_or_else(|| seat_coin_p1_first(&seed_base));
+    let (p1, p2) = if older_is_p1 {
+        (older, younger)
+    } else {
+        (younger, older)
+    };
     let made = async {
         let input = NewSeriesInput {
             series_id: series_id.clone(),
             first_match_id: match_id.to_string(),
             sides: (
                 NewSeriesSide {
-                    profile_id: older.profile_id.clone(),
-                    trio: trio_of(older)?,
+                    profile_id: p1.profile_id.clone(),
+                    trio: trio_of(p1)?,
                 },
                 NewSeriesSide {
-                    profile_id: younger.profile_id.clone(),
-                    trio: trio_of(younger)?,
+                    profile_id: p2.profile_id.clone(),
+                    trio: trio_of(p2)?,
                 },
             ),
             seed_base,
@@ -551,38 +682,48 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     };
     // R143: the server mints the seed, unless an end-to-end enqueue supplied one.
     let seed = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
+    // R1989000: the older ticket's pin wins, else the younger's; without a pin the seed's coin
+    // seats the older ticket, so the same seed always seats the same way. Decks, portraits, slots
+    // and leans travel with the profile; All Random deals stay seat-keyed.
+    let (older, younger) = older_first(a, b);
+    let older_is_p1 = take_seat_pin_for_pair(a, b).unwrap_or_else(|| seat_coin_p1_first(&seed));
+    let (p1, p2) = if older_is_p1 {
+        (older, younger)
+    } else {
+        (younger, older)
+    };
     let random = a.mode == QueueMode::Random;
     let seats = (
         MatchSeat {
-            profile_id: a.profile_id.clone(),
+            profile_id: p1.profile_id.clone(),
             player: jackioh_engine::PlayerId::P1,
             deck: if random {
-                dealt_deck(&seed, "p1", a.lean)
+                dealt_deck(&seed, "p1", p1.lean)
             } else {
-                a.deck.clone()
+                p1.deck.clone()
             },
             portrait: if random {
                 dealt_portrait(&seed, "p1")
             } else {
-                a.portrait.clone().flatten()
+                p1.portrait.clone().flatten()
             },
             // R1834002: an All Random seat plays no deck of its own, so it wears the account's slots.
-            deck_slots: if random { None } else { a.deck_slots.clone() },
+            deck_slots: if random { None } else { p1.deck_slots.clone() },
         },
         MatchSeat {
-            profile_id: b.profile_id.clone(),
+            profile_id: p2.profile_id.clone(),
             player: jackioh_engine::PlayerId::P2,
             deck: if random {
-                dealt_deck(&seed, "p2", b.lean)
+                dealt_deck(&seed, "p2", p2.lean)
             } else {
-                b.deck.clone()
+                p2.deck.clone()
             },
             portrait: if random {
                 dealt_portrait(&seed, "p2")
             } else {
-                b.portrait.clone().flatten()
+                p2.portrait.clone().flatten()
             },
-            deck_slots: if random { None } else { b.deck_slots.clone() },
+            deck_slots: if random { None } else { p2.deck_slots.clone() },
         },
     );
 
@@ -710,6 +851,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
             for ticket in &stale {
                 one_tx!(app.db, |t| t.tickets_cancel(&ticket.id, now).await?)?;
                 forget_seed(&ticket.id);
+                forget_seat(&ticket.id);
                 app.queue_presence.forget(&ticket.profile_id);
                 tracing::info!(
                     event = "queue.expired",
@@ -973,8 +1115,9 @@ async fn pair_with_bots(
 /// R641000: the series a Conquest ticket and its bot play, as `start_paired_series` makes a pair's,
 /// with the claim (`tickets_claim_for_bot_series`) and the series row in one transaction: between
 /// games the bot is in no match, and the series is all that holds it, so a claim must never land
-/// without its series. The person is series p1 and goes first in odd games, as the older ticket of a
-/// pair does (R335, R1453); the bot is p2 with the trio the pool dealt it. The series is ranked
+/// without its series. Series p1 is R1989000's coin winner on the seed base (the person's pin
+/// honored before the coin) and goes first in odd games (R335); the other side plays the trio the
+/// pool dealt it. The series is ranked
 /// (R604) and opens on game 1's pick phase; `bots::pick` makes the bot's picks from the sweeper.
 /// Answers false, with nothing written, when the bot holds no trio or the claim lost.
 async fn start_bot_series(
@@ -1009,11 +1152,14 @@ async fn start_bot_series(
         return Ok(false);
     }
     // R143 and R259: the server mints the series seed, unless an end-to-end enqueue supplied one.
+    // R1989000: sides index 0 is the coin winner on the seed base, the person's pin honored first.
     let seed_base = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
-    let input = NewSeriesInput {
-        series_id,
-        first_match_id: match_id.to_string(),
-        sides: (
+    let pin = seat_pins().shift_remove(&ticket.id);
+    let person_is_p1 = pin
+        .map(|seat| seat == jackioh_engine::PlayerId::P1)
+        .unwrap_or_else(|| seat_coin_p1_first(&seed_base));
+    let (first, second) = if person_is_p1 {
+        (
             NewSeriesSide {
                 profile_id: ticket.profile_id.clone(),
                 trio: person_trio,
@@ -1022,7 +1168,23 @@ async fn start_bot_series(
                 profile_id: bot.profile_id.clone(),
                 trio: bot_trio,
             },
-        ),
+        )
+    } else {
+        (
+            NewSeriesSide {
+                profile_id: bot.profile_id.clone(),
+                trio: bot_trio,
+            },
+            NewSeriesSide {
+                profile_id: ticket.profile_id.clone(),
+                trio: person_trio,
+            },
+        )
+    };
+    let input = NewSeriesInput {
+        series_id,
+        first_match_id: match_id.to_string(),
+        sides: (first, second),
         seed_base,
         catalog_version: app.catalog.version.clone(),
         // R604: a series the queue pairs is ranked, whoever it was paired with.
@@ -1044,9 +1206,8 @@ async fn start_bot_series(
 }
 
 /// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
-/// pair's. The seed is the server's (or R143's end-to-end one). The person is always p1 and goes
-/// first, the bot p2: between two people the older ticket is p1 (`start_paired_match`), and a ticket
-/// past its fallback time is older than anyone who would have come to pair with it. Best of 1 plays
+/// pair's. The seed is the server's (or R143's end-to-end one). R1989000 seats the person and the
+/// bot by the seed's coin (the person's pin honored first); whoever takes p1 goes first. Best of 1 plays
 /// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
 /// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
 /// lean.
@@ -1060,7 +1221,16 @@ async fn start_bot_match(
     lease: Lease<'_>,
 ) -> Result<(), ApiError> {
     let seed = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
-    let (human_player, bot_player) = (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2);
+    // R1989000: the seed's coin seats the person and the bot, the person's pin honored first.
+    let pin = seat_pins().shift_remove(&ticket.id);
+    let person_is_p1 = pin
+        .map(|seat| seat == jackioh_engine::PlayerId::P1)
+        .unwrap_or_else(|| seat_coin_p1_first(&seed));
+    let (human_player, bot_player) = if person_is_p1 {
+        (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2)
+    } else {
+        (jackioh_engine::PlayerId::P2, jackioh_engine::PlayerId::P1)
+    };
     let random = ticket.mode == QueueMode::Random;
     let human = MatchSeat {
         profile_id: ticket.profile_id.clone(),
@@ -1138,7 +1308,12 @@ async fn start_bot_match(
                 deck_slots: picked.slots,
             }
         };
-        let seats = (human, bot_seat);
+        // The row is seat-ordered — index 0 is p1 — whoever the coin gave it to.
+        let seats = if person_is_p1 {
+            (human, bot_seat)
+        } else {
+            (bot_seat, human)
+        };
 
         // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
         app.matches
@@ -1181,7 +1356,8 @@ async fn start_bot_match(
 /// closest in rating to it that is none of its last `BOT_RECENT_OPPONENTS` opponents. Each read
 /// waits for the checks before it to pass, so a sweep with nothing to kick off reads only the bots
 /// and the queue's count. Both are claimed in one statement (`bots_claim_pair`), and a claim that
-/// loses is no error. The grinder is p1 and goes first, each side plays one of its own Best-of-1
+/// loses is no error. R1989000 seats the grinder and its opponent by the seed's coin; whoever
+/// takes p1 goes first. Each side plays one of its own Best-of-1
 /// decks picked from the seed (`{seed}:bot-deck:{seat}`) with its portrait, and the match is ranked
 /// (R604) and Best of 1, stated on the row since no ticket made it: the bot seat (`bots::seat`)
 /// plays both sides, and it is rated and recorded as any match with a bot side is (R610, R611,
@@ -1263,6 +1439,14 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
     lease.commit();
 
     let seed = new_seed();
+    // R1989000: the seed's coin seats the grinder and its opponent; no pin exists here, since no
+    // ticket asked for one.
+    let grinder_is_p1 = seat_coin_p1_first(&seed);
+    let (grinder_player, opponent_player) = if grinder_is_p1 {
+        (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2)
+    } else {
+        (jackioh_engine::PlayerId::P2, jackioh_engine::PlayerId::P1)
+    };
     let seat = |bot: &BotRow, player: jackioh_engine::PlayerId| -> Result<MatchSeat, ApiError> {
         let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck:{}", player.as_str()), 0)
             .pick(&bot.decks)
@@ -1277,10 +1461,14 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
         })
     };
     let started = async {
-        let seats = (
-            seat(grinder, jackioh_engine::PlayerId::P1)?,
-            seat(opponent, jackioh_engine::PlayerId::P2)?,
-        );
+        // The row is seat-ordered — index 0 is p1 — whatever the coin gave the grinder.
+        let grinder_seat = seat(grinder, grinder_player)?;
+        let opponent_seat = seat(opponent, opponent_player)?;
+        let seats = if grinder_is_p1 {
+            (grinder_seat, opponent_seat)
+        } else {
+            (opponent_seat, grinder_seat)
+        };
         app.matches
             .start(
                 app,
@@ -1358,7 +1546,9 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     // R143: an optional `seed`, accepted only by an end-to-end test server and rejected — never
     // ignored — anywhere else.
     let seed = seed_override_of(app, &req.body)?;
-    let ticket = enqueue_ticket(app, &profile, &choice, seed).await?;
+    // R1989000: an optional `seat` beside it, under the same end-to-end-only rule.
+    let seat = seat_override_of(app, &req.body)?;
+    let ticket = enqueue_ticket(app, &profile, &choice, seed, seat).await?;
     let report = try_pair(app).await?;
     // The sweep carries on past one pair's failed start, so only a caller whose own ticket is
     // among the failures answers with its error; anyone else reads their ticket's status below.
@@ -1422,8 +1612,10 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
     };
     tx.tickets_cancel(&ticket.id, now_ms()).await?;
     tx.commit().await?;
-    // R143: a cancelled ticket will never be paired, so its seed is dropped with it.
+    // R143: a cancelled ticket will never be paired, so its seed is dropped with it. R1989000:
+    // its seat pin goes with it.
     forget_seed(&ticket.id);
+    forget_seat(&ticket.id);
     // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
     app.queue_presence.forget(&profile.id);
     tracing::info!(event = "queue.cancelled", profileId = %profile.id, ticketId = %ticket.id);
@@ -1455,12 +1647,19 @@ pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
 /// (R257), the expected wait the tickets claimed in it call for (`expected_wait_seconds`, null when
 /// too few were), and the games that ended in it. A pairing with a bot is a claim and a game against
 /// one is a game, like any other. No count of open tickets: one told a lone queuer that a bot came.
+///
+/// R1996000: counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept (`KeptReadout`).
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await
 }
 
 async fn population_route(app: &App) -> ApiResult {
-    let since = now_ms() - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
+    let now = now_ms();
+    // R1996000: a readout counted inside the TTL answers until it runs out.
+    if let Some(body) = app.queue_readout.fresh(now) {
+        return Ok(json(200, body));
+    }
+    let since = now - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
     let mut tx = app.db.begin(None).await?;
     let waits = tx.tickets_recent_waits(since).await?;
     let games = tx.results_count_since(since).await?;
@@ -1474,8 +1673,7 @@ async fn population_route(app: &App) -> ApiResult {
         bo3: expected_wait_seconds(&by_mode.bo3),
         random: expected_wait_seconds(&by_mode.random),
     };
-    Ok(json(
-        200,
-        json!({ "gamesLastHour": games, "expectedWaitSeconds": expected }),
-    ))
+    let body = json!({ "gamesLastHour": games, "expectedWaitSeconds": expected });
+    app.queue_readout.keep(now, body.clone());
+    Ok(json(200, body))
 }

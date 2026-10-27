@@ -19,6 +19,8 @@
 //    the one shown; a patch is the window the cards share (R1973001), so a micro is never a step of its own.
 //  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
 //    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
+//  - Games panel (R1994000): at the head of the Cards tab's scrolling panel, how the patch's games went
+//    (stats/GamesPanel.tsx).
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -40,6 +42,7 @@ import {
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
+import { GamesPanel } from "../stats/GamesPanel.tsx";
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
@@ -779,6 +782,9 @@ export default function StatsRoute(): ReactElement {
         {/* CARDS TAB */}
         {tab === "cards" && (
           <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel one-screen__body">
+            {/* R1994000: how the patch's games went, in the scrolling panel, not the fixed top (R1646000) */}
+            <GamesPanel patch={patch} mode={mode} />
+
             {/* Filter controls */}
             <div className="stats-filter-bar">
               <input
@@ -1569,7 +1575,7 @@ export default function StatsRoute(): ReactElement {
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
               <p className="stats-player-note">
-                {t("Player stats are public by default (opt-out in Settings). Elo ratings and rankings are kept separate.")}
+                {t("Player stats are public by default. Elo ratings and rankings are kept separate.")}
               </p>
             </div>
 

@@ -193,7 +193,7 @@ def cmd_quiet(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_wake(cfg: Config, args: argparse.Namespace) -> int:
-    """The morning start (`wake.py`): `--wait` sleeps until the wake time, `--list` prints this
+    """The wake (`wake.py`): `--wait` sleeps until the wake time, `--list` prints this
     bot's subscriptions to wake as JSON on its last line, and `--ping` wakes one with the job's
     own secret."""
     if args.ping:
@@ -211,21 +211,22 @@ def cmd_wake(cfg: Config, args: argparse.Namespace) -> int:
         _summary(f"### Wake ({identity_mod.HOME})\n\n"
                  f"{len(found)} to wake.{_bullets(notes)}")
         return 0
-    wait = None if args.now else wake_mod.until_wake(now)
-    if not args.now and wait is None:
-        reason = f"outside the hours around {wake_mod.WAKE_AT:%H:%M} {wake_mod.ZONE}"
-    elif not args.now and wake_mod.already_woken(
+    at = None if args.now else wake_mod.wake_time(now)
+    if not args.now and at is None:
+        reason = (f"outside the hours around the wake times ({wake_mod.WAKE_AT:%H:%M} "
+                  f"{wake_mod.ZONE} and every {wake_mod.EVERY} around it)")
+    elif at is not None and wake_mod.already_woken(
             ctx.gh.list_runs(wake_mod.WORKFLOW, status="success", limit=10), now):
-        reason, wait = "an earlier run already woke today's sessions", None
+        reason = f"an earlier run already woke the sessions of {at:%H:%M} {wake_mod.ZONE}"
     else:
         reason = ""
     if reason:
         print(f"wake: nothing to do: {reason}")
         _output({"go": "false"})
         return 0
-    if wait:
-        print(f"wake: sleeping {wait} until {wake_mod.WAKE_AT:%H:%M} {wake_mod.ZONE}")
-        time.sleep(wait.total_seconds())
+    if at is not None and at > now:
+        print(f"wake: sleeping {at - now} until {at:%H:%M} {wake_mod.ZONE}")
+        time.sleep((at - now).total_seconds())
     _output({"go": "true"})
     return 0
 

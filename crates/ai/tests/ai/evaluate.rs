@@ -9,7 +9,10 @@
 //! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
-use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, face_threat_with, unit_worth};
+use jackioh_ai::{
+    AI_EVAL, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, evaluate, face_threat, face_threat_with, redact,
+    unit_worth,
+};
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
     PlayerId, Value, Winner, json,
@@ -541,6 +544,20 @@ mod r1224_r1225_credit_line {
         // Borrowed: the same card counts again.
         held.players[AI].turn_log.mana_borrowed = Some(1);
         assert!(eval(&held, AI) > eval(&bare, AI));
+    }
+
+    #[test]
+    fn r1225_a_redacted_face_down_card_lapses_nothing_on_its_controllers_turn() {
+        // Core #41 Sheepish, set face-down: the other seat's redaction (R185) leaves a placeholder
+        // with no definition, which has no text and so no credit line.
+        let state = board(json!({ "active": "p1", "p1": { "backrow": ["core-041"] }, "p2": {} }));
+        let seen = redact(&state, HUMAN);
+        let placeholder = seen.players[AI].backrow[0]
+            .as_ref()
+            .expect("the face-down card stays in its zone");
+        assert_eq!(placeholder.def_id, HIDDEN_DEF_ID);
+        assert_eq!(jackioh_engine::credit_lapsing(&seen, AI), Vec::<String>::new());
+        assert!(eval(&seen, HUMAN).is_finite());
     }
 }
 

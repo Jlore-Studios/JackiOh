@@ -702,7 +702,7 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
 }
 
 /** R1578000: the ways to play beside online play, each one a link to the screen that starts it. */
-type Way = { href: string; testid: string; name: string; note: string };
+type Way = { href: string; testid: string; name: string };
 
 function waysToPlay(): readonly Way[] {
   return [
@@ -710,19 +710,16 @@ function waysToPlay(): readonly Way[] {
       href: paths.practice,
       testid: playTestid.practice,
       name: t("Practice"),
-      note: t("Solo games against the AI, including the tutorial."),
     },
     {
       href: paths.together,
       testid: playTestid.together,
       name: t("Play together"),
-      note: t("Friends, challenges, watching and co-op Duos."),
     },
     {
       href: paths.replays,
       testid: playTestid.replays,
       name: t("Replays"),
-      note: t("Watch your recent games again."),
     },
   ];
 }
@@ -733,7 +730,6 @@ function WaysNav(): ReactElement {
       {waysToPlay().map((way) => (
         <a key={way.href} className="play-way" href={way.href} data-testid={way.testid} onClick={followInApp(way.href)}>
           <span className="play-way__name">{way.name}</span>
-          <span className="play-way__note">{way.note}</span>
         </a>
       ))}
     </nav>

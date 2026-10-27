@@ -67,7 +67,8 @@ fn keyword_label(keyword: &Keyword) -> String {
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
 /// embiggen card's Embiggened version is labelled with its Embiggened cost, one label per cost a card
-/// prints (R1175000).
+/// prints (R1175000). The held Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
+/// "Activate 3:" to "Activate 6:" (R1857003).
 pub(super) const LABELS: &[&str] = &[
     "Cry:",
     "Death:",
@@ -78,8 +79,13 @@ pub(super) const LABELS: &[&str] = &[
     "Embiggened (2):",
     "Embiggened (3):",
     "Embiggened (4):",
+    "Embiggened (5):",
     "Activate:",
     "Activate 2:",
+    "Activate 3:",
+    "Activate 4:",
+    "Activate 5:",
+    "Activate 6:",
     "Activate ♾️:",
     "Cast on draw:",
     "Quest:",
@@ -1678,9 +1684,19 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         }
         assert_eq!(wrong, Vec::<String>::new());
         // The eight embiggen cards of issue #1175, and Meditative+ #3, #4, #5, #19 and #23
-        // (#1179, #1181).
+        // (#1179, #1181). Every face above is held to the label, a held set's too; the list pinned
+        // is the shipped sets' (R1857000: the Stinkyscape set's join at its release).
+        let shipped: Vec<String> = cards
+            .into_iter()
+            .filter(|id| {
+                CATALOG
+                    .get(*id)
+                    .is_some_and(|card| jackioh_engine::set_ships(card.set))
+            })
+            .map(str::to_string)
+            .collect();
         assert_eq!(
-            sorted(cards.into_iter().map(str::to_string).collect()),
+            sorted(shipped),
             strings(&[
                 "classicplus-036",
                 "core-046",
@@ -1736,6 +1752,60 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
             check("Aura: Draw 1. Embiggened (4): Draw 2 instead."),
             strings(&["does not start \"Embiggened (4):\" on a line of its own"])
         );
+    }
+}
+
+/// R1857003: the held Stinkyscape set prints five labels no shipped card does, "Activate 3:" to
+/// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):".
+/// Each starts a line as R366's labels do, in English and in Chinese.
+mod r1857003_five_labels_the_stinkyscape_set_prints {
+    use super::*;
+
+    /// The five, with their Chinese (`chinese-terms.json`'s `labels`).
+    const STINKYSCAPE_LABELS: &[(&str, &str)] = &[
+        ("Activate 3:", "激活3："),
+        ("Activate 4:", "激活4："),
+        ("Activate 5:", "激活5："),
+        ("Activate 6:", "激活6："),
+        ("Embiggened (5):", "加码(5)："),
+    ];
+
+    #[test]
+    fn r1857003_activate_3_to_6_and_embiggened_5_are_labels_in_both_languages() {
+        let terms = chinese_terms();
+        let dummy_card = entries()[0];
+        let check = |text: &str| -> Vec<String> {
+            failures(&Face {
+                card: dummy_card,
+                face: FaceKind::Base,
+                text: text.to_string(),
+                keywords: Vec::new(),
+            })
+        };
+        for (label, chinese) in STINKYSCAPE_LABELS {
+            assert!(LABELS.contains(label), "LABELS has no {label}");
+            assert_eq!(terms["labels"][*label].as_str(), Some(*chinese), "{label}");
+            // A label opens its own line, in English ...
+            assert_eq!(
+                check(&format!("Aura: Draw 1.\n{label} Draw 2.")),
+                Vec::<String>::new()
+            );
+            assert_eq!(
+                check(&format!("Aura: Draw 1. {label} Draw 2.")),
+                vec![format!("does not start \"{label}\" on a line of its own")],
+                "{label}"
+            );
+            // ... and in Chinese.
+            assert_eq!(
+                cjk_failures(&format!("光环：抽一张牌。\n{chinese}抽两张牌。"), &[]),
+                Vec::<String>::new()
+            );
+            assert_eq!(
+                cjk_failures(&format!("光环：抽一张牌。{chinese}抽两张牌。"), &[]),
+                vec![format!("does not start \"{chinese}\" on a line of its own")],
+                "{chinese}"
+            );
+        }
     }
 }
 

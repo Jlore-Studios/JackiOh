@@ -27,15 +27,21 @@
 // READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the grid has no
 // "+", no card is draggable, and no card carries `data-legal`, `data-in-deck`, `data-unavailable`,
 // `data-held-by`, `data-refused`, `data-owned` or `aria-disabled`, since there is no deck to put
-// it in and no collection to own it. A click, a right-click and a long-press still open the detail.
+// it in. A click, a right-click and a long-press still open the detail.
+//
+// R1956000: a card the viewer owns is drawn as their own copy and wears their picks for it (the
+// foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
+// the collection does not say is unowned, and in a read-only grid the cards `own` names, behind the
+// ownership it carries (the signed-in Almanac's). Every other card draws the defaults.
 
-import { useMemo, type DragEvent, type ReactElement } from "react";
+import { useContext, useMemo, type DragEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
-import { useFullArt } from "../../cards/fullArt.ts";
+import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
+import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
@@ -46,6 +52,32 @@ import type { Holder } from "./workshop.ts";
 /** Where a pool card already is: in the open deck, in a compared deck, or nowhere that matters. */
 export type PoolPlace = "deck" | Holder | null;
 
+/** R1956000: the cards that are the viewer's own copies, and the cosmetics they own on them. */
+export type OwnCopies = { cards: ReadonlySet<string>; owned: CardOwnership };
+
+/**
+ * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds,
+ * when `own` names the card; as the providers above say otherwise. It always renders both
+ * providers, so a face below it keeps its place in the tree when `own` arrives.
+ */
+export function AsOwnCopy({
+  own,
+  cardId,
+  children,
+}: {
+  own: OwnCopies | undefined;
+  cardId: string;
+  children?: ReactNode;
+}): ReactElement {
+  const outer = useContext(OwnershipContext);
+  const mine = own !== undefined && own.cards.has(cardId);
+  return (
+    <FullArtOwned owned={mine ? own.owned : outer}>
+      <OwnCopy own={mine}>{children}</OwnCopy>
+    </FullArtOwned>
+  );
+}
+
 /** What every grid needs: the cards to show and the detail view a card opens. */
 type PoolGridBaseProps = {
   /** The visible pool, already filtered and sorted (`visiblePool`, or the almanac's `almanacPool`). */
@@ -54,6 +86,8 @@ type PoolGridBaseProps = {
   onInspect: (cardId: string) => void;
   /** R1383: the set whose cards wear the "New" ribbon; `NEW_RIBBON_SET` when absent, null for none. */
   ribbon?: SetName | null;
+  /** R1956000: the cards drawn as the viewer's own copies (the signed-in Almanac's); none when absent. */
+  own?: OwnCopies;
 };
 
 /** The deck editor's half: the open deck, ownership, the "+" and the drag. */
@@ -138,6 +172,8 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
   const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   // R1313000: a full art the viewer does not own prints its words, and opens a preview as they do.
   const fullArtOn = useFullArt(cardId);
+  // R1956000: the viewer's own copy wears their picks; a card the collection says is unowned is not one.
+  const worn = useOwnCopy() && deck?.owned !== false;
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
@@ -187,7 +223,7 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
         {/* `data-skippable` (fit.ts SKIPPABLE_ATTRIBUTE): deckbuilder.css lets the browser skip the
             face's layout off screen, and its text fit waits until it is near (#263). */}
         <span className="db-card-face" aria-hidden="true" data-skippable="">
-          <CardFace face={face} layout="full" lazyArt />
+          <CardFace face={face} layout="full" lazyArt worn={worn} />
         </span>
         {fresh ? (
           <span className="db-new" data-new-set={def.set} aria-hidden="true">
@@ -237,7 +273,7 @@ function itemDeck(props: PoolGridProps, cardId: string): PoolItemDeck | null {
 }
 
 export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET } = props;
+  const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET, own } = props;
 
   return (
     <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
@@ -245,14 +281,15 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;
         return (
-          <PoolItem
-            key={cardId}
-            cardId={cardId}
-            def={def}
-            deck={itemDeck(props, cardId)}
-            fresh={ribbon !== null && def.set === ribbon}
-            onInspect={onInspect}
-          />
+          <AsOwnCopy key={cardId} own={own} cardId={cardId}>
+            <PoolItem
+              cardId={cardId}
+              def={def}
+              deck={itemDeck(props, cardId)}
+              fresh={ribbon !== null && def.set === ribbon}
+              onInspect={onInspect}
+            />
+          </AsOwnCopy>
         );
       })}
     </section>

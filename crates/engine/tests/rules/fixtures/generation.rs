@@ -17,7 +17,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::{both, new_game};
+use super::harness::{both, new_game, next_action};
 
 /// A face as the JSON a def literal takes.
 fn face(text: &str, extra: Value) -> Value {
@@ -225,7 +225,6 @@ pub static pricy_unit: LazyLock<CardDef> =
 
 thread_local! {
     static ASKER_ANSWERS: Cell<Vec<String>> = const { Cell::new(Vec::new()) };
-    static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
 /// How many times `asker`'s question was answered, by option.
@@ -649,19 +648,6 @@ pub struct Run {
     pub state: GameState,
 }
 
-fn next_nonce() -> u32 {
-    NONCE.with(|nonce| {
-        let next = nonce.get() + 1;
-        nonce.set(next);
-        next
-    })
-}
-
-fn action_of(input: impl serde::Serialize, nonce: String) -> Action {
-    let parsed: ActionInput = json_as(serde_json::to_value(&input).expect("an action body is JSON"));
-    parsed.with_nonce(nonce)
-}
-
 /// Past the mulligans, in p1's main phase with 4 mana, this file's fixtures registered.
 pub fn playing(seed: &str) -> Run {
     let mut state = begin_game(&new_game(seed, None)).state;
@@ -705,9 +691,8 @@ pub fn frozen(run: &Run) -> Run {
     }
 }
 
-pub fn act(run: &Run, input: impl serde::Serialize) -> Run {
-    let n = next_nonce();
-    let action = action_of(input, format!("gen{n}"));
+pub fn advance(run: &Run, input: impl serde::Serialize) -> Run {
+    let action = next_action(input);
     let result = reduce(&run.state, &action);
     if let Some(error) = &result.error {
         panic!("{} refused: {error}", action.action_type());
@@ -723,8 +708,7 @@ pub fn act(run: &Run, input: impl serde::Serialize) -> Run {
 
 /// The refusal an action meets, or `None` when it is legal (the state is left as it was).
 pub fn refusal(run: &Run, input: impl serde::Serialize) -> Option<String> {
-    let n = next_nonce();
-    reduce(&run.state, &action_of(input, format!("gen{n}"))).error
+    reduce(&run.state, &next_action(input)).error
 }
 
 /// The run's log applied again from its frozen start: the replay a server folds (§9.3).
@@ -759,7 +743,7 @@ pub fn answer(run: &Run, selection: Selection, player: Option<PlayerId>) -> Run 
         },
         player_id: player.unwrap_or(pending.player_id),
     };
-    act(run, input)
+    advance(run, input)
 }
 
 /// What `pick` takes: a card or its instance id.

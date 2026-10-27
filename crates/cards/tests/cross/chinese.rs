@@ -114,6 +114,54 @@ fn names_word(text: &str, phrase: &str) -> bool {
         .any(|(at, _)| edge(text[..at].chars().next_back()) && edge(text[at + phrase.len()..].chars().next()))
 }
 
+/// R1303, R279: `text` with the names of the cards its card names (`refs`) blanked, each as R279 links
+/// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
+/// term inside a name ("Shadow Word Death", the held Stinkyscape set's S #12 token, holds "Death") asks
+/// its face for no Chinese term: such a name is held to its Chinese name instead
+/// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`). Only a name the card's `refs` list
+/// is blanked, so a term the text says outside one is still read.
+fn without_named_cards(card: &CardDef, text: &str) -> String {
+    let mut names: Vec<&str> = card
+        .refs
+        .iter()
+        .flatten()
+        .filter_map(|id| CATALOG.get(id.as_str()))
+        .flat_map(|named| [named.name.as_str(), named.name.split(" (").next().unwrap_or("")])
+        .filter(|name| !name.is_empty())
+        .collect();
+    // The longest first, so a name is blanked whole before a shorter one inside it.
+    names.sort_by_key(|name| std::cmp::Reverse(name.len()));
+    let edge = |c: Option<char>| c.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '\'' || c == '-'));
+    let mut out = text.to_string();
+    for name in names {
+        let mut from = 0;
+        while let Some(offset) = out[from..].find(name) {
+            let at = from + offset;
+            let mut end = at + name.len();
+            if out[end..].starts_with('s') && edge(out[end + 1..].chars().next()) {
+                end += 1;
+            }
+            if edge(out[..at].chars().next_back()) && edge(out[end..].chars().next()) {
+                out.replace_range(at..end, &" ".repeat(end - at));
+            }
+            from = end;
+        }
+    }
+    out
+}
+
+/// R1303: the Hearthstone and set terms `english` says as whole words that `chinese` lacks, the names
+/// of the cards `card` names read as names (`without_named_cards`).
+fn missing_terms(card: &CardDef, english: &str, chinese: &str) -> Vec<(&'static str, &'static str)> {
+    let english = without_named_cards(card, english);
+    HEARTHSTONE_WORDS
+        .iter()
+        .chain(SET_WORDS)
+        .filter(|(term, word)| names_word(&english, term) && !chinese.contains(word))
+        .copied()
+        .collect()
+}
+
 /// A name with a closing edition cut off: "混沌召唤（核心版）" is named as "混沌召唤", as R279 names
 /// "Call to Chaos (Core Edition)" as "Call to Chaos".
 fn without_edition(name: &str) -> &str {
@@ -377,10 +425,8 @@ mod r1303_the_chinese_tables {
             for face in FACES {
                 let english = &card.face(face).text;
                 let chinese = text(entry, face_field(face));
-                for (term, word) in HEARTHSTONE_WORDS.iter().chain(SET_WORDS) {
-                    if names_word(english, term) && !chinese.contains(word) {
-                        problems.push(format!("{id} {face}: says {term} but not {word}"));
-                    }
+                for (term, word) in missing_terms(card, english, chinese) {
+                    problems.push(format!("{id} {face}: says {term} but not {word}"));
                 }
                 for keyword in &card.face(face).keywords {
                     let word = chinese_keyword_label(keyword, &terms);
@@ -467,6 +513,35 @@ mod r1303_the_chinese_tables {
             .collect();
         assert_eq!(unique.len(), live.len(), "two keywords share a word");
         assert_eq!(problems, Vec::<String>::new());
+    }
+
+    /// R1303, R279: a term inside the name of a card the face names asks for no Chinese term (the name is
+    /// held to its Chinese name), and the same term outside a name still does.
+    #[test]
+    fn r1303_a_term_inside_a_name_the_face_names_asks_for_no_chinese_term_and_outside_one_it_does() {
+        // The Rush Token's name holds two terms, Rush (突袭) and Token (衍生物).
+        assert_eq!(CATALOG["core-t-rush"].name, "Rush Token");
+        let mut naming = CATALOG["core-001"].clone();
+        naming.refs = Some(vec!["core-t-rush".to_string()]);
+        let mut plain = naming.clone();
+        plain.refs = None;
+        let chinese = "召唤一个冲锋兵。";
+        let none: Vec<(&str, &str)> = Vec::new();
+        assert_eq!(missing_terms(&naming, "Summon a Rush Token.", chinese), none);
+        assert_eq!(
+            missing_terms(&plain, "Summon a Rush Token.", chinese),
+            [("Rush", "突袭"), ("Token", "衍生物")]
+        );
+        assert_eq!(
+            missing_terms(&naming, "Summon a Rush Token. Give it Rush.", chinese),
+            [("Rush", "突袭")]
+        );
+        // The plural is the name too; a longer word that holds the name is none, and its terms stay.
+        assert!(!without_named_cards(&naming, "Summon two Rush Tokens.").contains("Rush"));
+        assert_eq!(
+            without_named_cards(&naming, "A Rush Tokenizer has Rush."),
+            "A Rush Tokenizer has Rush."
+        );
     }
 
     /// R279 in Chinese: a card the text names (`refs`) is named by its Chinese name, as the client marks

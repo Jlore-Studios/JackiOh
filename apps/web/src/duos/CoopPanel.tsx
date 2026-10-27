@@ -3,7 +3,8 @@
 // once both are in.
 //
 // CLAUDE.md rule 7: the panel proposes and the server rules. The AI's difficulty, the deck or a random
-// deal (and, for a random one, "More cards from the newest set", R1372) are what the player chose; the
+// deal (and, for a random one, "More cards from", R924000, R2031000: the device's online pick,
+// `readPlayLean`, as the lobby's) are what the player chose; the
 // server checks them, makes the room, and answers a join with the match or a refusal shown in a
 // player's words. The host waits on the room: it is read every COOP_ROOM_POLL_MS until it names its
 // match, and then both players are on the board (the guest goes straight from its join). A room the
@@ -13,6 +14,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactElement } from "r
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 
+import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { pageWake } from "../game/net.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { ApiRequestError, getDecks, type SavedDeck } from "../net/api.ts";
@@ -22,6 +24,7 @@ import {
   getDuosLive,
   getDuosRoom,
   joinDuosRoom,
+  type DuosDeckChoice,
 } from "../net/duos.ts";
 import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -122,7 +125,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const { decks, loadError, retry } = useSavedDecks();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [deck, setDeck] = useState<string>(RANDOM);
-  const [leanNewest, setLeanNewest] = useState(false);
+  const [lean, setLean] = useState(readPlayLean);
   const [room, setRoom] = useState<string | null>(readStoredRoom);
   const [joinCode, setJoinCode] = useState("");
   const [picked, setPicked] = useState("");
@@ -172,9 +175,9 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     };
   }, [room]);
 
-  /** S6: exactly one of a saved deck and a random deal. */
-  const choice = (): { deckId?: string; random?: boolean; leanNewest?: boolean } =>
-    deck === RANDOM ? { random: true, ...(leanNewest ? { leanNewest: true } : {}) } : { deckId: deck };
+  /** S6: exactly one of a saved deck and a random deal, the deal with its lean when there is one. */
+  const choice = (): DuosDeckChoice =>
+    deck === RANDOM ? { random: true, ...(lean === null ? {} : { leanSet: lean }) } : { deckId: deck };
 
   /** One request at a time; its refusal is shown, and a success clears the last one. */
   const run = (work: () => Promise<void>): void => {
@@ -235,9 +238,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
       <h2 id={headingId} className="play-panel__heading">
         {t("Duos co-op")}
       </h2>
-      <p className="lobby-note">
-        {t("Team up with a friend against two AI players: your team shares a pool of life, passes cards and ends its turns together.")}
-      </p>
       {live === null ? null : (
         <a className="button-primary" data-testid={duosTestid.coopRejoin} href={paths.duos(live)} onClick={followInApp(paths.duos(live))}>
           {t("Back to your co-op game")}
@@ -294,18 +294,15 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
           </select>
         </label>
         {deck === RANDOM ? (
-          <label>
-            <input
-              type="checkbox"
-              data-testid={duosTestid.coopLeanNewest}
-              checked={leanNewest}
-              disabled={busy || room !== null}
-              onChange={(event) => {
-                setLeanNewest(event.currentTarget.checked);
-              }}
-            />{" "}
-            {t("More cards from the newest set")}
-          </label>
+          <LeanSetPicker
+            value={lean}
+            disabled={busy || room !== null}
+            testid={duosTestid.coopLeanNewest}
+            onChange={(pick) => {
+              setLean(pick);
+              writePlayLean(pick);
+            }}
+          />
         ) : null}
       </div>
       {loadError === null ? null : (

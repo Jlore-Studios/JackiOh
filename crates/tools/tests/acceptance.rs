@@ -956,12 +956,14 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826).
+/// rather than copying (#1777, #1826, #1997).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
     /// The helpers' names, each defined once in `home`.
     names: &'static [&'static str],
+    /// The statics' names, each declared once in `home` (the rules tests' nonce counter, #1997).
+    statics: &'static [&'static str],
     /// The trees, from the repository's root, where no file but `home` may define one.
     dirs: &'static [&'static str],
     /// Fewer Rust files than this under `dirs` means the scan lost them.
@@ -980,13 +982,28 @@ const KIT_READERS: &[&str] = &[
 const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     SharedHelpers {
         home: "crates/engine/tests/rules/fixtures/harness.rs",
-        names: &["both", "spread"],
+        names: &[
+            "both",
+            "spread",
+            "next_nonce",
+            "next_action",
+            "act_result",
+            "act_ok",
+            "act",
+            "act_logged",
+            "act_with_nonce",
+            "live",
+            "live_mut",
+            "run_effect",
+        ],
+        statics: &["NONCE"],
         dirs: &["crates/engine/tests/rules"],
         more_than: 200,
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
         names: &["unit_at"],
+        statics: &[],
         dirs: KIT_READERS,
         more_than: 800,
     },
@@ -999,12 +1016,14 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "targets_of",
             "tributes_of",
         ],
+        statics: &[],
         dirs: &["crates/cards/tests/cross"],
         more_than: 40,
     },
     SharedHelpers {
         home: "crates/ai/tests/ai/support.rs",
         names: &["det", "ai_options", "js"],
+        statics: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
     },
@@ -1030,6 +1049,24 @@ fn shared_helper_definitions(text: &str, names: &[&str]) -> Vec<usize> {
                             .strip_prefix(name)
                             .is_some_and(|rest| rest.starts_with(['(', '<']))
                     })
+            })
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// The 1-based lines of `text` that declare a static named one of `statics` (`static NONCE: AtomicU32 = …`,
+/// `pub static NONCE`, one inside a `thread_local!`), a `//` comment aside.
+fn shared_static_declarations(text: &str, statics: &[&str]) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code: Vec<&str> = line.split("//").next().unwrap_or("").split_whitespace().collect();
+            code.windows(2).any(|pair| {
+                pair[0] == "static"
+                    && statics
+                        .iter()
+                        .any(|name| pair[1].strip_suffix(':') == Some(*name))
             })
         })
         .map(|(index, _)| index + 1)
@@ -1077,8 +1114,8 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
 }
 
 /// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
-/// one of a SHARED_TEST_HELPERS row's names under its trees outside its home, and a one-instance
-/// pick builder under KIT_READERS.
+/// one of a SHARED_TEST_HELPERS row's names or a declaration of one of its statics under its trees
+/// outside its home, and a one-instance pick builder under KIT_READERS.
 fn shared_helper_copies(root: &Path) -> Vec<String> {
     let at =
         |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
@@ -1089,11 +1126,9 @@ fn shared_helper_copies(root: &Path) -> Vec<String> {
             rust_sources(&root.join(dir), &mut files);
             for file in files.iter().filter(|file| !file.ends_with(row.home)) {
                 let text = fs::read_to_string(file).unwrap_or_default();
-                copies.extend(
-                    shared_helper_definitions(&text, row.names)
-                        .into_iter()
-                        .map(|line| at(file, line)),
-                );
+                let mut lines = shared_helper_definitions(&text, row.names);
+                lines.extend(shared_static_declarations(&text, row.statics));
+                copies.extend(lines.into_iter().map(|line| at(file, line)));
             }
         }
     }
@@ -1135,6 +1170,14 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
                 row.home
             );
         }
+        for name in row.statics {
+            assert_eq!(
+                shared_static_declarations(&home, &[name]).len(),
+                1,
+                "{} declares `static {name}` once",
+                row.home
+            );
+        }
     }
     let picks = fs::read_to_string(root.join(PICK_HOME)).unwrap_or_default();
     assert_eq!(
@@ -1146,7 +1189,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper (#1777, #1826): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper or nonce counter (#1777, #1826, #1997): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1154,6 +1197,12 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
 fn helpers_the_scan_finds_each_local_copy() {
     let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
     assert_eq!(shared_helper_definitions(text, &["both", "spread"]), [1, 3, 5]);
+}
+
+#[test]
+fn helpers_the_scan_finds_each_nonce_static() {
+    let text = "static NONCE: AtomicU32 = AtomicU32::new(0);\nthread_local! {\n    static NONCE: Cell<u32> = const { Cell::new(0) };\n}\npub static NONCE: u32 = 0;\nstatic NONCES: u32 = 0;\nstatic SEQ: AtomicU32 = AtomicU32::new(0);\n// static NONCE: u32 = 0;\nlet nonce = NONCE.with(|n| n.get());\n";
+    assert_eq!(shared_static_declarations(text, &["NONCE"]), [1, 3, 5]);
 }
 
 #[test]
@@ -1206,11 +1255,18 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
             .names
             .iter()
             .map(|name| format!("pub fn {name}() {{}}\n"))
+            .chain(
+                row.statics
+                    .iter()
+                    .map(|name| format!("static {name}: u32 = 0;\n")),
+            )
             .collect();
         write(row.home, &defs);
         for dir in row.dirs {
             write(&format!("{dir}/copy_{i}.rs"), &defs);
-            expected.extend((1..=row.names.len()).map(|line| format!("{dir}/copy_{i}.rs:{line}")));
+            expected.extend(
+                (1..=row.names.len() + row.statics.len()).map(|line| format!("{dir}/copy_{i}.rs:{line}")),
+            );
         }
     }
     let builder = r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#;

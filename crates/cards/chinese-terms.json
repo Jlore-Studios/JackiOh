@@ -29,6 +29,10 @@
     "Otherworldly": "异界",
     "Other-Origins": "异源",
     "Jelly Bean": "软糖豆",
+    "Drone Core": "无人机核心",
+    "Weapon": "武器",
+    "War Doctrine": "战争条令",
+    "Swarm": "虫群",
     "Token": "衍生物"
   },
   "rarities": {
@@ -86,8 +90,13 @@
     "Embiggened (2):": "加码(2)：",
     "Embiggened (3):": "加码(3)：",
     "Embiggened (4):": "加码(4)：",
+    "Embiggened (5):": "加码(5)：",
     "Activate:": "激活：",
     "Activate 2:": "激活2：",
+    "Activate 3:": "激活3：",
+    "Activate 4:": "激活4：",
+    "Activate 5:": "激活5：",
+    "Activate 6:": "激活6：",
     "Activate ♾️:": "激活♾️：",
     "Cast on draw:": "抽到时施放：",
     "Quest:": "任务："

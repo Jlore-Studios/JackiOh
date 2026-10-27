@@ -8,28 +8,7 @@
 use jackioh_engine::effects::hand_exile::exile_random_from_hand;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game};
-
-/// TS `run(state, effect, controller)`: one effect on a sink over `state`, the rng cursor written back;
-/// its events.
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
+use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, run_effect};
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
@@ -61,7 +40,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
             .collect();
         in_hand(&mut state, "fx-2", PlayerId::P1, 2);
 
-        let events = run(
+        let events = run_effect(
             &mut state,
             exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
             PlayerId::P1,
@@ -89,7 +68,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
         let mut state = new_game("hand-exile-many", None);
         in_hand(&mut state, "fx-1", PlayerId::P1, 2);
 
-        run(
+        run_effect(
             &mut state,
             exile_random_from_hand(json_as(json!({ "count": 5 }))),
             PlayerId::P1,
@@ -111,7 +90,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
         state.players[PlayerId::P2].hand = vec![];
         let cursor = state.rng_cursor;
 
-        let events = run(
+        let events = run_effect(
             &mut state,
             exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
             PlayerId::P1,
@@ -127,7 +106,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
         let pick = |seed: &str| -> String {
             let mut state = new_game(seed, None);
             let cards = in_hand(&mut state, "fx-1", PlayerId::P2, 4);
-            run(
+            run_effect(
                 &mut state,
                 exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
                 PlayerId::P1,
@@ -151,7 +130,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
             .into_iter()
             .next();
 
-        let events = run(
+        let events = run_effect(
             &mut state,
             exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
             PlayerId::P1,

@@ -729,6 +729,10 @@ pub struct AiReply {
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     pub defense_switches: i32,
+    /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
+    /// of a line's second score, the one with every countdown fired at the seat's next turn start, that
+    /// `reply_score` blends in: `first + share^wait · (second − first)`.
+    pub countdown_share: f64,
 }
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
@@ -748,6 +752,8 @@ pub const AI_REPLY: AiReply = AiReply {
     // deal 136 aborted at the action cap in both seatings (the parent aborts it against itself too),
     // edge 0.0 (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
     defense_switches: 4,
+    // #1995: untuned; the training lanes may move it.
+    countdown_share: 0.5,
 };
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).

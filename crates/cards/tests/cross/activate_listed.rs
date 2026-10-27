@@ -205,7 +205,8 @@ fn units(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
 }
 
 /// The census: the cards this file covers are exactly the cards whose text has an Activate, which are
-/// exactly the cards whose script declares one.
+/// exactly the cards whose script declares one, among the sets that ship (a held set's join at its
+/// release, R1857000).
 #[test]
 fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_has_a_case_here() {
     jackioh_cards::register_all();
@@ -213,6 +214,10 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
     let mut by_text: Vec<String> = Vec::new();
     let mut by_script: Vec<String> = Vec::new();
     for (id, def) in jackioh_cards::CATALOG.iter() {
+        // R1857000: held until the release (#1884)
+        if !set_ships(def.set) {
+            continue;
+        }
         if def.base.text.contains("Activate") || def.radiant.text.contains("Activate") {
             by_text.push(id.clone());
         }

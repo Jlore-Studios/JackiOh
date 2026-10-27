@@ -20,6 +20,7 @@ import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
 import { DECK_NAME_MAX_LENGTH, ECONOMY_LIVE, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type DecksResponse, type TutorialAccountProgress } from "../net/api.ts";
+import { practiceDeckPath } from "../net/navigate.ts";
 import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
 import {
@@ -1015,6 +1016,22 @@ describe("B32 URL parameters", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("issue #1991 the deck editor's ?deck=saved:2, with three saved decks, picks the second and starts no game", async () => {
+    window.history.replaceState(null, "", practiceDeckPath(2));
+    const host = routeHost();
+    const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
+    renderRoute(host, { account: readyAccount("active"), loadDecks });
+    await waitFor(() => {
+      expect(savedOptions()).toEqual(["saved:1", "saved:2", "saved:3"]);
+    });
+    const select = screen.getByTestId(T.deck) as HTMLSelectElement;
+    expect(select.value).toBe("saved:2");
+    expect(select.options[select.selectedIndex]?.textContent).toBe(SAVED_NAMES[1]);
+    await settle();
+    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+    expect(host.starts()).toEqual([]);
   });
 });
 

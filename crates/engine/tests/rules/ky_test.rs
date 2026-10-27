@@ -9,11 +9,11 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{in_hand, json_of, setup_catalog};
+use crate::rules::fixtures::harness::{act_logged, in_hand, json_of, setup_catalog};
 use crate::rules::fixtures::ky_test::{
     FIXTURE_BANK, book, coin, four, gift, ky_test, ky_test_qd, ky_two, legend, register_ky_test_fixtures,
 };
-use crate::rules::fixtures::prompt_harness::{act, answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
 
 use jackioh_engine::config::KyTestDifficulty::{Easy, Hard, Medium};
 
@@ -367,11 +367,12 @@ mod c_42_kys_test_the_two_prompts_r420 {
                 .iter()
                 .map(|card| card.id.clone())
                 .collect();
-            state = act(
+            state = act_logged(
                 &state,
                 input(json!({ "type": "mulligan", "playerId": player, "keep": keep })),
-                Some(&mut log),
-            );
+                &mut log,
+            )
+            .state;
         }
         let card = must(
             state
@@ -383,13 +384,14 @@ mod c_42_kys_test_the_two_prompts_r420 {
             "KY's Test in hand",
         )
         .clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": card.id })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let offer = open_as(&state, PromptKind::Mode, P1);
-        state = act(
+        state = act_logged(
             &state,
             input(json!({
                 "type": "answer",
@@ -397,11 +399,12 @@ mod c_42_kys_test_the_two_prompts_r420 {
                 "choiceId": offer.id,
                 "selection": [{ "pick": "mode", "option": "Hard" }],
             })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let problem = open_as(&state, PromptKind::Answer, P1);
         let key = must(answer_key_of(&problem.resume.data), "the key").to_string();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({
                 "type": "answer",
@@ -409,8 +412,9 @@ mod c_42_kys_test_the_two_prompts_r420 {
                 "choiceId": problem.id,
                 "selection": [{ "pick": "mode", "option": key }],
             })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert!(hand_ids(&state, P1).contains(&gift().id));
         let folded = fold(&FoldArgs {
             seed: seed.into(),

@@ -158,6 +158,9 @@ pub static countdown: LazyLock<CardDef> =
 /// A 1/1 Stack Unit piece: "Stack. Starship Piece." — a piece that buries a card.
 pub static pod: LazyLock<CardDef> =
     LazyLock::new(|| piece("pod", 18535, (1, 1), json!([{ "kind": "Stack" }]), json!([])));
+/// A Spell: "Return every Unit to its owner's hand." — a bounce that reaches a launched Starship.
+pub static recall: LazyLock<CardDef> =
+    LazyLock::new(|| def("ss-recall", 18536, "Spell", 0, (0, 0), json!([]), json!([])));
 
 /// What the booster's "When launched" deals the enemy hero.
 pub const LAUNCHED_DAMAGE: i32 = 2;
@@ -290,6 +293,10 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             })),
         ),
         (
+            recall.id.clone(),
+            spell(hook(|_ctx| vec![effects::bounce_all(json_as(json!({})))])),
+        ),
+        (
             countdown.id.clone(),
             both(Script {
                 triggers: vec![TriggerDef::new(
@@ -321,6 +328,7 @@ pub static STARSHIP_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         ignition.clone(),
         countdown.clone(),
         pod.clone(),
+        recall.clone(),
     ]
 });
 

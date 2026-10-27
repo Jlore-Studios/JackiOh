@@ -9,31 +9,10 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::config::LIBRARY_CAP;
 use jackioh_engine::effects::shuffle_card_into;
-use jackioh_engine::resolve::{HookOptions, make_context};
-use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
+use jackioh_engine::script::Effect;
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 
-use super::fixtures::harness::{events_json, new_game, set_library};
-
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
+use super::fixtures::harness::{events_json, new_game, run_effect, set_library};
 
 fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
@@ -61,7 +40,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
             .expect("the graveyard card")
             .cost_mod = -1;
 
-        let events = run(&mut state, shuffle_in(&card.id), PlayerId::P1);
+        let events = run_effect(&mut state, shuffle_in(&card.id), PlayerId::P1);
 
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(state.players.p1.library.len(), 4);
@@ -86,7 +65,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         set_library(&mut state, PlayerId::P2, &["fx-1"]);
         let card = in_graveyard(&mut state, "fx-4", PlayerId::P2);
 
-        run(&mut state, shuffle_in(&card.id), PlayerId::P1);
+        run_effect(&mut state, shuffle_in(&card.id), PlayerId::P1);
 
         assert!(state.players.p2.library.iter().any(|c| c.id == card.id));
     }
@@ -101,7 +80,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
                 &["fx-1", "fx-2", "fx-3", "fx-5", "fx-6"],
             );
             let card = in_graveyard(&mut state, "fx-4", PlayerId::P1);
-            run(&mut state, shuffle_in(&card.id), PlayerId::P1);
+            run_effect(&mut state, shuffle_in(&card.id), PlayerId::P1);
             state.players.p1.library.iter().position(|c| c.id == card.id)
         };
         assert_eq!(at("shuffle-card-seed"), at("shuffle-card-seed"));
@@ -114,7 +93,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         let first = in_graveyard(&mut state, "fx-4", PlayerId::P1);
         let second = in_graveyard(&mut state, "fx-5", PlayerId::P1);
 
-        let events = run(&mut state, shuffle_in(&first.id), PlayerId::P1);
+        let events = run_effect(&mut state, shuffle_in(&first.id), PlayerId::P1);
 
         assert_eq!(state.players.p1.library.len(), LIBRARY_CAP as usize);
         assert_eq!(
@@ -147,7 +126,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
             .expect("the graveyard card")
             .radiant = true;
 
-        let events = run(&mut state, shuffle_in(&card.id), PlayerId::P1);
+        let events = run_effect(&mut state, shuffle_in(&card.id), PlayerId::P1);
 
         assert_eq!(events_json(&events, "libraryOverflow")[0]["radiant"], json!(true));
     }
@@ -158,7 +137,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         set_library(&mut state, PlayerId::P1, &["fx-1"]);
         let cursor = state.rng_cursor;
 
-        let events = run(&mut state, shuffle_in("no-such-card"), PlayerId::P1);
+        let events = run_effect(&mut state, shuffle_in("no-such-card"), PlayerId::P1);
 
         assert_eq!(events, Vec::<GameEvent>::new());
         assert_eq!(state.players.p1.library.len(), 1);

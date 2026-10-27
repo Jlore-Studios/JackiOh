@@ -7,20 +7,19 @@ use jackioh_engine::mana::{cost_now, effective_cost, play_cost};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    cast_trap, embiggen_field, five_unit, forever, grave_spell, in_graveyard, lobbyist, monkey, only, pb_act,
-    pb_playing, pb_reduce, plays_of, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit,
-    zero_spell,
+    cast_trap, embiggen_field, five_unit, forever, grave_spell, in_graveyard, lobbyist, monkey, only,
+    pb_playing, plays_of, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit, zero_spell,
 };
 
 /// R345: no automatic turn ends, so a test walks the turns it names.
 fn manual_turns(state: &GameState) -> GameState {
-    let one = pb_act(
+    let one = act(
         state,
         json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }),
     );
-    pb_act(
+    act(
         &one,
         json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" }),
     )
@@ -159,7 +158,7 @@ mod r455_e15_price_rules_from_auras {
         assert_eq!(cost(&state, &in_library), 1);
 
         let mana = state.players.p1.mana.current;
-        let after = pb_act(
+        let after = act(
             &state,
             json!({ "type": "play", "instanceId": trap.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" }),
         );
@@ -271,7 +270,7 @@ mod r455_e15_price_rules_from_auras {
         assert_eq!(plays_json(&state, &three.id), Vec::<Value>::new());
         assert_eq!(plays_json(&state, &one.id).len(), 1);
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": three.id, "playerId": "p1" })
             ))
@@ -310,7 +309,7 @@ mod r455_e15_price_rules_on_a_player {
      {
         let mut state = manual_turns(&pb_playing("r455-next"));
         let card = hand_card(&mut state, &trickster().id, PlayerId::P1);
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -338,7 +337,7 @@ mod r455_e15_price_rules_on_a_player {
         assert_eq!(cost(&after, &spell), 1);
 
         // A Spell played leaves it; a cast Trap leaves it (a cast never uses a discount, R70).
-        after = pb_act(
+        after = act(
             &after,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
@@ -352,8 +351,8 @@ mod r455_e15_price_rules_on_a_player {
                 .any(|modifier| modifier.id == rule.id)
         );
         // It waits across turns ("next" has no "this turn").
-        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
-        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
+        after = act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
+        after = act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
         assert!(
             after
                 .players
@@ -364,7 +363,7 @@ mod r455_e15_price_rules_on_a_player {
         );
         // The Field Spell it prices spends it.
         let mana = after.players.p1.mana.current;
-        after = pb_act(
+        after = act(
             &after,
             json!({ "type": "play", "instanceId": field.id, "zone": { "row": "backrow", "lane": 3 }, "playerId": "p1" }),
         );
@@ -393,7 +392,7 @@ mod r455_e15_price_rules_on_a_player {
         find_instance_mut(&mut state, &card.id)
             .expect("the hand card")
             .radiant = true;
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -421,7 +420,7 @@ mod r455_e15_price_rules_on_a_player {
         let mut state = manual_turns(&pb_playing("r455-tax"));
         let card = hand_card(&mut state, &tax().id, PlayerId::P1);
         let theirs = hand_card(&mut state, &grave_spell().id, PlayerId::P2);
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -430,10 +429,10 @@ mod r455_e15_price_rules_on_a_player {
             only(&view_for(&after, PlayerId::P1).opponent.modifiers).label,
             "Your cards cost (1) more (next turn)"
         );
-        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
+        after = act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 2);
-        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
+        after = act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
         assert!(!after.players.p2.mods.iter().any(is_cost_rule));
     }
 
@@ -452,7 +451,7 @@ mod r455_e15_price_rules_on_a_player {
         );
         let spell = hand_card(&mut state, &grave_spell().id, PlayerId::P1);
         assert_eq!(cost(&state, &spell), 2);
-        let after = pb_act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let after = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
             after.players.p1.mods.iter().filter(|m| is_cost_rule(m)).count(),
             1
@@ -469,7 +468,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
      {
         let mut state = pb_playing("r455-forever");
         let card = hand_card(&mut state, &forever().id, PlayerId::P1);
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -480,7 +479,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         let spell = hand_card(&mut after, &grave_spell().id, PlayerId::P1);
         after.players.p1.mana.current = 4;
         let before = after.players.p2.hero.health;
-        after = pb_act(
+        after = act(
             &after,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
@@ -510,7 +509,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         );
         assert_eq!(cost(&after, &back), 2);
         // And it comes back again, and in any pile it keeps the floor.
-        after = pb_act(
+        after = act(
             &after,
             json!({ "type": "play", "instanceId": back.id, "playerId": "p1" }),
         );
@@ -570,7 +569,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
             .enchantments = Some(vec![Enchantment::ReturnAfterResolve { floor: 1 }]);
         let filler = HAND_CAP - full.players.p1.hand.len() as i32 + 1;
         in_hand(&mut full, &zero_spell().id, PlayerId::P1, filler.max(0));
-        let played = pb_reduce(
+        let played = act_result(
             &full,
             json!({ "type": "play", "instanceId": burnt.id, "playerId": "p1" }),
         );
@@ -585,7 +584,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         find_instance_mut(&mut state, &card.id)
             .expect("the hand card")
             .radiant = true;
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -617,7 +616,7 @@ mod r396_an_x_card_on_the_field_costs_its_x {
         let in_hand_x = hand_card(&mut state, &x_unit().id, PlayerId::P1);
         assert_eq!(cost_now(&state, &in_hand_x), 0);
         state.players.p1.mana.current = 3;
-        let mut after = pb_act(
+        let mut after = act(
             &state,
             json!({ "type": "play", "instanceId": in_hand_x.id, "x": 3, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );

@@ -5,14 +5,12 @@
 //!
 //! Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture file (BUILD §0).
 
-use std::cell::Cell;
 use std::sync::{Arc, LazyLock};
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
-use super::harness::{both, new_game, spread};
+use super::harness::{act, both, new_game, spread};
 
 fn def_json(index: u32, name: &str, type_: &str, extra: Value) -> Value {
     spread(
@@ -844,44 +842,16 @@ pub fn register_pipeline_b() {
 
 // Harness shared by the pipeline B tests
 
-thread_local! {
-    /// One counter per test thread, so every action a test sends is fresh.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-/// Reduce one action with a fresh nonce, returning the whole result. `body` is an `ActionInput` or
-/// its JSON literal.
-pub fn pb_reduce(state: &GameState, body: impl Serialize) -> ReduceResult {
-    let nonce = NONCE.with(|n| {
-        n.set(n.get() + 1);
-        n.get()
-    });
-    let mut fields = serde_json::to_value(body).expect("an action input serialises");
-    if let Some(object) = fields.as_object_mut() {
-        object.insert("nonce".to_string(), json!(format!("pb{nonce}")));
-    }
-    reduce(state, &json_as::<Action>(fields))
-}
-
-/// Reduce one action with a fresh nonce; a refusal panics with its text.
-pub fn pb_act(state: &GameState, body: impl Serialize) -> GameState {
-    let result = pb_reduce(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
 /// Past the mulligans, in p1's main phase, with these cards registered and p1 at 4 mana.
 pub fn pb_playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = pb_act(
+    state = act(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
     );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = pb_act(
+    state = act(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
     );

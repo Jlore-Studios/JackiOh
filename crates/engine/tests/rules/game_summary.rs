@@ -128,7 +128,7 @@ struct Stepper {
 }
 
 impl Stepper {
-    fn act(&mut self, player: PlayerId, body: ActionBody) {
+    fn send(&mut self, player: PlayerId, body: ActionBody) {
         let action = Action::new(body, player, format!("s{}", self.log.len()));
         let result = reduce(&self.state, &action);
         if let Some(error) = &result.error {
@@ -182,7 +182,7 @@ mod summarize_game_s9_11 {
             .find(|card| card.def_id != "fx-going-long")
             .expect("p1 was dealt nothing but the Quickdraw card")
             .clone();
-        game.act(
+        game.send(
             PlayerId::P1,
             ActionBody::Mulligan {
                 keep: p1_dealt
@@ -192,7 +192,7 @@ mod summarize_game_s9_11 {
                     .collect(),
             },
         );
-        game.act(
+        game.send(
             PlayerId::P2,
             ActionBody::Mulligan {
                 keep: ids(&dealt.players.p2.hand),
@@ -224,10 +224,10 @@ mod summarize_game_s9_11 {
             .iter()
             .find(|card| card.id == *played_id)
             .map(|card| card.def_id.clone());
-        game.act(PlayerId::P1, play.clone());
-        game.act(PlayerId::P1, ActionBody::EndTurn);
-        game.act(PlayerId::P2, ActionBody::EndTurn);
-        game.act(PlayerId::P1, ActionBody::Concede);
+        game.send(PlayerId::P1, play.clone());
+        game.send(PlayerId::P1, ActionBody::EndTurn);
+        game.send(PlayerId::P2, ActionBody::EndTurn);
+        game.send(PlayerId::P1, ActionBody::Concede);
 
         let summary = summarize_game(&fold_args(SEED, decks(), game.log.clone()))
             .expect("no summary of a finished game");
@@ -384,15 +384,15 @@ mod summarize_game_s9_11 {
                 .any(|card| card.def_id == "fx-hinder")
         );
         let keep = ids(&game.state.players.p1.hand);
-        game.act(PlayerId::P1, ActionBody::Mulligan { keep });
+        game.send(PlayerId::P1, ActionBody::Mulligan { keep });
         let keep = ids(&game.state.players.p2.hand);
-        game.act(PlayerId::P2, ActionBody::Mulligan { keep });
+        game.send(PlayerId::P2, ActionBody::Mulligan { keep });
         let mut turn = 0;
         while game.state.result.is_none() {
             assert!(turn <= 2 * TURN_CAP_PLAYER_TURNS, "the game did not end");
             turn += 1;
             let active = game.state.active;
-            game.act(active, ActionBody::EndTurn);
+            game.send(active, ActionBody::EndTurn);
         }
 
         let summary = summarize_game(&fold_args(seed, decks(), game.log.clone()))
@@ -440,14 +440,14 @@ mod summarize_game_s9_11 {
     #[test]
     fn r376_makes_no_summary_of_a_game_without_a_result() {
         let mut game = stepper("summary-unfinished", decks());
-        game.act(PlayerId::P1, ActionBody::Mulligan { keep: vec![] });
+        game.send(PlayerId::P1, ActionBody::Mulligan { keep: vec![] });
         assert!(summarize_game(&fold_args("summary-unfinished", decks(), game.log.clone())).is_none());
     }
 
     #[test]
     fn r376_leaves_the_opening_hands_empty_when_the_game_ended_before_a_turn_began() {
         let mut game = stepper("summary-early-concede", decks());
-        game.act(PlayerId::P2, ActionBody::Concede);
+        game.send(PlayerId::P2, ActionBody::Concede);
         let summary = summarize_game(&fold_args("summary-early-concede", decks(), game.log.clone()));
         assert_eq!(
             serde_json::to_value(&summary).expect("a summary serialises"),

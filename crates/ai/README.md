@@ -39,7 +39,7 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
 them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
 it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000), and what the opponent bought at the Marketplace this cycle (R1853004)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), what the opponent bought at the Marketplace this cycle (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
 traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while
@@ -67,7 +67,11 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796; plus a Trample attacker's excess on the hero and a Lifesteal
 attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
-evaluation prefers) on every determinization, and plays the first action of the best mean. It
+evaluation prefers) on every determinization, and plays the first action of the best mean. A line
+leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
+on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
+`AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
+with none waiting, nothing changes. It
 re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that

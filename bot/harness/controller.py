@@ -252,9 +252,13 @@ def check(ctx: Context, planned: dict[str, Any], given: dict[str, str]) -> list[
     if provider is None:
         return [f"the plan names no subscription providers.json has ({provider_id!r})"]
     shared = provider.quiet_check or provider.id == "claude-1"
-    expected = {"runs_on": provider.runs_on or "ubuntu-latest", "cli": provider.cli,
+    # Its own runner, or its fill-in runners when the plan put it in another's lane (`fill_in`).
+    runners = [provider.runs_on or "ubuntu-latest"] + (
+        [provider.fill_in.runs_on] if provider.fill_in else [])
+    runs_on = str(planned.get("runs_on") or "ubuntu-latest")
+    expected = {"runs_on": runs_on if runs_on in runners else runners[0], "cli": provider.cli,
                 "secret": provider.secret or "", "shared": str(shared).lower()}
-    planned_values = {"runs_on": str(planned.get("runs_on") or "ubuntu-latest"),
+    planned_values = {"runs_on": runs_on,
                       "cli": str(planned.get("cli") or ""), "secret": str(planned.get("secret") or ""),
                       "shared": str(bool(planned.get("shared"))).lower()}
     for key, want in expected.items():

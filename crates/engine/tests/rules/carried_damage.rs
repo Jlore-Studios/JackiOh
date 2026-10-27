@@ -11,8 +11,8 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::field::{act_result, flush, playing, tower};
-use crate::rules::fixtures::harness::{in_hand, put, sink_for, slot};
+use crate::rules::fixtures::field::{flush, playing, tower};
+use crate::rules::fixtures::harness::{act_result, in_hand, put, sink_for, slot};
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {

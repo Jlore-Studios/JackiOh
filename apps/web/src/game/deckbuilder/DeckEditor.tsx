@@ -9,6 +9,9 @@
 // R915005: the account's custom cards come in the catalog the route hands it (set `Custom`), behind a
 // "Custom" set chip beside the way to the creator; a deck that names one is "Practice only", in the
 // validator's own words (L7).
+//
+// #1991: a complete deck, while the workshop is saved, offers practice with it picked (`practicePath`,
+// worked out by DeckWorkshop).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -19,7 +22,7 @@ import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { paths } from "../../net/navigate.ts";
+import { navigate, paths } from "../../net/navigate.ts";
 import { followInApp } from "../../routes/nav.tsx";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
@@ -44,6 +47,7 @@ import {
   DECK_SAVE_ERROR,
   DECK_STATUS,
   DECK_PRACTICE_ONLY,
+  DECK_TO_PRACTICE,
   DECK_VERDICT,
   DECKS_OPEN_CREATOR,
   LOADOUT_ERRORS,
@@ -89,6 +93,8 @@ export type DeckEditorProps = {
   limits: WorkshopLimits;
   saved: boolean;
   refusal: string | null;
+  /** #1991: where "Practice with this deck" goes (`practiceDeckPath`), or null to offer none. */
+  practicePath: string | null;
   filter: PoolFilter;
   onFilter: (next: PoolFilter) => void;
   sort: PoolSort;
@@ -116,7 +122,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 }
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
-  const { deck, decks, trios, catalog, collection, limits, saved, refusal } = props;
+  const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
   const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
 
   useLocale();
@@ -388,6 +394,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           deckName={label}
           cards={deck.cards}
           catalog={catalog}
+          collection={collection}
           conflicts={conflicts}
           issues={cardIssues}
           head={head}
@@ -501,6 +508,22 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           </section>
 
           <div className="ws-actions">
+            {/* #1991: a press, as Back's, since navigate() keeps the move in the app. Its words are "Practice":
+                the full sentence, its name, would wrap this row on a phone and push the pool's first row off the
+                first screen (BUILD M5-T1). */}
+            {practicePath === null ? null : (
+              <button
+                type="button"
+                className="ws-action"
+                data-testid={DECK_TO_PRACTICE}
+                aria-label={t("Practice with this deck")}
+                onClick={() => {
+                  navigate(practicePath);
+                }}
+              >
+                {t("Practice")}
+              </button>
+            )}
             <button type="button" className="ws-action" data-testid={DECK_COPY_CODE} onClick={copyCode}>
               {t("Copy code")}
             </button>

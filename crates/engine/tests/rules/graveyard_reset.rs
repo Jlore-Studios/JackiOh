@@ -17,9 +17,9 @@ use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::subsystems::fuse::fuse;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, put, slot};
+use crate::rules::fixtures::harness::{act_result, in_hand, live, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    grave_spell, grave_unit, in_graveyard, only, pb_playing, pb_reduce, plays_of, second_wind, three_spell,
+    grave_spell, grave_unit, in_graveyard, only, pb_playing, plays_of, second_wind, three_spell,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -27,13 +27,6 @@ const P1: PlayerId = PlayerId::P1;
 /// A vanilla (1) Unit of the fixture catalog (`fixtures/catalog.rs`), and a second one to fuse it with.
 const VANILLA_A: &str = "fx-1";
 const VANILLA_B: &str = "fx-2";
-
-/// The card under this id as it stands in the state now.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("instance {id} in the state"))
-}
 
 fn edit(state: &mut GameState, id: &str, change: impl FnOnce(&mut CardInstance)) {
     change(find_instance_mut(state, id).unwrap_or_else(|| panic!("instance {id} in the state")));
@@ -142,7 +135,7 @@ fn r766_a_card_given_0_in_hand_and_discarded_is_played_from_the_graveyard_at_its
 
     // Each play from the graveyard pays the printed (1), and the card lands back there at (1) again.
     let mana = state.players.p1.mana.current;
-    let played = pb_reduce(
+    let played = act_result(
         &state,
         json!({ "type": "play", "instanceId": book.id, "playerId": "p1" }),
     );

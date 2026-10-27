@@ -7,16 +7,11 @@
 //! Meditative set was open (R982, D14); the set shipped in v0.3.5, so it is written in every game,
 //! and the tests that still preview the set preview nothing it had not opened already.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::subsystems::feng_shui::{element_of, element_of_index, last_element, reaction};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::feng_shui::{FS, with_feng_shui};
-use super::fixtures::harness::{events_json, in_hand, new_game, put, slot};
-
-/// TS's module `let nonce`: unique across the tests, which run on parallel threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
+use super::fixtures::harness::{events_json, in_hand, new_game, next_nonce, put, slot};
 
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_feng_shui(new_game(seed, None))).state;
@@ -37,10 +32,9 @@ fn game(seed: &str) -> GameState {
 
 /// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
     body["playerId"] = json!(player_id);
-    body["nonce"] = json!(format!("fs-{nonce}"));
+    body["nonce"] = json!(next_nonce());
     let result = reduce(state, &json_as::<Action>(body));
     if let Some(error) = &result.error {
         panic!("{error}");
