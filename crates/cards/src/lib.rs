@@ -185,6 +185,67 @@ pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scen
     jackioh_engine::testkit::scenario(opts)
 }
 
+/// Apply one effect as `controller`'s, the way `resolve.rs` runs a hook's effects, with no card as its
+/// source: a test's stand-in for whatever would have run it (an open Marketplace's first Credits, a
+/// summon that is no play).
+#[cfg(test)]
+pub(crate) fn run_as(
+    s: &mut jackioh_engine::testkit::Scenario,
+    effect: jackioh_engine::Effect,
+    controller: jackioh_engine::PlayerId,
+) -> Vec<jackioh_engine::GameEvent> {
+    use jackioh_engine::resolve::{HookOptions, make_context};
+    let mut events: Vec<jackioh_engine::GameEvent> = Vec::new();
+    let mut rng = jackioh_engine::rng::Rng::new(&s.state().seed, s.state().rng_cursor);
+    {
+        let mut sink = jackioh_engine::EngineSink::new(s.state_mut(), &mut events, &mut rng);
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+    s.state_mut().rng_cursor = rng.cursor();
+    events
+}
+
+/// R1840003: `player` plays the oldest Resource of `def_id` in their tray, with `targets` declared
+/// (`Value::Null` for none). Panics when the tray holds none or `reduce` refuses the play.
+#[cfg(test)]
+pub(crate) fn play_from_tray<'a>(
+    s: &'a mut jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    def_id: &str,
+    targets: serde_json::Value,
+) -> &'a mut jackioh_engine::testkit::Scenario {
+    let instance_id = s
+        .pile(player, "tray")
+        .into_iter()
+        .find(|card| card.def_id == def_id)
+        .unwrap_or_else(|| panic!("{player}'s tray holds a {def_id}"))
+        .id;
+    s.act(
+        jackioh_engine::ActionBody::Play {
+            instance_id,
+            zone: None,
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: (!targets.is_null()).then(|| jackioh_engine::prelude::json_as(targets)),
+            modes: None,
+            plague: None,
+            face_down: None,
+        },
+        player,
+        "play from the tray",
+    )
+}
+
 /// The price a play of p1's `id` reads: with one mana less than `cost`, the play is refused for it.
 #[cfg(test)]
 pub(crate) fn expect_costs(

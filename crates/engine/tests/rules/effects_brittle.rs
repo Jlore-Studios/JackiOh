@@ -293,7 +293,9 @@ mod r1861001_lower_brittle {
             json!([{ "type": "counterChanged", "instanceId": unit.id, "counter": "brittle", "value": 1 }]),
             "lowered once, Brittle 2 is 1 and nothing crumbles"
         );
-        assert!(!brittle_spent(find_instance(&state, &unit.id).expect("on the field")));
+        assert!(!brittle_spent(
+            find_instance(&state, &unit.id).expect("on the field")
+        ));
 
         let events = lower(&mut state, &unit.id);
         assert_eq!(
@@ -317,9 +319,16 @@ mod r1861001_lower_brittle {
     #[test]
     fn r1861001_a_card_with_no_count_in_force_has_none_to_lower() {
         let mut state = game();
-        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         assert_eq!(lower(&mut state, &unit.id), Vec::<GameEvent>::new());
         assert_eq!(brittle_of(&state, &unit.id), None);
-        assert!(!brittle_spent(find_instance(&state, &unit.id).expect("on the field")));
+        assert!(!brittle_spent(
+            find_instance(&state, &unit.id).expect("on the field")
+        ));
     }
 }

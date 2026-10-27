@@ -19,8 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, ResourcePrice, SetName, StarscapeReward,
-    Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, ResourcePrice, SetName,
+    StarscapeReward, Tag, string_union,
 };
 
 /// §2.6, R1705000

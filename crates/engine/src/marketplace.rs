@@ -24,10 +24,11 @@
 
 use crate::catalog::{def_of, find_def, query_cost, registered_catalog};
 use crate::config::{
-    HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_CREDITS_PER_MANA, MARKETPLACE_CREDITS_PER_MANA_PAST,
-    MARKETPLACE_CYCLE_TURNS, MARKETPLACE_FIXED_LOT_STOCK, MARKETPLACE_FULL_PRICE_MANA,
-    MARKETPLACE_PRICE_SPREAD_DIVISOR, MARKETPLACE_RADIANT_CHANCE, MARKETPLACE_RADIANT_PRICE_MULTIPLIER,
-    MARKETPLACE_TABLE, MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, RESOURCE_TRAY_CAP,
+    HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_CREDITS_PER_MANA,
+    MARKETPLACE_CREDITS_PER_MANA_PAST, MARKETPLACE_CYCLE_TURNS, MARKETPLACE_FIXED_LOT_STOCK,
+    MARKETPLACE_FULL_PRICE_MANA, MARKETPLACE_PRICE_SPREAD_DIVISOR, MARKETPLACE_RADIANT_CHANCE,
+    MARKETPLACE_RADIANT_PRICE_MULTIPLIER, MARKETPLACE_TABLE, MARKETPLACE_ZERO_COST_PRICE, MarketLot,
+    MarketPool, RESOURCE_TRAY_CAP,
 };
 use crate::resources::{
     add_market_credits, draw_sell_price, receive_resource, resource_def_ids, spend_market_credits,
@@ -96,7 +97,8 @@ fn hand_sale_def_ids() -> Vec<String> {
     let mut ids: Vec<String> = registered_catalog()
         .values()
         .filter(|def| {
-            crate::scripts::registered_entry(&def.id).is_some_and(|entry| entry.base.flags().hand_sale == Some(true))
+            crate::scripts::registered_entry(&def.id)
+                .is_some_and(|entry| entry.base.flags().hand_sale == Some(true))
         })
         .map(|def| def.id.clone())
         .collect();

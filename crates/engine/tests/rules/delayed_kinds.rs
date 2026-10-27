@@ -393,11 +393,18 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
         let first = vec![format!("end-tick:p1:{}:no-self", state.turn)];
         assert_eq!(notes(&theirs), first, "this turn's end, as the player's effect");
         let mine = pass(&theirs).state;
-        assert_eq!(notes(&mine), first, "not the opponent's end, nor the start of a turn");
+        assert_eq!(
+            notes(&mine),
+            first,
+            "not the opponent's end, nor the start of a turn"
+        );
         let next = pass(&mine).state;
         assert_eq!(
             notes(&next),
-            vec![first[0].clone(), format!("end-tick:p1:{}:no-self", state.turn + 2)]
+            vec![
+                first[0].clone(),
+                format!("end-tick:p1:{}:no-self", state.turn + 2)
+            ]
         );
     }
 

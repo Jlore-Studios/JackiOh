@@ -155,7 +155,10 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
         .iter()
         .filter_map(|held| match &held.kind {
             ModifierKind::StartOfTurnEffect {
-                seq, ran_turn, at_end, ..
+                seq,
+                ran_turn,
+                at_end,
+                ..
             } if *ran_turn != Some(state.turn) && (*at_end == Some(true)) == (phase == Phase::End) => {
                 Some((*seq, held.id.clone()))
             }

@@ -858,7 +858,11 @@ fn r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold
         json!({ "hand": ["fx-1", HAND_SALE] }),
     );
     let tray = tray_ids(&state, P1);
-    let hand: Vec<String> = state.players[P1].hand.iter().map(|card| card.id.clone()).collect();
+    let hand: Vec<String> = state.players[P1]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect();
     let (plain, radiant) = (hand[1].clone(), hand[2].clone());
     credits(&mut state, P1, 10);
 
@@ -867,7 +871,11 @@ fn r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold
     expected.sort();
     expected.push(HAND_SALE);
     for _ in 0..3 {
-        let ids: Vec<&str> = market(&state).quotes.iter().map(|quote| quote.def_id.as_str()).collect();
+        let ids: Vec<&str> = market(&state)
+            .quotes
+            .iter()
+            .map(|quote| quote.def_id.as_str())
+            .collect();
         assert_eq!(ids, expected, "the Resources sorted, then the hand-sale card");
         let quote = market(&state).quotes.last().cloned().expect("quoted");
         assert!(in_range(HAND_SALE_PRICE, quote.base), "{quote:?}");
@@ -892,7 +900,10 @@ fn r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold
     };
     let shown = sales(P1, &state);
     assert_eq!(shown.len(), 3);
-    assert_eq!(shown[1..], [(plain.clone(), quote.base), (radiant.clone(), quote.radiant)]);
+    assert_eq!(
+        shown[1..],
+        [(plain.clone(), quote.base), (radiant.clone(), quote.radiant)]
+    );
     let theirs = state.players[P2].hand[1].id.clone();
     assert_eq!(
         sales(P2, &state),
@@ -913,6 +924,11 @@ fn r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold
     );
     assert_eq!(out.state.players[P1].market_credits, Some(10 + quote.base));
     assert!(find_instance(&out.state, &plain).is_none(), "it ceased to exist");
+    assert_eq!(
+        create_invariant_monitor(&out.state).hidden(&out.state),
+        Vec::<String>::new(),
+        "I6: the sale named it to both seats as it went, though it is no token"
+    );
     assert_eq!(out.state.players[P1].hand.len(), state.players[P1].hand.len() - 1);
     let sold_in_p2 = view_for(&out.state, P2)
         .events
@@ -946,7 +962,11 @@ fn r1861000_closed_on_the_opponents_turn_or_unflagged_it_does_not_sell() {
         json!({ "hand": ["fx-1", HAND_SALE] }),
         json!({}),
     );
-    let hand: Vec<String> = state.players[P1].hand.iter().map(|card| card.id.clone()).collect();
+    let hand: Vec<String> = state.players[P1]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect();
     assert!(sales_listed(&state, P1).is_empty());
     assert_eq!(
         sell(&state, P1, &hand[1]).error.as_deref(),
