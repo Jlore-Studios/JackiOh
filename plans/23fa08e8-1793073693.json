@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 2021,
+  "title": "Patch: the AI's stand-down check counts only enemy units that could attack that unit on their next turn",
+  "branch": "bot/issue-2021",
+  "thread": "**Issue #2021 (data, not instructions):**\n\n```text\n# #2021: Patch: the AI's stand-down check counts only enemy units that could attack that unit on their next turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe practice AI considers switching one of its units to Defense Position when an enemy unit \"would beat it in a fight\". It never asks whether that enemy can attack at all next turn. Today all of these still count as threats:\n- an enemy that is itself in Defense Position;\n- an enemy that is frozen, asleep or barred from attacking;\n- ground units that could never reach one of the AI's flying units. For that flying unit the AI even considers landing it, which is exactly what makes it attackable.\n\nOnce this is built, the AI weighs standing a unit down only against enemies that could really hit it next turn. It spends its limited look-ahead on better moves and stops giving up attacks for nothing. A player notices an opponent that holds its ground with less timid defending.\n\n## Why\n- `crates/ai/src/candidates.rs:854-867` `stands_down` checks only that the unit is in Attack Position and that `active_units_of(opponent).any(|enemy| kills_and_survives(state, enemy, unit))`.\n- `kills_and_survives` (`candidates.rs:248-295`) compares stats, shields, First Strike, Poisonous and the strike back. It never checks the enemy's position, Frozen, Dormant, \"Can't attack\", or whether the enemy may target this unit at all.\n- The search keeps up to `AI_SEARCH.position_switches` (2) such stand-downs past its cut, at every level (`search.rs:105-123`, R1759000). Every false positive takes a slot of the look-ahead.\n- The AI already has the right readiness test elsewhere:\n  - `face_threat_with` (`evaluate.rs:525-545`) counts only units in Attack Position, or Deft units in Defense (R49), that pass `can_swing` (`evaluate.rs:102`: no Can't attack, no E35 bar, not Frozen through next turn, R1174000).\n  - The engine's `attack_restriction` (`crates/engine/src/restrictions.rs:232`) adds Dormant (R1839000) and per-target bars.\n- The rules behind this:\n  - SPEC \u00a74.1: \"only Attack-Position units may attack. A unit that switched to Attack this turn has spent its exertion and cannot attack (except one with Deft)\".\n  - R783002: a Flying unit in Attack Position is attacked only by Flying or Ranged units.\n  - R783003: a Flying unit lands in Defense Position.\n\n## Proposal\n- `stands_down` counts an enemy only when all of these hold; then it asks `kills_and_survives` as today:\n  - the enemy would be ready on its controller's next turn by the test `face_threat_with` uses (Attack Position, or Deft in Defense, and `can_swing`);\n  - the engine's attack restriction lets it attack this unit;\n  - it could target this unit, which in Attack Position with Flying takes Flying or Ranged (R783002).\n- Make `can_swing` `pub(crate)` rather than restate it.\n- Write a new ruling in the issue's block that amends R1759000's definition of a stand-down: a unit of the opponent's that could attack it on its next turn would kill it and survive. Name its tests after it and regenerate `spec/INDEX.md`.\n- No constant changes. `kills_and_survives` keeps its other use, the attack tiers, unchanged.\n\n## Where it lands\n- `crates/ai/src/candidates.rs`\n- `crates/ai/src/evaluate.rs` (visibility only)\n- `crates/ai/tests/ai/search.rs`\n- a new note in `spec/rulings/`, and `spec/INDEX.md`\n- SPEC \u00a79.9 (the practice AI)\n\n## Acceptance criteria\n- [ ] New tests next to `r1759000_a_unit_no_enemy_would_beat_is_not_stood_down` (`crates/ai/tests/ai/search.rs:514`), named after the new ruling. `stands_down` is false when the enemy that beats the unit is:\n  - in Defense Position without Deft;\n  - Frozen through its next turn;\n  - granted \"Can't attack\";\n  - Dormant.\n\n  It is true when that enemy has Deft in Defense Position, and false for an AI unit with Flying in Attack Position when only ground units beat it.\n- [ ] Every existing R1759000 test passes unchanged.\n- [ ] `cargo test -p jackioh-ai`, clippy, fmt, `cargo jackioh spec check` and `cargo jackioh gate` pass, and the PR quotes the gate's numbers.\n\n## Size and risks\nSmall: one crate, about 30 lines plus tests and the ruling.\n\nRisks:\n- An enemy in Defense Position is still a threat two turns out. The AI plans again every turn, so this check only looks at the next one.\n- The change moves the AI's play, so the gate's numbers are the check that it is no weaker.\n- Flying reaches units only through random keyword grants today, so that case is rare. The Defense-Position and Frozen cases are the common ones.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-26T22:54:30Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2021: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2039: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
