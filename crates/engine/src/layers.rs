@@ -197,7 +197,8 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 /// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
 /// a Unit of theirs on the field, in a unit zone or standing in the backrow (R1081000) — never a
 /// Vanilla one, unlike an aura's grant (the War Doctrines' rows of §8.10), nor one Dormant or buried
-/// under a Stack pile, which no effect reaches (R13, R1839000).
+/// under a Stack pile, which no effect reaches (R13, R1839000). R1870004: only while the modifier is
+/// live, so Stinkyscape #4.4 Last Word's lends Charge on its holder's next turn alone.
 fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     if instance.vanilla
         || is_dormant(state, instance)
@@ -210,7 +211,9 @@ fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
         .mods
         .iter()
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsHaveKeyword { keyword } => Some(keyword.clone()),
+            ModifierKind::UnitsHaveKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+                Some(keyword.clone())
+            }
             _ => None,
         })
         .collect()

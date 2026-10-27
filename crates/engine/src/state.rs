@@ -689,7 +689,8 @@ pub enum ModifierKind {
     /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
     /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but
     /// a Vanilla, Dormant or buried one (`layers::lent_by_player`). Expiry `never`; it outlasts the
-    /// War Doctrine that gave it.
+    /// War Doctrine that gave it. R1870004: Stinkyscape #4.4 Last Word's "your Units have Charge during
+    /// it" is the same modifier with expiry `nextTurnOf`, lending only while live (`mana::modifier_is_live`).
     UnitsHaveKeyword {
         keyword: Keyword,
     },
