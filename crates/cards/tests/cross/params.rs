@@ -461,8 +461,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
         // before (C #46's and C #54's among them, R749), less C #59's tokens, which both faces print
-        // since patch v0.3.10; and the Meditative set's twenty-three, less M #1's draw, printed on both
-        // faces since then too, with M #37's and M #38's `setCost` (R1748003).
+        // since patch v0.3.10, and C #75's draw, which both faces print since #2020; and the
+        // Meditative set's twenty-three, less M #1's draw, printed on both faces since then too,
+        // with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -476,7 +477,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .count();
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 24),
+            (42, 24),
             "{radiant_only:#?}"
         );
     }

@@ -1,0 +1,28 @@
+{
+  "title": "Infinite Reserves draws a card",
+  "sources": "#2020",
+  "notes": "Forced stats compare for core-075 (200 forced games each side, matched by seed): before 47.0% (95% interval 40.2% to 53.9%), after 52.5% (45.6% to 59.3%), paired difference +5.5 points (+0.3 to +10.7). Playing the base face now replaces itself, lifting the holder about five points; the Radiant face is unchanged.",
+  "player": {
+    "title": "Infinite Reserves draws a card",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Infinite Reserves draws 1 card when played; its Radiant face still draws 3."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "core-075"
+  ],
+  "plays": [
+    "classic-025",
+    "classic-028",
+    "classicplus-004",
+    "classicplus-060",
+    "core-094",
+    "core-095",
+    "meditative-008",
+    "meditativeplus-002"
+  ]
+}
