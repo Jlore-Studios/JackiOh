@@ -703,6 +703,15 @@ pub struct ReplayRow {
     pub actions: i64,
 }
 
+/// R768: one `replays_list` row already paired with what `matches_mode_of` answers for its match,
+/// as the batched `replays_list_with_modes` reads them in one query.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayWithMode {
+    pub replay: ReplayRow,
+    pub mode: Option<QueueMode>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchClocks {
@@ -2106,6 +2115,18 @@ impl Tx<'_> {
     /// One finished match with a result, whatever is left of its log; `None` for any other id.
     pub async fn replays_get(&mut self, match_id: &str) -> StoreResult<Option<ReplayRow>> {
         dispatch!(self, replays_get(match_id))
+    }
+
+    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each paired with
+    /// what `matches_mode_of` answers for its match. One query instead of one per row, so a page
+    /// costs a constant number of statements however many rows it holds.
+    pub async fn replays_list_with_modes(
+        &mut self,
+        profile_id: &str,
+        limit: i64,
+        offset: i64,
+    ) -> StoreResult<Vec<ReplayWithMode>> {
+        dispatch!(self, replays_list_with_modes(profile_id, limit, offset))
     }
 
     // rooms

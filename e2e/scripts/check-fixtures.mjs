@@ -1,7 +1,8 @@
 // Pre-flight for e2e/fixtures/decks/*.json: the checks the engine's `validateDeck` would make
-// (SPEC §9.4 L2/L3/L6, DECK_SIZE read off the engine's generated config, MAX_COPIES = 1, no Token
-// cards), run without a browser or a built client so a bad fixture is caught before the suite ever
-// starts.
+// (SPEC §9.4 L2/L3/L6, DECK_SIZE and LIBRARY_CAP read off the engine's generated config,
+// MAX_COPIES = 1, no Token cards), run without a browser or a built client so a bad fixture is
+// caught before the suite ever starts. e2e's `typecheck` runs it too, so CI's web job does on every
+// pull request it runs for (#2049).
 //
 // A fixture may carry a `handicap` (R180), the seat's resources when a scenario needs other than
 // SPEC's own (spec 25: a 5-card library, a 9-card opening hand, a 60-card library). It is checked as
@@ -19,17 +20,25 @@ const decksDir = path.join(here, "..", "fixtures", "decks");
 const catalogPath = path.join(here, "..", "..", "crates", "cards", "catalog.json");
 const engineConfigPath = path.join(here, "..", "..", "apps", "web", "src", "wire", "engineConfig.ts");
 
+const engineConfig = readFileSync(engineConfigPath, "utf8");
+
 /**
- * §2.6 L2, read off the constants `crates/engine/tests/export_config.rs` generates (CLAUDE.md rule 9)
+ * One of the constants `crates/engine/tests/export_config.rs` generates (CLAUDE.md rule 9), read
  * rather than restated: this script is plain Node and cannot import TypeScript, so it reads the line.
  */
-const DECK_SIZE = Number(/^export const DECK_SIZE = (\d+);$/m.exec(readFileSync(engineConfigPath, "utf8"))?.[1]);
-if (!Number.isInteger(DECK_SIZE)) {
-  console.error(`no "export const DECK_SIZE = <n>;" line in ${engineConfigPath}`);
-  process.exit(1);
+function engineConstant(name) {
+  const value = Number(new RegExp(`^export const ${name} = (\\d+);$`, "m").exec(engineConfig)?.[1]);
+  if (!Number.isInteger(value)) {
+    console.error(`no "export const ${name} = <n>;" line in ${engineConfigPath}`);
+    process.exit(1);
+  }
+  return value;
 }
+
+/** §2.6 L2. */
+const DECK_SIZE = engineConstant("DECK_SIZE");
 /** R80: a library holds at most this many cards, so no handicap deck is larger (R184). */
-const LIBRARY_CAP = 60;
+const LIBRARY_CAP = engineConstant("LIBRARY_CAP");
 const HANDICAP_FIELDS = ["deckSize", "manaBonus", "manaCap", "extraOpeningCards", "extraDrawsPerTurn"];
 
 const isCount = (value) => Number.isInteger(value) && value >= 0;

@@ -7,11 +7,9 @@
 
 import type { ReactElement } from "react";
 
-import { CATALOG } from "@jackioh/cards";
-
 import { t } from "../i18n/i18n.ts";
 import type { OwnedCosmeticsResponse } from "../net/api.ts";
-import { collectionTestid, cosmeticKindWords, ownedCosmetics } from "./collection.ts";
+import { cardNameOf, collectionTestid, cosmeticKindWords, ownedCosmetics } from "./collection.ts";
 
 /** R1579000: every cosmetic the account owns but the defaults, a per-card one on its card. */
 export default function OwnedCosmetics({ owned }: { owned: OwnedCosmeticsResponse }): ReactElement {
@@ -24,7 +22,7 @@ export default function OwnedCosmetics({ owned }: { owned: OwnedCosmeticsRespons
           data-rarity={cosmetic.rarity}
         >
           {t(cosmetic.name)} · {cosmeticKindWords(cosmetic.kind)} · {t(cosmetic.rarity)}
-          {cardId === null ? null : ` · ${t("On {card}", { card: CATALOG[cardId]?.name ?? cardId })}`}
+          {cardId === null ? null : ` · ${t("On {card}", { card: cardNameOf(cardId) })}`}
         </li>
       ))}
     </ul>

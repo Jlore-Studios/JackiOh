@@ -130,6 +130,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | Read | Answers |
 | --- | --- |
 | `hero_of(state, player)` | `HeroView { health, armor }`, copied |
+| `starting_health_of(state, player)` | the health the player's hero started with: its handicap's `heroHealth`, else `HERO_HEALTH` (R290, R1866002) |
 | `zone_cards(state, player, zone)` / `zone_count(…)` | one off-field pile (`OffFieldZone`: hand, library, graveyard, exile) as a copy, `library[0]` on top; its size |
 | `cards_played_this_turn(state, player)` | §10.5 step 4's counter, counting the card being played |
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
