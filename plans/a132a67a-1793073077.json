@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 2035,
+  "title": "Patch: a quests bookmark on the landing's button box",
+  "branch": "bot/issue-2035",
+  "thread": "**Issue #2035 (data, not instructions):**\n\n```text\n# #2035: Patch: a quests bookmark on the landing's button box\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now a player only sees their daily quests (SPEC \u00a714.9, R1304000) on `/collection` (`apps/web/src/routes/QuestsPanel.tsx`, rendered from `collection.tsx`), so most players never notice them. This puts them on the Home Screen (the tavern landing, `apps/web/src/routes/landing.tsx`) without crowding it.\n\n**The bookmark.** A small ribbon bookmark hangs off the **bottom-left edge** of the landing's button box (`.landing-ctas`, the `<nav>` in `Actions()` holding Play, Collection and Shop). It should look like a fabric or leather bookmark tucked under the box's brass rim: narrow, with a notched (swallowtail) bottom, in the tavern palette (`--tavern-brass`, `--tavern-gold`, the wood tones in `landing.css`). It shows a small quest glyph and, when the account holds any quests, the count (e.g. `2`). Keep it quiet: no glow or pulse, and lower contrast than the Collection and Shop buttons, so Play stays the one lit action (R1577000, R1578000). It isn't a fourth door. It's a `<button>` with `aria-expanded` and `aria-controls`, labelled with `t(\"Quests\")`.\n\n**The drop-down.** Clicking the bookmark opens a parchment panel that unrolls **downward** from it, under the button box, animated: the bookmark drops and the panel grows from height 0 / `scaleY(0)` with `transform-origin: top` over about 200\u2013250 ms with an ease-out. Clicking again rolls it back up. The panel shows:\n- each held quest's title, progress (`n of target` plus a bar) and reward (`{jlore} Jlore \u00b7 {xp} XP`), the same facts `QuestsList` shows today;\n- the time until the next quest (`Next quest in H:MM:SS`), or the \"You hold {max} quests\" sentence at `QUEST_MAX_HELD`;\n- \"No quests yet.\" when none is held but one is due.\n\nReuse what exists rather than copying it: `getQuests` (`net/api.ts`), `countdownWords`, `useSecondsUntil` (`auth/cooldown.ts`), and `QuestsList` itself or a compact variant pulled out of it, so `/collection` and the landing render the same rows. Every word goes through `t()` with the existing strings where they fit.\n\n**Behaviour:**\n- Shown only to a signed-in account (`useAccount()` is `ready`) while `ECONOMY_LIVE` is on. A visitor with no account, a loading or failed account read, and an off economy all render no bookmark and make no `/api/quests` request.\n- Quests are read once on mount (as `QuestsPanel` does). Opening the panel doesn't need another request. When the countdown reaches zero while the panel is open, it reads again so the new quest appears, instead of saying \"reopen this page\". A failed read shows the alert and Try again inside the panel; the bookmark stays.\n- Closes on a second click, on Escape (focus goes back to the bookmark), and on a click outside the panel.\n- Under `prefers-reduced-motion` (the landing's `motion === \"reduced\"`) it opens and closes instantly with no animation.\n- The panel overlays the content below it (absolutely positioned, above the stats on the landing floor). It doesn't push the hero's layout or make the hero scroll (R1584000). It must fit the phone layouts too (`landing.css`'s breakpoints at 580, 622, 650 and 694; check 390x844), staying inside the viewport with no horizontal scroll.\n- The client decides nothing about quests (CLAUDE.md rule 7): it shows what `GET /api/quests` answers.\n\nWrite a ruling note in this issue's block (R<this issue>\u00d71000, CLAUDE.md rule 3; `docs/issues-and-patches.md`, Ruling numbers) recording the decision: the landing shows held quests behind a bookmark on the button box, signed-in and economy-live only, and the three doors of R1577000/R1578000 don't change. Run `cargo jackioh spec index`. Use the `ui-walkthrough` skill to screenshot it closed and open on desktop and at 390x844 and attach the screenshots to the PR.\n\nTouches: `apps/web/src/routes/landing.tsx`, `landing.css`, `QuestsPanel.tsx` (extract or share the list), `auth/testids.ts` (new `landingTestid` entries), their tests, and the new ruling note. No server, engine, card or catalog change.\n\n### Acceptance\n\n- `landing.test.tsx` (or a new `landing-quests.test.tsx`), each test titled with the new R-id: a signed-in account with an answered `GET /api/quests` sees the bookmark inside or attached to `.landing-ctas`, with the held count; the panel is closed (`aria-expanded=\"false\"`, no quest rows) until it's clicked.\n- Clicking the bookmark opens the panel with each held quest's title, `n of target` and reward, and the next-quest countdown; clicking again, pressing Escape, or clicking outside closes it, and Escape puts focus back on the bookmark.\n- A visitor with no account, a loading account and `ECONOMY_LIVE` off render no bookmark and make no `/api/quests` request.\n- When `nextDueAt` passes while the panel is open, the quests are read again and the new quest shows up.\n- A failed read shows the alert and Try again inside the panel, and Try again reads again.\n- Under reduced motion the panel opens with no transition (a class or `data-motion` the test can check).\n- The existing landing, `QuestsPanel` and `/collection` tests still pass (mock `/api/quests` where the landing now reads it); `/collection`'s quests look the same as before.\n- The ruling note exists with `proven_in` listing the test file, and `cargo jackioh spec check` passes.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2035: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
