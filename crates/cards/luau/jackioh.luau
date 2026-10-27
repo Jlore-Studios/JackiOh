@@ -309,6 +309,7 @@ tribute: boolean?,
 busted: boolean?,
 complicated: boolean?,
 everySet: boolean?,
+dealsDamage: boolean?,
 }
 
 export type CellScope = {
@@ -1982,6 +1983,10 @@ expiry: ModifierExpiry,
 defIds: {string},
 resume: Resume,
 label: string,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "unitsHaveKeyword",
+keyword: Keyword,
 }
 
 export type PlayerSpec = "self" | "enemy"
