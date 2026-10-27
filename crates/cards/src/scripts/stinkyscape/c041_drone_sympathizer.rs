@@ -1,13 +1,144 @@
-//! SPEC §8.10 Stinkyscape 41 Drone Sympathizer, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S07 (#1863) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! S #41 Drone Sympathizer (SPEC §8.10 row 41): (1) Spell, Common, a card of the held Stinkyscape set
+//! (R1420).
+//!   Base:    "Add {cards|random Drone Core card|random Drone Core cards} to your hand." — cards 2
+//!   Radiant: "Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
+//!            — cards 2
+//! Engine: `add_random_from_catalog` over the Drone Core tag (S #27–#36, non-token, R380), one draw of the
+//!   match rng per card, repeats allowed, every tier as likely (R60), each on its base face at its printed
+//!   cost; a full hand burns the overflow (§2.4). The count is the declared `cards` (R386). The pool names
+//!   no set, so while the set is held it reaches no card (R1420). Radiant: added Radiant.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-041";
 
+fn face(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Drone Core"] },
+                "count": param(&*ctx, "cards"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
+
+// S #41 Drone Sympathizer — SPEC §8.10 row 41, BUILD M12 row S 41: "with the set previewed, adds 2 Drone
+// Core cards (each of S 27 to S 36 seen over the seeds), a full hand burning the second; with the set held
+// the pool is empty and nothing is added (R1420); cards reads through `param()`; radiant both Radiant".
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::*;
+
+    use crate::{filler, scenario};
+
+    const P1: PlayerId = PlayerId::P1;
+
+    const SYMPATHIZER: &str = "stinkyscape-041";
+    const FILLER: &str = "core-005";
+
+    /// The ten Drone Core tiers, S #27 to S #36.
+    fn tiers() -> Vec<String> {
+        (27..=36).map(|n| format!("stinkyscape-{n:03}")).collect()
+    }
+
+    fn played(seed: &str, radiant: bool, hand: usize) -> Scenario {
+        let mut cards = vec![json!({ "def": SYMPATHIZER, "radiant": radiant })];
+        cards.extend((0..hand).map(|_| json!(FILLER)));
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": cards, "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.play(SYMPATHIZER, json!({}));
+        s
+    }
+
+    /// The Drone Cores in p1's hand, as (definition, face, cost layer).
+    fn cores(s: &Scenario) -> Vec<(String, bool, i32)> {
+        s.hand(P1)
+            .into_iter()
+            .filter(|card| tiers().contains(&card.def_id))
+            .map(|card| (card.def_id, card.radiant, card.cost_mod))
+            .collect()
+    }
+
+    #[test]
+    fn r60_adds_two_drone_cores() {
+        let _p = preview_sets(&[SetName::Stinkyscape]);
+        let s = played("sympathizer", false, 1);
+        let added = cores(&s);
+        assert_eq!(added.len(), 2, "{added:?}");
+        for (_, radiant, cost_mod) in &added {
+            assert!(!radiant, "on its base face");
+            assert_eq!(*cost_mod, 0, "at its printed cost");
+        }
+    }
+
+    #[test]
+    fn r60_every_tier_is_seen_over_the_seeds() {
+        let _p = preview_sets(&[SetName::Stinkyscape]);
+        let mut seen: Vec<String> = (0..60)
+            .flat_map(|n| cores(&played(&format!("sympathizer-{n}"), false, 1)))
+            .map(|(def_id, _, _)| def_id)
+            .collect();
+        seen.sort();
+        seen.dedup();
+        assert_eq!(seen, tiers());
+    }
+
+    #[test]
+    fn r1420_with_the_set_held_nothing_is_added() {
+        let s = played("sympathizer-held", false, 1);
+        assert!(cores(&s).is_empty());
+        assert_eq!(s.hand(P1).len(), 1);
+    }
+
+    #[test]
+    fn a_full_hand_burns_the_second() {
+        let _p = preview_sets(&[SetName::Stinkyscape]);
+        let s = played("sympathizer-full", false, HAND_CAP as usize - 1);
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+        assert_eq!(cores(&s).len(), 1);
+        let burned: Vec<String> = s
+            .events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Burned { def_id, .. } => Some(def_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(burned.len(), 1);
+        assert!(tiers().contains(&burned[0]), "the burned card is a Drone Core");
+    }
+
+    #[test]
+    fn cards_reads_through_param() {
+        let _p = preview_sets(&[SetName::Stinkyscape]);
+        let mut s = scenario(json!({
+            "p1": { "hand": [SYMPATHIZER, FILLER], "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        set_param(s.card_mut(SYMPATHIZER), "cards", 4);
+        s.play(SYMPATHIZER, json!({}));
+        assert_eq!(cores(&s).len(), 4);
+    }
+
+    #[test]
+    fn radiant_both_radiant() {
+        let _p = preview_sets(&[SetName::Stinkyscape]);
+        let s = played("sympathizer-radiant", true, 1);
+        let added = cores(&s);
+        assert_eq!(added.len(), 2);
+        assert!(added.iter().all(|(_, radiant, _)| *radiant));
+    }
 }
