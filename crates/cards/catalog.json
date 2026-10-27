@@ -24343,7 +24343,7 @@
     "refs": [
       "stinkyscape-148-1"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [
         {
@@ -24376,7 +24376,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Escape the Universe: you win the game, and it is a draw for your opponent."
