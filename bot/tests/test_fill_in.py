@@ -1,5 +1,6 @@
 """Muse fills gpt's and agy's lanes on the night box while they cannot start work (`fill_in` in
-providers.json): Muse's own two lanes are on the Muse box, and each box runs two jobs at most."""
+providers.json): Muse's own four lanes are one on the night box and three on the Muse box, and
+each box runs three jobs at most, so Muse runs six at most."""
 
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from harness.errors import ConfigError
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import DAY, MACHINE, make_config, make_ctx, raw_providers
+from tests.support import DAY, MACHINE, make_config, make_ctx, raw_providers, with_lanes
 
 FILL = "night-vm-muse-fill"
 
@@ -27,7 +28,7 @@ def refused(ctx, provider_id):
     ctx.store.update(lambda s: providers.note_usage(s, provider_id, None, "+PT2H", DAY))
 
 
-def take_all(gh, ctx, limit=8):
+def take_all(gh, ctx, limit=10):
     """Plan until nothing more starts; each claim's run stays alive. (number, provider, runs_on)
     for each, and the last plan's reason."""
     taken, planned = [], {}
@@ -44,30 +45,34 @@ def take_all(gh, ctx, limit=8):
 class FillInTests(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
-        for n in (3, 4, 5, 6, 7):
+        for n in range(3, 12):
             self.gh.add_issue(n, labels=(LABEL_BUILD,))
 
     def test_with_gpt_and_agy_free_each_keeps_its_lane(self):
         ctx = ctx_for(self.gh)
         taken, reason = take_all(self.gh, ctx)
-        self.assertEqual(taken, [(3, "muse", "night-vm-muse"), (4, "muse", "night-vm-muse"),
-                                 (5, "agy", "night-vm-agy"), (6, "gpt", "night-vm-gpt")])
+        self.assertEqual(taken, [*((n, "muse", "night-vm-muse") for n in (3, 4, 5, 6)),
+                                 (7, "agy", "night-vm-agy"), (8, "gpt", "night-vm-gpt")])
         self.assertIn("`muse` is busy", reason)
 
     def test_muse_fills_the_lane_of_one_that_cannot_start(self):
+        # Room for every lane on the machine (`machine_parallel`, six, is its own test's), so
+        # what holds gpt back is its lane.
         ctx = ctx_for(self.gh)
+        ctx = make_ctx(self.gh, at=DAY, cfg=with_lanes(ctx.cfg, 8, 20))
         refused(ctx, "gpt")
         taken, _ = take_all(self.gh, ctx)
-        # Muse, first in the tier order, takes gpt's lane before agy takes its own.
-        self.assertEqual(taken, [(3, "muse", "night-vm-muse"), (4, "muse", "night-vm-muse"),
-                                 (5, "muse", FILL), (6, "agy", "night-vm-agy")])
+        # Muse, first in the tier order, takes its own four lanes, then gpt's lane before agy
+        # takes its own.
+        self.assertEqual(taken, [*((n, "muse", "night-vm-muse") for n in (3, 4, 5, 6)),
+                                 (7, "muse", FILL), (8, "agy", "night-vm-agy")])
         state = ctx.store.load()
-        self.assertEqual(state["items"]["5"]["runs_on"], FILL)
+        self.assertEqual(state["items"]["7"]["runs_on"], FILL)
         lanes = plan_mod.read_lanes(ctx, state)
-        self.assertEqual((lanes.filling, lanes.count("muse")), ({5}, 3))
+        self.assertEqual((lanes.filling, lanes.count("muse")), ({7}, 5))
         self.assertTrue(lanes.full(ctx.cfg.pool.get("muse")))
         # gpt's reset comes while Muse holds its lane: gpt waits for it, so the night box never
-        # runs more than two jobs.
+        # runs more than three jobs (Muse's own runner there, and the two lanes).
         ctx.store.update(lambda s: s["providers"]["gpt"].pop("refused_until"))
         again = plan_mod.make(ctx)
         self.assertEqual(again["action"], "none")
@@ -80,17 +85,16 @@ class FillInTests(unittest.TestCase):
         self.assertEqual(explained.now["gpt"].kind, "full")
         self.assertIn("`muse` fills it", explained.now["gpt"].text)
         # Once Muse's run there ends, the lane is gpt's again.
-        self.gh.runs["5"] = {"status": "completed"}
-        self.gh.add_issue(8, labels=(LABEL_BUILD,))
+        self.gh.runs["7"] = {"status": "completed"}
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["provider"], planned["runs_on"]), ("gpt", "night-vm-gpt"))
 
-    def test_with_both_off_muse_takes_both_lanes_and_no_more(self):
+    def test_with_both_off_muse_takes_both_lanes_and_runs_six_at_most(self):
         ctx = ctx_for(self.gh, machine=("muse",))
         taken, reason = take_all(self.gh, ctx)
-        self.assertEqual([r for _, _, r in taken],
-                         ["night-vm-muse", "night-vm-muse", FILL, FILL])
+        self.assertEqual([r for _, _, r in taken], ["night-vm-muse"] * 4 + [FILL] * 2)
         self.assertIn("`muse` is busy", reason)
+        self.assertEqual(ctx.cfg.pool.machine_parallel, 6)
 
     def test_a_planning_run_of_gpt_or_agy_holds_a_shared_lane(self):
         ctx = ctx_for(self.gh)
@@ -105,8 +109,8 @@ class FillInTests(unittest.TestCase):
 
     def test_the_survey_never_fills_a_lane(self):
         ctx = ctx_for(self.gh, machine=("muse",))
-        lanes = plan_mod.Lanes(8, {40: "muse", 41: "muse"}, machine_limit=6,
-                               machine=frozenset(MACHINE))
+        lanes = plan_mod.Lanes(8, {40: "muse", 41: "muse", 42: "muse", 43: "muse"},
+                               machine_limit=6, machine=frozenset(MACHINE))
         state = ctx.store.load()
         muse = ctx.cfg.pool.get("muse")
         self.assertEqual(plan_mod.runner_for(ctx, state, muse, lanes, "build"), FILL)
@@ -134,7 +138,7 @@ class ParseTests(unittest.TestCase):
         pool = providers.load(providers.Path(__file__).resolve().parents[2])
         muse = pool.get("muse")
         self.assertEqual((muse.runs_on, muse.lanes, muse.fill_in),
-                         ("night-vm-muse", 2, providers.FillIn(FILL, ("gpt", "agy"))))
+                         ("night-vm-muse", 4, providers.FillIn(FILL, ("gpt", "agy"))))
         self.assertEqual((pool.filler_of("gpt").id, pool.filler_of("agy").id),
                          ("muse", "muse"))
         self.assertIsNone(pool.filler_of("devin"))
