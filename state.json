@@ -3175,22 +3175,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40472941680",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "9177fa296c9b404c5638d17ce8fdcd1480b56118",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2041": {
