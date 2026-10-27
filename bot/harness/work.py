@@ -287,6 +287,9 @@ class Worker:
         self.last_usage: dict | None = None
         #: A fresh usage reading taken just before the run (`cmd_work`'s ping), if any.
         self.start_usage: dict | None = None
+        #: The reset of the 5-hour session whose last hour this run took (`providers.last_hour_of`):
+        #: its 5-hour cap stays lifted until then, however far past it the run goes.
+        self.last_hour: datetime | None = None
         self.calls = 0
         self.wt: Git | None = None
         self.base_ref = f"origin/{cfg.default_branch}"
@@ -535,9 +538,19 @@ class Worker:
     def _usage_stop(self, usage: dict[str, Any]) -> str | None:
         """While a call runs: the reading it just streamed, against the provider's caps (and
         its `off_hours` ones outside its window). A reason stops the call there."""
+        return self._refusal(usage)
+
+    def _refusal(self, usage: dict[str, Any], *, starting: bool = False) -> str | None:
+        """`usage`, read now, against the provider's caps. A reading that finds its session's
+        last hour (`providers.last_hour_of`) lifts the 5-hour cap for the rest of the run, until
+        that session resets: the run's own spending past the cap must not stop it."""
         now = self.now()
-        entry = {"usage": {**usage, "observed_at": iso(now)}}
-        return providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
+        reading = {**usage, "observed_at": iso(now)}
+        found = providers_mod.last_hour_of(self.provider, reading, now, self.cfg.timezone)
+        if found is not None:
+            self.last_hour = found
+        return providers_mod.refusal(self.provider, {"usage": reading}, now, self.cfg.timezone,
+                                     starting=starting, last_hour=self.last_hour)
 
     def _call_headroom(self) -> None:
         """Before each model call: the latest reading against the caps, with no headroom margin
@@ -548,9 +561,7 @@ class Worker:
         """
         if not self.last_usage:
             return
-        now = self.now()
-        entry = {"usage": {**self.last_usage, "observed_at": iso(now)}}
-        reason = providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
+        reason = self._refusal(self.last_usage)
         if reason:
             raise Interrupt(f"`{self.provider.id}` stops before its next call: {reason}",
                             "usage")
@@ -563,10 +574,8 @@ class Worker:
         if not self.start_usage:
             return
         self.last_usage = self.start_usage
-        now = self.now()
-        entry = {"usage": {**self.start_usage, "observed_at": iso(now)}}
-        reason = providers_mod.refusal(self.provider, entry, now, self.cfg.timezone,
-                                       starting=self.plan.get("action") in LONG_ACTIONS)
+        reason = self._refusal(self.start_usage,
+                               starting=self.plan.get("action") in LONG_ACTIONS)
         if reason:
             raise Interrupt(f"`{self.provider.id}` stops before it starts: {reason}", "usage")
 

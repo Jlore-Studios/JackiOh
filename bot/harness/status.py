@@ -33,13 +33,19 @@ def _numbers(items: list[dict[str, Any]]) -> str:
     return ", ".join(f"#{i['number']}" for i in items)
 
 
-def cap_text(ctx: Context, provider: Provider, window: str) -> str:
+def cap_text(ctx: Context, provider: Provider, window: str, usage: Any = None) -> str:
     """The cap on a usage window now: "cap 90%" or "no cap", and for a subscription whose cap
-    changes with its hours (`off_hours`) the other one too: "cap 50% now, 70% in its hours"."""
+    changes with its hours (`off_hours`) the other one too: "cap 50% now, 70% in its hours".
+    With its reading, a cap its last hour or its late week raised says so (`caps_at`)."""
     cfg = ctx.cfg
     now = ctx.now()
-    cap = provider.caps_at(now, cfg.timezone).get(window)
+    cap = provider.caps_at(now, cfg.timezone, usage).get(window)
     text = "no cap" if cap is None else f"cap {cap:.0%}"
+    usual = provider.caps_at(now, cfg.timezone).get(window)
+    if cap is not None and usual is not None and cap != usual:
+        why = ("its last hour" if window == "five_hour"
+               else f"its late week, from {provider.late_week.describe()}")
+        return f"{text} now ({why}), {usual:.0%} after the reset"
     hours = provider.schedule.window(cfg.timezone)
     if hours is None or window not in provider.off_hours:
         return text
@@ -57,13 +63,14 @@ def window_notes(ctx: Context, provider: Provider, entry: dict[str, Any], window
     a budget, and when the window resets (`when` writes the time: "in 3h 10m" by default)."""
     now = ctx.now()
     when = when or (lambda at: f"in {human_delta(at - now)}")
-    cap = provider.caps_at(now, ctx.cfg.timezone).get(window)
+    current = providers_mod.current_usage(provider, entry)
+    cap = provider.caps_at(now, ctx.cfg.timezone, current).get(window)
     budget = provider.limits.budgets.get(window)
     usage = entry.get("usage") if isinstance(entry.get("usage"), dict) else {}
     reading = usage.get(window)
     notes = []
     if cap is not None or (budget is None and isinstance(reading, dict)):
-        notes.append(cap_text(ctx, provider, window))
+        notes.append(cap_text(ctx, provider, window, current))
     if cap is not None:
         start = providers_mod.start_under(provider, window, cap)
         if start < cap:

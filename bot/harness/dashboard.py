@@ -264,7 +264,8 @@ def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, s
 
 def _mini_usage(ctx: Context, provider: Any, entry: dict[str, Any]) -> list[str]:
     """A box's usage lines: `5h ▰▰▱▱▱ 42% · cap 40%`, one per window with a reading or a cap."""
-    caps = provider.caps_at(ctx.now(), ctx.cfg.timezone)
+    caps = provider.caps_at(ctx.now(), ctx.cfg.timezone,
+                            providers_mod.current_usage(provider, entry))
     lines = []
     for window, short in (("five_hour", "5h"), ("seven_day", "7d")):
         used, reset, _ = _window_reading(ctx, provider, entry, window)
@@ -487,7 +488,8 @@ def usage_charts(ctx: Context, state: dict[str, Any]) -> list[str]:
         for provider in pool.ordered():
             entry = providers_mod.peek_record(state, provider.id)
             value, _, _ = _window_reading(ctx, provider, entry, window)
-            cap = provider.caps_at(ctx.now(), ctx.cfg.timezone).get(window)
+            cap = provider.caps_at(ctx.now(), ctx.cfg.timezone,
+                                   providers_mod.current_usage(provider, entry)).get(window)
             if value is None:
                 if window == "five_hour" or cap is not None:
                     unread.append(provider.id)

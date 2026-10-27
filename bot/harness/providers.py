@@ -28,7 +28,7 @@ import json
 import re
 import dataclasses
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -91,6 +91,19 @@ INFRA_ASK_AFTER = 3
 #: Usage windows, and how long each lasts when a reading carries no reset time of its own.
 WINDOWS = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
 WINDOW_NAMES = {"five_hour": "5-hour", "seven_day": "7-day"}
+
+#: The last hour of a 5-hour session (`last_hour` in providers.json): what is left of a session is
+#: lost at its reset, so a subscription its owner left alone may spend it past its cap.
+LAST_HOUR = timedelta(hours=1)
+#: How far over its 5-hour cap a reading may be and still count as the bot's own spending: a call
+#: the cap stops can end a point past it (its watcher looks every 15 seconds, at whole points).
+#: Further over, somebody else spent the session, and its last hour stays capped.
+LAST_HOUR_SLACK = 0.01
+#: The longest a late week (`late_week`) may last, from its start to the week's reset: a reset
+#: that moved further off raises nothing, rather than the week's cap for days.
+LATE_WEEK_SPAN = timedelta(days=1)
+#: Weekday names as `late_week` writes them, Monday first (`datetime.weekday`).
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 
 @dataclass(frozen=True)
@@ -197,6 +210,14 @@ class Provider:
     #: The effort a review runs at (#695): a review checks a finished change, which needs
     #: less thought than the build. "" runs it at `high`.
     review_effort: str = ""
+    #: Its last hour (`last_hour: true`): in the hour before its 5-hour session resets, while
+    #: its reading is no further over its 5-hour cap than the bot's own spending takes it (so
+    #: nobody else spent the session), that cap is lifted; a run that starts there goes on past
+    #: it until the reset (`last_hour_of`). Its weekly cap still holds.
+    last_hour: bool = False
+    #: Its late week (`late_week`): from a weekday and time until its week resets, a higher
+    #: weekly cap (claude-5's 90% from Sunday 17:00).
+    late_week: "LateWeek | None" = None
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -210,15 +231,51 @@ class Provider:
             text += f", outside them up to {caps}"
         return text
 
-    def caps_at(self, at: datetime, zone_name: str | None) -> dict[str, float]:
+    def caps_at(self, at: datetime, zone_name: str | None, usage: Any = None, *,
+                last_hour: datetime | None = None) -> dict[str, float]:
         """The usage caps that hold at `at`: its own, and outside its window the tighter of
-        those and its `off_hours` ones."""
+        those and its `off_hours` ones. With its reading (`usage`), its late week raises the
+        weekly cap (`late_week_holds`) and its last hour lifts the 5-hour one (`last_hour_of`).
+        `last_hour` is the reset of a session whose last hour a run already took
+        (`work.Worker`): the 5-hour cap stays lifted until then, however far past it the run
+        has gone."""
         caps = dict(self.limits.stops)
         if (self.off_hours and zone_name is not None
                 and not self.schedule.is_open(zone_name, at)):
             for window, share in self.off_hours.items():
                 caps[window] = min(caps.get(window, 1.0), share)
+        if usage is None:
+            return caps
+        if "seven_day" in caps and late_week_holds(self, usage, at, zone_name):
+            caps["seven_day"] = max(caps["seven_day"], self.late_week.seven_day)
+        if "five_hour" in caps and ((last_hour is not None and at < last_hour)
+                                    or last_hour_of(self, usage, at, zone_name) is not None):
+            caps["five_hour"] = 1.0
         return caps
+
+
+@dataclass(frozen=True)
+class LateWeek:
+    """`late_week` in providers.json, `{"from": "Sun 17:00", "seven_day": 0.9}`: from that
+    weekday and time in the bot's time zone until the week resets, the weekly cap is
+    `seven_day`. It holds only while the reset is at most `LATE_WEEK_SPAN` after the start."""
+
+    weekday: int
+    start: time
+    seven_day: float
+
+    def since(self, at: datetime, zone_name: str) -> datetime:
+        """The latest start at or before `at`."""
+        local = at.astimezone(zone(zone_name))
+        day = local.date() - timedelta(days=(local.weekday() - self.weekday) % 7)
+        start = datetime(day.year, day.month, day.day, self.start.hour, self.start.minute,
+                         tzinfo=zone(zone_name))
+        if start > at:
+            start -= timedelta(days=7)
+        return start.astimezone(timezone.utc)
+
+    def describe(self) -> str:
+        return f"{WEEKDAYS[self.weekday].title()} {self.start:%H:%M}"
 
 
 @dataclass(frozen=True)
@@ -442,7 +499,7 @@ _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason", "usage_since",
                   "lanes", "build_last", "easy_first", "off_hours", "fix_effort",
-                  "review_effort", "start_headroom", "fill_in"}
+                  "review_effort", "start_headroom", "fill_in", "last_hour", "late_week"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -485,6 +542,26 @@ def _fill_in(raw: Any, where: str) -> FillIn | None:
     if not isinstance(of, list) or not all(isinstance(i, str) and i for i in of):
         raise ConfigError(f"{where}.for: expected a list of subscriptions")
     return FillIn(runs_on, tuple(of))
+
+
+def _late_week(raw: Any, where: str) -> LateWeek | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping) or not raw.get("from") or raw.get("seven_day") is None:
+        raise ConfigError(f"{where}: needs from (\"Sun 17:00\") and seven_day")
+    unknown = sorted(set(raw) - {"from", "seven_day", "note"})
+    if unknown:
+        raise ConfigError(f"{where}: unknown keys {', '.join(unknown)}")
+    found = re.fullmatch(r"\s*([A-Za-z]{3})[A-Za-z]*\s+(\d{1,2}:\d{2})\s*", str(raw["from"]))
+    if not found or found.group(1).lower() not in WEEKDAYS:
+        raise ConfigError(f"{where}.from: {raw['from']!r} is not a weekday and a time "
+                          "(\"Sun 17:00\")")
+    try:
+        start = clock.parse_hhmm(found.group(2))
+    except ValueError as exc:
+        raise ConfigError(f"{where}.from: {raw['from']!r}: {exc}") from exc
+    return LateWeek(WEEKDAYS.index(found.group(1).lower()), start,
+                    _fraction(raw["seven_day"], f"{where}.seven_day"))
 
 
 def _tiers(raw: Any) -> dict[str, tuple[TierEntry, ...]]:
@@ -557,6 +634,13 @@ def _provider(name: str, raw: Any) -> Provider:
     if raw.get("quiet_check") and cli != "claude":
         raise ConfigError(f"{where}.quiet_check: only a Claude account can be checked for quiet "
                           "(the check reads Claude's usage)")
+    limits = _limits(raw["limits"], f"{where}.limits")
+    if raw.get("last_hour") and "five_hour" not in limits.stops:
+        raise ConfigError(f"{where}.last_hour: it lifts a 5-hour cap, and {name} has none")
+    late_week = _late_week(raw.get("late_week"), f"{where}.late_week")
+    if late_week is not None and late_week.seven_day <= (limits.stops.get("seven_day") or 1.0):
+        raise ConfigError(f"{where}.late_week: it raises a weekly cap, and {name}'s is not under "
+                          f"{late_week.seven_day:.0%}")
     return Provider(
         id=name,
         enabled=bool(raw.get("enabled", True)),
@@ -568,8 +652,7 @@ def _provider(name: str, raw: Any) -> Provider:
         secret=secret,
         schedule=_schedule(raw["schedule"], f"{where}.schedule"),
         limits=dataclasses.replace(
-            _limits(raw["limits"], f"{where}.limits"),
-            headroom=_headroom(raw.get("start_headroom"), f"{where}.start_headroom")),
+            limits, headroom=_headroom(raw.get("start_headroom"), f"{where}.start_headroom")),
         quiet_check=bool(raw.get("quiet_check", False)),
         roles=roles,
         env={str(k): str(v) for k, v in env.items()},
@@ -588,6 +671,8 @@ def _provider(name: str, raw: Any) -> Provider:
         review_effort=str(raw.get("review_effort") or ""),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
+        last_hour=bool(raw.get("last_hour", False)),
+        late_week=late_week,
     )
 
 
@@ -829,9 +914,11 @@ def _duration(text: str) -> timedelta:
 
 
 def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
-            zone_name: str | None = None, *, starting: bool = False) -> str | None:
+            zone_name: str | None = None, *, starting: bool = False,
+            last_hour: datetime | None = None) -> str | None:
     """Why this provider's usage says to start nothing now, or None. With the bot's time zone,
-    outside its window its `off_hours` caps hold too. `starting` (a build, a revision or a plan
+    outside its window its `off_hours` caps hold too, and its late week's and its last hour's
+    (`Provider.caps_at`, which takes `last_hour`). `starting` (a build, a revision or a plan
     about to start) leaves `start_headroom` under each cap; a run going on stops at the cap
     itself."""
     until = parse_iso(entry.get("refused_until"))
@@ -839,8 +926,8 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
         return f"it refused a call; its limit resets at {iso(until)}"
     usage = current_usage(provider, entry)
     observed = parse_iso(usage.get("observed_at"))
-    caps = provider.caps_at(at, zone_name)
-    outside = caps != dict(provider.limits.stops)
+    caps = provider.caps_at(at, zone_name, usage, last_hour=last_hour)
+    outside = provider.caps_at(at, zone_name) != dict(provider.limits.stops)
     for window, cap in caps.items():
         stop = start_under(provider, window, cap) if starting else cap
         reading = usage.get(window) if isinstance(usage, dict) else None
@@ -884,7 +971,7 @@ def room(provider: Provider, entry: Mapping[str, Any], at: datetime,
         return 0.0
     usage = current_usage(provider, entry)
     observed = parse_iso(usage.get("observed_at"))
-    caps = provider.caps_at(at, zone_name)
+    caps = provider.caps_at(at, zone_name, usage)
     free = [1.0]
     for window, span in WINDOWS.items():
         reading = usage.get(window)
@@ -907,12 +994,44 @@ def start_under(provider: Provider, window: str, cap: float) -> float:
     return max(0.0, cap - provider.limits.headroom.get(window, 0.0))
 
 
+def last_hour_of(provider: Provider, usage: Any, at: datetime,
+                 zone_name: str | None) -> datetime | None:
+    """When its 5-hour session resets, if `usage` finds `provider` in that session's last hour
+    (`last_hour`): the reset at most `LAST_HOUR` away, and the reading no further over the
+    5-hour cap that holds now than `LAST_HOUR_SLACK`, so nobody but the bot spent the session
+    (a cap of 50% read at 50%). None otherwise: then the cap holds as ever."""
+    if not provider.last_hour or not isinstance(usage, Mapping):
+        return None
+    cap = provider.caps_at(at, zone_name).get("five_hour")
+    reading = usage.get("five_hour")
+    if cap is None or cap >= 1.0 or not isinstance(reading, Mapping):
+        return None
+    resets = parse_iso(reading.get("resets_at"))
+    used = reading.get("utilization")
+    if (resets is None or not at < resets <= at + LAST_HOUR
+            or not isinstance(used, (int, float)) or used > cap + LAST_HOUR_SLACK):
+        return None
+    return resets
+
+
+def late_week_holds(provider: Provider, usage: Any, at: datetime, zone_name: str | None) -> bool:
+    """Whether `provider`'s late week (`late_week`) raises its weekly cap at `at`: its start has
+    passed, and the week its reading names resets after `at` and at most `LATE_WEEK_SPAN` after
+    that start."""
+    late = provider.late_week
+    reading = usage.get("seven_day") if isinstance(usage, Mapping) else None
+    if late is None or zone_name is None or not isinstance(reading, Mapping):
+        return False
+    resets = parse_iso(reading.get("resets_at"))
+    return resets is not None and resets > at and resets - late.since(at, zone_name) <= LATE_WEEK_SPAN
+
+
 def frees_at(provider: Provider, entry: Mapping[str, Any], at: datetime,
              zone_name: str) -> datetime | None:
     """When a subscription whose usage stops a build or a plan starting now
     (`refusal(..., starting=True)`) may start one again, with nothing more spent: the first of
-    its refusal's end, its readings' resets and its window's opening that clears it. None when
-    none of those does (a minute budget, say)."""
+    its refusal's end, its readings' resets, its session's last hour, its late week's start and
+    its window's opening that clears it. None when none of those does (a minute budget, say)."""
     times: set[datetime] = set()
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
@@ -926,6 +1045,10 @@ def frees_at(provider: Provider, entry: Mapping[str, Any], at: datetime,
         resets = parse_iso(reading.get("resets_at")) or (observed + span if observed else None)
         if resets is not None and resets > at:
             times.add(resets)
+            if window == "five_hour" and provider.last_hour and resets - LAST_HOUR > at:
+                times.add(resets - LAST_HOUR)  # its last hour lifts the cap
+    if provider.late_week is not None:
+        times.add(provider.late_week.since(at + WINDOWS["seven_day"], zone_name))
     window = provider.schedule.window(zone_name)
     if window is not None and provider.off_hours and not window.is_open(at):
         times.add(window.next_open(at))  # its in-hours caps are the looser ones
