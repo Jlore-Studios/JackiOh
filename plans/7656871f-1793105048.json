@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 1874,
+  "title": "Patch: Stinkyscape S12, the AI at the wheel",
+  "branch": "bot/issue-1874",
+  "thread": "**Issue #1874 (data, not instructions):**\n\n```text\n# #1874: Patch: Stinkyscape S12, the AI at the wheel\nOpened by @squishy-squooby.\n\nFullsend 1 of the Stinkyscape set, a card part. It builds on `main` behind R1420's gate, so no player meets these cards before the release, the last part of #1856.\n\n## Scope\n\n- **Cards**: `#46` Circadian Halfcycler, `#47` Circadian Fullcycler, `#147` IN33DH3, `#147.1` IN33DH3 Prime, `#147.2` Wardrum Blob\n- **Uses, already on `main`**: #1844\n\nCircadian Halfcycler's three AI actions are at the start of every one of your turns while it stands. The cyclers summon the drones S07 adds.\n\n## Reading\n\nEach card's entry is in the foundation's card-by-card brief (`docs/stinkyscape-set.md` once #1857 has merged); the designer's words are `JackiOh_Stinkyscape_Cards.md`. The plan's fixes (ST8) and the designer's answers (ST9) win over the designer's words.\n\n## Done when\n\n- Each card's script, `crates/cards/src/scripts/stinkyscape/cNNN_slug.rs` (filling the foundation's stub), returns `Vec<Effect>` built from the engine's verbs and reads state through the prelude alone (CLAUDE.md rules 5 and 6), with tests in the same file for its base and its Radiant behaviour and its BUILD M12 rows green.\n- A missing verb or board fact goes into the engine with its test (`crates/cards/README.md`); a decision the spec does not make gets a ruling note from this issue's block (CLAUDE.md rule 3).\n- The cards' own rows (\u00a78.10, \u00a77, BUILD M12, `docs/radiant-audit.md`, the catalog entry) are corrected where the build decides otherwise, and the pull request says so.\n- The set stays held by R1420's gate: no pending fragment, no golden trace moves, the shipped totals unchanged.\n- The gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `patches check`, `spec check`, `fuzz --seeds 200`.\n\nThe plan: [`docs/stinkyscape-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/docs/stinkyscape-set.md) (ST6, ST8, ST9); the designer's list: [`JackiOh_Stinkyscape_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/JackiOh_Stinkyscape_Cards.md). Both are on the planning branch `claude/stoic-planck-f1rvyy` until they merge; where they disagree with SPEC, SPEC wins (CLAUDE.md).\n\nBlocked by #1857, #1863\n\nPart of #1856.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1874: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2065: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1875 skipped: it waits for #1860 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1859, #1860, #1861, #1866, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
