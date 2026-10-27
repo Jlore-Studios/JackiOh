@@ -238,4 +238,12 @@ describe("B2 the first gesture unlocks audio, inside the gesture", () => {
       remove();
     }
   });
+
+  it("background: a gesture while the engine reports closed calls unlock so the tap rebuilds", () => {
+    const unlock = vi.fn();
+    const remove = install({ unlock, state: () => "closed" });
+    gesture("keydown");
+    expect(unlock).toHaveBeenCalledTimes(1);
+    remove();
+  });
 });
