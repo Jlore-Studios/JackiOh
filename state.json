@@ -3658,7 +3658,9 @@
     },
     "2023": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6429272516"
+      ],
       "difficulty_by": {
         "at": "2026-10-27T04:28:16Z",
         "difficulty": "hard",
@@ -3692,9 +3694,7 @@
       "started_at": "2026-10-27T04:18:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6429272516"
-      ]
+      "taken_asks": []
     },
     "2024": {
       "action": "plan",
