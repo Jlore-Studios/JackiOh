@@ -850,10 +850,15 @@ describe("R503: the set mark and a token's printed rarity", () => {
     const others = ["Core", "Classic", "Classic+", "Meditative", "Boss"].map((set) => setMarkOf(set).src);
     expect(others).not.toContain(mark.src);
     const svg = decodeURIComponent(mark.src);
-    // The deep-space disc, the green planet, its tilted ring and the three stink lines.
+    // The deep-space disc, the green planet, its tilted ring (its far half drawn before the planet,
+    // its near half after) and the three stink lines.
     expect(svg).toContain("fill='#1c1446'");
-    expect(svg).toContain("fill='#7fd23e'");
-    expect(svg).toContain("<ellipse");
+    const far = svg.indexOf("M2.6 14.2A8 2.2");
+    const planet = svg.indexOf("fill='#7fd23e'");
+    const near = svg.indexOf("M18.6 14.2A8 2.2");
+    expect(far).toBeGreaterThan(-1);
+    expect(planet).toBeGreaterThan(far);
+    expect(near).toBeGreaterThan(planet);
     expect(svg.match(/M[\d.]+ [\d.]+Q/g)).toHaveLength(3);
     expect(svg).not.toContain("<text");
     expect(svg).not.toContain("<title");
