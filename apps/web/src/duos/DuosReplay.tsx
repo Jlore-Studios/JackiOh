@@ -4,14 +4,15 @@
 // for a reason that can pass (`reason: "error"`) offers Try again (#1691); an expired or refused
 // replay offers none.
 //
-// The controls are the replay player's (`replay/ReplayPlayer.tsx`), a round standing for a turn
+// The controls are the 1v1 replay's toolbar (`replay/ReplayToolbar.tsx`), a round standing for a turn
 // (§13.3: a `DuosView` carries no turn). CLAUDE.md rule 7: only the server's views are drawn, on
 // `DuosBoard`'s `replay` mode, and nothing is computed from them.
 //
 // A step forward hands the board the next view with the same key, so its animations and sounds run
 // as live play's do (R201's speed included). Any other move, a step back or a jump, gives the board
 // a fresh key: it mounts on that view with nothing animating, and its portal shows the own duel again.
-// The controls sit outside the board, so a remount never takes the scrubber from under the pointer.
+// The controls sit outside the board, so a remount never takes the scrubber from under the pointer,
+// and the scrubber held moves the board only when it is let go (#2025).
 //
 // DOWNLOAD JSON (R1242000). A replay whose steps are loaded offers Download JSON in its controls:
 // the seat's views as one file, made in the page. A replay that is loading, refused or expired
@@ -27,6 +28,7 @@ import { getDuosReplay, type ReceivedPing } from "../net/duos.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS, REPLAY_PLAY_GAP_MS } from "../replay/config.ts";
 import { downloadFile } from "../replay/download.ts";
 import { replayTestid, useBoardBusy } from "../replay/ReplayPlayer.tsx";
+import { ReplayToolbar, isTyping } from "../replay/ReplayToolbar.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
@@ -90,15 +92,6 @@ export function previousRound(steps: DuosReplaySteps, at: number): number {
   return first;
 }
 
-// As the replay player's (replay/ReplayPlayer.tsx); kept local so that file stays the reference.
-/** A key the arrow keys must leave to its own control: a text field, a select, the scrubber. */
-function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
-  );
-}
-
 /** The control inside the co-op player that has focus, by test id: a fresh board takes its element away. */
 function focusedDuosControl(): string | null {
   const active = document.activeElement;
@@ -138,6 +131,11 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
     show(target);
   }
 
+  /** A round move: the first step of the next round, or of this round or the one before. */
+  function goRound(direction: 1 | -1): void {
+    goTo(direction === 1 ? nextRound(steps, shown.at) : previousRound(steps, shown.at));
+  }
+
   // Play: the next step comes a gap after the board has settled, the gap shortened by the table's
   // speed (R201); any move stops it, and so does the last step.
   useEffect(() => {
@@ -157,7 +155,7 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
     if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented || isTyping(event.target)) return;
     event.preventDefault();
     const direction = event.key === "ArrowRight" ? 1 : -1;
-    if (event.shiftKey) goTo(direction === 1 ? nextRound(steps, shown.at) : previousRound(steps, shown.at));
+    if (event.shiftKey) goRound(direction);
     else goTo(shown.at + direction);
   };
   useEffect(() => {
@@ -178,81 +176,18 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
     if (id !== null) root?.querySelector<HTMLElement>(`[data-testid="${id}"]`)?.focus({ preventScroll: true });
   }, [board, root]);
 
-  const atStart = shown.at <= 0;
-  const atEnd = shown.at >= last;
-
   return (
     <div className="app-shell app-shell--wide" ref={setRoot} data-testid={duosTestid.replay} data-step={shown.at} data-board={shown.board}>
-      <div className="replay-controls" role="toolbar" aria-label={t("Replay controls")} data-testid={replayTestid.controls}>
-        <button type="button" data-testid={replayTestid.start} aria-label={t("To the start")} disabled={atStart} onClick={() => goTo(0)}>
-          ⏮
-        </button>
-        <button
-          type="button"
-          data-testid={replayTestid.backTurn}
-          aria-label={t("Back a turn")}
-          disabled={atStart}
-          onClick={() => goTo(previousRound(steps, shown.at))}
-        >
-          ⏪
-        </button>
-        <button
-          type="button"
-          data-testid={replayTestid.backStep}
-          aria-label={t("Back a step")}
-          disabled={atStart}
-          onClick={() => goTo(shown.at - 1)}
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          data-testid={replayTestid.play}
-          aria-label={playing ? t("Pause") : t("Play")}
-          aria-pressed={playing}
-          disabled={atEnd}
-          onClick={() => setPlaying(!playing)}
-        >
-          {playing ? "⏸" : "▶"}
-        </button>
-        <button
-          type="button"
-          data-testid={replayTestid.forwardStep}
-          aria-label={t("Forward a step")}
-          disabled={atEnd}
-          onClick={() => goTo(shown.at + 1)}
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          data-testid={replayTestid.forwardTurn}
-          aria-label={t("Forward a turn")}
-          disabled={atEnd}
-          onClick={() => goTo(nextRound(steps, shown.at))}
-        >
-          ⏩
-        </button>
-        <button type="button" data-testid={replayTestid.end} aria-label={t("To the end")} disabled={atEnd} onClick={() => goTo(last)}>
-          ⏭
-        </button>
-        <input
-          type="range"
-          data-testid={replayTestid.scrubber}
-          aria-label={t("Step")}
-          min={0}
-          max={last}
-          step={1}
-          value={shown.at}
-          onChange={(event) => {
-            goTo(Number(event.currentTarget.value));
-          }}
-        />
-        <span className="replay-readout" data-testid={replayTestid.readout}>
-          {t("Step {step} of {steps} · Round {round}", { step: shown.at + 1, steps: steps.length, round: view.round })}
-        </span>
-        {actions}
-      </div>
+      <ReplayToolbar
+        at={shown.at}
+        last={last}
+        playing={playing}
+        onPlaying={setPlaying}
+        onGoTo={goTo}
+        onTurn={goRound}
+        readout={t("Step {step} of {steps} · Round {round}", { step: shown.at + 1, steps: steps.length, round: view.round })}
+        actions={actions}
+      />
       <DuosChromeContext.Provider value={{ back }}>
         {/* Replay steps carry no economy: no seat is ever capped. */}
         <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} jloreCapped={false} replay />

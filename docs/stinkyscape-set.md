@@ -1123,7 +1123,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Dormant for 2 turns. When this awakens, summon a Fiery Waraxe.
 - **Radiant:** Dormant for 2 turns. When this awakens, summon a Radiant Fiery Waraxe.
 - **Engine:** Dormant ([[R1839000]]): `StaticFlags.slumber { turns: 2 }`, counted at the start of its controller's turns and awake at the start of the second, before the start-of-turn triggers, not summoning sick ([[R1839001]]). `when_this_awakens` ([[R1839002]]): `summon { defId: meditative-066 }`, M #66 Fiery Waraxe, into the leftmost open backrow zone ([[R64]]), no Cry ([[R1]]); a full backrow summons nothing. Radiant: a Radiant one.
-- **Rulings:** ST-S01-1: the Waraxe summoned at the awakening animates that same turn, the awakening coming before the "Animated on your turn" step (R1839001). These are proposals for S01, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S01, #1858): ST-S01-1 is [[§6.1]]'s "Animated on your turn": the Waraxe enters at the start of its controller's turn, during that turn, so it animates as it enters, an entry and summoning sick ([[R1062]] spares only a card on that side since the turn began), its Rush letting it attack a Unit that turn.
 - **Numbers:** none (the 2 turns are the Dormant status's printed count, `slumber.turns`, no param).
 - **Check:** Designer voice line "They can not stop my work" kept as its play line. R275: stats doubled and a Radiant Waraxe (6/4 Pierce).
 - **Class:** C (Dormant, M01).
@@ -1188,7 +1188,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Pierce / Dormant for 2 turns. When this awakens, deal {damage} damage randomly split among all enemies.
 - **Radiant:** Pierce / Dormant for 2 turns. When this awakens, deal {damage} damage randomly split among all enemies.
 - **Engine:** Pierce ([[R346]]). Dormant ([[R1839000]]): `slumber { turns: 2 }`, awake at the start of its controller's second turn after it arrived ([[R1839001]]). `when_this_awakens` ([[R1839002]]): C+ #3's `damage_split`, the damage in hits of 1, each on an enemy drawn from the match rng among the enemy hero and the enemy Units still standing ([[R60]]), with no state check between the hits ([[R59]]); each hit's source is this Unit, so each pierces Armor ([[R346]]).
-- **Rulings:** ST-S01-2: "split among enemies" is the enemy hero and every enemy Unit, 1 damage a hit; a Unit at 0 is not hit again. These are proposals for S01, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S01, #1858): ST-S01-2 is [[§6.3]] Damage's split row, as C+ #3's: hits of 1, each on the enemy hero or an enemy Unit still standing ([[R60]]), no state check between them ([[R59]]).
 - **Numbers:** damage 10 ↑ (Radiant 20). The 2 turns are the status's printed count (no param).
 - **Check:** R275: stats doubled and the damage doubled (10 → 20).
 - **Class:** C (Dormant, M01).

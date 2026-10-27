@@ -207,6 +207,8 @@ src/replay/
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
   ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
+  ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
+                  moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
@@ -399,7 +401,7 @@ duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' 
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          teammate strip and the ping wheel
 duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
-                         DuosBoard's `replay` mode (nothing live) with the replay player's controls
+                         DuosBoard's `replay` mode (nothing live) with the replay toolbar (`replay/ReplayToolbar.tsx`)
 duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): the seat's views as one
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
