@@ -5356,10 +5356,18 @@
     "what": "build #2100 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-27T19:47:17Z",
+    "at": "2026-10-27T20:02:08Z",
     "notes": [
-      "delivered build #2089 on claude-5 (run 40569648138): interrupted",
-      "delivered plan #2105 on claude-7 (run 40568126717): planned"
+      "#2115 needs a plan",
+      "#2116 needs a plan",
+      "#2117 needs a plan",
+      "#2118 needs a plan",
+      "#2119 needs a plan",
+      "#2120 needs a plan",
+      "#2121 needs a plan",
+      "#2122 needs a plan",
+      "#2123 needs a plan",
+      "#2124 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6065,7 +6073,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T19:47:17Z",
+  "loop_tick": "2026-10-27T20:02:08Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T19:08:49Z",
