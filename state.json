@@ -5551,6 +5551,8 @@
       "provider": "claude-2",
       "question": "",
       "queued_at": "2026-10-27T21:26:32Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "40589821085",
       "runs_on": "ubuntu-latest",
