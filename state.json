@@ -4213,17 +4213,13 @@
     "what": "build #2048 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-27T13:53:42Z",
+    "at": "2026-10-27T14:10:31Z",
     "notes": [
-      "delivered plan #2047 on claude-7 (run 40513586139): planned",
-      "delivered plan #2048 on claude-3 (run 40511768907): planned",
-      "delivered revise #2065 on claude-1 (run 40506368248): approved",
-      "delivered revise #2066 on claude-3 (run 40504057069): approved",
-      "started revise #2059 on claude-7 (run 40516884434)",
-      "started build #1859 on claude-3 (run 40517042900)",
-      "started build #1870 on claude-1 (run 40517204341)",
-      "started build #1874 on claude-5 (run 40517349049)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 79h 56m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 86h 56m; `devin` is idle, but nothing queued is for it"
+      "delivered build #2054 on muse (run 40506635488): approved",
+      "delivered revise #2061 on muse (run 40502506298): approved",
+      "started build #2050 on muse (run 40519180819)",
+      "started build #2048 on muse (run 40519337564)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 79h 44m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 86h 43m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -4929,7 +4925,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T13:53:42Z",
+  "loop_tick": "2026-10-27T14:10:31Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T14:01:36Z",
