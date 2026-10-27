@@ -2307,6 +2307,19 @@ impl Tx<'_> {
         dispatch!(self, ranked_standings(season_id))
     }
 
+    /// `ranked_standings` cut to what a rank read shows (#2022): the season's rows of `profile_ids`, plus
+    /// every row whose ladder is at least `min_ladder` (`ladder::jlorious_floor()`: every row Jlorious is
+    /// drawn from), each with the player's current rating, in profile-id order. `jlorious_order` over it,
+    /// and the rank of any profile asked for, answer as over the whole season.
+    pub async fn ranked_standings_subset(
+        &mut self,
+        season_id: &str,
+        profile_ids: &[String],
+        min_ladder: i32,
+    ) -> StoreResult<Vec<SeasonStanding>> {
+        dispatch!(self, ranked_standings_subset(season_id, profile_ids, min_ladder))
+    }
+
     pub async fn ranked_rank(
         &mut self,
         season_id: &str,
