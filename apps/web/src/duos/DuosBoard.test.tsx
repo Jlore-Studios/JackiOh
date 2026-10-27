@@ -1086,9 +1086,26 @@ describe("R2095000 the portal hides while both boards show", () => {
     renderBoard();
     expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
     toggleBoth();
-    expect(screen.queryByTestId(ID.portal)).toBeNull();
+    // The portal stays mounted while both boards show (CSS hides it on a wide screen and
+    // shows it again on a narrowed one, where it is the only flip control), and the toggle
+    // coming back off leaves it in place.
+    expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
     toggleBoth();
     expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
+    expect(screen.getAllByTestId("game")).toHaveLength(1);
+  });
+
+  it("R2095000 the portal still flips while both boards show, for a narrowed screen", () => {
+    renderBoard();
+    toggleBoth();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
+    expect(screen.getByTestId(ID.portal)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
   });
 
   it("R2095000 replay mode keeps the portal flip and draws no Both boards toggle", () => {

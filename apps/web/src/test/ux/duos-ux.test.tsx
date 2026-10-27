@@ -20,10 +20,21 @@ describe("R2095000 both boards styles", () => {
     expect(text).toMatch(/\.duos-both\s*\{\s*display:\s*flex;/);
     expect(text).toMatch(/\.duos-board-teammate\s*\{[^}]*flex:\s*0 0 40%;/);
 
-    // Narrow: at the Duos phone layout's breakpoint the toggle hides and only the own board shows.
+    // Wide: while both boards show the portal is hidden (it stays mounted as the narrow
+    // fallback's flip control).
+    expect(text).toMatch(/\.duos-board\[data-both="true"\] \.duos-portal\s*\{\s*display:\s*none;/);
+
+    // Narrow: at the Duos phone layout's breakpoint the toggle hides, the portal comes back,
+    // and only the showing board draws.
     const narrow = text.slice(text.indexOf("@media (max-width: 600px)"));
     expect(narrow).toMatch(/\.duos-both-toggle\s*\{\s*display:\s*none;/);
-    expect(narrow).toMatch(/\.duos-board\[data-both="true"\] \.duos-board-teammate\s*\{\s*display:\s*none;/);
+    expect(narrow).toMatch(/\.duos-board\[data-both="true"\] \.duos-portal\s*\{\s*display:\s*revert;/);
+    expect(narrow).toMatch(
+      /\.duos-board\[data-both="true"\]\[data-showing="own"\] \.duos-board-teammate\s*\{\s*display:\s*none;/,
+    );
+    expect(narrow).toMatch(
+      /\.duos-board\[data-both="true"\]\[data-showing="teammate"\] \.duos-board-own\s*\{\s*display:\s*none;/,
+    );
     expect(narrow).toMatch(/\.duos-both\s*\{\s*display:\s*block;/);
   });
 });

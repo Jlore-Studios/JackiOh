@@ -10,7 +10,8 @@
 // card): read-only (B63). Each has its own key, so neither board animates the other duel's events.
 // On a wide screen R2095000's toggle (`duos-both`) shows that same read-only board beside the own
 // one instead, silent (Game's `silent`, so two mounted boards play one duel's cues), in
-// `duos-board-teammate` next to `duos-board-own`; the portal hides while both boards show.
+// `duos-board-teammate` next to `duos-board-own`; the portal stays mounted and CSS hides it there.
+// On a narrowed screen CSS hides the toggle and one board, so the visible portal flips again.
 //
 // CLAUDE.md rule 7: nothing here decides a rule. The pass control is live exactly when `legal` lists
 // that card's `pass` (B19), the concede offer when it lists `concede` (B11), and a duel's own concede
@@ -401,10 +402,13 @@ export function DuosBoard({
       if (Math.hypot(event.clientX - held.x, event.clientY - held.y) < DRAG_THRESHOLD_PX) return;
       if (typeof document.elementFromPoint !== "function") return;
       // The dragged card holds the pointer's capture, so the drop is read from where it was let go.
-      // R2095000: while both boards show the drop lands on the teammate's board, not the portal.
+      // R2095000: while both boards show the drop lands on the teammate's board; the portal
+      // stays a drop target too, so a narrowed screen (teammate board hidden by CSS, portal
+      // shown) passes the same way as today's single board.
       const under = document.elementFromPoint(event.clientX, event.clientY);
-      const drop: Element | null = showBoth ? mateWrap.current : portal.current;
-      if (under === null || drop === null || !drop.contains(under)) return;
+      if (under === null) return;
+      const drops: readonly (Element | null)[] = showBoth ? [mateWrap.current, portal.current] : [portal.current];
+      if (!drops.some((drop) => drop !== null && drop.contains(under))) return;
       passLatest.current(held.instanceId);
     };
     const onCancel = (): void => {
@@ -436,7 +440,10 @@ export function DuosBoard({
   const markersOwn = markersFor(view.own, slot);
   const markersMate = markersFor(view.teammate, duelOf(mate));
   const markers = showing === "own" ? markersOwn : markersMate;
-  const flash = !showBoth && livePings.some((ping) => ping.from !== seat && ping.target.duel !== shownDuel);
+  // R2095000: the portal flashes for a ping on the duel it does not show. On a wide screen both
+  // duels show so the portal (hidden by CSS there) flashes unseen; on a narrowed screen one board
+  // is CSS-hidden, so the visible portal flashes exactly as today's single board does.
+  const flash = livePings.some((ping) => ping.from !== seat && ping.target.duel !== shownDuel);
   const heard = [...livePings].reverse().find((ping) => ping.from !== seat);
 
   // B4, R1168001: whose turn the round is on in the seat's own duel. The duel's active player may be
@@ -457,22 +464,20 @@ export function DuosBoard({
       <LifeStrip view={view} />
       <TeammateStrip view={view} link={chrome?.teammate ?? null} />
       <div className="duos-rail__row">
-        {!showBoth ? (
-          <button
-            ref={portal}
-            type="button"
-            className="duos-portal"
-            data-testid={duosTestid.portal}
-            data-showing={showing}
-            data-flash={flash ? "ping" : undefined}
-            aria-pressed={showing === "teammate"}
-            onClick={() => {
-              setShowing((current) => (current === "own" ? "teammate" : "own"));
-            }}
-          >
-            {showing === "own" ? t("Teammate's board") : t("Back to your board")}
-          </button>
-        ) : null}
+        <button
+          ref={portal}
+          type="button"
+          className="duos-portal"
+          data-testid={duosTestid.portal}
+          data-showing={showing}
+          data-flash={flash ? "ping" : undefined}
+          aria-pressed={showing === "teammate"}
+          onClick={() => {
+            setShowing((current) => (current === "own" ? "teammate" : "own"));
+          }}
+        >
+          {showing === "own" ? t("Teammate's board") : t("Back to your board")}
+        </button>
         {!replay ? (
           <button
             type="button"

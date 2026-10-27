@@ -623,12 +623,21 @@
   }
 
   /* R2095000: below the width two boards fit, the toggle is hidden and the board falls back to
-     one: the teammate's board is not drawn, so the own board takes the row. */
+     one: only the showing board is drawn, so it takes the row, and the portal (hidden by CSS on
+     a wide screen) comes back to flip between them. */
   .duos-both-toggle {
     display: none;
   }
 
-  .duos-board[data-both="true"] .duos-board-teammate {
+  .duos-board[data-both="true"] .duos-portal {
+    display: revert;
+  }
+
+  .duos-board[data-both="true"][data-showing="own"] .duos-board-teammate {
+    display: none;
+  }
+
+  .duos-board[data-both="true"][data-showing="teammate"] .duos-board-own {
     display: none;
   }
 

@@ -421,8 +421,9 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
   `duos-board-own`, silent so it feeds no audio, with pings and inspection working on it and a hand
   card dragged onto it passing when `legal` lists it. The choice is kept per device in
-  `localStorage` (off until pressed); the portal hides while both boards show, and below 600px the
-  toggle hides and the board falls back to one with the portal flipping;
+  `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
+  screen while both boards show, and below 600px the toggle hides and the board falls back to one
+  with the portal flipping;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
