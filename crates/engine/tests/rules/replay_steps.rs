@@ -74,15 +74,24 @@ fn r768_every_step_is_view_for_after_a_fresh_fold_of_its_prefix() {
             "{seed}"
         );
 
-        for seat in PLAYER_IDS {
-            let shown = all_steps(&checkpoints, seat);
-            assert_eq!(shown.len(), steps, "{seed} {seat}");
-            for (k, step) in shown.iter().enumerate() {
-                let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
-                assert!(folded.errors.is_empty(), "{seed} step {k}");
+        let shown = PLAYER_IDS.map(|seat| (seat, all_steps(&checkpoints, seat)));
+        for (seat, seat_steps) in &shown {
+            assert_eq!(seat_steps.len(), steps, "{seed} {seat}");
+        }
+        // One fresh fold per prefix, held to both seats' steps: it was the binary's slowest test
+        // with a fold per seat (#2090).
+        for k in 0..steps {
+            let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
+            assert!(folded.errors.is_empty(), "{seed} step {k}");
+            for (seat, seat_steps) in &shown {
+                let step = &seat_steps[k];
                 assert_eq!(step.step, k, "{seed} {seat}");
                 assert_eq!(step.turn, folded.state.turn, "{seed} {seat} step {k}");
-                assert_eq!(step.view, view_for(&folded.state, seat), "{seed} {seat} step {k}");
+                assert_eq!(
+                    step.view,
+                    view_for(&folded.state, *seat),
+                    "{seed} {seat} step {k}"
+                );
             }
         }
     }

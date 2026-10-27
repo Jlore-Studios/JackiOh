@@ -525,6 +525,43 @@ mod add_random_from_catalog_54_57_59 {
     }
 
     #[test]
+    fn r1878003_each_card_added_is_given_the_keywords_once_in_the_hand_and_a_burned_one_none() {
+        let mut state = game("pool-keywords");
+        let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
+        run(
+            &mut state,
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "set": "Boss-X" }, "count": 2, "keywords": [{ "kind": "Starship Piece" }],
+            })))],
+            Some(PlayerId::P1),
+            Some(&self_),
+        );
+        assert_eq!(state.players[PlayerId::P1].hand.len(), 2);
+        for card in &state.players[PlayerId::P1].hand {
+            assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece]);
+            // The definition prints none: the keyword is the card's own, given in the hand.
+            assert!(def_of(Some(&state), &card.def_id).base.keywords.is_empty());
+        }
+
+        // A full hand burns the card instead, and a burned card is given nothing (§2.4, R4).
+        let mut full = game("pool-keywords-burned");
+        let self_ = resolving_self(&mut full, &generator().id, PlayerId::P1);
+        in_hand(&mut full, &beta().id, PlayerId::P1, HAND_CAP);
+        let events = run(
+            &mut full,
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "set": "Boss-X" }, "keywords": [{ "kind": "Starship Piece" }],
+            })))],
+            Some(PlayerId::P1),
+            Some(&self_),
+        );
+        assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
+        let burned = must(full.players[PlayerId::P1].graveyard.first(), "the burned card");
+        assert_eq!(burned.def_id, solo().id);
+        assert!(burned.granted_keywords.is_empty());
+    }
+
+    #[test]
     fn an_empty_pool_fizzles_and_the_card_still_resolves() {
         let mut state = game("pool-empty");
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
