@@ -141,7 +141,7 @@ class ParseTests(unittest.TestCase):
                          ("night-vm-muse", 4, providers.FillIn(FILL, ("gpt", "agy"))))
         self.assertEqual((pool.filler_of("gpt").id, pool.filler_of("agy").id),
                          ("muse", "muse"))
-        self.assertIsNone(pool.filler_of("devin"))
+        self.assertIsNone(pool.filler_of("lite"))
 
     def test_it_refuses_a_bad_fill_in(self):
         for fill, message in (({"runs_on": FILL}, "needs runs_on and for"),

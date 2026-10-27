@@ -1062,3 +1062,37 @@ mod r1178001_the_embiggen_pool_meditative_plus_23_enormous_elderberry {
         );
     }
 }
+
+mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_grant {
+    use super::*;
+    use jackioh_cards::query::starship_pieces;
+    use jackioh_engine::{DORMANT_STARSHIP_DEF_ID, KeywordKind, has_keyword};
+
+    #[test]
+    fn r1878000_the_starship_piece_pool_is_the_sixty_stinkyscape_cards_that_print_the_keyword() {
+        register();
+        // The query a card script writes, which names its set so that it reaches the pieces while the
+        // set is held (R1420): S #38 to #175, the Field Trap #131 Spacerace Stimulus among them; never
+        // the Dormant Starship, which prints none, nor the Golem or the AI card, which are tokens.
+        assert_eq!(
+            starship_pieces(),
+            q(json!({ "set": "Stinkyscape", "keywords": ["Starship Piece"] }))
+        );
+        let expected: Vec<String> = [
+            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
+            69, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 85, 86, 90, 93, 98, 100, 101, 104, 105, 106,
+            107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143, 175,
+        ]
+        .iter()
+        .map(|n| format!("stinkyscape-{n:03}"))
+        .collect();
+        assert_eq!(ids(query(&starship_pieces())), expected);
+        let printing: Vec<String> = ids(CATALOG.values().filter(|def| {
+            def.set == SetName::Stinkyscape
+                && !def.token
+                && has_keyword(&def.base.keywords, KeywordKind::StarshipPiece)
+        }));
+        assert_eq!(sorted(ids(query(&starship_pieces()))), sorted(printing));
+        assert!(!ids(query(&starship_pieces())).contains(&DORMANT_STARSHIP_DEF_ID.to_string()));
+    }
+}

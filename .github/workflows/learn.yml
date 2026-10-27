@@ -1,8 +1,9 @@
 # The learn lane (#466, #1012; training/learn.md): the learned evaluation, retrained on fresh
 # self-play and promoted to main by the same gate as every AI, with no LLM anywhere in it
 # (docs/learned-eval.md D2). One run after another (#1976: each starts the next as it ends, `next`),
-# daily to start the lane again if that chain stops, and by dispatch (`gh workflow run learn.yml`). It
-# runs with nobody watching it and with main moving under it (training/learn.md, Running unattended):
+# twice a day (06:23 and 18:23 UTC) to start the lane again if that chain stops, and by dispatch
+# (`gh workflow run learn.yml`). It runs with nobody watching it and with main moving under it
+# (training/learn.md, Running unattended):
 #
 #   plan      names the export's seed base (`learned-<catalog>-<date>-<run>`, never a gate's or the dev
 #             set's, R1006002). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
@@ -33,8 +34,8 @@
 #             STATS_IMPORT_DATABASE_URL; without it, nothing is filed
 #   next      the next run, started as this one ends, unless another is already on its way (a chain
 #             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it
-#             broke early: the daily schedule tries again), so the PC is always exporting, retraining
-#             or gating while it is idle
+#             broke early: the schedule tries again within 12 hours), so the PC is always
+#             exporting, retraining or gating while it is idle
 #   watch     when CI finishes red on the lane's pull request: its failed jobs run once more (a flaky
 #             test); red again, the pull request is closed with the failed jobs named, and a run on the
 #             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
@@ -55,7 +56,7 @@ name: learn
 
 on:
   schedule:
-    - cron: "23 6 * * *"
+    - cron: "23 6,18 * * *"
   workflow_dispatch:
     inputs:
       games:
@@ -493,7 +494,7 @@ jobs:
           started=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .run_started_at)
           minutes=$(( ($(date -u +%s) - $(date -u -d "$started" +%s)) / 60 ))
           if [ "$minutes" -lt "$LEARN_NEXT_MIN_MINUTES" ]; then
-            echo "::warning::this run took $minutes minutes, under $LEARN_NEXT_MIN_MINUTES: it broke early, so it starts no next run, and the daily schedule tries again"
+            echo "::warning::this run took $minutes minutes, under $LEARN_NEXT_MIN_MINUTES: it broke early, so it starts no next run, and the schedule tries again within 12 hours"
             exit 0
           fi
           # A run on this export that `main kept moving` or `watch` started, or the schedule's, is

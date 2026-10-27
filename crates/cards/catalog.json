@@ -18158,7 +18158,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 6,
       "health": 4,
@@ -18206,7 +18206,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 108,
     "base": {
       "keywords": [],
       "text": "Cry: Discover an Acclaimed Unit or a Jelly Bean.\nQuest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit.\nQuest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource.\nQuest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals."
@@ -20806,7 +20806,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 0,
       "health": 1,
@@ -20845,7 +20845,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 0,
       "health": 2,
@@ -20884,7 +20884,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 4,
@@ -20923,7 +20923,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 6,
@@ -20962,7 +20962,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 8,
@@ -21484,7 +21484,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 4,
       "health": 4,
@@ -21520,7 +21520,7 @@
       "base": 4,
       "embiggen": 5
     },
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 8,
       "health": 8,
@@ -21559,7 +21559,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 10,
       "health": 10,
@@ -23247,7 +23247,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23270,7 +23270,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Activate: Add a random Starship Piece to your hand."
@@ -23312,7 +23312,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game.\nStart of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23338,7 +23338,7 @@
       "base": 3,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 8,
       "health": 5,
@@ -23368,7 +23368,7 @@
       "base": 2,
       "embiggen": 3
     },
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 1,
@@ -23422,7 +23422,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23460,7 +23460,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add a random Jlockeed card to your hand. It gains Starship Piece."

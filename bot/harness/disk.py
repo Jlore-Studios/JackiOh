@@ -182,7 +182,7 @@ def _body(entry: Mapping[str, Any]) -> str:
         "- sees what fills it: `bot/machine/on-machine.sh bot/machine/disk-report.sh`;",
         "- deletes what the report shows, or makes the disk larger in EC2 (Modify volume); the "
         "machine grows into it at its next start, or at once with "
-        "`bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin`;",
+        "`bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse`;",
         "- and, if the clean-up missed something that comes back, adds it to `clean.sh`.",
         "",
         f"The bot rewrites this issue as readings come in and closes it once one is back at "
