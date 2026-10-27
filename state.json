@@ -5596,11 +5596,11 @@
       "question": "",
       "queued_at": "2026-10-27T21:47:56Z",
       "round_tier": "medium",
-      "run_id": "40580645560",
+      "run_id": "pending:ab05a692-1793137719",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-27T20:43:53Z",
+      "started_at": "2026-10-27T21:49:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -5626,9 +5626,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-27T21:48:24Z",
+    "at": "2026-10-27T21:49:16Z",
     "url": "",
-    "what": "review #2132 on claude-2"
+    "what": "revise #2135 on muse"
   },
   "last_sweep": {
     "at": "2026-10-27T21:23:46Z",
