@@ -2,7 +2,8 @@
 // `fixtures/spell_verbs.rs` (no Stinkyscape card ships yet). R1848000 a Freeze that never thaws;
 // R1848001 a Spell's Trample onto adjacent Units (and the hero); R1848002 Poisonous for a Spell and
 // "your next Spell this turn"; R1848003 copies with a fixed X; R1848004 lose or gain N mana next turn;
-// R1848005 the melee; R1848006 Inflation.
+// R1848005 the melee; R1848006 Inflation; and R1868000 (#1868) an X card's declared target read at the
+// play's X.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -1050,5 +1051,128 @@ mod r1848006_inflation_rolls_each_card_of_a_hand_and_a_deck_and_raises_its_price
             effective_cost(s.state(), &plain_card, Default::default()),
             1 + INFLATION_COST
         );
+    }
+}
+
+mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
+    use super::*;
+    use crate::rules::fixtures::spell_verbs::{nono_x, riser, stable};
+
+    /// Each play of `id` that `legal_actions` lists, as its X and the ids it targets.
+    fn plays_of(s: &Scenario, id: &str) -> Vec<(Option<i32>, Vec<String>)> {
+        legal_actions(s.state(), P1)
+            .iter()
+            .filter_map(|action| match action {
+                ActionBody::Play {
+                    instance_id,
+                    x,
+                    targets,
+                    ..
+                } if instance_id == id => Some((
+                    *x,
+                    targets
+                        .iter()
+                        .flatten()
+                        .filter_map(|selection| match selection {
+                            Selection::Instance { instance_id } => Some(instance_id.clone()),
+                            _ => None,
+                        })
+                        .collect(),
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The ids X `x`'s plays target, in listing order.
+    fn targets_at(plays: &[(Option<i32>, Vec<String>)], x: Option<i32>) -> Vec<String> {
+        plays
+            .iter()
+            .filter(|(at, _)| *at == x)
+            .flat_map(|(_, targets)| targets.clone())
+            .collect()
+    }
+
+    fn nono_board(seed: &str, p2_field: Value) -> Scenario {
+        board(
+            "p1",
+            seed,
+            json!([nono_x.id, stable.id]),
+            json!([]),
+            json!([plain.id]),
+            p2_field,
+        )
+    }
+
+    fn plain_and_big(seed: &str) -> Scenario {
+        nono_board(
+            seed,
+            json!([{ "def": plain.id, "lane": 1 }, { "def": big_body.id, "lane": 2 }]),
+        )
+    }
+
+    #[test]
+    fn r1868000_legal_actions_pair_each_x_with_the_units_below_four_times_it() {
+        let s = plain_and_big("r1868000-legal");
+        let (three, five) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
+        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        // A 3-Attack Unit is below 4 × 1; a 5-Attack one is not, and is below 4 × 2 and up.
+        assert_eq!(targets_at(&plays, Some(1)), vec![three.clone()]);
+        for x in 2..=4 {
+            assert_eq!(
+                targets_at(&plays, Some(x)),
+                vec![three.clone(), five.clone()],
+                "X {x}"
+            );
+        }
+        assert!(targets_at(&plays, Some(5)).is_empty(), "4 mana pays no X of 5");
+    }
+
+    #[test]
+    fn r1868000_the_reducer_refuses_a_pick_its_x_does_not_allow() {
+        let mut s = plain_and_big("r1868000-refuse");
+        let five = id_at(&s, P2, 2);
+        let at_x = |x: i32| json!({ "x": x, "targets": pick::id(&five) });
+        let one = at_x(1);
+        s.expect_refused_with(|s| s.play(nono_x.id.as_str(), one), "not a legal target");
+        s.expect_in_zone(nono_x.id.as_str(), "hand");
+
+        s.play(nono_x.id.as_str(), at_x(2));
+        s.expect_in_zone(five.as_str(), "graveyard");
+    }
+
+    #[test]
+    fn r1868000_an_x_with_no_unit_below_its_limit_is_not_offered_and_is_refused() {
+        let mut s = nono_board("r1868000-needed", json!([{ "def": big_body.id, "lane": 1 }]));
+        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        // R703: the pick is needed, so an X whose limit no Unit is below is no play.
+        assert!(plays.iter().all(|(x, _)| *x != Some(1)), "{plays:?}");
+        assert_eq!(targets_at(&plays, Some(2)), vec![id_at(&s, P2, 1)]);
+        s.expect_refused_with(
+            |s| s.play(nono_x.id.as_str(), json!({ "x": 1 })),
+            "cannot be played without",
+        );
+    }
+
+    #[test]
+    fn r1868000_a_set_x_is_the_plays_x() {
+        let mut s = plain_and_big("r1868000-set");
+        let three = id_at(&s, P2, 1);
+        s.card_mut(nono_x.id.as_str()).fixed_x = Some(1);
+        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        assert_eq!(plays, vec![(None, vec![three])]);
+    }
+
+    #[test]
+    fn r1868000_a_target_raised_past_it_after_the_pick_is_still_destroyed() {
+        let mut s = nono_board("r1868000-raised", json!([{ "def": riser.id, "lane": 1 }]));
+        let risen = id_at(&s, P2, 1);
+        s.play(nono_x.id.as_str(), json!({ "x": 1, "targets": pick::id(&risen) }));
+        // §10.5 step 4: its play raised it to 5 Attack before the Spell resolved, and the pick stands.
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::Buffed { instance_id, attack: 2, .. } if *instance_id == risen
+        )));
+        s.expect_in_zone(risen.as_str(), "graveyard");
     }
 }

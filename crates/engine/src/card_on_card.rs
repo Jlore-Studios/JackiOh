@@ -3,6 +3,8 @@
 //!
 //!  - R1850003: a card held beneath another (`effects::hold`) comes back once its holder has left the
 //!    field, summoned for whom it returns to;
+//!  - R1865000: a hand card set aside beneath another (`effects::hold::set_aside_from_hand`) is exiled
+//!    once its holder has left the field;
 //!  - R1850002: an exile aura (`Script.exile_auras`) exiles every card on the field it reaches;
 //!  - R1850005: a permanent whose text says "When this has N or more keywords, make it Radiant"
 //!    (`Script.radiant_at_keywords`) is made Radiant once its keywords reach N.
@@ -30,7 +32,7 @@ fn holder_gone(sink: &EngineSink<'_>, held: &HeldCard) -> bool {
 
 /// R1850003: summon every held card whose holder is gone, in the order they were taken — for the
 /// player it returns to, at R64's placement, summoning sick and with no Cry (R1). One with no zone to
-/// enter is exiled. True when any came back.
+/// enter is exiled, and so is a hand card set aside (R1865000). True when any came back.
 pub fn release_held(sink: &mut EngineSink<'_>) -> bool {
     let Some(held) = sink.state.held.as_ref() else {
         return false;
@@ -50,6 +52,13 @@ pub fn release_held(sink: &mut EngineSink<'_>) -> bool {
     }
     sink.state.held = if kept.is_empty() { None } else { Some(kept) };
     for entry in released {
+        // R1865000: a set-aside hand card is exiled, the printed card again (R215).
+        if entry.exile_on_release == Some(true) {
+            let mut card = entry.card;
+            crate::zones::reset_instance(&mut card);
+            crate::zones::exile_to_pile(sink, card);
+            continue;
+        }
         let summoned = {
             let mut ctx = make_context(
                 sink,
