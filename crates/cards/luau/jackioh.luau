@@ -4050,12 +4050,20 @@ function J.refresh_mana(args: RefreshManaArgs): EffectCall
 	return { verb = "refresh_mana", args = args :: any }
 end
 
+function J.refuse_own_activate(args: ActivationOfArgs): EffectCall
+	return { verb = "refuse_own_activate", args = args :: any }
+end
+
 function J.remember(args: RememberArgs): EffectCall
 	return { verb = "remember", args = args :: any }
 end
 
 function J.remember_random(args: RememberRandomArgs): EffectCall
 	return { verb = "remember_random", args = args :: any }
+end
+
+function J.remove_allures(args: any?): EffectCall
+	return { verb = "remove_allures", args = args :: any }
 end
 
 function J.replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs): EffectCall
@@ -4084,6 +4092,10 @@ end
 
 function J.rotate(args: RotateArgs): EffectCall
 	return { verb = "rotate", args = args :: any }
+end
+
+function J.run_activation(args: ActivationOfArgs): EffectCall
+	return { verb = "run_activation", args = args :: any }
 end
 
 function J.sacrifice(args: SacrificeArgs): EffectCall
