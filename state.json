@@ -3614,14 +3614,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:16:02Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
+      "pr": 2057,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-26T22:54:58Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "40459841044",
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T06:13:37Z",
@@ -3629,7 +3633,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6429255343"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "2022": {
       "action": "plan",
