@@ -5213,8 +5213,12 @@
     "what": "build #2100 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-27T19:36:35Z",
-    "notes": [],
+    "at": "2026-10-27T19:43:20Z",
+    "notes": [
+      "delivered plan #2106 on claude-8 (run 40568034159): planned",
+      "started build #2100 on claude-8 (run 40571874449)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-27T20:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 38%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T23:20:00Z; it takes reviews only; it can start a build or a plan again in 2h 34m; `claude-4` is busy; `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-10-27T21:20:00Z; it can start a build or a plan again in 1h 34m; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 74h 14m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 81h 14m; `devin` waits for room on the machine (6 at once)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -5919,7 +5923,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T19:36:35Z",
+  "loop_tick": "2026-10-27T19:43:20Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-27T19:08:49Z",
