@@ -1,12 +1,14 @@
 // "More cards from" (R1372, R1373, R924000): the picker beside every random deck a player is dealt
-// (All Random's in the lobby and the rematch, practice's Random deck). It deals nothing (CLAUDE.md
+// (All Random's in the lobby and the rematch, practice's Random deck, and R2031000's: an All Random
+// challenge's, sent and accepted, and a Duos room's Random deck). It deals nothing (CLAUDE.md
 // rule 7): with a pick, the dealer leans on that set, at least `AI_DECK.leanMinShare` of the deck
 // (R1370). "Newest" names the set from `newestShippedSet()` (R1371) and the dealer resolves it when
 // it deals; the other choices are the sets that ship (R1420). The share is read from WASM (rule 9).
 //
-// The online pick is kept in try/catch'd `localStorage` (`PLAY_LEAN_SET_KEY`): blocked storage only
-// means it starts with no lean. A device that kept R1372's switch (`PLAY_LEAN_NEWEST_KEY`) reads it
-// as "newest" when on, until the first pick is written. Practice keeps its own (`routes/practice.tsx`).
+// The online pick (every one of those but practice's) is kept on the device (`playLean.ts`, which
+// this module re-exports), so a pick made in one carries to the next. Practice keeps its own
+// (`routes/practice.tsx`). This module reads the AI's numbers, so a screen that may paint before the
+// engine loads shows the picker through `LeanSetPickerLazy.tsx` (#778).
 
 import { useId, type ReactElement } from "react";
 
@@ -15,40 +17,11 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import { LEAN_NEWEST, isLeanPick, leanPicks, leanSetOf, newestShippedSet, type LeanPick } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
+import { NO_LEAN } from "./playLean.ts";
 
 import "./leanNewest.css";
 
-/** Where this device remembers the online All Random pick (the lobby's and the rematch's). */
-export const PLAY_LEAN_SET_KEY = "jackioh.play.leanSet";
-
-/** R1372's switch, before the picker: `"true"` when it was on. Read only when no pick was written. */
-export const PLAY_LEAN_NEWEST_KEY = "jackioh.play.leanNewest";
-
-/** The `<select>` value of no lean. */
-const NO_LEAN = "";
-
-/**
- * The online pick this device made last: a pick, or `null` for none. None in a private window, with
- * blocked storage or junk; R1372's switch, left on, is "newest".
- */
-export function readPlayLean(): LeanPick | null {
-  try {
-    const stored = window.localStorage.getItem(PLAY_LEAN_SET_KEY);
-    if (stored !== null) return isLeanPick(stored) ? stored : null;
-    return window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY) === "true" ? LEAN_NEWEST : null;
-  } catch {
-    return null;
-  }
-}
-
-export function writePlayLean(pick: LeanPick | null): void {
-  try {
-    window.localStorage.setItem(PLAY_LEAN_SET_KEY, pick ?? NO_LEAN);
-    window.localStorage.removeItem(PLAY_LEAN_NEWEST_KEY);
-  } catch {
-    // Remembering the pick is a convenience; a refusal costs nothing.
-  }
-}
+export { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, readPlayLean, writePlayLean } from "./playLean.ts";
 
 /** R924000: the picker's words before its choices. */
 export function leanLabel(): string {
