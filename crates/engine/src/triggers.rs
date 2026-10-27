@@ -546,6 +546,13 @@ pub fn queue_trigger(
         Value::String(holder.zone.as_str().to_string()),
     );
     data.insert("controller".to_string(), player_value(holder.controller));
+    // R1864003: `traded` names no card (R1838001), so a trigger on it is handed the card the Trade put
+    // into the deck, which only the queue holds and no view shows.
+    if matches!(event, GameEvent::Traded { .. })
+        && let Some(traded) = crate::trade::traded_card_after(sink.state)
+    {
+        data.insert(crate::trade::TRADED_ID_KEY.to_string(), Value::String(traded));
+    }
     data.insert(crate::work::RUN_MARKS_KEY.to_string(), marks);
     let entry = QueuedTrigger {
         id,
