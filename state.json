@@ -3678,15 +3678,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/10-engine-guide.md"
+          ],
+          "from": "6edf2763c6dcccbf86640ca9c5744d3379688d85",
+          "main": "65fc8df7ec3df333c7e55f4025173b2ce3233184"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40476649836",
+            "run": "40493070589",
             "tier": "strong"
           }
         ],
-        "sha": "6edf2763c6dcccbf86640ca9c5744d3379688d85",
+        "sha": "13019152f5b7fb763d0c13badf603600e31e9723",
         "tiers": {
           "claude": "strong"
         }
