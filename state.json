@@ -3570,10 +3570,8 @@
     "what": "plan #1865 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-27T01:42:15Z",
-    "notes": [
-      "delivered build #1858 on claude-3 (run 40429090443): interrupted"
-    ],
+    "at": "2026-10-27T01:49:03Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -4278,7 +4276,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-27T01:42:15Z",
+  "loop_tick": "2026-10-27T01:49:03Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T21:35:26Z",
