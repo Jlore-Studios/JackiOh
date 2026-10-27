@@ -3243,12 +3243,22 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "9177fa296c9b404c5638d17ce8fdcd1480b56118",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40502627575",
+            "tier": "medium"
+          }
+        ],
+        "sha": "a09b6a0658e86d56a443751dcb4880453b5baa5b",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2041": {
