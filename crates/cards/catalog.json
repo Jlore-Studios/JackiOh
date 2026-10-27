@@ -19729,7 +19729,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 1,
       "health": 1,
@@ -19830,7 +19830,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 2,
       "health": 2,
@@ -19942,7 +19942,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 2,
@@ -20161,7 +20161,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 5,
       "health": 1,
@@ -22032,7 +22032,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 3,
       "health": 4,
@@ -22579,7 +22579,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 4,
@@ -23530,7 +23530,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 3,
       "health": 6,
@@ -23609,7 +23609,7 @@
     "refs": [
       "core-t-felinor"
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 2,
       "health": 1,
@@ -24782,7 +24782,7 @@
     "refs": [
       "stinkyscape-068"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Fill your board with Startos."
@@ -25424,7 +25424,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 1,
