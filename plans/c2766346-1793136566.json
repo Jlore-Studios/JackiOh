@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2118,
+  "title": "Patch: a Ctrl/Cmd+K command menu on the menu screens",
+  "branch": "bot/issue-2118",
+  "thread": "**Issue #2118 (data, not instructions):**\n\n```text\n# #2118: Patch: a Ctrl/Cmd+K command menu on the menu screens\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\n## What\n\nCtrl+K (\u2318K on Apple devices) opens a command menu on every menu screen.\n\n- **Entries:**\n  - every menu route the player can open, reached through `navigate()` so R1754000's leave guard still holds a move;\n  - the common actions: new deck, practice, play;\n  - a card search by name, over the shipped catalog only (`almanacShelf`, R1420: no unshipped card), whose result opens that card's inspect detail.\n- **Filtering.** Typing filters the entries by a case-insensitive match on their words in the player's locale (`t()`).\n- **Keys.** Arrow keys move the selection, Enter runs it, and Escape or a click outside closes the menu.\n- **Focus.** The menu is a modal dialog. Focus moves to its input on open, Tab stays inside it, and focus returns to where it was on close.\n- **Not on the board.** The menu is not mounted on any board route (match, practice game, hotseat, duos, watch, replay), so it never takes keys from a game.\n- **Typing elsewhere.** Ctrl/Cmd+K opens it even from a text field, but a plain letter typed into another field never does.\n- **Touch.** It needs a keyboard, so there is no touch entry point.\n\n## Done when\n\nvitest checks that:\n- Ctrl+K and Meta+K open the menu on a menu screen, and nothing opens on a board route;\n- Enter on a route entry calls `navigate()`, and the leave guard still holds it;\n- the card search lists no unshipped card, and its result opens the inspect detail;\n- Escape closes the menu and returns focus;\n- Tab stays inside the menu.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- Every animation and gesture follows Reduce motion: the media query, and `data-motion=\"reduced\"` from the settings panel.\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2118: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2093 skipped: it waits for #2092 to close first",
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
