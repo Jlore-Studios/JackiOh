@@ -280,6 +280,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::subsystems::activate::activate_actions_for;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -505,6 +506,33 @@ mod tests {
             }
             let rich: IndexSet<&str> = RICH_BOARDS.iter().map(|board| board.code).collect();
             assert_eq!(seen, rich, "{seen:?}");
+        }
+
+        #[test]
+        fn r1855001_fo_s_halo_and_phalanx_arm_themselves_with_random_picks() {
+            // Their Cries (S15, R1862002) Discover Weapons and Equip them; laid, every pick is drawn
+            // at random, so each ends armed with no question left for its caster.
+            let seed = seed_laying("FO", true, &RICH_BOARDS);
+            let mut s = setup(&seed, true, json!([]));
+            s.play(ID, json!({}));
+            assert!(s.state().pending.is_none(), "no question is left");
+            for (lane, def_id, picks) in [(2, HALO, 3), (4, PHALANX, 2)] {
+                let card = s.unit(P1, lane).expect("the laid Unit");
+                // R77: each Equip fuses a Weapon into the host, whose definition names every one.
+                assert!(card.def_id.ends_with(&format!("+{def_id}{}", ")".repeat(picks - 1))), "{}", card.def_id);
+                assert_eq!(card.def_id.matches('+').count(), picks, "{def_id} equipped {picks}: {}", card.def_id);
+                assert!(card.radiant);
+                let printed = crate::card_def(def_id).radiant.health.unwrap_or_default();
+                assert!(
+                    s.stats(card.id.as_str()).health > printed,
+                    "{def_id} took its Weapons' health"
+                );
+                assert!(
+                    !activate_actions_for(s.state(), P1, &card).is_empty(),
+                    "{def_id} took its Weapons' Activates"
+                );
+            }
+            assert_eq!(s.backrow(P1, 3).expect("The Syndicate").def_id, THE_SYNDICATE);
         }
 
         #[test]
