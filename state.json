@@ -980,7 +980,7 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "round_tier": "strong",
-      "run_id": "pending:0e22d0da-1793102565",
+      "run_id": "40500828000",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T12:03:39Z",
       "stop_requested": false,
