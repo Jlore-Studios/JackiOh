@@ -18896,7 +18896,7 @@
     "refs": [
       "meditative-066"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 2,
       "health": 2,
@@ -19074,7 +19074,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 10,
       "health": 6,
