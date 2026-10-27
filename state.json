@@ -3562,11 +3562,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-27T02:53:46Z",
+        "at": "2026-10-27T03:50:37Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "fails easy-rule line 5: it adds a database migration under crates/server/migrations/, which the hard rule names explicitly"
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 5 and the hard line both name a database migration (crates/server/migrations/0064), which this needs for the index, so it cannot be lower than hard"
       },
       "failures": 0,
       "forced": false,
