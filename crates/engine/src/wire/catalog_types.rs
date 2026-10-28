@@ -1169,6 +1169,13 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft: Option<crate::wire::craft::CraftRecipe>,
+    /// R2195000: the Core card this Training Grounds snapshot copies (#41–#60, "core-002" for #41),
+    /// so a deck holds one of the two, never both (§2.6 L3), and their shared name names one card
+    /// (R2195001). Absent on every other card, a fused or crafted definition included, so a state
+    /// that never holds a snapshot serialises, hashes and replays as before (TG4 D11).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub snapshot_of: Option<String>,
     pub base: CardFace,
     pub radiant: CardFace,
 }
@@ -1701,6 +1708,7 @@ mod tests {
             radiant_fallback: None,
             ingredients: None,
             craft: None,
+            snapshot_of: None,
             base: face.clone(),
             radiant: face,
         }

@@ -43,6 +43,7 @@ import { OwnershipContext, TheirCopyContext, ownsCosmetic, useCardPicks, type Ca
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
+import { snapshotArtOf } from "./art/traininggrounds.ts";
 
 /** The English names of the cards whose faces print full art: every hero portrait's card. */
 export const FULL_ART_NAMES: ReadonlySet<string> = new Set(Object.values(PORTRAITS).map((portrait) => portrait.cardName));
@@ -54,10 +55,12 @@ export function isFullArt(englishName: string): boolean {
 
 /**
  * Whether `face`'s full layout prints full art: a hero portrait's card while the Full-art cards
- * setting is on. A compact face and a board minion never do (CardFace, MinionFace).
+ * setting is on. A compact face and a board minion never do (CardFace, MinionFace). R2195001: a
+ * Training Grounds snapshot shares its Core card's name but not its full art, a cosmetic of that card's
+ * own (R1313000), so it prints its normal face.
  */
 export function showsFullArt(face: FaceModel, fullArtOn: boolean = readCardSettings().fullArt): boolean {
-  return fullArtOn && !isGlitch(face.defId) && isFullArt(face.englishName ?? face.name);
+  return fullArtOn && !isGlitch(face.defId) && snapshotArtOf(face.defId) === null && isFullArt(face.englishName ?? face.name);
 }
 
 /** R1108000: whether the faces below it may print full art; false on a tutorial lesson's board. */
