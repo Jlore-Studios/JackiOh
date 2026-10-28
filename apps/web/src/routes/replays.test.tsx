@@ -303,8 +303,10 @@ describe("R768000 a route a production build keeps", () => {
     expect(documentTitleFor(paths.replays)).toMatch(/^Replays · /u);
     vi.unstubAllEnvs();
 
+    const chunks = readFileSync(join(SRC, "routes/chunks.tsx"), "utf8");
+    expect(chunks).toContain('replays: routeChunk(() => import("./replays.tsx")),');
     const main = readFileSync(join(SRC, "main.tsx"), "utf8");
-    expect(main).toContain('const ReplaysRoute = lazy(() => import("./routes/replays.tsx"));');
+    expect(main).toContain("const ReplaysRoute = routeChunks.replays.Screen;");
     expect(main).not.toContain("DevReplaysRoute");
     // The player imports the export's module only for its type; the code itself is an `import()`.
     const share = readFileSync(join(SRC, "replay/ShareGif.tsx"), "utf8");

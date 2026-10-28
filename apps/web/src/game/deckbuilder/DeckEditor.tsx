@@ -525,6 +525,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 type="button"
                 className="ws-action"
                 data-testid={DECK_TO_PRACTICE}
+                data-route={practicePath}
                 aria-label={t("Practice with this deck")}
                 onClick={() => {
                   navigate(practicePath);
