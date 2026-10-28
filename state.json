@@ -6517,7 +6517,7 @@
       }
     },
     "2228": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
@@ -6542,11 +6542,11 @@
       "queued_at": "2026-10-28T13:18:56Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "40693988004",
+      "run_id": "pending:511aa44b-1793193669",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-10-28T13:10:09Z",
+      "started_at": "2026-10-28T13:21:27Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -6574,9 +6574,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T13:20:58Z",
+    "at": "2026-10-28T13:21:27Z",
     "url": "",
-    "what": "revise #2186 on claude-7"
+    "what": "revise #2228 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-28T13:06:52Z",
