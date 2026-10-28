@@ -4903,7 +4903,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-27T20:01:48Z",
       "requested_by": "squishy-squooby",
-      "run_id": "pending:a4e38ac7-1793181259",
+      "run_id": "40667958412",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T09:54:48Z",
       "stop_requested": false,
