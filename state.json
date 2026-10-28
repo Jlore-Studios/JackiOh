@@ -7695,15 +7695,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/cards/src/scripts/meditative/c101_gachaholic.rs"
+          ],
+          "from": "14d03b1a2c81f4be3ba8647fe47a9a5128e3018f",
+          "main": "ffee883abf765aab5b7a51dff80255951652a954"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40759004777",
+            "run": "40774345105",
             "tier": "strong"
           }
         ],
-        "sha": "14d03b1a2c81f4be3ba8647fe47a9a5128e3018f",
+        "sha": "dc7b45a312504d95b570fba37ab881e2b79d3ead",
         "tiers": {
           "claude": "strong"
         }
