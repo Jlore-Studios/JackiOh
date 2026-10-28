@@ -1,0 +1,55 @@
+/* R2119000: the undo toast (UndoToast.tsx), at the foot of the screen inside the safe-area insets.
+   It slides up as it appears, and only appears under Reduce motion. */
+
+.undo-toast-region {
+  position: fixed;
+  z-index: 94;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.undo-toast {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--selected);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--text);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--pal-black) 55%, transparent);
+  pointer-events: auto;
+  animation: undo-toast-in 180ms ease-out;
+}
+
+.undo-toast__undo {
+  font-weight: 700;
+}
+
+@keyframes undo-toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.undo-toast[data-motion="reduced"] {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .undo-toast {
+    animation: none;
+  }
+}

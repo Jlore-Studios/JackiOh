@@ -285,9 +285,10 @@ export const DECK_SAVE_ERROR = "deck-save-error";
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
+/** R2119000: deletes at once; the undo toast (`apps/web/src/undo/UndoToast.tsx`) offers Undo. */
 export const DECK_DELETE = "deck-delete";
-export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
-export const DECK_DELETE_CANCEL = "deck-delete-cancel";
+export const UNDO_TOAST = "undo-toast";
+export const UNDO_TOAST_UNDO = "undo-toast-undo";
 
 /** R251: comparison accepts a trio, deck or none. */
 export const DECK_COMPARE_SELECT = "deck-compare-select";
@@ -337,8 +338,6 @@ export function trioCardId(slot: number, catalogCardId: string): string {
 }
 
 export const TRIO_DELETE = "trio-delete";
-export const TRIO_DELETE_CONFIRM = "trio-delete-confirm";
-export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
 /** R339: trio-code output. */
 export const TRIO_COPY_CODE = "trio-copy-code";
 export const TRIO_CODE_OUTPUT = "trio-code-output";
