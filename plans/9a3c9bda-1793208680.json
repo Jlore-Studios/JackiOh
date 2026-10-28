@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2255,
+  "title": "Patch: the account screen shows this ranked season's record beside the rank",
+  "branch": "bot/issue-2255",
+  "thread": "**Issue #2255 (data, not instructions):**\n\n```text\n# #2255: Patch: the account screen shows this ranked season's record beside the rank\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe account screen shows a player's rank in the current ranked season, plus one win\u2013loss\u2013draw record covering every game they have ever played. It never shows how they are doing this season, even though the server already sends that. Once this is built, the rank block also reads, for example, \u201cThis season (ranked): 14\u20139\u20131\u201d, so a player can see their climb at a glance.\n\n## Why\n\n- `GET /api/ranked` already answers `record` (games, wins, losses, draws) for the caller's current season (`crates/server/src/api/ranked.rs:718`, filled at `:742-747`), and the client types it (`apps/web/src/net/api.ts:1289`).\n- No client code reads it: `apps/web/src/routes/account.tsx:367-385` shows only `profile.record`, the all-time count from `/api/profile`, and the play lobby (`routes/play.tsx`) shows only the crest and its caption.\n\n## Proposal\n\n- In the account screen's rank block, show the season's W\u2013L\u2013D from `getOwnRank`'s `record` under a clear label (\u201cThis season (ranked)\u201d), and keep the all-time Record section as it is. Leave the line out while the season has 0 games.\n- Optionally add the same one line under the crest in the play lobby.\n- Client only; the strings go through `t()` with zh-CN entries.\n\n## Where it lands\n\n- `apps/web/src/routes/account.tsx`, `account.test.tsx` (optionally `routes/play.tsx`)\n- `apps/web/src/i18n/zh-CN.json`\n- SPEC \u00a79.12\n\n## Acceptance criteria\n\n- [ ] A ranked answer of 14 wins, 9 losses and 1 draw shows \u201c14\u20139\u20131\u201d under the season label (vitest).\n- [ ] With 0 season games the line is absent, and the all-time record is unchanged.\n- [ ] A failed ranked read shows exactly what it shows today.\n\n## Size and risks\n\nSmall, 2 to 3 files. Risk: two records side by side could confuse a player, so each label must say which record it is.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T17:25:52Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2255: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
