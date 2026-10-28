@@ -6813,11 +6813,13 @@
         "by": "`claude` (strong)",
         "sha": "38367a573e8562a3438980eebc4d771cc8258ee7"
       },
+      "closed_at": "2026-10-28T15:52:35Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T13:11:47Z",
       "issue": 2213,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
