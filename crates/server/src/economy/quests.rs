@@ -17,6 +17,10 @@
 //!   its Jlore and `QUEST_XP_PER_JLORE` XP for each Jlore, onto every active track (§14.7), as
 //!   ledger rows. The store lets a held quest go once, and only that pays, so it pays once.
 //!
+//! - Replace ([`replace_quest`], [[R2210000]]): `QUEST_REPLACES_PER_DAY` times a UTC day, a held
+//!   quest leaves with its progress and one drawn as an arrival is, never held nor the one
+//!   replaced, takes its slot at once; the schedule is untouched.
+//!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): its callers top up and pay only while it is on
 //! ([[R1304002]]). Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
 
@@ -26,10 +30,11 @@ use std::sync::OnceLock;
 use jackioh_engine::wire::{CardDefs, CardType, SeatSummary, SetName, set_ships};
 use serde::{Deserialize, Serialize};
 
-use super::rewards::{GameSummary, XpPayout, pay_xp};
+use super::rewards::{GameSummary, XpPayout, pay_xp, utc_day_bounds};
 use super::store::{EconomyReason, JloreGrant, JloreReason, QuestBook, QuestChange, QuestGrant};
 use crate::config::{
-    QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_XP_PER_JLORE,
+    QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_REPLACES_PER_DAY,
+    QUEST_XP_PER_JLORE,
 };
 use crate::cosmetics::is_slug;
 use crate::db::store::{StoreResult, Tx};
@@ -425,6 +430,75 @@ pub async fn complete_quest(
     )
     .await?;
     Ok(true)
+}
+
+/// How a replace ended ([[R2210000]]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReplaceOutcome {
+    /// The quest left and this one took its slot.
+    Replaced(&'static QuestDef),
+    /// The day's `QUEST_REPLACES_PER_DAY` replaces are already used.
+    Spent,
+    /// The account does not hold that quest.
+    NotHeld,
+    /// Every other entry of the pool is held, so there is none to swap in.
+    NoneLeft,
+}
+
+/// [[R2210000]]: the replaces the account has left in the UTC day `now` falls in, never below 0:
+/// `QUEST_REPLACES_PER_DAY` less the quests it replaced that day, which are its `removed` rows with
+/// the reason `quest` (going live's `launch` removals, [[R1310002]], count for nothing). Read under
+/// the account's economy lock, it is the count a replace spends from.
+pub async fn replaces_left(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> StoreResult<i64> {
+    let (from, until) = utc_day_bounds(now);
+    let used = tx.economy_quests_removed_count(profile_id, from, until).await?;
+    Ok((QUEST_REPLACES_PER_DAY - used).max(0))
+}
+
+/// [[R2210000]]: replaces the held quest `quest_id` at `now`, in the caller's transaction. The
+/// account is locked first (R1301003) and topped up, so a second replace at once waits and then
+/// reads what this one wrote: at most `QUEST_REPLACES_PER_DAY` land in a UTC day. The quest leaves
+/// with its progress, a `removed` row, and one drawn as an arrival is (uniformly among the entries
+/// not held, the replaced one excluded, its fresh seed in the row's `ref`) takes its slot, dated
+/// `now`; the schedule is untouched. A refusal (the day's replaces spent, the quest not held, no
+/// other entry to draw) writes nothing but the top-up's own arrivals, which a quests read writes
+/// too, and the caller drops the transaction. It does not check `ECONOMY_LIVE`: its caller does.
+pub async fn replace_quest(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    quest_id: &str,
+    now: i64,
+) -> StoreResult<ReplaceOutcome> {
+    tx.economy_lock_account(profile_id).await?;
+    let book = top_up_quests(tx, profile_id, now).await?;
+    if replaces_left(tx, profile_id, now).await? <= 0 {
+        return Ok(ReplaceOutcome::Spent);
+    }
+    if !book.held.iter().any(|quest| quest.quest_id == quest_id) {
+        return Ok(ReplaceOutcome::NotHeld);
+    }
+    // Every held id, the replaced one too, so the draw never returns it.
+    let held: Vec<String> = book.held.iter().map(|quest| quest.quest_id.clone()).collect();
+    let Some((def, arrived)) = arrival(profile_id, &held, fresh_seed(), EconomyReason::Quest, now) else {
+        return Ok(ReplaceOutcome::NoneLeft);
+    };
+    let removed = tx
+        .economy_quests_change(&QuestGrant {
+            profile_id: profile_id.to_string(),
+            quest_id: quest_id.to_string(),
+            change: QuestChange::Removed,
+            progress: 0,
+            reason: EconomyReason::Quest,
+            reference: None,
+            dev: false,
+            at: now,
+        })
+        .await?;
+    if !removed {
+        return Ok(ReplaceOutcome::NotHeld);
+    }
+    tx.economy_quests_change(&arrived).await?;
+    Ok(ReplaceOutcome::Replaced(def))
 }
 
 /// [[R1304001]]: one finished game moves the account's quests, in the reward hook's transaction.

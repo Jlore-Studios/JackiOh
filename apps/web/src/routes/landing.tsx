@@ -336,7 +336,7 @@ type QuestsPhase = "closed" | "open" | "closing";
 
 /** R2035000: the account's quests behind a bookmark on the doors' box, read once on mount (CLAUDE.md rule 7). */
 function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
-  const { quests, error, reread } = useQuests(token);
+  const { quests, error, reread, replace } = useQuests(token);
   const [phase, setPhase] = useState<QuestsPhase>("closed");
   const root = useRef<HTMLDivElement>(null);
   const bookmark = useRef<HTMLButtonElement>(null);
@@ -415,7 +415,9 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
         data-motion={motion}
         hidden={phase === "closed"}
       >
-        {phase === "closed" ? null : <QuestsView quests={quests} error={error} onRetry={reread} onArrived={reread} />}
+        {phase === "closed" ? null : (
+          <QuestsView quests={quests} error={error} onRetry={reread} onArrived={reread} onReplace={replace} />
+        )}
       </div>
     </div>
   );
