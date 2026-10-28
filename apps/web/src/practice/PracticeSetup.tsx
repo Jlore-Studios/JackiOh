@@ -30,6 +30,7 @@ import {
 import { LeanSetPicker } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { DeckPreview } from "./DeckPreview.tsx";
 import {
   RANDOM_DECK_IDENTITY,
@@ -374,7 +375,9 @@ export function PracticeSetup({
             defsFailed={defsFailed}
             onRetry={onRetryDefs}
           />
-          {blocked === null ? null : (
+          {blocked === null ? null : custom.kind === "loading" ? (
+            <Skeleton variant="panel" label={blocked} testId={practiceTestid.customBlocked} />
+          ) : (
             <p className="practice-setup__hint" data-testid={practiceTestid.customBlocked} role="status">
               {blocked}
               {custom.kind === "failed" && onRetryCustom !== undefined ? (

@@ -27,6 +27,8 @@ import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import CosmeticPacks from "./CosmeticPacks.tsx";
 import Shop from "./Shop.tsx";
@@ -172,6 +174,20 @@ describe("#1309 the Jlore shop", () => {
       expect(screen.getByTestId(T.shortfall(pack))).toHaveTextContent("Short by 63 Jlore");
     }
     expect(screen.queryByTestId(T.error)).toBeNull();
+  });
+
+  it("#2115 the shop waits as a rows skeleton, and the wallet takes its place when the reads answer", async () => {
+    shopServer();
+    render(<Shop token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.loading), "rows");
+    expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your shop…");
+    expect(screen.queryByTestId(T.wallet)).toBeNull();
+
+    expect(await screen.findByTestId(T.wallet)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.loading)).toBeNull();
+    expect(screen.queryByText("Loading your shop…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("a server refusal shows its reason and changes nothing on screen", async () => {
@@ -427,6 +443,20 @@ describe("#1309 the cosmetic packs", () => {
     expect(await screen.findByText("No unopened packs.")).toBeInTheDocument();
     expect(screen.queryByTestId(T.cosmeticPackObject)).toBeNull();
     expect(screen.queryByTestId(T.open)).toBeNull();
+  });
+
+  it("#2115 the cosmetic packs wait as a panel skeleton, and the unopened count takes its place when the reads answer", async () => {
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.packsLoading), "panel");
+    expect(screen.getByTestId(T.packsLoading)).toHaveTextContent("Loading your cosmetic packs…");
+    expect(screen.queryByTestId(T.unopened)).toBeNull();
+
+    expect(await screen.findByTestId(T.unopened)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.packsLoading)).toBeNull();
+    expect(screen.queryByText("Loading your cosmetic packs…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("R1953000 an opened cosmetic pack pins both token bars at the top, its spent slot's points flying in before they fill", async () => {

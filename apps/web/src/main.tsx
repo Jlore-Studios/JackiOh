@@ -107,6 +107,7 @@ import { QueueFound } from "./routes/GameBanner.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
+import { Skeleton, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
@@ -234,6 +235,8 @@ export type LoadingProps = {
   testId?: string;
   /** More to say under the sentence: the match screen's connection line. */
   children?: ReactNode;
+  /** #2115: draw a skeleton of this shape, the sentence its hidden status line. */
+  skeleton?: SkeletonVariant;
 };
 
 /**
@@ -241,7 +244,7 @@ export type LoadingProps = {
  * be slow (Render's free tier sleeps and takes about a minute to wake) and offers the way out, so a
  * server or network that never answers is not a trap.
  */
-export function Loading({ what, slow = false, testId, children }: LoadingProps): ReactElement {
+export function Loading({ what, slow = false, testId, children, skeleton }: LoadingProps): ReactElement {
   const [late, setLate] = useState(false);
   useEffect(() => {
     if (!slow) return;
@@ -255,9 +258,13 @@ export function Loading({ what, slow = false, testId, children }: LoadingProps):
 
   return (
     <ShellPanel {...(testId === undefined ? {} : { testId })}>
-      <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
-        {t(what)}
-      </p>
+      {skeleton === undefined ? (
+        <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
+          {t(what)}
+        </p>
+      ) : (
+        <Skeleton variant={skeleton} label={t(what)} testId={shellTestid.loading} />
+      )}
       {children}
       {late ? (
         <>
@@ -374,7 +381,7 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
     };
   }, [load]);
 
-  if (load === "loading") return <Loading what="Loading…" slow testId={shellTestid.engineLoading} />;
+  if (load === "loading") return <Loading what="Loading…" slow skeleton="panel" testId={shellTestid.engineLoading} />;
   if (load === "failed") {
     return (
       <ShellPanel testId={shellTestid.engineFailed}>
@@ -481,7 +488,7 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
     navigate(target, { replace: true });
   }, [target]);
 
-  if (account.kind === "loading") return <Loading what="Checking your account…" slow />;
+  if (account.kind === "loading") return <Loading what="Checking your account…" slow skeleton="panel" />;
   if (account.kind === "anonymous") return <Loading what="Sign in to continue." />;
   if (account.kind === "error") return <GateError account={account} />;
 
@@ -856,7 +863,7 @@ export function App(): ReactElement {
   return (
     <>
       <RouteErrorBoundary key={path}>
-        <Suspense fallback={<Loading what="Loading…" slow />}>{route}</Suspense>
+        <Suspense fallback={<Loading what="Loading…" slow skeleton="panel" />}>{route}</Suspense>
       </RouteErrorBoundary>
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}

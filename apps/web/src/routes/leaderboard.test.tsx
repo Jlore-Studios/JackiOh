@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import LeaderboardRoute, { leaderboardTestid } from "./leaderboard.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -128,9 +129,12 @@ describe("the leaderboard screen", () => {
 
     fireEvent.click(screen.getByTestId(leaderboardTestid.retry));
     expect(screen.getByTestId(leaderboardTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(leaderboardTestid.loading), "rows");
     expect(screen.queryByTestId(leaderboardTestid.retry)).toBeNull();
 
     expect(await screen.findByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.2");
+    expect(screen.queryByTestId(leaderboardTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the ladder…")).toBeNull();
     expect(getLeaderboard).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
   });
