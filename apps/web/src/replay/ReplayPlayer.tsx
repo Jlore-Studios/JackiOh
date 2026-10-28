@@ -1,7 +1,9 @@
 // The replay player (#511, SPEC §9.3, §10.8, R768): a finished game, a step at a time. It reads a
 // `ReplaySource` and nothing else (CLAUDE.md rule 7), draws each step's view with `Game` as a board
-// to look at (`replay`: no legal action, glow or prompt, and a click changes nothing) and holds the
-// controls (`ReplayToolbar.tsx`, which the co-op replay shares) in the board's notice slot.
+// to look at (`replay`: no legal action or glow, and a click changes nothing; `replayPrompt`,
+// R2211000: the seat's own open prompt read-only and folded, the other seat's as the waiting panel)
+// and holds the controls (`ReplayToolbar.tsx`, which the co-op replay shares) in the board's notice
+// slot.
 //
 // A step forward hands `Game` the next view with the same key, so its animation queue, effects and
 // sound run as live play's do (R201's speed included). Any other move, a step back or a jump, gives
@@ -289,6 +291,7 @@ export default function ReplayPlayer({
         legal={NOTHING_LEGAL}
         onAction={IGNORE}
         replay
+        replayPrompt
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}
         boardRail={
