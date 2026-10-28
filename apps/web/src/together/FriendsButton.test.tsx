@@ -13,6 +13,8 @@ import type { Challenge, Friend, FriendRequest, PlayerRef } from "../net/social.
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { baseView } from "../test/fixtures.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -300,6 +302,25 @@ describe("#1831 the panel", () => {
       expect(within(panel).getByText(wholeText("Me#1"))).toBeInTheDocument();
       const all = within(panel).getByTestId(friendsTestid.all);
       expect(all).toHaveAttribute("href", "/together");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "#2115 the panel's friends are a rows skeleton while the list is read, then the friends",
+    async () => {
+      signIn("tok-panel");
+      serve(world());
+      shell();
+      fireEvent.click(await button());
+      // Right after the click the stubbed read has not answered yet.
+      const panel = screen.getByTestId(friendsTestid.panel);
+      expectSkeleton(within(panel).getByText("Loading your friends…"), "rows");
+
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(3);
+      expect(within(panel).queryByText("Loading your friends…")).toBeNull();
+      expect(within(panel).queryByTestId(skeletonTestid.root)).toBeNull();
     },
     TEST_MS,
   );

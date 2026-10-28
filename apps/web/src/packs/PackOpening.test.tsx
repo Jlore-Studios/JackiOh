@@ -27,6 +27,7 @@ import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { openedPack, packsInfo } from "./fixtures.ts";
 import PackOpening, { PackScene, type PackSceneProps } from "./PackOpening.tsx";
@@ -823,6 +824,7 @@ describe("#1308 the card packs panel", () => {
     packsServer();
     render(<PackOpening token={TOKEN} />);
     expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your packs…");
+    expectSkeleton(screen.getByTestId(T.loading), "rows");
     await screen.findByTestId(T.held);
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });

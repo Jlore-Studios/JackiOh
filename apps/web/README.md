@@ -47,6 +47,16 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
+shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
+and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
+line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer only under
+`data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
+root that clips them, so the one-screen rule holds. `main.tsx`'s `Loading` takes `skeleton` for the
+same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+more" buttons (content or a button is already there), the practice start screen's shuffle and the
+boards' "Joining …" panels.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

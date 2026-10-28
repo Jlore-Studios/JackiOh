@@ -36,6 +36,7 @@ import { paths } from "../net/navigate.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { navTestid } from "./nav.tsx";
 import CollectionRoute from "./collection.tsx";
 import { questsTestid } from "./QuestsPanel.tsx";
@@ -108,6 +109,7 @@ describe("#1307 the collection route", () => {
     render(<CollectionRoute token={TOKEN} />);
 
     expect(screen.getByTestId(T.loading("cards"))).toHaveTextContent("Loading your cards…");
+    expectSkeleton(screen.getByTestId(T.loading("cards")), "rows");
     expect(await screen.findByTestId(T.jlore)).toBeInTheDocument();
     expect(screen.queryByTestId(T.loading("wallet"))).toBeNull();
     expect(screen.queryByTestId(T.loading("tracks"))).toBeNull();
@@ -131,7 +133,9 @@ describe("#1307 the collection route", () => {
     render(<CollectionRoute token={TOKEN} />);
 
     expect(screen.getByTestId(T.loading("wallet"))).toHaveTextContent("Loading your wallet…");
+    expectSkeleton(screen.getByTestId(T.loading("wallet")), "rows");
     expect(screen.getByTestId(T.loading("tracks"))).toHaveTextContent("Loading your tracks…");
+    expectSkeleton(screen.getByTestId(T.loading("tracks")), "rows");
   });
 
   it("a refused read says why in its panel; the others still show", async () => {

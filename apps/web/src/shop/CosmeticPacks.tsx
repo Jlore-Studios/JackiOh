@@ -39,6 +39,7 @@ import { paths } from "../net/navigate.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { COSMETIC_PACK } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   REGISTRY,
   chaseCandidates,
@@ -186,9 +187,7 @@ export default function CosmeticPacks({
       )}
       {info === null || collection === null || owned === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.packsLoading}>
-            {t("Loading your cosmetic packs…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading your cosmetic packs…")} testId={shopTestid.packsLoading} />
         ) : null
       ) : (
         <>
