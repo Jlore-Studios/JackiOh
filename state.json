@@ -5923,7 +5923,7 @@
     "what": "revise #2168 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-28T10:12:04Z",
+    "at": "2026-10-28T10:14:45Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix"
     ],
@@ -6631,7 +6631,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T10:12:04Z",
+  "loop_tick": "2026-10-28T10:14:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
