@@ -9,8 +9,9 @@
 //! R1178000: the Meditative+ set (issue #1173) was the next held set, in the catalog order after
 //! Meditative, and shipped in v0.3.15 (issue #1187), so its fixture cards here now draw, deal and lean
 //! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
-//! R1857000: the Stinkyscape set (issue #1836) is the third held set, after Meditative+ in the catalog
-//! order, behind the gate until its release (#1884); its four tags name no tribe.
+//! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
+//! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
+//! lean like Meditative+'s; its four tags name no tribe.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -45,8 +46,9 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
 /// token (shipped since v0.3.5), two cards and a token of the Boss set (which does not ship), two
 /// cards and three tokens of the Meditative+ set (shipped since v0.3.15, R1178000: its Prime, M+
 /// #16.1, and the AI generated helpers of M+ #1, #1.1 and #1.2), two Prime tokens and a KY and a Book
-/// card for the pools, and three cards and two tokens of the held Stinkyscape set (R1857000: a Drone
-/// Core, a Weapon and a Swarm Unit, a War Doctrine and an AI generated card).
+/// card for the pools, and three cards and two tokens of the Stinkyscape set (shipped since its
+/// release, #1884, R1857000: a Drone Core, a Weapon and a Swarm Unit, a War Doctrine and an AI
+/// generated card).
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -238,16 +240,19 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
                 unshipped(&pool(json!({ "tags": ["CN"] }))),
                 vec!["boss-001", "boss-002"]
             );
-            // The Meditative and Meditative+ sets keep their places after Classic+ (B2.2), and a set
-            // the catalog order does not name sorts after every set it does.
+            // The Meditative, Meditative+ and Stinkyscape sets keep their places after Classic+
+            // (B2.2), and a set the catalog order does not name sorts after every set it does.
             let all = pool(json!({}));
             assert_eq!(
-                &all[all.len() - 6..],
+                &all[all.len() - 9..],
                 [
                     "meditative-033",
                     "meditative-034",
                     "meditativeplus-011",
                     "meditativeplus-021",
+                    "stinkyscape-027",
+                    "stinkyscape-050",
+                    "stinkyscape-091",
                     "boss-001",
                     "boss-002"
                 ]
@@ -336,8 +341,9 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
     use super::*;
 
     /// Meditative+ is the fifth set of the catalog order, right after Meditative, and ships since
-    /// v0.3.15 (#1187): it is open, it is the newest set, and a lean names it. The reserved Boss set,
-    /// which does not ship, still has no lean.
+    /// v0.3.15 (#1187): it is open and a lean names it. It was the newest set until the Stinkyscape
+    /// set shipped after it (#1884, R1857000). The reserved Boss set, which does not ship, still has
+    /// no lean.
     #[test]
     fn r1178000_meditative_plus_follows_meditative_in_the_catalog_order_and_ships_as_the_newest_set() {
         assert_eq!(SetName::MeditativePlus.as_str(), "Meditative+");
@@ -350,24 +356,23 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
                 .position(|set| *set == SetName::Meditative)
                 .map(|at| at + 1)
         );
-        // Fifth: the held Stinkyscape set follows it (R1857000).
+        // Fifth: the Stinkyscape set follows it (R1857000).
         assert_eq!(CATALOG_SETS.get(4), Some(&SetName::MeditativePlus));
         assert!(set_ships(SetName::MeditativePlus));
         assert!(set_is_open(SetName::MeditativePlus));
-        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::MeditativePlus));
-        assert_eq!(newest_shipped_set(), SetName::MeditativePlus);
+        assert_eq!(SHIPPED_SETS.get(4), Some(&SetName::MeditativePlus));
+        assert_eq!(SHIPPED_SETS.get(5), Some(&SetName::Stinkyscape));
         assert_eq!(
             LeanPick::parse("Meditative+"),
             Some(LeanPick::Set(SetName::MeditativePlus))
         );
         assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::MeditativePlus)));
-        assert_eq!(LeanPick::Newest.resolve(), SetName::MeditativePlus);
         assert_eq!(LeanPick::parse("Boss"), None);
         assert!(!LeanPick::choices().contains(&LeanPick::Set(SetName::Boss)));
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(
             newest_shipped_set(),
-            SetName::MeditativePlus,
+            SetName::Stinkyscape,
             "a preview ships nothing"
         );
     }
@@ -416,16 +421,19 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
             pool(json!({ "defId": ["meditativeplus-016-1"] })),
             vec!["meditativeplus-016-1"]
         );
-        // In its catalog place, after Meditative and last of the sets that ship; a preview of it
-        // changes nothing, since it is open already.
+        // In its catalog place, after Meditative and before Stinkyscape, the set that ships after
+        // it (R1857000); a preview of it changes nothing, since it is open already.
         let all = pool(json!({}));
         assert_eq!(
-            &all[all.len() - 4..],
+            &all[all.len() - 7..],
             [
                 "meditative-033",
                 "meditative-034",
                 "meditativeplus-011",
-                "meditativeplus-021"
+                "meditativeplus-021",
+                "stinkyscape-027",
+                "stinkyscape-050",
+                "stinkyscape-091"
             ]
         );
         let _preview = preview_sets(&[SetName::MeditativePlus]);
@@ -496,9 +504,9 @@ mod r1371_the_newest_shipped_set {
             .position(|set| *set == newest)
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
-        // Classic+ until the Meditative set's release, Meditative from v0.3.5, and the Meditative+
-        // set from v0.3.15 (R1178000).
-        assert_eq!(newest, SetName::MeditativePlus);
+        // Classic+ until the Meditative set's release, Meditative from v0.3.5, the Meditative+ set
+        // from v0.3.15 (R1178000), and the Stinkyscape set from its release (#1884, R1857000).
+        assert_eq!(newest, SetName::Stinkyscape);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(newest_shipped_set(), newest);
@@ -527,13 +535,15 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
         assert_eq!(pool(json!({ "tags": ["Felinor"] })), Vec::<String>::new());
         assert_eq!(pool(json!({ "tags": ["Human"] })), vec!["core-022"]);
         // An AI pool is the AI generated cards, every one a token, alone or beside other tags: the
-        // ten of Classic+ and, since Meditative+ shipped, M+ #1.1 Base Camp and #1.2 Spa Day.
+        // ten of Classic+, since Meditative+ shipped M+ #1.1 Base Camp and #1.2 Spa Day, and since
+        // Stinkyscape shipped its ten (R1857000).
         assert_eq!(
             pool(json!({ "tags": ["AI"] })),
             vec![
                 "classicplus-t-ai-01",
                 "meditativeplus-001-1",
-                "meditativeplus-001-2"
+                "meditativeplus-001-2",
+                "stinkyscape-t-ai-01"
             ]
         );
         assert_eq!(
@@ -542,7 +552,8 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
                 "core-022",
                 "classicplus-t-ai-01",
                 "meditativeplus-001-1",
-                "meditativeplus-001-2"
+                "meditativeplus-001-2",
+                "stinkyscape-t-ai-01"
             ]
         );
         // A set that has not shipped adds its Prime tokens only when previewed (R1420).
@@ -665,7 +676,7 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        // The held Stinkyscape set's four follow them (R1857000), and Token stays last.
+        // The Stinkyscape set's four follow them (R1857000), and Token stays last.
         assert_eq!(at(Tag::DroneCore), Some(potion + 1 + NEW.len()));
         assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
@@ -700,11 +711,11 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
     }
 }
 
-/// R1857000: the Stinkyscape set (issue #1836) is the third set R1420's gate holds, as R1178000 said
+/// R1857000: the Stinkyscape set (issue #1836) was the third set R1420's gate held, as R1178000 said
 /// of Meditative+: sixth in the catalog order, right after Meditative+, and in no pool that names no
-/// set, no deck and no lean until its release (#1884) lists it in `SHIPPED_SETS`. Its four tags are
-/// family tags that no rule reads (R1424).
-mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
+/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Since then it ships
+/// as the newest set. Its four tags are family tags that no rule reads (R1424).
+mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     use super::*;
 
     /// The set's four tags, as written.
@@ -716,7 +727,7 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
     ];
 
     #[test]
-    fn r1857000_stinkyscape_follows_meditative_plus_and_is_held() {
+    fn r1857000_stinkyscape_follows_meditative_plus_and_ships_as_the_newest_set() {
         assert_eq!(SetName::Stinkyscape.as_str(), "Stinkyscape");
         assert_eq!(json_as::<SetName>(json!("Stinkyscape")), SetName::Stinkyscape);
         let at = |set: SetName| CATALOG_SETS.iter().position(|each| *each == set);
@@ -725,25 +736,24 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
             at(SetName::MeditativePlus).map(|at| at + 1)
         );
         assert_eq!(CATALOG_SETS.last(), Some(&SetName::Stinkyscape));
-        // Held: it does not ship, it is not open, it is not the newest set, and no lean names it.
-        assert!(!set_ships(SetName::Stinkyscape));
-        assert!(!SHIPPED_SETS.contains(&SetName::Stinkyscape));
-        assert!(!set_is_open(SetName::Stinkyscape));
-        assert_eq!(newest_shipped_set(), SetName::MeditativePlus);
-        assert_eq!(LeanPick::parse("Stinkyscape"), None);
-        assert!(!LeanPick::choices().contains(&LeanPick::Set(SetName::Stinkyscape)));
-        // The preview opens it on this thread and ships nothing.
+        // Shipped: it is open, it is the newest set, and a lean names it.
+        assert!(set_ships(SetName::Stinkyscape));
+        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::Stinkyscape));
+        assert!(set_is_open(SetName::Stinkyscape));
+        assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
+        assert_eq!(
+            LeanPick::parse("Stinkyscape"),
+            Some(LeanPick::Set(SetName::Stinkyscape))
+        );
+        assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::Stinkyscape)));
+        assert_eq!(LeanPick::Newest.resolve(), SetName::Stinkyscape);
+        // A preview of it changes nothing, and a preview of a held set ships nothing.
         {
-            let _preview = preview_sets(&[SetName::Stinkyscape]);
+            let _preview = preview_sets(&[SetName::Stinkyscape, SetName::Boss]);
             assert!(set_is_open(SetName::Stinkyscape));
-            assert!(!set_ships(SetName::Stinkyscape));
-            assert_eq!(newest_shipped_set(), SetName::MeditativePlus);
+            assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
         }
-        {
-            let _preview = preview_every_set();
-            assert!(set_is_open(SetName::Stinkyscape));
-        }
-        assert!(!set_is_open(SetName::Stinkyscape));
+        assert!(set_is_open(SetName::Stinkyscape));
     }
 
     #[test]
@@ -761,30 +771,35 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
     }
 
     #[test]
-    fn r1857000_a_pool_that_names_no_set_never_reaches_it_one_that_names_it_does() {
+    fn r1857000_a_pool_that_names_no_set_reaches_it_and_one_that_names_it_keeps_to_it() {
         setup();
-        // Whatever it asks for: its own tags, the AI generated cards (R1421) or every token.
-        for args in [
-            json!({}),
-            json!({ "tags": ["Drone Core"] }),
-            json!({ "tags": ["Weapon"] }),
-            json!({ "anyTags": ["Swarm", "War Doctrine"] }),
-            json!({ "tags": ["AI"] }),
-            json!({ "withTokens": true }),
+        // Whatever it asks for: its own tags, the AI generated cards (R1421) or every token; its
+        // tokens only where a pool asks for tokens (§5.1) or for the AI tag they carry.
+        for (args, expected) in [
+            (
+                json!({}),
+                vec!["stinkyscape-027", "stinkyscape-050", "stinkyscape-091"],
+            ),
+            (json!({ "tags": ["Drone Core"] }), vec!["stinkyscape-027"]),
+            (json!({ "tags": ["Weapon"] }), vec!["stinkyscape-050"]),
+            (
+                json!({ "anyTags": ["Swarm", "War Doctrine"] }),
+                vec!["stinkyscape-091"],
+            ),
+            (json!({ "tags": ["AI"] }), vec!["stinkyscape-t-ai-01"]),
+            (
+                json!({ "withTokens": true }),
+                vec![
+                    "stinkyscape-027",
+                    "stinkyscape-050",
+                    "stinkyscape-091",
+                    "stinkyscape-137-1",
+                    "stinkyscape-t-ai-01",
+                ],
+            ),
         ] {
-            assert_eq!(stinkyscape(&pool(args.clone())), Vec::<String>::new(), "{args}");
+            assert_eq!(stinkyscape(&pool(args.clone())), expected, "{args}");
         }
-        // An AI pool stays the shipped sets' AI generated cards.
-        assert_eq!(
-            pool(json!({ "tags": ["AI"] })),
-            vec![
-                "classicplus-t-ai-01",
-                "meditativeplus-001-1",
-                "meditativeplus-001-2"
-            ]
-        );
-        // A pool that names the set, or its cards by id, reaches them, so its cards find their own
-        // tokens and pools.
         assert_eq!(
             pool(json!({ "set": "Stinkyscape" })),
             vec!["stinkyscape-027", "stinkyscape-050", "stinkyscape-091"]
@@ -797,9 +812,9 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
             pool(json!({ "defId": ["stinkyscape-t-ai-01"] })),
             vec!["stinkyscape-t-ai-01"]
         );
-        // Previewed, it draws in its catalog place: after Meditative+, before the Boss set the
-        // order does not name.
-        let _preview = preview_sets(&[SetName::Stinkyscape, SetName::Boss]);
+        // In its catalog place, last of the sets that ship and before the Boss set the order does
+        // not name.
+        let _preview = preview_sets(&[SetName::Boss]);
         let all = pool(json!({}));
         assert_eq!(
             &all[all.len() - 7..],
@@ -813,27 +828,18 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
                 "boss-002"
             ]
         );
-        assert_eq!(
-            stinkyscape(&pool(json!({ "tags": ["AI"] }))),
-            vec!["stinkyscape-t-ai-01"]
-        );
     }
 
     #[test]
-    fn r1857000_no_deck_holds_one_unless_previewed() {
+    fn r1857000_a_deck_holds_its_cards_since_it_shipped_and_never_its_tokens() {
         setup();
         let catalog = defs();
-        assert!(!deckable(&catalog["stinkyscape-027"]));
+        assert!(deckable(&catalog["stinkyscape-027"]));
         assert!(!deckable(&catalog["stinkyscape-137-1"]), "a Token never is");
+        assert!(!deckable(&catalog["stinkyscape-t-ai-01"]), "a Token never is");
         let mut deck: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
         deck.push("stinkyscape-050".to_string());
-        let refused = validate_deck(&deck, &catalog, "p1", 20).expect_err("refused");
-        assert!(
-            refused
-                .to_string()
-                .contains("Stinkyscape, which has not shipped yet"),
-            "{refused}"
-        );
+        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
 
         let collection: IndexMap<String, i32> = deck.iter().map(|id| (id.clone(), 1)).collect();
         let result = jackioh_engine::validator::validate_deck(&jackioh_engine::validator::DeckInput {
@@ -854,16 +860,6 @@ mod r1857000_the_stinkyscape_set_is_held_after_meditative_plus {
             .filter(|error| error.rule == jackioh_engine::validator::LoadoutRule::L3)
             .map(|error| error.message.as_str())
             .collect();
-        assert_eq!(l3.len(), 1, "{:?}", result.errors);
-        assert!(
-            l3[0].contains("the Stinkyscape set has not shipped yet"),
-            "{}",
-            l3[0]
-        );
-
-        let _preview = preview_sets(&[SetName::Stinkyscape]);
-        assert!(deckable(&catalog["stinkyscape-027"]));
-        assert!(!deckable(&catalog["stinkyscape-137-1"]), "a Token never is");
-        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
+        assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
     }
 }

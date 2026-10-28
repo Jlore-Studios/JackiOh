@@ -23,8 +23,8 @@ use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{
-    AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, is_legal, js, random_decks,
-    random_policy_states, trap_pool,
+    AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, face_down_pool, is_legal,
+    js, random_decks, random_policy_states, trap_pool,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -972,7 +972,7 @@ mod determinize_b12 {
         let (a, _) = pair();
         let hidden = hidden_instance_ids(&a, AI);
         let pool: IndexSet<String> = ai_pool().into_iter().collect();
-        let traps: IndexSet<String> = trap_pool().into_iter().collect();
+        let traps: IndexSet<String> = face_down_pool().into_iter().collect();
         let opponent_public: IndexSet<String> = every_card(&a)
             .iter()
             .filter(|card| card.owner == PlayerId::P2 && !hidden.contains(&card.id))

@@ -355,11 +355,25 @@ mod tests {
             assert_eq!(gained(&s), vec![coin.clone(), coin.clone(), coin]);
         }
 
+        /// Re-pinned for the Stinkyscape release (#1884): the 2-cost KY cards were Conjure KY, C+ #62 and
+        /// M+ #20, which the pinned seed dealt as Conjure KY; the set's #25 KY's Tricknology joins them,
+        /// so the seeds now show the whole pool rather than one pick.
         #[test]
-        fn r420_easy_a_random_2_cost_ky_card_which_is_conjure_ky() {
-            let mut s = rolled("Easy", "ky", false, &[FILLER], "");
-            take(&mut s, "Easy", true);
-            assert_eq!(gained(&s), vec![json!({ "defId": CONJURE_KY, "radiant": false })]);
+        fn r420_easy_a_random_2_cost_ky_card_conjure_ky_among_them() {
+            const TWO_COST_KY: [&str; 4] = [CONJURE_KY, "classicplus-062", "meditativeplus-020", "stinkyscape-025"];
+            let mut seen: BTreeSet<String> = BTreeSet::new();
+            for n in 0..16 {
+                let mut s = rolled("Easy", "ky", false, &[FILLER], &format!("two{n}-"));
+                take(&mut s, "Easy", true);
+                let cards = gained(&s);
+                assert_eq!(cards.len(), 1);
+                let def_id = def_id_of(&cards[0]);
+                assert!(TWO_COST_KY.contains(&def_id.as_str()), "{def_id}");
+                assert_eq!(cards[0]["radiant"], json!(false));
+                seen.insert(def_id);
+            }
+            assert!(seen.contains(CONJURE_KY), "{seen:?}");
+            assert!(seen.len() > 1, "{seen:?}");
         }
 
         #[test]
