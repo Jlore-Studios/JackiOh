@@ -470,6 +470,41 @@ class WakeWorkflowTests(unittest.TestCase):
         self.assertTrue(linted("claude-wake.yml"))
 
 
+class LearnSetWorkflowTests(unittest.TestCase):
+    """A new set stops a learn export still early on the set before (learn-set.yml); every learn
+    run plays the newest patch, reading main as it is when it starts (learn.yml, plan)."""
+    text = read("learn-set.yml")
+    learn = read("learn.yml")
+
+    def test_a_shipped_patch_on_main_starts_it_on_githubs_runner(self):
+        self.assertIn('  push:\n    branches: [main]\n    paths: ["crates/cards/patches/patches.json"]\n',
+                      self.text)
+        self.assertNotIn("schedule:", self.text)
+        stop = job(self.text, "stop")
+        self.assertIn("runs-on: ubuntu-latest", stop)
+        self.assertIn("timeout-minutes:", stop)
+        self.assertIn("cancel-in-progress: false", self.text)
+        self.assertTrue(linted("learn-set.yml"))
+
+    def test_only_a_set_stops_a_run_and_only_before_half_its_shards(self):
+        self.assertIn('select(.tier == "major")', self.text)
+        keep = re.search(r'LEARN_SET_KEEP_SHARDS: "(\d+)"', self.text)
+        shards = re.search(r"shards: \$\{\{ inputs\.shards \|\| '(\d+)' \}\}", self.learn)
+        self.assertIsNotNone(keep)
+        self.assertIsNotNone(shards)
+        self.assertEqual(int(keep.group(1)) * 2, int(shards.group(1)))
+        self.assertIn('[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]', self.text)
+
+    def test_a_learn_run_plans_and_builds_main_as_it_is_when_it_starts(self):
+        plan = job(self.learn, "plan")
+        self.assertIn("- uses: actions/checkout@v4\n        with:\n          ref: main\n", plan)
+        self.assertIn('echo "sha=$(git rev-parse HEAD)"', plan)
+        self.assertIn("ref: ${{ needs.plan.outputs.sha }}", job(self.learn, "export"))
+        build = job(read("selfplay.yml"), "build")
+        self.assertIn("- uses: actions/checkout@v4\n        with:\n          ref: ${{ inputs.ref }}\n",
+                      build)
+
+
 class RequiredChecksTests(unittest.TestCase):
     def test_every_required_check_is_a_job_that_runs_on_every_pull_request(self):
         cfg = config.load(env={})
