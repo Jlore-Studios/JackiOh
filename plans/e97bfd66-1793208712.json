@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2253,
+  "title": "Patch: daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest",
+  "branch": "bot/issue-2253",
+  "thread": "**Issue #2253 (data, not instructions):**\n\n```text\n# #2253: Patch: daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOne kind of daily quest asks a player to play cards of a given set. Each older set has one, but the newest set, Stinkyscape, has none. Two of the game's signature moves are never asked for either: making cards Radiant mid-game, and switching a unit between Attack and Defense. The game already counts both in every finished game. Once this is built the quest pool gains \u201cPlay 8 Stinkyscape cards\u201d and one quest each for Radiant upgrades and position switches, with targets and payouts set the way the pool's other quests are. A check also makes the next set's release add its own set quest, so the gap can't come back when Training Grounds ships.\n\n## Why\n\n- `crates/server/quests.json` holds 19 quests. Its set quests are `core-8`, `classic-8`, `classic-plus-8`, `meditative-8` and `meditative-plus-8`. Stinkyscape ships (`SHIPPED_SETS`, `crates/engine/src/wire/catalog_types.rs:287-294`; v0.5.0) and has no quest.\n- Nothing catches the gap: `quests::problems` (`crates/server/src/economy/quests.rs:89-145`) refuses a set quest for a set that does not ship, but not a shipped set that lacks one. The Training Grounds set (#2204) ships next and would miss its quest the same way.\n- SPEC \u00a71's pillars name the two combat axes (Attack and Defense position) and say \u201cupgrading cards mid-game is a core resource loop\u201d. Every game record already counts both per seat: `SeatSummary.position_switches` and `radiant_upgrades` (`crates/engine/src/wire/stats.rs:131-137`, R1256000). Yet `QuestGoal` (`quests.rs:44-65`) has no goal that reads them, and `GameTally` (`:196-200`) holds only plays, traps fired and attacks.\n\n## Proposal\n\n- Add `stinkyscape-8`, \u201cPlay 8 Stinkyscape cards\u201d, with the same target and Jlore as the other set quests.\n- Add two goal kinds, `radiantUpgrades` and `positionSwitches`, counted into `GameTally` from the seat's `SeatSummary` fields (a record without them counts 0). Add one quest for each to `quests.json`, inside `QUEST_JLORE_MIN..=QUEST_JLORE_MAX` and consistent with the rule that a harder quest pays more, which `problems()` enforces.\n- Add a test in `quests.rs` that every set in `SHIPPED_SETS` has at least one `playSetCards` quest, so shipping a set without one fails.\n- Add zh-CN titles for the three new quests (`QuestsPanel.tsx` shows `t(quest.title)`).\n- SPEC \u00a714.9 names the new goals. If the builder has to decide what counts as a switch or an upgrade for a quest (for example, \u201cas the record counts it, R1256000\u201d), that is a ruling in this issue's block, with its paragraph in `spec/pending/<issue>.md`.\n\n## Where it lands\n\n- `crates/server/quests.json`, `crates/server/src/economy/quests.rs` and its tests\n- `apps/web/src/i18n/zh-CN.json`\n- SPEC \u00a714.9; R1304000, R1256000\n\n## Acceptance criteria\n\n- [ ] `quests::shipped()` parses the pool with the three new quests.\n- [ ] A test fails when a set in `SHIPPED_SETS` has no `playSetCards` quest, and passes on the new pool.\n- [ ] A seat summary with `radiantUpgrades: 2` moves a `radiantUpgrades` quest by 2; `positionSwitches` works the same way; a summary without the fields moves neither.\n- [ ] A finished game through the reward hook moves a held quest of each new kind (an existing quest store test, extended).\n- [ ] zh-CN holds the three titles; `cargo test -p jackioh-server` passes, and `cargo jackioh spec check` too if a ruling is added.\n\n## Size and risks\n\nSmall to medium: the data file, one server module and its tests, the dictionary, and perhaps one ruling note. Low risk: older records count 0, and the pool's own check still enforces that a harder quest pays more. No card, engine or client logic changes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T17:25:07Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2253: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
