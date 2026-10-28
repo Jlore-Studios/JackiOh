@@ -602,6 +602,7 @@ mod tests {
                 "seed": seed,
                 "p1": {
                     "hand": [PROBE],
+                    "mana": 10,
                     "field": [{ "def": VANILLA, "lane": 1 }],
                     "library": [FILLER, FILLER, FILLER],
                 },

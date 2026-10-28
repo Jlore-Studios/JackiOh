@@ -27,6 +27,7 @@ const STRAAZA: &str = "core-054";
 const JILLIAX: &str = "core-056";
 const OOMEN: &str = "core-067";
 const TRANSMOGULATE: &str = "core-083";
+const TRAP: &str = "core-085"; // (2) Trap, set face down to fill a backrow.
 const CALL_TO_CHAOS: &str = "core-095";
 const ZEPHYRS: &str = "core-097";
 const CRAFT: &str = "core-099";
@@ -192,16 +193,23 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
         register_all();
         // The seed is arbitrary: the cursor is searched for the roll that summons Units.
         const SEED: &str = "chaos-full-row";
+        // R2248000: a Flying Unit of the pool would stand in an open backrow zone, so it is full too.
+        let backrow = vec![json!({ "def": TRAP, "faceUp": false }); 5];
         let cursor = cursor_where(SEED, |cursor| {
             chaos_roll(SEED, cursor).as_deref() == Some("units")
         });
         let mut s = scenario(json!({
             "seed": SEED,
-            "p1": { "hand": [CALL_TO_CHAOS, MENACE], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], "mana": 8 },
+            "p1": {
+                "hand": [CALL_TO_CHAOS, MENACE],
+                "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                "backrow": backrow,
+                "mana": 8,
+            },
         }));
         s.state_mut().rng_cursor = cursor;
         s.play(CALL_TO_CHAOS, json!({}));
-        // The roll is the one draw the card makes; every summon then fails on the full row (§3.2).
+        // The roll is the one draw the card makes; every summon then fails on the full board (§3.2).
         assert_eq!(
             summoned(s.last_events())
                 .into_iter()
