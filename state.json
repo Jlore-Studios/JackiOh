@@ -7468,6 +7468,8 @@
       "question": "",
       "queued_at": "2026-10-28T23:37:21Z",
       "requested_by": "jgoetzmann-bot",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "40788719978",
       "runs_on": "ubuntu-latest",
