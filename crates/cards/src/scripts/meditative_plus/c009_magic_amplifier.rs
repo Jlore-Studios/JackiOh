@@ -1,6 +1,6 @@
 //! M+ #9 Magic Amplifier (SPEC §8.9 row 9, BUILD M11 row M+ 9): (1, Embiggened 2) Field Spell, Common.
 //!   Base:    "Aura: Both players have Spell Damage +{spellDamage}.
-//!             Embiggened (2): This also has "Cry: Add a random Spell or Field Spell that deals
+//!             Embiggened (2): Also has "Cry: Add a random Spell or Field Spell that deals
 //!             damage to your hand."" (2)
 //!   Radiant: "… a random Radiant Spell or Field Spell that deals damage …" (4)
 //!

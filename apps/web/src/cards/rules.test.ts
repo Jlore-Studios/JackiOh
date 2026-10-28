@@ -351,7 +351,10 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
       ["§6.1", "Can attack twice each turn"],
-      ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+      [
+        "§6.1",
+        "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
+      ],
     ]);
   });
 

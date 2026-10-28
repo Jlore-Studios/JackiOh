@@ -1,6 +1,6 @@
 //! #83 Transmogulate (SPEC §8.4 row 83): Spell, cost 2 (Embiggened 4), Legendary.
 //!   Base:    "Replace every card in your hand and deck with a random Legendary.
-//!            Embiggened (4): Your hand, deck and board instead."
+//!            Embiggened (4): Your board too."
 //!   Radiant: "... with a random Radiant Legendary." — the same zones with `radiant: true` on every
 //!            replacement (§8 Conventions).
 //!

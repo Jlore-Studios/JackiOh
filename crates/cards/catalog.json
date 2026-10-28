@@ -2980,11 +2980,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (4): Your hand, deck and board instead."
+      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (4): Your board too."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (4): Your hand, deck and board instead."
+      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (4): Your board too."
     }
   },
   "core-084": {
@@ -17187,11 +17187,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): This also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): This also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
     }
   },
   "meditativeplus-010": {

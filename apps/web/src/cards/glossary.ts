@@ -239,7 +239,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // R2179001: Temporary X counts down at each end of its owner's turn; a plain Temporary is Temporary 1.
   Temporary: keyword(
     "Temporary",
-    "At the end of its owner's turn the count drops by 1; at 0 it is discarded from their hand. Temporary alone is Temporary 1",
+    "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
     { row: "Temporary X" },
   ),
   // Patch v0.2.4 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
@@ -407,13 +407,13 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
  * R910000: spellings that hold a term's word but name something else, so the tokenizer prints them
  * plain: the exile pile, which reads like Exile ("your exile", "from exile", Lizard's Breath's
  * "Exile," among its piles). Corpse Plantation's "each counter" and "1 counter" went with its old
- * text (patch v0.3.10), which now names its Plague Counters in full.
+ * text (patch v0.3.10), which now names its Plague Counters in full, and Transmogulate's "graveyard
+ * and exile" with its old reach (issue #2179).
  */
 export const PLAIN_SPELLINGS: readonly string[] = [
   "your exile",
   "their exile",
   "from exile",
-  "graveyard and exile",
   "graveyard or exile",
   "Exile, deal",
 ];
