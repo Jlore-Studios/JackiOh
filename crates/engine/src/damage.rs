@@ -218,7 +218,8 @@ fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
 /// §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
 /// in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
 /// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins. A hero immune
-/// to damage (Meditative #48, MD-C21) caps every hit at 0.
+/// to damage (Meditative #48, MD-C21) caps every hit at 0, and a floored hero (R2201000) every hit at
+/// what it has above its floor.
 pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
@@ -231,6 +232,10 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
             .iter()
             .filter_map(|guard| guard.cap.map(|cap| cap.max(0))),
     );
+    // R2201000: a floored hero takes no more than it has above its floor, so no hit is ever lethal.
+    if let Some(floor) = crate::state::hero_floor_of(state, player) {
+        caps.push((state.players[player].hero.health - floor).max(0));
+    }
     // MD-C21: immunity is a cap of 0, so it wins over every other cap.
     if state.players[player]
         .mods
@@ -1106,7 +1111,14 @@ pub fn lose_health(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> 
     if amount <= 0 {
         return 0;
     }
-    let lost = amount;
+    // R2201000: a floored hero loses no more than it has above its floor.
+    let lost = match crate::state::hero_floor_of(sink.state, player) {
+        Some(floor) => amount.min((sink.state.players[player].hero.health - floor).max(0)),
+        None => amount,
+    };
+    if lost <= 0 {
+        return 0;
+    }
     // #936 B13, B14: a Duos hero's own HP first, then its team's pool.
     crate::duos_life::hero_loses(sink.state, player, lost);
     sink.events.push(GameEvent::HealthLost { player, amount: lost });
