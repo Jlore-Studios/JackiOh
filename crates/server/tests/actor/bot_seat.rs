@@ -145,7 +145,7 @@ async fn started_bot_match(
         .seed_profile(json!({ "id": PERSON, "rating": 1000 }));
     let bot: NewBot = from(json!({
         "profileId": BOT,
-        // The strongest row: R747000's weaker rows hand some decisions, or all, to the random policy, and
+        // The strongest row: R747000's weaker rows hand some decisions, or all, to the skill miss, and
         // these tests are about what the bot's seat does with the AI's turn.
         "strength": BOT_STRENGTHS.len() - 1,
         "speed": 1.0,
@@ -493,6 +493,9 @@ async fn r1452_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace()
         actor.snapshot().result.is_some()
     })
     .await;
+    // #2213: the game ends before its result is written, and the write folds the log off the
+    // runtime first, so an `idle` queued behind the ending is what waits for the result's row.
+    actor.idle().await;
     let log = log_of(&app).await;
     let last = log.last().expect("a logged action");
     assert_eq!(
