@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2108,
+  "title": "Patch: one loading state and one empty state, with the tavern's look",
+  "branch": "bot/issue-2108",
+  "thread": "**Issue #2108 (data, not instructions):**\n\n```text\n# #2108: Patch: one loading state and one empty state, with the tavern's look\nOpened by @MaxGoetzmann.\n\n### What it does\n\nLoading and empty screens are bare lines of text (\"Loading\u2026\", \"No decks yet.\"), each styled by its own screen. They are the most generic-looking parts of the client. Make one shared loading state and one shared empty state with the tavern's look and a little character, and use them across the menus. An empty state offers the obvious next step where there is one.\n\n### Acceptance\n\n- The menus' loading and empty states share one look.\n- A fast load doesn't flash the loading state.\n- Reduced motion keeps the loading state still.\n\n### Blocked by, part of\n\nBlocked by #2106\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2108: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2186: it conflicts with main",
+    "queued #2163: it conflicts with main",
+    "queued #2155: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
