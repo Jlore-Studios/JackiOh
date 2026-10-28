@@ -12,6 +12,7 @@ import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { cosmeticPacksInfo } from "../shop/fixtures.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import PurchasesRoute, { purchasesTestid } from "./purchases.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -114,6 +115,34 @@ describe("R1665000 /purchases signed in", () => {
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
     expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
     for (const call of oddsReads(server)) expect(call.headers.authorization, call.path).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("#2115 shows a skeleton in each section until its read answers, then the odds and the pity", async () => {
+    servePurchases();
+    signIn(TOKEN);
+    render(<PurchasesRoute />);
+
+    // Before any await the stubbed reads have not answered: card packs a table, cosmetic packs a panel, pity rows.
+    const loading = {
+      "card-packs": screen.getByTestId(purchasesTestid.loading("card-packs")),
+      "cosmetic-packs": screen.getByTestId(purchasesTestid.loading("cosmetic-packs")),
+      pity: screen.getByTestId(purchasesTestid.loading("pity")),
+    };
+    expect(loading["card-packs"]).toHaveTextContent("Loading your packs…");
+    expectSkeleton(loading["card-packs"], "table");
+    expect(loading["cosmetic-packs"]).toHaveTextContent("Loading your cosmetic packs…");
+    expectSkeleton(loading["cosmetic-packs"], "panel");
+    expect(loading.pity).toHaveTextContent("Loading your packs…");
+    expectSkeleton(loading.pity, "rows");
+
+    expect(await screen.findByTestId(purchasesTestid.odds, undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByTestId(purchasesTestid.cosmeticSlot, undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByTestId(purchasesTestid.pityLine, undefined, SLOW)).toBeInTheDocument();
+    for (const place of ["card-packs", "cosmetic-packs", "pity"] as const) {
+      expect(screen.queryByTestId(purchasesTestid.loading(place)), place).toBeNull();
+    }
+    expect(screen.queryByText("Loading your packs…")).toBeNull();
+    expect(screen.queryByText("Loading your cosmetic packs…")).toBeNull();
   });
 
   it("R1665000 a failed read says why in its place and leaves the other read's sections", async () => {

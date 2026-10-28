@@ -10,6 +10,8 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::resolve::{CastOptions, HookOptions, cast_card, make_context};
 use jackioh_engine::testkit::*;
+
+use crate::rules::fixtures::harness::Bench;
 use serde_json::json;
 
 const P1: PlayerId = PlayerId::P1;
@@ -26,25 +28,6 @@ const WELL: &str = "core-006";
 
 fn library() -> Value {
     json!([FILLER, FILLER, FILLER, FILLER])
-}
-
-/// TS `sinkFor(state)`: a sink beside the state, so the test can apply verbs directly.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 fn books(s: &Scenario) -> usize {
@@ -147,9 +130,9 @@ mod r940 {
             scope: Some(scope),
             ..Default::default()
         };
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         let state = s.state_mut();
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         let mut ctx = make_context(
             &mut engine,
             None,
@@ -195,9 +178,9 @@ mod r940 {
             not_tags: None,
             exclude_self: None,
         };
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         let state = s.state_mut();
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         let ctx = make_context(
             &mut engine,
             None,
@@ -323,9 +306,9 @@ mod r942 {
                 lane: 5,
             },
         );
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         let state = s.state_mut();
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         let mut ctx = make_context(
             &mut engine,
             None,
@@ -379,10 +362,10 @@ mod r943 {
             "p1": { "hand": [FILLER], "library": [{ "def": VANILLA }, FILLER] },
             "p2": { "hand": [FILLER], "library": library() },
         }));
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         let coin = {
             let state = s.state_mut();
-            let mut engine = sink.on(state);
+            let mut engine = sink.sink(state);
             create_in_hand(&mut engine, P1, "core-t-coin")
         };
         assert_eq!(coin.created, Some(true), "The Coin is Created");
@@ -464,10 +447,10 @@ mod r943 {
         reset_instance(s.card_mut(&id));
         assert_eq!(s.card(&id).created, Some(true), "a reset keeps the mark");
         // A draw moves it to the hand with the mark on.
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         {
             let state = s.state_mut();
-            let mut engine = sink.on(state);
+            let mut engine = sink.sink(state);
             draw(&mut engine, P1, 1);
         }
         let drawn = s
@@ -561,10 +544,10 @@ mod r946 {
             .into_iter()
             .find(|card| card.def_id == HIT_JOB)
             .expect("Hit Job");
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         {
             let state = s.state_mut();
-            let mut engine = sink.on(state);
+            let mut engine = sink.sink(state);
             cast_card(
                 &mut engine,
                 &card,
@@ -583,10 +566,10 @@ mod r946 {
             .into_iter()
             .find(|card| card.def_id == HIT_JOB)
             .expect("Hit Job");
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         {
             let state = s.state_mut();
-            let mut engine = sink.on(state);
+            let mut engine = sink.sink(state);
             cast_card(
                 &mut engine,
                 &card,
@@ -677,9 +660,9 @@ mod r1956001 {
 
     /// Run `effect` as `maker`'s script, its controller's.
     fn run_as(s: &mut Scenario, maker: &CardInstance, effect: Effect) {
-        let mut sink = Sink::for_state(s.state());
+        let mut sink = Bench::new(s.state());
         let state = s.state_mut();
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         let mut ctx = make_context(
             &mut engine,
             Some(maker),

@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS } from "./config.ts";
 import { canShareFile, exportGif, shareGif } from "./gif/export.ts";
 import type { GifExportResult } from "./gif/export.ts";
@@ -139,7 +140,9 @@ describe("R768000 a result screen's way into a replay", () => {
       </CatalogContext.Provider>,
     );
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.queryByText("Loading the replay…")).toBeNull();
     unmount();
 
     vi.mocked(getReplaySteps).mockRejectedValue(
@@ -168,6 +171,7 @@ describe("R768000 a result screen's way into a replay", () => {
 
     fireEvent.click(screen.getByTestId(replayTestid.retry));
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
 
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
     expect(load).toHaveBeenCalledTimes(2);

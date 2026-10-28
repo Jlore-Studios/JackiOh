@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
@@ -90,12 +91,26 @@ describe("R388 the Patch notes page", () => {
     expect(new Set(asked)).toEqual(new Set([V3, V2]));
 
     fireEvent.click(within(patchEntry(V1)).getByTestId(patchTestid.toggle));
+    expectSkeleton(within(patchEntry(V1)).getByTestId(patchTestid.cardsLoading), "grid");
     expect(await within(patchEntry(V1)).findByTestId(patchTestid.cards)).toBeInTheDocument();
+    expect(within(patchEntry(V1)).queryByTestId(patchTestid.cardsLoading)).toBeNull();
     expect(asked).toContain(V1);
     expect(within(patchEntry(V1)).getByTestId(patchTestid.toggle)).toHaveTextContent("Hide the cards");
 
     fireEvent.click(within(patchEntry(V3)).getByTestId(patchTestid.toggle));
     expect(within(patchEntry(V3)).queryByTestId(patchTestid.cards)).toBeNull();
+  });
+
+  it("#2115 the page waits as a rows skeleton, and the patches take its place when the read answers", async () => {
+    renderPage(fixtureSource());
+
+    expectSkeleton(screen.getByTestId(patchTestid.loading), "rows");
+    expect(screen.getByTestId(patchTestid.loading)).toHaveTextContent("Loading the patch notes…");
+    expect(screen.queryAllByTestId(patchTestid.patch)).toEqual([]);
+
+    expect((await screen.findAllByTestId(patchTestid.patch)).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId(patchTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the patch notes…")).toBeNull();
   });
 
   it("R388 R507 shows a changed card as its face from the patch's snapshot, with its changes marked", async () => {

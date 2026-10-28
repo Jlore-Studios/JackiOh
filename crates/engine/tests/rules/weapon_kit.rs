@@ -9,6 +9,8 @@ use jackioh_engine::play_choices::{legal_tribute_sets, tribute_cost_of};
 use jackioh_engine::subsystems::activate::{abilities_of, activate_actions_for, activation_views_for};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
+
+use crate::rules::fixtures::harness::types_of;
 use jackioh_engine::work::can_resume;
 
 use crate::rules::fixtures::weapon_kit::{
@@ -57,10 +59,6 @@ fn pass_to(s: &mut Scenario, player: PlayerId, times: usize) {
             s.end_turn();
         }
     }
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn attack_health(s: &Scenario, id: &str) -> (i32, i32) {

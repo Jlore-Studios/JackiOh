@@ -21,7 +21,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::combat::{indestructible, plain, trampler};
 use crate::rules::fixtures::harness::{
     act, both, events_of_type, in_hand, json_of, matches_object, new_game, next_nonce, put, sink_for, slot,
-    spread,
+    spread, types_of,
 };
 
 // Local defs. Indices start above 1300 so they never collide with a fixture catalog or another test
@@ -349,10 +349,6 @@ fn last_index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .iter()
         .rposition(|found| *found == kind)
         .map_or(-1, |at| at as i64)
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 mod player_modifiers_and_their_three_expiries_2_2_10_1 {

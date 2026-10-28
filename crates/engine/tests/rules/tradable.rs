@@ -10,7 +10,7 @@
 
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{in_hand, put, slot};
+use super::fixtures::harness::{in_hand, put, slot, types_of};
 use super::fixtures::prompt_harness::board;
 use super::fixtures::tradable::{
     FIXTURE_TRADES, lender, no_draws, plain_unit, register_tradable, tradable_spell, trade_watcher,
@@ -59,10 +59,6 @@ fn hand_card<'a>(view: &'a PlayerView, id: &str) -> &'a CardView {
         .iter()
         .find(|card| card.instance_id == id)
         .unwrap_or_else(|| panic!("{id} in the viewer's hand"))
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 #[test]

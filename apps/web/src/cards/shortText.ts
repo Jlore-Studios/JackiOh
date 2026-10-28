@@ -21,6 +21,9 @@
 // The held Stinkyscape set (R1857000) prints its rows before its cards are built: its two Call to
 // Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
 // put over the limit clamps, until the card's part (docs/stinkyscape-set.md ST13) writes its own.
+// Where a clamp would still cut a face at 270 px (#7 The Greatest Heist, #112 Job Application), or a
+// face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and #26
+// ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -72,8 +75,8 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditativeplus-020": { radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-4": { base: "clamp", radiant: "clamp" },
-  "stinkyscape-004-5": { radiant: "clamp" },
-  "stinkyscape-007": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-004-5": { base: "colon", radiant: "clamp" },
+  "stinkyscape-007": { base: 2, radiant: 1 },
   "stinkyscape-016": { base: "clamp" },
   "stinkyscape-018-1": { base: "clamp", radiant: "clamp" },
   "stinkyscape-018-2": { base: "clamp", radiant: "clamp" },
@@ -81,10 +84,11 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-023": { base: "clamp", radiant: "clamp" },
   "stinkyscape-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-025": { base: "clamp" },
+  "stinkyscape-026": { base: 1 },
   "stinkyscape-039": { base: "clamp", radiant: "clamp" },
   "stinkyscape-077": { base: "clamp", radiant: "clamp" },
   "stinkyscape-087": { radiant: "clamp" },
-  "stinkyscape-112": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-112": { base: 2, radiant: 3 },
   "stinkyscape-116": { base: "clamp", radiant: "clamp" },
   "stinkyscape-139": { base: "clamp", radiant: "clamp" },
   "stinkyscape-143": { radiant: "clamp" },

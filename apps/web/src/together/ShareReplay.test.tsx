@@ -11,6 +11,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Friend } from "../net/social.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ShareWithFriend } from "./ShareReplay.tsx";
 
@@ -76,6 +78,21 @@ describe("B52 sharing a replay with a friend", () => {
     const options = screen.getAllByTestId("share-friend-option");
     expect(options.map((option) => option.getAttribute("data-profile-id"))).toEqual(["f-ann", "f-bob"]);
     expect(options.map((option) => option.getAttribute("data-shared"))).toEqual(["false", "false"]);
+  });
+
+  it("#2115 the friends are a rows skeleton while they are read, then one Share per friend", async () => {
+    serve([ANN, BOB]);
+    render(<ShareWithFriend matchId="m-done" />);
+    fireEvent.click(screen.getByTestId("share-friend-open"));
+    // Right after the click the stubbed reads have not answered yet.
+    expectSkeleton(screen.getByText("Loading your friends…"), "rows");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).toBeNull();
+    }, SLOW);
+    expect(screen.queryByText("Loading your friends…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+    expect(screen.getAllByTestId("share-friend-option").map((option) => option.getAttribute("data-profile-id"))).toEqual(["f-ann", "f-bob"]);
   });
 
   it("B52 with no friends, says so and links to Play together", async () => {

@@ -53,6 +53,7 @@ import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
 import { getPacks, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
 import { useSetting } from "../settings/store.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
   PACK_FLIP_MS,
@@ -499,9 +500,7 @@ export default function PackOpening({
         </>
       )}
       {info === null && loadError === null ? (
-        <p className="notice" role="status" data-testid={packTestid.loading}>
-          {t("Loading your packs…")}
-        </p>
+        <Skeleton variant="rows" label={t("Loading your packs…")} testId={packTestid.loading} />
       ) : null}
       {info === null ? null : (
         <>

@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::harness::{
-    events_of_type, in_hand, json_of, new_game, put, set_library, setup_catalog, slot,
+    events_of_type, in_hand, json_of, new_game, put, set_library, setup_catalog, slot, types_of,
 };
 use super::fixtures::turn as turn_fx;
 use crate::rules::fixtures::harness::{act, act_ok, live, live_mut, matches_object, round_trip};
@@ -84,10 +84,6 @@ fn answer(state: &GameState) -> ReduceResult {
         state,
         json!({ "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": pending.player_id }),
     )
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 /// The first position, or -1.

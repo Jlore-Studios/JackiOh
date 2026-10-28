@@ -15,6 +15,7 @@ import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
@@ -499,6 +500,21 @@ describe("R654 public statistics route", () => {
     const table = screen.getByTestId(statsTestid.playersTable);
     expect(within(table).queryByText(/elo/i)).not.toBeInTheDocument();
     expect(within(table).queryByText(/rating/i)).not.toBeInTheDocument();
+  });
+
+  it("#2115 a table skeleton stands in for the players while the read is pending", async () => {
+    const held = holdFetch((url) => url.pathname === "/api/stats/players");
+    render(<StatsRoute />);
+
+    fireEvent.click(await screen.findByTestId(statsTestid.tabPlayers, undefined, SLOW));
+    expectSkeleton(await screen.findByText("Loading players…", undefined, SLOW), "table");
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    await act(async () => {
+      held[0]!.answer(MOCK_PLAYERS);
+    });
+    expect(await screen.findByTestId(statsTestid.playersTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading players…")).toBeNull();
   });
 
   it("R1436 players tab shows usernames, isolated, never a profile id nor any slice of one, and searches by username", async () => {
@@ -1110,6 +1126,7 @@ describe("card statistics requests", () => {
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
+    expectSkeleton(screen.getByText("Loading card statistics…"), "table");
     expect(screen.queryByText("The card statistics didn't load.")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -1158,6 +1175,7 @@ describe("card statistics requests", () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
     const modal = screen.getByTestId(statsTestid.drillDownModal);
     expect(within(modal).getByText("Loading this card's details…")).toBeInTheDocument();
+    expectSkeleton(within(modal).getByText("Loading this card's details…"), "rows");
     expect(within(modal).queryByText("Details unavailable.")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -1464,6 +1482,18 @@ describe("R1966000 the Sets tab", () => {
     // A card opens its details, as a row of the Cards tab does.
     await user.click(within(strongest).getByRole("button", { name: "Spark Pup" }));
     expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("#2115 a table skeleton stands in for the sets while the read is pending", async () => {
+    serveSets();
+    at("/stats?tab=sets");
+    render(<StatsRoute />);
+
+    // Right after render the read has not answered.
+    expectSkeleton(screen.getByText("Loading set statistics…"), "table");
+
+    expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading set statistics…")).toBeNull();
   });
 
   it("R1966000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {

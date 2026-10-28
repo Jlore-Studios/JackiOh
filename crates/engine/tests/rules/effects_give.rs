@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    act, act_logged, events_of_type, in_hand, live, live_mut, put, set_library, slot,
+    Bench, act, act_logged, events_of_type, in_hand, live, live_mut, put, set_library, slot,
 };
 use crate::rules::fixtures::prompt_harness::{
     answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
@@ -22,31 +22,11 @@ use crate::rules::fixtures::prompts::{
     cast_on_draw_marker, common_resources, fluffy_grip, glitch, grunt, income_tax, quickdraw_of,
 };
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call (`on`).
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 /// Apply one effect for `controller` outside any card, and record its events as an applied action.
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         {
             let mut ctx = make_context(
                 &mut engine,
@@ -79,7 +59,7 @@ fn stolen_seen_by(state: &GameState, viewer: PlayerId) -> Vec<Value> {
         .collect()
 }
 
-fn ids_of(events: &[Value]) -> Vec<Value> {
+fn event_instance_ids(events: &[Value]) -> Vec<Value> {
     events
         .iter()
         .map(|event| event.get("instanceId").cloned().unwrap_or(Value::Null))
@@ -182,7 +162,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         state.players[PlayerId::P1].hand = vec![];
         state.players[PlayerId::P1].graveyard.push(played);
         assert_eq!(
-            ids_of(&stolen_seen_by(&state, PlayerId::P2)).first(),
+            event_instance_ids(&stolen_seen_by(&state, PlayerId::P2)).first(),
             Some(&json!(taken.id))
         );
     }
@@ -279,9 +259,9 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
         in_hand(&mut state, &grunt().id, PlayerId::P2, 1);
         set_library(&mut state, PlayerId::P2, &[glitch().id, plain.id.clone()]);
         state.active = PlayerId::P2;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine = sink.on(&mut state);
+            let mut engine = sink.sink(&mut state);
             jackioh_engine::draw::draw(&mut engine, PlayerId::P2, 1);
             settle(&mut engine, Default::default());
         }
@@ -341,7 +321,7 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
         // A card out of a hand reads to the hand's holder, who held it, and to its new holder (R466).
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(
-                ids_of(&stolen_seen_by(&state, viewer)),
+                event_instance_ids(&stolen_seen_by(&state, viewer)),
                 given.iter().map(|card| json!(card.id)).collect::<Vec<_>>()
             );
         }
@@ -412,7 +392,7 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
         }
         // p1 held them: p1 reads the `stolen` events; p2 holds them now and reads them too.
         assert!(
-            ids_of(&stolen_seen_by(&state, PlayerId::P1))
+            event_instance_ids(&stolen_seen_by(&state, PlayerId::P1))
                 .iter()
                 .all(|id| *id != json!(HIDDEN_ID))
         );
@@ -451,7 +431,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
             Some(&json!(HIDDEN_ID))
         );
         assert_eq!(
-            ids_of(&stolen_seen_by(&state, PlayerId::P2)).first(),
+            event_instance_ids(&stolen_seen_by(&state, PlayerId::P2)).first(),
             Some(&json!(HIDDEN_ID))
         );
         assert_eq!(
@@ -472,10 +452,10 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
         assert_eq!(state.players[PlayerId::P1].fatigue_count, 0);
         assert_eq!(state.players[PlayerId::P2].fatigue_count, 0);
         assert_eq!(state.players[PlayerId::P1].hero.health, HERO_HEALTH);
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         assert!(
             draw_from_library_of(
-                &mut sink.on(&mut state),
+                &mut sink.sink(&mut state),
                 PlayerId::P1,
                 PlayerId::P2,
                 Default::default()
@@ -575,10 +555,10 @@ mod r466_a_card_taken_off_the_field {
             json!({}),
         );
         live_mut(&mut state, &taken_trap.id).owner = PlayerId::P2;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         for id in [&face_up.id, &own_trap.id, &taken_trap.id] {
             let card = live(&state, id).clone();
-            take_into_hand(&mut sink.on(&mut state), &card, PlayerId::P1);
+            take_into_hand(&mut sink.sink(&mut state), &card, PlayerId::P1);
         }
         state.applied.push(AppliedAction {
             nonce: "field-steal".to_string(),
@@ -593,13 +573,13 @@ mod r466_a_card_taken_off_the_field {
         );
         // p1 holds all three now, so p1 reads all three.
         assert_eq!(
-            ids_of(&stolen_seen_by(&state, PlayerId::P1)),
+            event_instance_ids(&stolen_seen_by(&state, PlayerId::P1)),
             vec![json!(face_up.id), json!(own_trap.id), json!(taken_trap.id)]
         );
         // p2 saw the face-up unit and controlled its own face-down trap: it knows what it lost. The trap p1
         // controlled face-down it never read, so it learns only that a card left.
         assert_eq!(
-            ids_of(&stolen_seen_by(&state, PlayerId::P2)),
+            event_instance_ids(&stolen_seen_by(&state, PlayerId::P2)),
             vec![json!(face_up.id), json!(own_trap.id), json!(HIDDEN_ID)]
         );
     }
@@ -617,9 +597,9 @@ mod e2_e16_the_change_of_owner_itself {
             PlayerId::P2,
             Zone::Gone { player: PlayerId::P2 },
         );
-        let mut sink = sink_for(&state);
-        assert!(take_into_hand(&mut sink.on(&mut state), &card, PlayerId::P1).is_none());
-        assert!(!change_owner(&mut sink.on(&mut state), &card, PlayerId::P1));
+        let mut sink = Bench::new(&state);
+        assert!(take_into_hand(&mut sink.sink(&mut state), &card, PlayerId::P1).is_none());
+        assert!(!change_owner(&mut sink.sink(&mut state), &card, PlayerId::P1));
         // TS read the object it handed in; nothing in the state holds a card that is gone.
         assert_eq!(card.owner, PlayerId::P2);
         assert!(find_instance(&state, &card.id).is_none());
@@ -644,9 +624,9 @@ mod e2_e16_the_change_of_owner_itself {
             Zone::Graveyard { player: PlayerId::P2 },
         );
         state.players[PlayerId::P2].graveyard.push(dead.clone());
-        let mut sink = sink_for(&state);
-        take_into_hand(&mut sink.on(&mut state), &resolving, PlayerId::P1);
-        take_into_hand(&mut sink.on(&mut state), &dead, PlayerId::P1);
+        let mut sink = Bench::new(&state);
+        take_into_hand(&mut sink.sink(&mut state), &resolving, PlayerId::P1);
+        take_into_hand(&mut sink.sink(&mut state), &dead, PlayerId::P1);
         state.applied.push(AppliedAction {
             nonce: "public".to_string(),
             events: sink.events.clone(),
@@ -657,7 +637,7 @@ mod e2_e16_the_change_of_owner_itself {
         );
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(
-                ids_of(&stolen_seen_by(&state, viewer)),
+                event_instance_ids(&stolen_seen_by(&state, viewer)),
                 vec![json!(resolving.id), json!(dead.id)]
             );
         }

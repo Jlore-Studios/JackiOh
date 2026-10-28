@@ -23,6 +23,7 @@ import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { opponentModifiers, yourModifiers } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import type { FakeReplaySource } from "../test/replay.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import { REPLAY_FAILURE_TEXT, ReplayFailure } from "./source.ts";
@@ -111,8 +112,10 @@ describe("the replay player", () => {
       </CatalogContext.Provider>,
     );
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
     await flush();
     expect(screen.queryByTestId(replayTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the replay…")).toBeNull();
     expect(shownStep()).toBe(0);
     expect(screen.getByTestId(replayTestid.readout)).toHaveTextContent(`Step 1 of ${String(steps.length)} · Turn ${String(steps[0]?.turn)}`);
     const toolbar = screen.getByTestId(replayTestid.controls);

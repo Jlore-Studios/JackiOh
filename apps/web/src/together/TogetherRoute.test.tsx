@@ -12,6 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { manualClock } from "../game/deckbuilder/testkit.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
@@ -412,6 +414,23 @@ describe("B55 the friends list", () => {
     expect(rows()).toHaveLength(0);
     expect(screen.getByTestId(TESTID.addInput)).toBeInTheDocument();
     expect(screen.getByTestId(TESTID.addSubmit)).toBeInTheDocument();
+  });
+
+  it("#2115 the friends and the shared replays are rows skeletons while their reads are pending, then the rows", async () => {
+    signIn("tok-together");
+    serve(world({ friends: [ANN], shared: [SHARED] }));
+    render(<TogetherRoute />);
+    // Right after render no stubbed read has answered yet.
+    expectSkeleton(screen.getByText("Loading your friends…"), "rows");
+    expectSkeleton(screen.getByText("Loading…"), "rows");
+
+    await waitFor(() => {
+      expect(rows()).toHaveLength(1);
+    }, SLOW);
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    expect(screen.queryByText("Loading your friends…")).toBeNull();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 });
 

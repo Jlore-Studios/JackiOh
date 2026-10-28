@@ -25,7 +25,7 @@ use crate::rules::fixtures::call_to_chaos_meditative::{
 };
 use crate::rules::fixtures::call_to_chaos_plus::{chaos_plus_catalog, core95, immutable, plus, trap};
 use crate::rules::fixtures::harness::{
-    act_ok, events_of_type, in_hand, json_of, new_game, put, set_library, slot,
+    act_ok, events_of_type, ids_of, in_hand, json_of, new_game, put, set_library, slot,
 };
 
 fn scripts(cry: Hook) -> CardScripts {
@@ -178,10 +178,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids.sort();
     ids.dedup();
     ids
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// The Call to Chaos pool as a pool that names no set reads it (R28, R380).

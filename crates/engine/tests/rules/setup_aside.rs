@@ -10,7 +10,7 @@ use jackioh_engine::effects::choose_mode;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act_logged, setup_catalog};
+use crate::rules::fixtures::harness::{act_logged, ids_of, setup_catalog};
 
 const POOL: i32 = 30;
 const DUAL: &str = "fx-dual";
@@ -211,12 +211,8 @@ fn defs_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
-
 /// `{ type, player? }` of each event `p1` is shown, as `type` or `type:player`.
-fn types_of(state: &GameState) -> Vec<String> {
+fn viewed_types(state: &GameState) -> Vec<String> {
     view_for(state, PlayerId::P1)
         .events
         .iter()
@@ -325,7 +321,11 @@ mod r635_cast_on_draw_cards_sit_out_the_deal_and_are_shuffled_in_after_the_mulli
             let with_cast = start(&seed, (other(), deck_of(0, 7, None)), None);
             let without = start(&seed, (other(), deck_of(0, 0, None)), None);
 
-            assert_eq!(types_of(&with_cast.state), types_of(&without.state), "{seed}");
+            assert_eq!(
+                viewed_types(&with_cast.state),
+                viewed_types(&without.state),
+                "{seed}"
+            );
             assert_eq!(opponent_hand(&with_cast.state), json!({ "count": 4 }), "{seed}");
             assert_eq!(
                 opponent_library_count(&with_cast.state),
@@ -341,8 +341,8 @@ mod r635_cast_on_draw_cards_sit_out_the_deal_and_are_shuffled_in_after_the_mulli
                 "{seed}"
             );
             assert_eq!(
-                types_of(&settled_with.state),
-                types_of(&settled_without.state),
+                viewed_types(&settled_with.state),
+                viewed_types(&settled_without.state),
                 "{seed}"
             );
             assert_eq!(
@@ -791,7 +791,7 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
                 opponent_library_count(&none.state),
                 "{seed}"
             );
-            assert_eq!(types_of(&five.state), types_of(&none.state), "{seed}");
+            assert_eq!(viewed_types(&five.state), viewed_types(&none.state), "{seed}");
         }
     }
 

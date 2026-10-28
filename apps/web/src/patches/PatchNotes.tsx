@@ -12,6 +12,7 @@ import { isGlitch } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
@@ -193,11 +194,7 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   });
 
   if (read.status === "loading") {
-    return (
-      <p className="patch-status" role="status" data-testid={patchTestid.cardsLoading}>
-        {t("Loading this patch's cards…")}
-      </p>
-    );
+    return <Skeleton variant="grid" label={t("Loading this patch's cards…")} testId={patchTestid.cardsLoading} />;
   }
   if (read.status === "error") {
     return (
@@ -457,11 +454,7 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
   const read = useLoaded("patches", () => source.patches());
 
   if (read.status === "loading") {
-    return (
-      <p className="patch-status" role="status" data-testid={patchTestid.loading}>
-        {t("Loading the patch notes…")}
-      </p>
-    );
+    return <Skeleton variant="rows" label={t("Loading the patch notes…")} testId={patchTestid.loading} />;
   }
   if (read.status === "error") {
     return (
