@@ -1,13 +1,125 @@
-//! SPEC §8.10 Stinkyscape 115 Scornboi, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S17 (#1876) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! S #115 Scornboi (SPEC §8.10 row 115): (4) Unit, Human, Acclaimed, Legendary, 12/9 → 24/18, of the
+//! held Stinkyscape set (R1420).
+//!   Base:    "Tribute 3 / Aura: Every Unit that is neither Human, a Starship Piece nor a Starship is
+//!            exiled."
+//!   Radiant: "Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a
+//!            Starship is exiled."
+//! Engine: Tribute 3 is its play's cost, §6.3's `staticFlags.tribute` (R101), on both faces. The aura is
+//! an exile aura (R1850002): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece
+//! and Starship, read through the layers (§10.4), so a granted tag or keyword spares a Unit; exiled at
+//! each state check, never this card, a face-down or a Dormant one (a Dormant Starship is no Unit until
+//! it launches, R1839000). Units only (ST9). The Radiant face reaches the enemy side only.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-115";
 
+/// §6.3 "Tribute 3": three of your Units, or a Sheep Token and one more, worth 3 (R101).
+const TRIBUTE_COST: i32 = 3;
+
+fn scornboi(side: &str) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        exile_auras: vec![ExileAura {
+            scope: json_as(json!({ "side": side, "notTags": ["Human"] })),
+            cost: None,
+            not_keywords: vec![KeywordKind::StarshipPiece, KeywordKind::Starship],
+        }],
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: scornboi("any"),
+        radiant: scornboi("enemy"),
+    }
+}
+
+// S #115 Scornboi — SPEC §8.10 row 115, BUILD M12 row S 115: "played for Tribute 3; at each state check a
+// Unit that is not Human and has neither keyword is exiled, both sides, a granted Human tag sparing it
+// (R1850002); radiant 24/18, only the enemy's". The layers' read (a granted tag or keyword) is the
+// engine's, proven by its tests (R1850002).
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::PlayerId::{P1, P2};
+    use jackioh_engine::testkit::*;
+
+    use super::ID;
+    use crate::{filler, scenario};
+
+    const VANILLA: &str = "core-008"; // (1) 4/4, a Human: a tribute.
+    const MENACE: &str = "core-019"; // (3) 9/9, no tag.
+    const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1, a Starship Piece.
+    const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit.
+    const FILLER: &str = "core-005";
+
+    /// p1 holds Scornboi (`radiant` its face) beside three Vanillas to tribute and a Menace; p2 has a
+    /// Vanilla, a Menace, a Starship Piece and a Field Spell.
+    fn board(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": {
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "field": [VANILLA, VANILLA, VANILLA, MENACE],
+                "library": filler(4),
+                "mana": 10,
+            },
+            "p2": {
+                "hand": [FILLER],
+                "field": [VANILLA, MENACE, CHASSIS],
+                "backrow": [ARMOR],
+                "library": filler(4),
+            },
+        }))
+    }
+
+    fn exiled(s: &Scenario) -> Vec<(PlayerId, String)> {
+        s.last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Exiled { instance_id, .. } => {
+                    let card = s.card(instance_id.as_str());
+                    Some((card.owner, card.def_id.clone()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn play_scornboi(s: &mut Scenario) {
+        let tributes = [s.unit_at(P1, 1).id, s.unit_at(P1, 2).id, s.unit_at(P1, 3).id];
+        s.play(ID, json!({ "tributes": tributes, "zone": 1 }));
+    }
+
+    #[test]
+    fn r101_it_needs_its_tribute_3() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [ID, FILLER], "field": [VANILLA, VANILLA], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.expect_refused(|s| s.play(ID, json!({})));
+    }
+
+    #[test]
+    fn r1850002_every_unit_neither_human_nor_a_starship_piece_is_exiled_on_both_sides() {
+        let mut s = board(false);
+        play_scornboi(&mut s);
+        assert_eq!(exiled(&s), vec![(P1, MENACE.to_string()), (P2, MENACE.to_string())]);
+        assert_eq!(s.unit_at(P2, 1).def_id, VANILLA, "a Human stays");
+        assert_eq!(s.unit_at(P2, 3).def_id, CHASSIS, "a Starship Piece stays");
+        assert!(s.backrow(P2, 1).is_some(), "Units only: a Field Spell stays");
+        s.expect_stats(ID, json!({ "attack": 12, "health": 9 }));
+    }
+
+    #[test]
+    fn r275_radiant_24_18_exiles_the_enemys_alone() {
+        let mut s = board(true);
+        play_scornboi(&mut s);
+        assert_eq!(exiled(&s), vec![(P2, MENACE.to_string())]);
+        assert_eq!(s.unit_at(P1, 4).def_id, MENACE);
+        s.expect_stats(ID, json!({ "attack": 24, "health": 18 }));
+    }
 }
