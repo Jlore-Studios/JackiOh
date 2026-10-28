@@ -6,7 +6,7 @@
 //! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
 //!
 //! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative, Meditative+, and the held Stinkyscape set, R1857000): that it holds every card and every token exactly once, that every enum value is in
+//! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
 //! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
 //! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and

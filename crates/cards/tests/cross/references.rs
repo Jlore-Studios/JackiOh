@@ -17,7 +17,7 @@
 //! eight Pancake tokens and the AI generated cards (the ten T-AI cards, and since v0.3.15 Meditative+
 //! #1.1 to #1.4) reach play through a pool a card names by its tag ("a random Pancake token", "a
 //! random AI generated card"), so a text naming that pool names each of its members for the rule that
-//! every token is named by some card. R1857002 adds the held Stinkyscape set's two such pools, its
+//! every token is named by some card. R1857002 adds the Stinkyscape set's two such pools, its
 //! Terminus tokens ("a Terminus card") and its War Doctrines ("a War Doctrine"), and its Resources,
 //! which R1840002's roll deals as §2.1's setup deals The Coin, so no card need name one.
 //!
@@ -105,7 +105,7 @@ const TOKEN_POOLS: &[TokenPool] = &[
         tag: Tag::Ky,
         phrase: "random reward",
     },
-    // R1857002: the held Stinkyscape set's #4 Olivian Expanse and #154 Dice of Doom name its six
+    // R1857002: the Stinkyscape set's #4 Olivian Expanse and #154 Dice of Doom name its six
     // Terminus tokens as "a Terminus card", and #137 its four War Doctrines as "a War Doctrine".
     TokenPool {
         tag: Tag::Terminus,

@@ -1,4 +1,4 @@
-//! Stinkyscape #56 Cannon v4 (SPEC §8.10 row 56). Unit 0/6 → 0/12, Weapon, cost 3, Epic; held (R1420).
+//! Stinkyscape #56 Cannon v4 (SPEC §8.10 row 56). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy. Deals half damage to heroes." — damage 7
 //!   Radiant: the same text — damage 14

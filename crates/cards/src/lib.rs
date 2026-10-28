@@ -36,11 +36,11 @@ pub use code_blocks::CODE_BLOCKS;
 /// R1846000: the card metrics, compiled in by `build.rs` from every script: `CODE_LINES` (each
 /// catalog entry's code lines), `BUSTED` and `COMPLICATED` (the ids over the engine's
 /// `BUSTED_CODE_LINES` and `COMPLICATED_CODE_LINES`), each sorted by id; `register_all` hands them
-/// to the engine.
+/// to the engine. `LIST_READERS` (R2173000): the ids whose script reads those lists.
 mod card_metrics {
     include!(concat!(env!("OUT_DIR"), "/card_metrics.rs"));
 }
-pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED};
+pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, LIST_READERS};
 
 /// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, and whether it reads
 /// the BUSTED or complicated lists.

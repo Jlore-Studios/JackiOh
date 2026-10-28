@@ -551,7 +551,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     const AI_PRINTED: &str = "an AI generated card's printed number (R482)";
     /// An Immutable card's number: neither a Buff nor a Nerf reaches it (R386).
     const IMMUTABLE: &str = "an Immutable card's number, which nothing tunes";
-    /// A digit in the name of a card the text names (the held Stinkyscape set's Siva 1, Paragon Mk1,
+    /// A digit in the name of a card the text names (the Stinkyscape set's Siva 1, Paragon Mk1,
     /// Scanning Probe Mk1, Shockwave447, RR-5000, Trila 3, 1v1 Final Destination), which is no amount.
     const CARD_NAME: &str = "a digit in a card name the text names";
 

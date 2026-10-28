@@ -2837,9 +2837,11 @@ pub(crate) mod tests {
         }
 
         /// BUILD M12's foundation gate, "the fuzz tool previews it" (R1857000, R1420): every deck-legal
-        /// card of a set that has not shipped is in the pool and none in the shipped pool, and a seed
-        /// dealt one plays through the gate's four checks with no preview of the caller's. With every
-        /// set shipped (the Stinkyscape release, #1884) nothing is held, and the released set is dealt.
+        /// card of a set that has not shipped is in the pool and none in the shipped pool, and a game
+        /// dealt a held card plays through the gate's four checks. The card is a fixture of the first
+        /// catalog set that is held (Training Grounds until #2204), which the fuzz tool's own preview
+        /// opens; with every catalog set shipped, of a single-player set (R1846001), which no catalog
+        /// preview opens, so the caller previews it. Either way the preview path runs, never skipped.
         #[test]
         fn r1857000_the_fuzz_tool_previews_every_held_set() {
             register_all();
@@ -2856,24 +2858,37 @@ pub(crate) mod tests {
                 .collect();
             assert!(legal_held.iter().all(|id| FUZZ_POOL.contains(*id)));
             assert!(!SHIPPED_FUZZ_POOL.iter().any(held));
-            if legal_held.is_empty() {
-                // Every set ships since the Stinkyscape release (#1884): there is nothing to preview,
-                // and the released set is dealt as any shipped set is.
-                assert!(
-                    FUZZ_POOL
-                        .iter()
-                        .any(|id| CATALOG[id.as_str()].set.as_str() == "Stinkyscape")
-                );
-                return;
+            if let Some(seed) = (1..=SWEEP_SEEDS).find(|seed| {
+                let (p1, p2) = decks_for_seed(*seed);
+                p1.iter().chain(p2.iter()).any(held)
+            }) {
+                assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
             }
-            let seed = (1..=SWEEP_SEEDS)
-                .find(|seed| {
-                    let (p1, p2) = decks_for_seed(*seed);
-                    p1.iter().chain(p2.iter()).any(held)
-                })
-                .expect("a seed deals a held card");
-            assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
+            // A fixture held card, dealt first into both decks, so the path runs whatever ships.
+            let held_set = CATALOG_SETS.iter().copied().find(|set| !set_ships(*set));
+            let set = held_set.unwrap_or(jackioh_engine::SINGLE_PLAYER_SETS[0]);
+            let face = json!({ "attack": 1, "health": 1, "keywords": [], "text": "" });
+            let def: jackioh_engine::CardDef = jackioh_engine::testkit::json_as(json!({
+                "id": HELD_FIXTURE, "index": HELD_FIXTURE, "name": "Held (fuzz fixture)", "set": set,
+                "type": "Unit", "tags": [], "rarity": "Common", "token": false, "cost": 1,
+                "base": face, "radiant": face,
+            }));
+            let mut catalog = (*CATALOG).clone();
+            catalog.insert(HELD_FIXTURE.to_string(), def);
+            jackioh_engine::testkit::register_catalog_as(catalog, jackioh_cards::catalog_version());
+            let _single_player = held_set
+                .is_none()
+                .then(|| jackioh_engine::testkit::preview::preview_sets(&[set]));
+            let (mut p1, mut p2) = decks_for_seed(1);
+            p1[0] = HELD_FIXTURE.to_string();
+            p2[0] = HELD_FIXTURE.to_string();
+            let failure = fuzz_deal(1, (p1, p2)).err().map(|failure| failure.message);
+            jackioh_engine::testkit::clear_overrides();
+            assert_eq!(failure, None);
         }
+
+        /// R1857000: the fixture held card the preview test deals.
+        const HELD_FIXTURE: &str = "fuzz-held";
 
         /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
         /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.

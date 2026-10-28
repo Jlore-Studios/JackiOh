@@ -1,4 +1,4 @@
-//! Stinkyscape #63 Miner v2 (SPEC §8.10 row 63). Unit 0/2 → 0/4, cost 1, Common; held (R1420).
+//! Stinkyscape #63 Miner v2 (SPEC §8.10 row 63). Unit 0/2 → 0/4, cost 1, Common.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Gain a random Stinkyscape Resource."
 //!   Radiant: "Starship Piece, Equip

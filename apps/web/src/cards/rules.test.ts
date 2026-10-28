@@ -730,7 +730,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Freeze: ["freeze", "freezes"],
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
       Float: ["Floats", "Floated"],
-      // R1857000: the held Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
+      // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
       // above.
       "End the turn": ["end the turn"],
       Allure: ["Allured"],

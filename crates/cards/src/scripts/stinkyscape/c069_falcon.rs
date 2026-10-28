@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 69 Falcon, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 69 Falcon, a card of the Stinkyscape set.
 //! (2) Unit, Rare, 4/1 → 8/2: Starship Piece, Charge, Flying.
 //! Radiant: Starship Piece, Charge, Flying, Pierce (8/2, ST9: Radiant stats doubled).
 //!

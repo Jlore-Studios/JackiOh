@@ -18,13 +18,13 @@
 //   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition),
 //   one #1704 did (The House's Radiant face, its Cry and its Activate), and #1828's Can't attack put
 //   both faces of Jungle Loser a line over.
-// The held Stinkyscape set (R1857000) prints its rows before its cards are built: its two Call to
+// The Stinkyscape set (R1857000) printed its rows before its cards were built: its two Call to
 // Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
-// put over the limit clamps, until the card's part (docs/stinkyscape-set.md ST13) writes its own.
+// put over the limit clamps, unless the card's part (docs/stinkyscape-set.md ST13) wrote its own.
 // Where a clamp would still cut a face at 270 px (#7 The Greatest Heist, #112 Job Application), or a
 // face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and #26
 // ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
-// The held Training Grounds set (R2194000) does the same: its Call to Chaos edition (#39) takes
+// The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
 // "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
 // card's part (docs/training-grounds-set.md TG5) writes its own.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
