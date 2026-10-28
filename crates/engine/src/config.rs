@@ -343,6 +343,18 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_health: Option<i32>,
+    /// R2201000: the least health this seat's hero can fall to, so the seat cannot lose the game.
+    /// Absent means none, which is why no tier sets it and every other game hashes as before the
+    /// field existed. Only a lesson's human (`TUTORIAL_HUMAN`) sets it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_floor: Option<i32>,
+    /// R2201001: while either seat's handicap sets it, every random pool the game draws from leaves
+    /// out Legendary and Mythic cards. Absent means no hold, so every other game hashes as before.
+    /// Only a lesson before the last sets it (§9.10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub pool_hold: Option<bool>,
 }
 
 /// R180: this spec's own resources. A seat with no handicap plays with these.
@@ -353,6 +365,8 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     extra_opening_cards: 0,
     extra_draws_per_turn: 0,
     hero_health: None,
+    hero_floor: None,
+    pool_hold: None,
 };
 
 string_union! {
@@ -399,6 +413,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         extra_opening_cards: 1,
         extra_draws_per_turn: 0,
         hero_health: None,
+        hero_floor: None,
+        pool_hold: None,
     },
     hard: Handicap {
         deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
@@ -407,6 +423,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         extra_opening_cards: 1,
         extra_draws_per_turn: 1,
         hero_health: None,
+        hero_floor: None,
+        pool_hold: None,
     },
 };
 
@@ -423,16 +441,23 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     extra_opening_cards: 0,
     extra_draws_per_turn: 0,
     hero_health: Some(20),
+    hero_floor: None,
+    pool_hold: None,
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
 /// EARLIER_DECK_SIZE cards. It is a human's resources but for the deck's size, so a lesson's deal
 /// stays the one each lesson was written for while every other seat with no handicap holds
-/// DECK_SIZE. A seat stores it (it is not a human's), so a lesson folds as it was played.
+/// DECK_SIZE. A seat stores it (it is not a human's), so a lesson folds as it was played. R2201000:
+/// its hero never falls below TUTORIAL_HERO_FLOOR, so a lesson cannot be lost.
 pub const TUTORIAL_HUMAN: Handicap = Handicap {
     deck_size: EARLIER_DECK_SIZE,
+    hero_floor: Some(TUTORIAL_HERO_FLOOR),
     ..HUMAN_HANDICAP
 };
+
+/// §9.10, R2201000: the least health a lesson's human hero can fall to.
+pub const TUTORIAL_HERO_FLOOR: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
 // Patch v0.2.0 (docs/classic-sets.md B3–B5). Every number the new rules state, by workstream.

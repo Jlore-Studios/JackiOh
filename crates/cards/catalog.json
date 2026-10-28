@@ -26426,7 +26426,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 3,
       "health": 2,
@@ -26463,7 +26463,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 4,
       "health": 1,
@@ -26534,7 +26534,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 3,
       "health": 3,
@@ -26939,7 +26939,7 @@
       "traininggrounds-006",
       "traininggrounds-007"
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 3,
       "health": 3,
@@ -26999,7 +26999,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 3,
       "health": 6,
@@ -27178,7 +27178,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 3,
       "health": 3,
@@ -27216,7 +27216,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 3,
       "health": 4,
@@ -27385,7 +27385,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 9,
       "health": 5,
@@ -27412,7 +27412,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 5,
       "health": 9,
@@ -27553,7 +27553,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 11,
     "base": {
       "attack": 4,
       "health": 6,
