@@ -7524,11 +7524,11 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "muse",
       "round_tier": "medium",
-      "run_id": "40768810454",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-28T21:04:11Z",
+      "run_id": "pending:cfcc5a39-1793229641",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-10-28T23:21:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -7993,9 +7993,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T23:06:53Z",
+    "at": "2026-10-28T23:21:05Z",
     "url": "",
-    "what": "revise #2310 on muse"
+    "what": "build #2291 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T23:03:05Z",
