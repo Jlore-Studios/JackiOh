@@ -7000,6 +7000,13 @@
     "2252": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T17:52:32Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule lines 8 and 9: pairing a play with its announce has to work across R745's window and history, which this plan settles, but a weak builder could miss that the key is the event object itself; open PRs on Log.tsx can't be checked from here. Otherwise it is 3 web files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
