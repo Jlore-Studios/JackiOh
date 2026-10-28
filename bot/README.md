@@ -1272,6 +1272,11 @@ with each sha. For that, Squishy alone may change
 an exception), and `tests/test_skills.py` holds every skill to Markdown and to frontmatter that grants
 no tool and adds no hook.
 
+**The code audit.** Every three days at 22:17 UTC, `.github/workflows/code-audit.yml` (#2142) opens
+`Patch: audit the codebase for dead code, duplicates and zombie routes, <date>` for the night bot
+(`bot:build`, `difficulty:hard`, `person merges`) through the same `branches.py issue`, unless the last
+one is still open: #900's three passes again, from `.github/hygiene/code.md`.
+
 **Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
 `bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),
 which sweeps for it with its token and draws its lanes, its account, its queue, its trees and its
