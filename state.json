@@ -6648,7 +6648,9 @@
     },
     "40609485959": {
       "at": "2026-10-28T00:41:08Z",
+      "done": true,
       "ref": "cbfcfafc-1793147558",
+      "status": "interrupted",
       "tries": 1
     }
   },
