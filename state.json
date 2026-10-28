@@ -6030,6 +6030,7 @@
     "2155": {
       "action": "revise",
       "asks": [],
+      "died": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T22:35:33Z",
@@ -6037,7 +6038,7 @@
       "kind": "revise",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-10-28T01:15:52Z",
+      "queued_at": "2026-10-28T03:26:04Z",
       "run_id": "40614111227",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
