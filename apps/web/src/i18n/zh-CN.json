@@ -493,6 +493,7 @@
   "Win %": "胜率",
   "Classic": "经典",
   "Meditative": "冥想",
+  "Training Grounds": "训练场",
   "Left out {cards} this version of JackiOh doesn't know ({numbers}).": "已略过{cards}，此版本的 JackiOh 不认识（{numbers}）。",
   "Left out {names}: a Token never goes in a deck.": "已略过{names}：衍生物不能加入卡组。",
   "Left out {count} extra copy (a deck holds {max} of each card): {names}.": "已略过{count}张多余的副本（每套卡组中每种卡牌最多{max}张）：{names}。",
