@@ -457,8 +457,8 @@ What this buys, in the order it will be needed:
    recorded actions; the fuzz gate folds every seeded game back and compares.
 3. **Dispute resolution and balance telemetry.** ARCHITECTURE-CCG §2.2. A finished match's log is
    purged after `MATCH_ACTION_RETENTION_DAYS` (migration 0013), so card win rates are not derived
-   from it later: once a match's result is in, the server folds the log one more time through the
-   engine's `summarize_game` and keeps what the card statistics need as a `game_records` row
+   from it later: as a match's result is written the server folds the log once through the
+   engine's `summarize_game`, a fold its quests read too, and once the result is in keeps what the card statistics need as a `game_records` row
    (SPEC §9.11, R376). The fold is the instrumentation; nothing is added to the state or the log.
 4. **Replays for free.** A player's replay of their own game, and a friend's replay of one shared with
    them (SPEC §9.5), are folds of the kept log, sent as one seat's views.
