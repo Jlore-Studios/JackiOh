@@ -5951,10 +5951,10 @@
     "what": "build #2125 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-28T10:39:17Z",
+    "at": "2026-10-28T10:46:06Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2217 on claude-3 (run 40665979889): approved"
+      "delivered revise #2155 on claude-1 (run 40665788830): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6660,7 +6660,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T10:39:17Z",
+  "loop_tick": "2026-10-28T10:46:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
