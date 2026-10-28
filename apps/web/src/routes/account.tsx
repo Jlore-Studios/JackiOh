@@ -65,6 +65,7 @@ import { announceAccountChange } from "../net/gate.ts";
 import { t } from "../i18n/i18n.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
+import StreakFlame from "../rank/StreakFlame.tsx";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
@@ -333,6 +334,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                   <p data-testid={accountTestid.rank}>
                     <Username name={rank.username} /> · <RankCrest rank={rank.rank} size="large" />{" "}
                     {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
+                    <StreakFlame streak={rank.streak} size="large" />
                   </p>
                   <p data-testid={accountTestid.badges}>
                     {rank.badges.length === 0 ? (
