@@ -389,6 +389,7 @@ pub fn custom_def(card: &CustomCard) -> CardDef {
         radiant_fallback: None,
         ingredients: None,
         craft: None,
+        snapshot_of: None,
         base: face(false),
         radiant: face(true),
     }

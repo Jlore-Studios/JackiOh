@@ -100,7 +100,16 @@ describe("R279 the names a text links", () => {
     ).toEqual([["Jade", "meditative-039-2"]]);
   });
 
-  it("R279 with no catalog to read, a name is plain text", () => {
+  it("R2198004 Fortify Mind names itself and not Fortify", () => {
+    const fortifyMind = def("meditative-022-1");
+    const fortify = def("traininggrounds-012");
+    const text = "Add a Fortify Mind to your opponent's hand.";
+    expect(findRefs(text, [fortifyMind, fortify]).map((match) => [text.slice(match.start, match.end), match.id])).toEqual([
+      ["Fortify Mind", "meditative-022-1"],
+    ]);
+  });
+
+    it("R279 with no catalog to read, a name is plain text", () => {
     const { container } = render(<CardFace face={face("core-090", false)} layout="full" />);
     expect(container.querySelector(".cf-ref")).toBeNull();
     expect(container.querySelector(".card-text")).toHaveTextContent("Shuffle a CN-Virus into your opponent's deck.");

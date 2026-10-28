@@ -548,6 +548,7 @@ fn build_def(
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
         craft: None,
+        snapshot_of: None,
         base: kept_piece_only(
             fused_face(ingredients, defs, false, forced),
             target_def.map(|def| &def.base),
@@ -1311,6 +1312,7 @@ fn combine_objects(records: &[Script]) -> Script {
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
         ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),
+        ally_attack: hooks(|s| s.ally_attack.clone(), "allyAttack"),
         plague_multiplier: None,
         echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
