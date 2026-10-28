@@ -5299,12 +5299,22 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40704860008",
+            "tier": "strong"
+          }
+        ],
         "sha": "31618d8e0e6b303f85ed028da968175257e18eea",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2158": {
