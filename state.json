@@ -7130,6 +7130,13 @@
     "2257": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T19:00:46Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "about 40 files or more: 217 files change (68 lose previews, 175 Stinkyscape headers, overlapping), though every edit is mechanical and scripted"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
