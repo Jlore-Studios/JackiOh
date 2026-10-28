@@ -19,9 +19,10 @@
 //! (R1638000), as the co-op room's join refuses one; past `REMATCH_OFFER_TTL_MS` from the match's
 //! `ended_at` — the window a finished co-op match's socket reopens in (§13.9, R1398000) — the offer
 //! lapses silently, as a 1v1 rematch's does. Making the match refuses before anything is made: a
-//! frozen deck with a custom card is `loadout_invalid` (R915005), a seat in another game meets
-//! `assert_free_to_play`'s refusal (R1065000, through the seat ledger, R1523000), and a pair with a
-//! block either way reads as an unknown code, as a room's does (§13.9).
+//! frozen deck with a custom card is `loadout_invalid` (R915005), a seat in another game is
+//! `409 already_in_match` with no details, since the game may be the teammate's, as R1065000
+//! refuses a rematch (through the seat ledger, R1523000), and a pair with a block either way reads
+//! as an unknown code, as a room's does (§13.9).
 //!
 //! The response carries only booleans and ids (CLAUDE.md rule 7).
 //!
@@ -31,7 +32,7 @@
 //! poller still learns where to go. The reaper's tick sweeps every entry past that window whose
 //! finished match no actor holds (`sweep_duos_again_offers`).
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use indexmap::{IndexMap, IndexSet};
@@ -39,10 +40,12 @@ use jackioh_engine::LeanPick;
 use jackioh_engine::wire::DuosSeat;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tokio::sync::Notify;
+use tokio::sync::futures::OwnedNotified;
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_free_to_play, assert_no_custom_cards, in_game, lean_of};
+use crate::api::decks::{assert_free_to_play, assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::new_uuid;
 use crate::app::{App, now_ms};
@@ -82,11 +85,9 @@ struct OfferEntry {
     /// The game both seats' offers made, once made — and only once made, so no offer ever reads
     /// an id for a game whose create then fails.
     match_id: Option<String>,
-    /// Whether one offer's create is still in flight: a second offer landing meanwhile waits for
-    /// it instead of minting a second game.
-    creating: bool,
-    /// Which entry this is: a swept-and-remade entry must not be mistaken for it after a failed create.
-    generation: u64,
+    /// The create in flight, while one offer makes the game: an offer landing meanwhile waits on
+    /// it instead of minting a second game. Its `Creating` guard clears it however the create ends.
+    creating: Option<Arc<Notify>>,
 }
 
 /// R2092000's offers, by the finished match's id: rendezvous state for two sockets, not rows. One
@@ -95,13 +96,130 @@ struct OfferEntry {
 #[derive(Default)]
 pub struct DuosAgainOffers(Mutex<IndexMap<String, OfferEntry>>);
 
-static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
+/// What an offer does next, decided under the offers' lock (`DuosAgainOffers::claim`).
+enum Claim<'a> {
+    /// Answer now: the pair is incomplete, or the game is already made.
+    Done(Option<String>),
+    /// This offer makes the game, holding the claim while it does.
+    Make {
+        creating: Creating<'a>,
+        leans: (Option<LeanPick>, Option<LeanPick>),
+    },
+    /// Another offer's create is in flight: wait until it lands or is let go, then read again.
+    Wait(Pin<Box<OwnedNotified>>),
+}
+
+/// Holds the right to make the game both seats offered. Dropping it, once the game is published,
+/// on a refusal, or when the request making it is dropped mid-create (a client that hangs up) or
+/// panics, lets the claim go and wakes the waiters, so no offer is stuck behind a create that will
+/// never finish (as `auth.rs`'s `FetchGuard` frees a key-set fetch).
+struct Creating<'a> {
+    offers: &'a DuosAgainOffers,
+    finished: String,
+    mine: Arc<Notify>,
+}
+
+impl Drop for Creating<'_> {
+    fn drop(&mut self) {
+        let mut map = self.offers.lock();
+        if let Some(entry) = map.get_mut(&self.finished)
+            && self.holds(entry)
+        {
+            entry.creating = None;
+        }
+        drop(map);
+        self.mine.notify_waiters();
+    }
+}
+
+impl Creating<'_> {
+    /// Whether `entry` still waits on this claim's create: a swept and remade entry does not.
+    fn holds(&self, entry: &OfferEntry) -> bool {
+        entry
+            .creating
+            .as_ref()
+            .is_some_and(|held| Arc::ptr_eq(held, &self.mine))
+    }
+
+    /// Publishes the game this claim made, so every later offer and poll reads its id; dropping the
+    /// claim then wakes the waiters to read it. A sweep that won a race at the window's edge while
+    /// the create was in flight took the entry: the game stays discoverable under a fresh answered
+    /// one.
+    fn made(self, id: &str, now: i64) {
+        let mut map = self.offers.lock();
+        match map.get_mut(&self.finished) {
+            Some(entry) if self.holds(entry) => {
+                entry.match_id = Some(id.to_string());
+            }
+            _ => {
+                map.insert(
+                    self.finished.clone(),
+                    OfferEntry {
+                        offers: [DuosSeat::A1, DuosSeat::A2].into_iter().collect(),
+                        leans: IndexMap::new(),
+                        at: now,
+                        match_id: Some(id.to_string()),
+                        creating: None,
+                    },
+                );
+            }
+        }
+        drop(map);
+    }
+}
+
+impl DuosAgainOffers {
+    fn lock(&self) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
+        self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// Records `seat`'s offer on the finished match and decides what it does next. One new game per
+    /// pair of offers: the check and the claim run under one lock, so two offers landing together
+    /// cannot mint two games.
+    fn claim(&self, finished: &str, seat: DuosSeat, lean: Option<LeanPick>, now: i64) -> Claim<'_> {
+        let mut map = self.lock();
+        // Sweeps a stale entry, so the offer starts a fresh one.
+        live_entry(&mut map, finished, now);
+        let entry = map.entry(finished.to_string()).or_insert_with(|| OfferEntry {
+            offers: IndexSet::new(),
+            leans: IndexMap::new(),
+            at: now,
+            match_id: None,
+            creating: None,
+        });
+        entry.at = now;
+        entry.offers.insert(seat);
+        entry.leans.insert(seat, lean);
+        if let Some(created) = &entry.match_id {
+            return Claim::Done(Some(created.clone()));
+        }
+        if !entry.offers.contains(&seat.teammate()) {
+            return Claim::Done(None);
+        }
+        if let Some(inflight) = &entry.creating {
+            // Registered under the lock, which `Creating::drop` takes before it wakes anyone, so a
+            // create that ends in between cannot be missed.
+            let mut wait = Box::pin(Arc::clone(inflight).notified_owned());
+            wait.as_mut().enable();
+            return Claim::Wait(wait);
+        }
+        let mine = Arc::new(Notify::new());
+        entry.creating = Some(Arc::clone(&mine));
+        let lean_at = |at: DuosSeat| entry.leans.get(&at).copied().flatten();
+        let leans = (lean_at(DuosSeat::A1), lean_at(DuosSeat::A2));
+        Claim::Make {
+            creating: Creating {
+                offers: self,
+                finished: finished.to_string(),
+                mine,
+            },
+            leans,
+        }
+    }
+}
 
 fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
-    app.duos_again_offers
-        .0
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    app.duos_again_offers.lock()
 }
 
 /// For the tests; nothing in `src/` calls it.
@@ -133,6 +251,11 @@ fn not_finished() -> ApiError {
 
 fn not_open() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "that co-op room is not open")
+}
+
+/// R1065000: a seat in another game is refused with no details, since it may be the teammate's.
+fn already_in_match() -> ApiError {
+    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
 /// R1638000: a match played on a catalog version other than the server's offers no Play again. An
@@ -186,132 +309,28 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(DuosM
 }
 
 /// Records the offer and, once both seats have offered, makes the new co-op match outside the lock.
-/// One new game per pair of offers: the check and the claim run under one lock, so two offers
-/// landing together cannot mint two games. The created id is published only after the create
-/// succeeds: an offer landing while another's create is still in flight waits for it (yielding, so
-/// the create progresses) and then answers the same id, instead of reading a game that may never
-/// exist. A failed create clears the claim, so the seats re-offer.
+/// The created id is published only after the create succeeds: an offer landing while another's
+/// create is still in flight waits for it to land or be let go and then reads again, answering the
+/// same id, instead of reading a game that may never exist. A failed or abandoned create lets the
+/// claim go, so a waiting or later offer makes the game itself.
 async fn offer_as(
     app: &Arc<App>,
     match_row: &DuosMatch,
     seat: DuosSeat,
     lean: Option<LeanPick>,
 ) -> Result<Option<String>, ApiError> {
-    enum Claim {
-        /// Answer now: the pair is incomplete, or the game is already made.
-        Done(Option<String>),
-        /// This offer makes the game.
-        Make {
-            id: String,
-            generation: u64,
-            leans: (Option<LeanPick>, Option<LeanPick>),
-        },
-        /// Another offer's create is still in flight: let it finish, then read what it made.
-        Wait,
-    }
-
     loop {
-        // The claim: the created game, the decision to create it, or a concurrent create to wait for.
-        let claim = {
-            let mut map = offers(app);
-            let now = now_ms();
-            if live_entry(&mut map, &match_row.id, now).is_none() {
-                let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
-                map.insert(
-                    match_row.id.clone(),
-                    OfferEntry {
-                        offers: IndexSet::new(),
-                        leans: IndexMap::new(),
-                        at: now,
-                        match_id: None,
-                        creating: false,
-                        generation,
-                    },
-                );
-            }
-            let Some(entry) = map.get_mut(&match_row.id) else {
-                return Err(ApiError::internal(
-                    "the play again offer vanished while it was being written",
-                ));
-            };
-            entry.at = now;
-            entry.offers.insert(seat);
-            entry.leans.insert(seat, lean);
-            if let Some(created) = entry.match_id.clone() {
-                Claim::Done(Some(created))
-            } else if entry.offers.contains(&seat.teammate()) {
-                if entry.creating {
-                    Claim::Wait
-                } else {
-                    let id = new_uuid();
-                    entry.creating = true;
-                    let lean_of = |at: DuosSeat| entry.leans.get(&at).copied().flatten();
-                    Claim::Make {
-                        id,
-                        generation: entry.generation,
-                        leans: (lean_of(DuosSeat::A1), lean_of(DuosSeat::A2)),
-                    }
-                }
-            } else {
-                Claim::Done(None)
-            }
-        };
-
-        match claim {
-            Claim::Done(created) => {
-                // The pair is incomplete, or another offer already made the game: answer what the
-                // entry holds. A re-offer after the game was made learns its id here.
-                return Ok(created);
-            }
-            // The lock is never held across the create, so yielding lets it progress.
-            Claim::Wait => {
-                tokio::task::yield_now().await;
-            }
-            Claim::Make {
-                id,
-                generation,
-                leans,
-            } => {
-                if let Err(error) = create_again(app, match_row, leans, &id).await {
-                    let mut map = offers(app);
-                    if let Some(entry) = map.get_mut(&match_row.id)
-                        && entry.generation == generation
-                    {
-                        entry.match_id = None;
-                        entry.creating = false;
-                    }
-                    return Err(error);
-                }
-                {
-                    let mut map = offers(app);
-                    match map.get_mut(&match_row.id) {
-                        Some(entry) if entry.generation == generation => {
-                            entry.match_id = Some(id.clone());
-                            entry.creating = false;
-                        }
-                        // A sweep won a race at the window's edge while the create was in flight:
-                        // keep the made game discoverable under a fresh answered entry.
-                        _ => {
-                            let mut made = IndexSet::new();
-                            made.insert(DuosSeat::A1);
-                            made.insert(DuosSeat::A2);
-                            let mut made_leans = IndexMap::new();
-                            made_leans.insert(DuosSeat::A1, leans.0);
-                            made_leans.insert(DuosSeat::A2, leans.1);
-                            map.insert(
-                                match_row.id.clone(),
-                                OfferEntry {
-                                    offers: made,
-                                    leans: made_leans,
-                                    at: now_ms(),
-                                    match_id: Some(id.clone()),
-                                    creating: false,
-                                    generation: NEXT_GENERATION.fetch_add(1, Ordering::Relaxed),
-                                },
-                            );
-                        }
-                    }
-                }
+        match app.duos_again_offers.claim(&match_row.id, seat, lean, now_ms()) {
+            // The pair is incomplete, or another offer already made the game: answer what the
+            // entry holds. A re-offer after the game was made learns its id here.
+            Claim::Done(created) => return Ok(created),
+            // The create in flight was published, refused or let go: read again.
+            Claim::Wait(wait) => wait.await,
+            Claim::Make { creating, leans } => {
+                let id = new_uuid();
+                // A refusal returns here, and the dropped claim lets the seats re-offer.
+                create_again(app, match_row, leans, &id).await?;
+                creating.made(&id, now_ms());
                 return Ok(Some(id));
             }
         }
@@ -342,8 +361,12 @@ async fn create_again(
     // Refuse before making anything: a seat that found another game meanwhile keeps that game.
     // R1523000: either person in a 1v1 match, a Conquest series that is not over or a live co-op
     // match is refused with no details, since it may be the other person's (R1065000).
-    assert_free_to_play(app, &finished.a1).await?;
-    assert_free_to_play(app, &finished.a2).await?;
+    assert_free_to_play(app, &finished.a1)
+        .await
+        .map_err(|_| already_in_match())?;
+    assert_free_to_play(app, &finished.a2)
+        .await
+        .map_err(|_| already_in_match())?;
 
     // §13.9: to a pair with a block either way the game is over, as a room answers an unknown code.
     let blocked = one_tx!(app.db, |t| t.blocks_between(&finished.a1, &finished.a2).await?)?;
@@ -386,7 +409,7 @@ async fn create_again(
             seed: None,
             claim_room: None,
         },
-        |taken| in_game(&taken.seat),
+        |_| already_in_match(),
     )
     .await?;
     match outcome {
@@ -499,4 +522,58 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
         200,
         serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    const FINISHED: &str = "finished-match";
+
+    /// `a2`'s offer completes the pair and claims the create; `a1`'s re-offer meanwhile waits on it.
+    fn claimed(offers: &DuosAgainOffers) -> (Creating<'_>, Pin<Box<OwnedNotified>>) {
+        assert!(matches!(
+            offers.claim(FINISHED, DuosSeat::A1, None, 0),
+            Claim::Done(None)
+        ));
+        let Claim::Make { creating, .. } = offers.claim(FINISHED, DuosSeat::A2, None, 0) else {
+            panic!("the offer that completes the pair makes the game");
+        };
+        let Claim::Wait(wait) = offers.claim(FINISHED, DuosSeat::A1, None, 0) else {
+            panic!("an offer landing mid-create waits on it");
+        };
+        (creating, wait)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_create_whose_request_is_dropped_lets_its_claim_go_and_wakes_its_waiters() {
+        let offers = DuosAgainOffers::default();
+        let (creating, wait) = claimed(&offers);
+        // The request making the game is dropped mid-create (its client hung up): so is its claim.
+        drop(creating);
+        tokio::time::timeout(Duration::from_secs(1), wait)
+            .await
+            .expect("the waiting offer wakes");
+        // The woken offer reads again and makes the game itself, instead of waiting for ever.
+        assert!(matches!(
+            offers.claim(FINISHED, DuosSeat::A1, None, 0),
+            Claim::Make { .. }
+        ));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_waiting_offer_reads_the_game_the_create_made() {
+        let offers = DuosAgainOffers::default();
+        let (creating, wait) = claimed(&offers);
+        creating.made("new-match", 0);
+        tokio::time::timeout(Duration::from_secs(1), wait)
+            .await
+            .expect("the waiting offer wakes");
+        assert!(matches!(
+            offers.claim(FINISHED, DuosSeat::A1, None, 0),
+            Claim::Done(Some(id)) if id == "new-match"
+        ));
+    }
 }

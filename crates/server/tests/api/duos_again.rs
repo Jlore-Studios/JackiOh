@@ -9,9 +9,10 @@
 //! - A saved-deck seat replays its frozen deck; a dealt seat is dealt afresh on its latest lean.
 //! - A stranger, an unknown id and a live match get the replay route's answers; an offer past
 //!   `REMATCH_OFFER_TTL_MS` lapses silently and makes nothing.
-//! - A stale catalog is `update_required`; a seat in another game gets `assert_free_to_play`'s
-//!   refusal; a block made after the game answers as an unknown code; a seat emptied by a deleted
-//!   account is refused; a frozen deck with a custom card is `loadout_invalid`.
+//! - A stale catalog is `update_required`; a seat in another game is `already_in_match` with no
+//!   details, whichever seat offers (R1065000); a block made after the game answers as an unknown
+//!   code; a seat emptied by a deleted account is refused; a frozen deck with a custom card is
+//!   `loadout_invalid`.
 //! - Two offers racing make exactly one match; `teammateHere` follows the teammate's socket,
 //!   reading false with no actor in memory.
 //!
@@ -448,21 +449,27 @@ async fn r2092000_a_custom_card_in_a_frozen_deck_is_refused_l7() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r2092000_a_seat_in_another_game_gets_the_free_to_play_refusal() {
+async fn r2092000_a_seat_in_another_game_is_refused_with_no_details() {
     let (app, a1, a2) = app_with_pair().await;
     let finished_id = uuid(108);
     finished_row(&app, &finished_id, &a1.id, &a2.id, json!({})).await;
 
-    // `a1` holds a live game elsewhere: the seat ledger's seat, as a door that seated it holds.
+    // `a1` holds a live co-op game elsewhere: the seat ledger's seat, as a door that seated it holds.
     app.seats
         .reserve(&[a1.id.as_str()], Seat::Duos("match-elsewhere".to_string()))
         .expect("premise: the seat reserves")
         .commit();
 
-    offer(&app, &a2.token, &finished_id, json!({})).await;
-    let (code, refused) = offer(&app, &a1.token, &finished_id, json!({})).await;
-    assert_eq!(code, 409, "{refused}");
-    assert_eq!(refused["error"]["code"], "already_in_match");
+    // R1065000: the refusal names no game, since it may be the teammate's. `a2`, whose offer
+    // completes the pair, never learns where `a1` plays, and `a1`'s own re-offer is told no more.
+    offer(&app, &a1.token, &finished_id, json!({})).await;
+    for who in [&a2, &a1] {
+        let (code, refused) = offer(&app, &who.token, &finished_id, json!({})).await;
+        assert_eq!(code, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "already_in_match");
+        assert!(refused["error"].get("details").is_none(), "{refused}");
+        assert!(!refused.to_string().contains("match-elsewhere"), "{refused}");
+    }
     assert!(live_duos(&app).await.is_empty());
     assert_eq!(
         status(&app, &a2.token, &finished_id).await.1["matchId"],
