@@ -58,6 +58,19 @@ enum Claim {
 }
 
 fn claim_of(state: &GameState, player: PlayerId) -> Option<Claim> {
+    let claim = own_claim_of(state, player)?;
+    // R2201000: against a seat that cannot lose, no claim ends the game as its loss. A win by effect
+    // or a held win is not read; a flight that would leave it a loss leaves it a draw (R1843004).
+    if crate::state::can_lose(state, opponent_of(player)) {
+        return Some(claim);
+    }
+    match claim {
+        Claim::WonByEffect | Claim::AltWin => None,
+        Claim::Fled(_) => Some(Claim::Fled(FleeOpponent::Draw)),
+    }
+}
+
+fn own_claim_of(state: &GameState, player: PlayerId) -> Option<Claim> {
     let side = &state.players[player];
     if side.won_by_effect == Some(true) {
         return Some(Claim::WonByEffect);
@@ -202,6 +215,8 @@ fn vote_check(sink: &mut EngineSink<'_>) -> bool {
     let out: Vec<PlayerId> = PLAYER_IDS
         .into_iter()
         .filter(|player| voted_out(sink.state, *player))
+        // R2201000: a seat that cannot lose is never removed.
+        .filter(|player| crate::state::can_lose(sink.state, *player))
         .collect();
     if out.is_empty() {
         return false;
