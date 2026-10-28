@@ -143,7 +143,7 @@ mod tests {
 
             assert!(s.last_events().iter().any(|event| matches!(
                 event,
-                GameEvent::Buffed { instance_id, attack: -2, .. } if *instance_id == target
+                GameEvent::Buffed { instance_id, attack: -2, .. } if *instance_id == target.id
             )));
             s.expect_in_zone(&target, "graveyard");
         }

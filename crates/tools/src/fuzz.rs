@@ -2865,7 +2865,10 @@ pub(crate) mod tests {
                 assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
             }
             // A fixture held card, dealt first into both decks, so the path runs whatever ships.
-            let held_set = CATALOG_SETS.iter().copied().find(|set| !set_ships(*set));
+            let held_set = jackioh_engine::wire::CATALOG_SETS
+                .iter()
+                .copied()
+                .find(|set| !set_ships(*set));
             let set = held_set.unwrap_or(jackioh_engine::SINGLE_PLAYER_SETS[0]);
             let face = json!({ "attack": 1, "health": 1, "keywords": [], "text": "" });
             let def: jackioh_engine::CardDef = jackioh_engine::testkit::json_as(json!({

@@ -4,19 +4,18 @@
 //! beneath a card until it leaves, a beneficial Spell cast for yourself instead, and Radiant on reaching
 //! N keywords. Crater on a Field Spell (R1850006) is in `crater.rs`, with the rest of Crater.
 
-use jackioh_engine::reduce::{begin_game, legal_actions, reduce};
+use jackioh_engine::reduce::{legal_actions, reduce};
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use super::fixtures::card_on_card::{
-    BOOST, LEGEND_PING, LEGEND_RADIANT_PING, RADIANT_BOOST, bolt, boost, cheap, cheap_exiler, cheap_field,
-    cheap_trap, copier, crier, dear, duo, human, immutable_copier, legend, radiant_copier,
-    register_card_on_card, rod, rod_field, sack, sacker, tag_exiler, ticket, token, wormhole,
+    BOOST, RADIANT_BOOST, bolt, boost, cheap, cheap_exiler, cheap_field, cheap_trap, crier, dear, duo, human,
+    rod, rod_field, sack, sacker, tag_exiler, ticket, token, wormhole,
 };
 use super::fixtures::card_on_card::{apply, at, destroy, instance, on_field, pass, play, playing, top};
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, new_game, put, slot};
+use super::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, put, slot};
 
 /// The board settled with nothing applied: a state check, as after any effect.
 fn check(state: &mut GameState) -> Vec<GameEvent> {

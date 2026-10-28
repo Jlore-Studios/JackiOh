@@ -11,7 +11,9 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
     trample_lifesteal, trampler,
 };
-use crate::rules::fixtures::damage_combat::{bolt, cancel_gambit, grunt, playing, recorder, solar, wall};
+use crate::rules::fixtures::damage_combat::{
+    bolt, cancel_gambit, grunt, playing, recorder, solar, wall as spell_target,
+};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 use crate::rules::fixtures::stinkyscape_verbs::{MASOCHISM, PLAIN, REDIRECT_CAP, register_stinkyscape_verbs};
@@ -88,7 +90,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     fn step_0_spell_damage_raises_a_spell_s_hit_and_not_a_unit_s() {
         let mut state = playing("damage-step-0");
         let mage = put(&mut state, &solar.id, slot(P1, Row::Units, 1), json!({}));
-        let target = put(&mut state, &wall.id, slot(P2, Row::Units, 1), json!({}));
+        let target = put(&mut state, &spell_target.id, slot(P2, Row::Units, 1), json!({}));
         let spell = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
         with_sink(&mut state, |sink| {
             assert_eq!(spell_damage_of(sink.state, P1), 2);
