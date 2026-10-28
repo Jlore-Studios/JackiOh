@@ -4,8 +4,11 @@
 //
 // A trio is saved loose (R252): an empty slot or a shared card (R251: a card is its catalog id)
 // stops it from queueing Conquest, not from saving. Slots refuse T3's "the same deck twice".
+//
+// R2119000: Delete trio asks nothing. The workshop takes the trio off at once and holds its DELETE
+// behind an undo toast.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useId, useMemo, useState, type ReactElement } from "react";
 
 import type { CardCost } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -22,8 +25,6 @@ import {
   TRIO_COMPARE,
   TRIO_COPY_CODE,
   TRIO_DELETE,
-  TRIO_DELETE_CANCEL,
-  TRIO_DELETE_CONFIRM,
   TRIO_EDITOR,
   TRIO_L4_HINT,
   TRIO_NAME_INPUT,
@@ -49,6 +50,7 @@ export type TrioEditorProps = {
   refusal: string | null;
   onRename: (name: string) => void;
   onSlots: (slots: TrioSlots) => void;
+  /** R2119000: at once, with no question; the workshop offers Undo. */
   onDelete: () => void;
   onOpenDeck: (deckId: string) => void;
   /** A phone's way back to the list. */
@@ -67,18 +69,11 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
   const { trio, decks, catalog, collection, limits, refusal, onRename, onSlots, onDelete, onOpenDeck, onBack } = props;
   useLocale();
   const label = trioLabel(trio, limits.nameLength);
-  const [confirming, setConfirming] = useState(false);
   const [codeShown, setCodeShown] = useState(false);
   const [codeStatus, setCodeStatus] = useState<string | null>(null);
-  const keepButton = useRef<HTMLButtonElement>(null);
   const nameId = useId();
   const slotIdBase = useId();
   const verdictTitleId = useId();
-  const confirmTextId = useId();
-
-  useEffect(() => {
-    if (confirming) keepButton.current?.focus();
-  }, [confirming]);
 
   const slots = useMemo(() => trioSlots(trio, decks), [trio, decks]);
   const shared = useMemo(() => trioSharedCards(slots, limits.nameLength), [slots, limits.nameLength]);
@@ -306,10 +301,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
             type="button"
             className="ws-action ws-action--danger"
             data-testid={TRIO_DELETE}
-            aria-expanded={confirming}
-            onClick={() => {
-              setConfirming(true);
-            }}
+            onClick={onDelete}
           >
             {t("Delete trio")}
           </button>
@@ -332,27 +324,6 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
               }}
             />
           </label>
-        ) : null}
-        {confirming ? (
-          <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
-            <p id={confirmTextId}>{t("Delete “{trio}”? Its decks stay saved. This can’t be undone.", { trio: label })}</p>
-            <div className="ws-confirm-actions">
-              <button type="button" className="ws-action ws-action--danger" data-testid={TRIO_DELETE_CONFIRM} onClick={onDelete}>
-                {t("Delete")}
-              </button>
-              <button
-                ref={keepButton}
-                type="button"
-                className="ws-action"
-                data-testid={TRIO_DELETE_CANCEL}
-                onClick={() => {
-                  setConfirming(false);
-                }}
-              >
-                {t("Keep it")}
-              </button>
-            </div>
-          </div>
         ) : null}
       </div>
     </section>

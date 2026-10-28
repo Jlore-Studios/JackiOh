@@ -20,7 +20,7 @@ export const togetherTestid = {
   unread: "together-unread",
   remove: "together-remove",
   block: "together-block",
-  /** The inline "are you sure" of Remove and Block. */
+  /** The inline "are you sure" of Block; Remove asks nothing and offers Undo (R2119000). */
   confirm: "together-confirm",
   keep: "together-keep",
   /** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`. */
@@ -78,6 +78,10 @@ export const chatTestid = {
   reportReason: "chat-report-reason",
   reportSend: "chat-report-send",
   reported: "chat-reported",
+  /** R2120000: one per message sent from this panel that no answer has replaced yet: `data-state` (`sending|failed`), `data-from="you"`. */
+  pending: "chat-pending",
+  pendingRetry: "chat-pending-retry",
+  pendingDiscard: "chat-pending-discard",
 } as const;
 
 /** #1831: the Friends button every signed-in screen has at the top right, and its panel. */

@@ -14,6 +14,7 @@ import {
   type DecksResponse,
   type SavedDeck,
   type SavedTrio,
+  type SendOptions,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
@@ -105,7 +106,13 @@ export type ServerCall = {
   op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio";
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
+  /** R2119000: the request was sent with `keepalive`, as the page went away. */
+  keepalive?: true;
 };
+
+function sentWith(options: SendOptions | undefined): { keepalive?: true } {
+  return options?.keepalive === true ? { keepalive: true } : {};
+}
 
 /** An in-memory `/api/decks` and `/api/trios`, with the refusals the store has to handle. */
 export function fakeDeckServer() {
@@ -131,8 +138,8 @@ export function fakeDeckServer() {
       decks.set(id, input);
       return { deck: { id } };
     },
-    async deleteDeck(id) {
-      gate({ op: "deleteDeck", id });
+    async deleteDeck(id, options) {
+      gate({ op: "deleteDeck", id, ...sentWith(options) });
       return { deleted: decks.delete(id) };
     },
     async putTrio(id, input) {
@@ -147,8 +154,8 @@ export function fakeDeckServer() {
       trios.set(id, input);
       return { trio: { id } };
     },
-    async deleteTrio(id) {
-      gate({ op: "deleteTrio", id });
+    async deleteTrio(id, options) {
+      gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
     },
     async importTrio(input) {

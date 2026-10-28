@@ -46,7 +46,13 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
   return card;
 }
 
-export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
+/**
+ * R2095000: `silent` feeds no audio at all — no view feed, entry subscription, gesture/debug
+ * install, crowd, music enter, or preload — for the Duos both-boards view's teammate board, so
+ * two mounted boards play only the own duel's cues. The hook itself is still called; only its
+ * effects return early. Absent, off.
+ */
+export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false): void {
   // Use a ref so the persistent director sees a catalog that arrives after it.
   const lookup = useContext(CatalogContext);
   const lookupRef = useRef(lookup);
@@ -80,13 +86,15 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
 
   // Every view, before Game's enqueue layout effect.
   useLayoutEffect(() => {
+    if (silent) return undefined;
     quietly(() => director.onView(view));
     quietly(() => musicRef.current?.onView(view));
-  }, [director, view]);
+  }, [director, view, silent]);
 
   // Keep engine and music busy during entries (B58), so the idle flush preempts preload/prefetch.
   // Clear both if Game unmounts mid-burst.
   useLayoutEffect(() => {
+    if (silent) return undefined;
     const engine = getAudioEngine();
     const music = getMusicPlayer();
     let last = runner.inFlight();
@@ -111,27 +119,30 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       quietly(() => engine.setBusy(false));
       quietly(() => music.setBusy(false));
     };
-  }, [director, runner]);
+  }, [director, runner, silent]);
 
   // Cover a view for which the runner starts no entry.
   useEffect(() => {
+    if (silent) return;
     if (runner.idle()) {
       quietly(() => director.onIdle());
       quietly(() => musicRef.current?.settle());
     }
-  }, [director, view, runner]);
+  }, [director, view, runner, silent]);
 
   // Keep app-level gesture unlock, UI ticks and debug handle for this component's lifetime.
   useEffect(() => {
+    if (silent) return undefined;
     const engine = getAudioEngine();
     const removers = [retainAppAudio(), exposeAudioDebug(engine)];
     return () => {
       for (const remove of removers) remove();
     };
-  }, []);
+  }, [silent]);
 
   // Crowd audio belongs to this match, not menu audio; release it on route leave.
   useEffect(() => {
+    if (silent) return undefined;
     const crowd = createCrowdDirector({ engine: getAudioEngine() });
     crowdRef.current = crowd;
     crowd.start();
@@ -142,11 +153,13 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
   }, []);
 
   useEffect(() => {
+    if (silent) return;
     if (view.result !== null) crowdRef.current?.end();
-  }, [view.result]);
+  }, [view.result, silent]);
 
   // Enter board music before the first draw, then return control to the menu on unmount.
   useLayoutEffect(() => {
+    if (silent) return undefined;
     let leave: (() => void) | null = null;
     quietly(() => {
       const sink = enterGameMusic();
@@ -159,10 +172,11 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       musicRef.current = null;
       quietly(() => leave?.());
     };
-  }, []);
+  }, [silent]);
 
   // Busy bursts hold preloads until the context runs and the burst ends.
   useEffect(() => {
+    if (silent) return;
     quietly(() => {
       const engine = getAudioEngine();
       if (engine.state() === "running") engine.preloadVoices(voiceKeysForView(view, CARD_AUDIO));

@@ -12,7 +12,8 @@
 //! from `FIRST_VERSION`, each named after the one before it by `versions::name_by_tier`.
 //!
 //! The dry run prints the map. The write renames every version the repository stores, once:
-//! - `crates/cards/patches/`: the snapshots and `win_rates/<version>.json` renamed, `patches.json`'s
+//! - `crates/cards/patches/`: the snapshots, `win_rates/<version>.json` and
+//!   `card_metrics/<version>.json` (R2173000) renamed, `patches.json`'s
 //!   versions with each patch's `tier` and `plays`, `shipped.json`, `index.json`, and
 //!   `aliases.json`, the map, which only readers of an unmarked file consult (R1371000);
 //! - every `CATALOG_VERSION` site (`patch::bump_sites`);
@@ -110,19 +111,10 @@ pub fn tier_of(
     scripts: &[FileChange],
 ) -> (Tier, Vec<String>) {
     let before = previous.map_or_else(
-        || Side {
-            catalog: Catalog::new(),
-            sets: Vec::new(),
-        },
-        |catalog| Side {
-            catalog: catalog.clone(),
-            sets: sets_of(catalog),
-        },
+        || Side::of_catalog(Catalog::new(), Vec::new()),
+        |catalog| Side::of_catalog(catalog.clone(), sets_of(catalog)),
     );
-    let after = Side {
-        catalog: snapshot.clone(),
-        sets: sets_of(snapshot),
-    };
+    let after = Side::of_catalog(snapshot.clone(), sets_of(snapshot));
     let mut diff = classify::read_diff(&before, &after, &[]);
     if !diff.play.is_empty() || !diff.wording.is_empty() {
         diff.scripts = classify::read_diff(&before, &after, scripts).scripts;
@@ -227,6 +219,7 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
     }
     let mut snapshots = Vec::new();
     let mut tables = Vec::new();
+    let mut lists = Vec::new();
     for (patch, renamed) in patches.iter_mut().zip(map) {
         if patch.version != renamed.old {
             bail!("patches.json changed since the map was made");
@@ -242,6 +235,11 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
                 win_rates_path(&renamed.new, &dir)?,
                 rename_versions(&text, &names),
             ));
+        }
+        // R2173000: and its BUSTED and complicated lists, which name cards, never versions.
+        let kept = crate::card_lists::lists_path(&patch.version, &dir)?;
+        if let Ok(text) = fs::read_to_string(&kept) {
+            lists.push((kept, crate::card_lists::lists_path(&renamed.new, &dir)?, text));
         }
         patch.version = renamed.new.clone();
         patch.tier = Some(renamed.tier);
@@ -292,10 +290,10 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
     for (from, _, _) in &snapshots {
         fs::remove_file(from).with_context(|| format!("{} cannot be removed", from.display()))?;
     }
-    for (from, _, _) in &tables {
+    for (from, _, _) in tables.iter().chain(&lists) {
         fs::remove_file(from).with_context(|| format!("{} cannot be removed", from.display()))?;
     }
-    for (_, to, text) in snapshots.iter().chain(&tables) {
+    for (_, to, text) in snapshots.iter().chain(&tables).chain(&lists) {
         fs::write(to, text).with_context(|| format!("{} cannot be written", to.display()))?;
     }
     for (path, text) in &others {

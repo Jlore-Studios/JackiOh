@@ -166,4 +166,33 @@ mod tests {
         assert!(s.unit(P1, 1).is_some());
         s.expect_in_zone(SHIELD, "field");
     }
+
+    #[test]
+    fn r1881002_a_forced_attack_springs_nothing() {
+        // #9 Moths to the Flame: "Start of turn: Every enemy Unit attacks this", a forced attack (R53).
+        const MOTHS: &str = "core-009";
+        let mut s = scenario(json!({
+            "seed": "predictive-shield-forced",
+            "active": "p2",
+            "p1": {
+                "backrow": [SHIELD],
+                "field": [MOTHS],
+                "hand": [FILLER],
+                "library": filler(6),
+            },
+            "p2": { "field": [ATTACKER], "hand": [FILLER], "library": filler(6) },
+        }));
+        s.end_turn(); // p1's start of turn: the Vanilla is made to attack the Moths.
+        assert_eq!(s.state().active, P1);
+        assert!(
+            s.last_events().iter().any(
+                |event| matches!(event, GameEvent::Damage { target_id, .. } if *target_id == s.card(MOTHS).id)
+            ),
+            "the forced attack happened"
+        );
+        assert!(!fired(&s));
+        assert!(!cancelled(&s));
+        assert!(s.card(ATTACKER).frozen.is_none());
+        s.expect_in_zone(SHIELD, "field");
+    }
 }

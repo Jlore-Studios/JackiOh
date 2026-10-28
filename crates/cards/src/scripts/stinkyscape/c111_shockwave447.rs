@@ -147,6 +147,20 @@ mod tests {
     }
 
     #[test]
+    fn keywords_reads_through_param() {
+        let mut s = scenario(json!({
+            "seed": "shockwave-param",
+            "p1": { "hand": [ID], "library": filler(6), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": filler(6) },
+        }));
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        let keywords = crate::upgrade_number(&mut s, ID, "keywords");
+        s.play(ID, json!({ "zone": 1 }));
+        let drawn = drawn_combat_keywords(s.card(me(&s).as_str()), None);
+        assert_eq!(drawn.len(), usize::try_from(keywords).expect("a count"));
+    }
+
+    #[test]
     fn r1846000_an_empty_hand_gets_none() {
         let (s, _, _) = played(false, "shockwave-empty", 0);
         assert!(s.hand(P2).is_empty());

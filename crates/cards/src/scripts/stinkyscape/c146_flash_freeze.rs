@@ -107,6 +107,36 @@ mod tests {
         }
 
         #[test]
+        fn r1174000_yours_thaws_at_this_turns_end_the_enemys_at_the_end_of_its_controllers_next_turn() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [FREEZE, FILLER], "field": [TIMMY], "library": [FILLER, FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER, FILLER] },
+            }));
+            let mine = s.unit_at(P1, 1);
+            let theirs = s.unit_at(P2, 1);
+            s.play(FREEZE, json!({}));
+            assert!(frozen(&s, &mine) && frozen(&s, &theirs));
+
+            s.end_turn(); // p1's turn ends: their own Unit, frozen on their turn, thaws.
+            assert_eq!(s.state().active, P2);
+            assert!(
+                !frozen(&s, &mine),
+                "frozen on its controller's turn, it thaws at that turn's end"
+            );
+            assert!(
+                frozen(&s, &theirs),
+                "the enemy's stays Frozen through its controller's next turn"
+            );
+
+            s.end_turn(); // p2's turn ends: theirs thaws.
+            assert!(
+                !frozen(&s, &theirs),
+                "it thaws at the end of its controller's next turn"
+            );
+        }
+
+        #[test]
         fn r1867009_a_unit_frozen_on_its_controllers_turn_loses_that_turns_attack() {
             crate::register_all();
             let mut s = scenario(json!({

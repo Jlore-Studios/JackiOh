@@ -11,6 +11,10 @@
 //! `SHIPPED_SETS` names on each side: a set that ships is a major, and a card of a set that has not
 //! shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
 //! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
+//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
+//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
+//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
+//! differently, so `--claims` asks for its fragment.
 //!
 //! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
 //! build what the diff cannot say:
@@ -34,11 +38,12 @@ use std::process::Command as Process;
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
 use jackioh_engine::config::CRAFT_ID_PREFIX;
-use jackioh_engine::wire::SetName;
+use jackioh_engine::wire::{SINGLE_PLAYER_SETS, SetName};
 use jackioh_engine::{GameState, find_instance};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::card_lists::{self, CardLists, Scripts};
 use crate::catalog::{code_lines, code_lines_with_uses};
 use crate::golden::{record_seeds, text_at};
 use crate::luau::{parent_check, temp_traces};
@@ -256,13 +261,44 @@ pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
         .collect()
 }
 
-/// One side of the change: its catalog, every set's cards, and the sets that ship.
+/// One side of the change: its catalog, every set's cards, the sets that ship, and its card scripts
+/// as the BUSTED and complicated lists see them (R2173001; none where only the catalog is read).
 pub(crate) struct Side {
     pub catalog: Catalog,
     pub sets: Vec<SetName>,
+    pub scripts: Scripts,
 }
 
 impl Side {
+    /// A side read off its catalog alone, with no scripts.
+    pub(crate) fn of_catalog(catalog: Catalog, sets: Vec<SetName>) -> Side {
+        Side {
+            catalog,
+            sets,
+            scripts: Scripts::default(),
+        }
+    }
+
+    /// R2173001: whether a list's card can join a pool on this side: a card of a set that ships, or
+    /// of a single-player set, which an `everySet` pool takes (R1846001). A held set's is in none.
+    fn pooled(&self, id: &str) -> bool {
+        let single_player = self
+            .catalog
+            .get(id)
+            .and_then(|entry| entry.get("set"))
+            .and_then(|set| set.as_str())
+            .is_some_and(|set| SINGLE_PLAYER_SETS.iter().any(|single| single.as_str() == set));
+        self.ships(id) || single_player
+    }
+
+    /// R2173001: this side's BUSTED and complicated lists, of the cards that can join a pool.
+    fn pooled_lists(&self) -> CardLists {
+        let mut lists = self.scripts.lists();
+        lists.busted.retain(|id| self.pooled(id));
+        lists.complicated.retain(|id| self.pooled(id));
+        lists
+    }
+
     fn ships(&self, id: &str) -> bool {
         let set = self
             .catalog
@@ -352,6 +388,18 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
             Area::App => diff.app = true,
             Area::Catalog | Area::Internal => {}
         }
+    }
+    // R2173001: while a card that reads the BUSTED or complicated lists ships on both sides, a change
+    // that moves a card across a threshold (a script edit, a card added or removed, a threshold
+    // moved) plays every such reader differently: its pool is not what it was.
+    let readers: Vec<&String> = after
+        .scripts
+        .readers
+        .iter()
+        .filter(|id| after.ships(id) && before.ships(id) && before.scripts.readers.contains(*id))
+        .collect();
+    if !readers.is_empty() && before.pooled_lists() != after.pooled_lists() {
+        diff.play.extend(readers.into_iter().map(|id| family(id)));
     }
     diff.wording.retain(|family| !diff.play.contains(family));
     diff
@@ -815,8 +863,10 @@ pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
 pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     let catalog = show(root, rev, CATALOG_PATH).with_context(|| format!("{rev} has no {CATALOG_PATH}"))?;
     let sets = show(root, rev, SETS_PATH).with_context(|| format!("{rev} has no {SETS_PATH}"))?;
+    let catalog: Catalog = serde_json::from_str(&catalog).with_context(|| format!("{rev}'s catalog"))?;
     Ok(Side {
-        catalog: serde_json::from_str(&catalog).with_context(|| format!("{rev}'s catalog"))?,
+        scripts: card_lists::at_rev(root, rev, &catalog).with_context(|| format!("{rev}'s card scripts"))?,
+        catalog,
         sets: shipped_sets(&sets).with_context(|| format!("{rev}'s SHIPPED_SETS"))?,
     })
 }
@@ -925,10 +975,7 @@ mod tests {
     }
 
     fn side(cards: Vec<(String, crate::patches::js::Object)>, sets: &[SetName]) -> Side {
-        Side {
-            catalog: cards.into_iter().collect(),
-            sets: sets.to_vec(),
-        }
+        Side::of_catalog(cards.into_iter().collect(), sets.to_vec())
     }
 
     const SHIPPED: &[SetName] = &[SetName::Core, SetName::Meditative];
@@ -1049,6 +1096,98 @@ mod tests {
     }
 
     const SCRIPT: &str = "use jackioh_engine::prelude::*;\n\npub const ID: &str = \"core-001\";\n\npub fn script() -> CardScripts {\n    CardScripts::default()\n}\n\n#[cfg(test)]\nmod tests {}\n";
+
+    /// R2173001: a side whose catalog holds `ids`, its scripts counted from `scripts`.
+    fn side_with_scripts(ids: &[(&str, &str)], sets: &[SetName], scripts: &[String]) -> Side {
+        let mut side = side(ids.iter().map(|(id, set)| card(id, set, 1, "x")).collect(), sets);
+        let config =
+            "pub const BUSTED_CODE_LINES: usize = 100;\npub const COMPLICATED_CODE_LINES: usize = 60;\n";
+        side.scripts = Scripts::read(scripts, &side.catalog, config).expect("the scripts");
+        side
+    }
+
+    #[test]
+    fn r2173001_a_script_edit_across_a_threshold_plays_the_readers_differently() {
+        use crate::card_lists::tests::script;
+        let ids = [
+            ("core-001", "Core"),
+            ("core-002", "Core"),
+            ("stinkyscape-109", "Stinkyscape"),
+            ("stinkyscape-050", "Stinkyscape"),
+        ];
+        let reader = script("stinkyscape-109", 30, true);
+        let with = |lines: usize, held: usize, sets: &[SetName]| {
+            side_with_scripts(
+                &ids,
+                sets,
+                &[
+                    script("core-001", lines, false),
+                    script("core-002", 10, false),
+                    reader.clone(),
+                    script("stinkyscape-050", held, false),
+                ],
+            )
+        };
+        let shipping = [SetName::Core, SetName::Stinkyscape];
+        let edit = |before: &Side, after: &Side| {
+            let files = [file(
+                "crates/cards/src/scripts/core/c001_x.rs",
+                &script("core-001", 1, false),
+                &script("core-001", 2, false),
+            )];
+            read_diff(before, after, &files)
+        };
+
+        // core-001 grows from 60 lines to 61: complicated now, so xxFreshJack's family plays differently.
+        let diff = edit(&with(60, 10, &shipping), &with(61, 10, &shipping));
+        assert_eq!(diff.play, BTreeSet::from(["stinkyscape-109".to_string()]));
+        assert_eq!(diff.scripts, BTreeSet::from(["core-001".to_string()]));
+        // Across BUSTED's 100 too; an edit that stays on one side of both moves no reader.
+        let diff = edit(&with(100, 10, &shipping), &with(101, 10, &shipping));
+        assert!(diff.play.contains("stinkyscape-109"));
+        let diff = edit(&with(62, 10, &shipping), &with(90, 10, &shipping));
+        assert!(diff.play.is_empty(), "{diff:?}");
+        // A card no pool can draw (a held set's) moves no reader, nor does any move while no reader ships
+        // on both sides: before the release (#1884) the rule is inert.
+        let core_only = [SetName::Core];
+        let held = side_with_scripts(
+            &[
+                ("core-001", "Core"),
+                ("stinkyscape-109", "Core"),
+                ("stinkyscape-050", "Stinkyscape"),
+            ],
+            &core_only,
+            &[
+                script("core-001", 10, false),
+                reader.clone(),
+                script("stinkyscape-050", 10, false),
+            ],
+        );
+        let held_long = side_with_scripts(
+            &[
+                ("core-001", "Core"),
+                ("stinkyscape-109", "Core"),
+                ("stinkyscape-050", "Stinkyscape"),
+            ],
+            &core_only,
+            &[
+                script("core-001", 10, false),
+                reader.clone(),
+                script("stinkyscape-050", 200, false),
+            ],
+        );
+        assert!(read_diff(&held, &held_long, &[]).play.is_empty());
+        let diff = edit(&with(60, 10, &core_only), &with(61, 10, &core_only));
+        assert!(diff.play.is_empty(), "no reader ships: {diff:?}");
+        let diff = edit(&with(60, 10, &core_only), &with(61, 10, &shipping));
+        assert!(
+            !diff.play.contains("stinkyscape-109"),
+            "the reader's own set shipping is the release's major, not a threshold move"
+        );
+        // The classification names the reader, so `--claims` asks a fragment for it (R1370000).
+        let classification = classify(&edit(&with(60, 10, &shipping), &with(61, 10, &shipping)), None);
+        assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
+    }
 
     #[test]
     fn r1365000_a_script_edit_to_comments_tests_or_layout_is_internal() {
