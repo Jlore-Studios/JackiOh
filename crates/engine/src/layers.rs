@@ -7,10 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::brittle_count::active_brittle_count;
 use crate::catalog::def_of;
-use crate::config::{
-    ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, FIENDER_STATS_MODE,
-    RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
-};
+use crate::config::{BACKROW_ZONES, FIENDER_STATS_MODE, RADIANT_FALLBACK_FACTOR, UNIT_ZONES};
 use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, ModifierKind, Position};
 use crate::tuning::{tuned_keywords, x_of};
@@ -88,14 +85,6 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
     let face = if instance.radiant { &def.radiant } else { &def.base };
     let stats = worn_stats_override(def, instance).or_else(|| x_stats_of(face, instance));
     let keywords = tuned_keywords(&printed_keywords_of(state, instance), instance);
-    // R657: an Animated card with no stats from any source (no printed stats, no statsOverride, no X
-    // stats) fights as a 0/1 instead of dying as a 0/0 at the state check.
-    let statless = stats.is_none() && face.attack.is_none() && face.health.is_none();
-    let animated = statless
-        && keywords
-            .iter()
-            .chain(instance.granted_keywords.iter())
-            .any(|keyword| matches!(keyword, Keyword::Animated | Keyword::AnimatedOnYourTurn));
     let tuning_attack = instance
         .tuning
         .as_ref()
@@ -106,19 +95,26 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
         .as_ref()
         .and_then(|tuning| tuning.health)
         .unwrap_or(0);
-    let attack = stats
-        .map(|stats| stats.attack)
-        .or(face.attack)
-        .unwrap_or(if animated { ANIMATED_FALLBACK_ATTACK } else { 0 });
-    let health = stats
-        .map(|stats| stats.health)
-        .or(face.health)
-        .unwrap_or(if animated { ANIMATED_FALLBACK_HEALTH } else { 0 });
+    let attack = stats.map(|stats| stats.attack).or(face.attack).unwrap_or(0);
+    let health = stats.map(|stats| stats.health).or(face.health).unwrap_or(0);
     FaceStats {
         attack: attack + tuning_attack,
         health: health + tuning_health,
         keywords,
     }
+}
+
+/// R2280000: whether the card has stats, an attack and health line its definition gives it: its own
+/// printed one or a fused definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras
+/// and `tuning` change a line the card has and never make one. A Field Spell, Trap or Field Trap
+/// animates only with stats (`animated::animated_with_stats`).
+pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
+    let def = def_of(Some(state), &instance.def_id);
+    let face = if instance.radiant { &def.radiant } else { &def.base };
+    instance.stats_override.is_some()
+        || face.x_stats.is_some()
+        || face.attack.is_some()
+        || face.health.is_some()
 }
 
 /// The keywords the running face prints, before tuning (§5.2): what a Degrade takes a printed keyword

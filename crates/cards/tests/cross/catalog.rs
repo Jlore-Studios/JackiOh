@@ -40,6 +40,8 @@
 //!                    Meditative #19.1 Temporal Rift (0).
 //!   patch v0.3.16   — issue #1151 tags C #40 MC Tech and Meditative #57, #82, #83 and #85 Human
 //!                    (#57's tag ships under patch v0.3.10's claim of that card).
+//!   issue #2280    — C+ #74 Twice Forward One Step Backwards and S #16 Rod of Ages print no stats on
+//!                    either face (R2280000); the briefs keep the stats they first printed.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -3002,8 +3004,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::FieldTrap,
         &[],
         R::Mythic,
-        st(0, 1),
-        st(0, 2),
+        NO_STATS,
+        NO_STATS,
     ),
     row(
         "75",
@@ -5100,8 +5102,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::FieldSpell,
         &[G::Quickdraw],
         R::Mythic,
-        st(1, 1),
-        st(2, 2),
+        NO_STATS,
+        NO_STATS,
     ),
     row(
         "17",

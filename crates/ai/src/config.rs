@@ -332,8 +332,9 @@ pub struct EvalWeights {
     /// B3.3: a card with a Brittle count n is worth (1 − brittleDiscount / n) of itself — half at
     /// Brittle 1, the next tick away from crumbling — on the board, in the backrow and in the own hand.
     pub brittle_discount: f64,
-    /// B3.1: a readable backrow card with Animated is a Unit in waiting, worth this share of its unit
-    /// face's `unitWorth` on top of its backrow value. Animated, it stands in a unit zone and is a unit.
+    /// B3.1: a readable backrow card with Animated and stats (R2280000) is a Unit in waiting, worth this
+    /// share of its unit face's `unitWorth` on top of its backrow value. Animated, it stands in a unit
+    /// zone and is a unit.
     pub animated_share: f64,
     /// Own hand card: handCard + handPerCost × min(queryCost(def), handCostCap).
     pub hand_card: f64,
