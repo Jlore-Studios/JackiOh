@@ -10,6 +10,8 @@
 //!   the hand, a granted keyword that adds to the Lucky it prints and that its roll reads.
 //! - **Radiant:** the same pull as an Activate (R384): once a turn, in your main phase, at no cost,
 //!   the turn it is played included. It has no Cry.
+//! - **Tuned:** `lucky` is `cry: "base"` (R2261001): on the field a base Gachaholic's Cry has run, so
+//!   no Nerf or Buff draws it there, while a Radiant one's Activate still reads it.
 
 use jackioh_engine::effects::{AddRandomFromCatalogArgs, add_random_from_catalog};
 use jackioh_engine::prelude::*;
@@ -58,6 +60,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::{ID, script};
     use crate::js;
+    use jackioh_engine::effects::TuneDirection;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -106,6 +109,14 @@ mod tests {
     /// The cards p1 holds past the fillers it kept.
     fn added(s: &Scenario, kept: usize) -> Vec<CardInstance> {
         s.hand(P1).into_iter().skip(kept).collect()
+    }
+
+    /// The keys of the declared numbers a Buff would move on it now.
+    fn buffable(s: &Scenario) -> Vec<String> {
+        steppable_params(s.state(), s.card(ID), TuneDirection::Upgrade)
+            .into_iter()
+            .map(|item| item.param.key)
+            .collect()
     }
 
     mod m101_gachaholic {
@@ -183,6 +194,14 @@ mod tests {
             }
 
             #[test]
+            fn r2261001_on_the_field_its_cry_s_lucky_is_out_of_a_buff_s_reach() {
+                let mut s = holding("gachaholic-in-play", false, 1);
+                assert_eq!(buffable(&s), ["lucky"]);
+                s.play(ID, json!({}));
+                assert!(buffable(&s).is_empty());
+            }
+
+            #[test]
             fn r1420_previewed_it_reaches_cn_peptides() {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let found = (0..200).any(|n| {
@@ -208,6 +227,13 @@ mod tests {
                 let mut s = holding("gachaholic-radiant-play", true, 1);
                 s.play(ID, json!({}));
                 assert!(added(&s, 1).is_empty());
+            }
+
+            #[test]
+            fn r2261001_on_the_field_its_activate_s_lucky_is_still_in_a_buff_s_reach() {
+                let mut s = holding("gachaholic-radiant-in-play", true, 1);
+                s.play(ID, json!({}));
+                assert_eq!(buffable(&s), ["lucky"]);
             }
 
             #[test]
