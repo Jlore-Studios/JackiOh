@@ -6599,7 +6599,7 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "round_tier": "",
-      "run_id": "pending:2fce8330-1793225449",
+      "run_id": "40778000855",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T22:11:13Z",
       "stop_requested": false,
