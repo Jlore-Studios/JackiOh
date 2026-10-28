@@ -5964,18 +5964,24 @@
       "suggestion": true
     },
     "2211": {
-      "asks": [
-        "c:6469176739"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-10-28T12:44:19Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:ed748a2d-1793191572",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-28T12:46:28Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6469176739"
+      ]
     },
     "2212": {
       "asks": [
@@ -6328,9 +6334,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T12:39:19Z",
+    "at": "2026-10-28T12:46:28Z",
     "url": "",
-    "what": "build #2108 on muse"
+    "what": "plan #2211 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-28T12:37:41Z",
