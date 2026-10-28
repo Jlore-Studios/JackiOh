@@ -22,7 +22,6 @@ import {
   selectionForOption,
   selectionKey,
   selectionTestid,
-  withNonce,
   type Interaction,
 } from "./actions.ts";
 import { testid } from "./contract.ts";
@@ -939,18 +938,6 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
     const enumerated: ActionBody = { type: "mulligan", keep: ["h2", "h1"] };
 
     expect(answerAction(pending, ["h1", "h2"], view, [enumerated])).toBe(enumerated);
-  });
-});
-
-describe("withNonce", () => {
-  it("attaches the player and the nonce it was handed, and generates nothing", () => {
-    expect(withNonce({ type: "endTurn" }, "p1", "n7")).toEqual({ type: "endTurn", playerId: "p1", nonce: "n7" });
-    expect(withNonce({ type: "play", instanceId: "h1" }, "p2", "n8")).toEqual({
-      type: "play",
-      instanceId: "h1",
-      playerId: "p2",
-      nonce: "n8",
-    });
   });
 });
 

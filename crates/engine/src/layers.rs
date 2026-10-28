@@ -129,8 +129,7 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 /// R1850000: a copier prints the keywords of the text it copied, on its own stats (`face_of`).
 pub fn printed_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
-    let def = def_of(Some(state), def_id);
-    let face = if radiant { &def.radiant } else { &def.base };
+    let face = crate::faces::running_face_of(state, def_id, radiant);
     match instance.armor_override {
         None => face.keywords.clone(),
         Some(n) => face

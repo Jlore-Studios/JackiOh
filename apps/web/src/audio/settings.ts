@@ -9,6 +9,7 @@
 
 import { useSyncExternalStore } from "react";
 
+import { isRecord } from "../wire/json.ts";
 import { AUDIO_SETTINGS_KEY, MUSIC_STATIONS } from "./constants.ts";
 import type { AudioSettings, MusicStation } from "./types.ts";
 
@@ -53,8 +54,7 @@ function legacyBackground(o: Record<string, unknown>): boolean {
  *  station that is not one of MUSIC_STATIONS takes the default. Settings saved before the music
  *  existed read with the music's defaults. */
 export function parseAudioSettings(raw: unknown): AudioSettings {
-  const o: Record<string, unknown> =
-    typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const o: Record<string, unknown> = isRecord(raw) ? raw : {};
   return {
     master: level(o.master, DEFAULT_AUDIO_SETTINGS.master),
     sfx: level(o.sfx, DEFAULT_AUDIO_SETTINGS.sfx),

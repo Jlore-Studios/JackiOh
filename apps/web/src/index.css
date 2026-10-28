@@ -1,4 +1,5 @@
 @import "./fonts.css";
+@import "./palette.css";
 
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
@@ -10,32 +11,32 @@
      brass hairlines and parchment, so the board is the wooden table the landing shows. Parchment
      is 14.9:1 on --bg, 13.1:1 on --bg-raised and 15.2:1 on --bg-sunken; --text-dim is 7.9, 7.3 and
      8.1:1 (WCAG AA asks 4.5:1). */
-  --bg: #120b07;
-  --bg-raised: #2b170c;
-  --bg-sunken: #0e0905;
-  --line: rgb(201 149 63 / 30%);
-  --line-bright: rgb(201 149 63 / 55%);
-  --text: #efe0bf;
-  --text-dim: rgb(239 224 191 / 72%);
+  --bg: var(--pal-wood-900);
+  --bg-raised: var(--pal-wood-800);
+  --bg-sunken: var(--pal-wood-950);
+  --line: color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  --line-bright: color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  --text: var(--pal-parchment);
+  --text-dim: color-mix(in srgb, var(--pal-parchment) 72%, transparent);
 
-  --you: #3d7bd4;
-  --opponent: #c0453f;
-  --legal: #4ec98a;
-  --selected: #f0c04a;
-  --radiant: #ffd24a;
-  --plague: #8b5cf6;
-  --grade: #38bdf8;
-  --mana: #3d7bd4;
-  --locked: #6b7280;
+  --you: var(--pal-blue-600);
+  --opponent: var(--pal-red-600);
+  --legal: var(--pal-jade-400);
+  --selected: var(--pal-gold-400);
+  --radiant: var(--pal-gold-300);
+  --plague: var(--pal-violet-500);
+  --grade: var(--pal-sky-400);
+  --mana: var(--pal-blue-600);
+  --locked: var(--pal-grey-500);
 
   /* The one primary button: End turn, in the tavern's gold (tavern.css's primary, the landing's
      Play vs AI). The prompt's Confirm and the result panel's first action wear it too, so a screen
-     never shows two kinds of "go". The hover is the tavern's brightness(1.07), set into the stops. */
-  --primary-edge: #fde68a;
-  --primary-face: linear-gradient(180deg, #fff0bf 0%, #f3c969 42%, #dc9b33 58%, #a86a1f 100%);
-  --primary-face-hover: linear-gradient(180deg, #ffffcc 0%, #ffd770 42%, #eba637 58%, #b47121 100%);
-  --primary-ink: #2b1800;
-  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 2px 0 #713f12, 0 4px 12px rgb(0 0 0 / 45%);
+     never shows two kinds of "go". The hover mixes 7% white into each of the face's stops. */
+  --primary-edge: var(--pal-gold-200);
+  --primary-face: linear-gradient(180deg, var(--pal-parchment) 0%, var(--pal-gold-400) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
+  --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
+  --primary-ink: var(--pal-brass-950);
+  --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
 
   --card-w: 82px;
   --card-h: 112px;
@@ -71,12 +72,20 @@
   scroll-behavior: auto !important;
 }
 
-/* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these */
+/* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these.
+   #2103: while a mouse button is held the pointing glove is the pressed one, its finger curled and
+   the hand shrunk toward the fingertip, which stays the hotspot; release brings the pointing glove
+   back. The press is one still frame, so reduced motion has no movement to stop. */
 @media (pointer: fine) {
   :root {
     --cursor-glove: url("/cursors/glove.svg") 4 3, auto;
     --cursor-glove-point: url("/cursors/glove-point.svg") 4 3, pointer;
     --cursor-glove-grab: url("/cursors/glove-grab.svg") 10 9, grabbing;
+    --cursor-glove-press: url("/cursors/glove-press.svg") 4 3, pointer;
+  }
+
+  :root:active {
+    --cursor-glove-point: var(--cursor-glove-press);
   }
 }
 
@@ -315,14 +324,14 @@ button:disabled {
 .button-primary,
 .form-card button[type="submit"] {
   background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
+  color: var(--pal-white);
 }
 
 .button-primary:hover:not(:disabled),
 .form-card button[type="submit"]:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--you) 82%, white);
-  border-color: #fff;
+  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
+  border-color: var(--pal-white);
 }
 
 /* An <a> that should read as a button: the landing's two calls to action. Kept as anchors rather
@@ -341,14 +350,14 @@ button:disabled {
 
 .app-shell a.button-primary {
   background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
+  color: var(--pal-white);
 }
 
 .app-shell a.button-primary:hover {
-  background: color-mix(in srgb, var(--you) 82%, white);
-  border-color: #fff;
-  color: #fff;
+  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
+  border-color: var(--pal-white);
+  color: var(--pal-white);
 }
 
 .app-shell a.button-secondary {

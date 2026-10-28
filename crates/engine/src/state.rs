@@ -690,6 +690,17 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
     },
+    // ---- Stinkyscape's Calls to Chaos (issue #1882) ----
+    /// R1882004 (Stinkyscape #150 Call to Chaos (Stinky Edition), entry 8): "for the rest of the game,
+    /// whenever an Acclaimed card dies, its controller casts a random Call to Chaos": after each
+    /// `destroyed` of a card that prints `tag`, either player's, `resume` re-enters its step as the
+    /// player who controlled the card as it died. Expiry `never`; several stack, each its own record.
+    /// `label` is its badge (R169).
+    DeathWatch {
+        tag: crate::wire::Tag,
+        resume: Resume,
+        label: String,
+    },
     // ---- Stinkyscape's War Doctrines (issue #1859) ----
     /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
     /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but

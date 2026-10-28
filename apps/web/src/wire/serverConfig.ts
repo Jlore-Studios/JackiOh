@@ -97,6 +97,7 @@ export const QUEST_JLORE_MIN = 50;
 export const QUEST_MAX_HELD = 3;
 export const QUEST_XP_PER_JLORE = 50;
 export const QUEUE_ENDED_AFTER_READS = 2;
+export const RANK_STREAK_FLAME_LENGTH = 3;
 export const RATING_WINDOW_FULL_AFTER_SECONDS = 60;
 export const REDEMPTION_IDENTICAL_ERROR = "This invite code is invalid.";
 export const REDEMPTION_RESPONSE_FLOOR_MS = 250;
