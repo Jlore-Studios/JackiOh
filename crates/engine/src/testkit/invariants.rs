@@ -104,6 +104,8 @@
 //!      Stinkyscape's S04 found another, fuzz seed 8 and the Duos smoke wave's seed 1: a card sold from a
 //!      hand at the Marketplace (S #89 Spice, R1861000) ceases to exist and is no token, yet its public
 //!      `marketSold` named it to both seats as it went (R1853003), so a sold id reads, as R11's tokens do.
+//!      S21's Marketplace table (R1881006) found another, fuzz seeds 4, 10 and 14: the offering is public
+//!      (R1853001), so a lot's definition reads to every seat it is offered to, whatever hidden card shares it.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
 //!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
 //!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
@@ -778,6 +780,14 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
             && !standing.reads
         {
             ids.insert(id, format!("{} (a former id)", standing.where_));
+        }
+    }
+
+    // R1853001, R1881006: the Marketplace's offering is public, so a definition on a lot the viewer is
+    // offered (a rolled lot, or one an effect added for them) is no secret, whatever hidden card shares it.
+    for offer in state.marketplace.iter().flat_map(|market| market.offers.iter()) {
+        if offer.owner.is_none_or(|owner| owner == viewer) {
+            defs.shift_remove(&offer.def_id);
         }
     }
 

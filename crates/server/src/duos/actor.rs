@@ -1759,6 +1759,15 @@ impl DuosActor {
             .any(|seat| self.socket_for(&core, seat).is_some())
     }
 
+    /// R2092000: which human seats hold an open socket right now, by `HUMAN_SEATS`. The Play again
+    /// status reads this, so a seat learns whether its teammate is still on the finished match. A
+    /// seat is present while it holds a socket that is still open (CLAUDE.md rule 7: booleans and
+    /// ids only).
+    pub fn presence(&self) -> [bool; 2] {
+        let core = self.lock();
+        HUMAN_SEATS.map(|seat| self.socket_for(&core, seat).is_some())
+    }
+
     /// Drops the actor: its clocks stop, its sockets go, its log stays.
     pub async fn stop(&self) {
         self.halt();
