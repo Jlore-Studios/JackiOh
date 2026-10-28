@@ -44,6 +44,10 @@
   --gap: 6px;
   --radius: 7px;
 
+  /* R2122000: the least a control's hit area spans on a phone, either way (WCAG 2.5.5); e2e
+     spec 47's HIT_MIN_PX is the same number. */
+  --hit-min: 44px;
+
   /* M5-T4 collapses every duration to 0 under prefers-reduced-motion. */
   --anim-scale: 1;
 }
@@ -420,7 +424,32 @@ h3,
   .app-shell .screen-nav .link-button,
   .hotseat-bar .link-button,
   .hotseat-bar > button {
-    min-height: 44px;
+    min-height: var(--hit-min);
+  }
+}
+
+/* The hit area (#2122, R2122000): on a phone or under a finger, a control shorter than --hit-min
+   takes a tap across --hit-min each way round its centre through a transparent ::before, so nothing
+   in the layout moves: top and bottom reach out by half the shortfall, and left and right by half
+   what the width falls short, if it does. A control as tall as --hit-min gets no band from here: top
+   and bottom meet at 50%, the clamp's middle term (the shortfall times a thousand) choosing, since a
+   band over a tall control's box would take the taps of what it holds, and an inset cannot see the
+   width from the height. One as tall but narrower takes its band in its own stylesheet (spec 47
+   finds it). Zero specificity, so a control's own ::before or position wins where it has one. Not
+   here: a link in running text (exempt), a table row (its ::before would be a cell), and inputs and
+   selects, which draw no ::before and take --hit-min as their height where they are small. */
+@media (pointer: coarse), (max-width: 600px) {
+  :where(button, a[href], [role="button"], [tabindex="0"]):where(:not(:is(p, label) a, tr)) {
+    position: relative;
+  }
+
+  :where(button, a[href], [role="button"], [tabindex="0"]):where(:not(:is(p, label) a, tr))::before {
+    content: "";
+    position: absolute;
+    top: clamp((100% - var(--hit-min)) / 2, (100% - var(--hit-min)) * 1000, 50%);
+    bottom: clamp((100% - var(--hit-min)) / 2, (100% - var(--hit-min)) * 1000, 50%);
+    left: min(0px, (100% - var(--hit-min)) / 2);
+    right: min(0px, (100% - var(--hit-min)) / 2);
   }
 }
 
