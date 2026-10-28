@@ -5696,40 +5696,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-27T20:27:12Z",
+      "feedback_since": "2026-10-27T23:14:17Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2095,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "On a narrow screen with Both on, flipping the portal to the teammate's board hides the own board's wrapper, and the rail is inside that wrapper. The portal, concede, life strip and waiting notice all disappear, and the player is stuck on the read-only teammate board with no way back.",
-          "evidence": "In Both mode `rail` goes only to the own `<Game \u2026 boardRail={rail}>` inside `.duos-board-own` (DuosBoard.tsx). The teammate `<Game>` gets no `boardRail`. Board.tsx:749 draws `boardRail` inside the board's own tree. The new narrow rule `.duos-board[data-both=\"true\"][data-showing=\"teammate\"] .duos-board-own { display: none; }` therefore hides the portal along with the own board. The toggle is also hidden below 600px, so no visible control remains. This is the same \"the board works as today, with the portal flipping\" requirement the last pass claimed to fix.",
-          "severity": "blocking",
-          "where": "apps/web/src/duos/duos.css:641"
-        },
-        {
-          "claim": "The new test 'the portal still flips while both boards show, for a narrowed screen' only checks `data-showing` and the portal's `aria-pressed`. It never checks that the portal or rail is still there once the teammate board is the one showing, so it passes over the stranding bug above.",
-          "evidence": "The test asserts `data-showing` goes to \"teammate\", `aria-pressed=true` and two `game` testids. It does not check where the portal sits relative to `duos-board-own`, the wrapper that narrow CSS hides when the teammate board is showing.",
-          "severity": "blocking",
-          "where": "apps/web/src/duos/DuosBoard.test.tsx:1100"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-27T21:58:53Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "40600728783",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-27T23:14:17Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
