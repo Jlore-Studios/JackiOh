@@ -26,6 +26,7 @@ import {
   type CustomCardInput,
   type CustomCardsResponse,
 } from "../net/customCards.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { checkCustomCard, type ScriptProblem } from "../wasm/index.ts";
 import { customDef, validateCustomCard } from "../wire/validator.ts";
 import { BuilderView } from "./BuilderView.tsx";
@@ -443,7 +444,7 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
     <div className="creator one-screen__body" data-testid={creatorTestid.screen}>
       <aside className="creator-list" data-testid={creatorTestid.list} aria-label={t("Your custom cards")}>
         <h2>{t("Your custom cards")}</h2>
-        {state.kind === "loading" ? <p className="creator-hint">{t("Loading your cards…")}</p> : null}
+        {state.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your cards…")} /> : null}
         {state.kind === "failed" ? (
           <div className="creator-error" data-testid={creatorTestid.loadFailed} role="alert">
             <p>{t("Your custom cards could not be loaded just now.")}</p>

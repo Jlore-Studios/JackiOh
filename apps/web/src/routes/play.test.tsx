@@ -44,6 +44,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import PlayRoute, {
@@ -676,9 +677,11 @@ describe("the lobby's modes", () => {
 
     fireEvent.click(screen.getByTestId(playTestid.decksRetry));
     expect(screen.getByText("Loading your decks…")).toBeInTheDocument();
+    expectSkeleton(screen.getByText("Loading your decks…"), "panel");
     expect(screen.queryByTestId(playTestid.decksRetry)).toBeNull();
 
     await screen.findByTestId(playTestid.deckSelect);
+    expect(screen.queryByText("Loading your decks…")).toBeNull();
     expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(getDecks).toHaveBeenCalledTimes(2);

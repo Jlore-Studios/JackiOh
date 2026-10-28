@@ -43,6 +43,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
@@ -1019,7 +1020,7 @@ export default function StatsRoute(): ReactElement {
 
             {/* Table or Grid */}
             {cardStatsLoading ? (
-              <p className="stats-loading">{t("Loading card statistics…")}</p>
+              <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
             ) : cardStatsError ? (
               <div className="stats-error">
                 <p>{t("Failed to load card statistics.")}</p>
@@ -1402,7 +1403,7 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             ) : setsData === null ? (
-              <p className="stats-loading">{t("Loading set statistics…")}</p>
+              <Skeleton variant="table" label={t("Loading set statistics…")} />
             ) : sets.length === 0 ? (
               <p className="stats-empty">{t("No games on patch {patch} yet.", { patch: setsData.patch })}</p>
             ) : (
@@ -1584,7 +1585,7 @@ export default function StatsRoute(): ReactElement {
             </div>
 
             {playersLoading ? (
-              <p className="stats-loading">{t("Loading players…")}</p>
+              <Skeleton variant="table" label={t("Loading players…")} />
             ) : playersError ? (
               <div className="stats-error">
                 <p>{t("Failed to load player stats.")}</p>
@@ -1752,7 +1753,7 @@ export default function StatsRoute(): ReactElement {
 
                 <div className="stats-drilldown-details">
                   {drillDownLoading ? (
-                    <p className="stats-loading">{t("Loading drill-down data…")}</p>
+                    <Skeleton variant="rows" label={t("Loading drill-down data…")} />
                   ) : drillDownError ? (
                     <div className="stats-error">
                       <p>{t("Details unavailable.")}</p>

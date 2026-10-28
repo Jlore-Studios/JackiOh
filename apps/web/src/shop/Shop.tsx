@@ -24,6 +24,7 @@ import {
 } from "../net/api.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
 import "./shop.css";
 
@@ -136,9 +137,7 @@ export default function Shop({
       )}
       {info === null || wallet === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.loading}>
-            {t("Loading your shop…")}
-          </p>
+          <Skeleton variant="rows" label={t("Loading your shop…")} testId={shopTestid.loading} />
         ) : null
       ) : (
         <>

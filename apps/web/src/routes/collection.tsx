@@ -35,6 +35,7 @@ import {
 } from "../net/api.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths, useSearch } from "../net/navigate.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import QuestsPanel from "./QuestsPanel.tsx";
 
@@ -107,9 +108,7 @@ function Section<T>({
     <section className="collection-section">
       <h3 className="account-heading">{title}</h3>
       {read.kind === "loading" ? (
-        <p className="notice" role="status" data-testid={collectionTestid.loading(part)}>
-          {loading}
-        </p>
+        <Skeleton variant="rows" label={loading} testId={collectionTestid.loading(part)} />
       ) : read.kind === "error" ? (
         <AccountError
           message={read.message}

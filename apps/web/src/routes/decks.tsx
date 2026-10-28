@@ -37,6 +37,7 @@ import {
 } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
 
 type Loaded = {
@@ -194,7 +195,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
   if (account.kind === "loading" || account.kind === "anonymous" || blocked) {
     return (
       <Shell settings={false}>
-        <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
+        <Skeleton variant="rows" label={t("Loading…")} testId={DECKBUILDER_LOADING} />
       </Shell>
     );
   }
@@ -235,7 +236,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
   if (screen.kind === "loading") {
     return (
       <Shell settings={false}>
-        <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
+        <Skeleton variant="rows" label={t("Loading…")} testId={DECKBUILDER_LOADING} />
       </Shell>
     );
   }

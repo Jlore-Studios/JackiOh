@@ -37,6 +37,7 @@ import {
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { SHARED_ANCHOR } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
@@ -163,11 +164,7 @@ export function TogetherRoute(): ReactElement {
               reloadFriends();
             }}
           />
-          {friends.kind === "loading" ? (
-            <p className="lobby-note" role="status">
-              {t("Loading your friends…")}
-            </p>
-          ) : null}
+          {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
           {friends.kind === "failed" ? (
             <AccountError
               message={friends.message}
@@ -295,11 +292,7 @@ export function TogetherRoute(): ReactElement {
             <h2 id="together-shared-heading" className="together-panel__heading">
               {t("Shared with me")}
             </h2>
-            {shared.kind === "loading" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading…")}
-              </p>
-            ) : null}
+            {shared.kind === "loading" ? <Skeleton variant="rows" label={t("Loading…")} /> : null}
             {shared.kind === "failed" ? (
               <>
                 <p className="notice" role="alert">

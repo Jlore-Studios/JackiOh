@@ -66,6 +66,7 @@ import { t } from "../i18n/i18n.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import StreakFlame from "../rank/StreakFlame.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
@@ -319,9 +320,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           ) : null}
 
           {!pending && profile === null && error === null ? (
-            <p className="notice shell-panel__loading" data-testid={accountTestid.loading} role="status">
-              {t("Loading your account…")}
-            </p>
+            <Skeleton variant="panel" label={t("Loading your account…")} testId={accountTestid.loading} />
           ) : null}
 
           {profile !== null ? (

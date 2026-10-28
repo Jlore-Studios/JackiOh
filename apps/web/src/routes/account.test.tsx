@@ -27,6 +27,7 @@ import {
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
@@ -218,9 +219,12 @@ describe("the account screen", () => {
 
     fireEvent.click(screen.getByTestId(accountTestid.retry));
     expect(screen.getByTestId(accountTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(accountTestid.loading), "panel");
     expect(screen.queryByTestId(accountTestid.retry)).toBeNull();
 
     expect(await screen.findByTestId(accountTestid.email)).toHaveTextContent("player1@example.com");
+    expect(screen.queryByTestId(accountTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading your account…")).toBeNull();
     expect(getProfile).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
   });

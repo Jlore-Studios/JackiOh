@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import type { ReplayPlayerProps } from "./ReplayPlayer.tsx";
 import { replayFailureOf, replayFailureText } from "./source.ts";
@@ -45,9 +46,7 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
         {t("← Back")}
       </button>
       {failure === null ? (
-        <p className="notice" role="status" data-testid={replayTestid.loading}>
-          {t("Loading the replay…")}
-        </p>
+        <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
       ) : (
         <>
           <p className="notice" role="alert" data-testid={replayTestid.failure}>
