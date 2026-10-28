@@ -45,6 +45,15 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
+`(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
+`tabindex="0"` shorter than that a transparent `::before` centred on it. The rule has zero
+specificity, so a control's own `::before` or `position` wins: the switch draws none, and a
+browsable pile's band is its `::after`. An input or a select draws no `::before`, so a small one
+takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a radio is tapped through
+its labels. Neighbours nearer than that split the gap. e2e spec `47` measures the board and every
+menu of `46` at 390x844.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

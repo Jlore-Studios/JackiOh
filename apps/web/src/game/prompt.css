@@ -557,6 +557,7 @@
 
 .prompt .prompt-rewards > button::before {
   content: "Reward";
+  position: static;
   padding: 1px 10px;
   border-radius: 999px;
   background: var(--pal-wood-600);

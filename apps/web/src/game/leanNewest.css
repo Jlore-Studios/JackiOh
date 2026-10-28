@@ -49,6 +49,14 @@
   opacity: 0.6;
 }
 
+/* R2122000 on a phone or under a finger: a select draws no ::before, so the picker is --hit-min
+   tall itself. */
+@media (pointer: coarse), (max-width: 600px) {
+  .lean-newest__input {
+    min-height: var(--hit-min);
+  }
+}
+
 .lean-newest__note {
   flex: 1 0 100%;
   font-size: 12px;

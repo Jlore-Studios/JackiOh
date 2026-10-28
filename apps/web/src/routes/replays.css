@@ -44,3 +44,11 @@
     align-items: stretch;
   }
 }
+
+/* R2122000 on a phone or under a finger: a file field draws no ::before, so it is --hit-min tall
+   itself. */
+@media (pointer: coarse), (max-width: 600px) {
+  .replays input[type="file"] {
+    min-height: var(--hit-min);
+  }
+}
