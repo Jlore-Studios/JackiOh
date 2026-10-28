@@ -9,7 +9,9 @@ import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { rememberRead } from "../net/readCache.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
@@ -1730,5 +1732,38 @@ describe("R2089000 the Created cards", () => {
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     expect(screen.queryByText("Created cards")).toBeNull();
+  });
+});
+
+describe("R2125000 the Cards tab opens on its last table", () => {
+  it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
+    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+
+    expect(screen.queryByText("Loading card statistics…")).not.toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    await act(async () => {
+      held[0]!.answer({}, 503);
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading card statistics…")).not.toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+  });
+
+  it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
+    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(held).toHaveLength(2), SLOW);
+
+    expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
   });
 });

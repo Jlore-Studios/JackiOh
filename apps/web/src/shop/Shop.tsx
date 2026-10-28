@@ -18,10 +18,12 @@ import {
   buyPack,
   getPacks,
   getWallet,
+  keptPaths,
   type BoughtPackResponse,
   type PacksResponse,
   type WalletResponse,
 } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -58,8 +60,13 @@ export default function Shop({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [info, setInfo] = useState<PacksResponse | null>(null);
-  const [wallet, setWallet] = useState<WalletResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<PacksResponse | null>(
+    () => cachedRead<PacksResponse>(token, keptPaths.packs) ?? null,
+  );
+  const [wallet, setWallet] = useState<WalletResponse | null>(
+    () => cachedRead<WalletResponse>(token, keptPaths.wallet) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,8 +90,17 @@ export default function Shop({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptInfo = cachedRead<PacksResponse>(token, keptPaths.packs);
+          const keptWallet = cachedRead<WalletResponse>(token, keptPaths.wallet);
+          if (keptInfo === undefined || keptWallet === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(keptInfo);
+            setWallet(keptWallet);
+            setLoadError(null);
+          }
         }
       },
     );

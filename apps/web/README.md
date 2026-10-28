@@ -55,6 +55,20 @@ same drawing. Still text: the deck builder's win-rate line and the chat's and th
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
 boards' "Joining …" panels.
 
+A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
+menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
+reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
+packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's table (public) and
+`FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
+reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
+skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
+`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
+accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
+a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
+for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
+`key`, when the decks that land differ, since its store is made once.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

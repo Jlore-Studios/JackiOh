@@ -10,7 +10,8 @@ import { useEffect, useState, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
-import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
+import { getLeaderboard, keptPaths, type LeaderboardResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -37,7 +38,10 @@ export type LeaderboardRouteProps = {
 };
 
 export default function LeaderboardRoute({ token }: LeaderboardRouteProps): ReactElement {
-  const [board, setBoard] = useState<LeaderboardResponse | null>(null);
+  // R2125000: a revisit starts on the ladder the last visit kept and reads it again behind it.
+  const [board, setBoard] = useState<LeaderboardResponse | null>(
+    () => cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -48,7 +52,11 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
         if (!cancelled) setBoard(next);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (cancelled) return;
+        // R2125000: a read that fails behind a kept ladder leaves it and says nothing; only a first visit says why.
+        const kept = cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard);
+        if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
+        else setBoard(kept);
       });
     return () => {
       cancelled = true;

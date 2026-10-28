@@ -29,7 +29,14 @@ import { withSession } from "../net/gate.ts";
 import { bannerGameOf, type LiveGame } from "../net/liveGame.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { acceptFriendRequest, declineFriendRequest, getFriends, type Friend, type PlayerRef } from "../net/social.ts";
+import {
+  acceptFriendRequest,
+  cachedFriends,
+  declineFriendRequest,
+  getFriends,
+  type Friend,
+  type PlayerRef,
+} from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
@@ -76,7 +83,7 @@ function FriendsPanel({
   useLocale();
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
-  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const [me] = usePolled(() => withSession(getMe), null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
