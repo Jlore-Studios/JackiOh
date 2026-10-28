@@ -1,0 +1,109 @@
+# A new set for the learn lane (training/learn.md, A new patch ships): when a push to main ships a
+# set (a `major` patch, docs/issues-and-patches.md, Version numbers), a learn run still early in an
+# export on the set before it stops, so the lane's next export plays the new set.
+#
+# Every learn run plays the newest patch as it starts (learn.yml, plan: main as it is then), so a
+# patch or a micro reaches the next run, at most one run (about two days) on, and stops nothing.
+# Patches ship two or three times a day and an export takes about 40 hours of the PC, so a lane that
+# started again on each would never finish one. A set ships about once a week and brings a set's
+# cards (v0.5.0: 231 changes), none of which an export on the set before plays. So a run that has
+# played fewer than LEARN_SET_KEEP_SHARDS of its export's shards is cancelled (the shards that
+# finished stay its artifacts for 30 days), and when no other learn run is on its way, one starts.
+# A run further on finishes, since playing its export again would cost the lane more than finishing
+# it: its screen and gate play on main as it is by then, with the new set, and the run after it
+# exports the new set. So does a run past its export (retraining, screening or gating), one on an
+# earlier run's export (`export_run`) and one that planned after the set shipped. A run waiting to
+# start plans on the new set when it does.
+#
+# A few API calls, on GitHub's runner: the PC's runner is busy with the export this may stop.
+name: learn set
+
+on:
+  push:
+    branches: [main]
+    paths: ["crates/cards/patches/patches.json"]
+
+permissions:
+  contents: read
+
+env:
+  # An export with this many shards finished goes on: half of learn.yml's 20, where playing the rest
+  # costs the lane less than playing it all again.
+  LEARN_SET_KEEP_SHARDS: "10"
+
+concurrency:
+  group: learn-set
+  cancel-in-progress: false
+
+jobs:
+  stop:
+    name: a new set stops an export on the set before
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # `gh run cancel` and `gh workflow run`.
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          SHIPPED_AT: ${{ github.event.head_commit.timestamp }}
+        run: |
+          set -euo pipefail
+          # patches.json at a commit, read through a jq filter.
+          patches() {
+            gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/$REPO/contents/crates/cards/patches/patches.json?ref=$1" --jq "$2"
+          }
+          sets='[.[] | select(.tier == "major")] | length'
+          newest=$(patches "$AFTER" '.[-1].version')
+          if [ "$(patches "$BEFORE" "$sets")" = "$(patches "$AFTER" "$sets")" ]; then
+            echo "$newest is no new set: the next learn run plays it, planning on main as it is when it starts" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          shipped=$(date -u -d "$SHIPPED_AT" +%s)
+          lane='.workflow_runs[] | select(.event != "workflow_run")'
+          stopped=()
+          while read -r id number; do
+            [ -n "$id" ] || continue
+            { read -r planned; read -r exporting; read -r finished; read -r retraining; } < <(
+              gh api "repos/$REPO/actions/runs/$id/jobs?per_page=100" --jq '
+                ([.jobs[] | select(.name == "plan") | .started_at // empty] | first // ""),
+                ([.jobs[] | select(.name | startswith("export / "))] | length),
+                ([.jobs[] | select(.name | test("^export / round [0-9]+ / "))
+                  | select(.conclusion == "success")] | length),
+                ([.jobs[] | select(.name | startswith("retrain"))] | length)')
+            if [ -z "$planned" ]; then
+              why="it has not started, and plans on main as it is when it does"
+            elif [ "$(date -u -d "$planned" +%s)" -ge "$shipped" ]; then
+              why="it planned after $newest shipped"
+            elif [ "$exporting" = 0 ] || [ "$retraining" != 0 ]; then
+              why="it is past its export, or retrains on an earlier run's: it gates on main as it is then, and the run after it exports $newest"
+            elif [ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]; then
+              why="$finished of its shards are played, at least $LEARN_SET_KEEP_SHARDS: it finishes, gates on main as it is then, and the run after it exports $newest"
+            else
+              gh run cancel "$id" -R "$REPO"
+              stopped+=("$id")
+              echo "stopped learn run $number: $finished of its shards were played, on the set before $newest" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            echo "left learn run $number: $why" >> "$GITHUB_STEP_SUMMARY"
+          done < <(gh api "repos/$REPO/actions/workflows/learn.yml/runs?per_page=30" --jq "$lane"'
+            | select([.status] | inside(["queued", "waiting", "requested", "in_progress"]))
+            | "\(.id) \(.run_number)"')
+          # A run waiting behind a stopped one starts once it has ended, and plans on the new set.
+          others=0
+          for id in $(gh api "repos/$REPO/actions/workflows/learn.yml/runs?per_page=30" --jq "$lane"'
+              | select([.status] | inside(["queued", "pending", "waiting", "requested", "in_progress"])) | .id'); do
+            case " ${stopped[*]} " in
+              *" $id "*) ;;
+              *) others=$((others + 1)) ;;
+            esac
+          done
+          if [ "$others" = 0 ]; then
+            gh workflow run learn.yml -R "$REPO" --ref main
+            echo "started a learn run on $newest" >> "$GITHUB_STEP_SUMMARY"
+          fi
