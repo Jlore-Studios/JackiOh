@@ -117,6 +117,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 tuning: None,
                 lucky: None,
                 copy_of: None,
+                exact: None,
                 memory: Some(memory),
                 fixed_x: None,
             })
