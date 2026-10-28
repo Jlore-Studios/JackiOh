@@ -1998,6 +1998,12 @@ resume: Resume,
 label: string,
 } | {
 expiry: ModifierExpiry,
+["kind"]: "deathWatch",
+tag: Tag,
+resume: Resume,
+label: string,
+} | {
+expiry: ModifierExpiry,
 ["kind"]: "unitsHaveKeyword",
 keyword: Keyword,
 }

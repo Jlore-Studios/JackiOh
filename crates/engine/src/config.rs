@@ -955,6 +955,29 @@ pub const CHAOS_MED_COST: i32 = 0;
 /// holds; a roll of the entry for a player at the cap resolves into nothing.
 pub const CALL_TO_CHAOS_ETERNAL_CAP: i32 = 3;
 
+// Stinkyscape #150 Call to Chaos (Stinky Edition) and #151 (Scape Edition) (SPEC §8.10 rows 150 and
+// 151, issue #1882): their tables' numbers, as printed.
+/// §8.10 row 150 entry 2 and row 151 entries 5 and 8: the cards "cost (0)" (`costOverride`).
+pub const CHAOS_STINKYSCAPE_COST: i32 = 0;
+/// §8.10 row 150 entry 3: "summon 3 random Quest or Wincon Field Spells" (R1882001).
+pub const CHAOS_STINKY_FIELD_SPELLS: i32 = 3;
+/// §8.10 row 150 entry 8, R1882004: the most rest-of-game Acclaimed death rules one player holds, bounded
+/// as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at the cap resolves into nothing.
+pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
+/// §8.10 row 151 entry 2: "summon 3 Drone Corvettes".
+pub const CHAOS_SCAPE_CORVETTES: i32 = 3;
+/// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).
+pub const CHAOS_SCAPE_SYSTEMS: i32 = 2;
+/// §8.10 row 151 entry 5: "add 4 random Starship Pieces to your hand".
+pub const CHAOS_SCAPE_HAND_PIECES: i32 = 4;
+/// §8.10 row 151 entry 7: "fuse 4 random Starship Pieces into your Dormant Starship" (R1882008).
+pub const CHAOS_SCAPE_FUSED_PIECES: i32 = 4;
+/// §8.10 row 151 entry 8: "add 2 random Radiant Weapons to your hand".
+pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
+/// §8.10 row 151 entry 9, R1882009: the Marketplace's Call to Chaos "for 20 Credits", a price that never
+/// moves (R1853005).
+pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
+
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /// T-AI-4: the repeats after the first draw, a termination bound: five draws at most.
 pub const CHAIN_OF_THOUGHT_REPEATS: i32 = 4;

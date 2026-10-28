@@ -4,6 +4,7 @@ import type { CostRule } from "./CostRule";
 import type { Enchantment } from "./Enchantment";
 import type { Keyword } from "./Keyword";
 import type { Resume } from "./Resume";
+import type { Tag } from "./Tag";
 
 /**
  * What a player modifier does, discriminated on `kind` (TS: the union half of `PlayerModifier`).
@@ -12,4 +13,4 @@ export type ModifierKind = { "kind": "costDiscount", amount: number, onlyType?: 
 /**
  * R1861002: due at the end of this player's turns, not the start. Only ever `Some(true)`.
  */
-atEnd?: boolean, } | { "kind": "healToDamage", converterId: string, } | { "kind": "heroArmor", amount: number, } | { "kind": "altWin", condition: AltWinCondition, threshold: number, } | { "kind": "laneWatch", lane: number, resume: Resume, label: string, } | { "kind": "heroImmune" } | { "kind": "spellDamage", amount: number, } | { "kind": "healthPrice", multiple: number, echo?: number, } | { "kind": "keywordNextSpell", keyword: Keyword, } | { "kind": "starshipLaunchCost", cost: number, } | { "kind": "playWatch", defIds: Array<string>, resume: Resume, label: string, } | { "kind": "unitsHaveKeyword", keyword: Keyword, };
+atEnd?: boolean, } | { "kind": "healToDamage", converterId: string, } | { "kind": "heroArmor", amount: number, } | { "kind": "altWin", condition: AltWinCondition, threshold: number, } | { "kind": "laneWatch", lane: number, resume: Resume, label: string, } | { "kind": "heroImmune" } | { "kind": "spellDamage", amount: number, } | { "kind": "healthPrice", multiple: number, echo?: number, } | { "kind": "keywordNextSpell", keyword: Keyword, } | { "kind": "starshipLaunchCost", cost: number, } | { "kind": "playWatch", defIds: Array<string>, resume: Resume, label: string, } | { "kind": "deathWatch", tag: Tag, resume: Resume, label: string, } | { "kind": "unitsHaveKeyword", keyword: Keyword, };

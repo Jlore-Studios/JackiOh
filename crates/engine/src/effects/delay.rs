@@ -255,7 +255,12 @@ pub fn due_resume(entry: &DelayedEffect) -> Resume {
 /// not carried past the hook that read it; nor does it carry the run it was made in
 /// (`work.RUN_MARKS_KEY`): it resolves at its own R62 point, and a card it watches is watched through
 /// `watch` (R174). Nor are its choices random for being made in a run whose were (R1855001).
-fn delayed_resume(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, Value>, hook: &str) -> Resume {
+pub(crate) fn delayed_resume(
+    ctx: &EffectContext<'_>,
+    step: &str,
+    data: IndexMap<String, Value>,
+    hook: &str,
+) -> Resume {
     let mut built = resume_self(ctx, step, data);
     built.data.shift_remove(SELF_KEY);
     built.data.shift_remove(RUN_MARKS_KEY);
