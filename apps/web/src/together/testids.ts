@@ -20,7 +20,7 @@ export const togetherTestid = {
   unread: "together-unread",
   remove: "together-remove",
   block: "together-block",
-  /** The inline "are you sure" of Remove and Block. */
+  /** The inline "are you sure" of Block; Remove asks nothing and offers Undo (R2119000). */
   confirm: "together-confirm",
   keep: "together-keep",
   /** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`. */

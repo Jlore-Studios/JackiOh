@@ -333,6 +333,7 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
                 player,
                 instance_id,
                 def_id,
+                ..
             }
             | GameEvent::Bounced {
                 owner: player,
@@ -2191,6 +2192,8 @@ fn redact_event(
         GameEventType::CardPlayed | GameEventType::Summoned => {
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if hidden(&instance) {
                 // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`. Any other hidden play keeps both, as it always has (D14).
@@ -2236,13 +2239,20 @@ fn redact_event(
         | GameEventType::Burned
         | GameEventType::Discarded
         | GameEventType::Drawn
-        | GameEventType::AddedToHand
         // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
         | GameEventType::VoteCast => {
             if !hidden(&instance) {
                 return event.clone();
             }
             hide(&mut shown, &["instanceId", "defId"]);
+            rebuild(shown)
+        }
+        // As above; R2089000's `creator` is the game record's bookkeeping, which no view forwards.
+        GameEventType::AddedToHand => {
+            shown.remove("creator");
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
             rebuild(shown)
         }
 
@@ -2320,6 +2330,8 @@ fn redact_event(
 
         // §9.1: library order is hidden from both players, so the slot never travels either way.
         GameEventType::ShuffledIn => {
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
             }
@@ -2333,6 +2345,8 @@ fn redact_event(
         GameEventType::Transformed => {
             let new_hidden = hidden(&text_at(&shown, "newInstanceId"));
             shown.remove("hiddenFrom");
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if new_hidden || hidden(&instance) {
                 hide(&mut shown, &["instanceId", "fromDefId"]);
             }

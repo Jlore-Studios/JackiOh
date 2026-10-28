@@ -72,6 +72,9 @@ struct RecordOptions {
     turns: Option<i32>,
     /// p1's pilot and p2's: by default a live game is two people's, a development one two AIs'.
     pilots: Option<[&'static str; 2]>,
+    /// R2089000: p1's Created cards used (`createdUsed`) and made but never used (`createdUnused`).
+    p1_created_used: Option<Value>,
+    p1_created_unused: Option<Vec<&'static str>>,
 }
 
 /// One seat's summary: the first three cards are the opening hand, the rest drawn.
@@ -118,6 +121,18 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
         .unwrap_or_else(|| p2_deck.iter().take(2).copied().collect());
     let pilot = if source == "dev" { "ai" } else { "human" };
     let [p1_pilot, p2_pilot] = options.pilots.unwrap_or([pilot, pilot]);
+    let mut p1 = seat(
+        &p1_deck,
+        &p1_played,
+        options.p1_played_turns,
+        options.p1_played_radiant,
+    );
+    if let Some(used) = options.p1_created_used {
+        p1["createdUsed"] = used;
+    }
+    if let Some(unused) = options.p1_created_unused {
+        p1["createdUnused"] = json!(unused);
+    }
 
     json!({
         "id": record_id,
@@ -131,7 +146,7 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
             "reason": "hero-death",
             "turns": options.turns.unwrap_or(5),
             "seats": {
-                "p1": seat(&p1_deck, &p1_played, options.p1_played_turns, options.p1_played_radiant),
+                "p1": p1,
                 "p2": seat(&p2_deck, &p2_played, options.p2_played_turns, options.p2_played_radiant),
             }
         }
@@ -1909,5 +1924,88 @@ mod r1994000_game_figures {
         assert_eq!(conquest["figures"], Value::Null);
         assert_eq!(conquest["pairs"], json!([]));
         assert_eq!(conquest["totalGames"], json!(0));
+    }
+}
+
+// R2089000: `GET /api/stats/cards` lists the Created cards, tokens among them, apart from the deck
+// cards and under the same filters.
+mod r2089000_created_card_stats {
+    use super::*;
+
+    #[tokio::test]
+    async fn r2089000_get_api_stats_cards_lists_created_cards_apart_from_the_deck_table() {
+        let app = test_app().await;
+        // p1 plays its dealt core-001 in both games. In the first, which it wins, it also uses a Rush
+        // Token and a Created core-001, Radiant at its first use; in the second, which it loses, it
+        // makes a Rush Token it never uses.
+        let records = vec![
+            make_game_record(
+                "live-1",
+                RecordOptions {
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_radiant: Some(vec![false]),
+                    p1_created_used: Some(json!([
+                        { "card": "core-t-rush", "turn": 2, "radiant": false },
+                        { "card": "core-001", "turn": 3, "radiant": true },
+                    ])),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ),
+            make_game_record(
+                "live-2",
+                RecordOptions {
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_radiant: Some(vec![false]),
+                    p1_created_unused: Some(vec!["core-t-rush"]),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            ),
+        ];
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards?source=live").await;
+        assert_eq!(status, 200);
+        // The deck table counts the dealt copies alone and holds no token.
+        let card001 = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(card001["playedGames"], json!(2));
+        assert_eq!(card001["playedRadiantGames"], json!(0));
+        assert!(find(&data["cards"], "id", &json!("core-t-rush")).is_none());
+
+        let created = data["created"].as_array().expect("a Created table");
+        let ids: Vec<&str> = created.iter().filter_map(|row| row["id"].as_str()).collect();
+        // Both are short of the floor, so the one with more games comes first.
+        assert_eq!(ids, ["core-t-rush", "core-001"]);
+        let rush = &created[0];
+        assert_eq!(rush["name"], json!(jackioh_cards::CATALOG["core-t-rush"].name));
+        assert_eq!(rush["games"], json!(2));
+        assert_eq!(rush["createdPlayedGames"], json!(1));
+        assert_eq!(rush["createdPlayedWinRate"].as_f64(), Some(1.0));
+        assert_eq!(rush["createdNotPlayedGames"], json!(1));
+        assert_eq!(rush["createdNotPlayedWinRate"].as_f64(), Some(0.0));
+        assert_eq!(rush["createdPlayedNormalGames"], json!(1));
+        assert_eq!(rush["createdPlayedRadiantGames"], json!(0));
+        assert!(rush["createdPlayedRadiantWinRate"].is_null());
+        // R654: the delta waits for the floor on both sides.
+        assert!(rush["createdPlayedDelta"].is_null());
+        assert_eq!(rush["hasEnoughGames"], json!(false));
+        assert!(rush["window"]["from"].is_string());
+        let made001 = &created[1];
+        assert_eq!(made001["createdPlayedGames"], json!(1));
+        assert_eq!(made001["createdPlayedRadiantGames"], json!(1));
+        assert_eq!(made001["createdNotPlayedGames"], json!(0));
+
+        // `?card=` filters both tables alike.
+        let (status, _, only) = get_public(&app, "/api/stats/cards?source=live&card=core-t-rush").await;
+        assert_eq!(status, 200);
+        assert_eq!(only["cards"], json!([]));
+        let ids: Vec<&str> = only["created"]
+            .as_array()
+            .expect("a Created table")
+            .iter()
+            .filter_map(|row| row["id"].as_str())
+            .collect();
+        assert_eq!(ids, ["core-t-rush"]);
     }
 }
