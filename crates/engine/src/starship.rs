@@ -221,6 +221,7 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
                 source_id: None,
                 arrived_during: None,
                 exits_from: None,
+                creator: None,
             });
             return Some(id);
         }

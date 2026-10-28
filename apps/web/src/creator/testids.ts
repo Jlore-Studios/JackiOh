@@ -73,7 +73,7 @@ export const creatorTestid = {
   saved: "creator-saved",
   saveError: "creator-save-error",
   reloadStale: "creator-reload-stale",
+  /** R2119000: deletes the card at once, behind the undo toast (`undo/UndoToast.tsx`). */
   delete: "creator-delete",
-  deleteConfirm: "creator-delete-confirm",
   tryIt: "creator-try-it",
 } as const;

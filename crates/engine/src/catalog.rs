@@ -25,9 +25,11 @@
 //! win-rate table among them, or a ruling says why it does not. The code blocks (`code_block_of`)
 //! stay the build's: no final hash holds them.
 //!
-//! R1846003: so do the card metrics (`card_metrics`, R1846000): no card of a carried version asks for
-//! a BUSTED or complicated pool, so no fold reads them, and the patch that ships the first card that
-//! asks owes each version its own lists.
+//! R2173000 (meeting R1846003's obligation): the BUSTED and complicated lists (`card_metrics`,
+//! R1846000) answer from the shipped catalog a fold runs under when its version kept lists of its own
+//! (`with_card_lists`, from the version that ships the first card that reads them on), and from the
+//! build's for a version that kept none, which no game on it could read. The code lines stay the
+//! build's: no card reads a count.
 
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -263,6 +265,18 @@ pub struct ShippedCatalog {
     scripts: IndexMap<String, CardScripts, IdHash>,
     /// R1266000: the win-rate table this version shipped with, which its folds read.
     win_rates: crate::win_rates::WinRateTable,
+    /// R2173000: the BUSTED and complicated lists this version shipped with, which its folds read;
+    /// none for a version shipped before any card read them.
+    card_lists: Option<CardLists>,
+}
+
+/// R2173000: a shipped version's own BUSTED and complicated lists (R1846000), each sorted by id.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CardLists {
+    /// The BUSTED cards as the version shipped them.
+    pub busted: Vec<&'static str>,
+    /// The complicated cards as the version shipped them.
+    pub complicated: Vec<&'static str>,
 }
 
 impl ShippedCatalog {
@@ -276,6 +290,7 @@ impl ShippedCatalog {
             index,
             scripts: scripts.into_iter().collect(),
             win_rates: crate::win_rates::WinRateTable::default(),
+            card_lists: None,
         }
     }
 
@@ -300,6 +315,22 @@ impl ShippedCatalog {
     /// R1266000: the win-rate table its version shipped with.
     pub fn win_rates(&self) -> &crate::win_rates::WinRateTable {
         &self.win_rates
+    }
+
+    /// R2173000: this catalog with `lists` as the BUSTED and complicated lists its version shipped
+    /// with, each sorted here so the engine finds an id by binary search.
+    pub fn with_card_lists(self, mut lists: CardLists) -> ShippedCatalog {
+        lists.busted.sort_unstable();
+        lists.complicated.sort_unstable();
+        ShippedCatalog {
+            card_lists: Some(lists),
+            ..self
+        }
+    }
+
+    /// R2173000: the BUSTED and complicated lists its version shipped with, if it kept any.
+    pub fn card_lists(&self) -> Option<&CardLists> {
+        self.card_lists.as_ref()
     }
 
     fn find(&self, def_id: &str) -> Option<&CardDef> {
@@ -1051,9 +1082,23 @@ pub fn register_card_metrics(metrics: CardMetrics) {
     let _ = METRICS.set(metrics);
 }
 
-/// R1846000: the card metrics: the testkit's override first, then the compiled ones, never a shipped
-/// catalog's (R1846003); none before anything is registered.
+/// R1846000: the card metrics: the testkit's override first, then the compiled ones; none before
+/// anything is registered. R2173000: while a replay folds under a shipped catalog that kept its own
+/// lists, its BUSTED and complicated lists are that version's, beside the code lines above.
 pub fn card_metrics() -> CardMetrics {
+    let build = build_card_metrics();
+    match folding().and_then(|shipped| shipped.card_lists.as_ref()) {
+        Some(lists) => CardMetrics {
+            code_lines: build.code_lines,
+            busted: &lists.busted,
+            complicated: &lists.complicated,
+        },
+        None => build,
+    }
+}
+
+/// R1846000: the testkit's override of the compiled card metrics, else the compiled ones.
+fn build_card_metrics() -> CardMetrics {
     #[cfg(feature = "testkit")]
     if let Some(metrics) = crate::testkit::scenario::card_metrics_override() {
         return metrics;

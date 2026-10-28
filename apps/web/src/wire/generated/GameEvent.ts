@@ -89,7 +89,13 @@ arrivedDuring?: Array<string>,
 /**
  * R174, R212: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
  */
-exitsFrom?: number, } | { "type": "damage", sourceId: string | null, targetId: string, amount: number, combat: boolean, absorbed?: number, } | { "type": "healthLost", player: PlayerId, amount: number, } | { "type": "healed", targetId: string, amount: number, } | { "type": "divineShieldLost", instanceId: string, } | { "type": "destroyed", instanceId: string, defId: string, owner: PlayerId, 
+exitsFrom?: number, 
+/**
+ * R2089000: as on `addedToHand`, the seat whose effect summoned the card, set only when that is
+ * not `player`; the game record credits a Created card to it (§9.11). Engine bookkeeping: no
+ * rule reads it and a view never forwards it.
+ */
+creator?: PlayerId, } | { "type": "damage", sourceId: string | null, targetId: string, amount: number, combat: boolean, absorbed?: number, } | { "type": "healthLost", player: PlayerId, amount: number, } | { "type": "healed", targetId: string, amount: number, } | { "type": "divineShieldLost", instanceId: string, } | { "type": "destroyed", instanceId: string, defId: string, owner: PlayerId, 
 /**
  * The player who controlled it as it died. R172: a stolen unit dies as its controller's, though
  * it goes to its owner's graveyard — Classic #14 Shadowstep's "your Units" reads this.
@@ -118,13 +124,13 @@ copyOf?: string, } | { "type": "discarded", instanceId: string, defId: string, o
  * draw of yours takes the last card of your deck". Present, and `true`, only then. Public: the
  * library count already says as much.
  */
-emptied?: true, } | { "type": "addedToHand", player: PlayerId, instanceId: string, defId: string, } | { "type": "shuffledIn", player: PlayerId, instanceId: string, defId: string, position: number, } | { "type": "buffed", instanceId: string, attack: number, health: number, } | { "type": "keywordGranted", instanceId: string, keyword: Keyword, 
+emptied?: true, } | { "type": "addedToHand", player: PlayerId, instanceId: string, defId: string, creator?: PlayerId, } | { "type": "shuffledIn", player: PlayerId, instanceId: string, defId: string, position: number, creator?: PlayerId, } | { "type": "buffed", instanceId: string, attack: number, health: number, } | { "type": "keywordGranted", instanceId: string, keyword: Keyword, 
 /**
  * R46: set when the unit loses the keyword instead — the Taunt an Indestructible unit's
  * knock-down takes for the rest of the turn, which a unit already in Attack Position would
  * otherwise lose with no event (§10.3, R91). Absent on a grant. Only ever `Some(true)`.
  */
-lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, creator?: PlayerId, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.

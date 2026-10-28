@@ -17,6 +17,7 @@ fn summoned(id: &str) -> GameEvent {
         source_id: None,
         arrived_during: None,
         exits_from: None,
+        creator: None,
     }
 }
 
@@ -92,6 +93,7 @@ mod stays_moves_in_r212 {
                 to_def_id: "b".into(),
                 new_instance_id: "c9".into(),
                 hidden_from: None,
+                creator: None,
             },
             GameEvent::Fused {
                 instance_ids: vec!["c2".into(), "c3".into()],
@@ -145,6 +147,7 @@ mod stays_the_landing_of_a_move_is_that_move_r212 {
             player: PlayerId::P1,
             instance_id: id.into(),
             def_id: "fx".into(),
+            creator: None,
         }
     }
 

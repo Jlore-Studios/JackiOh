@@ -30,7 +30,7 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
@@ -362,6 +362,19 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
 
+**A deletion is undone, not asked** (R2119000, `undo/`). Delete deck, Delete trio, the creator's
+Delete and Remove on a friend's row take the item off the screen at once and show a toast, "Deck
+deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
+`UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
+motion). The request waits for the window to close and goes at once when a second deletion takes the
+toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
+creator before a new card's first save, since the item counts against the server's caps until then.
+Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
+trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
+and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
+
 ## Play together and Duos
 
 Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §13) are screens over the server's answers and
@@ -432,6 +445,12 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
+- on a live game's result, Play again (`duos-result-again`, R2092000) sends this seat's offer
+  (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
+  `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
+  to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
+  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
+  no button.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for

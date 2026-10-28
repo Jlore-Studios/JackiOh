@@ -3,7 +3,9 @@
 //! definitions rebuilt from `build.rs`'s `history.json` (the snapshot's entries as they differ from
 //! `catalog.json`'s), in catalog order, and its scripts the build's own but where one is kept in
 //! `KEPT_SCRIPTS`. Each carries the win-rate table it shipped with (R1266000): its
-//! `patches/win_rates/<version>.json`, or the empty table when it has none (R1329000, `table_of`).
+//! `patches/win_rates/<version>.json`, or the empty table when it has none (R1329000, `table_of`),
+//! and the BUSTED and complicated lists of its `patches/card_metrics/<version>.json` when it has one
+//! (R2173000, `lists_of`).
 //! The browser's module carries only the newest of them (`build.rs`'s `BROWSER_CARRIED_FROM`).
 //!
 //! A version's catalog is built the first time a replay asks for it and kept for the process: one of
@@ -12,7 +14,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::{CardDef, CardDefs, CardScripts, ShippedCatalog, WinRateTable};
+use jackioh_engine::{CardDef, CardDefs, CardLists, CardScripts, ShippedCatalog, WinRateTable};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -282,11 +284,21 @@ struct History {
     /// R1329000: every table a version's `win_rates/<version>.json` holds, each once.
     #[serde(default, rename = "winRates")]
     win_rates: Vec<WinRateTable>,
+    /// R2173000: every pair of lists a version's `card_metrics/<version>.json` holds, each once.
+    #[serde(default, rename = "cardLists")]
+    card_lists: Vec<ListsFile>,
     #[serde(default)]
     versions: Vec<VersionDelta>,
     /// R1371000: `patches/aliases.json`'s map, each old name to its new one; empty before the retcon.
     #[serde(default)]
     aliases: IndexMap<String, String>,
+}
+
+/// R2173000: a `card_metrics/<version>.json`: the BUSTED and complicated lists a version shipped with.
+#[derive(Deserialize, Default)]
+struct ListsFile {
+    busted: Vec<String>,
+    complicated: Vec<String>,
 }
 
 /// What turns a catalog entry back into a snapshot's: top-level keys set to the snapshot's values,
@@ -311,6 +323,9 @@ struct VersionDelta {
     changed: IndexMap<String, usize>,
     #[serde(default, rename = "winRates")]
     win_rates: Option<usize>,
+    /// R2173000: its lists, by index into `History::card_lists`, when it has a file.
+    #[serde(default, rename = "cardLists")]
+    card_lists: Option<usize>,
 }
 
 static HISTORY: LazyLock<History> = LazyLock::new(|| {
@@ -400,7 +415,12 @@ fn build(delta: &VersionDelta) -> ShippedCatalog {
             covering(&HISTORY.order, KEPT_SCRIPTS, &delta.version, id).map(|script| (id.clone(), script()))
         })
         .collect();
-    ShippedCatalog::new(&delta.version, defs, scripts).with_win_rates(table_of(&HISTORY, delta))
+    let shipped =
+        ShippedCatalog::new(&delta.version, defs, scripts).with_win_rates(table_of(&HISTORY, delta));
+    match lists_of(&HISTORY, delta) {
+        Some(lists) => shipped.with_card_lists(lists),
+        None => shipped,
+    }
 }
 
 /// `version`'s definition of `id`: the catalog's raw entry with `patch` applied.
@@ -437,6 +457,18 @@ fn table_of(history: &History, delta: &VersionDelta) -> WinRateTable {
     delta
         .win_rates
         .map_or_else(WinRateTable::default, |at| history.win_rates[at].clone())
+}
+
+/// R2173000: the BUSTED and complicated lists `delta`'s version shipped with: the ones its
+/// `card_metrics/<version>.json` holds, or none with no file, as every version shipped before the
+/// first card that reads them, whose folds read the build's.
+fn lists_of(history: &'static History, delta: &VersionDelta) -> Option<CardLists> {
+    let file = &history.card_lists[delta.card_lists?];
+    let ids = |list: &'static Vec<String>| list.iter().map(String::as_str).collect();
+    Some(CardLists {
+        busted: ids(&file.busted),
+        complicated: ids(&file.complicated),
+    })
 }
 
 /// R767000: whether `id` has a script on `version`: one kept for it, or the build's own.
@@ -495,6 +527,50 @@ mod tests {
         for version in ["v0.1.0", "v0.3.1"] {
             let carried = catalog_at(version).expect("in patches.json").win_rates();
             assert!(carried.cards.is_empty(), "{version}: {carried:?}");
+        }
+    }
+
+    #[test]
+    fn r2173000_a_version_carries_the_lists_its_file_held_and_one_with_no_file_none() {
+        let history: &'static History = Box::leak(Box::new(
+            serde_json::from_value(serde_json::json!({
+                "order": ["v1", "v2", "v3"],
+                "cardLists": [{ "busted": ["core-009", "core-001"], "complicated": ["core-001"] }],
+                "versions": [
+                    { "version": "v1" },
+                    { "version": "v2", "cardLists": 0 },
+                    { "version": "v3", "cardLists": 0 },
+                ],
+            }))
+            .expect("a history"),
+        ));
+        let lists: Vec<Option<CardLists>> = history
+            .versions
+            .iter()
+            .map(|delta| lists_of(history, delta))
+            .collect();
+        assert_eq!(lists[0], None, "no file, no lists: its folds read the build's");
+        let kept = lists[1].clone().expect("v2 kept its lists");
+        assert_eq!(kept.busted, vec!["core-009", "core-001"]);
+        assert_eq!(kept.complicated, vec!["core-001"]);
+        assert_eq!(lists[2], lists[1], "two versions share the one file");
+        // `with_card_lists` sorts them for the engine's binary search.
+        let shipped = ShippedCatalog::new("v2", CardDefs::new(), IndexMap::new()).with_card_lists(kept);
+        assert_eq!(
+            shipped.card_lists().map(|lists| lists.busted.clone()),
+            Some(vec!["core-001", "core-009"])
+        );
+
+        crate::register_all();
+        // v0.1.0 and v0.3.1 shipped before any card read the lists: none kept.
+        for version in ["v0.1.0", "v0.3.1"] {
+            assert!(
+                catalog_at(version)
+                    .expect("in patches.json")
+                    .card_lists()
+                    .is_none(),
+                "{version}"
+            );
         }
     }
 
