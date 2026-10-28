@@ -1,0 +1,9 @@
+{
+  "seed": 8,
+  "catalogVersion": "v0.4.12d",
+  "decks": [
+    ["meditative-030", "classicplus-027", "core-085", "meditative-096", "stinkyscape-089", "stinkyscape-157", "core-060", "core-030", "core-061", "stinkyscape-175", "stinkyscape-001", "classicplus-065", "core-094", "classic-044", "classic-025", "stinkyscape-065", "core-033", "meditative-074", "stinkyscape-044", "core-073", "classicplus-060", "core-064", "classicplus-017", "classic-015", "meditativeplus-025"],
+    ["classicplus-011", "classicplus-044", "core-089", "core-079", "classicplus-062", "meditativeplus-021", "classic-065", "stinkyscape-033", "core-034", "core-007", "meditative-034", "stinkyscape-084", "stinkyscape-037", "meditative-081", "classic-088", "stinkyscape-167", "core-048", "classicplus-077", "core-041", "meditative-051", "stinkyscape-004", "core-017", "classic-073", "classicplus-072", "classic-056"]
+  ],
+  "found": "The short wave of `cargo jackioh fuzz --seeds 20` (and the tools' fuzz_m4_gate test) on issue #1861's branch: I6 on turn 6, 18 actions in, from the dealt start: p1 was sent \"c13\" at view.events[24].instanceId, a card in no pile (it ceased to exist). S #89 Spice sold from a hand at the Marketplace (R1861000) ceases to exist and is no token, and the oracle read every such card as unseen, though the sale's `marketSold` is public (R1853003). Fixed in the same change (testkit invariants.rs: a sold id reads), proven by marketplace.rs's r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold_from_the_hand. A record replays from the plain start, not the dealt one, so it keeps the decks, not the I6, which the ruling test holds. The decks are decks_for_seed(8) over the 571-card pool every set previewed, at v0.4.12d."
+}
