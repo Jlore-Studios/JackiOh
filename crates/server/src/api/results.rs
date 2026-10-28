@@ -57,6 +57,7 @@ use crate::db::store::{
     LastBoardKind, MatchActionRow, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason,
     ResultRow, SeriesRow, SeriesStatus, StoreError, Tx,
 };
+use crate::duos::again::sweep_duos_again_offers;
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
@@ -869,7 +870,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// matches, then deletes the `open` rows past their grace (R1450), then holds the seat ledger to the
 /// record (`seats::reconcile`, R1523000), then drops the finished actors whose rematch window has
 /// passed (`Registry::reap_finished`), then the rematch offers past that window whose finished match
-/// no actor holds (`rematch::sweep_rematch_offers`).
+/// no actor holds (`rematch::sweep_rematch_offers`), and the co-op Play again offers past that
+/// window whose finished match no co-op actor holds (`duos::again::sweep_duos_again_offers`).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -889,5 +891,6 @@ pub async fn run_reaper(app: Arc<App>) {
         crate::seats::reconcile(&app).await;
         app.matches.reap_finished(now_ms()).await;
         sweep_rematch_offers(&app, now_ms());
+        sweep_duos_again_offers(&app, now_ms());
     }
 }

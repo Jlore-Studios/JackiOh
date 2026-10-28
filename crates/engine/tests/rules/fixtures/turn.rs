@@ -261,6 +261,11 @@ pub fn contract_ask() -> CardDef {
     def(4322, "contract-ask", "Spell", json!({ "tags": ["Quickdraw"] }))
 }
 
+/// R1861002 (Stinkyscape #39's shape): for the rest of the game, at the end of your turn, a note.
+pub fn contract_end() -> CardDef {
+    def(4326, "contract-end", "Spell", json!({}))
+}
+
 // The start-of-turn stages: a delayed effect and a start-of-turn hook to order them against.
 
 /// A Spell that schedules a note for the start of its controller's next turn (R62's delayed stage).
@@ -336,6 +341,7 @@ pub static TURN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         later(),
         contract(),
         contract_ask(),
+        contract_end(),
         reminder(),
         clock(),
         crumble_watcher(),
@@ -573,6 +579,27 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
                     ctx.controller,
                     ctx.state.turn,
                     js_string(ctx.data.get("n")),
+                    if ctx.self_.is_none() { "no-self" } else { "self" },
+                ))]
+            })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        contract_end().id,
+        faces(Script {
+            cry: Some(hook(|_ctx| {
+                vec![effects::for_rest_of_game(json_as(json!({
+                    "step": "tick",
+                    "label": "At the end of your turn, take a note",
+                    "atEnd": true,
+                })))]
+            })),
+            delayed: Some(hook(|ctx| {
+                vec![note(format!(
+                    "end-tick:{}:{}:{}",
+                    ctx.controller,
+                    ctx.state.turn,
                     if ctx.self_.is_none() { "no-self" } else { "self" },
                 ))]
             })),
