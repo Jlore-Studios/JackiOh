@@ -10,7 +10,8 @@
 //! mapped through the Jacobian of F at that point, J = [[2x, −1], [y, x]], with its corner at the zone,
 //! is the parallelogram of the points (x, y) + s·(2x, y) + t·(−1, x), s and t in 0 to 1, edges included
 //! (`covers`; at (1, −2) J is singular and it is a segment). Each unit zone whose point lies in it, open
-//! and not Locked, gets one random Starship Piece Unit (`query::starship_pieces()`, R1878000) summoned
+//! and not Locked, gets one random Starship Piece Unit (`query::starship_pieces()`, R1878000, narrowed to
+//! Units as S #26's is, so S #131 Spacerace Stimulus, a Field Trap, is never one) summoned
 //! for the player whose zone it is (`summon_random`: no Cry, R1; R387), the caster's zones first, each
 //! lane upward. A covered backrow zone gets none, as an occupied or Locked unit zone gets none. The
 //! Radiant face reaches the caster's zones alone, each piece Radiant. Declares no numbers.
@@ -142,6 +143,8 @@ mod tests {
 
     const FILLER: &str = "core-005"; // (1) Spell.
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    /// How many games the pool sweep plays, six pieces each.
+    const POOL_SEEDS: u32 = 20;
 
     /// Every zone's point from the caster's seat: 5 lanes by the rows 1, 2, −1 and −2.
     fn every_point() -> Vec<(i32, i32)> {
@@ -246,6 +249,25 @@ mod tests {
         assert_eq!(places, vec![(P1, 3), (P1, 4), (P1, 5), (P2, 3), (P2, 4), (P2, 5)]);
         assert!(pieces.iter().all(|(_, _, def_id, radiant)| is_piece(def_id) && !radiant));
         assert_eq!(run(), pieces);
+    }
+
+    #[test]
+    fn its_pool_is_the_starship_piece_units_never_spacerace_stimulus_s_field_trap() {
+        crate::register_all();
+        // S #131 Spacerace Stimulus prints Starship Piece on a Field Trap (§8.10 row 131): never summoned.
+        const SPACERACE_STIMULUS: &str = "stinkyscape-131";
+        let mut seen: Vec<String> = Vec::new();
+        for seed in 0..POOL_SEEDS {
+            let mut s = board(false, &format!("tricknology-pool-{seed}"), json!([]), json!([]));
+            choose(&mut s, enemy_unit_lane(3));
+            seen.extend(summoned(&s).into_iter().map(|(_, _, def_id, _)| def_id));
+        }
+        assert!(seen.iter().all(|def_id| is_piece(def_id)), "{seen:?}");
+        assert!(!seen.iter().any(|def_id| def_id == SPACERACE_STIMULUS));
+        assert!(has_keyword(
+            &crate::card_def(SPACERACE_STIMULUS).base.keywords,
+            KeywordKind::StarshipPiece
+        ));
     }
 
     #[test]
