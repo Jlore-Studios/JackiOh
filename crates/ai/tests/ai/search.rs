@@ -2022,3 +2022,36 @@ mod ways_of_being_played {
         );
     }
 }
+
+/// R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the search
+/// signature tells apart two positions that differ only in a unit's sickness (#1884): merged, a child
+/// whose unit cannot attack this turn stood for one whose unit can, and the lethal solver missed it.
+#[test]
+fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
+    super::support::register_cards();
+    let state = scenario(json!({
+        "seed": "ai-sick",
+        "p1": { "hand": ["core-011"], "field": ["core-008"], "library": ["core-008", "core-011"] },
+        "p2": { "hand": ["core-011"], "field": ["core-011"], "library": ["core-008", "core-011"] },
+    }))
+    .state()
+    .clone();
+    let unit = active_units_of(&state, AI)[0].id.clone();
+    assert!(
+        !is_sick(&state, active_units_of(&state, AI)[0]),
+        "the board's unit is ready"
+    );
+    let mut sick = state.clone();
+    let turn = sick.turn;
+    find_instance_mut(&mut sick, &unit)
+        .expect("the unit")
+        .summoned_turn = Some(turn);
+    assert!(is_sick(&sick, active_units_of(&sick, AI)[0]));
+    assert_ne!(search_signature(&state, AI), search_signature(&sick, AI));
+    // An earlier turn's entry is no sickness, and signs as the ready board does.
+    let mut earlier = state.clone();
+    find_instance_mut(&mut earlier, &unit)
+        .expect("the unit")
+        .summoned_turn = Some(turn - 1);
+    assert_eq!(search_signature(&state, AI), search_signature(&earlier, AI));
+}

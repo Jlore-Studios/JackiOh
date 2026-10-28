@@ -50,6 +50,11 @@
 // heading says whether the viewer goes first or second, with no count under it; a tutorial lesson's
 // (`lesson`) keeps the engine's instruction and the count, which the lesson teaches.
 //
+// R2211000: a replay's board draws the open prompt of its step's view and sends nothing (`readOnly`).
+// Route 1's picker opens folded, its options `aria-disabled` and inert, with no Confirm, Cancel,
+// countdown, focus or board listener. A craft, a market and a placement answered on the board fall
+// back to the waiting panel under the prompt's words, and route 2 never opens.
+//
 // No rule is applied here either. `min` and `max` gate the confirm button, and both came from the
 // engine — from `PendingView` on route 1 and from the candidate `play`s on route 2. The options
 // likewise: a prompt's options are the engine's, and a play's choices are read off the
@@ -135,6 +140,11 @@ export type PromptProps = {
   animating?: string;
   /** A tutorial lesson's board: the mulligan picker keeps the engine's instruction and its count. */
   lesson?: boolean;
+  /**
+   * R2211000: a replay's board: the open prompt as offered, folded and inert; nothing it draws calls
+   * `onAction`. Absent, off.
+   */
+  readOnly?: boolean;
 };
 
 /**
@@ -804,6 +814,8 @@ function CardOption(props: {
   own?: boolean;
   /** R515: the card would take a pick past its budget, so it is greyed and cannot be added. */
   over?: boolean;
+  /** R2211000: a replay's option: greyed, and a click picks nothing. */
+  readOnly?: boolean;
   onPick: () => void;
 }) {
   useLocale();
@@ -869,7 +881,7 @@ function CardOption(props: {
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
         aria-pressed={props.pressed}
-        aria-disabled={props.over === true ? "true" : undefined}
+        aria-disabled={props.over === true || props.readOnly === true ? "true" : undefined}
         aria-label={label}
         title={props.over === true ? t(OVER_BUDGET) : undefined}
         onClick={props.onPick}
@@ -919,7 +931,7 @@ function CardOption(props: {
   );
 }
 
-function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => void }) {
+function ListOption(props: { item: PickerItem; pressed: boolean; readOnly?: boolean; onPick: () => void }) {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const name =
     props.item.defId === undefined
@@ -931,6 +943,7 @@ function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => v
         type="button"
         data-testid={`prompt-option-${props.item.key}`}
         aria-pressed={props.pressed}
+        aria-disabled={props.readOnly === true ? "true" : undefined}
         onClick={props.onPick}
       >
         {name}
@@ -939,13 +952,14 @@ function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => v
   );
 }
 
-function PlainOption(props: { item: PickerItem; pressed: boolean; onPick: () => void }) {
+function PlainOption(props: { item: PickerItem; pressed: boolean; readOnly?: boolean; onPick: () => void }) {
   return (
     <button
       type="button"
       className={props.item.detail === undefined ? undefined : "prompt-mode"}
       data-testid={`prompt-option-${props.item.key}`}
       aria-pressed={props.pressed}
+      aria-disabled={props.readOnly === true ? "true" : undefined}
       onClick={props.onPick}
     >
       {props.item.detail === undefined ? (
@@ -1059,6 +1073,7 @@ function CardChoice(props: {
   /** R515: whether adding this option keeps the picks within the budget. */
   fits: (key: string) => boolean;
   pick: (key: string) => void;
+  readOnly: boolean;
 }) {
   const { picker } = props;
   const budget = picker.budget;
@@ -1081,6 +1096,7 @@ function CardChoice(props: {
             verdicts={picker.chrome === "mulligan"}
             own={own}
             over={!props.pressed(item.key) && !props.fits(item.key)}
+            readOnly={props.readOnly}
             onPick={() => props.pick(item.key)}
           />
         ))}
@@ -1100,9 +1116,12 @@ function PromptModal(props: {
   onInteraction?: (next: Interaction) => void;
   onCancel?: () => void;
   animating?: string;
+  /** R2211000: a replay's picker: folded as it opens, its options greyed, and nothing it draws sends. */
+  readOnly?: boolean;
 }) {
   useLocale();
   const { picker } = props;
+  const readOnly = props.readOnly === true;
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
   /**
    * What is typed in the X field, which is not the same thing as what has been chosen: a field
@@ -1115,10 +1134,14 @@ function PromptModal(props: {
   const fits = (keys: readonly string[]): boolean => picker.budget === undefined || spent(keys) <= picker.budget.limit;
   const inRange = selected.length >= picker.min && selected.length <= picker.max && fits(selected);
   const panel = useRef<HTMLDivElement>(null);
-  /** #1204: the card picker folded to a bar so the board shows. Never sent; `selected` outlasts it. */
-  const [folded, setFolded] = useState(false);
+  /**
+   * #1204: the card picker folded to a bar so the board shows. Never sent; `selected` outlasts it.
+   * R2211000: a read-only one opens folded.
+   */
+  const [folded, setFolded] = useState(readOnly);
 
   function send(keys: readonly string[]): void {
+    if (readOnly) return;
     const out = picker.submit(keys);
     if (out.interaction !== undefined) props.onInteraction?.(out.interaction);
     if (out.action !== undefined) props.onAction(out.action);
@@ -1126,10 +1149,12 @@ function PromptModal(props: {
 
   /** Stages a value without sending it: the X stepper's − and +. */
   function stage(key: string): void {
+    if (readOnly) return;
     setSelected([key]);
   }
 
   function pick(key: string): void {
+    if (readOnly) return;
     if (!selected.includes(key) && !fits([...selected, key])) return;
     if (picker.immediate) {
       send([key]);
@@ -1145,10 +1170,10 @@ function PromptModal(props: {
   const pressed = (key: string): boolean => selected.includes(key);
 
   useEffect(() => {
-    if (!FOCUS_ON_OPEN.has(picker.chrome)) return;
+    if (readOnly || !FOCUS_ON_OPEN.has(picker.chrome)) return;
     const first = panel.current?.querySelector<HTMLElement>('[data-testid^="prompt-option-"]:not([aria-disabled="true"])');
     first?.focus({ preventScroll: true });
-  }, [picker.chrome]);
+  }, [picker.chrome, readOnly]);
 
   // R514: a click on a zone of the board a `cell` prompt offers, or Enter or Space on it, picks that
   // cell. The board's own handler builds nothing from a zone while a prompt is open, so this is the
@@ -1156,7 +1181,7 @@ function PromptModal(props: {
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
   const live = useRef({ pick, keys: picker.boardKeys });
   live.current = { pick, keys: picker.boardKeys };
-  const answersOnBoard = picker.boardKeys !== undefined;
+  const answersOnBoard = picker.boardKeys !== undefined && !readOnly;
   useEffect(() => {
     if (!answersOnBoard) return;
     const zone = '[data-testid^="zone-"]';
@@ -1189,7 +1214,7 @@ function PromptModal(props: {
       return (
         <div className="prompt-chips prompt-plague" role="group" aria-label={t("Plague Counters")}>
           {items.map((item) => (
-            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </div>
       );
@@ -1203,6 +1228,7 @@ function PromptModal(props: {
           pressed={pressed}
           fits={(key) => fits([...selected, key])}
           pick={pick}
+          readOnly={readOnly}
         />
       );
     }
@@ -1218,6 +1244,7 @@ function PromptModal(props: {
               role="button"
               tabIndex={0}
               aria-pressed={pressed(item.key)}
+              aria-disabled={readOnly ? "true" : undefined}
               onClick={() => pick(item.key)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") pick(item.key);
@@ -1244,6 +1271,7 @@ function PromptModal(props: {
       // Typing stages the value only when the engine offered it; anything else stages nothing, so
       // an X the play cannot take can never be confirmed.
       const typeX = (raw: string): void => {
+        if (readOnly) return;
         setTypedX(raw);
         const match = items.find((item) => item.key === raw);
         setSelected(match === undefined ? [] : [match.key]);
@@ -1251,7 +1279,7 @@ function PromptModal(props: {
       return (
         <>
           <div className="prompt-stepper" data-testid="x-stepper" role="group" aria-label={t("Choose X")}>
-            <button type="button" data-testid="x-minus" aria-label={t("Lower X")} onClick={() => step(-1)}>
+            <button type="button" data-testid="x-minus" aria-label={t("Lower X")} aria-disabled={readOnly ? "true" : undefined} onClick={() => step(-1)}>
               −
             </button>
             {/* The number is both typeable and readable: `prompt-x` is the input the value is
@@ -1265,18 +1293,19 @@ function PromptModal(props: {
               min={items[0]?.key}
               max={items[items.length - 1]?.key}
               value={typedX ?? chosen ?? ""}
+              readOnly={readOnly}
               onChange={(event) => typeX(event.target.value)}
             />
             <span className="prompt-stepper-value" data-testid="x-value">
               {items[at]?.label ?? ""}
             </span>
-            <button type="button" data-testid="x-plus" aria-label={t("Raise X")} onClick={() => step(1)}>
+            <button type="button" data-testid="x-plus" aria-label={t("Raise X")} aria-disabled={readOnly ? "true" : undefined} onClick={() => step(1)}>
               +
             </button>
           </div>
           <div className="prompt-chips">
             {items.map((item) => (
-              <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+              <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
             ))}
           </div>
         </>
@@ -1293,7 +1322,7 @@ function PromptModal(props: {
               <Fragment key={group}>
                 {group === "" ? null : <span className="prompt-zone-row">{group}</span>}
                 {inGroup.map((item) => (
-                  <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+                  <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
                 ))}
               </Fragment>
             );
@@ -1312,7 +1341,7 @@ function PromptModal(props: {
           onKeyDown={arrowFocus(NUMBER_PAD_COLUMNS)}
         >
           {items.map((item) => (
-            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </div>
       );
@@ -1330,7 +1359,7 @@ function PromptModal(props: {
               {t("Right answers in a row: {count}", { count: picker.streak })}
             </p>
           )}
-          {picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
             <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
           )}
           <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
@@ -1344,6 +1373,7 @@ function PromptModal(props: {
                   data-letter={letter}
                   aria-pressed={pressed(item.key)}
                   aria-label={`${letter}: ${item.label}`}
+                  aria-disabled={readOnly ? "true" : undefined}
                   onClick={() => pick(item.key)}
                 >
                   <span className="prompt-answer-letter" aria-hidden="true">
@@ -1360,6 +1390,7 @@ function PromptModal(props: {
                 className="prompt-answer-stop"
                 data-testid={`prompt-option-${stop.key}`}
                 aria-pressed={pressed(stop.key)}
+                aria-disabled={readOnly ? "true" : undefined}
                 onClick={() => pick(stop.key)}
               >
                 {stop.label}
@@ -1374,7 +1405,7 @@ function PromptModal(props: {
       return (
         <div className="prompt-rewards" role="group" aria-label={t("Rewards")}>
           {items.map((item) => (
-            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </div>
       );
@@ -1384,7 +1415,7 @@ function PromptModal(props: {
       return (
         <ul className="prompt-list">
           {items.map((item) => (
-            <ListOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+            <ListOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </ul>
       );
@@ -1393,7 +1424,7 @@ function PromptModal(props: {
     return (
       <div className="prompt-modes">
         {items.map((item) => (
-          <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
+          <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
         ))}
       </div>
     );
@@ -1402,7 +1433,12 @@ function PromptModal(props: {
   const range = picker.min === picker.max ? `${picker.min}` : `${picker.min}–${picker.max}`;
 
   return (
-    <div className="prompt-scrim" data-testid="prompt-scrim" data-collapsed={folded ? "true" : undefined}>
+    <div
+      className="prompt-scrim"
+      data-testid="prompt-scrim"
+      data-collapsed={folded ? "true" : undefined}
+      data-read-only={readOnly ? "true" : undefined}
+    >
       <div
         ref={panel}
         className={`prompt prompt-${picker.chrome}`}
@@ -1416,8 +1452,9 @@ function PromptModal(props: {
            prompt's own options. */
         data-board-testids={props.boardTestids.join(" ")}
         data-collapsed={folded ? "true" : undefined}
+        data-read-only={readOnly ? "true" : undefined}
         role="dialog"
-        aria-modal={!folded}
+        aria-modal={!folded && !readOnly}
         aria-label={picker.title}
       >
         {picker.chrome === "reward" ? (
@@ -1443,7 +1480,7 @@ function PromptModal(props: {
           </>
         )}
         <div className="prompt-actions">
-          {folded ? null : (
+          {folded || readOnly ? null : (
             <button
               type="button"
               data-testid="prompt-submit"
@@ -1456,12 +1493,12 @@ function PromptModal(props: {
               {picker.chrome === "mulligan" ? t("Ready") : t("Confirm")}
             </button>
           )}
-          {folded || props.onCancel === undefined ? null : (
+          {folded || readOnly || props.onCancel === undefined ? null : (
             <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
               {t("Cancel")}
             </button>
           )}
-          {isCardLayout(picker) ? (
+          {isCardLayout(picker) || readOnly ? (
             <button type="button" data-testid="prompt-peek" aria-pressed={folded} onClick={() => setFolded((was) => !was)}>
               {folded ? t("Back to the choice") : t("View the board")}
             </button>
@@ -1476,9 +1513,12 @@ function PromptModal(props: {
  * §10.6, §10.8: the other seat learns that a choice is open and nothing else about it. The chooser
  * is always the viewer's opponent (a prompt for the viewer is `forYou`), so the line names the
  * opponent rather than a seat id: in practice that is the AI, which the HUD already shows thinking.
+ * R2211000: on a replay's board, the viewer's own craft, market or board-only placement is this
+ * panel, under the prompt's words.
  */
-function Waiting(props: { pendingFor: PlayerId }) {
+function Waiting(props: { pendingFor: PlayerId; prompt?: string }) {
   useLocale();
+  const title = props.prompt ?? t("Waiting for choice");
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
@@ -1486,13 +1526,14 @@ function Waiting(props: { pendingFor: PlayerId }) {
         data-testid="prompt-modal"
         data-prompt-waiting={WAITING_FLAG}
         data-pending-for={props.pendingFor}
+        data-read-only={props.prompt === undefined ? undefined : "true"}
         role="dialog"
         aria-modal="true"
-        aria-label={t("Waiting for choice")}
+        aria-label={title}
       >
-        <p className="prompt-title">{t("Waiting for choice")}</p>
+        <p className="prompt-title">{title}</p>
         <p className="prompt-sub" role="status">
-          {t("Your opponent is choosing…")}
+          {props.prompt === undefined ? t("Your opponent is choosing…") : t("A replay doesn't show this choice.")}
         </p>
       </div>
     </div>
@@ -1603,7 +1644,9 @@ export default function Prompt(props: PromptProps) {
   useLocale();
   const lookup = useContext(CatalogContext);
   const interaction = props.interaction ?? IDLE;
-  const boardTestids = [...highlightFor(props.view, props.legal ?? [], interaction).legal].sort();
+  const readOnly = props.readOnly === true;
+  // R2211000: a replay lights nothing, so no prompt says "Highlighted on the board as well."
+  const boardTestids: string[] = readOnly ? [] : [...highlightFor(props.view, props.legal ?? [], interaction).legal].sort();
   const pending = props.view.pending;
   const mulligan = props.view.mulligan;
 
@@ -1617,6 +1660,10 @@ export default function Prompt(props: PromptProps) {
   // R243: an option naming a match-made card (a crafted card in a hand pick) reads its definition
   // from the view, and a Heroic Power on the field its power.
   if (pending !== null) {
+    // R2211000: a form only an answer fills is not drawn on a replay's board; the waiting panel says so.
+    if (readOnly && (pending.kind === "craft" || pending.kind === "market" || isPlaguePlacementPrompt(pending))) {
+      return <Waiting pendingFor={props.view.viewer} prompt={t(pending.prompt)} />;
+    }
     // ME-CRAFT (Meditative #17, R880): a craft prompt opens the block editor, not the picker.
     if (pending.kind === "craft") {
       return (
@@ -1657,12 +1704,14 @@ export default function Prompt(props: PromptProps) {
           onAction={props.onAction}
           {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}
           {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
+          readOnly={readOnly}
         />
       </MatchCardsProvider>
     );
   }
 
   // R81: no prompt is open and nothing is paused, but the play in flight still needs a choice.
+  if (readOnly) return null;
   const need = outstandingNeed(interaction);
   if (need === null) return null;
 

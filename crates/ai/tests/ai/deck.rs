@@ -675,11 +675,13 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the decks were dealt before the Meditative+
         // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
         // Every pin was re-dealt for #1704, whose costs move the builder's curve again.
+        // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
+        // deal the decks unchanged.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
                 21,
                 &[
                     "classicplus-006",
@@ -707,7 +709,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
                 21,
                 &[
                     "core-089",
@@ -735,7 +737,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -773,7 +775,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"], "theme": "Human" }),
                 20,
                 &[
                     "classic-008",
@@ -1155,11 +1157,12 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_a_lean_on_meditative_leans_on_the_newest_shipped_set_that_is_not_gated() {
         register_cards();
         let gate = GATE;
-        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the newest set that ships is Meditative+,
-        // which this gate leaves, so a lean on gated Meditative lands on it and no longer on Classic+.
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the newest set that ships was Meditative+,
+        // which this gate leaves, so a lean on gated Meditative landed on it and no longer on
+        // Classic+. Re-pinned for the Stinkyscape release (#1884): the newest set is Stinkyscape now.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
-            Some(SetName::MeditativePlus)
+            Some(SetName::Stinkyscape)
         );
         assert_eq!(
             ungated_lean(Some(SetName::ClassicPlus), gate),
@@ -1168,18 +1171,24 @@ mod r1390_the_ai_decks_soft_gate {
         assert_eq!(ungated_lean(Some(SetName::Core), gate), Some(SetName::Core));
         assert_eq!(ungated_lean(None, gate), None);
         // The walk back starts from the newest set that ships, not from the set the lean names, and
-        // skips every gated set: past Meditative+ and Meditative, as it skips Classic+ here.
+        // skips every gated set: past Stinkyscape, Meditative+ and Meditative, as it skips Classic+
+        // here.
         assert_eq!(
             ungated_lean(
                 Some(SetName::Meditative),
-                &[SetName::ClassicPlus, SetName::Meditative]
+                &[SetName::ClassicPlus, SetName::Meditative, SetName::Stinkyscape]
             ),
             Some(SetName::MeditativePlus)
         );
         assert_eq!(
             ungated_lean(
                 Some(SetName::Meditative),
-                &[SetName::ClassicPlus, SetName::Meditative, SetName::MeditativePlus]
+                &[
+                    SetName::ClassicPlus,
+                    SetName::Meditative,
+                    SetName::MeditativePlus,
+                    SetName::Stinkyscape
+                ]
             ),
             Some(SetName::Classic)
         );
@@ -1203,15 +1212,15 @@ mod r1390_the_ai_decks_soft_gate {
                 DECK_SIZE,
                 &options(json!({ "leanSet": "Meditative", "gatedSets": GATE })),
             );
-            let on_meditative_plus = build_ai_deck(
+            let on_stinkyscape = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
-                &options(json!({ "leanSet": "Meditative+", "gatedSets": GATE })),
+                &options(json!({ "leanSet": "Stinkyscape", "gatedSets": GATE })),
             );
-            assert_eq!(on_meditative, on_meditative_plus, "{seed}");
+            assert_eq!(on_meditative, on_stinkyscape, "{seed}");
             assert!(gated_in(&on_meditative).is_empty(), "{seed}: {on_meditative:?}");
             assert!(
-                of_set(&on_meditative, SetName::MeditativePlus) >= lean_floor(DECK_SIZE),
+                of_set(&on_meditative, SetName::Stinkyscape) >= lean_floor(DECK_SIZE),
                 "{seed}: {on_meditative:?}"
             );
         }
@@ -1284,9 +1293,10 @@ mod r1390_the_ai_decks_soft_gate {
     #[test]
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
-        // Issue #732 measured the AI on the Meditative set and emptied the list (R1390): the AI's own
-        // decks are dealt from every set that ships, and a lean on Meditative is a lean on Meditative.
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
+        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative. The list holds
+        // the Stinkyscape set alone since its release (#1884).
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1312,6 +1322,47 @@ mod r1390_the_ai_decks_soft_gate {
                 "{seed}: {leaning:?}"
             );
         }
+    }
+
+    /// The Stinkyscape set ships with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
+    /// D8): the gate holds it, so no AI deck at any tier holds one of its cards, a lean on it leans on
+    /// Meditative+, the newest set that ships and is not gated, and a player's random deck from the
+    /// same stream is dealt from it.
+    #[test]
+    fn r1390_the_gate_holds_the_stinkyscape_set_from_its_release() {
+        register_cards();
+        assert!(SHIPPED_SETS.contains(&SetName::Stinkyscape));
+        assert!(AI_DECK_GATED_SETS.contains(&SetName::Stinkyscape));
+        assert_eq!(
+            ungated_lean(Some(SetName::Stinkyscape), AI_DECK_GATED_SETS),
+            Some(SetName::MeditativePlus)
+        );
+        let mut player_stinkyscape = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r1390:stinkyscape:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(deck.len(), size as usize, "{seed}");
+                assert_eq!(of_set(&deck, SetName::Stinkyscape), 0, "{seed}: {deck:?}");
+                let player = build_ai_deck(
+                    &mut create_rng(&seed, 0),
+                    size,
+                    &options(json!({ "manaCap": base["manaCap"], "banned": [], "gatedSets": [] })),
+                );
+                player_stinkyscape += of_set(&player, SetName::Stinkyscape);
+            }
+        }
+        assert!(player_stinkyscape > 0, "no player's deck held a Stinkyscape card");
+        let leaning = build_ai_deck(
+            &mut create_rng("r1390:stinkyscape:lean", 0),
+            DECK_SIZE,
+            &options(json!({ "leanSet": "Stinkyscape" })),
+        );
+        assert_eq!(of_set(&leaning, SetName::Stinkyscape), 0, "{leaning:?}");
+        assert!(
+            of_set(&leaning, SetName::MeditativePlus) >= lean_floor(DECK_SIZE).min(26),
+            "{leaning:?}"
+        );
     }
 }
 

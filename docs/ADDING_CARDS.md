@@ -34,10 +34,10 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`572 cards`, `138 tokens`, `710`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set is held now, issue #1836, R1857000) differs in five places, the Stinkyscape paths below standing for any held set's:
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; and the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; no set is held now) differs in five places, the Stinkyscape paths below standing for any held set's:
 - Its script goes in `src/scripts/stinkyscape/` (id `stinkyscape-NNN`, a token's `stinkyscape-NNN-k`, an entry outside the numbers
   `stinkyscape-t-<name>`). The foundation (issue #1857) wrote a stub for every entry there, `STUB (#1857):` in its header: a card
   part **replaces its stub** with the script and its tests, and updates its own entry's `loc` in `catalog.json` (`cargo jackioh

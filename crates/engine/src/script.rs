@@ -54,6 +54,9 @@ pub struct EngineSink<'a> {
     pub frontier: crate::triggers::FrontierSlot<'a>,
     /// R117: the owed items behind the one a drain is running (TS `work.ts`'s `DrainSink.owedBehind`).
     pub owed_behind: Option<indexmap::IndexSet<String>>,
+    /// R1884001: the cards whose `resolveFirst` would-die replacement is resolving up this call, which
+    /// a check its own follow-up runs does not ask again (`replacements::would_die_window`).
+    pub dying_replaced_by: Vec<String>,
 }
 
 impl<'a> EngineSink<'a> {
@@ -67,6 +70,7 @@ impl<'a> EngineSink<'a> {
             dry_running: false,
             frontier: crate::triggers::FrontierSlot::default(),
             owed_behind: None,
+            dying_replaced_by: Vec::new(),
         }
     }
 
@@ -82,6 +86,7 @@ impl<'a> EngineSink<'a> {
             dry_running: self.dry_running,
             frontier: crate::triggers::FrontierSlot::Shared(self.frontier.get_mut()),
             owed_behind: self.owed_behind.clone(),
+            dying_replaced_by: self.dying_replaced_by.clone(),
         }
     }
 }
