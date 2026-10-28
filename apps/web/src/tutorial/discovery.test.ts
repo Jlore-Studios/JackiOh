@@ -25,7 +25,7 @@ import {
   type CoachState,
   type LessonScript,
 } from "./coach.ts";
-import { TUTORIAL_MOMENT_TURNS_MAX } from "./config.ts";
+import { TUTORIAL_BUBBLES_PER_MOVE_MAX, TUTORIAL_MOMENT_TURNS_MAX } from "./config.ts";
 import { FIELD_GUIDE, discoveryById, type Discovery } from "./discoveries.ts";
 import { moment } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
@@ -212,6 +212,29 @@ describe("R2205000 the discovery coach", () => {
     expect(state.finished).toBe(true);
     expect(state.found).toEqual(["x"]);
     expect(state.discoveryQueue).toEqual([]);
+  });
+
+  it("R2205000 one move that trips several discoveries shows at most TUTORIAL_BUBBLES_PER_MOVE_MAX bubbles; the rest are found quietly", () => {
+    const hit: GameEvent = { type: "damage", sourceId: "e1", targetId: "u1", amount: 1, combat: true };
+    const many: Discovery[] = ["a", "b", "c"].map((id) => ({
+      id,
+      name: "Mana",
+      rule: "each card costs mana, and you get one more crystal every turn.",
+      lesson: "basics",
+      found: (c) => c.fresh.some((event) => event.type === "damage"),
+    }));
+    const script = scriptOf({ steps: [], guide: [...many, ...GUIDE], teaches: [] });
+    let state = coachObserve(script, COACH_START, ctx(aiTurn(2), [hit], [], true));
+    expect(state.found).toEqual(["a", "b", "c"]);
+    expect(state.discoveryQueue).toHaveLength(TUTORIAL_BUBBLES_PER_MOVE_MAX);
+    // Acknowledged, still no move of the player's: a further find has no room.
+    state = coachAck(script, coachAck(script, state, ctx(aiTurn(2))), ctx(aiTurn(2)));
+    state = coachObserve(script, state, ctx(aiTurn(2), [shieldPopped], [], true));
+    expect(state.found).toContain("y");
+    expect(state.discoveryQueue).toEqual([]);
+    // The player moves: the count starts again, and the find it brings is named.
+    state = coachObserve(script, state, ctx(myTurn(3), [played]));
+    expect(state.discoveryQueue).toEqual(["x"]);
   });
 
   it("R2205000 a discovery bubble comes before a tip, and Got it takes them in that order", () => {

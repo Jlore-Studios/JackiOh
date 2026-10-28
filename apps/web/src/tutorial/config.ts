@@ -12,6 +12,12 @@ export const TUTORIAL_STEP_TURNS_MAX = 2;
  */
 export const TUTORIAL_MOMENT_TURNS_MAX = 3;
 
+/**
+ * R2205000: the most "Got it" bubbles the coach queues between two of the player's own moves; a
+ * discovery past it is recorded without a bubble and reaches the Field Guide all the same.
+ */
+export const TUTORIAL_BUBBLES_PER_MOVE_MAX = 2;
+
 /** `progress.ts` reads and writes this localStorage record in try/catch. */
 export const TUTORIAL_PROGRESS_KEY = "jackioh.tutorial.v1";
 

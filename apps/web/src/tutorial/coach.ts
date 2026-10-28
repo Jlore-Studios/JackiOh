@@ -12,7 +12,7 @@ import type { ActionBody, CardDef, GameEvent, PlayerView, Row } from "@jackioh/s
 
 import type { Side } from "../game/contract.ts";
 import { t } from "../i18n/i18n.ts";
-import { TUTORIAL_MOMENT_TURNS_MAX, TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
+import { TUTORIAL_BUBBLES_PER_MOVE_MAX, TUTORIAL_MOMENT_TURNS_MAX, TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 import { FIELD_GUIDE, type Discovery } from "./discoveries.ts";
 
 /** Everything the coach reads, all of it already the page's. */
@@ -122,6 +122,8 @@ export type CoachState = {
   shownAt: number;
   /** Hint presses on the current step. */
   hintsAsked: number;
+  /** Discovery bubbles queued since the player's last own move (`TUTORIAL_BUBBLES_PER_MOVE_MAX`). */
+  bubblesSinceMove: number;
 };
 
 export const COACH_START: CoachState = {
@@ -139,6 +141,7 @@ export const COACH_START: CoachState = {
   known: [],
   shownAt: 0,
   hintsAsked: 0,
+  bubblesSinceMove: 0,
 };
 
 /** The coach at a lesson's start, given what the player's Field Guide already holds (R2205002). */
@@ -246,16 +249,48 @@ function overdue(step: CoachStep, state: CoachState, turns: number): boolean {
   return turns > TUTORIAL_STEP_TURNS_MAX;
 }
 
-/** R2205000: every entry the view shows found for the first time; a bubble for each the lesson lists or the player has not met. */
-function discover(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachState {
+/** The player's own move shows in the fresh events: a play, an attack, a switch, an answer or the turn's end. */
+function playerMoved(ctx: CoachCtx): boolean {
+  const { view } = ctx;
+  const own = new Set([
+    ...view.you.units.flatMap((unit) => (unit === null ? [] : [unit.instanceId])),
+    ...view.you.graveyard.map((card) => card.instanceId),
+  ]);
+  return ctx.fresh.some((event) => {
+    switch (event.type) {
+      case "cardPlayed":
+      case "turnEnded":
+      case "promptAnswered":
+        return event.player === view.viewer;
+      case "attackDeclared":
+        return !event.forced && own.has(event.attackerId);
+      case "positionSwitched":
+        return own.has(event.instanceId);
+      default:
+        return false;
+    }
+  });
+}
+
+/**
+ * R2205000: every entry the view shows found for the first time; a bubble for each the lesson lists
+ * or the player has not met, at most `TUTORIAL_BUBBLES_PER_MOVE_MAX` "Got it"s between two of the
+ * player's moves, tips and a shown `info` step counted. The rest are found without a bubble.
+ */
+function discover(script: LessonScript, current: CoachState, ctx: CoachCtx): CoachState {
+  const state = playerMoved(ctx) && current.bubblesSinceMove > 0 ? { ...current, bubblesSinceMove: 0 } : current;
   const fresh = guideOf(script).filter((entry) => !state.found.includes(entry.id) && safely(() => entry.found(ctx)));
   if (fresh.length === 0) return state;
   const teaches = script.teaches ?? [];
-  const bubbles = fresh.filter((entry) => teaches.includes(entry.id) || !state.known.includes(entry.id)).map((entry) => entry.id);
+  const wanted = fresh.filter((entry) => teaches.includes(entry.id) || !state.known.includes(entry.id)).map((entry) => entry.id);
+  const info = state.since !== null && script.steps[state.index]?.kind === "info" ? 1 : 0;
+  const room = Math.max(0, TUTORIAL_BUBBLES_PER_MOVE_MAX - state.bubblesSinceMove - state.tipQueue.length - info);
+  const bubbles = wanted.slice(0, room);
   return {
     ...state,
     found: [...state.found, ...fresh.map((entry) => entry.id)],
     discoveryQueue: [...state.discoveryQueue, ...bubbles],
+    bubblesSinceMove: state.bubblesSinceMove + bubbles.length,
   };
 }
 

@@ -12,6 +12,8 @@ import { baseView, card, emptySide, resetIds, unit } from "../test/fixtures.ts";
 import type { CoachCtx, LessonScript } from "./coach.ts";
 import { LESSON_GAME_TIMEOUT_MS, playLesson, reckless } from "./harness.ts";
 import { TUTORIAL_LESSONS, lessonById } from "./lessons.ts";
+import { TUTORIAL_BUBBLES_PER_MOVE_MAX } from "./config.ts";
+import { gotItRuns } from "./scripts/testkit.ts";
 import { heroTargetId, legalPlays, moment } from "./steps.ts";
 
 const LESSON = "basics";
@@ -72,6 +74,8 @@ describe("R2205000 a moment script through the real practice core", () => {
       expect(new Set(run.discoveries).size).toBe(run.discoveries.length);
       expect(run.discoveries).toEqual(expect.arrayContaining(["mana", "play-unit", "attack-hero"]));
       expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
+      // However many discoveries one move trips, the player reads at most two bubbles before moving again.
+      for (const bubbles of gotItRuns(run).runs) expect(bubbles.length, bubbles.join(", ")).toBeLessThanOrEqual(TUTORIAL_BUBBLES_PER_MOVE_MAX);
     },
     LESSON_GAME_TIMEOUT_MS,
   );

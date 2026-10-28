@@ -361,9 +361,9 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     found: (ctx) => freshOf(ctx, "destroyed").some((event) => says(defOf(ctx, event.defId), "Death:")) && anyEffect(ctx),
   },
   {
-    id: "brittle",
-    name: "Units that don't last",
-    rule: "some units are gone at the end of the turn, so use them while they are here.",
+    id: "temporary-tokens",
+    name: "Tokens for one turn",
+    rule: "some tokens only last this turn, so use them while they are here.",
     lesson: "advanced",
     found: (ctx) =>
       freshOf(ctx, "turnEnded").some((event) => event.player === ctx.view.viewer) &&
