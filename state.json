@@ -6574,6 +6574,13 @@
     "2226": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T22:10:18Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "engine rules and the trigger registry in crates/engine/src (triggers.rs, targeting.rs, fuse.rs), a new ruling and re-blessed golden traces: the rule's hard line, no doubt"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-10-28T19:09:11Z",
