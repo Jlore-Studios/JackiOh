@@ -5363,7 +5363,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
+      "question": "This PR's CI is red because `main` is red, not because of anything on this branch. `cargo jackioh spec check` fails on main at 0242b3b8c with `spec/rulings/R2102000.md: cards names Core #2102, which is no card in crates/cards/catalog.json (an issue is written issue #<n>)`. That ruling came in with #2177 (issue #2102). Fixing main is a one-word change in that file's `cards:` line: write `issue #2102` instead of `#2102`, as #2222 did for R2115000. Once main is fixed and merged into bot/issue-2100, this PR's `rust` check should pass. If you would rather this PR carry the fix itself, comment `@jgoetzmann-bot carry the R2102000 cards fix` and the next pass will make it.",
       "queued_at": "2026-10-28T13:39:56Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
