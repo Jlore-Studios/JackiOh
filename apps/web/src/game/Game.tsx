@@ -182,6 +182,13 @@ export type GameProps = {
    */
   lesson?: boolean;
   /**
+   * R2102000: the human has a sure win this turn by what they can see, the Easy practice tier's
+   * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
+   * Only the practice route sets it, and the board shows it once it shows the newest view, never on
+   * a replay or once the game is over. Absent, off.
+   */
+  lethalHint?: boolean;
+  /**
    * R1838000: the board's own Trade bar over a Tradable hand card. The Duos board turns it off and
    * puts the Trade button in its card bar beside the pass control instead. Absent, on.
    */
@@ -230,6 +237,7 @@ export default function Game({
   aim,
   replay = false,
   lesson = false,
+  lethalHint = false,
   tradeBar = true,
 }: GameProps): ReactElement {
   useLocale();
@@ -491,6 +499,8 @@ export default function Game({
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
+  // R2102000: and so does the lethal hint, which is the newest view's too.
+  const lethalShown = lethalHint && !replay && shown === view && shown.result === null;
 
   const dispatch = useCallback(
     (body: ActionBody) => {
@@ -647,6 +657,7 @@ export default function Game({
       ref={attach}
       data-testid="game"
       data-replay={replay ? "true" : undefined}
+      data-lethal-hint={lethalShown ? "true" : undefined}
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
       data-impact-tier={impactTier}
@@ -703,6 +714,11 @@ export default function Game({
               </p>
             ) : null}
             {boardNotice}
+            {lethalShown ? (
+              <p className="lethal-hint" data-testid={testid.lethalHint} role="status">
+                {t("You have lethal")}
+              </p>
+            ) : null}
             {/* R915004: a custom card's script that failed, from the newest view; a replay's log says it. */}
             {replay ? null : <ScriptFailedNotice view={view} />}
             {/* `view` is newest for this notice: it changes no board position, and its actions use

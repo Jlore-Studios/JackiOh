@@ -1659,7 +1659,8 @@
 
 /* R849000: why a click on your own unit offered no attack. Information rather than a refusal, so it
    wears the neutral frame, not the opponent's amber. */
-.board .attack-reason {
+.board .attack-reason,
+.board .lethal-hint {
   max-width: none;
   margin: 0;
   padding: 5px 8px;
@@ -1670,6 +1671,11 @@
   font-size: 0.82em;
   font-weight: 650;
   text-align: center;
+}
+
+/* R2102000: "You have lethal", the lethal hint's line, ringed in its outlines' colour (highlights.css). */
+.board .lethal-hint {
+  border-color: var(--glow-lethal);
 }
 
 .control {

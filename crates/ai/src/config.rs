@@ -50,6 +50,15 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// R2102000: the stream the Easy practice tier's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
+/// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
+pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
+
+/// R2102000: the hint's worlds and its solver's nodes, the AI's own, so that it proves a lethal as the
+/// AI's solver does.
+pub const LETHAL_HINT_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
+pub const LETHAL_HINT_NODES: usize = AI_BUDGET.lethal_nodes;
+
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
 /// baseline, `duos.rs`'s `duos_gate`.

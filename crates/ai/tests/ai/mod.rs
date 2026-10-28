@@ -22,6 +22,7 @@ pub mod freeze;
 pub mod hidden_nerfs;
 pub mod ky_competition;
 pub mod learned;
+pub mod lethal_hint;
 pub mod lost_mana;
 pub mod marketplace;
 pub mod match_refusal;

@@ -464,6 +464,14 @@ export function decide(state: GameState, seat: PlayerId, request: DecideRequest,
   return call("decide", () => parsed<DecideResult>(engine.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
 }
 
+/**
+ * R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`).
+ * `deadlineMs` is a `Date.now()` time, as `decide`'s is: a check still running past it says no; 0, no clock.
+ */
+export function lethalHint(state: GameState, seat: PlayerId, deadlineMs: number): boolean {
+  return call("lethalHint", () => engine.lethal_hint(stateJson(state), seat, deadlineMs));
+}
+
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
 export type AiDeckRequest = StreamAt & {
   size: number;
