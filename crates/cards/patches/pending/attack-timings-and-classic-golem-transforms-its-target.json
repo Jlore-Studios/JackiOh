@@ -1,0 +1,41 @@
+{
+  "title": "Attack timings, and Classic Golem transforms its target",
+  "sources": "#2285",
+  "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build. The Stinkyscape shared tokens' family is claimed through the Dormant Starship, whose fused Badgers now gain before the damage.",
+  "player": {
+    "title": "Attack timings, and Classic Golem as designed",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "\"When this attacks\" now happens before the attack deals damage: Nature Titan, Badger and Honey Badger.",
+      "\"After this attacks\" now happens only if the attacker is still alive: Prem Panther, Boots on the Ground and The Propagation's Wasp and Hornet.",
+      "Classic Golem now transforms the Unit it attacks before the damage: into a Radiant Classic or Classic+ Unit, or a normal one from a Radiant Golem.",
+      "If Classic Golem destroys the Unit it transformed and survives, it may attack again."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "classicplus-073-1"
+  ],
+  "plays": [
+    "classic-013",
+    "classic-016",
+    "classic-045",
+    "meditative-091",
+    "meditativeplus-007",
+    "meditativeplus-025",
+    "stinkyscape-065",
+    "stinkyscape-068",
+    "stinkyscape-071",
+    "stinkyscape-074",
+    "stinkyscape-075",
+    "stinkyscape-076",
+    "stinkyscape-077",
+    "stinkyscape-091",
+    "stinkyscape-092",
+    "stinkyscape-098",
+    "stinkyscape-137",
+    "stinkyscape-t-dormant-starship"
+  ]
+}
