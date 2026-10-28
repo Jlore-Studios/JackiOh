@@ -2137,6 +2137,66 @@
       "loopStart": null,
       "loopEnd": null,
       "handoff": 4.485981
+    },
+    "intro-traininggrounds-037": {
+      "hash": "6b8e8f17e8dfed79",
+      "bytes": 54968,
+      "bpm": 125,
+      "beatsPerBar": 3,
+      "loop": false,
+      "intro": 4.32,
+      "duration": 5.32,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4.32
+    },
+    "intro-traininggrounds-038": {
+      "hash": "8d7da3058b27f6bf",
+      "bytes": 52255,
+      "bpm": 118,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 4.067797,
+      "duration": 5.067797,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4.067797
+    },
+    "intro-traininggrounds-039": {
+      "hash": "ddbbcceaaa81bd44",
+      "bytes": 52463,
+      "bpm": 119,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 4.033613,
+      "duration": 5.033613,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4.033613
+    },
+    "intro-traininggrounds-039-1": {
+      "hash": "2317db22210a1ce5",
+      "bytes": 49603,
+      "bpm": 126,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 3.809524,
+      "duration": 4.809524,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 3.809524
+    },
+    "intro-traininggrounds-040": {
+      "hash": "d6aa504997ae0ba8",
+      "bytes": 45157,
+      "bpm": 145,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 3.310345,
+      "duration": 4.310345,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 3.310345
     }
   }
 }

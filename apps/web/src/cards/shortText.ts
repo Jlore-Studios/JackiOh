@@ -151,6 +151,9 @@ export const LONG_FACES: readonly string[] = [
   "stinkyscape-151 radiant",
   "stinkyscape-t-dormant-starship base",
   "stinkyscape-t-dormant-starship radiant",
+  // R2202001: the held Training Grounds set's longest, its Call to Chaos edition's table.
+  "traininggrounds-039 base",
+  "traininggrounds-039 radiant",
 ];
 
 /** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */

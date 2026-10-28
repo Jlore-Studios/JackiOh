@@ -218,6 +218,11 @@ attribution is required when they play in the game.
 | `intro-stinkyscape-t-narcor` | `apps/web/public/audio/music/intro-stinkyscape-t-narcor.m4a` | Intro of Stinkyscape Narcor (Legendary): flute, strings, cello, F major, 3/4 at 123 | 5.4 s |
 | `intro-stinkyscape-t-red-narcor` | `apps/web/public/audio/music/intro-stinkyscape-t-red-narcor.m4a` | Intro of Stinkyscape Red Narcor (Mythic): flute, strings, cello, D-flat dorian, 4/4 at 127 | 4.8 s |
 | `intro-stinkyscape-t-anomaly-found` | `apps/web/public/audio/music/intro-stinkyscape-t-anomaly-found.m4a` | Intro of Stinkyscape Anomaly Found! (Mythic): glockenspiel, strings, cello, F dorian, 4/4 at 107 | 5.5 s |
+| `intro-traininggrounds-037` | `apps/web/public/audio/music/intro-traininggrounds-037.m4a` | Intro of Training Grounds #37 Seance (Legendary): celesta, strings, cello, G lydian, 3/4 at 125 | 5.3 s |
+| `intro-traininggrounds-038` | `apps/web/public/audio/music/intro-traininggrounds-038.m4a` | Intro of Training Grounds #38 Tutorial Master (Legendary): horn, strings, contrabass, E major, 4/4 at 118 | 5.1 s |
+| `intro-traininggrounds-039` | `apps/web/public/audio/music/intro-traininggrounds-039.m4a` | Intro of Training Grounds #39 Call to Chaos (Training-Grounds Edition) (Legendary): calliope, xylophone, tuba, A-flat harmonic minor, 4/4 at 119 | 5.0 s |
+| `intro-traininggrounds-039-1` | `apps/web/public/audio/music/intro-traininggrounds-039-1.m4a` | Intro of Training Grounds #39.1 Training-Grounds Golem (token printed Legendary): horn, horns, contrabass, A-flat major, 4/4 at 126 | 4.8 s |
+| `intro-traininggrounds-040` | `apps/web/public/audio/music/intro-traininggrounds-040.m4a` | Intro of Training Grounds #40 Goetzmann Game Design (Mythic): whistle, steel guitar, acoustic bass, B mixolydian, 4/4 at 145 | 4.3 s |
 
 ## Third-party material
 
