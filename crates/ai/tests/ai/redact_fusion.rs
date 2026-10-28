@@ -86,4 +86,60 @@ mod redact_keeps_what_a_fused_card_is_built_from_r185 {
         assert!(public.transient_defs.is_empty());
         let _ = legal_actions(&public, AI);
     }
+
+    /// R1850003 a fused card held beneath another keeps its definitions, so its release still runs
+    #[test]
+    fn r1850003_a_fused_card_held_beneath_another_keeps_its_chain_and_its_release_still_runs() {
+        let mut state = with_chain(Where::Field);
+        // As `hold_beneath` takes it: off the field, its lane emptied.
+        let card = state.players[HUMAN]
+            .units
+            .iter_mut()
+            .find_map(Option::take)
+            .and_then(|mut pile| pile.pop())
+            .expect("p2's unit");
+        let holder = state.players[AI]
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .next()
+            .expect("p1's unit");
+        state.held = Some(vec![HeldCard {
+            holder_id: holder.id.clone(),
+            holder_mark: 0,
+            to: HUMAN,
+            card,
+            exile_on_release: None,
+        }]);
+        let public = redact(&state, AI);
+        let mut keys: Vec<String> = public.transient_defs.keys().cloned().collect();
+        keys.sort();
+        assert_eq!(keys, vec![INNER.to_string(), outer()]);
+        let _ = legal_actions(&public, AI);
+        let _ = view_for(&public, AI);
+    }
+
+    /// R1850000 a copier on the field keeps the fused text it copied, so its layers still read
+    #[test]
+    fn r1850000_a_copier_keeps_the_fused_units_definition_it_copied() {
+        let mut state = with_chain(Where::Hand);
+        let copier = state.players[AI]
+            .units
+            .iter_mut()
+            .flatten()
+            .flatten()
+            .next()
+            .expect("p1's unit");
+        copier.memory.insert(
+            jackioh_engine::subsystems::UNIT_TEXT_KEY.to_string(),
+            json!({ "defId": outer(), "radiant": false }),
+        );
+        let public = redact(&state, AI);
+        let mut keys: Vec<String> = public.transient_defs.keys().cloned().collect();
+        keys.sort();
+        assert_eq!(keys, vec![INNER.to_string(), outer()]);
+        let _ = legal_actions(&public, AI);
+        let _ = view_for(&public, AI);
+    }
 }

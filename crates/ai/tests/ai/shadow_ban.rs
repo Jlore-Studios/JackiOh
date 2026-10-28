@@ -1587,9 +1587,9 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
             assert!(
                 matches!(
                     def_of(None, def_id).set,
-                    SetName::Meditative | SetName::MeditativePlus
+                    SetName::Meditative | SetName::MeditativePlus | SetName::Stinkyscape
                 ),
-                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000)"
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000)"
             );
         }
         for (set, cards) in [
@@ -1605,6 +1605,19 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
                 "{banned} of the {cards} {set:?} cards banned, more than half"
             );
         }
+    }
+
+    #[test]
+    fn r1885000_the_shadow_ban_holds_at_most_stinkyscape_ban_ceiling_stinkyscape_cards() {
+        jackioh_cards::register_all();
+        let banned = SHADOW_BAN
+            .iter()
+            .filter(|(def_id, _)| def_of(None, def_id).set == SetName::Stinkyscape)
+            .count();
+        assert!(
+            banned <= STINKYSCAPE_BAN_CEILING,
+            "{banned} Stinkyscape cards banned, more than {STINKYSCAPE_BAN_CEILING} (R1885000)"
+        );
     }
 
     #[test]
