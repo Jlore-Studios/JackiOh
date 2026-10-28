@@ -7589,9 +7589,9 @@
     "what": "plan #2291 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-28T20:44:46Z",
+    "at": "2026-10-28T20:53:06Z",
     "notes": [
-      "delivered revise #2289 on claude-8 (run 40755157441): approved"
+      "delivered build #2276 on claude-4 (run 40749121858): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8297,7 +8297,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T20:44:46Z",
+  "loop_tick": "2026-10-28T20:53:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
