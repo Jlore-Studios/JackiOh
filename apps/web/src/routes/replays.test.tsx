@@ -37,8 +37,10 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, replayJsonFile } from "../replay/download.ts";
 import type { ReplayJson } from "../replay/download.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -248,6 +250,23 @@ describe("R768000 /replays", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Too many requests");
     });
+  });
+
+  it("R2108000 the device's games wait behind a skeleton, and none kept offers Play vs AI", async () => {
+    renderRoute(memorySaveStore());
+    expectSkeleton(screen.getByText("Reading the games kept on this device…"), "rows");
+    const root = expectEmptyState(await screen.findByTestId(replaysTestid.noPractice));
+    const link = within(root).getByText("Play vs AI");
+    expect(link).toHaveAttribute("href", paths.practice);
+  });
+
+  it("R2108000 signed in with no online game kept, the empty state offers Find a match", async () => {
+    signIn();
+    vi.mocked(getReplays).mockResolvedValue({ replays: [], nextOffset: null });
+    renderRoute(memorySaveStore());
+    const root = expectEmptyState(await screen.findByTestId(replaysTestid.noOnline));
+    const link = within(root).getByText("Find a match");
+    expect(link).toHaveAttribute("href", paths.play);
   });
 });
 

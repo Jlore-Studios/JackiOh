@@ -2,18 +2,16 @@
 // does: the "can't act yet" cue on a Unit with no action left (spent.ts, spent.css), and keyboard
 // inspect (I, the context-menu key, Shift+F10) on every hand and field card.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CATALOG } from "@jackioh/cards";
 import type { PlayerView, UnitView } from "@jackioh/shared";
 
 import { INSPECT_FACE_DOWN, INSPECT_SHEET, closeInspect } from "../cards/index.ts";
-import Board from "./Board.tsx";
 import { SPENT_NOTE } from "./Card.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid, type BoardProps, type ClickTarget } from "./contract.ts";
+import { testid, type ClickTarget } from "./contract.ts";
 import { actingSeat, isSpent } from "./spent.ts";
+import { renderBoard } from "../test/board.tsx";
 import { fullBoardView, pendingFor } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -21,16 +19,6 @@ afterEach(() => {
   closeInspect();
   vi.useRealTimers();
 });
-
-const lookup = lookupFromDefs(CATALOG);
-
-function renderBoard(view: PlayerView, props: Omit<BoardProps, "view"> = {}): void {
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} {...props} />
-    </CatalogContext.Provider>,
-  );
-}
 
 function units(view: PlayerView, side: "you" | "opponent"): UnitView[] {
   return view[side].units.filter((u): u is UnitView => u !== null);

@@ -81,7 +81,7 @@ function start(api: SettingsAccountApi): SettingsAccountSync {
   return sync;
 }
 
-async function settle(): Promise<void> {
+async function settleSyncs(): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0);
     for (const sync of started) await sync.settled();
@@ -140,7 +140,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
       cards: { at: T0 - 2_000, values: { animatedFoil: false } },
     });
     start(api);
-    await settle();
+    await settleSyncs();
 
     expect(readAudioSettings()).toMatchObject({ master: 0.3, muted: true, station: "lofi" });
     expect(readSettings()).toMatchObject({ dragToPlay: false, confirmEndTurn: true });
@@ -161,7 +161,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
     const api = fakeApi({ gameplay: { at: T0 - 9_000, values: { dragToPlay: false } } });
 
     start(api);
-    await settle();
+    await settleSyncs();
 
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
@@ -183,7 +183,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
     });
 
     start(api);
-    await settle();
+    await settleSyncs();
 
     // Audio: the account's is later (T0 - 2000 > T0 - 8000), so it is taken.
     expect(readAudioSettings().master).toBe(0.9);
@@ -199,7 +199,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
       "store-from-the-future": { at: T0, values: { x: true } },
     });
     start(api);
-    await settle();
+    await settleSyncs();
 
     expect(readAudioSettings()).toMatchObject({ master: 1, station: "tavern" });
     expect(api.save).not.toHaveBeenCalled();
@@ -211,7 +211,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
     api.load.mockResolvedValueOnce({ groups: null } as unknown as PlayerSettingsAccountCopy);
     writeAudioSettings({ master: 0.4 });
     start(api);
-    await settle();
+    await settleSyncs();
 
     expect(readAudioSettings().master).toBe(0.4);
     expect(readSettingsSyncState().phase).toBe("error");
@@ -223,7 +223,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R634 a burst of changes is one request after the debounce, with the whole group and the time of the last change", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
     expect(api.save).not.toHaveBeenCalled();
 
     await pass(1_000);
@@ -249,7 +249,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R634 changes in different stores go up together, each with its own time", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
 
     await pass(1_000);
     setFxSettings({ speed: 2 });
@@ -265,7 +265,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R1295000 the card cosmetics go up as their own group and come back on a new device", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
 
     await pass(1_000);
     writeCosmetics({ foil: "foil-rainbow", border: "border-bone" });
@@ -282,14 +282,14 @@ describe("R634 after the load, each change is sent as it happens", () => {
     resetCosmeticsForTests();
     expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
     start(fakeApi(api.account));
-    await settle();
+    await settleSyncs();
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-rainbow", border: "border-bone" });
   });
 
   it("R1297000 the deck slots ride the cosmetics group", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
 
     await pass(1_000);
     writeCosmetics({ table: "table-felt", cardBack: "card-back-blueprint" });
@@ -306,14 +306,14 @@ describe("R634 after the load, each change is sent as it happens", () => {
     localStorage.clear();
     resetCosmeticsForTests();
     start(fakeApi(api.account));
-    await settle();
+    await settleSyncs();
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
   });
 
   it("R1655000 the picks of each card stay on the device: never the cosmetics group, never a settings request", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
 
     await pass(1_000);
     writeCardPick("core-004", "foil", "foil-rainbow");
@@ -338,7 +338,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
     localStorage.clear();
     resetCosmeticsForTests();
     start(fakeApi(api.account));
-    await settle();
+    await settleSyncs();
     expect(readCosmetics().foil).toBe("foil-holo-sweep");
     expect(readCardPicks("core-004")).toEqual({});
   });
@@ -346,7 +346,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R1295000 an id this client does not know comes in, is kept and draws as its kind's default", async () => {
     const api = fakeApi({ cosmetics: { at: T0 - 1_000, values: { foil: "foil-unknown", border: "border-wood" } } });
     start(api);
-    await settle();
+    await settleSyncs();
 
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-unknown", border: "border-wood" });
     expect(resolveCosmetic("foil", readCosmetics().foil)).toBe(DEFAULT_CARD_COSMETICS.foil);
@@ -358,7 +358,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R634 takes the account's values in without sending them back: adopting is not a change", async () => {
     const api = fakeApi({ audio: { at: T0 - 100, values: { master: 0.6 } } });
     start(api);
-    await settle();
+    await settleSyncs();
     await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
 
     expect(readAudioSettings().master).toBe(0.6);
@@ -368,7 +368,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R634 keeps one request in flight: a change made meanwhile is sent when the first answers", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
 
     let release: () => void = () => undefined;
     api.gate = new Promise<void>((resolve) => {
@@ -394,7 +394,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
   it("R634 a reset is a change like any other: the defaults go up", async () => {
     const api = fakeApi({ audio: { at: T0 - 100, values: { master: 0.1 } } });
     start(api);
-    await settle();
+    await settleSyncs();
     expect(readAudioSettings().master).toBe(0.1);
 
     await pass(1_000);
@@ -409,7 +409,7 @@ describe("R634 a request that fails is dropped, and the device keeps what it has
   it("R634 a failed send leaves the setting in force, says so, and goes again on the player's retry", async () => {
     const api = fakeApi();
     const sync = start(api);
-    await settle();
+    await settleSyncs();
 
     api.fail = true;
     await pass(1_000);
@@ -422,7 +422,7 @@ describe("R634 a request that fails is dropped, and the device keeps what it has
 
     api.fail = false;
     sync.retry();
-    await settle();
+    await settleSyncs();
 
     expect(readSettingsSyncState().phase).toBe("saved");
     expect(api.account["audio"]?.values).toMatchObject({ master: 0.2 });
@@ -432,7 +432,7 @@ describe("R634 a request that fails is dropped, and the device keeps what it has
     const api = fakeApi({ gameplay: { at: T0 - 100, values: { dragToPlay: false } } });
     api.fail = true;
     const sync = start(api);
-    await settle();
+    await settleSyncs();
     expect(readSettingsSyncState().phase).toBe("error");
 
     await pass(1_000);
@@ -442,7 +442,7 @@ describe("R634 a request that fails is dropped, and the device keeps what it has
 
     api.fail = false;
     sync.retry();
-    await settle();
+    await settleSyncs();
 
     expect(readSettings().dragToPlay).toBe(false);
     expect(api.account["audio"]?.values).toMatchObject({ master: 0.2 });
@@ -452,7 +452,7 @@ describe("R634 a request that fails is dropped, and the device keeps what it has
   it("R634 coming back online sends what a failure left owed", async () => {
     const api = fakeApi();
     start(api);
-    await settle();
+    await settleSyncs();
     api.fail = true;
     await pass(1_000);
     writeAudioSettings({ master: 0.5 });
@@ -475,7 +475,7 @@ describe("R634 a device whose clock runs ahead cannot pin its settings", () => {
     const api = fakeApi();
     api.serverNow = T0 + 60_000;
     start(api);
-    await settle();
+    await settleSyncs();
 
     // This device's clock is a day ahead of the server's.
     wallClock = T0 + 86_400_000;
@@ -495,7 +495,7 @@ describe("R634 stopping", () => {
   it("R634 stop ends the listening: later changes send nothing and an answer in flight is ignored", async () => {
     const api = fakeApi();
     const sync = start(api);
-    await settle();
+    await settleSyncs();
 
     sync.stop();
     await pass(1_000);
@@ -525,7 +525,7 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
       { kind: "loading" } as unknown as Account,
     ]) {
       const view = render(<Screen account={account} api={api} />);
-      await settle();
+      await settleSyncs();
       view.unmount();
     }
     expect(api.load).not.toHaveBeenCalled();
