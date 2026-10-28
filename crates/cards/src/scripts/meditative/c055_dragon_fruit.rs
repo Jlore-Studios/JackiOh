@@ -60,7 +60,7 @@ mod tests {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id } => {
+                GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id, .. } => {
                     Some((instance_id.clone(), def_id.clone()))
                 }
                 _ => None,
