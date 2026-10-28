@@ -6723,9 +6723,12 @@
         "sha": "13f3a9c6e4edb8d1db68dfd763ce2f55a96eb63c"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T12:39:19Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2108,
       "kind": "review",
       "pending_request": false,
