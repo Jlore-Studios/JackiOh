@@ -11,7 +11,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
-use crate::rules::fixtures::harness::{run_effect, setup_catalog, spread};
+use crate::rules::fixtures::harness::{run_effect, setup_catalog, spread, types_of};
 use crate::rules::fixtures::resources::*;
 
 const P1: PlayerId = PlayerId::P1;
@@ -49,10 +49,6 @@ fn tray(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 
 fn tray_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     tray(state, player).into_iter().map(|card| card.id).collect()
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn sold(events: &[GameEvent]) -> Vec<i32> {

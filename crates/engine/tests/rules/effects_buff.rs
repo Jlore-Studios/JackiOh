@@ -10,7 +10,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, shielded, spikey_pillow, taunter, zero_attack};
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_of_type, live, live_mut, new_game, put, slot};
 
 /// A unit holding every keyword in R21's pool, so the pool can run dry.
 fn pool_keywords() -> Value {
@@ -47,47 +47,19 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `sinkFor(state)`, kept for the whole test: the state, the events every run appends to, and an
-/// rng that starts at the state's cursor, as reduce does.
-struct Bench {
-    state: GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: GameState) -> Bench {
-        let rng = Rng::new(&state.seed, state.rng_cursor);
-        Bench {
-            state,
-            events: Vec::new(),
-            rng,
-        }
-    }
-
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
-    }
-
-    /// The card as it stands now (TS held the live object).
-    fn card(&self, id: &str) -> CardInstance {
-        find_instance(&self.state, id)
-            .expect("the card is in the state")
-            .clone()
-    }
-
-    fn card_mut(&mut self, id: &str) -> &mut CardInstance {
-        find_instance_mut(&mut self.state, id).expect("the card is in the state")
-    }
-
-    fn view(&self, id: &str) -> UnitView {
-        unit_view(&self.state, &self.card(id))
-    }
+fn view(state: &GameState, id: &str) -> UnitView {
+    unit_view(state, &live(state, id))
 }
 
 /// Apply one effect the way the engine does: a context over the sink, then `apply` (§10.9).
-fn run(bench: &mut Bench, effect: Effect, self_: Option<CardInstance>, options: HookOptions) {
-    let mut sink = bench.sink();
+fn run(
+    bench: &mut Bench,
+    state: &mut GameState,
+    effect: Effect,
+    self_: Option<CardInstance>,
+    options: HookOptions,
+) {
+    let mut sink = bench.sink(state);
     let mut ctx = make_context(&mut sink, self_.as_ref(), options);
     (effect.apply)(&mut ctx);
 }
@@ -126,10 +98,10 @@ fn buffed_json(events: &[GameEvent]) -> Value {
     serde_json::to_value(buffed).unwrap()
 }
 
-fn hit_unit(bench: &mut Bench, id: &str, amount: i32) -> i32 {
-    let instance = bench.card(id);
+fn hit_unit(bench: &mut Bench, state: &mut GameState, id: &str, amount: i32) -> i32 {
+    let instance = live(state, id);
     deal_damage(
-        &mut bench.sink(),
+        &mut bench.sink(state),
         DamageArgs {
             source: None,
             target: DamageTarget::Unit { instance },
@@ -153,10 +125,11 @@ mod buff_s10_4_layer_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         ); // 3/3
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "chosen" }, "attack": 2, "health": 3 }),
             )),
@@ -164,29 +137,36 @@ mod buff_s10_4_layer_4_m3_t1 {
             on_instance(&unit),
         );
 
-        assert_eq!(b.card(&unit.id).buffs, AttackHealth { attack: 2, health: 3 });
-        assert_eq!(b.view(&unit.id).attack, 5);
-        assert_eq!(b.view(&unit.id).max_health, 6);
-        assert_eq!(b.view(&unit.id).health, 6);
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 2, health: 3 }
+        );
+        assert_eq!(view(&state, &unit.id).attack, 5);
+        assert_eq!(view(&state, &unit.id).max_health, 6);
+        assert_eq!(view(&state, &unit.id).health, 6);
         assert_eq!(
             buffed_json(&b.events),
             json!([{ "type": "buffed", "instanceId": unit.id, "attack": 2, "health": 3 }])
         );
 
         // A second buff accumulates, and a damaged unit keeps its damage: health = max − damage.
-        hit_unit(&mut b, &unit.id, 4);
-        let me = Some(b.card(&unit.id));
+        hit_unit(&mut b, &mut state, &unit.id, 4);
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "self" }, "attack": 1, "health": 1 }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.card(&unit.id).buffs, AttackHealth { attack: 3, health: 4 });
-        assert_eq!(b.view(&unit.id).max_health, 7);
-        assert_eq!(b.view(&unit.id).health, 3);
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 3, health: 4 }
+        );
+        assert_eq!(view(&state, &unit.id).max_health, 7);
+        assert_eq!(view(&state, &unit.id).health, 3);
         assert_eq!(events_of_type(&b.events, GameEventType::Buffed).len(), 2);
     }
 
@@ -199,45 +179,47 @@ mod buff_s10_4_layer_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         ); // 3/3
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "self" }, "attack": 3, "health": 3 }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.view(&unit.id).attack, 6);
+        assert_eq!(view(&state, &unit.id).attack, 6);
 
         // Spikey Pillow's aura: your units have −2 attack, applied after the buff.
         put(
-            &mut b.state,
+            &mut state,
             &spikey_pillow.id,
             slot(PlayerId::P1, Row::Units, 2),
             json!({}),
         );
-        assert_eq!(b.view(&unit.id).attack, 4);
-        assert_eq!(b.card(&unit.id).buffs.attack, 3);
+        assert_eq!(view(&state, &unit.id).attack, 4);
+        assert_eq!(live(&state, &unit.id).buffs.attack, 3);
 
         // §10.4: attack floors at 0 in the aura layer, and the buff below it is still on the instance.
         let weakling = put(
-            &mut b.state,
+            &mut state,
             &zero_attack.id,
             slot(PlayerId::P1, Row::Units, 3),
             json!({}),
         ); // 0/8
-        let me = Some(b.card(&weakling.id));
+        let me = Some(live(&state, &weakling.id));
         run(
             &mut b,
+            &mut state,
             buff(json_as(json!({ "target": { "of": "self" }, "attack": 1 }))),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.view(&weakling.id).attack, 0);
-        assert_eq!(b.card(&weakling.id).buffs.attack, 1);
+        assert_eq!(view(&state, &weakling.id).attack, 0);
+        assert_eq!(live(&state, &weakling.id).buffs.attack, 1);
     }
 
     #[test]
@@ -249,22 +231,26 @@ mod buff_s10_4_layer_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "self" }, "attack": 4, "health": 4 }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.card(&unit.id).buffs, AttackHealth { attack: 4, health: 4 });
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth { attack: 4, health: 4 }
+        );
 
-        let mut now = b.card(&unit.id);
-        move_to_zone(&mut b.state, &mut now, OffFieldZone::Hand, Default::default());
-        assert_eq!(b.card(&unit.id).buffs, NO_BUFF);
+        let mut now = live(&state, &unit.id);
+        move_to_zone(&mut state, &mut now, OffFieldZone::Hand, Default::default());
+        assert_eq!(live(&state, &unit.id).buffs, NO_BUFF);
     }
 
     #[test]
@@ -288,10 +274,11 @@ mod buff_s10_4_layer_4_m3_t1 {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         run(
             &mut b,
+            &mut state,
             buff_all_units(json_as(json!({ "attack": 1, "health": 1 }))),
             None,
             as_player(PlayerId::P1),
@@ -306,19 +293,26 @@ mod buff_s10_4_layer_4_m3_t1 {
             })
             .collect();
         assert_eq!(buffed_ids, vec![first.id.clone(), third.id.clone()]);
-        assert_eq!(b.view(&first.id).attack, 4);
-        assert_eq!(b.view(&third.id).attack, 4);
-        assert_eq!(b.card(&enemy.id).buffs, NO_BUFF);
+        assert_eq!(view(&state, &first.id).attack, 4);
+        assert_eq!(view(&state, &third.id).attack, 4);
+        assert_eq!(live(&state, &enemy.id).buffs, NO_BUFF);
 
         // The enemy form reaches only the other side.
         run(
             &mut b,
+            &mut state,
             buff_all_units(json_as(json!({ "side": "enemy", "attack": 2 }))),
             None,
             as_player(PlayerId::P1),
         );
-        assert_eq!(b.card(&enemy.id).buffs, AttackHealth { attack: 2, health: 0 });
-        assert_eq!(b.card(&first.id).buffs, AttackHealth { attack: 1, health: 1 });
+        assert_eq!(
+            live(&state, &enemy.id).buffs,
+            AttackHealth { attack: 2, health: 0 }
+        );
+        assert_eq!(
+            live(&state, &first.id).buffs,
+            AttackHealth { attack: 1, health: 1 }
+        );
     }
 
     #[test]
@@ -330,10 +324,11 @@ mod buff_s10_4_layer_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "enemyHero" }, "attack": 5, "health": 5 }),
             )),
@@ -342,6 +337,7 @@ mod buff_s10_4_layer_4_m3_t1 {
         );
         run(
             &mut b,
+            &mut state,
             buff(json_as(json!({ "target": { "of": "chosen" }, "attack": 5 }))),
             None,
             HookOptions {
@@ -349,9 +345,10 @@ mod buff_s10_4_layer_4_m3_t1 {
                 ..Default::default()
             },
         );
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             buff(json_as(
                 json!({ "target": { "of": "self" }, "attack": 0, "health": 0 }),
             )),
@@ -360,9 +357,9 @@ mod buff_s10_4_layer_4_m3_t1 {
         );
 
         assert_eq!(b.events.len(), 0);
-        assert_eq!(b.card(&unit.id).buffs, NO_BUFF);
+        assert_eq!(live(&state, &unit.id).buffs, NO_BUFF);
         assert_eq!(
-            b.state.players[PlayerId::P2].hero,
+            state.players[PlayerId::P2].hero,
             HeroState { health: 30, armor: 0 }
         );
     }
@@ -380,10 +377,11 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Taunt" } }),
             )),
@@ -391,8 +389,8 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             on_instance(&unit),
         );
 
-        assert_eq!(b.card(&unit.id).granted_keywords, vec![Keyword::Taunt]);
-        assert!(unit_has(&b.state, &b.card(&unit.id), KeywordKind::Taunt));
+        assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::Taunt]);
+        assert!(unit_has(&state, &live(&state, &unit.id), KeywordKind::Taunt));
         let granted: Vec<&GameEvent> = b
             .events
             .iter()
@@ -404,21 +402,22 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
         );
 
         // Keywords are a set (§10.4): the same kind is not stored twice.
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "self" }, "keyword": { "kind": "Taunt" } }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.card(&unit.id).granted_keywords, vec![Keyword::Taunt]);
+        assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::Taunt]);
 
         // R78: the grant goes when the card leaves the field.
-        let mut now = b.card(&unit.id);
-        move_to_zone(&mut b.state, &mut now, OffFieldZone::Hand, Default::default());
-        assert_eq!(b.card(&unit.id).granted_keywords, Vec::<Keyword>::new());
+        let mut now = live(&state, &unit.id);
+        move_to_zone(&mut state, &mut now, OffFieldZone::Hand, Default::default());
+        assert_eq!(live(&state, &unit.id).granted_keywords, Vec::<Keyword>::new());
     }
 
     #[test]
@@ -431,39 +430,41 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "self" }, "keyword": { "kind": "Armor", "n": 3 } }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.view(&unit.id).armor, 3);
+        assert_eq!(view(&state, &unit.id).armor, 3);
 
         // Armor carries a number, so a second grant stacks instead of being folded into the first.
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "self" }, "keyword": { "kind": "Armor", "n": 1 } }),
             )),
             me,
             HookOptions::default(),
         );
-        assert_eq!(b.view(&unit.id).armor, 4);
+        assert_eq!(view(&state, &unit.id).armor, 4);
         assert_eq!(
-            b.card(&unit.id).granted_keywords,
+            live(&state, &unit.id).granted_keywords,
             vec![Keyword::Armor { n: 3 }, Keyword::Armor { n: 1 }]
         );
 
         // Defense Position adds its own +1 on top (§4.1).
-        b.card_mut(&unit.id).position = Some(Position::Def);
-        assert_eq!(b.view(&unit.id).armor, 5);
-        assert_eq!(armor_of(&b.view(&unit.id).keywords), 5);
+        live_mut(&mut state, &unit.id).position = Some(Position::Def);
+        assert_eq!(view(&state, &unit.id).armor, 5);
+        assert_eq!(armor_of(&view(&state, &unit.id).keywords), 5);
     }
 
     #[test]
@@ -475,15 +476,20 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         ); // 2/2, Divine Shield
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        assert_eq!(hit_unit(&mut b, &unit.id, 5), 0);
-        assert_eq!(b.card(&unit.id).divine_shield_spent, Some(true));
-        assert!(!unit_has(&b.state, &b.card(&unit.id), KeywordKind::DivineShield));
+        assert_eq!(hit_unit(&mut b, &mut state, &unit.id, 5), 0);
+        assert_eq!(live(&state, &unit.id).divine_shield_spent, Some(true));
+        assert!(!unit_has(
+            &state,
+            &live(&state, &unit.id),
+            KeywordKind::DivineShield
+        ));
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "self" }, "keyword": { "kind": "Divine Shield" } }),
             )),
@@ -491,11 +497,15 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             HookOptions::default(),
         );
 
-        assert_eq!(b.card(&unit.id).divine_shield_spent, None);
-        assert!(unit_has(&b.state, &b.card(&unit.id), KeywordKind::DivineShield));
-        assert_eq!(hit_unit(&mut b, &unit.id, 5), 0);
-        assert_eq!(b.card(&unit.id).damage, 0);
-        assert_eq!(b.card(&unit.id).divine_shield_spent, Some(true));
+        assert_eq!(live(&state, &unit.id).divine_shield_spent, None);
+        assert!(unit_has(
+            &state,
+            &live(&state, &unit.id),
+            KeywordKind::DivineShield
+        ));
+        assert_eq!(hit_unit(&mut b, &mut state, &unit.id, 5), 0);
+        assert_eq!(live(&state, &unit.id).damage, 0);
+        assert_eq!(live(&state, &unit.id).divine_shield_spent, Some(true));
     }
 
     #[test]
@@ -510,11 +520,12 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
         find_instance_mut(&mut state, &unit.id)
             .expect("the unit")
             .reborn_spent = Some(true);
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_keyword(json_as(
                 json!({ "target": { "of": "self" }, "keyword": { "kind": "Reborn" } }),
             )),
@@ -522,8 +533,8 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
             HookOptions::default(),
         );
 
-        assert_eq!(b.card(&unit.id).reborn_spent, None);
-        assert!(unit_has(&b.state, &b.card(&unit.id), KeywordKind::Reborn));
+        assert_eq!(live(&state, &unit.id).reborn_spent, None);
+        assert!(unit_has(&state, &live(&state, &unit.id), KeywordKind::Reborn));
     }
 }
 
@@ -539,10 +550,11 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": 2 }))),
             None,
             on_instance(&unit),
@@ -551,7 +563,7 @@ mod r21_random_keywords_m3_t1 {
         let kinds = granted_kinds(&b.events);
         assert_eq!(kinds.len(), 2);
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), 2);
-        assert_eq!(b.card(&unit.id).granted_keywords.len(), 2);
+        assert_eq!(live(&state, &unit.id).granted_keywords.len(), 2);
         let pool_kinds: Vec<&str> = random_pool_keywords()
             .iter()
             .map(|keyword| keyword.kind().as_str())
@@ -559,8 +571,8 @@ mod r21_random_keywords_m3_t1 {
         for kind in &kinds {
             assert!(pool_kinds.contains(&kind.as_str()));
         }
-        let shown = b.view(&unit.id).keywords;
-        for keyword in &b.card(&unit.id).granted_keywords {
+        let shown = view(&state, &unit.id).keywords;
+        for keyword in &live(&state, &unit.id).granted_keywords {
             // R347: an Indestructible unit shows no Taunt, whichever came first.
             if keyword.kind() == KeywordKind::Taunt && has_keyword(&shown, KeywordKind::Indestructible) {
                 continue;
@@ -576,17 +588,18 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut replay_bench = Bench::new(replay);
-        let me = Some(replay_bench.card(&same.id));
+        let mut replay_bench = Bench::new(&replay);
+        let me = Some(live(&replay, &same.id));
         run(
             &mut replay_bench,
+            &mut replay,
             grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": 2 }))),
             me,
             HookOptions::default(),
         );
         assert_eq!(
-            replay_bench.card(&same.id).granted_keywords,
-            b.card(&unit.id).granted_keywords
+            live(&replay, &same.id).granted_keywords,
+            live(&state, &unit.id).granted_keywords
         );
     }
 
@@ -603,13 +616,14 @@ mod r21_random_keywords_m3_t1 {
         find_instance_mut(&mut state, &unit.id)
             .expect("the unit")
             .position = Some(Position::Def);
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         // Every draw the 14-entry pool has room for but Taunt, and nothing it has (R781005, R1025000, R1615000).
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         let count = RANDOM_KEYWORD_POOL.len() - 1;
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": count }))),
             me,
             HookOptions::default(),
@@ -631,12 +645,13 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         // Drawing the pool dry on a unit with no keyword hands out every entry, and Armor 1 and
         // Spell Damage +1 are not among them.
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(
                 json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
             )),
@@ -650,7 +665,7 @@ mod r21_random_keywords_m3_t1 {
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
         // Taunt is no longer held down, since the pool draws no Indestructible (R1615000).
         assert!(kinds.len() >= RANDOM_KEYWORD_POOL.len() - 1);
-        for keyword in &b.card(&unit.id).granted_keywords {
+        for keyword in &live(&state, &unit.id).granted_keywords {
             assert!(!matches!(
                 keyword.kind(),
                 KeywordKind::Armor | KeywordKind::SpellDamage
@@ -667,12 +682,13 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         // Drawing the pool dry on a unit with no keyword hands out all fourteen entries, Taunt
         // among them, and Charge and Indestructible are not among them.
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(
                 json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
             )),
@@ -698,11 +714,12 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
         // Its printed Indestructible is no pool entry now, and still keeps Taunt out (R347).
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(
                 json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
             )),
@@ -725,17 +742,18 @@ mod r21_random_keywords_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut b = Bench::new(state);
+        let mut b = Bench::new(&state);
 
-        let me = Some(b.card(&unit.id));
+        let me = Some(live(&state, &unit.id));
         run(
             &mut b,
+            &mut state,
             grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": 3 }))),
             me,
             HookOptions::default(),
         );
 
-        assert_eq!(b.card(&unit.id).granted_keywords, Vec::<Keyword>::new());
+        assert_eq!(live(&state, &unit.id).granted_keywords, Vec::<Keyword>::new());
         assert_eq!(b.events.len(), 0);
     }
 }

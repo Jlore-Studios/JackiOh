@@ -628,3 +628,22 @@ mod r1064_armor_on_field {
         assert_eq!(armor_on_field(&state), 0);
     }
 }
+
+// -------------------------------------------------------------------------
+// isResolving — S #138 Pocket Peptides (R1881007).
+// -------------------------------------------------------------------------
+mod r1881007_is_resolving {
+    use super::*;
+
+    #[test]
+    fn reads_a_card_of_the_definitions_mid_resolution_for_the_player_named_and_no_other() {
+        let mut state = board("is-resolving");
+        assert!(!is_resolving(&state, P1, &["fx-1"]));
+        let card = must(in_hand(&mut state, "fx-1", P1, 1).pop(), "a card in hand");
+        state.players.p1.hand.retain(|held| held.id != card.id);
+        state.players.p1.resolving.push(card);
+        assert!(is_resolving(&state, P1, &["fx-2", "fx-1"]));
+        assert!(!is_resolving(&state, P1, &["fx-2"]));
+        assert!(!is_resolving(&state, P2, &["fx-1"]));
+    }
+}

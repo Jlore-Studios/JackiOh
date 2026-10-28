@@ -22,7 +22,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::work::owed_work;
 
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, new_game, put, round_trip, set_library, slot,
+    Bench, act, act_result, both, events_of_type, new_game, put, round_trip, set_library, slot,
 };
 
 // Fixtures.
@@ -268,25 +268,6 @@ fn library_of(state: &GameState) -> Vec<String> {
 
 fn strings(ids: &[String]) -> Vec<String> {
     ids.to_vec()
-}
-
-/// A sink's events and rng (from the state's cursor), lent with the state to one engine call.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 fn hooks_of(state: &GameState) -> Vec<String> {

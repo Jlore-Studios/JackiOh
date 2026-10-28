@@ -55,6 +55,7 @@ mod tests {
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const MINING: &str = "stinkyscape-t-ai-02";
     const FILLER: &str = "core-005";
@@ -98,5 +99,71 @@ mod tests {
         assert_eq!(tray.len(), 1);
         assert!(tray[0].radiant);
         assert!(POOL.contains(&tray[0].def_id.as_str()));
+    }
+
+    #[test]
+    fn r1840000_the_opponent_sees_only_that_one_was_gained() {
+        let s = cast(false, "mining-hidden", json!([]));
+        let gained = resource_tray_of(s.state(), P1)[0].clone();
+        assert_eq!(
+            s.view(P2).opponent.resource_tray,
+            Some(HandView::Count { count: 1 })
+        );
+        let gain_seen_by = |viewer: PlayerId| -> GameEvent {
+            s.view(viewer)
+                .events
+                .into_iter()
+                .find(|event| event.event_type() == GameEventType::ResourceGained)
+                .expect("the view carries the gain")
+        };
+        assert_eq!(
+            gain_seen_by(P1),
+            GameEvent::ResourceGained {
+                player: P1,
+                instance_id: gained.id.clone(),
+                def_id: gained.def_id.clone(),
+                radiant: None,
+            }
+        );
+        assert_eq!(
+            gain_seen_by(P2),
+            GameEvent::ResourceGained {
+                player: P1,
+                instance_id: HIDDEN_ID.to_string(),
+                def_id: HIDDEN_ID.to_string(),
+                radiant: None,
+            },
+            "one was gained, not which"
+        );
+    }
+
+    #[test]
+    fn r1840002_its_pool_rolls_common_55_against_rare_25() {
+        const ROLLS: i32 = 10_000;
+        /// Percentage points the rolled share may stray from the odds.
+        const SLACK: f64 = 2.0;
+        let s = cast(false, "mining-odds", json!([]));
+        let pool: Vec<String> = POOL.iter().map(|id| (*id).to_string()).collect();
+        let mut rng = Rng::new("mining-odds", 0);
+        let mut by_def: IndexMap<String, i32> = IndexMap::new();
+        for _ in 0..ROLLS {
+            let id = roll_resource(s.state(), &mut rng, Some(&pool)).expect("the pool holds Resources");
+            *by_def.entry(id).or_default() += 1;
+        }
+        let share = |ids: &[&str]| -> f64 {
+            let seen: i32 = ids.iter().map(|id| by_def.get(*id).copied().unwrap_or(0)).sum();
+            f64::from(seen) * 100.0 / f64::from(ROLLS)
+        };
+        // Common (Reknite, Korrelite) 55 against Rare (Gellium) 25: 68.75% and 31.25%.
+        let rare = 25.0 * 100.0 / 80.0;
+        assert!(
+            (share(&[POOL[2]]) - rare).abs() <= SLACK,
+            "Gellium {}%",
+            share(&[POOL[2]])
+        );
+        assert!((share(&POOL[..2]) - (100.0 - rare)).abs() <= SLACK);
+        // Each Common of the two equally.
+        assert!((share(&[POOL[0]]) - share(&[POOL[1]])).abs() <= 2.0 * SLACK);
+        assert_eq!(by_def.len(), POOL.len(), "never another Resource: {by_def:?}");
     }
 }

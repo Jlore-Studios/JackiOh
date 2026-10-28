@@ -87,6 +87,46 @@ mod tests {
         }
 
         #[test]
+        fn r1839000_a_dormant_cards_zone_is_not_filled() {
+            crate::register_all();
+            let _preview = open();
+            let (mut s, ship) = crate::built_starship(
+                "s158-dormant",
+                json!([{ "def": STARTOS, "lane": 2 }]),
+                json!({ "hand": [SWARM, ANCHOR], "field": [{ "def": VANILLA, "lane": 1 }] }),
+                json!({}),
+            );
+            assert_eq!(
+                s.unit_at(PlayerId::P1, 2).id,
+                ship,
+                "the Dormant Starship stands in lane 2"
+            );
+            s.play(SWARM, json!({}));
+
+            let lanes = row(&s);
+            assert_eq!(lanes[0], Some(VANILLA.to_string()));
+            assert_eq!(
+                s.unit_at(PlayerId::P1, 2).id,
+                ship,
+                "lane 2 still tops with the Starship"
+            );
+            assert!(is_dormant_starship(s.card(ship.as_str())));
+            let slot = ZoneSlot {
+                player: PlayerId::P1,
+                row: Row::Units,
+                lane: 2,
+            };
+            assert_eq!(
+                pile_at(s.state(), slot).map(|pile| pile.len()),
+                Some(1),
+                "no Startos stacked onto it"
+            );
+            for lane in lanes.iter().skip(2) {
+                assert_eq!(lane, &Some(STARTOS.to_string()));
+            }
+        }
+
+        #[test]
         fn r1860008_a_full_board_summons_none() {
             crate::register_all();
             let _preview = open();

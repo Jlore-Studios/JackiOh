@@ -115,6 +115,20 @@ mod tests {
     }
 
     #[test]
+    fn r1850002_a_granted_human_tag_spares_a_unit() {
+        let mut s = board(false);
+        let spared = s.unit_at(P2, 2).id;
+        s.card_mut(spared.as_str()).granted_tags = Some(vec![Tag::Human]);
+        play_scornboi(&mut s);
+        assert_eq!(
+            exiled(&s),
+            vec![(P1, MENACE.to_string())],
+            "only the untagged Menace"
+        );
+        assert_eq!(s.unit_at(P2, 2).id, spared, "the Menace given Human stays");
+    }
+
+    #[test]
     fn r275_radiant_24_18_exiles_the_enemys_alone() {
         let mut s = board(true);
         play_scornboi(&mut s);
