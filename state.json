@@ -5954,6 +5954,11 @@
     "2221": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-28T11:01:59Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "0501957549247c58e27837e58ad2d33da59a6801"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
