@@ -7025,6 +7025,14 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false,
       "suggestion": true
+    },
+    "2262": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T15:37:33Z",
+      "issue": 2109,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
