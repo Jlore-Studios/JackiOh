@@ -184,7 +184,7 @@
       "instanceId": "c29",
       "type": "play",
       "zone": {
-        "lane": 2,
+        "lane": 1,
         "row": "units"
       },
       "playerId": "p2",
@@ -259,7 +259,7 @@
       "instanceId": "c31",
       "type": "play",
       "zone": {
-        "lane": 5,
+        "lane": 4,
         "row": "units"
       },
       "playerId": "p2",
