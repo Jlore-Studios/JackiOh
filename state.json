@@ -7137,21 +7137,13 @@
     "what": "build #2255 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-28T17:28:39Z",
+    "at": "2026-10-28T17:39:55Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "#2251 needs a plan",
-      "#2252 needs a plan",
-      "#2253 needs a plan",
-      "#2255 needs a plan",
-      "#2257 needs a plan",
-      "delivered build #2109 on muse (run 40717864745): approved",
-      "started plan #2251 on muse (run 40736402430)",
-      "started plan #2252 on claude-3 (run 40736484129)",
-      "started plan #2255 on claude-1 (run 40736569895)",
-      "started plan #2253 on claude-6 (run 40736653782)",
-      "started plan #2257 on claude-8 (run 40736735592)",
-      "started review #2262 on claude-3 (run 40736824322)",
+      "delivered plan #2255 on claude-1 (run 40736569895): planned",
+      "delivered plan #2251 on muse (run 40736402430): planned",
+      "started build #2251 on muse (run 40738291337)",
+      "started build #2255 on claude-1 (run 40738374966)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -7858,7 +7850,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T17:28:39Z",
+  "loop_tick": "2026-10-28T17:39:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
