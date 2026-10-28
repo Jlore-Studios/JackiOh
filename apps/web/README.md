@@ -640,18 +640,24 @@ decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes th
 src/tutorial/
   lessons.ts lessons/*.ts   each lesson as data: title, mechanics, seed, seat, both decks, retry tip
   scripts/*.ts              each lesson's coach script: steps in order and reactive tips (page only)
-  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, display (R292, R314)
+  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, hint, display (R292, R314,
+                            R2205000: moments, discoveries, escalating hints)
+  discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
   Coach.tsx layout.ts       the ring, and the bubble placed clear of what it points at (a panel above the board on phones)
   TutorialPath.tsx          the lesson path at the top of the lobby (locked / open / done), with Hide / Show
                             tutorial (R322; its look in path-visibility.css)
-  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Exit tutorial) and its result dialog
-  progress.ts               completed lessons and the Hide/Show choice in localStorage `jackioh.tutorial.v1`,
-                            try/catch (R294), and R321's merge with another copy (a union, the newest choice)
+  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Field Guide, Exit tutorial) and its result
+                            dialog, which names what the game did not show found (R314)
+  FieldGuide.tsx            the Field Guide's button and dialog, from the HUD and the path's header (R2205002)
+  progress.ts               completed lessons, the Hide/Show choice and the Field Guide's found entries (the
+                            device's alone, R2205002) in localStorage `jackioh.tutorial.v1`, try/catch (R294),
+                            and R321's merge with another copy (a union, the newest choice)
   accountSync.ts            an active account's copy (`GET`/`PUT /api/tutorial`, R320) kept level with the
                             device's (R321); the practice route mounts it
-  harness.ts                test support only: a lesson played through the real core by a policy (R293)
+  harness.ts                test support only: a lesson played through the real core by a policy: coach,
+                            coach-passive, autopilot, random or reckless (R293, R2205001)
   config.ts testids.ts devHandle.ts   the numbers, the testids (mirrored in e2e), `window.__jackiohTutorial`
 ```
 
@@ -661,6 +667,12 @@ src/tutorial/
   a tip or an `info` step holds the AI, and each shows "Got it"; an action step never holds it; a
   step expires after `TUTORIAL_STEP_TURNS_MAX` of the player's own turns (the lesson's `final` step
   ends with the game); and Exit tutorial is in the HUD throughout. Nothing strands a lesson.
+- A `moment` step (R2205000) asks a question with nothing pointed at, and is done once the view
+  shows the player found what it sets up (`discoveries.ts`, read from the fresh events, the view
+  and the public catalog). Its hint escalates a level per own turn it stays unfound, or per Hint
+  press: the nudge, then the pointed hint with its ring; past `TUTORIAL_MOMENT_TURNS_MAX` it
+  retires. It never holds the AI. Each entry found for the first time shows a discovery bubble with
+  Got it, and the tracker hands it to the device's Field Guide (`markFound`).
 - The bubble adopts a new step only once the board has caught up (no `data-animating`), so it never
   points at a card the board has not drawn; a step or tip with `holdAi` holds the AI through
   `setHold("coach", …)` until its "Got it".

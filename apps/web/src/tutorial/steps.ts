@@ -97,6 +97,25 @@ export function info(options: Common & { done?: CoachStep["done"]; moot?: CoachS
   return { kind: "info", ...options };
 }
 
+/**
+ * R2205000: pose a question and wait for the player to find what it sets up. Shows on the player's
+ * own main phase unless `when` says otherwise; never holds the AI (R314).
+ */
+export function moment(
+  options: Omit<Common, "holdAi"> & {
+    discovers: readonly string[];
+    hints: readonly [StepText, StepText];
+    hintAnchor?: CoachStep["hintAnchor"];
+    expect?: CoachStep["expect"];
+    done?: CoachStep["done"];
+    moot?: CoachStep["moot"];
+    revisit?: boolean;
+  },
+): CoachStep {
+  const { when, ...rest } = options;
+  return { kind: "moment", ...rest, when: (ctx) => myMain(ctx) && (when === undefined || when(ctx)) };
+}
+
 export function tip(options: CoachTip): CoachTip {
   return options;
 }

@@ -1,11 +1,15 @@
 // Tutorial path for `/practice` (SPEC §9.10, R294); locked lessons remain focusable.
 // R322 (with account copy, R321): the player may persistently hide the path, with focus returned to Show or Hide.
+// R2205002: a lesson's chips are the Field Guide entries it sets up, each marked once found.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
+import { discoveryById } from "./discoveries.ts";
+import { FieldGuideButton } from "./FieldGuide.tsx";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
 import {
+  fieldGuideOf,
   isTutorialHidden,
   lessonStatus,
   nextLessonToPlay,
@@ -60,15 +64,45 @@ function buttonLabel(status: LessonStatus): string {
   }
 }
 
+function Chips({ lesson, met }: { lesson: TutorialLesson; met: readonly string[] }): ReactElement {
+  if (lesson.discoveries === undefined) {
+    return (
+      <ul className="tutorial-lesson__chips" aria-label={t("What it teaches")}>
+        {lesson.mechanics.map((mechanic) => (
+          <li key={mechanic} className="tutorial-lesson__chip">
+            {t(mechanic)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <ul className="tutorial-lesson__chips" aria-label={t("What you can find")}>
+      {lesson.discoveries.map((id) => {
+        const found = met.includes(id);
+        const name = t(discoveryById(id)?.name ?? id);
+        return (
+          <li key={id} className="tutorial-lesson__chip" data-found={found ? "true" : "false"}>
+            {found ? <span className="tutorial-sr-only">{t("Found: {name}", { name })}</span> : null}
+            <span aria-hidden={found ? "true" : undefined}>{name}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function LessonNode({
   lesson,
   status,
   isNext,
+  met,
   onStart,
 }: {
   lesson: TutorialLesson;
   status: LessonStatus;
   isNext: boolean;
+  met: readonly string[];
   onStart(lesson: TutorialLesson): void;
 }): ReactElement {
   const statusId = useId();
@@ -91,13 +125,7 @@ function LessonNode({
         </p>
         <h3 className="tutorial-lesson__title">{t(lesson.title)}</h3>
         <p className="tutorial-lesson__summary">{t(lesson.summary)}</p>
-        <ul className="tutorial-lesson__chips" aria-label={t("What it teaches")}>
-          {lesson.mechanics.map((mechanic) => (
-            <li key={mechanic} className="tutorial-lesson__chip">
-              {t(mechanic)}
-            </li>
-          ))}
-        </ul>
+        <Chips lesson={lesson} met={met} />
         <div className="tutorial-lesson__foot">
           {/* An open lesson's kicker already says "Up next"; its status is there for a screen reader. */}
           <span
@@ -136,6 +164,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
   const done = TUTORIAL_LESSONS.filter((lesson) => lessonStatus(progress, lesson) === "completed").length;
   const allDone = done === total;
   const next = nextLessonToPlay(progress);
+  const met = fieldGuideOf(progress);
   const [openChoice, setOpenChoice] = useState<boolean | null>(null);
   const open = openChoice ?? !allDone;
 
@@ -218,6 +247,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
               {t("Continue: Lesson {number}", { number: next.number })}
             </button>
           ) : null}
+          <FieldGuideButton testid={tutorialTestid.fieldGuidePath} />
           {!allDone ? (
             <button
               ref={hideButton}
@@ -256,6 +286,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
             lesson={lesson}
             status={lessonStatus(progress, lesson)}
             isNext={next?.id === lesson.id}
+            met={met}
             onStart={onStart}
           />
         ))}

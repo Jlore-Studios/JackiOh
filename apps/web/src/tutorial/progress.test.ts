@@ -15,8 +15,10 @@ import {
   __resetTutorialProgressForTests,
   accountLacks,
   adoptTutorialProgress,
+  fieldGuideOf,
   isTutorialHidden,
   lessonStatus,
+  markFound,
   markLessonComplete,
   mergeTutorialProgress,
   nextLessonToPlay,
@@ -301,5 +303,45 @@ describe("R321 the device's copy merges with the account's, and never steps back
     }
     // A reset forgets the choice too.
     expect(resetTutorialProgress().hiddenChoice).toBeNull();
+  });
+});
+
+describe("R2205002 the Field Guide is kept on this device", () => {
+  it("R2205002 found entries are stored beside the lessons, in the guide's order, unknown ones dropped, and read back", () => {
+    markFound(["cry", "mana", "no-such-entry"]);
+    markFound(["mana"]);
+    expect(readTutorialProgress().found).toEqual(["mana", "cry"]);
+    expect(stored()).toEqual({ v: TUTORIAL_PROGRESS_VERSION, completed: [], found: ["mana", "cry"] });
+    __resetTutorialProgressForTests();
+    expect(readTutorialProgress().found).toEqual(["mana", "cry"]);
+  });
+
+  it("R2205002 a record with no found list reads as none, and a lesson won or a choice made keeps what was found", () => {
+    window.localStorage.setItem(TUTORIAL_PROGRESS_KEY, JSON.stringify({ v: TUTORIAL_PROGRESS_VERSION, completed: [lesson(1).id] }));
+    expect(readTutorialProgress().found).toEqual([]);
+    markFound(["mana"]);
+    markLessonComplete(lesson(2).id);
+    setTutorialHidden(true, 1000);
+    expect(readTutorialProgress()).toMatchObject({ completed: [lesson(1).id, lesson(2).id], found: ["mana"] });
+  });
+
+  it("R2205002 the account's copy never carries it: adopting the account's keeps the device's found entries", () => {
+    markFound(["trade"]);
+    adoptTutorialProgress({ completed: [lesson(1).id], hiddenChoice: null });
+    expect(readTutorialProgress()).toMatchObject({ completed: [lesson(1).id], found: ["trade"] });
+    expect(accountLacks({ completed: [lesson(1).id], hiddenChoice: null }, readTutorialProgress()), "found entries are never sent up").toBe(false);
+    expect(mergeTutorialProgress({ completed: [], hiddenChoice: null, found: ["mana"] }, { completed: [], hiddenChoice: null, found: ["cry"] }).found).toEqual([
+      "mana",
+      "cry",
+    ]);
+  });
+
+  it("R2205002 the guide shows what was found here and every entry of a lesson won anywhere", () => {
+    const won: TutorialLesson = { ...lesson(1), discoveries: ["mana", "trade"] };
+    const other: TutorialLesson = { ...lesson(2), discoveries: ["cry"] };
+    const lessons = [won, other];
+    expect(fieldGuideOf({ completed: [], hiddenChoice: null, found: ["cry"] }, lessons)).toEqual(["cry"]);
+    expect(fieldGuideOf({ completed: [won.id], hiddenChoice: null }, lessons)).toEqual(["mana", "trade"]);
+    expect(fieldGuideOf({ completed: [won.id], hiddenChoice: null, found: ["cry", "mana"] }, lessons)).toEqual(["mana", "trade", "cry"]);
   });
 });

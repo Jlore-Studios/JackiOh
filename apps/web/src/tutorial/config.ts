@@ -6,6 +6,12 @@ import { PRACTICE_SHOWCASE_HOLD_MAX_MS } from "../practice/config.ts";
 /** Retire stale non-final steps so a passed moment cannot strand the lesson. */
 export const TUTORIAL_STEP_TURNS_MAX = 2;
 
+/**
+ * R2205000: a shown moment's own turns: one with its question, one with its nudge, one with its
+ * pointed hint; past them it retires as expired, and the lesson's end names what it set up (R314).
+ */
+export const TUTORIAL_MOMENT_TURNS_MAX = 3;
+
 /** `progress.ts` reads and writes this localStorage record in try/catch. */
 export const TUTORIAL_PROGRESS_KEY = "jackioh.tutorial.v1";
 

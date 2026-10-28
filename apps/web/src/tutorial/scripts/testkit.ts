@@ -6,7 +6,7 @@ import { beginGame, createGame, legalActions, reduce, viewFor, type GameState } 
 import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "../../game/animations.ts";
-import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
+import { coachAck, coachDisplay, coachObserve, coachStart, isBubble, type CoachCtx } from "../coach.ts";
 import type { LessonRun } from "../harness.ts";
 
 /** One accepted action of the game and everything it emitted, unredacted, with the states around it. */
@@ -37,7 +37,7 @@ export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } 
   const human = run.humanSeat;
   const ai = opponentOf(human);
   let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  let coach = COACH_START;
+  let coach = coachStart([]);
   let previous: PlayerView | null = null;
   const runs: string[][] = [];
   const tips: string[] = [];
@@ -57,7 +57,7 @@ export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } 
     previous = view;
     coach = coachObserve(run.script, coach, ctx);
     let display = coachDisplay(run.script, coach, ctx);
-    while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
+    while (isBubble(display) && display.ack) {
       current.push(display.id);
       if (display.mode === "tip") tips.push(display.id);
       coach = coachAck(run.script, coach, ctx);

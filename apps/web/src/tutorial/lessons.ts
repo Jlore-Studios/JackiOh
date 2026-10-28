@@ -15,6 +15,8 @@ export type TutorialLesson = {
   title: string;
   summary: string;
   mechanics: readonly string[];
+  /** R2205000: the Field Guide entries the lesson's moments set up; its path chips read found or not. */
+  discoveries?: readonly string[];
   seed: string;
   humanSeat: PlayerId;
   humanDeck: readonly string[];
