@@ -40,6 +40,7 @@ use crate::state::{
 };
 use crate::wire::{
     CardDef, GameEvent, MarketOfferView, MarketSaleView, MarketplaceView, PerPlayer, Phase, PlayerId, Zone,
+    has_keyword,
 };
 use crate::zones::cease_to_exist;
 
@@ -132,7 +133,8 @@ fn moved_price(rng: &mut Rng, base: i32) -> i32 {
 }
 
 /// R1853001: the ids one lot draws from, in a fixed order: the catalog's Resources sorted, the ids named
-/// that a definition is found for, or a set's cards that are no token, in catalog order.
+/// that a definition is found for, or a set's cards that are no token, in catalog order, all of them or
+/// (R1881006) those that print a keyword on their base face.
 fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
     match pool {
         MarketPool::Resources => resource_def_ids(),
@@ -144,6 +146,11 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
         MarketPool::Set(set) => registered_catalog()
             .values()
             .filter(|def| def.set == set && !def.token)
+            .map(|def| def.id.clone())
+            .collect(),
+        MarketPool::SetKeyword(set, keyword) => registered_catalog()
+            .values()
+            .filter(|def| def.set == set && !def.token && has_keyword(&def.base.keywords, keyword))
             .map(|def| def.id.clone())
             .collect(),
     }
