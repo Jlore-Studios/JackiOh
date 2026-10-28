@@ -6875,20 +6875,28 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/routes/QuestsPanel.test.tsx"
+          ],
+          "from": "bc01615d2bcf39ddd21106b475bdaf7e63437869",
+          "main": "eba63924d1a62b58560b8f0ab8e7c93f59c0357e"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "40694152702",
-            "tier": "strong"
+            "family": "muse",
+            "run": "40717782805",
+            "tier": "medium"
           }
         ],
-        "sha": "bc01615d2bcf39ddd21106b475bdaf7e63437869",
+        "sha": "3e2be5d018548fd4b18351621ecd1def74467355",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     }
