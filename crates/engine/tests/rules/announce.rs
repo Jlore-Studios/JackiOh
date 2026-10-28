@@ -15,7 +15,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_json, in_hand, new_game, next_nonce, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{
+    Bench, events_json, in_hand, new_game, next_nonce, put, setup_catalog, slot,
+};
 use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
 
 /// A game in p1's first main phase, both mulligans kept, with this file's fixtures registered.
@@ -48,7 +50,7 @@ fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     result
 }
 
-fn types_of(events: &[GameEvent]) -> Vec<String> {
+fn type_names(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
         .map(|event| event.event_type().as_str().to_string())
@@ -85,25 +87,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// A sink's events and rng (from the state's cursor), lent with the state to one engine call at a time.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
@@ -123,7 +106,7 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
         );
         let (after, events) = (&result.state, &result.events);
 
-        let order = types_of(events);
+        let order = type_names(events);
         assert!(index_in(&order, "manaChanged") < index_in(&order, "cardAnnounced"));
         assert!(index_in(&order, "cardAnnounced") < index_in(&order, "cardPlayed"));
         assert_eq!(
@@ -546,7 +529,7 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
         cast_card(&mut bench.sink(&mut state), &ping, Default::default());
         settle(&mut bench.sink(&mut state), Default::default());
 
-        let order: Vec<String> = types_of(&bench.events)
+        let order: Vec<String> = type_names(&bench.events)
             .into_iter()
             .filter(|kind| kind == "cardAnnounced" || kind == "cardPlayed")
             .collect();

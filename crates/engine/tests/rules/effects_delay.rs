@@ -30,32 +30,8 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::indestructible;
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, ids_of, in_hand, new_game, put, slot};
 use crate::rules::fixtures::harness::{act, json_of, matches_object};
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 /// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
@@ -206,9 +182,9 @@ struct RunOptions {
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
     let RunOptions { self_, controller } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut inner = sink.sink();
+        let mut inner = sink.sink(state);
         let mut ctx = make_context(
             &mut inner,
             self_.as_ref(),
@@ -600,10 +576,6 @@ mod delay_watching_hand_cards_r1140_r1141 {
         }
     }
 
-    fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
-    }
-
     #[test]
     fn r1140_a_hand_watch_marks_and_steals_those_still_held() {
         let mut state = playing("delay-hand-watch");
@@ -908,8 +880,8 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         // §2.2's cleanup, which `turn.ts` runs at the end of this player's turn. TS ran it on the same
         // sink, so its events follow the run's on one list.
         {
-            let mut sink = sink_for(&mut state);
-            expire_modifiers(&mut sink.sink(), P1);
+            let mut sink = Bench::new(&state);
+            expire_modifiers(&mut sink.sink(&mut state), P1);
             events.extend(std::mem::take(&mut sink.events));
         }
 

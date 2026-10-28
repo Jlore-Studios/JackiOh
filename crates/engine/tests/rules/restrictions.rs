@@ -13,7 +13,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, ask_controller, bolt, charger, fighter, grunt, note, notes, playing, recorder, replays_to,
     round_trip, statue, storm, top_loser, wall, warded,
 };
-use crate::rules::fixtures::harness::{events_json, in_hand, live, live_mut, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_json, in_hand, live, live_mut, put, slot};
 
 fn unit_of(instance: &CardInstance) -> AttackTarget {
     AttackTarget::Unit {
@@ -76,37 +76,21 @@ fn with_asker() {
     register_scripts(registry);
 }
 
-/// The three parts of a sink side by side, so the state stays readable between engine calls.
-struct Bench {
-    state: GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn sink_for(state: GameState) -> Bench {
-        let rng = Rng::new(&state.seed, state.rng_cursor);
-        Bench {
-            state,
-            events: Vec::new(),
-            rng,
-        }
-    }
-
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
-    }
-
-    fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
-        let me = me.map(|card| {
-            find_instance(&self.state, &card.id)
-                .cloned()
-                .unwrap_or_else(|| card.clone())
-        });
-        let mut sink = self.sink();
-        let mut ctx = make_context(&mut sink, me.as_ref(), options);
-        apply_effects(&effects, &mut ctx);
-    }
+fn apply(
+    bench: &mut Bench,
+    state: &mut GameState,
+    me: Option<&CardInstance>,
+    options: HookOptions,
+    effects: Vec<Effect>,
+) {
+    let me = me.map(|card| {
+        find_instance(state, &card.id)
+            .cloned()
+            .unwrap_or_else(|| card.clone())
+    });
+    let mut sink = bench.sink(state);
+    let mut ctx = make_context(&mut sink, me.as_ref(), options);
+    apply_effects(&effects, &mut ctx);
 }
 
 fn input(body: Value) -> ActionInput {
@@ -165,8 +149,10 @@ mod e35_attack_restrictions_section_4_2_step_2 {
         );
         assert_eq!(refused.error.as_deref(), Some("that unit cannot be attacked"));
         // A forced attack on it does not happen, in silence.
-        let mut b = Bench::sink_for(state);
-        b.apply(
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
             Some(&attacker),
             HookOptions::default(),
             vec![forced_attacks_on(json_as(
@@ -175,19 +161,21 @@ mod e35_attack_restrictions_section_4_2_step_2 {
         );
         assert!(events_json(&b.events, GameEventType::AttackDeclared).is_empty());
         // Effects still reach it.
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&attacker),
             HookOptions::default(),
             vec![damage(json_as(
                 json!({ "to": on_instance(&jet.id), "amount": 1 }),
             ))],
         );
-        assert_eq!(live(&b.state, &jet).damage, 1);
+        assert_eq!(live(&state, &jet).damage, 1);
         // A Taunt it gains binds nobody, since nobody may attack it.
-        live_mut(&mut b.state, &jet).granted_keywords = vec![Keyword::Taunt];
+        live_mut(&mut state, &jet).granted_keywords = vec![Keyword::Taunt];
         assert!(can_attack(
-            &b.state,
-            &live(&b.state, &attacker),
+            &state,
+            &live(&state, &attacker),
             &hero_of(PlayerId::P2)
         ));
     }
@@ -298,9 +286,11 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         assert_eq!(find_instance(game.state(), &open.id).map(|c| c.damage), Some(2));
         assert!(replays_to(&game.start, &game.log, game.state()));
 
-        let mut b = Bench::sink_for(state);
-        let spell = in_hand(&mut b.state, &bolt.id, PlayerId::P1, 1).remove(0);
-        b.apply(
+        let mut b = Bench::new(&state);
+        let spell = in_hand(&mut state, &bolt.id, PlayerId::P1, 1).remove(0);
+        apply(
+            &mut b,
+            &mut state,
             Some(&spell),
             HookOptions {
                 controller: Some(PlayerId::P1),
@@ -314,20 +304,22 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
                 destroy(json_as(json!({ "target": { "of": "chosen" } }))),
             ],
         );
-        assert_eq!(live(&b.state, &shielded).damage, 0);
-        assert!(live(&b.state, &shielded).marked_destroyed.is_none());
+        assert_eq!(live(&state, &shielded).damage, 0);
+        assert!(live(&state, &shielded).marked_destroyed.is_none());
         let body = put(
-            &mut b.state,
+            &mut state,
             &grunt.id,
             slot(PlayerId::P1, Row::Units, 1),
             Default::default(),
         );
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&body),
             HookOptions::default(),
             vec![damage_all(json_as(json!({ "amount": 1, "side": "enemy" })))],
         );
-        assert_eq!(live(&b.state, &shielded).damage, 1);
+        assert_eq!(live(&state, &shielded).damage, 1);
     }
 
     #[test]
@@ -341,8 +333,8 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
             json_as(json!({ "radiant": true })),
         );
         let top = live(&state, &radiant_top).clone();
-        let mut b = Bench::sink_for(state);
-        let mut sink = b.sink();
+        let mut b = Bench::new(&state);
+        let mut sink = b.sink(&mut state);
         let mut gone = make_context(
             &mut sink,
             None,
@@ -389,34 +381,38 @@ mod e35_a_keyword_that_holds_only_while_a_condition_does {
             Default::default(),
         );
         assert!(!keywords(&state, &bull).contains(&KeywordKind::FirstStrike));
-        let mut b = Bench::sink_for(state);
-        b.apply(
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
             Some(&bull),
             HookOptions::default(),
             vec![plague(json_as(
                 json!({ "target": { "of": "self" }, "amount": 1 }),
             ))],
         );
-        assert!(keywords(&b.state, &bull).contains(&KeywordKind::FirstStrike));
+        assert!(keywords(&state, &bull).contains(&KeywordKind::FirstStrike));
         // It strikes first: the 2/2 it attacks dies before hitting back.
         let victim = put(
-            &mut b.state,
+            &mut state,
             &grunt.id,
             slot(PlayerId::P2, Row::Units, 1),
             Default::default(),
         );
-        let mut game = recorder(&b.state.clone());
+        let mut game = recorder(&state.clone());
         game.play(input(
             json!({ "type": "attack", "attackerId": bull.id, "targetId": victim.id, "playerId": "p1" }),
         ));
         assert_eq!(find_instance(game.state(), &bull.id).map(|c| c.damage), Some(0));
         assert!(replays_to(&game.start, &game.log, game.state()));
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&bull),
             HookOptions::default(),
             vec![vanilla(json_as(json!({ "target": { "of": "self" } })))],
         );
-        assert!(!keywords(&b.state, &bull).contains(&KeywordKind::FirstStrike));
+        assert!(!keywords(&state, &bull).contains(&KeywordKind::FirstStrike));
     }
 }
 
@@ -466,8 +462,10 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             card.summoned_turn = Some(turn);
             card.position = Some(Position::Def);
         }
-        let mut b = Bench::sink_for(state);
-        b.apply(
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
             Some(&attacker),
             HookOptions::default(),
             vec![forced_attack_random(json_as(
@@ -480,7 +478,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
                 json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": open.id, "forced": true })
             ]
         );
-        assert_eq!(live(&b.state, &top).damage, 0);
+        assert_eq!(live(&state, &top).damage, 0);
         // With nothing it may attack, nothing happens.
         let mut lonely = playing("dc-random-none");
         let striker = put(
@@ -495,8 +493,10 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             slot(PlayerId::P2, Row::Units, 1),
             Default::default(),
         );
-        let mut quiet = Bench::sink_for(lonely);
-        quiet.apply(
+        let mut quiet = Bench::new(&lonely);
+        apply(
+            &mut quiet,
+            &mut lonely,
             Some(&striker),
             HookOptions::default(),
             vec![forced_attack_random(json_as(
@@ -530,12 +530,18 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             slot(PlayerId::P2, Row::Units, if first_pick == 0 { 2 } else { 1 }),
             Default::default(),
         );
-        let mut b = Bench::sink_for(state);
-        let striker = live(&b.state, &attacker).clone();
-        force_attacks_random(&mut b.sink(), &striker, json_as(json!("enemyUnits")), 2, None);
-        assert_eq!(notes(&b.state), vec!["asker:death".to_string()]);
-        assert_eq!(b.state.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
-        let owed = owed_work(&b.state, Some(FORCED_RANDOM_WORK));
+        let mut b = Bench::new(&state);
+        let striker = live(&state, &attacker).clone();
+        force_attacks_random(
+            &mut b.sink(&mut state),
+            &striker,
+            json_as(json!("enemyUnits")),
+            2,
+            None,
+        );
+        assert_eq!(notes(&state), vec!["asker:death".to_string()]);
+        assert_eq!(state.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
+        let owed = owed_work(&state, Some(FORCED_RANDOM_WORK));
         assert_eq!(owed.len(), 1);
         let run = owed[0].resume.data.get("run").cloned().unwrap_or(Value::Null);
         assert_eq!(run["attacker"], json!(attacker.id));
@@ -543,8 +549,8 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         assert_eq!(run["left"], json!(1));
         assert!(run["since"].is_number(), "{run}");
         assert_eq!(run.as_object().map(|fields| fields.len()), Some(4), "{run}");
-        b.state.rng_cursor = b.rng.cursor();
-        let resumed = answer(&round_trip(&b.state)).state;
+        state.rng_cursor = b.rng.cursor();
+        let resumed = answer(&round_trip(&state)).state;
         assert_eq!(
             notes(&resumed),
             vec!["asker:death".to_string(), "asker:answered".to_string()]
@@ -580,9 +586,15 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             attack: 5,
             health: 20,
         };
-        let mut b = Bench::sink_for(state);
-        let striker = live(&b.state, &attacker).clone();
-        force_attacks_random(&mut b.sink(), &striker, json_as(json!("enemyUnits")), 2, None);
+        let mut b = Bench::new(&state);
+        let striker = live(&state, &attacker).clone();
+        force_attacks_random(
+            &mut b.sink(&mut state),
+            &striker,
+            json_as(json!("enemyUnits")),
+            2,
+            None,
+        );
         // The first strike back killed it, so there is no second attack.
         let targets: Vec<Value> = events_json(&b.events, GameEventType::AttackDeclared)
             .into_iter()
@@ -590,7 +602,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             .collect();
         assert_eq!(targets, vec![json!(spiky.id)]);
         assert_eq!(
-            find_instance(&b.state, &attacker.id).map(|c| c.zone.z()),
+            find_instance(&state, &attacker.id).map(|c| c.zone.z()),
             Some(ZoneName::Graveyard)
         );
     }
@@ -605,16 +617,18 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             Default::default(),
         );
         live_mut(&mut state, &attacker).buffs = AttackHealth { attack: 3, health: 0 };
-        let mut b = Bench::sink_for(state);
-        b.apply(
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
             Some(&attacker),
             HookOptions::default(),
             vec![forced_attack_own_hero(json_as(
                 json!({ "attacker": { "of": "self" } }),
             ))],
         );
-        assert_eq!(b.state.players.p1.hero.health, 25);
-        assert_eq!(live(&b.state, &attacker).damage, 0);
+        assert_eq!(state.players.p1.hero.health, 25);
+        assert_eq!(live(&state, &attacker).damage, 0);
         assert_eq!(
             events_json(&b.events, GameEventType::AttackDeclared),
             vec![
@@ -623,18 +637,20 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         );
         // A unit that cannot attack does not.
         let stone = put(
-            &mut b.state,
+            &mut state,
             &statue.id,
             slot(PlayerId::P1, Row::Units, 2),
             Default::default(),
         );
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&stone),
             HookOptions::default(),
             vec![forced_attack_own_hero(json_as(
                 json!({ "attacker": { "of": "self" } }),
             ))],
         );
-        assert_eq!(b.state.players.p1.hero.health, 25);
+        assert_eq!(state.players.p1.hero.health, 25);
     }
 }

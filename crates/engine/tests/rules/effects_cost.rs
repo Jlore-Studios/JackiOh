@@ -7,32 +7,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::{PlayerId::P1, Row::Units};
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, new_game, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, new_game, put, slot};
 use super::fixtures::scripts::x_bolt;
 use crate::rules::fixtures::harness::{json_of, live};
-
-/// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
-/// borrows all three, so they live here and `sink()` lends them out.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 #[derive(Default)]
 struct RunOptions {
@@ -101,10 +78,10 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
     fn r65_adds_to_the_instances_cost_mod_and_reports_the_new_effective_cost() {
         let mut state = new_game("costmod", None);
         let card = hand_card(&mut state, "fx-1"); // printed cost 1
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -1 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -112,9 +89,9 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
 
-        assert_eq!(live(sink.state, &card).cost_mod, -1);
+        assert_eq!(live(&state, &card).cost_mod, -1);
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             0
         );
         assert_eq!(
@@ -124,16 +101,16 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
 
         // #31: each application adds, and the event carries the cost after R65's floor at 0.
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": 3 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
                 ..Default::default()
             },
         );
-        assert_eq!(live(sink.state, &card).cost_mod, 2);
+        assert_eq!(live(&state, &card).cost_mod, 2);
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             3
         );
         assert_eq!(costs(&sink.events), vec![0, 3]);
@@ -143,9 +120,9 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
     fn r65_the_cost_the_event_reports_is_the_effective_one_with_the_players_discount_included() {
         let mut state = new_game("costmod-discount", None);
         let card = hand_card(&mut state, "fx-1");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
         add_modifier_spec(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             P1,
             json_as(
                 json!({ "kind": "costDiscount", "amount": 2, "expiry": { "until": "thisTurn", "turn": 1 } }),
@@ -153,7 +130,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         );
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": 4 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -162,7 +139,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         );
 
         // printed 1 + costMod 4 − discount 2 = 3.
-        assert_eq!(live(sink.state, &card).cost_mod, 4);
+        assert_eq!(live(&state, &card).cost_mod, 4);
         assert_eq!(
             json_of(events_of_type(&sink.events, GameEventType::CostChanged)),
             json!([{ "type": "costChanged", "instanceId": card.id, "cost": 3 }])
@@ -174,19 +151,19 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         let mut state = new_game("costmod-x", None);
         let card = hand_card(&mut state, &x_bolt().id); // cost "X"
         find_instance_mut(&mut state, &card.id).unwrap().x = Some(3);
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -2 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
                 ..Default::default()
             },
         );
-        assert_eq!(live(sink.state, &card).cost_mod, -2);
+        assert_eq!(live(&state, &card).cost_mod, -2);
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             3
         );
         assert_eq!(
@@ -195,7 +172,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         );
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 1 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -203,20 +180,20 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             0
         );
-        assert_eq!(live(sink.state, &card).x, Some(3));
+        assert_eq!(live(&state, &card).x, Some(3));
     }
 
     #[test]
     fn does_nothing_without_a_card_a_hero_selection_an_empty_selection_or_a_zero_amount() {
         let mut state = new_game("costmod-fizzle", None);
         let card = hand_card(&mut state, "fx-1");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "enemyHero" }, "amount": -1 }))),
             RunOptions {
                 controller: Some(P1),
@@ -224,7 +201,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -1 }))),
             RunOptions {
                 targets: Some(vec![]),
@@ -232,7 +209,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "self" }, "amount": 0 }))),
             RunOptions {
                 self_: Some(card.clone()),
@@ -240,7 +217,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
 
-        assert_eq!(live(sink.state, &card).cost_mod, 0);
+        assert_eq!(live(&state, &card).cost_mod, 0);
         assert_eq!(sink.events.len(), 0);
     }
 }
@@ -254,34 +231,34 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         let card = hand_card(&mut state, "fx-1"); // printed 1
         let dear = hand_card(&mut state, "fx-2");
         find_instance_mut(&mut state, &dear.id).unwrap().cost_mod = 3; // printed 1 + 3 = 4 before the override
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 1 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
                 ..Default::default()
             },
         );
-        assert_eq!(live(sink.state, &card).cost_override, Some(1));
+        assert_eq!(live(&state, &card).cost_override, Some(1));
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             1
         );
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 0 }))),
             RunOptions {
                 targets: Some(on_instance(&dear)),
                 ..Default::default()
             },
         );
-        assert_eq!(live(sink.state, &dear).cost_override, Some(0));
+        assert_eq!(live(&state, &dear).cost_override, Some(0));
         // R65 starts from the override and still adds the instance's costMod.
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &dear), CostOptions::default()),
+            effective_cost(&state, &live(&state, &dear), CostOptions::default()),
             3
         );
         assert_eq!(
@@ -298,17 +275,17 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         let mut state = new_game("override-order", None);
         state.turn = 2; // the turn after the one that made it, so Curvature is live (R48)
         let card = hand_card(&mut state, "fx-1");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         add_modifier_spec(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             P1,
             json_as(
                 json!({ "kind": "costDiscount", "amount": 1, "expiry": { "until": "thisTurn", "turn": 2 } }),
             ),
         );
         add_modifier_spec(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             P1,
             json_as(json!({
                 "kind": "costDiscount",
@@ -319,7 +296,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         );
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 6 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -327,7 +304,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -1 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -338,14 +315,14 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         // 6 (override) − 1 (costMod) − 1 (discount) = 4, which Curvature then takes to 3. The override
         // alone was 6 − 1 = 5, which Curvature already reached (R363: 4 or more), so 4.
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             3
         );
         assert_eq!(costs(&sink.events), vec![4, 3]);
 
         // Take the override below 4 and Curvature no longer bites: 3 − 1 − 1 = 1.
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 3 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -353,7 +330,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             },
         );
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             1
         );
     }
@@ -362,10 +339,10 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
     fn r65_a_negative_override_is_floored_at_0_rather_than_turning_into_a_discount() {
         let mut state = new_game("override-floor", None);
         let card = hand_card(&mut state, "fx-1");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": -5 }))),
             RunOptions {
                 targets: Some(on_instance(&card)),
@@ -373,9 +350,9 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             },
         );
 
-        assert_eq!(live(sink.state, &card).cost_override, Some(0));
+        assert_eq!(live(&state, &card).cost_override, Some(0));
         assert_eq!(
-            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
+            effective_cost(&state, &live(&state, &card), CostOptions::default()),
             0
         );
     }
@@ -385,10 +362,10 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
     {
         let mut state = new_game("cost-persists", None);
         let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_mod(json_as(json!({ "target": { "of": "self" }, "amount": 2 }))),
             RunOptions {
                 self_: Some(unit.clone()),
@@ -396,29 +373,29 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             set_cost_override(json_as(json!({ "target": { "of": "self" }, "cost": 3 }))),
             RunOptions {
                 self_: Some(unit.clone()),
                 ..Default::default()
             },
         );
-        find_instance_mut(sink.state, &unit.id).unwrap().buffs = AttackHealth { attack: 1, health: 1 };
+        find_instance_mut(&mut state, &unit.id).unwrap().buffs = AttackHealth { attack: 1, health: 1 };
 
-        let mut moving = live(sink.state, &unit).clone();
+        let mut moving = live(&state, &unit).clone();
         move_to_zone(
-            sink.state,
+            &mut state,
             &mut moving,
             OffFieldZone::Graveyard,
             Default::default(),
         );
 
         // R766: a graveyard takes both cost layers with the buffs, so it costs its printed (1) there.
-        let after = live(sink.state, &unit);
+        let after = live(&state, &unit);
         assert_eq!(after.cost_mod, 0);
         assert_eq!(after.cost_override, None);
         assert_eq!(after.buffs, AttackHealth { attack: 0, health: 0 });
-        assert_eq!(effective_cost(sink.state, &after, CostOptions::default()), 1);
+        assert_eq!(effective_cost(&state, &after, CostOptions::default()), 1);
     }
 }
 
@@ -432,13 +409,13 @@ mod a_price_for_a_card_in_a_hand_in_hand_only_r4 {
         let in_hand = hand_card(&mut state, "fx-1");
         let burned = new_instance(&mut state, "fx-1", P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(burned.clone());
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         // #31's "+1", #37r's and #72's "costs 1 less", #72r's "costs 0": written after the move, each is
         // the price of a card that reached the hand, and a card the move burned keeps its cost.
         for card in [&in_hand, &burned] {
             run(
-                &mut sink.sink(),
+                &mut sink.sink(&mut state),
                 set_cost_mod(json_as(
                     json!({ "target": { "of": "chosen" }, "amount": -1, "inHandOnly": true }),
                 )),
@@ -448,7 +425,7 @@ mod a_price_for_a_card_in_a_hand_in_hand_only_r4 {
                 },
             );
             run(
-                &mut sink.sink(),
+                &mut sink.sink(&mut state),
                 set_cost_override(json_as(
                     json!({ "target": { "of": "chosen" }, "cost": 0, "inHandOnly": true }),
                 )),
@@ -459,9 +436,9 @@ mod a_price_for_a_card_in_a_hand_in_hand_only_r4 {
             );
         }
 
-        let held = live(sink.state, &in_hand);
+        let held = live(&state, &in_hand);
         assert_eq!((held.cost_mod, held.cost_override), (-1, Some(0)));
-        let kept = live(sink.state, &burned);
+        let kept = live(&state, &burned);
         assert_eq!((kept.cost_mod, kept.cost_override), (0, None));
         let ids: Vec<String> = events_of_type(&sink.events, GameEventType::CostChanged)
             .iter()

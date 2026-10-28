@@ -16,29 +16,8 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, new_game, put, round_trip, slot,
+    Bench, act, act_result, both, events_of_type, hand_ids, new_game, put, round_trip, slot,
 };
-
-// The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
-// so the event list and the rng live here and each call borrows the state again.
-
-struct SinkFor {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> SinkFor {
-    SinkFor {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl SinkFor {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
 
 // Fixtures.
 
@@ -239,14 +218,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
-}
-
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
@@ -445,9 +416,9 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         );
 
         // A prompt an end-of-turn trigger left open: the window has delivered its event to nobody.
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         open_prompt(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             OpenPromptArgs {
                 player: PlayerId::P1,
                 kind: PromptKind::Target,
@@ -463,7 +434,7 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         );
 
         let ended = turn_ended_in(&state, PlayerId::P1);
-        let dispatch = run_trap_window(&mut sink.on(&mut state), &ended);
+        let dispatch = run_trap_window(&mut sink.sink(&mut state), &ended);
         assert_eq!(dispatch.fired, Vec::<String>::new());
         assert!(dispatch.paused);
         assert!(notes(&state).is_empty());
@@ -473,8 +444,8 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             Some(vec![first.id.clone(), second.id.clone()])
         );
 
-        close_prompt(&mut sink.on(&mut state));
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        close_prompt(&mut sink.sink(&mut state));
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         assert_eq!(notes(&state), strings(&["window2", "window3"]));
         assert!(state.work.is_empty());
     }
@@ -503,9 +474,9 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             json!({}),
         );
 
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let scheduled = schedule_delayed(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             PlayerId::P1,
             DelayedAt {
                 phase: Phase::End,

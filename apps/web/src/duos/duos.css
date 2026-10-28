@@ -36,6 +36,53 @@
   container-type: size;
 }
 
+/* R2095000: Both boards, side by side on a wide screen. The own board keeps its room; the narrower
+   teammate wrapper makes the container-query board draw smaller: the smaller scale. The teammate's
+   board is the portal's board, so it takes the same rules under `.duos-both`. */
+.duos-both {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.duos-board-own {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.duos-board-teammate {
+  position: relative;
+  display: flex;
+  flex: 0 0 40%;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.duos-both .game {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}
+
+.duos-both .game > .board {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+}
+
+/* While both boards show, the rail rides the own board and draws the Both boards toggle instead of
+   the portal. Only when a narrowed screen flipped to the teammate's board (the rail with it) and
+   widened again does the portal stay, as the way back. */
+.duos-board[data-both="true"][data-showing="own"] .duos-portal {
+  display: none;
+}
+
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .app-shell.app-shell--wide:has(> .duos-board) {
     gap: 6px;
@@ -584,6 +631,31 @@
     gap: 0 6px;
     padding: 2px 6px;
     font-size: 0.72em;
+  }
+
+  /* R2095000: below the width two boards fit, the toggle is hidden and the board falls back to
+     one: only the showing board is drawn, so it takes the row, and it carries the rail, whose
+     portal (hidden by CSS on a wide screen) comes back to flip between them. */
+  .duos-both-toggle {
+    display: none;
+  }
+
+  .duos-board[data-both="true"][data-showing="own"] .duos-portal {
+    display: revert;
+  }
+
+  .duos-board[data-both="true"][data-showing="own"] .duos-board-teammate {
+    display: none;
+  }
+
+  .duos-board[data-both="true"][data-showing="teammate"] .duos-board-own {
+    display: none;
+  }
+
+  /* `.duos-both` stays a flex row, so the one board drawn keeps a definite height (the board is a
+     size container, which an auto-height block parent would collapse). */
+  .duos-board[data-both="true"][data-showing="teammate"] .duos-board-teammate {
+    flex: 1 1 0;
   }
 
   .duos-rail__row {

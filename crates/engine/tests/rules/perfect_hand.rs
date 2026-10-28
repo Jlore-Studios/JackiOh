@@ -300,7 +300,7 @@ fn cast(state: &GameState, instance_id: &str) -> ReduceResult {
     )
 }
 
-fn hand_ids(state: &GameState) -> Vec<String> {
+fn p1_hand_def_ids(state: &GameState) -> Vec<String> {
     state
         .players
         .p1
@@ -477,7 +477,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
         );
         let expected: Vec<String> = rank_ids(&state, false).into_iter().take(3).collect();
         let after = cast(&state, &zealot_id);
-        assert_eq!(hand_ids(&after.state), expected);
+        assert_eq!(p1_hand_def_ids(&after.state), expected);
         for old in &held {
             assert_eq!(
                 find_instance(&after.state, &old.id).map(|card| card.zone.clone()),
@@ -537,7 +537,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
         );
         state.players.p2.hero.health = 4;
         assert_eq!(
-            hand_ids(&cast(&state, &zealot_id).state).first(),
+            p1_hand_def_ids(&cast(&state, &zealot_id).state).first(),
             Some(&charger().id)
         );
     }
@@ -547,7 +547,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
         let Holding { state, zealot_id, .. } =
             holding("ph-radiant", &[quiet_spell().id, quiet_trap().id], true, None);
         let after = cast(&state, &zealot_id).state;
-        assert_eq!(hand_ids(&after).first(), Some(&sleeper().id));
+        assert_eq!(p1_hand_def_ids(&after).first(), Some(&sleeper().id));
         assert!(after.players.p1.hand.iter().all(|card| card.radiant));
     }
 
@@ -649,7 +649,7 @@ mod r1446_the_perfect_pool_is_every_set_that_ships {
         assert_eq!(top.def.set, SetName::Core);
         assert_eq!(json_of(top.priority), json!("lethal"));
         assert_eq!(
-            hand_ids(&cast(&state, &zealot_id).state).first(),
+            p1_hand_def_ids(&cast(&state, &zealot_id).state).first(),
             Some(&charger().id)
         );
     }
@@ -661,7 +661,7 @@ mod r1446_the_perfect_pool_is_every_set_that_ships {
         let Holding { state, zealot_id, .. } = holding("ph-radiant-sets", &held, true, None);
         let expected: Vec<String> = rank_ids(&state, true).into_iter().take(held.len()).collect();
         let after = cast(&state, &zealot_id).state;
-        assert_eq!(hand_ids(&after), expected);
+        assert_eq!(p1_hand_def_ids(&after), expected);
         assert!(after.players.p1.hand.iter().all(|card| card.radiant));
         let sets: Vec<SetName> = after
             .players
