@@ -194,17 +194,27 @@ fn r1846002_no_custom_card_is_counted() {
 }
 
 #[test]
-fn r1846003_a_fold_under_a_carried_version_reads_the_builds_metrics() {
+fn r1846003_r2173000_a_fold_under_a_carried_version_reads_its_own_lists_or_the_builds() {
     register_all();
     let build = card_metrics();
     let versions = carried_versions();
     assert!(!versions.is_empty(), "the build carries older versions");
     for version in versions {
         let shipped = shipped_catalog(version).expect("a carried version's catalog");
+        // R2173000: a version that kept its own lists folds against them; one that kept none (every
+        // version before the first card that reads them shipped) against the build's.
+        let expected = match shipped.card_lists() {
+            None => build,
+            Some(lists) => jackioh_engine::CardMetrics {
+                code_lines: build.code_lines,
+                busted: &lists.busted,
+                complicated: &lists.complicated,
+            },
+        };
         assert_eq!(
             with_shipped(Some(shipped), card_metrics),
-            build,
-            "{version}: the lists stay the build's"
+            expected,
+            "{version}: its own lists, else the build's"
         );
     }
 }
