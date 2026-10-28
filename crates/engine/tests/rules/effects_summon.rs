@@ -100,7 +100,15 @@ fn flier() -> CardDef {
 const RUSH_TOKEN: &str = "fx-token-rush";
 
 fn defs() -> Vec<CardDef> {
-    vec![crier(), trap(), field_spell(), spell(), felinor(), pricey(), flier()]
+    vec![
+        crier(),
+        trap(),
+        field_spell(),
+        spell(),
+        felinor(),
+        pricey(),
+        flier(),
+    ]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -1173,10 +1181,20 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
     fn full_row(backrow: &[i32]) -> GameState {
         let mut state = game();
         for lane in 1..=5 {
-            put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(
+                &mut state,
+                &crier().id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
         }
         for lane in backrow {
-            put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, *lane), json!({}));
+            put(
+                &mut state,
+                &field_spell().id,
+                slot(PlayerId::P1, Row::Backrow, *lane),
+                json!({}),
+            );
         }
         state
     }
@@ -1207,7 +1225,10 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
             .expect("the flier")
             .clone();
         assert_eq!(flier_card.def_id, flier().id);
-        assert!(stands_in_backrow(&state, &flier_card), "it stands there (R1081000)");
+        assert!(
+            stands_in_backrow(&state, &flier_card),
+            "it stands there (R1081000)"
+        );
         assert!(
             active_units_of(&state, PlayerId::P1)
                 .iter()
@@ -1236,7 +1257,10 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
             RunOptions::default(),
         );
         assert!(events.is_empty(), "a Unit that cannot fly finds no zone");
-        assert!(summon_flier(&mut state, json!({ "lane": 3 })).is_empty(), "a named lane is that lane");
+        assert!(
+            summon_flier(&mut state, json!({ "lane": 3 })).is_empty(),
+            "a named lane is that lane"
+        );
         assert!(card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).is_none());
     }
 }

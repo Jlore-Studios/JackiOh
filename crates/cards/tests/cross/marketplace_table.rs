@@ -34,7 +34,10 @@ fn pool(pool: MarketPool) -> Vec<String> {
         MarketPool::SetKeyword(set, keyword) => registered_catalog()
             .values()
             .filter(|def| {
-                def.set == set && !def.token && !made_by_a_rule(def) && has_keyword(&def.base.keywords, keyword)
+                def.set == set
+                    && !def.token
+                    && !made_by_a_rule(def)
+                    && has_keyword(&def.base.keywords, keyword)
             })
             .map(|def| def.id.clone())
             .collect(),

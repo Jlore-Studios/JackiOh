@@ -715,7 +715,10 @@ mod r2260000_a_dormant_card_hosts_no_equip_play {
             .collect();
         assert_eq!(lanes, vec![2], "only the awake host is offered");
         let result = act_result(&state, play_input(&mag.id, 1, true, Value::Null));
-        assert!(result.error.is_some(), "an Equip play onto the Dormant card is refused");
+        assert!(
+            result.error.is_some(),
+            "an Equip play onto the Dormant card is refused"
+        );
 
         // Awake, it hosts as any Unit does.
         find_instance_mut(&mut state, &sleeper.id)
