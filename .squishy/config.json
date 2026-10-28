@@ -127,5 +127,9 @@
       "timeout_minutes": 20,
       "machine": false
     }
+  ],
+  "resolvers": [
+    {"path": "spec/INDEX.md", "take": "main"},
+    {"path": "crates/engine/tests/golden/games.jsonl", "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl", "timeout_minutes": 20}
   ]
 }

@@ -41,3 +41,9 @@ asset tests out).
 - a listed file that is missing from `apps/web/public/art/`;
 - a file that is not WebP, is not 512 x 512, or is over 96 KiB;
 - a file in `apps/web/public/art/` that no manifest line lists (a delivery that forgot its line).
+
+## The Stinkyscape set's own art
+
+The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s procedural art instead of
+`procedural.ts`'s: a space backdrop under one subject per family, each weapon the weapon its name says
+(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins.

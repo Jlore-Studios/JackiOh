@@ -408,6 +408,10 @@ mod tests {
                 wins: 0,
                 draws: 0,
             },
+            created_played: jackioh_engine::Tally::default(),
+            created_not_played: jackioh_engine::Tally::default(),
+            created_played_radiant: jackioh_engine::Tally::default(),
+            created_played_normal: jackioh_engine::Tally::default(),
         }
     }
 
@@ -422,6 +426,7 @@ mod tests {
             games: 1,
             decks: 2,
             cards,
+            created: Vec::new(),
         };
         serde_json::to_string(&report).unwrap_or_default()
     }
@@ -468,6 +473,9 @@ mod tests {
             traps_fired: None,
             position_switches: None,
             radiant_upgrades: None,
+            created_used: None,
+            created_unused: None,
+            created_played: None,
         };
         let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {

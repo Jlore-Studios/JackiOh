@@ -5,10 +5,13 @@
 // It is percent-encoded in full, parentheses and quotes included, so it can sit inside a CSS
 // `url("…")` in any browser and in jsdom's style parser.
 
+import type { CardType, Tag } from "@jackioh/shared";
+
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import type { MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
+import { stinkyscapeSvg } from "./stinkyscape.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
@@ -157,6 +160,20 @@ export function proceduralArtUri(
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const uri = artDataUri(artSpec(defId, theme, composition, radiant, motif));
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/**
+ * R2170000: a Stinkyscape face's picture (stinkyscape.ts), memoised beside the rest. Its key adds
+ * the name, which picks the detail inside the card's family, as the motif does above.
+ */
+export function stinkyscapeArtUri(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
+  const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
