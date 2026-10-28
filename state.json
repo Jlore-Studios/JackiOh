@@ -13548,6 +13548,12 @@
         "number": 2209,
         "title": "Patch: Conquest with three dealt decks, so a player who owns fewer than 75 cards can play it",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-28T17:26:47Z",
+        "number": 2254,
+        "title": "Patch: the hand shows its card limit and says when it is full",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-28T17:04:18Z",
