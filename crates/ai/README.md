@@ -95,7 +95,7 @@ line on a tie. So the placements the beam tries reach the reply, which prices a 
 neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
-the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and

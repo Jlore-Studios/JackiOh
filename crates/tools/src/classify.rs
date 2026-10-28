@@ -9,11 +9,12 @@
 //! player reads and no game does, every other field plays. Each card script's code, the lines
 //! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
 //! `SHIPPED_SETS` names on each side: a set that ships is a major, and a card of a set that has not
-//! shipped is no change (R1420). And the paths of everything else (`area`). R2173001: while a card
-//! that reads the BUSTED or complicated lists (R1846000) ships on both sides, a change that moves a
-//! card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES` (each side's
-//! scripts counted by `card_lists`, each side's thresholds) plays every such reader differently, so
-//! `--claims` asks for its fragment.
+//! shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
+//! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
+//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
+//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
+//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
+//! differently, so `--claims` asks for its fragment.
 //!
 //! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
 //! build what the diff cannot say:
@@ -43,7 +44,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::card_lists::{self, CardLists, Scripts};
-use crate::catalog::code_lines;
+use crate::catalog::{code_lines, code_lines_with_uses};
 use crate::golden::{record_seeds, text_at};
 use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
@@ -212,12 +213,18 @@ fn area(path: &str) -> Area {
     Area::Internal
 }
 
-/// Whether a file's code changed: for Rust and TypeScript the lines `catalog loc` counts, all white
-/// space removed (so a reflow is no change); any other file byte for byte.
+/// Whether a file's code changed, all white space removed (so a reflow is no change): for a card
+/// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
+/// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
+/// can change which code runs (R2050000); any other file byte for byte.
 fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
-    let code = |text: Option<&str>| {
-        text.map(|text| code_lines(text).concat().split_whitespace().collect::<String>())
+    let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
+        code_lines
+    } else {
+        code_lines_with_uses
     };
+    let code =
+        |text: Option<&str>| text.map(|text| lines(text).concat().split_whitespace().collect::<String>());
     if path.ends_with(".rs") || path.ends_with(".ts") || path.ends_with(".tsx") {
         code(before) != code(after)
     } else {
@@ -1403,6 +1410,75 @@ mod tests {
             Some("fn a() { 1 } // one\n")
         ));
         assert!(code_changed("a.json", Some("{}"), Some("{ }")));
+    }
+
+    // R2050000: outside a card script a `use` line is code, so a moved import is checked.
+    const MODULE: &str = "use crate::a::run;\n\npub fn go() {\n    run()\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n";
+
+    #[test]
+    fn r2050000_a_use_only_change_outside_a_card_script_is_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let moved = MODULE.replace("use crate::a::run;", "use crate::b::run;");
+        for path in ["crates/engine/src/combat.rs", "crates/cards/src/query.rs"] {
+            let diff = read_diff(&both, &both, &[file(path, MODULE, &moved)]);
+            assert!(diff.play_code, "{path}");
+            assert_eq!(
+                classify(&diff, None).unchecked,
+                vec!["play-code".to_string()],
+                "{path}"
+            );
+        }
+        let diff = read_diff(&both, &both, &[file("crates/ai/src/search.rs", MODULE, &moved)]);
+        let classified = classify(&diff, None);
+        assert_eq!(classified.kind, Kind::Ai);
+        assert_eq!(classified.unchecked, vec!["ai".to_string()]);
+    }
+
+    #[test]
+    fn r2050000_a_use_only_change_in_a_card_script_is_still_no_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let edited = SCRIPT.replace(
+            "use jackioh_engine::prelude::*;",
+            "use jackioh_engine::prelude::{CardScripts, *};",
+        );
+        let diff = read_diff(
+            &both,
+            &both,
+            &[file("crates/cards/src/scripts/core/c001.rs", SCRIPT, &edited)],
+        );
+        assert_eq!(diff, Diff::default());
+        let classified = classify(&diff, None);
+        assert_eq!(classified.kind, Kind::Internal);
+        assert!(classified.unchecked.is_empty(), "{:?}", classified.unchecked);
+        assert_eq!(
+            crate::catalog::count_loc(SCRIPT),
+            crate::catalog::count_loc(&edited)
+        );
+    }
+
+    #[test]
+    fn r2050000_comment_layout_and_test_changes_outside_a_card_script_are_no_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let edited = "use crate::a::run; // the runner\n\n/// Goes.\npub fn go() { run() }\n\n#[cfg(test)]\nmod tests {\n    use super::go;\n\n    #[test]\n    fn goes() {\n        go()\n    }\n}\n";
+        for path in [
+            "crates/engine/src/combat.rs",
+            "crates/cards/src/query.rs",
+            "crates/ai/src/search.rs",
+        ] {
+            let diff = read_diff(&both, &both, &[file(path, MODULE, edited)]);
+            assert_eq!(diff, Diff::default(), "{path}");
+        }
+    }
+
+    #[test]
+    fn r1365000_every_ai_tooling_entry_names_a_file() {
+        let src = repo_root().join("crates/ai/src");
+        for file in AI_TOOLING {
+            assert!(
+                src.join(file).is_file(),
+                "AI_TOOLING names crates/ai/src/{file}, which is no file"
+            );
+        }
     }
 
     #[test]

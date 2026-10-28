@@ -7,7 +7,7 @@ use jackioh_engine::mana::{cost_now, effective_cost, play_cost};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{Bench, act, act_result, events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     cast_trap, embiggen_field, five_unit, forever, grave_spell, in_graveyard, lobbyist, monkey, only,
     pb_playing, plays_of, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit, zero_spell,
@@ -27,25 +27,6 @@ fn manual_turns(state: &GameState) -> GameState {
 
 fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     only(&in_hand(state, def_id, player, 1))
-}
-
-/// A sink's events and rng (from the state's cursor), lent with the state to one engine call at a time.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 fn add_modifier_to(state: &mut GameState, player: PlayerId, expiry: ModifierExpiry, kind: ModifierKind) {
