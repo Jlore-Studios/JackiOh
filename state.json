@@ -6936,10 +6936,10 @@
     "what": "revise #2085 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-28T07:59:22Z",
+    "at": "2026-10-28T08:07:50Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2057 on claude-5 (run 40646338581): approved"
+      "delivered revise #2163 on claude-6 (run 40649505880): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7645,7 +7645,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T07:59:22Z",
+  "loop_tick": "2026-10-28T08:07:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
