@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import PoolGrid, { POOL_FIRST_CARDS } from "./PoolGrid.tsx";
-import { addPoolId } from "./testids.ts";
+import { addPoolId, poolCardId } from "./testids.ts";
 
 /** How many times each card's face has rendered, by card id. */
 const faceRenders = vi.hoisted(() => new Map<string, number>());
@@ -73,8 +73,9 @@ describe("#2266 the pool's cards are memoized", () => {
     rerender(readOnly(["core-002", "core-008"]));
     expect(rendered()).toEqual([]);
 
-    // A new order draws the cards that stay as they were; the one it brings back mounts.
-    rerender(readOnly(["core-008", "core-004", "core-002"]));
+    // A new order draws the cards that stay as they were; the one it brings back mounts. (A pool that
+    // grows draws its own first cards first, so a card the new order puts past them mounts anew.)
+    rerender(readOnly(["core-008", "core-002", "core-004"]));
     expect(rendered()).toEqual(["core-004"]);
   });
 
@@ -126,5 +127,34 @@ describe("#2266 the pool's cards are memoized", () => {
     drawn = [];
     rerender(grid(ids));
     expect(drawn).toEqual([2, ids.length]);
+  });
+
+  it("a pool that grows into other cards never draws a card the pool does not hold", () => {
+    const all = Object.keys(CATALOG);
+    const before = all.slice(0, 10);
+    const after = all.slice(20, 20 + POOL_FIRST_CARDS + 12);
+    const held = new Set(after);
+    let watching = false;
+    const strays: string[] = [];
+    const grid = (shown: readonly string[]): ReactElement => (
+      <Profiler
+        id="pool"
+        onRender={() => {
+          if (!watching) return;
+          for (const card of document.querySelectorAll('[data-testid^="card-pool-"]')) {
+            const id = (card.getAttribute("data-testid") ?? "").slice(poolCardId("").length);
+            if (id !== "" && !held.has(id)) strays.push(id);
+          }
+        }}
+      >
+        {readOnly(shown)}
+      </Profiler>
+    );
+
+    const { rerender, getByTestId } = render(grid(before));
+    watching = true;
+    rerender(grid(after));
+    expect(strays).toEqual([]);
+    for (const id of after) expect(getByTestId(poolCardId(id))).toBeTruthy();
   });
 });

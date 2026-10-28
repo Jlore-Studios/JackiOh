@@ -357,10 +357,12 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
     }),
     [],
   );
-  // A pool that grows keeps what it drew until the background render has drawn the rest; one that
-  // shrinks or reorders is drawn at once (a plain deferred list made a narrowing search slower).
+  // A pool that grows draws only as many of its own cards as the last render drew, until the
+  // background render has drawn the rest, so the grid never shows a card the pool no longer holds;
+  // one that shrinks or reorders is drawn at once (a plain deferred list made a narrowing search
+  // slower).
   const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
-  const shown = ids.length > deferred.length ? deferred : ids;
+  const shown = ids.length > deferred.length ? ids.slice(0, deferred.length) : ids;
 
   return (
     <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
