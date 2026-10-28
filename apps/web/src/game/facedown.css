@@ -23,7 +23,7 @@
 .card[data-unrevealed="true"] {
   /* Its width is the zone's, never its content's, so it can be the tag's size container. */
   container-type: inline-size;
-  outline: 2px dashed rgb(232 236 248 / 0.85);
+  outline: 2px dashed color-mix(in srgb, var(--pal-slate-100) 85%, transparent);
   outline-offset: -3px;
 }
 
@@ -36,8 +36,8 @@
   z-index: 2;
   border-radius: inherit;
   background:
-    repeating-linear-gradient(135deg, rgb(12 16 28 / 0.42) 0 5px, rgb(12 16 28 / 0.1) 5px 10px),
-    linear-gradient(180deg, rgb(12 16 28 / 0.1), rgb(12 16 28 / 0.35));
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--pal-wood-900) 42%, transparent) 0 5px, color-mix(in srgb, var(--pal-wood-900) 10%, transparent) 5px 10px),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-900) 10%, transparent), color-mix(in srgb, var(--pal-wood-900) 35%, transparent));
   background-size: 28px 28px, 100% 100%;
   pointer-events: none;
   animation: jk-veil-drift calc(9s * var(--anim-scale, 1)) linear infinite;
@@ -77,11 +77,11 @@
   justify-content: center;
   gap: 3px;
   padding: 1px 4px;
-  border: 1px solid rgb(232 236 248 / 0.9);
+  border: 1px solid color-mix(in srgb, var(--pal-slate-100) 90%, transparent);
   border-radius: 999px;
-  background: rgb(10 13 22 / 0.92);
-  color: #f1f4fb;
-  font-size: clamp(8px, 11cqw, 12px);
+  background: color-mix(in srgb, var(--pal-wood-900) 92%, transparent);
+  color: var(--pal-slate-100);
+  font-size: clamp(var(--type-3xs), 11cqw, var(--type-sm));
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.2;

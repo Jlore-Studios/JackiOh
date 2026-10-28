@@ -68,6 +68,7 @@ import {
   PileDepth,
   REVEAL_AT_LABEL,
   REVEAL_AT_NOTE,
+  TermTips,
   UNREVEALED_NOTE,
   ascentLevelOf,
   faceDownLabel,
@@ -510,7 +511,10 @@ export default function Card(props: CardProps): ReactElement {
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the inspect
         // overlays (which render their own CardFace from `face`) keep the whole text.
-        <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} worn={worn} />
+        // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
+        <TermTips>
+          <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} worn={worn} />
+        </TermTips>
       )}
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the

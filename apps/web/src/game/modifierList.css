@@ -13,7 +13,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--radiant) 12%, var(--bg-sunken));
   color: var(--radiant);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -33,9 +33,9 @@
   border: 1px solid color-mix(in srgb, var(--radiant) 45%, var(--line));
   border-radius: 12px;
   background: var(--bg-raised);
-  box-shadow: 0 18px 40px -16px rgb(0 0 0 / 90%);
+  box-shadow: 0 18px 40px -16px color-mix(in srgb, var(--pal-black) 90%, transparent);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .modifier-list__side {
@@ -46,7 +46,7 @@
 
 .modifier-list__who {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
   letter-spacing: 0.12em;
   text-transform: uppercase;

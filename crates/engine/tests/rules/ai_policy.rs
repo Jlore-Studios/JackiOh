@@ -145,7 +145,7 @@ fn playout(seed: &str) -> (GameState, Vec<GameEvent>, PlayoutResult) {
     (original, events, result)
 }
 
-fn types_of(actions: &[ActionBody]) -> Vec<ActionType> {
+fn action_types(actions: &[ActionBody]) -> Vec<ActionType> {
     actions.iter().map(|action| action.action_type()).collect()
 }
 
@@ -182,10 +182,11 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         }
 
         // The filter is doing work: `legalActions` does offer those, and `skip: []` is the literal set.
-        assert!(types_of(&offered).contains(&ActionType::Concede));
-        assert!(types_of(&offered).contains(&ActionType::OfferDraw));
+        assert!(action_types(&offered).contains(&ActionType::Concede));
+        assert!(action_types(&offered).contains(&ActionType::OfferDraw));
         assert!(
-            !types_of(&policy_actions(&state, P1, PolicyOptions::default())).contains(&ActionType::Concede)
+            !action_types(&policy_actions(&state, P1, PolicyOptions::default()))
+                .contains(&ActionType::Concede)
         );
         assert_eq!(
             policy_actions(&state, P1, PolicyOptions { skip: Some(vec![]) }),

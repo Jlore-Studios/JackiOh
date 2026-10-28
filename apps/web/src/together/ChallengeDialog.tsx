@@ -31,6 +31,7 @@ import { withSession } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createChallenge, type PlayerRef } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { choiceOf, pickDeck, pickTrio, readChallengeChoice, rememberChallengeChoice } from "./challengeChoice.ts";
 import { followChallenge } from "./follow.ts";
 import { tabStops, useModalKeys } from "./modalKeys.ts";
@@ -180,9 +181,7 @@ export function ChallengeDialog({
           </>
         ) : null}
         {mode !== "random" && saved === null && loadError === null ? (
-          <p className="lobby-note" role="status">
-            {t("Loading your decks…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading your decks…")} />
         ) : null}
         {mode !== "random" && loadError !== null ? (
           <>

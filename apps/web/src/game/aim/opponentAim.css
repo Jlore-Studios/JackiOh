@@ -15,15 +15,15 @@
 
 .opponent-aim-shaft {
   fill: none;
-  stroke: rgb(255 82 82 / 85%);
+  stroke: color-mix(in srgb, var(--pal-ember-500) 85%, transparent);
   stroke-width: 7;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 5px rgb(255 60 60 / 60%));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--pal-red-500) 60%, transparent));
 }
 
 .opponent-aim-pulse {
   fill: none;
-  stroke: rgb(255 214 214 / 90%);
+  stroke: color-mix(in srgb, var(--pal-parchment) 90%, transparent);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: 10 18;
@@ -31,15 +31,15 @@
 }
 
 .opponent-aim-head {
-  fill: rgb(255 82 82 / 95%);
-  stroke: rgb(255 214 214 / 90%);
+  fill: color-mix(in srgb, var(--pal-ember-500) 95%, transparent);
+  stroke: color-mix(in srgb, var(--pal-parchment) 90%, transparent);
   stroke-width: 1.5;
   stroke-linejoin: round;
 }
 
 .opponent-aim-origin {
-  fill: rgb(255 82 82 / 25%);
-  stroke: rgb(255 82 82 / 90%);
+  fill: color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
+  stroke: color-mix(in srgb, var(--pal-ember-500) 90%, transparent);
   stroke-width: 2.5;
   animation: opponent-aim-breathe 900ms ease-in-out infinite alternate;
   transform-box: fill-box;

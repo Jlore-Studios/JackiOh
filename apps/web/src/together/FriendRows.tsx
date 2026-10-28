@@ -4,8 +4,8 @@
 // `watchable`), and every refusal is shown in the server's words.
 //
 // A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
-// server says the game is `watchable`; Chat always; Remove and Block, each asking once, where the
-// screen gives it the means to.
+// server says the game is `watchable`; Chat always; Remove, at once, and Block, asking once, where
+// the screen gives it the means to. Remove asks nothing because the screen offers Undo (R2119000).
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -91,7 +91,7 @@ export type FriendRowProps = {
   /** Gets the Challenge button pressed, which has the focus back once the dialog closes. */
   onChallenge: (opener: HTMLElement) => void;
   onChat: () => void;
-  /** A screen that leaves these out offers no Remove or Block. */
+  /** A screen that leaves these out offers no Remove or Block. Remove goes at once; the screen offers Undo (R2119000). */
   onRemove?: () => void;
   onBlock?: () => void;
   /** Runs before Watch takes the player to the game (the friends panel closes). */
@@ -112,7 +112,8 @@ export function FriendRow({
   onWatch,
   challengeRefusal = null,
 }: FriendRowProps): ReactElement {
-  const [asking, setAsking] = useState<"remove" | "block" | null>(null);
+  /** Block's inline question is open. */
+  const [asking, setAsking] = useState(false);
   const questionId = useId();
   const canChallenge = friend.status === "online";
   const canWatch = friend.watchable && friend.matchId !== null;
@@ -129,7 +130,7 @@ export function FriendRow({
         <Username name={friend.username} />
         <span className="together-row__status">{t(STATUS_WORDS[friend.status])}</span>
       </span>
-      {asking === null ? (
+      {!asking ? (
         <span className="together-row__actions">
           {canChallenge ? (
             <button
@@ -149,6 +150,7 @@ export function FriendRow({
             <button
               type="button"
               data-testid={togetherTestid.watch}
+              data-route={watchLink(friend.matchId, friend.profileId)}
               onClick={() => {
                 if (friend.matchId === null) return;
                 onWatch?.();
@@ -172,9 +174,7 @@ export function FriendRow({
               className="link-button"
               data-testid={togetherTestid.remove}
               disabled={busy}
-              onClick={() => {
-                setAsking("remove");
-              }}
+              onClick={onRemove}
             >
               {t("Remove")}
             </button>
@@ -186,7 +186,7 @@ export function FriendRow({
               data-testid={togetherTestid.block}
               disabled={busy}
               onClick={() => {
-                setAsking("block");
+                setAsking(true);
               }}
             >
               {t("Block")}
@@ -194,34 +194,28 @@ export function FriendRow({
           )}
         </span>
       ) : (
-        // An inline question, not a modal: the row asks once before it removes or blocks (B56).
+        // An inline question, not a modal: the row asks once before it blocks (B56).
         <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
           <span className="together-row__question" id={questionId}>
-            {asking === "remove" ? (
-              <Named text={t("Remove {name} from your friends?")} name={friend.username} />
-            ) : (
-              <Named text={t("Block {name}? You stop being friends, and neither of you can reach the other.")} name={friend.username} />
-            )}
+            <Named text={t("Block {name}? You stop being friends, and neither of you can reach the other.")} name={friend.username} />
           </span>
           <button
             type="button"
             data-testid={togetherTestid.confirm}
             disabled={busy}
             onClick={() => {
-              const action = asking;
-              setAsking(null);
-              if (action === "remove") onRemove?.();
-              else onBlock?.();
+              setAsking(false);
+              onBlock?.();
             }}
           >
-            {asking === "remove" ? t("Remove") : t("Block")}
+            {t("Block")}
           </button>
           <button
             type="button"
             className="link-button"
             data-testid={togetherTestid.keep}
             onClick={() => {
-              setAsking(null);
+              setAsking(false);
             }}
           >
             {t("Keep")}

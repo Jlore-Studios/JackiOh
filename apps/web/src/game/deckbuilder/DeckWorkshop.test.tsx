@@ -11,7 +11,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { cosmeticsOf } from "../../cards/cosmetics.ts";
+import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
+import { expectEmptyState } from "../../test/empty.ts";
+import { UNDO_WINDOW_MS } from "../../undo/hold.ts";
+import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../../undo/UndoToast.tsx";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";
 import { DECK_SIZE } from "./deckSize.ts";
@@ -28,6 +32,7 @@ import {
   memoryStorage,
   savedDeck,
   savedTrio,
+  settle,
 } from "./testkit.ts";
 import {
   DECK_CAP,
@@ -35,12 +40,13 @@ import {
   DECK_CODE_OUTPUT,
   DECK_COMPARE_SELECT,
   DECK_CONFLICTS,
+  DB_SEARCH,
   DECK_COPY_CODE,
   DECK_COSMETICS_BUTTON,
   DECK_COUNT,
+  DECK_DUPLICATE,
+  DECK_DUPLICATE_REASON,
   DECK_DELETE,
-  DECK_DELETE_CANCEL,
-  DECK_DELETE_CONFIRM,
   DECK_EDITOR,
   DECK_IMPORT,
   DECK_IMPORT_CAP_REASON,
@@ -48,10 +54,13 @@ import {
   DECK_IMPORT_OPEN,
   DECK_IMPORT_PREVIEW,
   DECK_IMPORT_SUBMIT,
+  DECK_LIST,
   DECK_NAME_INPUT,
   DECK_NEW,
+  DECK_REDO,
   DECK_SAVE_ERROR,
   DECK_STATUS,
+  DECK_UNDO,
   DECK_TO_PRACTICE,
   DECK_VERDICT,
   SYNC_STATUS,
@@ -60,7 +69,6 @@ import {
   TRIO_COMPARE,
   TRIO_COPY_CODE,
   TRIO_DELETE,
-  TRIO_DELETE_CONFIRM,
   TRIO_EDITOR,
   TRIO_IMPORT,
   TRIO_IMPORT_CAP_REASON,
@@ -70,14 +78,17 @@ import {
   TRIO_IMPORT_PREVIEW,
   TRIO_IMPORT_SHARED,
   TRIO_IMPORT_SUBMIT,
+  TRIO_LIST,
   TRIO_NAME_INPUT,
   TRIO_NEW,
   TRIO_VERDICT,
   WORKSHOP,
   WORKSHOP_BACK,
+  WORKSHOP_EMPTY,
   addPoolId,
   deckCardId,
   deckCompareChipId,
+  deckDuplicateId,
   deckRowId,
   loadoutErrorId,
   poolCardId,
@@ -231,6 +242,17 @@ describe("the rail", () => {
   });
 });
 
+describe("R2108000 the workshop's empty state", () => {
+  it("R2108000 with no deck the workshop's empty state offers Make a deck, which makes and opens one", () => {
+    mount();
+    const root = expectEmptyState(
+      within(screen.getByTestId(WORKSHOP_EMPTY)).getByText("Make your first deck, or import a code someone shared."),
+    );
+    fireEvent.click(within(root).getByText("Make a deck"));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+  });
+});
+
 // Making and editing a deck
 
 describe("a deck", () => {
@@ -315,21 +337,15 @@ describe("a deck", () => {
     expect(screen.getByTestId(DECK_VERDICT)).toHaveAttribute("data-ready", "true");
   });
 
-  it("R250 Delete asks first; Keep it keeps the deck, Delete removes it and sends the DELETE", async () => {
+  it("R250 Delete removes the deck at once and sends the DELETE once the undo window has passed", async () => {
     const { server, tick } = mount({
       decks: [savedDeck("a", "Aggro", [], 1), savedDeck("b", "Brawl", [], 2)],
       initialOpen: { kind: "deck", id: "a" },
     });
     fireEvent.click(screen.getByTestId(DECK_DELETE));
-    expect(screen.getByTestId(DECK_DELETE_CANCEL)).toHaveFocus();
-    fireEvent.click(screen.getByTestId(DECK_DELETE_CANCEL));
-    expect(screen.getByTestId(deckRowId("a"))).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId(DECK_DELETE));
-    fireEvent.click(screen.getByTestId(DECK_DELETE_CONFIRM));
     expect(screen.queryByTestId(deckRowId("a"))).toBeNull();
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "b");
-    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    await tick(UNDO_WINDOW_MS);
     expect(server.calls.some((call) => call.op === "deleteDeck" && call.id === "a")).toBe(true);
     expect(server.decks.has("a")).toBe(false);
   });
@@ -395,10 +411,9 @@ describe("issue #1991 Practice with this deck", () => {
     expect(practiceTarget()).toBe("/practice?deck=saved:2");
     fireEvent.click(screen.getByTestId(deckRowId("a")));
     fireEvent.click(screen.getByTestId(DECK_DELETE));
-    fireEvent.click(screen.getByTestId(DECK_DELETE_CONFIRM));
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "b");
     expect(screen.queryByTestId(DECK_TO_PRACTICE)).toBeNull();
-    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    await tick(UNDO_WINDOW_MS);
     expect(practiceTarget()).toBe("/practice?deck=saved:1");
   });
 });
@@ -633,22 +648,202 @@ describe("a trio", () => {
     fireEvent.click(screen.getByTestId(trioOpenDeckId(2)));
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
     fireEvent.click(screen.getByTestId(DECK_DELETE));
-    fireEvent.click(screen.getByTestId(DECK_DELETE_CONFIRM));
     fireEvent.click(screen.getByTestId(trioRowId("t")));
     expect(screen.getByTestId(trioSlotId(2))).toHaveValue("");
-    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    await tick(UNDO_WINDOW_MS);
     expect(server.trios.get("t")?.deckIds).toEqual(["a", null, "m"]);
   });
 
-  it("R252 Delete trio asks first, then removes only the trio", async () => {
+  it("R252 Delete trio removes only the trio", async () => {
     const { server, tick } = mount({ decks: full, trios: [savedTrio("t", "Ladder", ["a", "c", "m"], 4)], initialOpen: { kind: "trio", id: "t" } });
     fireEvent.click(screen.getByTestId(TRIO_DELETE));
-    fireEvent.click(screen.getByTestId(TRIO_DELETE_CONFIRM));
     expect(screen.queryByTestId(trioRowId("t"))).toBeNull();
     expect(screen.getByTestId(deckRowId("a"))).toBeInTheDocument();
-    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    await tick(UNDO_WINDOW_MS);
     expect(server.trios.has("t")).toBe(false);
     expect(server.decks.has("a")).toBe(true);
+  });
+});
+
+// Undoing a deletion (R2119000)
+
+describe("undoing a deletion (R2119000)", () => {
+  const full = [savedDeck("a", "Aggro", ONE, 1), savedDeck("c", "Control", TWO, 2), savedDeck("m", "Midrange", THREE, 3)];
+  const ladder = savedTrio("t", "Ladder", ["a", "c", "m"], 4);
+  const second = savedTrio("u", "Second", [null, null, null], 5);
+
+  /** The rows a list shows, in its order. */
+  function rows(listId: string): string[] {
+    return Array.from(screen.getByTestId(listId).querySelectorAll("[data-testid^='deck-row-'], [data-testid^='trio-row-']")).map(
+      (row) => row.getAttribute("data-testid") ?? "",
+    );
+  }
+
+  async function pageHide(): Promise<void> {
+    await act(async () => {
+      window.dispatchEvent(new Event("pagehide"));
+      await settle();
+    });
+  }
+
+  it("R2119000 Delete deck takes it off at once behind \"Deck deleted · Undo\" and sends nothing", async () => {
+    const { server, tick } = mount({ decks: full, initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    expect(rows(DECK_LIST)).toEqual([deckRowId("a"), deckRowId("m")]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Deck deleted · Undo");
+    await tick(UNDO_WINDOW_MS - 1);
+    expect(server.calls).toEqual([]);
+  });
+
+  it("R2119000 Undo puts the deck back in its place, open, and fills its trio slots again, sending nothing", async () => {
+    const { server, tick } = mount({ decks: full, trios: [ladder], initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.getByTestId(trioSlotId(2))).toHaveValue("");
+
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    expect(rows(DECK_LIST)).toEqual([deckRowId("a"), deckRowId("c"), deckRowId("m")]);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.getByTestId(trioSlotId(2))).toHaveValue("c");
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.calls).toEqual([]);
+    expect(server.decks.has("c")).toBe(true);
+  });
+
+  it("R2119000 the window's end sends the deck's DELETE exactly once", async () => {
+    const { server, tick } = mount({ decks: full, initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    await tick(UNDO_WINDOW_MS);
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "c" }]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.calls).toHaveLength(1);
+    expect(syncState()).toBe("saved");
+  });
+
+  it("R2119000 pagehide sends the held DELETE at once, with keepalive", async () => {
+    const { server } = mount({ decks: full, initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    await pageHide();
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "c", keepalive: true }]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+  });
+
+  it("R2119000 leaving the workshop sends the held DELETE", async () => {
+    const { server } = mount({ decks: full, initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    cleanup();
+    await settle();
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "c" }]);
+  });
+
+  it("R2119000 a refused DELETE puts the deck back and shows the server's words", async () => {
+    const server = fakeDeckServer();
+    const message = "This account can't change its decks.";
+    server.state.refusals.set("c", new ApiRequestError(403, { code: "forbidden", message }));
+    const { tick } = mount({ decks: full, server, initialOpen: { kind: "deck", id: "c" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    await tick(UNDO_WINDOW_MS);
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "c" }]);
+    expect(rows(DECK_LIST)).toEqual([deckRowId("a"), deckRowId("c"), deckRowId("m")]);
+    expect(syncState()).toBe("error");
+    expect(screen.getByTestId(SYNC_STATUS)).toHaveTextContent(message);
+  });
+
+  it("R2119000 while the delete is held nothing saves the deck and no trio shows it", async () => {
+    const { server, tick } = mount({ decks: full, trios: [ladder], initialOpen: { kind: "deck", id: "a" } });
+    expect(screen.getByTestId(trioRowId("t"))).toHaveTextContent("3 of 3 decks");
+    fireEvent.change(screen.getByTestId(DECK_NAME_INPUT), { target: { value: "Aggro 2" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    expect(screen.getByTestId(trioRowId("t"))).toHaveTextContent("2 of 3 decks");
+    await tick(UNDO_WINDOW_MS - 1);
+    expect(server.calls, "the rename waits with the deck").toEqual([]);
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.getByTestId(trioSlotId(1))).toHaveValue("");
+
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["putDeck a"]);
+    expect(server.decks.get("a")?.name).toBe("Aggro 2");
+  });
+
+  it("R2119000 a second delete sends the first's DELETE at once and takes the toast", async () => {
+    const { server } = mount({ decks: full, initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    await act(async () => {
+      await settle();
+    });
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "a" }]);
+    expect(screen.getAllByTestId(UNDO_TOAST)).toHaveLength(1);
+    expect(rows(DECK_LIST)).toEqual([deckRowId("m")]);
+
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(rows(DECK_LIST)).toEqual([deckRowId("c"), deckRowId("m")]);
+  });
+
+  it("R2119000 New deck at the cap sends the held DELETE first", async () => {
+    const decks = Array.from({ length: MAX_SAVED_DECKS }, (_unused, index) => savedDeck(`d${String(index)}`, `Deck ${String(index)}`, [], index));
+    const { server, tick } = mount({ decks, initialOpen: { kind: "deck", id: "d0" } });
+    expect(screen.getByTestId(DECK_NEW)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    fireEvent.click(screen.getByTestId(DECK_NEW));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["deleteDeck d0", "putDeck new-1"]);
+  });
+
+  it("R2119000 Delete trio takes it off at once behind \"Trio deleted · Undo\" and sends nothing", async () => {
+    const { server, tick } = mount({ decks: full, trios: [ladder, second], initialOpen: { kind: "trio", id: "t" } });
+    fireEvent.click(screen.getByTestId(TRIO_DELETE));
+    expect(rows(TRIO_LIST)).toEqual([trioRowId("u")]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Trio deleted · Undo");
+    await tick(UNDO_WINDOW_MS - 1);
+    expect(server.calls).toEqual([]);
+  });
+
+  it("R2119000 Undo puts the trio back in its place, open, sending nothing", async () => {
+    const { server, tick } = mount({ decks: full, trios: [ladder, second], initialOpen: { kind: "trio", id: "t" } });
+    fireEvent.click(screen.getByTestId(TRIO_DELETE));
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(rows(TRIO_LIST)).toEqual([trioRowId("t"), trioRowId("u")]);
+    expect(screen.getByTestId(TRIO_EDITOR)).toHaveAttribute("data-trio", "t");
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.calls).toEqual([]);
+    expect(server.trios.has("t")).toBe(true);
+  });
+
+  it("R2119000 the window's end sends the trio's DELETE exactly once", async () => {
+    const { server, tick } = mount({ decks: full, trios: [ladder], initialOpen: { kind: "trio", id: "t" } });
+    fireEvent.click(screen.getByTestId(TRIO_DELETE));
+    await tick(UNDO_WINDOW_MS);
+    expect(server.calls).toEqual([{ op: "deleteTrio", id: "t" }]);
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.calls).toHaveLength(1);
+    expect(server.trios.has("t")).toBe(false);
+  });
+
+  it("R2119000 pagehide sends the held trio DELETE at once, with keepalive", async () => {
+    const { server } = mount({ decks: full, trios: [ladder], initialOpen: { kind: "trio", id: "t" } });
+    fireEvent.click(screen.getByTestId(TRIO_DELETE));
+    await pageHide();
+    expect(server.calls).toEqual([{ op: "deleteTrio", id: "t", keepalive: true }]);
+  });
+
+  it("R2119000 a refused trio DELETE puts the trio back and shows the server's words", async () => {
+    const server = fakeDeckServer();
+    const message = "This account can't change its trios.";
+    server.state.refusals.set("t", new ApiRequestError(403, { code: "forbidden", message }));
+    const { tick } = mount({ decks: full, trios: [ladder, second], server, initialOpen: { kind: "trio", id: "t" } });
+    fireEvent.click(screen.getByTestId(TRIO_DELETE));
+    await tick(UNDO_WINDOW_MS);
+    expect(rows(TRIO_LIST)).toEqual([trioRowId("t"), trioRowId("u")]);
+    expect(syncState()).toBe("error");
+    expect(screen.getByTestId(SYNC_STATUS)).toHaveTextContent(message);
   });
 });
 
@@ -971,5 +1166,231 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     // Escape closes the picker again.
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+  });
+});
+
+describe("issue #2099 undo and redo", () => {
+  function undoButton(): HTMLElement {
+    return screen.getByTestId(DECK_UNDO);
+  }
+
+  function redoButton(): HTMLElement {
+    return screen.getByTestId(DECK_REDO);
+  }
+
+  function count(): string {
+    return screen.getByTestId(DECK_COUNT).getAttribute("data-count") ?? "";
+  }
+
+  it("issue #2099 Undo takes back an add and a removal and Redo puts them back; each button is off with nothing to move, and an undo saves like any edit", async () => {
+    const { server, tick } = mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(undoButton()).toBeDisabled();
+    expect(redoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(screen.getByTestId(deckCardId(fixtureCardId(1))));
+    expect(count()).toBe("1");
+    fireEvent.click(undoButton());
+    expect(count()).toBe("2");
+    expect(screen.getByTestId(deckCardId(fixtureCardId(1)))).toBeInTheDocument();
+    expect(redoButton()).toBeEnabled();
+    fireEvent.click(undoButton());
+    fireEvent.click(undoButton());
+    expect(count()).toBe("0");
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(redoButton());
+    expect(count()).toBe("1");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")?.cards).toEqual([fixtureCardId(1)]);
+  });
+
+  it("issue #2099 a rename is one step however many keys it takes", async () => {
+    const { server, tick } = mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    const input = screen.getByTestId(DECK_NAME_INPUT);
+    fireEvent.change(input, { target: { value: "Aggr" } });
+    fireEvent.change(input, { target: { value: "Aggro Rush" } });
+    fireEvent.blur(input);
+    fireEvent.change(input, { target: { value: "Tempo" } });
+    fireEvent.blur(input);
+    fireEvent.click(undoButton());
+    expect(input).toHaveValue("Aggro Rush");
+    fireEvent.click(undoButton());
+    expect(input).toHaveValue("Aggro");
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(redoButton());
+    expect(input).toHaveValue("Aggro Rush");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")?.name).toBe("Aggro Rush");
+  });
+
+  it("issue #2099 a portrait pick and a cosmetic pick are a step each", () => {
+    mount({ decks: [savedDeck("a", "Aggro", ONE, 1)], initialOpen: { kind: "deck", id: "a" } });
+    const first = screen.getByTestId("portrait-current").getAttribute("title") ?? "";
+    fireEvent.click(screen.getByTestId("portrait-current"));
+    fireEvent.click(screen.getByTestId("portrait-pick-shredder"));
+    fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
+    fireEvent.change(screen.getByTestId("deck-cosmetic-field"), { target: { value: "field-rain" } });
+    fireEvent.click(undoButton());
+    expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("");
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    fireEvent.click(undoButton());
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", first);
+    fireEvent.click(redoButton());
+    fireEvent.click(redoButton());
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("field-rain");
+  });
+
+  it("issue #2099 a new edit after Undo empties Redo", () => {
+    mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(undoButton());
+    expect(redoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(3))));
+    expect(redoButton()).toBeDisabled();
+    fireEvent.click(undoButton());
+    expect(screen.queryByTestId(deckCardId(fixtureCardId(3)))).toBeNull();
+    expect(count()).toBe("1");
+  });
+
+  it("issue #2099 Ctrl/Cmd+Z undoes and Ctrl/Cmd+Shift+Z redoes, and neither does anything in a text field", () => {
+    mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    expect(fireEvent.keyDown(document.body, { key: "z", ctrlKey: true })).toBe(false);
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(document.body, { key: "Z", ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(count()).toBe("1");
+    expect(fireEvent.keyDown(document.body, { key: "z", metaKey: true })).toBe(false);
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(document.body, { key: "z", metaKey: true, shiftKey: true })).toBe(false);
+    expect(count()).toBe("1");
+    expect(fireEvent.keyDown(screen.getByTestId(DECK_NAME_INPUT), { key: "z", ctrlKey: true })).toBe(true);
+    expect(fireEvent.keyDown(screen.getByTestId(DB_SEARCH), { key: "z", metaKey: true })).toBe(true);
+    expect(count()).toBe("1");
+    fireEvent.click(undoButton());
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(screen.getByTestId(DB_SEARCH), { key: "z", ctrlKey: true, shiftKey: true })).toBe(true);
+    expect(count()).toBe("0");
+  });
+
+  it("issue #2099 opening another deck starts a fresh history, and so does closing the editor", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", [], 1), savedDeck("b", "Tempo", [], 2)],
+      trios: [savedTrio("t", "Ladder", [null, null, null], 3)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    expect(undoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "b");
+    expect(undoButton()).toBeDisabled();
+    expect(redoButton()).toBeDisabled();
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    expect(screen.getByTestId(deckRowId("a"))).toHaveAttribute("data-count", "1");
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.queryByTestId(DECK_UNDO)).toBeNull();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(3))));
+    expect(undoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(WORKSHOP_BACK));
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(undoButton()).toBeDisabled();
+    expect(screen.getByTestId(deckRowId("b"))).toHaveAttribute("data-count", "2");
+  });
+});
+
+describe("duplicating a deck (#2096)", () => {
+  it("#2096 Duplicate in the editor makes a deck with the same cards, portrait and picks, opens it and saves it", async () => {
+    const { server, tick } = mount({
+      decks: [
+        {
+          ...savedDeck("a", "Aggro", ONE, 1),
+          portrait: "gary",
+          tableCosmetic: "table-felt",
+          fieldCosmetic: "field-rain",
+          cardBackCosmetic: "card-back-lacquer",
+        },
+      ],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    expect(screen.getByTestId(DECK_DUPLICATE)).toBeEnabled();
+    expect(screen.queryByTestId(DECK_DUPLICATE_REASON)).toBeNull();
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy)");
+    expect(screen.getByTestId(deckRowId("new-1"))).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId(deckRowId("new-1"))).toHaveAttribute("data-count", String(DECK_SIZE));
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("new-1")).toMatchObject({
+      name: "Aggro (copy)",
+      cards: [...ONE],
+      portrait: "gary",
+      tableCosmetic: "table-felt",
+      fieldCosmetic: "field-rain",
+      cardBackCosmetic: "card-back-lacquer",
+    });
+  });
+
+  it("#2096 a row's Duplicate copies that deck, not the open one, and opens the copy from the list", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", ONE.slice(0, 3), 1), savedDeck("b", "Brawl", TWO.slice(0, 5), 2)],
+    });
+    expect(screen.getByTestId(WORKSHOP)).toHaveAttribute("data-view", "list");
+    expect(screen.getByRole("button", { name: "Duplicate Brawl" })).toBe(screen.getByTestId(deckDuplicateId("b")));
+    fireEvent.click(screen.getByTestId(deckDuplicateId("b")));
+    expect(screen.getByTestId(WORKSHOP)).toHaveAttribute("data-view", "editor");
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Brawl (copy)");
+    expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", "5");
+  });
+
+  it("#2096 the copy's name takes (copy 2), then (copy 3), while each is taken", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", [], 1), savedDeck("b", "Aggro (copy)", [], 2)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(deckDuplicateId("a")));
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy 2)");
+    fireEvent.click(screen.getByTestId(deckDuplicateId("a")));
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy 3)");
+    expect(screen.getByTestId(DECK_CAP)).toHaveTextContent(`4/${String(MAX_SAVED_DECKS)}`);
+  });
+
+  it("#2096 the original and the trio slots naming it are unchanged", async () => {
+    const { server, tick } = mount({
+      decks: [savedDeck("a", "Aggro", ONE, 1), savedDeck("b", "Brawl", TWO, 2)],
+      trios: [savedTrio("t", "Ladder", ["a", "b", null], 3)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["putDeck new-1"]);
+    expect(server.decks.get("a")).toMatchObject({ name: "Aggro", cards: [...ONE] });
+    expect(server.trios.get("t")?.deckIds).toEqual(["a", "b", null]);
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.getByTestId(trioSlotId(1))).toHaveValue("a");
+    expect(screen.getByTestId(trioSlotId(2))).toHaveValue("b");
+    expect(screen.getByTestId(trioSlotId(3))).toHaveValue("");
+  });
+
+  it("#2096 at the deck limit Duplicate is off in the list and the editor, and says why", () => {
+    const decks = Array.from({ length: MAX_SAVED_DECKS }, (_unused, index) => savedDeck(`d${String(index)}`, `Deck ${String(index)}`, [], index));
+    mount({ decks, initialOpen: { kind: "deck", id: "d0" } });
+    expect(screen.getByTestId(DECK_DUPLICATE)).toBeDisabled();
+    expect(screen.getByTestId(DECK_DUPLICATE_REASON)).toHaveTextContent(
+      `You have ${String(MAX_SAVED_DECKS)} decks, the most you can keep. Delete one to duplicate this.`,
+    );
+    expect(screen.getByTestId(DECK_DUPLICATE)).toHaveAttribute("aria-describedby", screen.getByTestId(DECK_DUPLICATE_REASON).id);
+    const rowDuplicate = screen.getByTestId(deckDuplicateId("d0"));
+    expect(rowDuplicate).toBeDisabled();
+    expect(rowDuplicate).toHaveAttribute("aria-describedby", screen.getByTestId(DECK_CAP_REASON).id);
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    fireEvent.click(rowDuplicate);
+    expect(screen.getByTestId(DECK_CAP)).toHaveTextContent(`${String(MAX_SAVED_DECKS)}/${String(MAX_SAVED_DECKS)}`);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "d0");
   });
 });

@@ -140,9 +140,19 @@ fn strip_key(value: &mut Value, key: &str) {
     }
 }
 
-/// The canonical text of a step's events.
+/// The canonical text of a step's events, without the `creator` an `addedToHand`, a `shuffledIn` or
+/// a `transformed` names (R2089000): the game record's bookkeeping, which no rule reads and no view
+/// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
 pub fn events_text(events: &[GameEvent]) -> String {
-    canonical(&serde_json::to_value(events).expect("GameEvents serialise"))
+    let mut value = serde_json::to_value(events).expect("GameEvents serialise");
+    if let Value::Array(items) = &mut value {
+        for item in items {
+            if let Value::Object(event) = item {
+                event.remove("creator");
+            }
+        }
+    }
+    canonical(&value)
 }
 
 /// §13.2's `l`: the actor's legal actions as a set — each action's canonical text, distinct, sorted

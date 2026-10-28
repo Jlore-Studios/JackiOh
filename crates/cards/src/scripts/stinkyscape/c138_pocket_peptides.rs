@@ -1,5 +1,5 @@
-//! S #138 Pocket Peptides (SPEC §8.10 row 138; R70, R460, R946, R1875006): (1) Trap, Common, of the held
-//! Stinkyscape set (R1420).
+//! S #138 Pocket Peptides (SPEC §8.10 row 138; R70, R460, R946, R1875006, R1881007): (1) Trap, Common,
+//! of the held Stinkyscape set (R1420).
 //!   Base:    "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
 //!   Radiant: "Reveals when one of your Units would die in combat: Cast a Radiant CN Peptides on each of
 //!            your Units."
@@ -12,7 +12,8 @@
 //! times, which may lift its Health past its damage, and otherwise it is destroyed; the check after the
 //! cast's effect judges it on the board the cast left (R460): a Unit the Buffs lifted lives. Radiant: a
 //! Radiant CN Peptides (Lucky 1, so its coin rolls twice, R1440) cast once at each of its controller's
-//! Units, the dying one first and then the rest in lane order (R1875006). Declares no numbers: CN
+//! Units, the dying one first and then the rest in lane order (R1875006). Fused into a permanent, it answers no
+//! death while a CN Peptides its controller cast is still resolving (R1881007). Declares no numbers: CN
 //! Peptides' 50% and its count are its own.
 
 use jackioh_engine::effects::{ForEachCardArgs, cast_new, for_each_card};
@@ -35,6 +36,14 @@ fn first_in_combat(event: &ReplacedEvent, controller: PlayerId) -> Option<String
         .iter()
         .find(|unit| unit.controller == controller && unit.combat == Some(true))
         .map(|unit| unit.instance_id.clone())
+}
+
+/// R1881007: this card is not a set Trap (a Pocket Peptides M #47's Fuse took into a permanent, which is
+/// not spent as it fires) and a CN Peptides its controller cast is still resolving, so it answers no death
+/// until that cast has: the check inside the cast finds the same Unit still dying and would ask it again,
+/// forever. A set Trap is spent as it fires, so another set Pocket Peptides still answers.
+fn answering(state: &GameState, card: &CardInstance, controller: PlayerId) -> bool {
+    !jackioh_engine::preview::is_face_down(state, card) && is_resolving(state, controller, &[CN_PEPTIDES])
 }
 
 /// R1875006: the Units it casts at — the one dying in combat first, so its own Buffs decide it; on the
@@ -62,7 +71,9 @@ fn pocket_peptides(radiant: bool) -> Script {
             id: "pocket-peptides".into(),
             on: ReplacementMoment::WouldDie,
             where_: None,
-            when: Some(replacement_when(|rc| first_in_combat(rc.event, rc.controller).is_some())),
+            when: Some(replacement_when(|rc| {
+                first_in_combat(rc.event, rc.controller).is_some() && !answering(rc.state, rc.self_, rc.controller)
+            })),
             instead: ReplacementInstead {
                 resolve_first: Some(true),
                 ..ReplacementInstead::default()
@@ -257,6 +268,128 @@ mod tests {
                 .collect();
             assert_eq!(aimed, lanes);
             assert!(s.state().pending.is_none());
+        }
+    }
+
+    /// R1881007: a set Pocket Peptides is spent as it fires, and a second one set beside it still
+    /// answers the check inside the first one's cast. p1's 14/14 attacks p2's Vanilla, two Pocket
+    /// Peptides set behind it; on a seed whose first cast Buffs the Vanilla (no destroy), the 14 damage
+    /// still kills it, so the check inside that cast finds it dying in combat again.
+    mod set_twice {
+        use super::*;
+
+        fn attacked(seed: &str) -> (Scenario, String) {
+            let mut s = crate::scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [FILLER], "field": [{ "def": GENN, "lane": 1 }], "library": crate::filler(6) },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [{ "def": VANILLA, "lane": 1 }],
+                    "backrow": [{ "def": ID, "lane": 1 }, { "def": ID, "lane": 2 }],
+                    "library": crate::filler(6),
+                },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let defender = s.unit_at(P2, 1).id;
+            s.attack(GENN, defender.as_str());
+            (s, defender)
+        }
+
+        /// Whether the first CN Peptides cast took the Buff: an `upgraded` comes before any destroy.
+        fn first_cast_buffed(s: &Scenario) -> bool {
+            s.last_events()
+                .iter()
+                .find_map(|event| match event.event_type() {
+                    GameEventType::Upgraded => Some(true),
+                    GameEventType::Destroyed => Some(false),
+                    _ => None,
+                })
+                .unwrap_or(false)
+        }
+
+        #[test]
+        fn r1881007_a_second_set_trap_still_answers_the_check_inside_the_first_ones_cast() {
+            let seed = seed_where("pocket-peptides-twice", |seed| {
+                first_cast_buffed(&attacked(seed).0)
+            });
+            let (s, _defender) = attacked(&seed);
+            let fired = s
+                .last_events()
+                .iter()
+                .filter(|event| event.event_type() == GameEventType::TrapFired)
+                .count();
+            assert_eq!(fired, 2, "the second set Pocket Peptides answered too");
+            assert_eq!(peptides_cast(&s).len(), 2, "two CN Peptides casts");
+            assert!(
+                s.backrow(P2, 1).is_none() && s.backrow(P2, 2).is_none(),
+                "each is spent as it fires"
+            );
+            assert_eq!(
+                s.pile(P2, "graveyard")
+                    .iter()
+                    .filter(|card| card.def_id == ID)
+                    .count(),
+                2
+            );
+            assert!(s.state().result.is_none());
+        }
+    }
+
+    /// R1881007: a Pocket Peptides fused into one of p2's Units (as M #47's Fuse takes it in) answers its
+    /// Unit's combat death with one cast, and the check inside that cast, which finds the Unit still dying,
+    /// asks it nothing more: one CN Peptides, the game going on.
+    mod fused {
+        use super::*;
+        use jackioh_engine::subsystems::{self, FuseArgs};
+
+        /// The fused card `def_ids` make, put into p2's hand at (0), as `tests/cross`'s `craft_fused`.
+        fn fused_into_hand(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
+            let mut events: Vec<GameEvent> = vec![];
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            let made = {
+                let state = s.state_mut();
+                let ingredients: Vec<CardInstance> = def_ids
+                    .iter()
+                    .map(|def_id| new_instance(&mut *state, def_id, P2, Zone::Gone { player: P2 }))
+                    .collect();
+                let mut sink = EngineSink::new(state, &mut events, &mut rng);
+                subsystems::fuse(
+                    &mut sink,
+                    FuseArgs {
+                        ingredients,
+                        to_hand: Some(P2),
+                        ..FuseArgs::default()
+                    },
+                )
+            };
+            s.state_mut().rng_cursor = rng.cursor();
+            made.expect("the fused card")
+        }
+
+        #[test]
+        fn r1881007_fused_into_a_unit_it_answers_one_combat_death_once() {
+            for i in 0..6 {
+                let mut s = crate::scenario(json!({
+                    "seed": format!("fused-peptides-{i}"),
+                    "active": "p2",
+                    "p1": { "hand": [FILLER], "field": [{ "def": GENN, "lane": 1 }], "library": crate::filler(6) },
+                    "p2": { "hand": [FILLER], "library": crate::filler(6), "mana": 10 },
+                }));
+                let fused = fused_into_hand(&mut s, &[VANILLA, ID]);
+                s.play(fused.id.as_str(), json!({ "zone": 1 }));
+                let on_field = s.unit_at(P2, 1).id;
+                s.end_turn();
+                s.attack(GENN, on_field.as_str());
+                let casts = s
+                    .last_events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if def_id == CN_PEPTIDES))
+                    .count();
+                assert_eq!(casts, 1, "seed {i}: one cast");
+                assert!(s.state().result.is_none());
+            }
         }
     }
 }

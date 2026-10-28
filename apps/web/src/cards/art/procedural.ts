@@ -87,6 +87,8 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   meditative: 0x16056737,
   // R1857000: the held Stinkyscape set's own, under which none of its cards repeats a shipped card's picture.
   stinkyscape: 0x275c6732,
+  // R2194000: the held Training Grounds set's own, under which none of its cards repeats a shipped card's picture.
+  traininggrounds: 0x3c6ef373,
 };
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;

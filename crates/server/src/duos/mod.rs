@@ -3,6 +3,8 @@
 //! (`/ws/duos`) and one actor per match.
 //!
 //! - `rooms`: the HTTP routes: make, read, join and free a room, and the caller's live co-op match.
+//! - `again`: Play again after a finished match: the two seats' offers and the game they make
+//!   (R2092000).
 //! - `replay`: a finished match's steps as the caller's seat saw them (B41).
 //! - `ws`: the socket's authentication and hello, before the actor takes it (B35).
 //! - `actor`: the match itself: the state, the log, the clocks, the AI's seats and the pings
@@ -16,6 +18,7 @@
 //! through the reward hook (`finish_match`, [[R1502000]]).
 
 pub mod actor;
+pub mod again;
 pub mod engine;
 pub mod protocol;
 pub mod registry;

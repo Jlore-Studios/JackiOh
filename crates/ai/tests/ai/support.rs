@@ -81,6 +81,16 @@ pub fn trap_pool() -> Vec<String> {
     ids
 }
 
+/// Every def a face-down backrow sample may take: the trap pool and every card that prints Cloaked
+/// (R783009), Stinkyscape's #103 Vxyl and #123 Gokugains among them since that set shipped (#1884).
+pub fn face_down_pool() -> Vec<String> {
+    let mut ids = trap_pool();
+    ids.extend(jackioh_engine::alt_play::printed_cloaked_def_ids());
+    ids.sort();
+    ids.dedup();
+    ids
+}
+
 /// Every instance in every zone of both players, Stack piles included.
 pub fn every_card(state: &GameState) -> Vec<&CardInstance> {
     PLAYER_IDS

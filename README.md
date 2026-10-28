@@ -8,7 +8,7 @@ against a practice AI.
 
 | Read | For |
 |---|---|
-| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 396 cards and 86 tokens of Core, Classic, Classic+, Meditative and Meditative+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
+| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 572 cards and 138 tokens of Core, Classic, Classic+, Meditative, Meditative+ and Stinkyscape, the architecture and the engine design, one note per section and per ruling. The only source of rules |
 | [`BUILD.md`](BUILD.md) | The work order: milestones, acceptance criteria, the definition of done |
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
 | [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and the commands |
@@ -79,7 +79,7 @@ flowchart LR
 | Part | Where | What runs there | Read |
 |---|---|---|---|
 | The web client | Cloudflare; Vercel is staging | the Vite and React app, with the engine and the AI as WebAssembly | [`apps/web`](apps/web/README.md), [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
-| The server | Render, in Ohio | `jackioh-server`: the HTTP API and one match actor per match. `/api/catalog` is Render's health check | [`crates/server`](crates/server/README.md), [`render.yaml`](render.yaml) |
+| The server | Render, in Ohio | `jackioh-server`: the HTTP API and one match actor per match. `/readyz` is Render's health check, and deploy-watch polls `/api/catalog` | [`crates/server`](crates/server/README.md), [`render.yaml`](render.yaml) |
 | The database and sign-in | Supabase, in `us-east-2` | Postgres and Auth | [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
 | CI | GitHub's runners | the five required checks on every pull request, and the slow suites once a day | [`CLAUDE.md`](CLAUDE.md), CI |
 | The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |

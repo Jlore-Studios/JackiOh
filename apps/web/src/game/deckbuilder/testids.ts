@@ -93,9 +93,20 @@ export const DECK_SAVE_ERROR = "deck-save-error";
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
+/** R2119000: deletes the deck at once, behind the undo toast (`undo/UndoToast.tsx`). */
 export const DECK_DELETE = "deck-delete";
-export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
-export const DECK_DELETE_CANCEL = "deck-delete-cancel";
+
+/**
+ * #2096: Duplicate in the open deck's actions, and the reason it gives when off at the deck limit.
+ * Each row in the list has its own, `deck-duplicate-<deckId>` (never `deck-row-…`, which the e2e
+ * specs read as the rows).
+ */
+export const DECK_DUPLICATE = "deck-duplicate";
+export const DECK_DUPLICATE_REASON = "deck-duplicate-reason";
+
+export function deckDuplicateId(deckId: string): string {
+  return `deck-duplicate-${deckId}`;
+}
 
 /**
  * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
@@ -115,6 +126,10 @@ export const DECK_COMPARE_SELECT = "deck-compare-select";
  * sidebar keeps the verdict and the pool's first row on the first screen (BUILD M5-T1).
  */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
+
+/** #2099: the open deck's Undo and Redo, in the top bar; each is off with nothing to move. */
+export const DECK_UNDO = "deck-undo";
+export const DECK_REDO = "deck-redo";
 
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
@@ -182,9 +197,8 @@ export function trioCardId(slot: number, cardId: string): string {
   return `trio-card-${String(slot)}-${cardId}`;
 }
 
+/** R2119000: as `DECK_DELETE`, for the trio. */
 export const TRIO_DELETE = "trio-delete";
-export const TRIO_DELETE_CONFIRM = "trio-delete-confirm";
-export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
 
 /** R339: "Copy trio code", and the read-only field the code is shown in once copied. */
 export const TRIO_COPY_CODE = "trio-copy-code";

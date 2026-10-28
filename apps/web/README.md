@@ -30,7 +30,11 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
+
+The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+
+The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
@@ -42,6 +46,47 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 `workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
+
+On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
+`(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
+`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
+what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
+switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
+`::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
+radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
+measures the board and every menu of `46` at 390x844.
+
+A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
+shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
+and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
+line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer only under
+`data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
+root that clips them, so the one-screen rule holds. `main.tsx`'s `Loading` takes `skeleton` for the
+same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+more" buttons (content or a button is already there), the practice start screen's shuffle and the
+boards' "Joining …" panels.
+
+A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
+the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
+`useShownAfterDelay` sets `data-shown` on the skeleton and, through `shown`, on `ShellPanel`. It is
+a timer because Reduce motion zeroes CSS delays. The blocks are brass. An empty menu panel draws
+`empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
+for a link, `onPress` for a button). The ruling lists what stays text.
+
+A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
+menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
+reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
+packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's table (public) and
+`FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
+reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
+skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
+`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
+accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
+a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
+for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
+`key`, when the decks that land differ, since its store is made once.
 
 ## Three flows at the table
 
@@ -154,7 +199,7 @@ A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-priced Resource in the viewer's tray. Each is live exactly when `legal` lists its `marketBuy` or
+sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
 ## Commands
@@ -170,6 +215,14 @@ pnpm --dir apps/web test         # vitest (jsdom)
 `dev`, `build`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre` scripts), which
 needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
 so run one of them (or the script) once first.
+
+The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
+`scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
+`fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
+`settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
+mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
+defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
@@ -205,7 +258,7 @@ src/replay/
                   and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its notice slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
@@ -233,8 +286,11 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
-                        (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
-                        (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
+                        (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
+                        new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
+                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        one POST /api/trios/import, never the autosave (R341);
+                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
@@ -266,7 +322,9 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
-                        (#1650), for this screen, the account, Play and the board
+                        (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
+                        draws a ranked win streak as a flame on the account and a ranked match's
+                        line (R2101000)
 routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
                         Card builder (/creator) as links, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
@@ -293,7 +351,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; moved from /account (#1307). The landing's bookmark
+                        reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
+                        a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
@@ -355,6 +414,19 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
 
+**A deletion is undone, not asked** (R2119000, `undo/`). Delete deck, Delete trio, the creator's
+Delete and Remove on a friend's row take the item off the screen at once and show a toast, "Deck
+deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
+`UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
+motion). The request waits for the window to close and goes at once when a second deletion takes the
+toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
+creator before a new card's first save, since the item counts against the server's caps until then.
+Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
+trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
+and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
+
 ## Play together and Duos
 
 Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §13) are screens over the server's answers and
@@ -377,7 +449,13 @@ routes (net/navigate.ts paths, and both vercel.json route tables):
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+                         this site's room link draws a Join button that navigates in-app (R2094000);
+                         a send shows at once, sends go one at a time, a failed one offers Retry and
+                         Discard (R2120000)
+net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
+                         (/together?coop=…): built for the share sheet or the clipboard, read once off
+                         the address bar into this tab, through a sign-in, for the lobby or the co-op panel
 together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
                          landing and a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
@@ -396,11 +474,12 @@ together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenge
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
-                         invite a friend by sending the code in chat, join by code; both players go to
-                         /duos/:matchId once the guest joins
+                         offer its link, invite a friend by sending the link in chat, join by code or by
+                         a co-op link that fills the join form and focuses Join (R2094000); both players
+                         go to /duos/:matchId once the guest joins
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
-                         teammate strip and the ping wheel
+                         Both boards toggle (R2095000), the teammate strip and the ping wheel
 duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
                          DuosBoard's `replay` mode (nothing live) with the replay toolbar (`replay/ReplayToolbar.tsx`)
 duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): the seat's views as one
@@ -417,9 +496,23 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
+- the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
+  (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
+  `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
+  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
+  screen while both boards show, and below 600px the toggle hides and the board falls back to one
+  with the portal flipping: the rail rides whichever board the portal names, so the one drawn
+  always carries it;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
+- on a live game's result, Play again (`duos-result-again`, R2092000) sends this seat's offer
+  (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
+  `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
+  to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
+  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
+  no button.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
@@ -430,9 +523,9 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
-`duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
-`duos-ping-<kind>` and `duos-ping-marker`.
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
+`duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
+`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>` and `duos-ping-marker`.
 
 ## Practice
 
@@ -455,8 +548,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, the clock mark (R2208000), in IndexedDB `jackioh.practice`
+                      (memory in jsdom), and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -471,7 +564,16 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
+- Against the Easy AI a free game's snapshot adds `lethal: true` while the human has a sure win this
+  turn by what they can see (R2102000): the core asks `lethalHint(state, human, deadlineMs)`, which the
+  Rust AI answers from the human's own redaction, so the AI's hidden cards never change it, under a
+  wall-clock cap of its own (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). Medium, Hard and a
+  lesson never ask. The route passes it to `Game`'s `lethalHint` while the Lethal hint setting is
+  on, and the board shows it (`data-lethal-hint` on the game, which outlines the enemy hero and End
+  turn, and the `lethal-hint` line "You have lethal") once it shows the newest view, never on a
+  replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
@@ -658,6 +760,11 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
+  `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
+  buttons and prefetches each route's code once per page load, and the Practice, Play and match
+  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
   and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
@@ -704,6 +811,13 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   module, records no card statistics, and keeps its custom cards in its save, its replay and its
   debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
   in the log.
+
+## Player-facing words
+
+Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
+`src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
+client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
+apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 

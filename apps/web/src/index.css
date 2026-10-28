@@ -1,4 +1,6 @@
 @import "./fonts.css";
+@import "./palette.css";
+@import "./typescale.css";
 
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
@@ -10,37 +12,41 @@
      brass hairlines and parchment, so the board is the wooden table the landing shows. Parchment
      is 14.9:1 on --bg, 13.1:1 on --bg-raised and 15.2:1 on --bg-sunken; --text-dim is 7.9, 7.3 and
      8.1:1 (WCAG AA asks 4.5:1). */
-  --bg: #120b07;
-  --bg-raised: #2b170c;
-  --bg-sunken: #0e0905;
-  --line: rgb(201 149 63 / 30%);
-  --line-bright: rgb(201 149 63 / 55%);
-  --text: #efe0bf;
-  --text-dim: rgb(239 224 191 / 72%);
+  --bg: var(--pal-wood-900);
+  --bg-raised: var(--pal-wood-800);
+  --bg-sunken: var(--pal-wood-950);
+  --line: color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  --line-bright: color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  --text: var(--pal-parchment);
+  --text-dim: color-mix(in srgb, var(--pal-parchment) 72%, transparent);
 
-  --you: #3d7bd4;
-  --opponent: #c0453f;
-  --legal: #4ec98a;
-  --selected: #f0c04a;
-  --radiant: #ffd24a;
-  --plague: #8b5cf6;
-  --grade: #38bdf8;
-  --mana: #3d7bd4;
-  --locked: #6b7280;
+  --you: var(--pal-blue-600);
+  --opponent: var(--pal-red-600);
+  --legal: var(--pal-jade-400);
+  --selected: var(--pal-gold-400);
+  --radiant: var(--pal-gold-300);
+  --plague: var(--pal-violet-500);
+  --grade: var(--pal-sky-400);
+  --mana: var(--pal-blue-600);
+  --locked: var(--pal-grey-500);
 
   /* The one primary button: End turn, in the tavern's gold (tavern.css's primary, the landing's
      Play vs AI). The prompt's Confirm and the result panel's first action wear it too, so a screen
-     never shows two kinds of "go". The hover is the tavern's brightness(1.07), set into the stops. */
-  --primary-edge: #fde68a;
-  --primary-face: linear-gradient(180deg, #fff0bf 0%, #f3c969 42%, #dc9b33 58%, #a86a1f 100%);
-  --primary-face-hover: linear-gradient(180deg, #ffffcc 0%, #ffd770 42%, #eba637 58%, #b47121 100%);
-  --primary-ink: #2b1800;
-  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 2px 0 #713f12, 0 4px 12px rgb(0 0 0 / 45%);
+     never shows two kinds of "go". The hover mixes 7% white into each of the face's stops. */
+  --primary-edge: var(--pal-gold-200);
+  --primary-face: linear-gradient(180deg, var(--pal-parchment) 0%, var(--pal-gold-400) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
+  --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
+  --primary-ink: var(--pal-brass-950);
+  --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
 
   --card-w: 82px;
   --card-h: 112px;
   --gap: 6px;
   --radius: 7px;
+
+  /* R2122000: the least a control's hit area spans on a phone, either way (WCAG 2.5.5); e2e
+     spec 47's HIT_MIN_PX is the same number. */
+  --hit-min: 44px;
 
   /* M5-T4 collapses every duration to 0 under prefers-reduced-motion. */
   --anim-scale: 1;
@@ -71,12 +77,20 @@
   scroll-behavior: auto !important;
 }
 
-/* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these */
+/* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these.
+   #2103: while a mouse button is held the pointing glove is the pressed one, its finger curled and
+   the hand shrunk toward the fingertip, which stays the hotspot; release brings the pointing glove
+   back. The press is one still frame, so reduced motion has no movement to stop. */
 @media (pointer: fine) {
   :root {
     --cursor-glove: url("/cursors/glove.svg") 4 3, auto;
     --cursor-glove-point: url("/cursors/glove-point.svg") 4 3, pointer;
     --cursor-glove-grab: url("/cursors/glove-grab.svg") 10 9, grabbing;
+    --cursor-glove-press: url("/cursors/glove-press.svg") 4 3, pointer;
+  }
+
+  :root:active {
+    --cursor-glove-point: var(--cursor-glove-press);
   }
 }
 
@@ -98,7 +112,9 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.35 var(--font-text);
+  font-family: var(--font-text);
+  font-size: var(--type-md);
+  line-height: 1.35;
   overflow-x: hidden;
 }
 
@@ -150,7 +166,7 @@ button:disabled {
 .app-shell.one-screen .one-screen__stack > * { flex-shrink: 0; }
 
 .app-shell h1 {
-  font-size: 16px;
+  font-size: var(--type-xl);
   margin: 0;
 }
 
@@ -164,6 +180,28 @@ button:disabled {
 
 .notice code {
   color: var(--text-dim);
+}
+
+/* --- headlines and prose (#2123) -----------------------------------------------------------
+   A paragraph's last line is not left a lone word, and a heading, a dialog's or a toast's title
+   and the result's word share their words evenly between their lines. Only `text-wrap-style`:
+   the `text-wrap` shorthand would also set `text-wrap-mode: wrap` and undo a `white-space: nowrap`
+   the element inherits. The titles come second, so a title that is a <p> still balances. Card
+   faces are left alone: `cards/fit.ts` measures their text, and a different wrap would change
+   the size it fits. */
+p {
+  text-wrap-style: pretty;
+}
+
+h1,
+h2,
+h3,
+.prompt-title,
+.hero-inspect-title,
+.challenge-toast__text,
+.draw-toast__line,
+.result-overlay__word {
+  text-wrap-style: balance;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -183,7 +221,7 @@ button:disabled {
   gap: 18px;
   max-width: 960px;
   margin: 0 auto;
-  font-size: 15px;
+  font-size: var(--type-lg);
 }
 
 /* A match fills the viewport; it must not be squeezed into the reading column above. */
@@ -191,11 +229,11 @@ button:disabled {
   max-width: 100%;
   padding: 12px;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .app-shell h1 {
-  font-size: 30px;
+  font-size: var(--type-4xl);
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0;
@@ -203,7 +241,7 @@ button:disabled {
 }
 
 .app-shell h2 {
-  font-size: 19px;
+  font-size: var(--type-2xl);
   line-height: 1.25;
   margin: 0;
   font-weight: 600;
@@ -287,7 +325,7 @@ button:disabled {
   background: var(--bg-sunken);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.92em;
+  font-size: var(--type-sm-em);
 }
 
 /* --- controls ------------------------------------------------------------------------------ */
@@ -315,14 +353,14 @@ button:disabled {
 .button-primary,
 .form-card button[type="submit"] {
   background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
+  color: var(--pal-white);
 }
 
 .button-primary:hover:not(:disabled),
 .form-card button[type="submit"]:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--you) 82%, white);
-  border-color: #fff;
+  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
+  border-color: var(--pal-white);
 }
 
 /* An <a> that should read as a button: the landing's two calls to action. Kept as anchors rather
@@ -341,14 +379,14 @@ button:disabled {
 
 .app-shell a.button-primary {
   background: var(--you);
-  border-color: color-mix(in srgb, var(--you) 70%, white);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--you) 70%, var(--pal-white));
+  color: var(--pal-white);
 }
 
 .app-shell a.button-primary:hover {
-  background: color-mix(in srgb, var(--you) 82%, white);
-  border-color: #fff;
-  color: #fff;
+  background: color-mix(in srgb, var(--you) 82%, var(--pal-white));
+  border-color: var(--pal-white);
+  color: var(--pal-white);
 }
 
 .app-shell a.button-secondary {
@@ -386,7 +424,32 @@ button:disabled {
   .app-shell .screen-nav .link-button,
   .hotseat-bar .link-button,
   .hotseat-bar > button {
-    min-height: 44px;
+    min-height: var(--hit-min);
+  }
+}
+
+/* The hit area (#2122, R2122000): on a phone or under a finger, a control shorter than --hit-min
+   takes a tap across --hit-min each way round its centre through a transparent ::before, so nothing
+   in the layout moves: top and bottom reach out by half the shortfall, and left and right by half
+   what the width falls short, if it does. A control as tall as --hit-min gets no band from here: top
+   and bottom meet at 50%, the clamp's middle term (the shortfall times a thousand) choosing, since a
+   band over a tall control's box would take the taps of what it holds, and an inset cannot see the
+   width from the height. One as tall but narrower takes its band in its own stylesheet (spec 47
+   finds it). Zero specificity, so a control's own ::before or position wins where it has one. Not
+   here: a link in running text (exempt), a table row (its ::before would be a cell), and inputs and
+   selects, which draw no ::before and take --hit-min as their height where they are small. */
+@media (pointer: coarse), (max-width: 600px) {
+  :where(button, a[href], [role="button"], [tabindex="0"]):where(:not(:is(p, label) a, tr)) {
+    position: relative;
+  }
+
+  :where(button, a[href], [role="button"], [tabindex="0"]):where(:not(:is(p, label) a, tr))::before {
+    content: "";
+    position: absolute;
+    top: clamp((100% - var(--hit-min)) / 2, (100% - var(--hit-min)) * 1000, 50%);
+    bottom: clamp((100% - var(--hit-min)) / 2, (100% - var(--hit-min)) * 1000, 50%);
+    left: min(0px, (100% - var(--hit-min)) / 2);
+    right: min(0px, (100% - var(--hit-min)) / 2);
   }
 }
 
@@ -409,13 +472,13 @@ button:disabled {
 }
 
 .form-card h2 {
-  font-size: 19px;
+  font-size: var(--type-2xl);
   margin: 0;
 }
 
 .form-card label {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   margin-top: 7px;
 }
 
@@ -516,7 +579,7 @@ button:disabled {
  * columns that must align, which these tiles are not.
  */
 .stat-value {
-  font-size: 22px;
+  font-size: var(--type-3xl);
   font-weight: 600;
   line-height: 1.15;
   color: var(--text);
@@ -524,13 +587,13 @@ button:disabled {
 
 /* Sentence case, no trailing colon. */
 .stat-label {
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--text-dim);
 }
 
 .account-email {
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-xl);
   word-break: break-all;
 }
 
@@ -578,7 +641,7 @@ button:disabled {
   }
 
   .app-shell h1 {
-    font-size: 24px;
+    font-size: var(--type-3xl);
   }
 
   .panel--auth {

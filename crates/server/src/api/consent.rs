@@ -20,7 +20,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use crate::api::auth::remove_account;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, now_ms};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, now_ms};
 use crate::app::App;
 use crate::config::{BIRTH_YEAR_EARLIEST, MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION};
 use crate::db::store::{ConsentRow, Profile, ProfileStatus, TermsSource};
@@ -61,10 +61,6 @@ pub fn consent_owed(profile: &Profile, consent: &ConsentRow) -> bool {
     age_check_owed(profile, consent) || terms_owed(consent)
 }
 
-fn bad_request(message: &str) -> ApiError {
-    ApiError::new(ApiErrorCode::BadRequest, message)
-}
-
 /// The birth month and year as sent: both or neither, each a whole number.
 fn birth_of(body: &Value) -> Result<Option<(i32, i32)>, ApiError> {
     let number = |key: &str| -> Result<Option<i32>, ApiError> {
@@ -74,7 +70,7 @@ fn birth_of(body: &Value) -> Result<Option<(i32, i32)>, ApiError> {
                 .as_i64()
                 .and_then(|n| i32::try_from(n).ok())
                 .map(Some)
-                .ok_or_else(|| bad_request(&format!("\"{key}\" must be a whole number"))),
+                .ok_or_else(|| bad_request(format!("\"{key}\" must be a whole number"))),
         }
     };
     match (number("birthYear")?, number("birthMonth")?) {

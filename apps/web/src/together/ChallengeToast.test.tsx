@@ -8,20 +8,30 @@
 // the ids #1831 gave its Accept, deck picker and lobby link. R2031000: an All Random challenge's
 // toast offers "More cards from" on the device's online pick, and Accept joins with it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LEAN_NEWEST } from "@jackioh/shared";
 
 import { PLAY_LEAN_SET_KEY, readPlayLean } from "../game/LeanNewest.tsx";
+import { getDecks } from "../net/api.ts";
 import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { settle } from "../test/settle.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { challengeToastTestid } from "./testids.ts";
+
+// #2115: the decks read passes through to the real one, except while a test holds it (`holdDecks`).
+vi.mock("../net/api.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/api.ts")>();
+  return { ...actual, getDecks: vi.fn(actual.getDecks) };
+});
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -97,12 +107,29 @@ function acceptButtons(): HTMLElement[] {
   return screen.queryAllByRole("button", { name: /^accept/i });
 }
 
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
+const realApi = await vi.importActual<typeof import("../net/api.ts")>("../net/api.ts");
+
+/** The decks reads `holdDecks` has kept from answering, each one's release making the real read. */
+let heldDecks: (() => void)[] = [];
+
+/** Every decks read from now on waits for `releaseDecks` (#2115), so the toast can be seen while it is pending. */
+function holdDecks(): void {
+  vi.mocked(getDecks).mockImplementation(
+    (...args) =>
+      new Promise((resolve, reject) => {
+        heldDecks.push(() => {
+          realApi.getDecks(...args).then(resolve, reject);
+        });
+      }),
+  );
+}
+
+/** Answers the reads held back, and every read after them, as the real one does. */
+function releaseDecks(): void {
+  vi.mocked(getDecks).mockImplementation(realApi.getDecks);
+  const releases = heldDecks;
+  heldDecks = [];
+  for (const release of releases) release();
 }
 
 beforeEach(() => {
@@ -110,6 +137,8 @@ beforeEach(() => {
   forgetRoomLink();
   resetUsernamePromptForTests();
   at("/decks");
+  heldDecks = [];
+  vi.mocked(getDecks).mockImplementation(realApi.getDecks);
 });
 
 afterEach(() => {
@@ -131,6 +160,25 @@ describe("B57 the challenge toast", () => {
       expect(await screen.findByRole("button", { name: /^accept/i }, SOON)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^decline/i })).toBeInTheDocument();
       expect(document.body).toHaveTextContent(ANN.username);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "#2115 the toast's decks are a panel skeleton while they are read, then the deck picker",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] });
+      holdDecks();
+      render(<ChallengeToast />);
+      const toast = await screen.findByTestId(challengeToastTestid.toast, undefined, SOON);
+      expectSkeleton(within(toast).getByText("Loading your decks…"), "panel");
+      expect(within(toast).queryByTestId(challengeToastTestid.deck)).toBeNull();
+
+      releaseDecks();
+      expect(await within(toast).findByTestId(challengeToastTestid.deck, undefined, SOON)).toBeInTheDocument();
+      expect(within(toast).queryByText("Loading your decks…")).toBeNull();
+      expect(within(toast).queryByTestId(skeletonTestid.root)).toBeNull();
     },
     TEST_MS,
   );
@@ -307,7 +355,7 @@ describe("B57 the challenge toast", () => {
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(BOB.username);
@@ -321,7 +369,7 @@ describe("B57 the challenge toast", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(0);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(ANN.username);
@@ -341,7 +389,7 @@ describe("B57 the challenge toast", () => {
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
     },
@@ -465,7 +513,7 @@ describe("R2031000 an All Random challenge's more cards from", () => {
       // The lobby (or any other door) writes the device's pick while the shell is up.
       window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
       challenges.incoming = [{ ...INCOMING, mode: "random" }];
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       await waitFor(() => {
         expect(screen.getByTestId<HTMLSelectElement>(challengeToastTestid.lean).value).toBe("Classic");
       }, SOON);

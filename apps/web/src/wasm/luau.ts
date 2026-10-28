@@ -35,6 +35,7 @@ export type LuauBindings = {
   preview_sets(sets: string): void;
   ai_to_act(state: string, seat: string): boolean;
   ai_decide(state: string, seat: string, options: string, deadlineMs: number): string;
+  lethal_hint(state: string, seat: string, deadlineMs: number): boolean;
   build_ai_deck(options: string): string;
   choose_action(state: string, seat: string, rngSeed: string, rngCursor: number): string;
   constants(): string;
@@ -101,6 +102,12 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
       }),
     ai_decide: (state, seat, options, deadlineMs) =>
       withArgs([state, seat, options], ([p = 0, q = 0, r = 0]) => take(m._ai_decide(p, q, r, deadlineMs))),
+    lethal_hint: (state, seat, deadlineMs) =>
+      withArgs([state, seat], ([p = 0, q = 0]) => {
+        const answer = m._lethal_hint(p, q, deadlineMs);
+        if (answer < 0) fail();
+        return answer !== 0;
+      }),
     build_ai_deck: one((a) => m._build_ai_deck(a)),
     choose_action: (state, seat, rngSeed, rngCursor) =>
       withArgs([state, seat, rngSeed], ([p = 0, q = 0, r = 0]) => take(m._choose_action(p, q, r, rngCursor))),

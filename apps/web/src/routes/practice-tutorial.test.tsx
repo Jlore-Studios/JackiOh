@@ -19,6 +19,7 @@ import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../practice/protocol.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
+import { settle } from "../test/settle.ts";
 import type { LessonScript } from "../tutorial/coach.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "../tutorial/lessons.ts";
 import { __resetTutorialProgressForTests, markLessonComplete, readTutorialProgress } from "../tutorial/progress.ts";
@@ -175,12 +176,6 @@ function visit(search: string): void {
   window.history.replaceState(null, "", `/practice${search}`);
 }
 
-async function settle(): Promise<void> {
-  await act(async () => {
-    for (let i = 0; i < 10; i += 1) await Promise.resolve();
-  });
-}
-
 function before(a: Element, b: Element): boolean {
   return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
@@ -207,7 +202,7 @@ afterEach(() => {
 describe("the lesson path on /practice", () => {
   it("sits at the very top of the lobby: under Back and the page's H1, above the practice header and its setup", async () => {
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     const back = screen.getByTestId("nav-back");
     const title = screen.getByRole("heading", { level: 1, name: "Practice" });
     const path = screen.getByTestId(tutorialTestid.path);
@@ -224,9 +219,9 @@ describe("the lesson path on /practice", () => {
     visit("?seed=mine&seat=p2");
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(tutorialTestid.lessonStart(lesson(1).id)));
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.starts()).toEqual([
       { seed: lesson(1).seed, difficulty: "easy", humanSeat: lesson(1).humanSeat, deck: { kind: "random" }, lesson: lesson(1).id },
     ]);
@@ -235,9 +230,9 @@ describe("the lesson path on /practice", () => {
   it("a locked lesson's button starts nothing", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(tutorialTestid.lessonStart(lesson(2).id)));
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.starts()).toEqual([]);
     expect(screen.getByTestId(tutorialTestid.path)).toBeInTheDocument();
   });
@@ -248,7 +243,7 @@ describe("?lesson= starts a lesson at once", () => {
     visit(`?lesson=${lesson(2).id}&seed=other&seat=p2&pace=fast`);
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.starts()).toHaveLength(1);
     expect(host.starts()[0]).toMatchObject({ seed: lesson(2).seed, humanSeat: lesson(2).humanSeat, lesson: lesson(2).id });
     expect(screen.getByTestId(tutorialTestid.hud)).toHaveAttribute("data-lesson", lesson(2).id);
@@ -258,7 +253,7 @@ describe("?lesson= starts a lesson at once", () => {
     visit("?lesson=no-such-lesson");
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.starts()).toEqual([]);
     expect(screen.getByTestId(tutorialTestid.path)).toBeInTheDocument();
   });
@@ -269,7 +264,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     visit(`?lesson=${lesson(number).id}`);
     const host = routeHost(options);
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     return host;
   }
 
@@ -314,7 +309,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   it("a holdAi step holds the AI until Got it", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const host = await startLesson(1, { aiToAct: true });
-    await settle();
+    await settle({ ticks: 10 });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(PRACTICE_PACING_FAST.firstActionMs + 1);
     });
@@ -340,7 +335,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
 
     fireEvent.click(screen.getByTestId(tutorialTestid.exit));
     fireEvent.click(screen.getByTestId(practiceTestid.leaveConfirm));
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.queryByTestId(tutorialTestid.hud)).toBeNull();
     expect(screen.getByTestId(tutorialTestid.path)).toBeInTheDocument();
   });
@@ -348,7 +343,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   it("a win completes the lesson at once; the dialog opens the next lesson on its own seed", async () => {
     const host = await startLesson(1);
     fireEvent.click(screen.getByTestId("end-turn"));
-    await settle();
+    await settle({ ticks: 10 });
     expect(readTutorialProgress().completed).toEqual([lesson(1).id]);
 
     const dialog = await screen.findByTestId(tutorialTestid.result);
@@ -363,7 +358,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     expect(screen.getByTestId(tutorialTestid.result)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(tutorialTestid.next));
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.starts().at(-1)).toMatchObject({ seed: lesson(2).seed, lesson: lesson(2).id });
     expect(screen.getByTestId(tutorialTestid.hud)).toHaveAttribute("data-lesson", lesson(2).id);
   });
@@ -380,7 +375,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     expect(readTutorialProgress().completed).toEqual([]);
 
     fireEvent.click(screen.getByTestId(tutorialTestid.retry));
-    await settle();
+    await settle({ ticks: 10 });
     const starts = host.starts();
     expect(starts).toHaveLength(2);
     expect(starts[1]).toEqual(starts[0]);
@@ -390,9 +385,9 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   it("Back to lessons shows the path with the lesson completed", async () => {
     await startLesson(1);
     fireEvent.click(screen.getByTestId("end-turn"));
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(await screen.findByTestId(tutorialTestid.back));
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(tutorialTestid.lesson(lesson(1).id))).toHaveAttribute("data-status", "completed");
     expect(screen.getByTestId(tutorialTestid.lesson(lesson(2).id))).toHaveAttribute("data-status", "unlocked");
   });
@@ -401,10 +396,10 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     for (const each of TUTORIAL_LESSONS.slice(0, -1)) markLessonComplete(each.id);
     await startLesson(TUTORIAL_LESSONS.length);
     fireEvent.click(screen.getByTestId("end-turn"));
-    await settle();
+    await settle({ ticks: 10 });
     expect(await screen.findByTestId(tutorialTestid.result)).toHaveAccessibleName("Tutorial complete");
     fireEvent.click(screen.getByTestId(tutorialTestid.playPractice));
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(practiceTestid.setup)).toBeInTheDocument();
     expect(screen.getByTestId(tutorialTestid.path)).toHaveAttribute("data-complete", "true");
   });

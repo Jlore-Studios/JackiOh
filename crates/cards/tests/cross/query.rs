@@ -78,11 +78,12 @@ fn token_ids() -> Vec<String> {
 }
 
 /// Every non-token def, in catalog order — the pool a plain query answers (R380).
-/// The non-token cards of the sets that ship (R1420): a pool that names no set reaches no other.
+/// The non-token cards of the sets that ship (R1420): a pool that names no set reaches no other, and
+/// no pool reaches the Dormant Starship, which only a rule makes (R1857001).
 fn non_token() -> Vec<&'static CardDef> {
     CATALOG
         .values()
-        .filter(|def| !def.token && set_is_open(def.set))
+        .filter(|def| !def.token && !jackioh_engine::catalog::made_by_a_rule(def) && set_is_open(def.set))
         .collect()
 }
 
@@ -364,7 +365,8 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
     // since the release (v0.3.5) §8.8's KY cards: #34 高考, #38 H1B Printer, #45 Knowledge Breaker,
     // #79 Touched by KY and #87 Tatches the Totem (every tribe). Re-pinned for v0.3.15 (Meditative+
     // ships, #1187): §8.9's two KY cards join it, M+ #20 KY's Competition and #25 KY's Intuition, so
-    // the pool is thirteen.
+    // the pool is thirteen; and for the Stinkyscape release (#1884): §8.10's #25 KY's Tricknology,
+    // fourteen, while its token #4.2 KY's Last Exam stays out.
     const KY_POOL: &[&str] = &[
         "core-031",
         "core-051",
@@ -379,10 +381,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
         "meditative-087",
         "meditativeplus-020",
         "meditativeplus-025",
+        "stinkyscape-025",
     ];
 
     #[test]
-    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_thirteen_defs() {
+    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_fourteen_defs() {
         register();
         assert_eq!(
             ids(catalog.query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
@@ -420,6 +423,7 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
                 "Tatches the Totem",
                 "KY's Competition",
                 "KY's Intuition",
+                "KY's Tricknology",
             ])
         );
         assert!(card_def_by_index(SetName::Core, "51.1").tags.contains(&Tag::Ky)); // it really is in the tag …
@@ -438,6 +442,9 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
         assert!(!pool_ids.contains(&"meditative-045-1".to_string()));
         assert!(!pool_ids.contains(&"meditativeplus-020-1".to_string()));
+        let exam = card_def_by_index(SetName::Stinkyscape, "4.2");
+        assert!(exam.tags.contains(&Tag::Ky) && exam.token);
+        assert!(!pool_ids.contains(&"stinkyscape-004-2".to_string()));
         assert!(!pool_ids.contains(&"core-057".to_string()));
     }
 }
@@ -450,7 +457,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     //   or catalog::pool("core-067", &q(json!({ "type": TRAP_TYPES })))   // #67 is not itself a trap, but §5.1 anyway
     // Both types, because SPEC says "Field Trap counts as Trap" (§8 #51, #85, R35, R61) while the
     // filter matches `def.type` exactly. Since the release (v0.3.5, R1420) the pool holds §8.8's two:
-    // Meditative #64 Traitorous Blood, a (1) Trap, and #68 Catnip, a (1) Field Trap.
+    // Meditative #64 Traitorous Blood, a (1) Trap, and #68 Catnip, a (1) Field Trap; and since its
+    // release (#1884) the Stinkyscape set's six Traps (#22, #135, #138, #139, #144 and #174) and two
+    // Field Traps (#5 and #131).
     const TRAP_POOL: &[&str] = &[
         "core-018",
         "core-041",
@@ -475,6 +484,14 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         "classicplus-074",
         "meditative-064",
         "meditative-068",
+        "stinkyscape-005",
+        "stinkyscape-022",
+        "stinkyscape-131",
+        "stinkyscape-135",
+        "stinkyscape-138",
+        "stinkyscape-139",
+        "stinkyscape-144",
+        "stinkyscape-174",
     ];
 
     fn trap_query() -> Vec<&'static CardDef> {
@@ -495,7 +512,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_classic_plus_22_blood_moon_and_meditative_64_68()
      {
         register();
-        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10.
+        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10. The Stinkyscape
+        // set's (1) Cost ones join them from its release (#1884).
         assert_eq!(
             ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -508,6 +526,11 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "classicplus-022",
                 "meditative-064",
                 "meditative-068",
+                "stinkyscape-005",
+                "stinkyscape-131",
+                "stinkyscape-135",
+                "stinkyscape-138",
+                "stinkyscape-144",
             ])
         );
     }
@@ -529,6 +552,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "classic-088",
                 "classicplus-074",
                 "meditative-068",
+                "stinkyscape-005",
+                "stinkyscape-131",
             ])
         );
         assert_eq!(
@@ -563,7 +588,9 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // and since v0.3.5 the Meditative set's sixteen Legendaries (§8.8: #7, #11, #26, #40, #42, #45,
     // #47, #51, #63, #65, #75, #79, #80, #86, #87 and #95; #45.1 and the other Legendary-printed
     // tokens are tokens, R1420). Re-pinned for v0.3.15 (Meditative+ ships, #1187): the set's one
-    // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it. For replacing a card on
+    // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it; and for the Stinkyscape
+    // release (#1884): its 28 Legendary cards (§8.10), the Dormant Starship, which only a rule
+    // makes, aside (R1857001). For replacing a card on
     // the board, the script narrows the same pool by type and asks for TRAP_TYPES when the board card
     // is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
@@ -613,6 +640,34 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "meditative-087",
         "meditative-095",
         "meditativeplus-024",
+        "stinkyscape-007",
+        "stinkyscape-018",
+        "stinkyscape-026",
+        "stinkyscape-034",
+        "stinkyscape-035",
+        "stinkyscape-037",
+        "stinkyscape-039",
+        "stinkyscape-058",
+        "stinkyscape-059",
+        "stinkyscape-060",
+        "stinkyscape-061",
+        "stinkyscape-066",
+        "stinkyscape-070",
+        "stinkyscape-071",
+        "stinkyscape-073",
+        "stinkyscape-080",
+        "stinkyscape-085",
+        "stinkyscape-087",
+        "stinkyscape-088",
+        "stinkyscape-112",
+        "stinkyscape-115",
+        "stinkyscape-116",
+        "stinkyscape-147",
+        "stinkyscape-149",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "stinkyscape-152",
+        "stinkyscape-153",
     ];
 
     #[test]
@@ -669,7 +724,8 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
         // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
         // Appropriations and #69 Buff Billy, and since the release Meditative #43 CN Jade Market
         // (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power costs (0) since R752,
-        // Meditative #37 CN in a Bottle (1) since R1149001).
+        // Meditative #37 CN in a Bottle (1) since R1149001), and since its release (#1884) the
+        // Stinkyscape set's #99 No-No Words.
         let x_cards = strings(&[
             "core-024",
             "core-074",
@@ -677,6 +733,7 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
             "classicplus-040",
             "classicplus-069",
             "meditative-043",
+            "stinkyscape-099",
         ]);
         assert_eq!(
             ids(query(&q(json!({})))
@@ -878,11 +935,13 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     fn r382_classic_plus_23_dropshipping_s_pool_takes_every_card_and_every_token_of_every_set_but_itself() {
         register();
         let every = ids(pool("classicplus-023", &q(json!({ "withTokens": true }))));
-        // R674: Glitch is the one token no pool takes; R1420: a set that has not shipped is in none.
+        // R674: Glitch is the one token no pool takes, and R1857001's Dormant Starship the one card;
+        // R1420: a set that has not shipped is in none.
         let open = CATALOG.values().filter(|def| set_is_open(def.set)).count();
-        assert_eq!(every.len(), open - 2);
+        assert_eq!(every.len(), open - 3);
         assert!(!every.contains(&"classicplus-023".to_string()));
         assert!(!every.contains(&GLITCH_DEF_ID.to_string()));
+        assert!(!every.contains(&"stinkyscape-t-dormant-starship".to_string()));
         for id in GRAPES.iter().copied().chain([
             "classicplus-019-3",
             "classicplus-t-ai-01",
@@ -931,6 +990,16 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             "meditative-086",
         ]);
         pool.extend(landed(&[CATBOY_MAID]));
+        // R1857000: and since its release, the Stinkyscape set's #77 Yuma, #112 Job Application, #145
+        // Fortify Flesh, #153 Stimmycheck and its two Scanning Probes, #166 and #167.
+        pool.extend(landed(&[
+            "stinkyscape-077",
+            "stinkyscape-112",
+            "stinkyscape-145",
+            "stinkyscape-153",
+            "stinkyscape-166",
+            "stinkyscape-167",
+        ]));
         assert_eq!(ids(query(&luck_based())), pool);
         let expected: Vec<String> = ids(CATALOG
             .values()
@@ -989,12 +1058,17 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "meditative-101",
     ];
 
+    /// The Stinkyscape set's printed 1/1 Units (§8.10: #38 Shield Amplifier and #98 Hull Booster; none
+    /// of its tokens prints 1/1), which the pool takes since its release (#1884, R1857000).
+    const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-098"];
+
     #[test]
     fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
         register();
         let mut expected = strings(ONE_ONE_POOL);
         expected.extend(strings(MEDITATIVE_ONE_ONES));
         expected.extend(landed(&[CATBOY_MAID]));
+        expected.extend(strings(STINKYSCAPE_ONE_ONES));
         assert_eq!(
             ids(catalog.query(&q(json!({
                 "type": "Unit",
@@ -1012,6 +1086,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         let mut expected = strings(ONE_ONE_POOL);
         expected.extend(strings(MEDITATIVE_ONE_ONES));
         expected.extend(landed(&[CATBOY_MAID]));
+        expected.extend(strings(STINKYSCAPE_ONE_ONES));
         assert_eq!(
             ids(catalog.query(&q(json!({
                 "type": "Unit",

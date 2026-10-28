@@ -3,17 +3,15 @@
 // the note in its hover preview. The words are informational: the combinations not listed stay legal.
 // The engine half is proved in crates/engine/tests/rules/play_choices_filters.rs.
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CATALOG } from "@jackioh/cards";
 import type { PlayerView } from "@jackioh/shared";
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, INSPECT_NOTE, closeInspect, writeCardSettings } from "../cards/index.ts";
-import Board from "./Board.tsx";
 import { CHOICES_TRUNCATED_NOTE } from "./Card.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -23,17 +21,7 @@ afterEach(() => {
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
-const lookup = lookupFromDefs(CATALOG);
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
-
-function renderBoard(view: PlayerView): HTMLElement {
-  const { container } = render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  );
-  return container;
-}
 
 function hover(element: HTMLElement): void {
   fireEvent.pointerEnter(element, { pointerType: "mouse" });

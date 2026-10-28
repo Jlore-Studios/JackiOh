@@ -22,11 +22,11 @@
   min-width: 22px;
   height: 20px;
   padding: 0 4px 0 2px;
-  border: 1px solid #fcd34d;
+  border: 1px solid var(--pal-gold-300);
   border-radius: 999px;
-  background: linear-gradient(180deg, #4c3a0c, #2a1f05);
-  color: #fde68a;
-  font-size: 11px;
+  background: linear-gradient(180deg, var(--pal-brass-800), var(--pal-brass-950));
+  color: var(--pal-gold-200);
+  font-size: var(--type-xs);
   font-weight: 700;
   line-height: 1;
   cursor: var(--cursor-glove-point, pointer);
@@ -45,9 +45,9 @@
 }
 
 .board .activate-control[data-legal="false"] {
-  border-color: #6b7280;
-  background: #1f2937;
-  color: #9ca3af;
+  border-color: var(--pal-grey-500);
+  background: var(--pal-slate-800);
+  color: var(--pal-slate-400);
   cursor: not-allowed;
   opacity: 0.85;
 }
@@ -58,7 +58,7 @@
 }
 
 .board .activate-control:focus-visible {
-  outline: 2px solid #fde68a;
+  outline: 2px solid var(--pal-gold-200);
   outline-offset: 2px;
 }
 
@@ -80,19 +80,20 @@
   .board .activate-control[data-flash="activated"],
   .board .power-button[data-flash="activated"] {
     animation: none;
-    outline: 2px solid #fde68a;
+    outline: 2px solid var(--pal-gold-200);
   }
 }
 
 :root[data-reduce-motion="true"] .board .activate-control[data-flash="activated"],
 :root[data-reduce-motion="true"] .board .power-button[data-flash="activated"] {
   animation: none;
-  outline: 2px solid #fde68a;
+  outline: 2px solid var(--pal-gold-200);
 }
 
 /* Touch sizing (B29, as the switch's): the glyph stays small on the card's edge, and a finger gets a
-   hit area round it, up to 44x44 px where the tile has room, stopping short of the card's centre
-   line, so the middle of the tile is always the card's own tap (attack, target) and drag. */
+   hit area round it, a --hit-min tall band (R2122000) and only as wide as the tile allows, short of
+   the card's centre line (R2122000's split with the card), so the middle of the tile is always the
+   card's own tap (attack, target) and drag. */
 @media (max-width: 1024px), (pointer: coarse) {
   .board .zone > .card:has(> .activate-controls) {
     container-type: size;
@@ -103,8 +104,8 @@
     --activate-reach: 22px;
     content: "";
     position: absolute;
-    top: -12px;
-    bottom: -12px;
+    top: min(-12px, (100% - var(--hit-min)) / 2);
+    bottom: min(-12px, (100% - var(--hit-min)) / 2);
     left: -2px;
     right: calc(-1 * clamp(0px, 50cqw - 100% - 3px - var(--activate-clear), var(--activate-reach)));
   }
@@ -116,7 +117,7 @@
     min-width: 18px;
     height: 16px;
     padding: 0 3px 0 1px;
-    font-size: 9px;
+    font-size: var(--type-3xs);
   }
 
   .board .activate-glyph {

@@ -891,6 +891,7 @@ mod generator {
             RadiantChanceArgs,
             RadiantTarget,
             DuoRadiantArgs,
+            ActivationOfArgs,
             HoldArgs,
             CopyUnitTextArgs,
             RecruitArgs,

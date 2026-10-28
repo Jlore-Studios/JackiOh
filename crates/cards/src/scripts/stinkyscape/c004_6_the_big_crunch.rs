@@ -72,8 +72,6 @@ mod tests {
 
     const CRUNCH: &str = "stinkyscape-004-6";
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    /// The editions written so far: the set's own two are S25's (#1882), stubs until then.
-    const SHIPPED: [&str; 3] = ["core-095", "classicplus-073", "meditative-095"];
     /// The most actions one play's prompts may take before the test gives up on it.
     const ANSWER_BOUND: usize = 200;
 
@@ -167,7 +165,7 @@ mod tests {
             let s = played(&plain_seed("big-crunch-named", false), false);
             let rolled = rolls(&s);
             let by: Vec<&str> = rolled.iter().map(|(def_id, _)| def_id.as_str()).collect();
-            assert_eq!(by, SHIPPED.to_vec(), "each written edition rolls once, in order");
+            assert_eq!(by, EDITIONS.to_vec(), "each edition rolls once, in order");
             for (def_id, effects) in &rolled {
                 assert_eq!(effects.len(), 1, "{def_id}'s base face rolls one effect");
             }
@@ -179,7 +177,7 @@ mod tests {
                     .into_iter()
                     .filter(|entry| entry["type"] == "chaosRolled")
                     .count();
-                assert_eq!(seen, SHIPPED.len(), "{viewer:?} reads every roll");
+                assert_eq!(seen, EDITIONS.len(), "{viewer:?} reads every roll");
             }
         }
 
@@ -201,10 +199,32 @@ mod tests {
                 assert!(s.card(id.as_str()).radiant, "each cast is Radiant");
             }
             let rolled = rolls(&s);
-            assert_eq!(rolled.len(), SHIPPED.len());
+            assert_eq!(rolled.len(), EDITIONS.len());
             for (def_id, effects) in &rolled {
                 assert_eq!(effects.len(), 3, "{def_id}'s Radiant face rolls three");
             }
+        }
+
+        #[test]
+        fn r1870006_base_many_seeds_end_within_the_caps() {
+            let mut nested = false;
+            for i in 0..20 {
+                let s = crunched(&format!("big-crunch-base-caps-{i}"), false);
+                assert!(
+                    s.state().pending.is_none() || s.state().result.is_some(),
+                    "seed {i}: the play completes"
+                );
+                let plays = chaos_plays(&s).len();
+                assert!(
+                    plays <= EDITIONS.len() * usize::try_from(CALL_TO_CHAOS_CHAIN_CAP).unwrap_or(usize::MAX),
+                    "seed {i}: {plays} Calls, past every chain's cap"
+                );
+                nested |= plays > EDITIONS.len();
+            }
+            assert!(
+                nested,
+                "some seed rolled a nested Call to Chaos, so a cap was in play"
+            );
         }
 
         #[test]

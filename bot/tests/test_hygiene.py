@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 
 from harness import config
@@ -104,6 +105,43 @@ class DeleteTests(unittest.TestCase):
         self.assertIn("  - [X] ~~`claude/lost`~~ deleted · ", body)
         self.assertIn("- [ ] `claude/same` · ", body)
         self.assertEqual(branches.TICKED.findall(body), ["claude/now-open", "gone/branch"])
+
+
+class IssueTests(unittest.TestCase):
+    """`open_issue`: one issue of a kind open at a time, titled for its kind and dated."""
+
+    def open(self, kind, still_open):
+        with mock.patch.object(branches, "gh_json", return_value=still_open):
+            return branches.open_issue("o/r", kind, "run <!-- run -->", "", "", "https://run", "2026-10-28",
+                                       dry_run=True)
+
+    def test_the_code_audit_opens_under_its_own_title_with_the_run_linked(self):
+        out = self.open("code", [])
+        self.assertIn("would open 'Patch: audit the codebase for dead code, duplicates and zombie routes, "
+                      "2026-10-28'", out)
+        self.assertIn("run https://run", out)
+        self.assertIn("bot:build", out)
+        self.assertNotIn("squishy:", out)
+
+    def test_the_weekly_two_stay_squishys(self):
+        for kind in ("files", "instructions"):
+            out = self.open(kind, [])
+            self.assertIn("squishy:build", out)
+            self.assertNotIn("bot:build", out)
+
+    def test_none_while_the_last_of_its_kind_is_open(self):
+        open_audit = [{"number": 7, "title": branches.KINDS["code"] + ", 2026-10-25"},
+                      {"number": 8, "title": branches.KINDS["files"] + ", 2026-10-21"}]
+        self.assertEqual(self.open("code", open_audit), "#7 is still open, so no new code issue this time")
+        self.assertIn("would open 'Architecture: weekly hygiene, agent instructions, 2026-10-28'",
+                      self.open("instructions", open_audit))
+
+    def test_the_code_audits_template_is_whole(self):
+        text = (config.REPO_ROOT / ".github" / "hygiene" / "code.md").read_text(encoding="utf-8")
+        self.assertIn("<!-- run -->", text)
+        self.assertIn("CLAUDE.md rule 13", text)
+        workflow = (config.REPO_ROOT / ".github" / "workflows" / "code-audit.yml").read_text(encoding="utf-8")
+        self.assertIn("branches.py issue code .github/hygiene/code.md", workflow)
 
 
 if __name__ == "__main__":

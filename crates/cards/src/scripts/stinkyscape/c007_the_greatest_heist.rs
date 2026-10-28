@@ -159,7 +159,7 @@ pub fn script() -> CardScripts {
 // Resource to the tray; a steal from the opponent completes Stage 3: their crystals drop to 0 and yours rise
 // to the cap (R1854003); leaving the field resets the line; finds reads through `param()`; radiant: the
 // Discover, the Unit, the Anomalies and the Resources Radiant". Leaving the field resetting the line is
-// R78's, proven by the engine's staged-quest tests (R1854000).
+// R78's, proven by the engine's staged-quest tests (R1854000) and here on the card.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,12 +176,14 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const MIND_CONTROL: &str = "core-049"; // (4) Spell: Steal an enemy Unit.
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: Bounce all permanents.
 
     /// Enough to play anything a test asks, each turn.
     const MANA: i32 = 20;
 
-    /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship.
-    const POOL: [&str; 7] = [
+    /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship, the Stinkyscape
+    /// set's nine Acclaimed Units among them since its release (#1884).
+    const POOL: [&str; 16] = [
         "core-026",
         "core-027",
         "core-028",
@@ -189,6 +191,15 @@ mod tests {
         "classic-080",
         "classicplus-037",
         "meditative-049",
+        "stinkyscape-006",
+        "stinkyscape-026",
+        "stinkyscape-037",
+        "stinkyscape-087",
+        "stinkyscape-088",
+        "stinkyscape-109",
+        "stinkyscape-110",
+        "stinkyscape-111",
+        "stinkyscape-115",
     ];
 
     /// p1 holds the Heist (Radiant on `radiant`) and `hand`; p2 has a Vanilla. Each turn ends when the
@@ -242,7 +253,8 @@ mod tests {
     #[test]
     fn r1873001_its_cry_discovers_an_acclaimed_unit_or_a_jelly_bean_into_your_hand() {
         let mut seen: IndexSet<String> = IndexSet::new();
-        for seed in 0..12 {
+        // Re-pinned for the Stinkyscape release (#1884): the pool is sixteen, so more seeds see it all.
+        for seed in 0..40 {
             let mut s = holding(false, &format!("heist-{seed}"), &[]);
             s.play(ID, json!({ "zone": 1 }));
             let offer = offered(&s);
@@ -259,6 +271,26 @@ mod tests {
     #[test]
     fn r1854000_stage_1_opens_as_it_enters() {
         let mut s = holding(false, "heist-open", &[]);
+        played(&mut s);
+        assert_eq!(stage(&s), Some(INITIATION));
+    }
+
+    #[test]
+    fn r1854000_leaving_the_field_resets_the_line_and_played_again_it_starts_at_stage_1() {
+        let mut s = holding(false, "heist-reset", &[TYLANNT, CORE_SYSTEM]);
+        played(&mut s);
+        tylannt(&mut s, 1);
+        assert_eq!(stage(&s), Some(COMRADERY));
+        s.play(CORE_SYSTEM, json!({}));
+        let bounced = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == ID)
+            .expect("the Heist back in hand");
+        assert!(
+            subsystems::quest_memory_of(&bounced).is_none(),
+            "R78: the line went with the stay"
+        );
         played(&mut s);
         assert_eq!(stage(&s), Some(INITIATION));
     }

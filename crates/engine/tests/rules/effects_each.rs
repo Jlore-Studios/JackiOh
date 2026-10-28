@@ -17,7 +17,7 @@ use std::sync::Arc;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{new_game, set_library};
+use crate::rules::fixtures::harness::{Bench, new_game, set_library};
 
 const DRAWER: &str = "each-drawer";
 
@@ -102,26 +102,6 @@ fn board(seed: &str, asks_after: AsksAfter) -> (GameState, Vec<CardInstance>) {
     (state, library)
 }
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call (`on`).
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -138,8 +118,8 @@ mod for_each_card_r113_r66 {
             PlayerId::P1,
             Zone::Resolving { player: PlayerId::P1 },
         );
-        let mut sink = sink_for(&state);
-        run_hook_resumable(&mut sink.on(&mut state), &card, "cry", Default::default());
+        let mut sink = Bench::new(&state);
+        run_hook_resumable(&mut sink.sink(&mut state), &card, "cry", Default::default());
 
         assert!(state.pending.is_none());
         assert_eq!(ids(&state.players[PlayerId::P1].hand), ids(&library));
@@ -159,8 +139,8 @@ mod for_each_card_r113_r66 {
             PlayerId::P1,
             Zone::Resolving { player: PlayerId::P1 },
         );
-        let mut sink = sink_for(&state);
-        run_hook_resumable(&mut sink.on(&mut state), &card, "cry", Default::default());
+        let mut sink = Bench::new(&state);
+        run_hook_resumable(&mut sink.sink(&mut state), &card, "cry", Default::default());
 
         // The first card is drawn and the question is open; the other two wait in the library.
         let Some(pending) = state.pending.clone() else {
@@ -172,9 +152,9 @@ mod for_each_card_r113_r66 {
         let mut stored: GameState =
             serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
                 .expect("and parses");
-        let mut answered = sink_for(&stored);
+        let mut answered = Bench::new(&stored);
         let refused = answer_prompt(
-            &mut answered.on(&mut stored),
+            &mut answered.sink(&mut stored),
             &AnswerInput {
                 player_id: PlayerId::P1,
                 choice_id: pending.id.clone(),

@@ -45,16 +45,18 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { namesCustomCard } from "../creator/useCustomCards.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -523,14 +525,6 @@ function useLobbyWatch(
 
 // UI pieces
 
-function DecksLink({ children }: { children: string }): ReactElement {
-  return (
-    <a href={paths.decks} data-testid={playTestid.decksLink} onClick={followInApp(paths.decks)}>
-      {children}
-    </a>
-  );
-}
-
 function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | null {
   if (result === null) return null;
   if (result.ok) {
@@ -800,7 +794,7 @@ function SignedOutPlay(): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <p>{t("Online play is invite-only for now: you'll need an invite code after signing up.")}</p>
           <a
             className="button-primary play-cta"
             href={paths.login}
@@ -948,6 +942,23 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   const trioSelect = useRef<HTMLSelectElement>(null);
   const joinSubmit = useRef<HTMLButtonElement>(null);
   const focusPending = useRef(link !== null && rejoined === null);
+  // R2094000: a chat Join on a room link pressed on this very screen arrives as a new query without
+  // remounting, so it is adopted here as the opened link is above, unless the lobby is queued or found.
+  const search = useSearch();
+  // Counts adopted links, so the focus below waits for the mode they chose to render.
+  const [adopted, setAdopted] = useState(0);
+  useEffect(() => {
+    const next = readRoomLink();
+    if (next === null) return;
+    forgetRoomLink();
+    setJoinCode(next.code);
+    if (waiting || found) return;
+    const named = next.mode ?? mode;
+    setMode(named);
+    setStatus({ kind: "roomLink", mode: named });
+    focusPending.current = true;
+    setAdopted((count) => count + 1);
+  }, [search]);
   useEffect(() => {
     if (!focusPending.current) return;
     if (mode !== "random" && lobby.kind === "loading") return;
@@ -955,7 +966,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     if (mode === "bo1") deckSelect.current?.focus();
     else if (mode === "bo3") trioSelect.current?.focus();
     else joinSubmit.current?.focus();
-  }, [lobby.kind, mode]);
+  }, [lobby.kind, mode, adopted]);
 
   function run(work: () => Promise<void>): void {
     if (busy) return;
@@ -1053,9 +1064,6 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     });
   }
 
-  // Split around the link, so each sentence is one entry and English reads as it always did.
-  const [noDecksBefore = "", noDecksAfter = ""] = t("You have no saved decks yet. {link}.").split("{link}");
-  const [noTriosBefore = "", noTriosAfter = ""] = t("You have no saved trios yet. {link}.").split("{link}");
   const noChoice = choice === null;
   const locked = waiting || found;
   const queued = waiting && room === null && !found;
@@ -1174,9 +1182,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
             </h2>
 
             {lobby.kind === "loading" && mode !== "random" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading your decks…")}
-              </p>
+              <Skeleton variant="panel" label={t("Loading your decks…")} />
             ) : null}
             {lobby.kind === "failed" && mode !== "random" ? (
               <>
@@ -1193,11 +1199,10 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
 
             {data !== null && mode === "bo1" ? (
               data.decks.length === 0 ? (
-                <p className="lobby-note">
-                  {noDecksBefore}
-                  <DecksLink>{t("Build one in Decks")}</DecksLink>
-                  {noDecksAfter}
-                </p>
+                <EmptyState
+                  text={t("You have no saved decks yet.")}
+                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
+                />
               ) : (
                 <div className="play-pick">
                   <label htmlFor="play-deck">{t("Your deck")}</label>
@@ -1237,11 +1242,10 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
 
             {data !== null && mode === "bo3" ? (
               data.trios.length === 0 ? (
-                <p className="lobby-note">
-                  {noTriosBefore}
-                  <DecksLink>{t("Build one in Decks")}</DecksLink>
-                  {noTriosAfter}
-                </p>
+                <EmptyState
+                  text={t("You have no saved trios yet.")}
+                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
+                />
               ) : (
                 <div className="play-pick">
                   <label htmlFor="play-trio">{t("Your trio")}</label>

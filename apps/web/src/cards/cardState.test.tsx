@@ -16,16 +16,15 @@ import { resolve } from "node:path";
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type PlayerView, type Tuning } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
-import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { liveFace } from "../game/faces.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
@@ -97,14 +96,6 @@ function def(id: string): CardDef {
   const found = CATALOG[id];
   if (found === undefined) throw new Error(`the catalog has no ${id}`);
   return found;
-}
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
-
-function renderBoard(view: PlayerView): void {
-  render(withCatalog(<Board view={view} />));
 }
 
 /** The `.cf` face inside a board card's root. */

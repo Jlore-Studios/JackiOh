@@ -1,8 +1,10 @@
 // Tests for CardStatsBlock (SPEC §9.11, R377, R654).
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { CardStatsBlock } from "./CardStatsBlock.tsx";
 
 const SLOW = { timeout: 10_000 } as const;
@@ -56,7 +58,7 @@ const SPARK_PUP = {
 };
 
 describe("R377 CardStatsBlock", () => {
-  it("R377 renders Played Δ with cohort sample sizes when above sample floor", async () => {
+  it("R377 renders Played vs held with cohort sample sizes when above sample floor", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -69,12 +71,34 @@ describe("R377 CardStatsBlock", () => {
 
     render(<CardStatsBlock cardId="core-001" />);
 
-    expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("Played vs held", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("+20%")).toBeInTheDocument();
     expect(screen.getByText("(30 / 10)")).toBeInTheDocument();
   });
 
-  it("R654 renders not enough data for Played Δ when below sample floor", async () => {
+  it("#2115 a panel skeleton stands in for the figures while the read is pending", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify(mockStatsResponse(SPARK_PUP)),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<CardStatsBlock cardId="core-001" />);
+
+    // Right after render the read has not answered: the block keeps its frame and its title.
+    const block = screen.getByTestId(INSPECT_STATS);
+    expectSkeleton(within(block).getByText("Loading stats…"), "panel");
+
+    expect(await screen.findByText("Played vs held", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading stats…")).toBeNull();
+    expect(screen.queryByTestId("skeleton")).toBeNull();
+  });
+
+  it("R654 renders not enough data for Played vs held when below sample floor", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -106,14 +130,14 @@ describe("R377 CardStatsBlock", () => {
 
     render(<CardStatsBlock cardId="core-002" />);
 
-    expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("Played vs held", undefined, SLOW)).toBeInTheDocument();
     // Delta should display "not enough data" and not any misleading percentage
     expect(screen.getByText("not enough data")).toBeInTheDocument();
     expect(screen.queryByText("+27%")).not.toBeInTheDocument();
     expect(screen.queryByText("(5 / 3)")).not.toBeInTheDocument();
   });
 
-  it("R654 renders not enough data for Played Δ when the server withholds the delta", async () => {
+  it("R654 renders not enough data for Played vs held when the server withholds the delta", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -145,7 +169,7 @@ describe("R377 CardStatsBlock", () => {
 
     render(<CardStatsBlock cardId="core-003" />);
 
-    expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("Played vs held", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("not enough data")).toBeInTheDocument();
     expect(screen.queryByText("%")).not.toBeInTheDocument();
   });
@@ -164,7 +188,7 @@ describe("CardStatsBlock after a load that failed", () => {
     await screen.findByText("Statistics unavailable", undefined, SLOW);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
-    await screen.findByText("Played Δ", undefined, SLOW);
+    await screen.findByText("Played vs held", undefined, SLOW);
     expect(screen.getByText("+20%")).toBeInTheDocument();
     expect(screen.queryByText("Statistics unavailable")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);

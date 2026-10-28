@@ -9,9 +9,11 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { listSeparator, readerName } from "../cards/chinese.ts";
 import { isGlitch } from "../cards/glitch.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
@@ -116,9 +118,10 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
 
   if (nothing) {
     return (
-      <p className="patch-status" data-testid={patchTestid.noMatch}>
-        {query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
-      </p>
+      <EmptyState
+        text={query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
+        testId={patchTestid.noMatch}
+      />
     );
   }
   return (
@@ -133,7 +136,7 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
         </Section>
       )}
       {quiet.length === 0 ? null : (
-        <Section title={t("Changed only in details the card doesn’t print")} count={quiet.length}>
+        <Section title={t("Changed only in details the card doesn't print")} count={quiet.length}>
           <ul className="patch-quiet">
             {quiet.map((delta) => (
               <li key={delta.id} className="patch-quiet__card" data-testid={patchTestid.dataOnly} data-card={delta.id}>
@@ -193,17 +196,13 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   });
 
   if (read.status === "loading") {
-    return (
-      <p className="patch-status" role="status" data-testid={patchTestid.cardsLoading}>
-        {t("Loading this patch’s cards…")}
-      </p>
-    );
+    return <Skeleton variant="grid" label={t("Loading this patch's cards…")} testId={patchTestid.cardsLoading} />;
   }
   if (read.status === "error") {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.cardsError}>
-          {t("This patch’s cards didn’t load.")}
+          {t("This patch's cards didn't load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.cardsRetry} onClick={read.retry}>
           {t("Try again")}
@@ -457,17 +456,13 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
   const read = useLoaded("patches", () => source.patches());
 
   if (read.status === "loading") {
-    return (
-      <p className="patch-status" role="status" data-testid={patchTestid.loading}>
-        {t("Loading the patch notes…")}
-      </p>
-    );
+    return <Skeleton variant="rows" label={t("Loading the patch notes…")} testId={patchTestid.loading} />;
   }
   if (read.status === "error") {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.error}>
-          {t("The patch notes didn’t load. Check your connection and try again.")}
+          {t("The patch notes didn't load. Check your connection and try again.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.retry} onClick={read.retry}>
           {t("Try again")}
@@ -476,11 +471,7 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
     );
   }
   if (read.value.length === 0) {
-    return (
-      <p className="patch-status" data-testid={patchTestid.empty}>
-        {t("There are no patch notes yet.")}
-      </p>
-    );
+    return <EmptyState text={t("There are no patch notes yet.")} testId={patchTestid.empty} />;
   }
   return <PatchList patches={read.value} releases={releases} />;
 }

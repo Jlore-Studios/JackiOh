@@ -23,6 +23,7 @@ import {
   aiToAct as wasmAiToAct,
   buildAiDeck as wasmBuildAiDeck,
   decide as wasmDecide,
+  lethalHint as wasmLethalHint,
   whenWasmLoaded,
 } from "../wasm/index.ts";
 import { advanceTo, type Rng } from "./rng.ts";
@@ -33,20 +34,10 @@ import type { ActionBody, PlayerId, SetName } from "./index.ts";
 
 export {
   AI_EMOTE,
-  AI_PERSONAS,
-  EMOTE_REPLY_KEYS,
-  EMOTE_TRIGGERS,
   createEmotePersona,
   pickPersona,
-  replyKeyOf,
-  rollForReply,
-  rollForTrigger,
   type AiEmote,
   type EmotePersona,
-  type EmoteReplyKey,
-  type EmoteTrigger,
-  type PersonaName,
-  type PersonaSpec,
 } from "../practice/personas.ts";
 
 // ---------------------------------------------------------------------------------------------
@@ -174,6 +165,16 @@ whenWasmLoaded(() => {
 /** R187, R188: whether `seat` owes an action the AI should take now. */
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
   return wasmAiToAct(state, seat);
+}
+
+/**
+ * R2102000: whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's
+ * lethal hint. Like `decide` it reads the true state only through `redact` (R185), on the Rust side,
+ * so the AI's hidden cards never change its answer. False outside `seat`'s own main phase, and when
+ * the check is still running at `deadlineMs`, a `Date.now()` time as `decide`'s is; absent, no clock.
+ */
+export function lethalHint(state: GameState, seat: PlayerId, deadlineMs?: number): boolean {
+  return wasmLethalHint(state, seat, deadlineMs ?? 0);
 }
 
 /**
