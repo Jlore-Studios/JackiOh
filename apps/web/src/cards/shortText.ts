@@ -24,6 +24,9 @@
 // Where a clamp would still cut a face at 270 px (#7 The Greatest Heist, #112 Job Application), or a
 // face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and #26
 // ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
+// The held Training Grounds set (R2194000) does the same: its Call to Chaos edition (#39) takes
+// "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
+// card's part (docs/training-grounds-set.md TG5) writes its own.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -110,6 +113,10 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-173": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-dormant-starship": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
+  // R2194000: the held Training Grounds set's rows.
+  "traininggrounds-016": { radiant: "clamp" },
+  "traininggrounds-038": { radiant: "clamp" },
+  "traininggrounds-039": { base: "colon", radiant: "colon" },
 };
 
 // R1017000: every catalog face whose printed text runs past TEXT_TIER_MAX.xl (260
