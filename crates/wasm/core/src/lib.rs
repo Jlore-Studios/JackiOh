@@ -391,6 +391,26 @@ pub fn ai_decide(
     to_json(&json!({ "decision": decision, "rngCursor": options.rng.cursor() }))
 }
 
+/// R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`),
+/// the Easy practice tier's lethal hint. `deadline_ms` is a clock as `ai_decide`'s is: a search still
+/// running once `now_ms()` passes it lights nothing, and `deadline_ms <= 0` means no clock.
+pub fn lethal_hint(
+    state_json: &str,
+    seat: &str,
+    deadline_ms: f64,
+    now_ms: fn() -> f64,
+) -> Result<bool, String> {
+    let state = state_of("lethalHint", state_json)?;
+    let seat = player(seat)?;
+    let clock = move || now_ms() >= deadline_ms;
+    let should_stop = if deadline_ms > 0.0 {
+        Some(&clock as &dyn Fn() -> bool)
+    } else {
+        None
+    };
+    Ok(jackioh_ai::lethal_hint(&state, seat, should_stop))
+}
+
 /// `{ deck, rngCursor }` (TS `buildAiDeck(createRng(rngSeed, rngCursor), size, options)`). Every key
 /// but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read by its own serde, so an absent
 /// `banned` (the shadow ban), an absent `theme` (roll one) and a `null` one (none) keep their meanings,

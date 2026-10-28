@@ -888,6 +888,36 @@ mod decide_cannot_see_hidden_cards_b11 {
 }
 
 // ---------------------------------------------------------------------------------------------
+// R2102000: the lethal hint cannot see hidden cards either
+// ---------------------------------------------------------------------------------------------
+
+mod lethal_hint_r2102000 {
+    use super::*;
+
+    /// R2102000: the lethal hint gives one answer for random mutations of real states, asked for the
+    /// seat whose main phase it is
+    #[test]
+    fn r2102000_the_lethal_hint_gives_one_answer_for_random_mutations_of_real_states() {
+        let candidates: Vec<&GameState> = real_states()
+            .iter()
+            .filter(|state| state.result.is_none() && state.pending.is_none() && state.phase == Phase::Main)
+            .take(8)
+            .collect();
+        assert!(!candidates.is_empty());
+        for (at, state) in candidates.iter().enumerate() {
+            let seat = state.active;
+            let mutated = mutate_hidden(state, seat, at as i64 + 1);
+            assert_ne!(hash_state(&mutated), hash_state(state), "state {at}");
+            assert_eq!(
+                lethal_hint(&mutated, seat, None),
+                lethal_hint(state, seat, None),
+                "state {at}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // B12: determinize
 // ---------------------------------------------------------------------------------------------
 
