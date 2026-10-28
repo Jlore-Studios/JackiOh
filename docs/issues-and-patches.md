@@ -350,13 +350,13 @@ overlap them, has none.
 
 Two branches can still take one number when they work on one issue. The one that merges second
 renumbers before it merges: it merges `main` in, moves its note to the next number free in its
-issue's block (the file name and its `id`), renames its proving tests (`fn r<n>_…`, `it("R<n> …")`)
-and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index` again for its
-index row. The clash shows as a conflict on the note, and `cargo jackioh spec check` fails on
+issue's block (the file name and its `id`), and renames its proving tests (`fn r<n>_…`, `it("R<n> …")`)
+and every `R<n>` and `[[R<n>]]` its change cites. The clash shows as a conflict on the note, and `cargo jackioh spec check` fails on
 whatever the renumbering missed: two notes with one `id`, a test or a citation with no note, a link
-to nothing. A conflict on `spec/INDEX.md` or `spec/11-rulings.md` alone is no clash: two branches'
-rows or paragraphs met, and `cargo jackioh spec index` rewrites the index with both, renumbering
-nothing. Numbers on `main` are never reused or renumbered (`spec/README.md`). Under the old rule
+to nothing. No branch writes `spec/INDEX.md` or the end of `spec/11-rulings.md`, which every
+ruling's branch once conflicted on: a branch's §11 paragraph goes in `spec/pending/<n>.md`, and
+`spec-fold.yml` folds the paragraphs and rewrites the index on `main` daily (`spec/README.md`, Adding
+a ruling). Numbers on `main` are never reused or renumbered (`spec/README.md`). Under the old rule
 this happened on nearly every merge (#357 and #360 both took R744, and #360 moved to R745).
 
 Before R690000, a tracker whose parts built side by side could hold a block of sequential numbers
