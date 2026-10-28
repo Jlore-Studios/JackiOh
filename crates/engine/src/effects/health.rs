@@ -108,11 +108,41 @@ fn set_stats_on(ctx: &mut crate::script::EffectContext<'_>, id: &str, stats: Att
     }
 }
 
+/// R1185002: set one Unit standing on the field (or carried) to `stats`, unless it is Immutable
+/// (R23), and report its two numbers as it now wears them, auras included, with `numberChanged`
+/// ("attack", "health"): public, since a Unit on the field is. `set_stats_all` and `set_stats` share it.
+fn set_one(
+    ctx: &mut crate::script::EffectContext<'_>,
+    unit: &crate::state::CardInstance,
+    stats: AttackHealth,
+) {
+    if !crate::zones::in_units_row_or_standing(ctx.state, unit) && !crate::zones::is_carried(ctx.state, unit)
+    {
+        return;
+    }
+    if unit_has(ctx.state, unit, KeywordKind::Immutable) {
+        return;
+    }
+    set_stats_on(ctx, &unit.id, stats);
+    let Some(now) = find_instance(ctx.state, &unit.id).cloned() else {
+        return;
+    };
+    let view = unit_view(ctx.state, &now);
+    for (key, value) in [("attack", view.attack), ("health", view.health)] {
+        ctx.events.push(GameEvent::NumberChanged {
+            instance_id: now.id.clone(),
+            def_id: now.def_id.clone(),
+            key: key.to_string(),
+            value,
+            hidden_from: None,
+        });
+    }
+}
+
 /// §6.3 Set stats (R1185002): every Unit the scope names (`cards_in_scope` order, the tops of piles,
 /// carried and standing Units included, R13, R446, R1081000) is set to `attack`/`health`
-/// (`set_stats_on`). An Immutable Unit is untouched (R23), and a Spell's set passes a Unit Immune to
-/// Spells by, as every scope does. Each Unit set reports its two numbers as it now wears them, auras
-/// included, with `numberChanged` ("attack", "health"): public, since a Unit on the field is.
+/// (`set_one`). An Immutable Unit is untouched (R23), and a Spell's set passes a Unit Immune to
+/// Spells by, as every scope does.
 pub fn set_stats_all(args: SetStatsAllArgs) -> Effect {
     Effect::new("setStatsAll", move |ctx| {
         let stats = AttackHealth {
@@ -120,28 +150,34 @@ pub fn set_stats_all(args: SetStatsAllArgs) -> Effect {
             health: args.health,
         };
         for unit in cards_in_scope(ctx, &args.scope) {
-            if !crate::zones::in_units_row_or_standing(ctx.state, &unit)
-                && !crate::zones::is_carried(ctx.state, &unit)
-            {
-                continue;
-            }
-            if unit_has(ctx.state, &unit, KeywordKind::Immutable) {
-                continue;
-            }
-            set_stats_on(ctx, &unit.id, stats);
-            let Some(now) = find_instance(ctx.state, &unit.id).cloned() else {
-                continue;
-            };
-            let view = unit_view(ctx.state, &now);
-            for (key, value) in [("attack", view.attack), ("health", view.health)] {
-                ctx.events.push(GameEvent::NumberChanged {
-                    instance_id: now.id.clone(),
-                    def_id: now.def_id.clone(),
-                    key: key.to_string(),
-                    value,
-                    hidden_from: None,
-                });
-            }
+            set_one(ctx, &unit, stats);
         }
+    })
+}
+
+/// `setStats`' argument: one Unit and the Attack and Health it is set to.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SetStatsArgs {
+    pub target: TargetSpec,
+    pub attack: i32,
+    pub health: i32,
+}
+
+/// §6.3 Set stats on one Unit (R2198000, Training Grounds #34 Dino-size): `set_stats_all`'s set
+/// (R1185002) on the Unit `target` names, with the same guards: an Immutable Unit is untouched (R23),
+/// and a target that is no Unit on the field, or has left it, fizzles. Who may be targeted is the
+/// card's declared target's business (R81), so a Unit Immune to Spells is never offered to a Spell.
+pub fn set_stats(args: SetStatsArgs) -> Effect {
+    Effect::new("setStats", move |ctx| {
+        let Some(DamageTarget::Unit { instance: unit }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        let stats = AttackHealth {
+            attack: args.attack,
+            health: args.health,
+        };
+        set_one(ctx, &unit, stats);
     })
 }

@@ -56,11 +56,13 @@ const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
 
 /// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
-/// "Jade" (Meditative #39.2), which names nothing inside it.
-const RULES_PHRASES: &[&str] = &["Jade Counter"];
+/// "Jade" (Meditative #39.2), which names nothing inside it. R2198004: "Fortify Mind" (M #22.1)
+/// holds "Fortify" (TG #12), and still names itself.
+const RULES_PHRASES: &[&str] = &["Jade Counter", "Fortify Mind"];
 
 /// Whether the match at byte range `at..end` lies inside a rules phrase: the phrase holds the
-/// name, so the name reads as the phrase's word, not the card's. Both bounds sit on the match's
+/// name, so the name reads as the phrase's word, not the card's. A match that is the whole phrase
+/// is not inside it (R2198004: the phrase may be a card's own name). Both bounds sit on the match's
 /// own edges, so every byte index here is a character boundary.
 fn inside_rules_phrase(text: &str, at: usize, end: usize) -> bool {
     RULES_PHRASES.iter().any(|phrase| {
@@ -70,7 +72,7 @@ fn inside_rules_phrase(text: &str, at: usize, end: usize) -> bool {
                 return false;
             };
             let start = from + offset;
-            if start <= at && end <= start + phrase.len() {
+            if start <= at && end <= start + phrase.len() && (at, end) != (start, start + phrase.len()) {
                 return true;
             }
             from = start + 1;
@@ -479,6 +481,16 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "{id} names no card"
             );
         }
+    }
+
+    #[test]
+    fn r2198004_fortify_mind_names_itself_and_not_fortify() {
+        let text = "Add a Fortify Mind to your opponent's hand.";
+        assert!(names(text, "Fortify Mind"));
+        assert!(!names(text, "Fortify"));
+        assert!(names("Add 2 Fortify Minds.", "Fortify Mind"));
+        // Outside the phrase "Fortify" still names Training Grounds #12.
+        assert!(names("Cast a Fortify.", "Fortify"));
     }
 
     #[test]

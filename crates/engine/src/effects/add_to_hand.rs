@@ -193,6 +193,25 @@ fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
     copy.tuning = source.tuning.clone();
 }
 
+/// R2198001 (Training Grounds #37 Seance, "an exact copy … keeping its cost changes"): what `exact`
+/// adds to `copy_riders`: the rest of R57's copy of a Unit on the field (its buffs, granted keywords
+/// and Vanilla state) and its price (`costMod`, `costOverride`, the Embiggened version's price and a
+/// set X), which a card keeps from the hand onto the field and back (R78, R766). Damage, exertion,
+/// counters, memory, the Brittle and times-played counts start afresh, as R57's do (R385, R429). A
+/// price the effect states (`costOverride`) sets the copy's price outright, so the copied one is left
+/// off (the Radiant Seance's "It costs (0)").
+fn exact_riders(copy: &mut CardInstance, source: &CardInstance, priced: bool) {
+    copy.buffs = source.buffs;
+    copy.granted_keywords = source.granted_keywords.clone();
+    copy.vanilla = source.vanilla;
+    if !priced {
+        copy.cost_mod = source.cost_mod;
+        copy.cost_override = source.cost_override;
+        copy.embiggen_cost_override = source.embiggen_cost_override;
+        copy.fixed_x = source.fixed_x;
+    }
+}
+
 /// `add_to_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -237,6 +256,10 @@ pub struct AddToHandArgs {
     /// `statsOverride` and `tuning`. The card copied stays where it is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_of: Option<String>,
+    /// R2198001: with `copyOf`, an exact copy: R57's whole copy and the copied card's price as well
+    /// (`exact_riders`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exact: Option<bool>,
     /// ME-SECRET, R862: what the new card remembers from the start.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<IndexMap<String, Value>>,
@@ -294,6 +317,9 @@ pub fn add_to_hand(args: AddToHandArgs) -> Effect {
             let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
             let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Hand { player });
             copy_riders(&mut copy, &source);
+            if args.exact == Some(true) {
+                exact_riders(&mut copy, &source, args.cost_override.is_some());
+            }
             crate::generators::record_generator(ctx, &copy);
             let id = copy.id.clone();
             put_in_hand_with(ctx, copy, &riders);

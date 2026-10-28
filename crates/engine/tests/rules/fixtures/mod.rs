@@ -61,6 +61,7 @@ pub mod starscape;
 pub mod starship;
 pub mod stinkyscape_verbs;
 pub mod terminus;
+pub mod tg_spells;
 pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;

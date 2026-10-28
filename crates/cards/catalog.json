@@ -26703,7 +26703,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [
         {
@@ -26743,7 +26743,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a Unit."
@@ -26782,7 +26782,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{health} Health, +{armor} Armor and Taunt."
@@ -26893,7 +26893,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them."
@@ -27310,7 +27310,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Exile a permanent. Draw {draw|card|cards}."
@@ -27337,7 +27337,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Make a permanent Radiant."
@@ -27561,7 +27561,7 @@
     "flavor": "Nature",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Set a Unit's Attack and Health to 10/10."
@@ -27652,7 +27652,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add an exact copy of a permanent to your hand, keeping its cost changes."
@@ -27816,7 +27816,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a random card to your hand."
