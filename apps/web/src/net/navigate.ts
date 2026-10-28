@@ -7,7 +7,6 @@
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
-import { testid } from "../game/contract.ts";
 import { reducedMotionNow } from "../settings/motion.ts";
 
 const NAVIGATED = "jackioh:navigated";
@@ -47,8 +46,12 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
   };
 }
 
-/** R2117000: a board on screen; `Board.tsx` draws one for every game and every replay. */
-const BOARD_ON_SCREEN = `[data-testid="${testid.board}"]`;
+/**
+ * R2117000: a board on screen; `Board.tsx` draws one for every game and every replay. `testid.board`
+ * spelled out: e2e's typecheck loads this file through the Vite config, and `game/contract.ts`'s
+ * imports reach the card components, which it cannot compile. viewTransition.test.tsx pins the two.
+ */
+const BOARD_ON_SCREEN = '[data-testid="board"]';
 
 /** R2117000: the pathname the screens were last told of; by a `popstate` the address has moved on. */
 let shown = "/";
