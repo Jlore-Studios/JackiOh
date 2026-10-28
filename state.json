@@ -7558,9 +7558,9 @@
     "what": "plan #2291 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-28T20:33:04Z",
+    "at": "2026-10-28T20:44:46Z",
     "notes": [
-      "CI on #2217: #2217: queued a CI fix"
+      "delivered revise #2289 on claude-8 (run 40755157441): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8266,7 +8266,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T20:33:04Z",
+  "loop_tick": "2026-10-28T20:44:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
