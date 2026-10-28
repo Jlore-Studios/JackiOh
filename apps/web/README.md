@@ -770,6 +770,13 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
   in the log.
 
+## Player-facing words
+
+Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
+`src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
+client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
+apostrophe there or in a dictionary key, and no straight double quote there.
+
 ## Internationalisation
 
 The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.

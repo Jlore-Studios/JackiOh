@@ -207,7 +207,7 @@ function connectionWords(connection: WatchConnection): string {
     case "closed":
       return t("Disconnected");
     case "refused":
-      return t("This game can’t be watched");
+      return t("This game can't be watched");
   }
 }
 
@@ -245,7 +245,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
     screen = (
       <ShellPanel>
         <p className="notice" data-testid={watchTestid.refused} role="alert">
-          {t("You can’t watch this game. It may be over or full, or your friend may have turned watching off.")}
+          {t("You can't watch this game. It may be over or full, or your friend may have turned watching off.")}
         </p>
         <div className="row">
           <BackToTogether />

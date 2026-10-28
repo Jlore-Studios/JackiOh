@@ -57,13 +57,13 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   });
 
   if (read.status === "loading") {
-    return <Skeleton variant="rows" label={t("Loading this card’s history…")} testId={patchTestid.historyLoading} />;
+    return <Skeleton variant="rows" label={t("Loading this card's history…")} testId={patchTestid.historyLoading} />;
   }
   if (read.status === "error") {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.historyError}>
-          {t("This card’s history didn’t load.")}
+          {t("This card's history didn't load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.historyRetry} onClick={read.retry}>
           {t("Try again")}

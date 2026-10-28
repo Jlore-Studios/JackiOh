@@ -108,7 +108,7 @@ export function connectionWords(state: ConnectionState): string {
     case "reconnecting":
       return t("Reconnecting…");
     case "refused":
-      return t("This match isn\u2019t available");
+      return t("This match isn't available");
     case "closed":
       return t("Disconnected");
   }
@@ -344,7 +344,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       return (
         <ShellPanel testId={matchTestid.connecting}>
           <p className="notice" data-testid={matchTestid.refused} role="alert">
-            {t("This match isn’t available. It may have ended, or it may not be yours to join.")}
+            {t("This match isn't available. It may have ended, or it may not be yours to join.")}
           </p>
           <div className="row">
             <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
@@ -562,7 +562,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           </p>
         ) : readOnly ? (
           <p className="board-read-only" data-testid={matchTestid.missingLegal} role="alert">
-            {t("Your moves can’t be sent from this board right now. Reload the page to rejoin the match.")}
+            {t("Your moves can't be sent from this board right now. Reload the page to rejoin the match.")}
           </p>
         ) : null
       }

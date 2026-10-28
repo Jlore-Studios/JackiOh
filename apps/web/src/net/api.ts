@@ -81,7 +81,7 @@ export class ApiRequestError extends Error {
  * from a refusal, which has a code. Its message is a sentence for the player; the browser's own
  * wording ("Failed to fetch", Safari's "Load failed") says nothing to them and is kept aside.
  */
-export const API_UNREACHABLE_MESSAGE = "Couldn’t reach JackiOh. Check your connection, then try again.";
+export const API_UNREACHABLE_MESSAGE = "Couldn't reach JackiOh. Check your connection, then try again.";
 
 export class ApiUnreachableError extends Error {
   /** What the transport said, for a debugger; never shown. */

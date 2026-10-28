@@ -52,16 +52,16 @@ export type DecodedDeck =
 
 /** Every refusal, as the import dialog shows it. */
 export const DECK_CODE_MESSAGES = Object.freeze({
-  tooLong: "That’s too long to be a JackiOh deck code.",
+  tooLong: "That's too long to be a JackiOh deck code.",
   empty: "Paste a deck code to import it.",
-  notACode: "That isn’t a JackiOh deck code.",
-  trioCode: "That’s a trio code, not a deck code: import it with Import trio, under Trios.",
+  notACode: "That isn't a JackiOh deck code.",
+  trioCode: "That's a trio code, not a deck code: import it with Import trio, under Trios.",
   newer: "This code was made by a newer version of JackiOh. Reload the page to update, then try again.",
-  older: "This code was made by an older version of JackiOh, and this version can’t read it.",
+  older: "This code was made by an older version of JackiOh, and this version can't read it.",
   damaged: "That deck code is damaged. Copy it again from where it was shared.",
   incomplete: "That deck code is incomplete. Copy the whole code and try again.",
-  checksum: "That deck code doesn’t check out: part of it was changed or lost. Copy it again from where it was shared.",
-  unreadable: "That deck code couldn’t be read.",
+  checksum: "That deck code doesn't check out: part of it was changed or lost. Copy it again from where it was shared.",
+  unreadable: "That deck code couldn't be read.",
 });
 
 // Byte format
