@@ -62,6 +62,8 @@ pub fn roll_resource(state: &GameState, rng: &mut Rng, pool: Option<&[String]>) 
     let candidates: Vec<(String, PrintedRarity)> = resource_def_ids()
         .into_iter()
         .filter(|id| pool.is_none_or(|pool| pool.contains(id)))
+        // R2201001: a held game rolls no Legendary or Mythic Resource.
+        .filter(|id| !find_def(Some(state), id).is_some_and(crate::catalog::held_out))
         .filter_map(|id| resource_rarity(state, &id).map(|rarity| (id, rarity)))
         .collect();
     let table: Vec<(PrintedRarity, i32)> = RESOURCE_RARITY_ODDS
