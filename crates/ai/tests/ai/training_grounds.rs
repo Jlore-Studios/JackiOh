@@ -13,15 +13,19 @@ use super::support::{AI, HUMAN, act, is_legal, register_cards, scenario};
 const PERSONAL_TRAINER: &str = "traininggrounds-002";
 const MIDLANE_MENACE: &str = "traininggrounds-005";
 const CELESTIAL_CALLER: &str = "traininggrounds-016";
+const FLAME_TONGUE_TOTEM: &str = "traininggrounds-021";
 const RIGHT_HAND_FELINOR: &str = "traininggrounds-022";
 const GOLIATH_SITUATION: &str = "traininggrounds-024";
 const OCCIDENTAL: &str = "traininggrounds-028";
+const FLOODGATES: &str = "traininggrounds-030";
 const ORIENTAL: &str = "traininggrounds-029";
 const CALL_TO_CHAOS: &str = "traininggrounds-039";
 /// TG #8 Clobberer: a (3) 14/7 Human, the hand card Goliath Situation makes cheap.
 const CLOBBERER: &str = "traininggrounds-008";
 /// Core #8 Mr. Vanilla: a (1) 4/4 with no text, the hand, library and field filler.
 const VANILLA: &str = "core-008";
+/// Core #16 Hit Job: (3) Spell, "Destroy a Unit."
+const HIT_JOB: &str = "core-016";
 /// Core #43 Big Felinor: a (4) Unit, dearer than Clobberer.
 const BIG_FELINOR: &str = "core-043";
 
@@ -333,4 +337,72 @@ fn r2203001_after_each_call_to_chaos_entry_the_ai_finishes_its_turn_cleanly() {
             entry.name
         );
     }
+}
+
+// TG #21 Flame Tongue Totem: an aura on the Units beside it
+
+#[test]
+fn r2203001_the_ai_plays_flame_tongue_totem_beside_its_unit() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-totem",
+        json!([FLAME_TONGUE_TOTEM]),
+        1,
+        json!([{ "def": VANILLA, "lane": 4 }]),
+        json!([]),
+    );
+    let totem = in_hand(&state, FLAME_TONGUE_TOTEM);
+    let decision = decide_at(&state, "ai-tg-totem");
+    assert!(is_legal(&state, AI, &decision.action));
+    let lane = played_lane(&decision, &totem)
+        .unwrap_or_else(|| panic!("a play of the Totem: {:?}", decision.action));
+    assert!(
+        lane == 3 || lane == 5,
+        "lane {lane} is not beside the Vanilla in lane 4"
+    );
+}
+
+// TG #30 Floodgates: its Death destroys every Unit of its side
+
+#[test]
+fn r2203001_the_ai_kills_an_enemy_floodgates_so_its_death_destroys_their_units() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-floodgates",
+        json!([HIT_JOB]),
+        3,
+        json!([]),
+        json!([
+            { "def": VANILLA, "lane": 1 },
+            { "def": FLOODGATES, "lane": 3 },
+            { "def": VANILLA, "lane": 5 },
+        ]),
+    );
+    let floodgates = state.players[HUMAN]
+        .units
+        .iter()
+        .flatten()
+        .flatten()
+        .find(|card| card.def_id == FLOODGATES)
+        .expect("the Floodgates")
+        .id
+        .clone();
+    let hit_job = in_hand(&state, HIT_JOB);
+    let decision = decide_at(&state, "ai-tg-floodgates");
+    assert!(is_legal(&state, AI, &decision.action));
+    assert!(
+        matches!(
+            &decision.action,
+            ActionBody::Play { instance_id, targets: Some(targets), .. }
+                if *instance_id == hit_job
+                    && *targets == [Selection::Instance { instance_id: floodgates.clone() }]
+        ),
+        "the Hit Job at the Floodgates: {:?}",
+        decision.action
+    );
+    let after = act(&state, AI, &decision.action);
+    assert!(
+        after.players[HUMAN].units.iter().flatten().next().is_none(),
+        "its Death destroyed the enemy's other Units"
+    );
 }
