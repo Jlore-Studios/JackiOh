@@ -147,6 +147,7 @@ pub mod hand_returns;
 pub mod hidden_information;
 pub mod invariants;
 pub mod lasting_effects;
+pub mod lesson_pools;
 pub mod marketplace_table;
 pub mod my_pawn;
 pub mod params;

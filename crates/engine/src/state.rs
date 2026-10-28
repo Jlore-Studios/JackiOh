@@ -2177,6 +2177,29 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         .iter()
         .all(|field| handicap_field(handicap, field) == handicap_field(&human, field))
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
+        && handicap.hero_floor.is_none()
+        && handicap.pool_hold != Some(true)
+}
+
+/// R2201000: the least health `player`'s hero can fall to, when its handicap sets a floor.
+pub fn hero_floor_of(state: &GameState, player: PlayerId) -> Option<i32> {
+    state.players[player].handicap.and_then(|h| h.hero_floor)
+}
+
+/// R2201000: whether `player` can lose the game. A seat whose handicap sets a floor cannot: its hero
+/// never falls below it, and nothing the other player does ends the game as its loss.
+pub fn can_lose(state: &GameState, player: PlayerId) -> bool {
+    hero_floor_of(state, player).is_none()
+}
+
+/// R2201001: whether the game holds Legendary and Mythic cards out of its random pools: either
+/// seat's handicap sets `poolHold`.
+pub fn holds_pools(state: &GameState) -> bool {
+    PLAYER_IDS.into_iter().any(|player| {
+        state.players[player]
+            .handicap
+            .is_some_and(|h| h.pool_hold == Some(true))
+    })
 }
 
 /// R180, R184: a handicap is five non-negative integers, and its deck size is one a library can
@@ -2204,6 +2227,15 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
         return Err(EngineError::new(format!(
             "{label}: handicap heroHealth must be a positive integer (R290), got {hero_health}"
         )));
+    }
+    // R2201000: optional, and when given a floor the hero starts at or above.
+    if let Some(floor) = handicap.hero_floor {
+        let start = starting_hero_health(Some(handicap));
+        if floor < 1 || floor > start {
+            return Err(EngineError::new(format!(
+                "{label}: handicap heroFloor must be between 1 and the hero's starting health {start} (R2201000), got {floor}"
+            )));
+        }
     }
     Ok(())
 }
@@ -2592,6 +2624,9 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 } else {
                     Some(hero_health)
                 },
+                // R2201000, R2201001: each joins only when set, so no other game stores either.
+                hero_floor: handicap.hero_floor,
+                pool_hold: handicap.pool_hold.filter(|hold| *hold),
             });
             side.hero.health = hero_health;
         }

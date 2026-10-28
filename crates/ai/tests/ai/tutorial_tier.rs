@@ -61,6 +61,12 @@ const TUTORIAL_TIER: TutorialTier = TutorialTier {
     greedy_margin_over_easy: 1,
 };
 
+/// `TUTORIAL_HUMAN` without its floor (R2201000): a lesson's deck size and a human's resources.
+const UNFLOORED_TUTORIAL_HUMAN: Handicap = Handicap {
+    hero_floor: None,
+    ..TUTORIAL_HUMAN
+};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Tier {
     Tutorial,
@@ -84,9 +90,11 @@ fn tier_handicap(tier: Tier) -> Handicap {
 }
 
 /// The greedy seat's handicap: a lesson's human seat against AI_TUTORIAL (R1705005), a human's at Easy.
+/// R2201000: without the lesson's floor, so the run measures the tier by play, as it always did: a
+/// floored seat cannot lose, and every game it would have lost would read as a win or a draw.
 fn human_handicap_of(tier: Tier) -> Handicap {
     match tier {
-        Tier::Tutorial => TUTORIAL_HUMAN,
+        Tier::Tutorial => UNFLOORED_TUTORIAL_HUMAN,
         Tier::Easy => HUMAN_HANDICAP,
     }
 }
@@ -283,7 +291,7 @@ mod r290_the_tutorial_tier_by_play {
                     human_handicap.deck_size as usize
                 );
             }
-            assert_eq!(human_handicap_of(Tier::Tutorial), TUTORIAL_HUMAN);
+            assert_eq!(human_handicap_of(Tier::Tutorial), UNFLOORED_TUTORIAL_HUMAN);
             assert_eq!(human_handicap_of(Tier::Easy), HUMAN_HANDICAP);
             // The greedy seat's deck is the one its seed deals at each tier's size; the AI seat's differs.
             for (config, size) in [(&tutorial, EARLIER_DECK_SIZE), (&easy, DECK_SIZE)] {
@@ -395,6 +403,93 @@ mod r290_the_tutorial_tier_by_play {
                 assert_eq!(game.replay_errors, 0, "{label}");
                 assert_eq!(game.replay_hash, game.record.hash, "{label}");
             }
+        }
+    }
+}
+
+/// R2201000: a lesson's game, the AI under AI_TUTORIAL against a human seat under the floored
+/// TUTORIAL_HUMAN who only keeps its hand and ends its turns, dealt as `tier_game` deals game `n`.
+fn passive_lesson(n: i32) -> (GameState, i32) {
+    let config = tier_game(Tier::Tutorial, n);
+    let human = human_seat_of(n);
+    let ai_seat = human.opponent();
+    let mut handicaps = config.handicaps.clone().expect("a tutorial game is handicapped");
+    *handicaps.slot(human) = Some(TUTORIAL_HUMAN);
+    let mut state = begin_game(&create_game(&CreateGameOptions {
+        seed: config.seed.clone(),
+        decks: config.decks.clone(),
+        handicaps: Some(handicaps),
+        ..Default::default()
+    }))
+    .state;
+    let mut ai = AiOptions::with_budget(create_rng(&format!("{}:ai", config.seed), 0), AI_GATE_BUDGET);
+    let mut steps = 0;
+    while state.result.is_none() {
+        steps += 1;
+        assert!(steps < 3000, "{}: the lesson ends", config.seed);
+        let seat = seat_to_act(&state).expect("a seat to act");
+        let body = if seat == ai_seat {
+            decide(&state, ai_seat, &mut ai).expect("the AI decides").action
+        } else if let Some(pending) = &state.pending {
+            ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: pending
+                    .options
+                    .iter()
+                    .take(pending.min.max(0) as usize)
+                    .map(|o| o.selection.clone())
+                    .collect(),
+            }
+        } else if state.mulligan.is_some() {
+            ActionBody::Mulligan {
+                keep: state.players[seat]
+                    .hand
+                    .iter()
+                    .map(|card| card.id.clone())
+                    .collect(),
+            }
+        } else {
+            ActionBody::EndTurn
+        };
+        let result = reduce(&state, &Action::new(body, seat, format!("pl{steps}")));
+        assert!(result.error.is_none(), "{}: {:?}", config.seed, result.error);
+        state = result.state;
+        assert!(
+            state.players[human].hero.health >= TUTORIAL_HERO_FLOOR,
+            "{}: the floor holds",
+            config.seed
+        );
+    }
+    (state, steps)
+}
+
+mod r2201000_a_lesson_cannot_be_lost {
+    use super::*;
+
+    /// The tutorial's games end in the human's win when the human does nothing at all: the AI's 12-card
+    /// deck runs out, and fatigue takes its 20 health before the turn cap. Part 12's "never a draw"
+    /// stands on this (R2201000).
+    #[test]
+    fn r2201000_a_floored_human_who_only_ends_turns_beats_the_ai_at_ai_tutorial_by_its_fatigue_before_the_turn_cap()
+     {
+        for n in 1..=2 {
+            let (state, _) = passive_lesson(n);
+            let result = state.result.expect("over");
+            assert_eq!(
+                result.winner,
+                Winner::from(human_seat_of(n)),
+                "game {n}: {result:?}"
+            );
+            assert_eq!(result.reason, GameOverReason::HeroDeath, "game {n}");
+            assert!(
+                state.turn < TURN_CAP_PLAYER_TURNS,
+                "game {n}: turn {}",
+                state.turn
+            );
+            assert!(
+                state.players[human_seat_of(n).opponent()].fatigue_count > 0,
+                "game {n}: by fatigue"
+            );
         }
     }
 }

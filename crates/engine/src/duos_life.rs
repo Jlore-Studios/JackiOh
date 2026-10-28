@@ -13,6 +13,10 @@
 //!
 //! Without `PlayerState.duos` — every 1v1 game — each helper is exactly the arithmetic it replaced,
 //! so no 1v1 state, hash, golden trace or fuzz seed moves (B3).
+//!
+//! R2201000: a seat whose handicap sets `heroFloor` never reads below it after any write here. The
+//! damage pipeline and life loss already stop at the floor; this holds set health, the swap and
+//! anything else that writes, so no path takes a floored hero to 0.
 
 use crate::state::{GameState, PlayerState};
 use crate::wire::PlayerId;
@@ -20,6 +24,7 @@ use crate::wire::PlayerId;
 /// Damage and life loss on `player`'s hero, after Armor (B13, B14).
 pub fn hero_loses(state: &mut GameState, player: PlayerId, amount: i32) {
     side_loses(&mut state.players[player], amount);
+    hold_floor(&mut state.players[player]);
 }
 
 /// A heal on `player`'s hero: what it healed (B14). Uncapped unless the hero is spent.
@@ -37,6 +42,7 @@ pub fn hero_heal_room(state: &GameState, player: PlayerId, amount: i32) -> i32 {
 /// E7's "set a hero's health to N" on `player`'s hero (B13, B14).
 pub fn hero_set(state: &mut GameState, player: PlayerId, value: i32) {
     side_set(&mut state.players[player], value);
+    hold_floor(&mut state.players[player]);
 }
 
 /// What it would take to bring `player` to 0: health, plus the pool while own HP is not spent (once
@@ -59,7 +65,18 @@ pub fn heroes_swap_health(state: &mut GameState, one: PlayerId, other: PlayerId)
     let keep = state.players[one].hero.health;
     state.players[one].hero.health = state.players[other].hero.health;
     state.players[other].hero.health = keep;
+    hold_floor(&mut state.players[one]);
+    hold_floor(&mut state.players[other]);
     true
+}
+
+/// R2201000: a floored hero reads its floor after any write that would take it lower.
+fn hold_floor(side: &mut PlayerState) {
+    if let Some(floor) = side.handicap.and_then(|h| h.hero_floor)
+        && side.hero.health < floor
+    {
+        side.hero.health = floor;
+    }
 }
 
 fn side_loses(side: &mut PlayerState, amount: i32) {

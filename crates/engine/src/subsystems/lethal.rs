@@ -232,7 +232,8 @@ pub fn is_lethal(state: &GameState, attacker: &CardInstance, target: &AttackTarg
         heal = crate::duos_life::hero_heal_room(state, hero, heal);
     }
     let net = projected_damage(state, attacker, target) - heal;
-    net >= crate::duos_life::effective_life(state, hero)
+    // R2201000: no hit is lethal to a hero that cannot lose.
+    crate::state::can_lose(state, hero) && net >= crate::duos_life::effective_life(state, hero)
 }
 
 /// §4.3 step 1: a defender with First Strike, against an attacker without it, strikes first, so its

@@ -28,7 +28,7 @@
 //!   new or custom card (#915) is valued by its dense stats alone (D5). The checked-in network may be
 //!   the null one, whose correction is zero everywhere, until a fit replaces it.
 
-use jackioh_engine::{AI_TUTORIAL, GameState, PlayerId};
+use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 
 use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
 use crate::evaluate::{NextSwing, evaluate};
@@ -245,6 +245,18 @@ pub fn open_score_with(
     }
 }
 
+/// R1012003: whether a seat plays the tutorial opponent's tier: its handicap is `AI_TUTORIAL`'s
+/// resources, whatever the lesson adds that is no resource (R2201000's floor, R2201001's pool hold).
+pub fn is_tutorial_opponent(handicap: Option<Handicap>) -> bool {
+    handicap.is_some_and(|handicap| {
+        Handicap {
+            hero_floor: None,
+            pool_hold: None,
+            ..handicap
+        } == AI_TUTORIAL
+    })
+}
+
 /// `finalist_score` under a given switch and network, for tests and screens.
 pub fn finalist_score_with(
     state: &GameState,
@@ -261,7 +273,7 @@ pub fn finalist_score_with(
             // with a 12-card deck, as a Duos duel is one (D9).
             if state.result.is_some()
                 || state.players[seat].duos.is_some()
-                || state.players[seat].handicap == Some(AI_TUTORIAL)
+                || is_tutorial_opponent(state.players[seat].handicap)
             {
                 return hand;
             }

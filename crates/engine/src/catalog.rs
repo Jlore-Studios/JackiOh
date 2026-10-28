@@ -411,6 +411,43 @@ pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnc
     run()
 }
 
+// CLAUDE.md rule 4's scoped exception (R2201001): whether the call in flight on this thread is a
+// step of a game that holds its pools, set by `with_pool_hold` for that one call and put back after
+// it, so every pool `query` builds inside the step reads the game's hold without the state.
+thread_local! {
+    static POOL_HOLD: Cell<bool> = const { Cell::new(false) };
+}
+
+/// R2201001: whether the step in flight on this thread holds Legendary and Mythic cards out of its
+/// random pools.
+pub fn pool_held() -> bool {
+    POOL_HOLD.with(Cell::get)
+}
+
+/// R2201001: the rarities a held pool leaves out.
+pub const HELD_RARITIES: [Rarity; 2] = [Rarity::Legendary, Rarity::Mythic];
+
+/// R2201001: whether a held pool leaves `def` out.
+pub fn held_out(def: &CardDef) -> bool {
+    pool_held() && HELD_RARITIES.contains(&def.rarity)
+}
+
+/// R2201001: `run` with this thread's pools held as `state`'s handicaps say (`state::holds_pools`),
+/// for that call alone. The hold it ran under before is put back after it, a panic included, so a
+/// step of a held game nested in an unheld one (or the reverse: the AI's search, the autopilot) reads
+/// its own game's hold and nothing outlives the call. Every engine entry point that steps a game
+/// runs under it (`reduce`, `reduce_unpiloted`, `begin_game`); `create_game` draws from no pool.
+pub fn with_pool_hold<T>(state: &GameState, run: impl FnOnce() -> T) -> T {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            POOL_HOLD.with(|cell| cell.set(self.0));
+        }
+    }
+    let _restore = Restore(POOL_HOLD.with(|cell| cell.replace(crate::state::holds_pools(state))));
+    run()
+}
+
 /// Panics when a def is missing: a card instance always has a definition.
 pub fn def_of<'a>(state: Option<&'a GameState>, def_id: &str) -> &'a CardDef {
     match find_def(state, def_id) {
@@ -631,6 +668,11 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R674: Glitch is in no pool, not even one that takes every token; only R673's roll makes one.
     // R1857001: nor is the Dormant Starship, a card and no token, which only a piece's death summons.
     if made_by_a_rule(def) && !as_list(&args.def_id).contains(&def.id) {
+        return false;
+    }
+    // R2201001: a held game's pools leave out Legendary and Mythic cards. A query naming one card
+    // (`defId`) is a lookup of that card, not a pool, and is not held.
+    if held_out(def) && as_list(&args.def_id).len() != 1 {
         return false;
     }
     if !tokens_allowed && def.is_token() && !tag_pool_takes_token(args, def) {
@@ -975,6 +1017,22 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
 /// the later entry, since the table runs from worst to best. Returns the rolled entry's def id.
 /// (TS's `lucky = 0` default: pass 0.)
 pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
+    // R2201001: a held game's table leaves out the entries a held pool would, and rolls the rest by
+    // their own percents. A table left empty rolls nothing. An unheld game rolls the table as given.
+    let kept: Vec<RollOdds>;
+    let table = if pool_held() {
+        kept = table
+            .iter()
+            .filter(|entry| !find_def(None, entry.def_id).is_some_and(held_out))
+            .copied()
+            .collect();
+        if kept.is_empty() {
+            return String::new();
+        }
+        &kept[..]
+    } else {
+        table
+    };
     let roll = |rng: &mut Rng| -> usize {
         let total: i32 = table.iter().map(|entry| entry.percent).sum();
         let mut at = rng.int(total);

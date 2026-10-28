@@ -31,8 +31,8 @@ use std::rc::Rc;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, KeywordKind, Phase, PlayerId, Rng,
-    active_units_of, attack_restriction, attacks_per_turn, can_attack, effective_life, find_instance,
-    has_exertion, is_sick, legal_actions, unit_has, unit_view,
+    active_units_of, attack_restriction, attacks_per_turn, can_attack, can_lose, effective_life,
+    find_instance, has_exertion, is_sick, legal_actions, unit_has, unit_view,
 };
 
 use crate::candidates::candidate_actions;
@@ -206,6 +206,10 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
         };
     }
     let opp = seat.opponent();
+    // R2201000: a seat that cannot lose stands infinitely far from lethal.
+    if !can_lose(state, opp) {
+        return f64::INFINITY;
+    }
     let life = effective_life(state, opp);
     // legal_actions lists no attack while a prompt is open or outside the seat's own main phase.
     if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
@@ -382,7 +386,8 @@ pub fn find_lethal_with_quick_nodes(
     quick_nodes: usize,
 ) -> Option<Vec<ActionBody>> {
     let root = dets.first()?;
-    if limit == 0 {
+    // R2201000: there is no lethal on a seat that cannot lose, so nothing is searched for one.
+    if limit == 0 || !can_lose(root, seat.opponent()) {
         return None;
     }
     if line_status(root, seat, root.turn) != LineStatus::Open {

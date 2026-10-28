@@ -753,7 +753,12 @@ pub fn reduce_unpiloted(state: &GameState, action: &Action) -> ReduceResult {
 }
 
 /// `reduce` and `reduce_unpiloted`: `drive_autopilot` is whether a turn the autopilot owes is played.
+/// R2201001: the step runs under its game's pool hold.
 fn reduce_driving(state: &GameState, action: &Action, drive_autopilot: bool) -> ReduceResult {
+    crate::catalog::with_pool_hold(state, || reduce_held(state, action, drive_autopilot))
+}
+
+fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> ReduceResult {
     if let Some(previous) = state.applied.iter().find(|entry| entry.nonce == action.nonce) {
         return ReduceResult {
             state: state.clone(),
@@ -835,6 +840,11 @@ fn reduce_driving(state: &GameState, action: &Action, drive_autopilot: bool) -> 
 
 /// Start the game: shuffle, deal and open both mulligans (§2.1, R265).
 pub fn begin_game(state: &GameState) -> ReduceResult {
+    // R2201001: setup runs under its game's pool hold, as every step does.
+    crate::catalog::with_pool_hold(state, || begin_held(state))
+}
+
+fn begin_held(state: &GameState) -> ReduceResult {
     let mut next = state.clone();
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&next.seed, next.rng_cursor);

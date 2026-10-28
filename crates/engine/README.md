@@ -73,7 +73,11 @@ compiled beside the catalog, `register_card_metrics`, R1846000); under the `test
 feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
 more thread-local, `catalog.rs`'s `FOLDING`, names the shipped catalog a replay is folding under:
 `with_shipped` sets it for that one call and puts the previous one back after it, a panic included,
-so a fold of a game played on an older catalog version reads that version's cards (R767000).
+so a fold of a game played on an older catalog version reads that version's cards (R767000). And
+`catalog.rs`'s `POOL_HOLD` says whether the step in flight holds Legendary and Mythic cards out of
+its random pools: `with_pool_hold` sets it from the game's handicaps for each `reduce`,
+`reduce_unpiloted` and `begin_game` and puts the previous one back after it, so every pool a step
+builds reads its own game's hold without the state (R2201001).
 
 ## Effects, reads and scripts
 

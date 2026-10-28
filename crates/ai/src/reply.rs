@@ -186,9 +186,10 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
 
 /// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
 /// the game, judged against all of `seat`'s life (`effective_life`: in a Duos duel its own HP and its
-/// team's pool while unspent, R964000), else AI_REPLY.face_per_damage a point.
+/// team's pool while unspent, R964000), else AI_REPLY.face_per_damage a point. R2201000: never the win
+/// on a seat that cannot lose.
 pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
-    if damage >= effective_life(state, seat) {
+    if jackioh_engine::can_lose(state, seat) && damage >= effective_life(state, seat) {
         AI_EVAL.win
     } else {
         AI_REPLY.face_per_damage * f64::from(damage)
