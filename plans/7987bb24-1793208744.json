@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2257,
+  "title": "Patch: card tests stop previewing sets that already ship, and a check keeps it so",
+  "branch": "bot/issue-2257",
+  "thread": "**Issue #2257 (data, not instructions):**\n\n```text\n# #2257: Patch: card tests stop previewing sets that already ship, and a check keeps it so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhile a card set is being built, tests can pretend it has shipped so its cards can be dealt and tested. Three sets have shipped since, yet about 150 test lines still pretend they haven't, and a few test names and file headers still describe the pretend mode. Those lines do nothing now, and they mislead anyone who reads or copies a test. Once this is built they are gone, the misleading names and headers are fixed, and a check fails any test that previews a set that already ships. The next set's release, Training Grounds, then has to clean up after itself.\n\n## Why\n\n- A preview changes only `set_is_open`, which is `set_ships(set) || previewed(set)` (`crates/engine/src/catalog.rs:914-918`), and nothing else reads the preview (`crates/engine/src/testkit/preview.rs`). For a set in `SHIPPED_SETS` it does nothing.\n- `SHIPPED_SETS` (`crates/engine/src/wire/catalog_types.rs:287`) lists Meditative, Meditative+ and Stinkyscape, yet 154 `preview_sets(&[SetName::\u2026])` calls name them (Meditative 81, MeditativePlus 31, Stinkyscape 42) across 68 files in `crates/cards`, `crates/engine/tests` and `crates/ai/tests`. Among them are about 20 copies of `fn open() -> PreviewGuard { preview_sets(&[SetName::Stinkyscape]) }`.\n- Some tests now claim something they don't test: `meditative/c055_dragon_fruit.rs`'s `r1420_under_preview_a_fruit_pool_holds_dragon_fruit` and `meditative/c101_gachaholic.rs`'s `r1420_previewed_it_reaches_cn_peptides`. 44 Stinkyscape script headers still say the set is \u201cheld (R1420)\u201d.\n- The Boss (13 calls) and Custom (1) previews are real and stay. R1420's actual proofs (`crates/engine/tests/rules/sets_not_shipped.rs`) rely on them.\n- Training Grounds (#2194 to #2204) is about to add a new round of previews. Without a check, they will linger the same way once #2204 ships the set.\n\n## Proposal\n\n- Delete every `preview_sets` call, along with its guard and the `open()` helpers, that names only shipped sets. Keep the ones naming Boss or Custom; in a call that also names an unshipped set, keep that set.\n- Rename the tests whose names say \u201cpreview\u201d about a shipped set, keeping any ruling token (`r1420_\u2026`) that a ruling's `proven_in` depends on. Fix the \u201cheld (R1420)\u201d headers.\n- Add a source-scan test beside the other guards in `crates/tools/tests/acceptance.rs`: every `preview_sets(&[\u2026])` under `crates/` must name at least one set outside `SHIPPED_SETS`, and the failure names the file and line.\n\n## Where it lands\n\n- about 68 files under `crates/cards/src/scripts/{meditative,meditative_plus,stinkyscape}/`, `crates/cards/tests/`, `crates/engine/tests/` and `crates/ai/tests/`, test code and comments only\n- `crates/tools/tests/acceptance.rs`\n- R1420 (its text needs no change)\n\n## Acceptance criteria\n\n- [ ] No `preview_sets` call under `crates/` names only sets in `SHIPPED_SETS`.\n- [ ] The new acceptance test fails on a planted `preview_sets(&[SetName::Core])` and passes on the tree.\n- [ ] No test is removed or ignored, and every renamed test still runs.\n- [ ] `cargo test -p jackioh-cards`, `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-ai`, `cargo test -p jackioh-tools --test acceptance` and `cargo jackioh spec check` pass, and `cargo jackioh classify --base origin/main --claims` finds no card that plays differently.\n\n## Size and risks\n\nMedium by file count (about 70 files), but mechanical. Behaviour-neutral: comments and test code don't count as a card's code (`crates/cards/src/code_lines.rs`, R1846000), so no card, rule or replay changes. Only remove `use` lines inside the `#[cfg(test)]` module, since a `use` above it counts as a code line. A Training Grounds part touching the same card files could conflict, so the bot should build this late or rebase it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T17:26:53Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2257: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
