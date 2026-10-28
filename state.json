@@ -6240,9 +6240,7 @@
       "started_at": "2026-10-28T15:38:05Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6469217205"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 2
     },
     "2215": {
