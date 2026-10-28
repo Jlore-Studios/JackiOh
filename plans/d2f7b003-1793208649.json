@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2252,
+  "title": "Patch: the game log says what each play aimed at and what dealt each hit",
+  "branch": "bot/issue-2252",
+  "thread": "**Issue #2252 (data, not instructions):**\n\n```text\n# #2252: Patch: the game log says what each play aimed at and what dealt each hit\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the opponent casts a spell at one of your units, the game log today writes two lines that never meet: \u201cOpponent played Fireball for 4\u201d and \u201cYour Panther took 4 damage\u201d. When several things happen at once, such as a trap springing or a card hitting two units, the log can't tell a player which card did what. Once this is built the lines join up: \u201cOpponent played Fireball for 4, aiming at your Panther\u201d and \u201cFireball dealt 4 damage to your Panther\u201d. Nothing a player may not see gets named: a hidden card still reads as \u201ca card\u201d.\n\n## Why\n\n- The engine already sends both facts. `cardAnnounced` carries `targets` (`crates/engine/src/wire/events.rs:664-680`: \u201c`targets` names what the play declared\u201d), and `damage` / `damageAbsorbed` carry `sourceId` (`apps/web/src/wire/generated/GameEvent.ts`).\n- The view already hides them where it must: an announce's targets become hidden ids when the viewer may not read them, and a face-down set hides them all (`crates/engine/src/view_for.rs:2565-2595`); a hit's hidden source is hidden too (`view_for.rs:2437-2445`). So naming what arrives reveals nothing (CLAUDE.md rule 7, R97).\n- The client throws them away: `apps/web/src/game/Log.tsx:418-420` is `case \"cardAnnounced\": return null;`, the play line is only `{seat} played {card} for {cost}` (`:230-231`), and the damage lines (`:246-260`) never read `event.sourceId`.\n- Practice games have no aim arrow (live aim, `apps/web/src/game/aim/OpponentAim.tsx`, is online only), so there the log is the only place a spell's target could be read after it lands.\n\n## Proposal\n\n- In the log's reader, pair a `cardAnnounced` with the `cardPlayed` of the same instance. When the announce names targets the viewer can read, the play line becomes \u201c{seat} played {card} for {cost}, aiming at {targets}\u201d, with one target or a list in the reader's language. A countered play keeps its `countered` line.\n- A non-combat `damage` or `damageAbsorbed` line whose source the viewer can read names it: \u201c{source} dealt {amount} damage to {target}\u201d, and the Armor variants likewise. Combat lines stay as they are. A hidden or null source reads exactly as today.\n- Every new line is one whole sentence through `t()` with its zh-CN entry (R711000), never pieced together.\n\n## Where it lands\n\n- `apps/web/src/game/Log.tsx`, `Log.test.tsx`\n- `apps/web/src/i18n/zh-CN.json`\n- SPEC \u00a710.8 (the view), \u00a710.10 (client rendering); R97\n\n## Acceptance criteria\n\n- [ ] A spell played at an enemy unit logs one play line naming that unit (vitest, on a fixture event list or a real engine game).\n- [ ] That spell's damage logs \u201c{source} dealt N damage to {target}\u201d; combat damage lines are unchanged.\n- [ ] A face-down set, and any target or source the view hid, logs exactly what it logs today.\n- [ ] A play with no targets logs the same line as today.\n- [ ] Each new sentence has a zh-CN entry and the R711000 tests pass.\n\n## Size and risks\n\nSmall to medium, client only, 3 files. Risks: the pairing must survive the log's windowing, where an announce and its play arrive in different batches, so key it by instance id and fall back to today's line when the announce is out of reach. A spell's damage source is the spell's own instance, already in the graveyard by then, so name it from the play the log already read rather than from the board. Animations and the play showcase are left alone.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T17:25:29Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2252: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
