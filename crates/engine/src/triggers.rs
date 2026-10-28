@@ -1283,7 +1283,9 @@ pub type SettleSink<'a> = EngineSink<'a>;
 /// by object identity (`SettleSink.dispatched` and the module's `collected` and `dispatchedElsewhere`
 /// `WeakSet`s) and Rust keeps by position in the action's event list. It decides only what
 /// `collect_events` takes — R212's reading of what happened after an event (`events_after_dispatched`)
-/// reads the list itself — and it holds no game state: it lives on the sink and dies with the action.
+/// reads the list itself — and keeps the action's own tallies (R2067000's cast-on-draw casts,
+/// R2067001's would-die follow-ups resolving), and it holds no game state: it lives on the sink and
+/// dies with the action.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Frontier {
     /// Every event of the action's list below this position has been taken into `state.dispatch`, or
@@ -1303,6 +1305,12 @@ pub struct Frontier {
     /// The position in the action's list of each event this action took into `state.dispatch`, by its
     /// dispatch item's `seq`: TS's identity of a frontier item with the list's own object.
     pub positions: IndexMap<u32, usize>,
+    /// R2067000: the cast-on-draw cards this action has cast so far, over every chain of it
+    /// (`draw::complete_draw`), held to `CAST_ON_DRAW_ACTION_CAP`.
+    pub cast_on_draw_casts: i32,
+    /// R2067001: the cards whose would-die follow-up is resolving first (`replacements::would_die_window`),
+    /// which answer no state check made inside it.
+    pub resolving_first: Vec<String>,
 }
 
 /// Where a sink keeps its `Frontier`: its own, for the sink an action begins with

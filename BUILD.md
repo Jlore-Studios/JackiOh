@@ -139,6 +139,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `CALL_TO_CHAOS_CHAIN_CAP` | 20 | R28 |
 | `TIMEOUT_ANSWER_CAP` | 500 | §2.5, R79 |
 | `CAST_ON_DRAW_CHAIN_CAP` | 20 | R58 |
+| `CAST_ON_DRAW_ACTION_CAP` | `LIBRARY_CAP` (60): cast-on-draw cards one action casts over all its chains | §2.4, R2067000 |
 | `LIBRARY_CAP` | 60 | R80 |
 | `ANTI_ONESHOT_CAP` | `{ base: 5, radiant: 3 }` | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |
