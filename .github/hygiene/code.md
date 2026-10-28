@@ -43,8 +43,8 @@ nothing calls; delete none of them (CLAUDE.md rule 13).
 ## Never
 
 - Never delete anything called from outside this codebase (CLAUDE.md rule 13): a webhook, a workflow's
-  `schedule:`, an auth callback, a route a deploy probes or a person calls (`/api/catalog` is Render's
-  health check), or a `cargo jackioh`, server or harness subcommand a workflow, a deploy or a person
+  `schedule:`, an auth callback, a route a deploy probes or a person calls (`/readyz` is Render's health
+  check, and deploy-watch polls `/api/catalog`), or a `cargo jackioh`, server or harness subcommand a workflow, a deploy or a person
   runs. Name it in the pull request for a person instead.
 - Never delete a test or a function a ruling's `proven_in` needs: `cargo jackioh spec check` passes.
 - Never delete a named constant nothing reads before asking whether it should be read (CLAUDE.md rule 9).
