@@ -600,7 +600,8 @@ pub enum ModifierKind {
     /// re-enters the card's step at each start of this player's turn, in R62's delayed-effect stage
     /// among the delayed effects in creation order (`seq`); `ranTurn` is the turn it last ran, so a
     /// prompt that pauses the stage never runs it twice. `label` is its badge (R169), the card's own
-    /// words. Expiry `never`; several stack, each its own modifier.
+    /// words. Expiry `never`; several stack, each its own modifier. `atEnd` (R1861002, Stinkyscape #39)
+    /// makes it "at the end of each of your turns" instead, in the end of turn's delayed stage.
     StartOfTurnEffect {
         seq: u32,
         resume: Resume,
@@ -608,6 +609,10 @@ pub enum ModifierKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         ran_turn: Option<i32>,
+        /// R1861002: due at the end of this player's turns, not the start. Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        at_end: Option<bool>,
     },
     // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
     /// B5 E8: a heal of X on one of this player's enemies — the enemy hero or an enemy unit — deals X
@@ -682,6 +687,17 @@ pub enum ModifierKind {
     /// off `def_ids`. Expiry `never`; several stack, each its own record. `label` is its badge (R169).
     PlayWatch {
         def_ids: Vec<String>,
+        resume: Resume,
+        label: String,
+    },
+    // ---- Stinkyscape's Calls to Chaos (issue #1882) ----
+    /// R1882004 (Stinkyscape #150 Call to Chaos (Stinky Edition), entry 8): "for the rest of the game,
+    /// whenever an Acclaimed card dies, its controller casts a random Call to Chaos": after each
+    /// `destroyed` of a card that prints `tag`, either player's, `resume` re-enters its step as the
+    /// player who controlled the card as it died. Expiry `never`; several stack, each its own record.
+    /// `label` is its badge (R169).
+    DeathWatch {
+        tag: crate::wire::Tag,
         resume: Resume,
         label: String,
     },

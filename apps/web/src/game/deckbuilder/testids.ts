@@ -112,6 +112,18 @@ export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
 export const DECK_DELETE_CANCEL = "deck-delete-cancel";
 
 /**
+ * #2096: Duplicate in the open deck's actions, and the reason it gives when off at the deck limit.
+ * Each row in the list has its own, `deck-duplicate-<deckId>` (never `deck-row-…`, which the e2e
+ * specs read as the rows).
+ */
+export const DECK_DUPLICATE = "deck-duplicate";
+export const DECK_DUPLICATE_REASON = "deck-duplicate-reason";
+
+export function deckDuplicateId(deckId: string): string {
+  return `deck-duplicate-${deckId}`;
+}
+
+/**
  * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
  * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
  */
@@ -129,6 +141,10 @@ export const DECK_COMPARE_SELECT = "deck-compare-select";
  * sidebar keeps the verdict and the pool's first row on the first screen (BUILD M5-T1).
  */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
+
+/** #2099: the open deck's Undo and Redo, in the top bar; each is off with nothing to move. */
+export const DECK_UNDO = "deck-undo";
+export const DECK_REDO = "deck-redo";
 
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;

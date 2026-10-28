@@ -1,13 +1,164 @@
-//! SPEC §8.10 Stinkyscape 139 Wormhole, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S15 (#1875) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! S #139 Wormhole (SPEC §8.10 row 139; R448, R1850004, R1875007): (2) Trap, Rare, of the held
+//! Stinkyscape set (R1420).
+//!   Base:    "Reveals when your opponent plays a Spell aimed only at their hero or permanents they
+//!            control: Counter it and cast it for yourself, aimed only at your hero or permanents you
+//!            control."
+//!   Radiant: the same, "Counter it, make it Radiant and cast it for yourself, …".
+//! Engine: set face-down, it answers in §10.5 step 3a's announce window an opponent's Spell whose chosen
+//! targets, one at least, are all that player's own hero or cards they control on the field
+//! (`query::beneficial_on_own_side`, R1850004; R1875007: a Spell that chose no target is not one, nor one
+//! aimed at Wormhole's own side). The Spell is countered into Wormhole's controller's hand, its owner
+//! becoming them (`counter_play` to the thief, R448), and cast by them (R70) with `friendsOnly`: every
+//! target pick of the cast, and every one its text asks for while it is cast, is its caster's own hero or
+//! a card they control on the field, a declaration with none passed (R90). Radiant: `set_radiant` on the
+//! countered card before the cast, so it resolves Radiant and lands Radiant in its new owner's graveyard.
+//! Declares no numbers.
 
+use jackioh_engine::effects::{cast, counter_play, set_radiant};
 use jackioh_engine::prelude::*;
+use jackioh_engine::query::beneficial_on_own_side;
 
 pub const ID: &str = "stinkyscape-139";
 
+/// R1875007: an opponent's Spell aimed only at their own side.
+fn answers(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    matches!(event, GameEvent::CardAnnounced { player, .. } if *player != ctx.controller)
+        && beneficial_on_own_side(&*ctx.state, event).is_some()
+}
+
+fn wormhole(radiant: bool) -> Script {
+    let steal = TriggerDef::new("wormhole", &[GameEventType::CardAnnounced], move |ctx, event| {
+        let Some(spell) = beneficial_on_own_side(&*ctx.state, event) else {
+            return Vec::new();
+        };
+        let card = json!({ "of": "instance", "instanceId": spell });
+        let mut effects = vec![counter_play(json_as(json!({ "to": "thief", "target": card.clone() })))];
+        if radiant {
+            effects.push(set_radiant(json_as(json!({ "instanceId": spell }))));
+        }
+        effects.push(cast(json_as(json!({ "target": card, "friendsOnly": true }))));
+        effects
+    })
+    .with_when(|ctx, event| answers(ctx, event));
+    Script {
+        triggers: vec![steal],
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: wormhole(false),
+        radiant: wormhole(true),
+    }
+}
+
+// S #139 Wormhole — SPEC §8.10 row 139, BUILD M12 row S 139: "set, it reveals on an enemy Spell aimed at
+// the enemy's own Unit and casts it on a Unit of its controller's, its controller choosing the target; a
+// Spell aimed at a Unit of its controller's does not reveal it, nor does a Spell with no target; the Spell
+// lands in its controller's graveyard; radiant it resolves Radiant and lands Radiant".
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::PlayerId::{P1, P2};
+    use jackioh_engine::testkit::*;
+
+    use super::ID;
+
+    const FILLER: &str = "core-005"; // (1) Spell Stockpile: draws, aims at nothing.
+    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const GREASER: &str = "meditative-100"; // (2) 7/7.
+    const BOOK: &str = "classicplus-057"; // (1) Spell Book of Stats: "Give a Unit +5/+5" (+10/+10 Radiant).
+    const BUFF: i32 = 5;
+    const RADIANT_BUFF: i32 = 10;
+
+    /// p1, active with 10 mana, has a Vanilla in unit zone 1 and holds a Book of Stats; p2 has Wormhole
+    /// (`radiant` its face) set in backrow zone 1, and a Vanilla and a Greaser in unit zones 1 and 2.
+    fn trapped(radiant: bool) -> Scenario {
+        let mut s = crate::scenario(json!({
+            "seed": "wormhole",
+            "p1": {
+                "hand": [BOOK, FILLER],
+                "field": [{ "def": VANILLA, "lane": 1 }],
+                "library": crate::filler(6),
+                "mana": 10,
+            },
+            "p2": {
+                "hand": [FILLER],
+                "field": [{ "def": VANILLA, "lane": 1 }, { "def": GREASER, "lane": 2 }],
+                "backrow": [{ "def": ID, "radiant": radiant, "lane": 1 }],
+                "library": crate::filler(6),
+            },
+        }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    fn fired(s: &Scenario) -> bool {
+        s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
+    }
+
+    fn book_in_graveyard_of(s: &Scenario, player: PlayerId) -> Option<CardInstance> {
+        s.pile(player, "graveyard").into_iter().find(|card| card.def_id == BOOK)
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn r1875007_an_enemy_spell_on_its_own_unit_is_countered_and_cast_by_its_controller_who_picks() {
+            let mut s = trapped(false);
+            let mine = s.unit_at(P1, 1);
+            s.play(BOOK, json!({ "targets": pick::instance(&mine) }));
+            assert!(fired(&s));
+            // p2 casts it, offered its own Units alone.
+            let pending = s.state().pending.clone().expect("the cast's target prompt");
+            assert_eq!(pending.player_id, P2);
+            let greaser = s.unit_at(P2, 2);
+            let offered: Vec<Selection> = pending.options.iter().map(|option| option.selection.clone()).collect();
+            assert_eq!(
+                offered,
+                [s.unit_at(P2, 1).id, greaser.id.clone()]
+                    .map(|instance_id| Selection::Instance { instance_id })
+                    .to_vec()
+            );
+            s.answer(pick::instance(&greaser));
+            s.expect_stats(&greaser, json!({ "attack": 7 + BUFF, "health": 7 + BUFF }));
+            s.expect_stats(&mine, json!({ "attack": 4, "health": 4 }));
+            let book = book_in_graveyard_of(&s, P2).expect("the Book lands in p2's graveyard");
+            assert_eq!((book.owner, book.radiant), (P2, false));
+            assert!(book_in_graveyard_of(&s, P1).is_none());
+            s.expect_in_zone(ID, "graveyard");
+        }
+
+        #[test]
+        fn r1875007_a_spell_aimed_at_its_controllers_unit_or_at_nothing_leaves_it_set() {
+            let mut s = trapped(false);
+            let theirs = s.unit_at(P2, 2);
+            s.play(BOOK, json!({ "targets": pick::instance(&theirs) }));
+            assert!(!fired(&s));
+            s.expect_stats(&theirs, json!({ "attack": 7 + BUFF }));
+            s.play(FILLER, json!({}));
+            assert!(!fired(&s));
+            assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(ID.to_string()));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn r1875007_it_resolves_radiant_and_lands_radiant() {
+            let mut s = trapped(true);
+            let mine = s.unit_at(P1, 1);
+            s.play(BOOK, json!({ "targets": pick::instance(&mine) }));
+            assert!(fired(&s));
+            let greaser = s.unit_at(P2, 2);
+            s.answer(pick::instance(&greaser));
+            s.expect_stats(&greaser, json!({ "attack": 7 + RADIANT_BUFF, "health": 7 + RADIANT_BUFF }));
+            let book = book_in_graveyard_of(&s, P2).expect("the Book lands in p2's graveyard");
+            assert!(book.radiant);
+        }
+    }
 }

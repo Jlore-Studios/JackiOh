@@ -51,7 +51,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from itertools import islice
 from typing import Any, Iterator, Mapping
 
 from harness import asks, declined, issueplan, review_rule, threads
@@ -73,8 +72,6 @@ from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_iss
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
-#: What an assignment's run does: its action in the plan file.
-ACTIONS = ("plan", "build", "revise", "review")
 #: A run asked for and never taken up is dropped after this long.
 RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
@@ -1665,6 +1662,3 @@ def suggestion_plan(ctx: Context, lanes: Lanes, *, force: bool,
         **_provider_fields(ctx, provider),
     }
 
-
-def first(iterable: Iterator[Any]) -> Any:
-    return next(islice(iterable, 1), None)

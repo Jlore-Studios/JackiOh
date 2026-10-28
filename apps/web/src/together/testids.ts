@@ -69,6 +69,7 @@ export const chatTestid = {
   message: "chat-message",
   close: "chat-close",
   error: "chat-error",
+  join: "chat-join",
   /** #1898: a failed read of the conversation says why, and Try again reads it again. */
   readError: "chat-read-error",
   retry: "chat-retry",

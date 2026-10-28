@@ -3,6 +3,7 @@ verbs! {
     verb!(delay, DelayArgs);
     verb!(destroy_at_next_turn_start, DestroyAtNextTurnStartArgs);
     verb!(allure_enemy_units);
+    verb!(remove_allures);
     verb!(duo_radiant, DuoRadiantArgs);
     verb!(squad_radiant);
     verb!(discard_hand_at_turn_end, DiscardHandAtTurnEndArgs);

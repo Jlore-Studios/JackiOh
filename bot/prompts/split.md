@@ -23,7 +23,7 @@ $fullsend
   its own: whoever builds it reads only it and the code, not this issue.
 - **In order.** When one needs another merged first, list that one in its `blocked_by`. Keep the
   chains short: the sub-issues that do not depend on each other can be built side by side.
-- **Shared surfaces** (the ruling numbers in `spec/rulings/` and `spec/INDEX.md`,
+- **Shared surfaces** (the ruling numbers in `spec/rulings/`,
   `crates/engine/src/wire/events.rs`, `state.rs`, `script.rs`, `effects/mod.rs`) belong to one
   sub-issue at a time: make the others wait for it.
 - **A plan each.** Under `plan`, the steps the builder should take, in order, with the files, so it

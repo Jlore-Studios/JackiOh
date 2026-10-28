@@ -12,9 +12,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LEAN_NEWEST } from "@jackioh/shared";
 
 import { PLAY_LEAN_SET_KEY, leanLabel, readPlayLean } from "../game/LeanNewest.tsx";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { COOP_LINK_STORAGE_KEY, findRoomLinkInText } from "../net/roomLink.ts";
 import type { Friend } from "../net/social.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
-import { CoopPanel } from "./CoopPanel.tsx";
+import { COOP_DECK_KEY, CoopPanel, defaultCoopDeck } from "./CoopPanel.tsx";
 import { COOP_ROOM_POLL_MS } from "./config.ts";
 
 const SLOW = { timeout: 5_000 } as const;
@@ -168,6 +170,7 @@ async function flush(): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
   at("/together");
 });
 
@@ -177,6 +180,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
+  window.sessionStorage.clear();
+  at("/together");
+  Reflect.deleteProperty(navigator, "clipboard");
+  Reflect.deleteProperty(navigator, "share");
+  resetLocaleForTests();
 });
 
 describe("B60 creating a room", () => {
@@ -367,16 +375,22 @@ describe("B60 the deck choice", () => {
 });
 
 describe("R2031000 the Random deck's more cards from", () => {
+  /** R2094000 starts the deck on the first saved deck: these tests pick the Random deck first. */
+  async function chooseRandomDeck(): Promise<void> {
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    fireEvent.change(screen.getByTestId("coop-deck"), { target: { value: "random" } });
+  }
+
   it("R2031000 the picker is the Random deck's alone and starts on the device's online pick", async () => {
     window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
     serve({ created: false, guestJoined: false });
     await renderPanel();
+    await chooseRandomDeck();
     const picker = screen.getByTestId<HTMLSelectElement>("coop-lean-newest");
     expect(picker.value).toBe("Classic");
     expect(picker.closest("label")).toHaveTextContent(leanLabel());
-    await waitFor(() => {
-      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
-    }, SLOW);
     fireEvent.change(screen.getByTestId("coop-deck"), { target: { value: "d-aggro" } });
     expect(screen.queryByTestId("coop-lean-newest")).toBeNull();
   });
@@ -384,6 +398,7 @@ describe("R2031000 the Random deck's more cards from", () => {
   it("R2031000 with a pick the create sends leanSet, and the device keeps the pick", async () => {
     const server = serve({ created: false, guestJoined: false });
     await renderPanel();
+    await chooseRandomDeck();
     const picker = screen.getByTestId<HTMLSelectElement>("coop-lean-newest");
     expect(picker.value).toBe("");
     fireEvent.change(picker, { target: { value: LEAN_NEWEST } });
@@ -396,6 +411,7 @@ describe("R2031000 the Random deck's more cards from", () => {
     window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
     const server = serve({ created: false, guestJoined: false });
     await renderPanel();
+    await chooseRandomDeck();
     fireEvent.change(screen.getByTestId("coop-lean-newest"), { target: { value: "" } });
     expect(readPlayLean()).toBeNull();
     await createRoom(server);
@@ -405,6 +421,7 @@ describe("R2031000 the Random deck's more cards from", () => {
   it("R2031000 a join on the Random deck sends the pick as leanSet", async () => {
     const server = serve({ created: false, guestJoined: false });
     await renderPanel();
+    await chooseRandomDeck();
     fireEvent.change(screen.getByTestId("coop-lean-newest"), { target: { value: "Classic" } });
     await join(OTHER_CODE);
     await waitFor(() => {
@@ -582,5 +599,207 @@ describe("B60 B33 joining by code", () => {
     }, SLOW);
     expect(server.to("POST", "/api/duos/rooms")).toHaveLength(0);
     expect(server.calls.some((call) => call.method === "POST" && call.path.startsWith("/api/chat/"))).toBe(false);
+  });
+});
+
+describe("R2094000 a co-op link fills the join form", () => {
+  it("R2094000 opening with a stored co-op link fills the join form and focuses Join, and forgets it", async () => {
+    serve({ created: false, guestJoined: false });
+    at("/together?coop=abc234");
+    await renderPanel();
+    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
+    expect(input).toHaveValue("ABC234");
+    // The link leaves the address bar at once, and the tab forgets it once used.
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("");
+    await waitFor(() => {
+      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+    }, SLOW);
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
+    }, SLOW);
+  });
+
+  it("R2094000 the join deck starts on the last co-op pick, else the first saved deck, else Random", async () => {
+    // The last co-op pick, still saved, wins over the first saved deck.
+    window.localStorage.setItem(COOP_DECK_KEY, "d-control");
+    const control = { ...must(DECKS.decks[0], "the saved deck"), id: "d-control", name: "Control" };
+    serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: { ...DECKS, decks: [...DECKS.decks, control] } } : undefined,
+    );
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(3);
+    }, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-control");
+    }, SLOW);
+    cleanup();
+    window.sessionStorage.clear();
+
+    // Without a remembered pick, the first saved deck wins.
+    window.localStorage.removeItem(COOP_DECK_KEY);
+    at("/together");
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-aggro");
+    }, SLOW);
+    cleanup();
+    window.sessionStorage.clear();
+
+    // With no saved deck at all, the join starts on a random deal.
+    at("/together");
+    serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/decks"
+        ? { status: 200, body: { catalogVersion: "v1", decks: [], trios: [], limits: DECKS.limits } }
+        : undefined,
+    );
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(1);
+    }, SLOW);
+    expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
+  });
+
+  it("R2094000 a remembered deck the account no longer has is never sent: with no saved deck the create is a random deal", async () => {
+    window.localStorage.setItem(COOP_DECK_KEY, "d-gone");
+    const server = serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/decks"
+        ? { status: 200, body: { catalogVersion: "v1", decks: [], trios: [], limits: DECKS.limits } }
+        : undefined,
+    );
+    await renderPanel();
+    await waitFor(() => {
+      expect(server.to("GET", "/api/decks")).toHaveLength(1);
+    }, SLOW);
+    await flush();
+    expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
+    // The Random deck's own picker is drawn, as the select shows.
+    expect(screen.getByTestId("coop-lean-newest")).toBeInTheDocument();
+    await createRoom(server);
+    expect(await created(server)).toEqual({ difficulty: "easy", random: true });
+  });
+
+  it("R2094000 a Random pick is a pick: it is remembered, and the next join starts on it", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-aggro");
+    }, SLOW);
+    fireEvent.change(screen.getByTestId("coop-deck"), { target: { value: "random" } });
+    expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("random");
+    expect(server.to("POST", "/api/duos/rooms")).toHaveLength(0);
+    cleanup();
+    window.sessionStorage.clear();
+
+    // A later visit keeps the Random deal although a deck is saved.
+    at("/together");
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    await flush();
+    expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
+  });
+
+  it("R2094000 defaultCoopDeck prefers the remembered deck, then the first saved deck, then none", () => {
+    const decks = DECKS.decks;
+    expect(defaultCoopDeck(decks, decks[0]?.id ?? null)?.id).toBe("d-aggro");
+    expect(defaultCoopDeck(decks, "gone")?.id).toBe("d-aggro");
+    expect(defaultCoopDeck(decks, "random")).toBeNull();
+    expect(defaultCoopDeck([], null)).toBeNull();
+  });
+
+  it("R2094000 Copy invite link writes the co-op link to the clipboard where there is no share sheet", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await createRoom(server);
+    const button = screen.getByTestId("duos-coop-link");
+    expect(button).toHaveTextContent("Copy invite link");
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(button).toHaveTextContent("Link copied");
+    }, SLOW);
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/together?coop=${CODE}`);
+  });
+
+  it("R2094000 Copy invite link opens the share sheet where there is one, and does not touch the clipboard", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await createRoom(server);
+    fireEvent.click(screen.getByTestId("duos-coop-link"));
+    await waitFor(() => {
+      expect(screen.getByTestId("duos-coop-link")).toHaveTextContent("Link shared");
+    }, SLOW);
+    expect(share).toHaveBeenCalledWith({
+      title: "Join my JackiOh room",
+      url: `${window.location.origin}/together?coop=${CODE}`,
+    });
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("R2094000 Send to friend's chat message contains the link and the code", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await createRoom(server);
+    const panel = screen.getByTestId("coop-code").closest("section") ?? document.body;
+    const invite = within(panel).getByTestId("coop-invite");
+    fireEvent.click(invite);
+    await waitFor(() => {
+      expect(server.to("POST", `/api/chat/${ANN.profileId}`)).toHaveLength(1);
+    }, SLOW);
+    const body = must(server.to("POST", `/api/chat/${ANN.profileId}`)[0], "the invite").body as { body?: unknown };
+    expect(typeof body.body).toBe("string");
+    expect(String(body.body)).toContain(CODE);
+    expect(String(body.body)).toContain(`/together?coop=${CODE}`);
+  });
+
+  it("R2094000 the invite sent in Chinese keeps its link apart from the words, so the friend's chat draws Join", async () => {
+    await setLocale("zh-CN");
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await createRoom(server);
+    fireEvent.click(screen.getByTestId("coop-invite"));
+    await waitFor(() => {
+      expect(server.to("POST", `/api/chat/${ANN.profileId}`)).toHaveLength(1);
+    }, SLOW);
+    const body = must(server.to("POST", `/api/chat/${ANN.profileId}`)[0], "the invite").body as { body?: unknown };
+    expect(String(body.body)).toContain("房间号");
+    expect(findRoomLinkInText(String(body.body), window.location.origin)).toEqual({ path: `/together?coop=${CODE}` });
+  });
+
+  it("R2094000 join from the filled form posts /api/duos/rooms/<code>/join with the chosen deck and lands on /duos/<id>", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    at(`/together?coop=${OTHER_CODE.toLowerCase()}`);
+    await renderPanel();
+    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
+    expect(input).toHaveValue(OTHER_CODE);
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    fireEvent.click(screen.getByTestId("coop-join-submit"));
+    await waitFor(() => {
+      expect(server.to("POST", `/api/duos/rooms/${OTHER_CODE}/join`)).toHaveLength(1);
+    }, SLOW);
+    expect(must(server.to("POST", `/api/duos/rooms/${OTHER_CODE}/join`)[0], "the join").body).toEqual({
+      deckId: "d-aggro",
+    });
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/duos/dm-9");
+    }, SLOW);
+    // The picked deck is remembered for the next join.
+    expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("d-aggro");
   });
 });
