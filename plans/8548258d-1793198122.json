@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 2226,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-2226",
+  "thread": "**Issue #2226 (data, not instructions):**\n\n```text\n# #2226: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 40679341231](https://github.com/Jlore-Studios/JackiOh/actions/runs/40679341231) on `claude/stinkyscape-release-1884` (`dda4fe5`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [e2e component (chrome)](https://github.com/Jlore-Studios/JackiOh/actions/runs/40679341231/job/122789889446) | failure |\n| [fuzz (2/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/40679341231/job/122791266316) | failure |\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/40679341231/job/122791266342) | failure |\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/40679341231/job/122791266350) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nThis run is on `claude/stinkyscape-release-1884`, not `main`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2226: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
