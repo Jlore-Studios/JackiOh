@@ -5920,13 +5920,14 @@
     "what": "revise #2217 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-28T09:21:38Z",
+    "at": "2026-10-28T09:34:54Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2207 on muse (run 40652761712): approved",
-      "delivered revise #2155 on muse (run 40648362888): approved",
-      "delivered revise #2088 on claude-7 (run 40644842473): approved",
-      "started review #2155 on claude-8 (run 40664418981)",
+      "delivered review #2155 on claude-8 (run 40664418981): reviewed",
+      "delivered build #2107 on muse (run 40629838869): interrupted",
+      "started revise #2155 on claude-1 (run 40665788830)",
+      "started build #2107 on muse (run 40665881612)",
+      "started revise #2217 on claude-3 (run 40665979889)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -6633,7 +6634,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T09:21:38Z",
+  "loop_tick": "2026-10-28T09:34:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
