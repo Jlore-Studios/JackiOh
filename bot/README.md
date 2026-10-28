@@ -710,6 +710,19 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   resolves a conflict with `main` goes only to a builder with a real reviewer in the run, never
   to a weak one (#317): SPEC §11 and the rulings index conflict on nearly every merge, and the
   weak builder committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
+- **Conflicts the harness resolves itself.** Before any builder sees a merge of `main`, the
+  work job settles the conflicted files `resolvers` in the config names
+  ([`harness/resolve.py`](harness/resolve.py)): `spec/INDEX.md` takes `main`'s version (the daily
+  spec fold rewrites it), and the golden traces are blessed again from the merged tree
+  (`cargo jackioh golden bless`) once nothing else is conflicted, since that builds the tree. A
+  command that fails, runs out of time or leaves a marker puts the file back exactly as git left
+  it, for the builder. The builder is told what the harness resolved and gets only the rest. A
+  conflict revision with nothing left, and nothing else asked of it (no new trusted comment, no
+  earlier findings, no cut-off work), spends no builder session: the harness commits the merge,
+  the run's checks and its reviewer judge it, and a cleared change's clearance carries over it as
+  over a builder's resolution. In the two weeks to 2026-10-28, 169 of the 328 merges the bots
+  left conflicted held only `spec/INDEX.md` and `spec/11-rulings.md` (which the daily fold now
+  keeps branches off), and 27 more only those and the golden traces.
   A revision that answers a final audit stays at the auditor's tier or above, so the auditor
   fixes and pushes it.
 - **Reviewing in the run.** Every builder reviews its own change in a fresh adversarial session
