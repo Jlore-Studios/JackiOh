@@ -5358,12 +5358,12 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-10-28T03:12:46Z",
       "requested_by": "squishy-squooby",
-      "run_id": "40617535408",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-10-28T01:51:40Z",
+      "run_id": "pending:5e2934d3-1793168523",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-28T06:22:38Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -6605,9 +6605,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T06:21:49Z",
+    "at": "2026-10-28T06:22:38Z",
     "url": "",
-    "what": "revise #2132 on claude-8"
+    "what": "build #2115 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-28T06:02:11Z",
