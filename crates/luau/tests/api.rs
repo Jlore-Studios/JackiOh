@@ -646,6 +646,7 @@ fn verb_cases() -> Vec<(&'static str, Value)> {
         ),
         ("remember", json!({ "key": "k", "value": 1 })),
         ("gain_brittle", json!({ "target": { "of": "self" }, "n": 1 })),
+        ("lower_brittle", json!({ "target": { "of": "self" }, "n": 1 })),
         ("grant_tag", json!({ "tag": "Human" })),
         ("plague", json!({ "amount": 1 })),
         (
