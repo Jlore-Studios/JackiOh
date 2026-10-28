@@ -1087,3 +1087,20 @@
 .prompt-mulligan-waiting .prompt-card:hover {
   transform: none;
 }
+
+/* --- a replay's read-only prompt (R2211000) ---------------------------------------------------- */
+
+/* Prompt.tsx `readOnly`: on the top edge, folded or not, clear of the control bar that holds the
+   replay's toolbar; index.css greys its buttons, and this its direction arrows. */
+.game[data-replay="true"] .prompt-scrim[data-read-only] {
+  place-items: start center;
+}
+
+.game[data-replay="true"] .prompt[data-read-only] {
+  max-height: min(55vh, 520px);
+}
+
+.prompt[data-read-only] .prompt-arrow[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

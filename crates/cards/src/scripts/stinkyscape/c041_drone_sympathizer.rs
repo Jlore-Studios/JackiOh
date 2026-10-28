@@ -96,11 +96,12 @@ mod tests {
         assert_eq!(seen, tiers());
     }
 
+    /// Held, its pool of the set's own Drone Cores was empty; since the release (#1884) the set ships,
+    /// so they arrive with no preview.
     #[test]
-    fn r1420_with_the_set_held_nothing_is_added() {
+    fn r1857000_since_the_release_the_drone_cores_arrive_without_a_preview() {
         let s = played("sympathizer-held", false, 1);
-        assert!(cores(&s).is_empty());
-        assert_eq!(s.hand(P1).len(), 1);
+        assert!(!cores(&s).is_empty());
     }
 
     #[test]

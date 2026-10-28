@@ -111,8 +111,8 @@ pub fn dormant_starship_of(state: &GameState, player: PlayerId) -> Option<&CardI
         .find(|card| is_dormant_starship(card))
 }
 
-/// R1852005 (#137 Firststrike Capability's "If you are building a ship"): whether `player` has a
-/// Dormant Starship.
+/// R1852005 (#137 Firststrike Capability's "If you have a Dormant Starship", which read "If you are
+/// building a ship" until the release): whether `player` has a Dormant Starship.
 pub fn building_a_ship(state: &GameState, player: PlayerId) -> bool {
     dormant_starship_of(state, player).is_some()
 }
