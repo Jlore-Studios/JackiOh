@@ -7516,6 +7516,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_at": "2026-10-28T20:43:28Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
@@ -7524,11 +7525,13 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "round_tier": "medium",
       "run_id": "40768810454",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T21:04:11Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2292": {
       "cleared": {
