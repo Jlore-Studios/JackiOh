@@ -37,8 +37,15 @@ RATE_LIMIT_WORDS = re.compile(
     r"|quota exceeded|exhausted your (?:\w+ )?quota|resource_exhausted|terminalquotaerror"
     # agy, once its plan's allowance is spent: "Individual quota reached. Please upgrade your
     # subscription to increase your limits. Resets in 1h44m44s."
-    r"|quota reached|upgrade your subscription to increase your limits)"
+    r"|quota reached|upgrade your subscription to increase your limits"
+    # Muse, once its week is spent: "API error 429 […]: Subscription quota exhausted. Your usage
+    # window resets at 2026-10-26T00:00:00Z. (rate_limit_error)". Unread, six runs on 2026-10-25
+    # ended as infra and handed their items on (reviews/2026-10-27-muse-usage.md, finding 3).
+    r"|quota exhausted|rate_limit_error)"
 )
+#: "resets at 2026-10-26T00:00:00Z" (Muse): when a refusal ends, as a time.
+RESETS_AT = re.compile(
+    r"(?i)resets? at\s+(\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:?\d\d))")
 #: "Resets in 1h44m44s" (agy), "resets in 3h", "try again in 5 days 2 hours 22 minutes" (Codex):
 #: how long a refusal lasts.
 RESETS_IN = re.compile(
@@ -125,8 +132,15 @@ def _resets_in_minutes(text: str | None) -> int | None:
 
 
 def park_for(error: str | None) -> str:
-    """How long a refused CLI is left alone: until the reset its message names, plus a minute,
-    or an hour when it names none."""
+    """How long a refused CLI is left alone: until the reset its message names (as a time, or as
+    a wait plus a minute), or an hour when it names none."""
+    at = RESETS_AT.search(error or "")
+    if at:
+        try:
+            resets = datetime.fromisoformat(at.group(1).replace("Z", "+00:00"))
+            return resets.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            pass
     total = _resets_in_minutes(error)
     return DEFAULT_PARK if total is None else f"+PT{total + 1}M"
 #: How much of a transcript the next agent is shown (`trail`).
@@ -951,8 +965,10 @@ class MuseCli(_Cli):
         if not ok:
             error = redact(stderr_error(stderr, f"muse exited {launch.code}")[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
+        # A refusal is never a CLI that could not run, whatever its exit code says.
         return self._with_usage(RunResult(ok, text, launch.code, None, launch.elapsed, error,
-                                          None, reset_at, infra_hint=launch.code == 2), request)
+                                          None, reset_at,
+                                          infra_hint=launch.code == 2 and not reset_at), request)
 
 
 BACKENDS: dict[str, type[_Cli]] = {"claude": ClaudeCli, "codex": CodexCli, "agy": AgyCli,
