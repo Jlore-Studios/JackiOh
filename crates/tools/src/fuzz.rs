@@ -2836,6 +2836,30 @@ pub(crate) mod tests {
             assert_ne!(decks_for_seed(1), decks_for_seed(2));
         }
 
+        /// BUILD M12's foundation gate, "the fuzz tool previews it" (R1857000, R1420): every deck-legal
+        /// card of a set that has not shipped is in the pool and none in the shipped pool, and a seed
+        /// dealt one plays through the gate's four checks with no preview of the caller's.
+        #[test]
+        fn r1857000_the_fuzz_tool_previews_every_held_set() {
+            register_all();
+            let held = |id: &String| !set_ships(CATALOG[id.as_str()].set);
+            let legal_held: Vec<&String> = CATALOG
+                .iter()
+                .filter(|(id, def)| !set_ships(def.set) && !def.is_token() && !made_by_a_rule(def) && !EXCLUDED_IDS.contains(id.as_str()))
+                .map(|(id, _)| id)
+                .collect();
+            assert!(!legal_held.is_empty(), "a held set to preview");
+            assert!(legal_held.iter().all(|id| FUZZ_POOL.contains(*id)));
+            assert!(!SHIPPED_FUZZ_POOL.iter().any(held));
+            let seed = (1..=SWEEP_SEEDS)
+                .find(|seed| {
+                    let (p1, p2) = decks_for_seed(*seed);
+                    p1.iter().chain(p2.iter()).any(held)
+                })
+                .expect("a seed deals a held card");
+            assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
+        }
+
         #[test]
         fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
             // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).

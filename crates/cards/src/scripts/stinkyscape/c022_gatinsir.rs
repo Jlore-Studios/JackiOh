@@ -8,8 +8,10 @@
 //! declared `chance` out of 100, its controller's Luck rolling again (R987), and a miss leaves it set
 //! and silent (R33). A hit fires it in §4.2 step 4's trap window, before the combat: it summons
 //! {disruptors} S #23 Warp Disruptors into its controller's open backrow zones, then {phalanxes} S #82
-//! Phalanxes into open unit zones (R64), no Cry (R1), a summon that finds no zone doing nothing; the
-//! attack then goes on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
+//! Phalanxes into open unit zones (R64), a summon that finds no zone doing nothing. A summon that names
+//! its card fires that card's Cry (R411): each Phalanx that arrived then runs its Cry for Gatinsir's
+//! controller, in the order they arrived (R2176000; a Warp Disruptor prints none). The attack then goes
+//! on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
 //! Radiant: all of them Radiant (Phalanx 8/8). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
 //! phalanxes 2 ↑.
 
@@ -54,6 +56,19 @@ fn summons(def_id: &str, count: i32, radiant: bool) -> impl Iterator<Item = Effe
     (0..count).map(move |_| summon(json_as(json!({ "defId": def_id, "radiant": radiant }))))
 }
 
+/// R411, R2176000: the Cry of each Phalanx this ambush summoned, in the order they arrived.
+fn phalanx_crys() -> Effect {
+    for_each_card(ForEachCardArgs {
+        cards: Arc::new(|ctx: &mut EffectContext<'_>| {
+            summoned_so_far(ctx)
+                .into_iter()
+                .filter(|id| find_instance(&*ctx.state, id).is_some_and(|card| card.def_id == PHALANX))
+                .collect()
+        }),
+        each: Arc::new(|instance_id: &str| trigger_cry(json_as(json!({ "instanceId": instance_id })))),
+    })
+}
+
 fn gatinsir(radiant: bool) -> Script {
     let ambush = TriggerDef::new(
         "gatinsir",
@@ -61,6 +76,7 @@ fn gatinsir(radiant: bool) -> Script {
         move |ctx, _event| {
             let mut effects: Vec<Effect> = summons(WARP_DISRUPTOR, param(&*ctx, "disruptors"), radiant).collect();
             effects.extend(summons(PHALANX, param(&*ctx, "phalanxes"), radiant));
+            effects.push(phalanx_crys());
             effects
         },
     )
@@ -86,7 +102,8 @@ pub fn script() -> CardScripts {
 // roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
 // revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
 // which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
-// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 8/8)".
+// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 8/8)". Each Phalanx it
+// summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -95,6 +112,10 @@ mod tests {
     use super::{ID, PHALANX, WARP_DISRUPTOR};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    /// Core #9 Moths to the Flame: "Start of turn: Every enemy Unit attacks this", a forced attack.
+    const MOTHS: &str = "core-009";
+    /// S #82 Phalanx's Cry: "Discover 2 … Weapons".
+    const PHALANX_PICKS: usize = 2;
     /// Gatinsir's printed chance, out of `PERCENT`.
     const CHANCE: i32 = 30;
 
@@ -150,6 +171,26 @@ mod tests {
             .collect()
     }
 
+    /// R411, R2176000: answers each Discover the Phalanxes' Crys open for Gatinsir's controller with the
+    /// first card offered, and returns how many there were.
+    fn answer_phalanx_discovers(s: &mut Scenario) -> usize {
+        let mut asked = 0;
+        while let Some(pending) = s.state().pending.clone() {
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P2));
+            let first = pending
+                .options
+                .iter()
+                .find_map(|option| match &option.selection {
+                    Selection::Mode { option } => Some(option.clone()),
+                    _ => None,
+                })
+                .expect("a Weapon is offered");
+            s.answer(json!(first));
+            asked += 1;
+        }
+        asked
+    }
+
     mod base {
         use super::*;
 
@@ -173,8 +214,49 @@ mod tests {
                 defs_in(&s, Row::Units),
                 vec![(PHALANX.to_string(), false), (PHALANX.to_string(), false)]
             );
+            assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
             // R1875002: the attack goes on to its declared target, with the two Disruptors' +2 each.
             s.expect_health(P2, HERO_HEALTH - (4 + 2 + 2));
+        }
+
+        #[test]
+        fn r2176000_each_phalanx_it_summons_runs_its_cry_for_its_controller_before_the_combat() {
+            let mut s = trapped("gatinsir-cry", false, json!([]));
+            roll_next(&mut s, CHANCE, true);
+            let attacker = s.unit_at(P1, 1);
+            s.attack(&attacker, "hero");
+            // The first Phalanx's Cry asks first, the combat waiting on it (R411).
+            let pending = s.state().pending.clone().expect("the first Phalanx's Discover");
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P2));
+            s.expect_health(P2, HERO_HEALTH);
+            let phalanxes: Vec<String> = (1..=5)
+                .filter_map(|lane| s.unit(P2, lane))
+                .filter(|card| card.def_id == PHALANX)
+                .map(|card| card.id)
+                .collect();
+            let bare: Vec<i32> = phalanxes.iter().map(|id| s.stats(id.as_str()).health).collect();
+            assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
+            // Each took two Weapons, which raise its Health (R1862002).
+            for (id, before) in phalanxes.iter().zip(bare) {
+                assert!(s.stats(id.as_str()).health > before, "{id} was armed");
+            }
+            s.expect_health(P2, HERO_HEALTH - (4 + 2 + 2));
+        }
+
+        #[test]
+        fn r1875002_a_forced_attack_rolls_nothing() {
+            // Moths to the Flame on Gatinsir's side makes p1's Vanilla attack it at p2's start of turn: an
+            // enemy Unit's attack that no one declared (R121).
+            let mut s = trapped("gatinsir-forced", false, json!([{ "def": MOTHS, "lane": 2 }]));
+            let cursor = s.state().rng_cursor;
+            s.end_turn();
+            assert!(s.events().iter().any(|event| matches!(
+                event,
+                GameEvent::AttackDeclared { forced: true, .. }
+            )));
+            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
+            assert_eq!(s.backrow(P2, 5).map(|card| card.def_id), Some(ID.to_string()));
+            assert_eq!(s.state().rng_cursor, cursor);
         }
 
         #[test]
@@ -215,6 +297,7 @@ mod tests {
                 summoned_defs(&s),
                 [WARP_DISRUPTOR, WARP_DISRUPTOR, PHALANX].map(String::from)
             );
+            assert_eq!(answer_phalanx_discovers(&mut s), PHALANX_PICKS);
         }
 
         #[test]
@@ -238,6 +321,7 @@ mod tests {
                 summoned_defs(&s),
                 [WARP_DISRUPTOR, WARP_DISRUPTOR, WARP_DISRUPTOR, PHALANX].map(String::from)
             );
+            assert_eq!(answer_phalanx_discovers(&mut s), PHALANX_PICKS);
         }
     }
 
@@ -260,8 +344,9 @@ mod tests {
                 vec![(PHALANX.to_string(), true), (PHALANX.to_string(), true)]
             );
             let phalanx = s.unit_at(P2, 1);
-            // A Phalanx 8/8, with the two Disruptors' +2 each.
+            // A Phalanx 8/8, with the two Disruptors' +2 each, before its Cry arms it.
             s.expect_stats(&phalanx, json!({ "attack": 8 + 2 + 2, "health": 8 }));
+            assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
         }
 
         #[test]
