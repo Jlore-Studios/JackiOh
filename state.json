@@ -4591,6 +4591,11 @@
     "2085": {
       "action": "revise",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-28T09:11:38Z",
+        "by": "`claude` (strong)",
+        "sha": "0b2406cad89401593eb7470e95ad939b12bde480"
+      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
