@@ -76,8 +76,9 @@ mod tests {
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51,
     /// Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8) and
     /// Meditative+ #4 Supply Drop (§8.9). Re-pinned for v0.3.5: the Meditative set joins the pool; and
-    /// for v0.3.15 (Meditative+ ships, #1187): M+ #4 joins it.
-    const POOL: [&str; 8] = [
+    /// for v0.3.15 (Meditative+ ships, #1187): M+ #4 joins it; and for the Stinkyscape release (#1884):
+    /// its #124 to #130, Jlockeed's space program.
+    const POOL: [&str; 15] = [
         "classic-004",
         "classicplus-048",
         "classicplus-051",
@@ -86,6 +87,13 @@ mod tests {
         "meditative-087",
         "meditative-097",
         "meditativeplus-004",
+        "stinkyscape-124",
+        "stinkyscape-125",
+        "stinkyscape-126",
+        "stinkyscape-127",
+        "stinkyscape-128",
+        "stinkyscape-129",
+        "stinkyscape-130",
     ];
 
     use crate::scenario;

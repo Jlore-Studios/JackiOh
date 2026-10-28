@@ -406,14 +406,11 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
         // The sets' other columns: their types and rarities are ones 0002's checks admit, and no
         // check names a set.
-        for entry in raw
-            .values()
-            .filter(|entry| {
-                ["Meditative", "Meditative+", "Stinkyscape"]
-                    .iter()
-                    .any(|set| entry["set"] == json!(set))
-            })
-        {
+        for entry in raw.values().filter(|entry| {
+            ["Meditative", "Meditative+", "Stinkyscape"]
+                .iter()
+                .any(|set| entry["set"] == json!(set))
+        }) {
             assert!(
                 ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"]
                     .contains(&entry["type"].as_str().unwrap_or_default()),
@@ -590,11 +587,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone. Meditative+ adds a
         // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed; the
         // Stinkyscape set #147 IN33DH3, a Catalyst, its #147.1 IN33DH3 Prime, and nine Acclaimed.
-        for (tag, theirs, plus, stinky) in [
-            ("Catalyst", 3, 1, 1),
-            ("Prime", 3, 1, 1),
-            ("Acclaimed", 2, 0, 9),
-        ] {
+        for (tag, theirs, plus, stinky) in [("Catalyst", 3, 1, 1), ("Prime", 3, 1, 1), ("Acclaimed", 2, 0, 9)]
+        {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),

@@ -1632,7 +1632,10 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
         // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
         // The gate holds the Stinkyscape set alone since its release (#1884), until a sweep of record
         // measures the AI on it.
-        assert!(!AI_DECK_GATED_SETS.contains(&SetName::Meditative), "{AI_DECK_GATED_SETS:?}");
+        assert!(
+            !AI_DECK_GATED_SETS.contains(&SetName::Meditative),
+            "{AI_DECK_GATED_SETS:?}"
+        );
         assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));

@@ -3434,7 +3434,9 @@
       "core-t-rush",
       "core-095-1",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -10818,7 +10820,9 @@
       "classicplus-073-1",
       "core-095",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -15841,7 +15845,9 @@
       "meditative-039-5",
       "meditative-095-1",
       "core-095",
-      "classicplus-073"
+      "classicplus-073",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 22,
     "base": {

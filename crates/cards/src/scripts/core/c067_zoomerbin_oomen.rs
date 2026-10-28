@@ -87,8 +87,10 @@ mod tests {
     /// #71, #96, Classic #63 Crop Dusting, Classic+ #22 Blood Moon, the one new Cost (1) Trap
     /// (docs/classic-sets.md B2.6), and Meditative #64 Traitorous Blood and #68 Catnip (a Field Trap).
     /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.10, where Classic #10 Exile
-    /// went to (2) and #63 Crop Dusting to (1).
-    const TRAP_POOL: [&str; 9] = [
+    /// went to (2) and #63 Crop Dusting to (1); and for the Stinkyscape release (#1884), where its #5
+    /// Masochism Unmasked and #131 Spacerace Stimulus (Field Traps), #135 Sacked, #138 Pocket Peptides
+    /// and #144 Prepare For Liftoff join it.
+    const TRAP_POOL: [&str; 14] = [
         "core-018",
         "core-041",
         "core-060",
@@ -98,6 +100,11 @@ mod tests {
         "classicplus-022",
         "meditative-064",
         "meditative-068",
+        "stinkyscape-005",
+        "stinkyscape-131",
+        "stinkyscape-135",
+        "stinkyscape-138",
+        "stinkyscape-144",
     ];
 
     fn query_ids(args: Value) -> Vec<String> {

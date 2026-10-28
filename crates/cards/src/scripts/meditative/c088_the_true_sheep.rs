@@ -166,11 +166,13 @@ mod tests {
             }
 
             #[test]
-            fn r1221_the_tribute_query_holds_the_seven_shipped_tribute_cost_cards() {
+            fn r1221_the_tribute_query_holds_the_eleven_shipped_tribute_cost_cards() {
                 crate::register_all();
                 // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row
                 // 88 lists them: Lava Golem, The Rock, Nature Titan, Plague-Bringer Goliath, BOOM! Big
-                // Max, M #25 Blue-Eyes White Felinor and M #91 Windfast. Turtinator's Tribute is an
+                // Max, M #25 Blue-Eyes White Felinor and M #91 Windfast, and since the Stinkyscape
+                // release (#1884) S #74 Paragon-X, #80 Galaxy, #85 Prototype-X1 and #86 Prototype-X2.
+                // Turtinator's Tribute is an
                 // Activate's cost, not a play cost, and M #97's Tribute buildings are tokens, so
                 // neither is one of them.
                 let pool: Vec<&str> = jackioh_engine::catalog::query(&CatalogQueryArgs {
@@ -190,6 +192,10 @@ mod tests {
                         "classic-080",
                         "meditative-025",
                         "meditative-091",
+                        "stinkyscape-074",
+                        "stinkyscape-080",
+                        "stinkyscape-085",
+                        "stinkyscape-086",
                     ]
                 );
                 // `false` forbids them.

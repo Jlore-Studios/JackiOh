@@ -8,7 +8,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{dealt_game, det, trap_pool};
+use super::support::{dealt_game, det, face_down_pool, trap_pool};
 
 /// TS's module constant `FIELD_SPELL`: the first Core Field Spell, in `query`'s order.
 fn field_spell() -> String {
@@ -94,7 +94,7 @@ mod r447_the_ais_seat_and_a_backrow_pile {
 
         let world = det(&seen, PlayerId::P1, &mut create_rng("ai-backrow-pile-world", 0));
         let sampled = buried_def(&world, PlayerId::P2).unwrap_or_default();
-        assert!(traps.contains(&sampled), "{sampled}");
+        assert!(face_down_pool().contains(&sampled), "{sampled}");
     }
 
     /// R447 the seat's own buried trap stays readable to it
