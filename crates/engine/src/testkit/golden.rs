@@ -35,9 +35,14 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// release (R1420, v0.3.5) began to record: the same log, both stripped, still folds to the old
 /// `a798906b`. #1837's tags moved it once more, from `8784adae` (R1837000): the log's last play, p1's
 /// Friend of Felinors, records no Felinor tag in `playedByTag`, and no card in either deck reads one.
-/// A change to the game itself re-records the log (R244, R275, R276, R360–R366).
+/// A change to the game itself re-records the log (R244, R275, R276, R360–R366). Issue #2179's was one:
+/// Core #81 Radiant Saintess went to (2), so p2's turn-2 play of it on 1 mana is no longer legal, and
+/// the log was recorded again, from `7044d528` to `5b8b57a7`. Cypress could not be fetched where that
+/// was done, so spec 01's policy (the first playable hand card into the first open zone, then each
+/// unit at the first target it may attack, then End turn) was run against the engine instead; on the
+/// base build that run gives the old log action for action and its hash.
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
-pub const HOTSEAT_HASH: &str = "7044d528";
+pub const HOTSEAT_HASH: &str = "5b8b57a7";
 
 /// A game's first divergence from its trace.
 pub struct Mismatch {

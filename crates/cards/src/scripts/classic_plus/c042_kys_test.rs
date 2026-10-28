@@ -18,25 +18,28 @@ use crate::ky_test_bank::{KY_TEST_BANK, KY_TEST_BANK_V0_4_12D};
 
 pub const ID: &str = "classicplus-042";
 
-fn ky_test(bank: &[KyTestProblem], easy: KyTestEasy) -> CardScripts {
+/// Both faces' script: the engine makes the Radiant face's rewards Radiant (`ctx.radiant`).
+fn ky_test(bank: &[KyTestProblem], easy: KyTestEasy) -> Script {
     let ky_test = ky_test_script_with(bank, easy);
-    let base = Script {
+    Script {
         cry: Some(ky_test.cry),
         resume: ky_test.resume,
         ..Script::default()
-    };
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    }
 }
 
 pub fn script() -> CardScripts {
-    ky_test(&KY_TEST_BANK, KyTestEasy::FourDigits)
+    let base = ky_test(&KY_TEST_BANK, KyTestEasy::FourDigits);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 /// R767000: through v0.4.12d its Easy problems were two-digit sums and its bank v0.4.12d's;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_4_12d() -> CardScripts {
-    ky_test(&KY_TEST_BANK_V0_4_12D, KyTestEasy::Sums)
+    let base = ky_test(&KY_TEST_BANK_V0_4_12D, KyTestEasy::Sums);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // C+ #42 KY's Test — SPEC §8.7 row 42, R420, R465, R580, BUILD M9 row C+ 42. The engine proves the

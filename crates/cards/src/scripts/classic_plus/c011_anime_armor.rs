@@ -10,8 +10,8 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-011";
 
 /// One script for both faces; `guards_self` is #2179's "and this".
-fn anime_armor(guards_self: bool) -> CardScripts {
-    let base = Script {
+fn anime_armor(guards_self: bool) -> Script {
+    Script {
         hero_guard: Some(read_hook(move |args| {
             vec![HeroGuard {
                 cap: Some(param(&args, "cap")),
@@ -20,20 +20,22 @@ fn anime_armor(guards_self: bool) -> CardScripts {
             }]
         })),
         ..Script::default()
-    };
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = anime_armor(true);
     // The Radiant face adds Reborn and doubles the stats: catalog data only.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-pub fn script() -> CardScripts {
-    anime_armor(true)
-}
-
 /// R767000: through v0.4.12d the cap guarded its controller's hero alone; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_4_12d() -> CardScripts {
-    anime_armor(false)
+    let base = anime_armor(false);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // C+ #11 Anime Armor — SPEC §8.7 row 11, BUILD M9 Classic+ row C+ 11: "While it is on the field its

@@ -338,8 +338,9 @@ fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the
                 _ => None,
             });
             assert_eq!(paid, Some(dearer), "the normal price plus the premium");
-            // Radiant and Embiggened, the Wand draws 5: the filler and the five draws are in the hand.
-            assert_eq!(result.state.players[AI].hand.len(), 6, "played Radiant");
+            // Radiant and Embiggened, the Wand draws 4 (5 through v0.4.12d, issue #2179): the filler and
+            // the four draws are in the hand.
+            assert_eq!(result.state.players[AI].hand.len(), 5, "played Radiant");
         }
     }
 }
