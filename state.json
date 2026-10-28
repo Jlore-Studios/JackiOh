@@ -6567,16 +6567,12 @@
     "what": "build #2215 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-28T13:18:13Z",
+    "at": "2026-10-28T13:27:49Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered review #2228 on claude-8 (run 40693988004): reviewed",
-      "delivered plan #2208 on claude-6 (run 40689541121): planned",
-      "delivered revise #2155 on claude-7 (run 40686316865): approved",
-      "started build #2208 on claude-6 (run 40695520914)",
-      "started revise #2186 on claude-7 (run 40695611276)",
-      "started revise #2228 on claude-8 (run 40695685873)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` is busy; `muse` is idle, but nothing queued is for it; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 56h 38m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 63h 38m"
+      "delivered revise #2163 on claude-3 (run 40686252586): approved",
+      "started build #2215 on claude-4 (run 40696852804)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7282,7 +7278,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T13:18:13Z",
+  "loop_tick": "2026-10-28T13:27:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
