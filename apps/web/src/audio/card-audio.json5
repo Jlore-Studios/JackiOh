@@ -1972,7 +1972,7 @@
       cast: { voice: "robot", text: "Target acquired. Initiating deep chill." },
     },
     "stinkyscape-002": { // Absolute Zero
-      cast: { voice: "sapi-ghost", text: "Cold. Still. Forever." },
+      cast: { voice: "sapi-ghost", text: "Cold. Forever." },
     },
     "stinkyscape-003": { // Meteor
       cast: { voice: "announcer", text: "Incoming! Look up, look way up!" },
@@ -1999,7 +1999,7 @@
       cast: { voice: "announcer", text: "Everything, all at once. Collapse!" },
     },
     "stinkyscape-005": { // Masochism Unmasked
-      cast: { voice: "sapi-villain", text: "Ow! Lovely. Now it's your turn to hurt." },
+      cast: { voice: "sapi-villain", text: "Ow! Lovely. Your turn to hurt." },
     },
     "stinkyscape-006": { // Tylannt
       play: { voice: "hustler", text: "The job's already done. You're just late." },

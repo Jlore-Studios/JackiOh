@@ -44,6 +44,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -269,6 +270,13 @@ BOX_STYLES = (
     "    classDef broken fill:#ffebe9,stroke:#cf222e,color:#82071e",
     "    classDef off fill:#f6f8fa,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
 )
+
+
+def styles(lines: list[str], extra: tuple[str, ...] = ()) -> list[str]:
+    """The `classDef`s of `BOX_STYLES` and `extra` that `lines` use (`:::name`): a chart declaring
+    the rest only spends the issue's room (`MAX_BODY`)."""
+    used = set(re.findall(r":::(\w+)", "\n".join(lines)))
+    return [style for style in (*BOX_STYLES, *extra) if style.split()[1] in used]
 #: Each kind of `waiting.Now` as a box style.
 STYLE = {"busy": "busy", "next": "next", "idle": "idle", "reviews": "paused", "full": "paused",
          "capped": "paused", "closed": "closed", "broken": "broken", "off": "off"}
@@ -424,7 +432,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
             lines.append("    hosted ~~~ machine")
         training = training_boxes(ctx)
         lines += training + (["    machine ~~~ training"] if training else [])
-    lines += [*BOX_STYLES, "```"]
+    lines += [*styles(lines), "```"]
     planning_runs = {n for n in live
                      if n and status_mod.record_of(state, n).get("action") == "plan"}
     # GitHub's runners have lanes of their own, apart from the night box's slots (`plan.Lanes`).
@@ -1739,8 +1747,7 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
         groups.append("qu")
     if len(groups) > 1:
         lines.append("    " + " ~~~ ".join(groups))
-    ghosts = [GHOST_STYLE] if any(":::ghost" in line for line in lines) else []
-    return lines + [*BOX_STYLES, *ghosts, "```"]
+    return lines + [*styles(lines, (GHOST_STYLE,)), "```"]
 
 
 def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = None, *,
@@ -1887,10 +1894,10 @@ def section(ctx: Context) -> str:
     lines += ["### Its account", ""] + subscription_table(ctx, state, live, explained.now) + [""]
     if MODES:
         lines += ["### Its trees", ""] + trees_table(ctx, state) + [""]
-    lines += [f"### Last {BOT_TITLE} runs", ""] + view.runs + [""]
-    lines += [f"<details><summary>{BOT_TITLE}'s full status</summary>", "",
-              view.report, "", "</details>"]
-    head = lines.index(f"## 🫧 {BOT_TITLE}") + 2
+    # No full status: the line under its heading says where it is, and the issue keeps under
+    # GitHub's limit (`MAX_BODY`).
+    lines += [f"### Last {BOT_TITLE} runs", ""] + view.runs
+    head =lines.index(f"## 🫧 {BOT_TITLE}") + 2
     lines[head:] = fold(f"What {BOT_TITLE} is working on, its queue, account and last runs",
                         lines[head:])
     return "\n".join(lines + [SECTION_END])

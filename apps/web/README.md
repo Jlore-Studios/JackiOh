@@ -233,7 +233,7 @@ src/replay/
                   and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its notice slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
