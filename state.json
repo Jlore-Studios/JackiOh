@@ -6598,19 +6598,30 @@
     "2229": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T12:48:21Z",
       "issue": 2212,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new mayClamp lets the Chinese face of every listed Meditative card clamp on the phone sheet, which the old check forbade, and the comment above it says the opposite of what the code does.",
+          "evidence": "Base: `mayClamp = size.clampLong && printedLength(def, face) > TEXT_TIER_MAX.xl`, with printedLength reading the Chinese text for a Chinese face. The new MN09 vitest case proves no Chinese face is over 260, so the old check never let a Chinese face clamp. New: `LONG_FACES.includes(`${def.id} ${face.radiant ? \"radiant\" : \"base\"}`)` ignores `face.chinese`, so 'Chinese base' of meditative-008, -022, -022-1, -049-1 and -095 (10 faces) maps to a listed entry and may clamp. The comment says 'only a listed base or radiant face may clamp', which this code does not do. The plan called this 'behaviour-identical while the list is in sync'. That is false, and the builder reported no departure. Adding `!face.chinese &&` keeps the old strictness and still reads the shared list.",
+          "severity": "blocking",
+          "where": "e2e/cypress/component/meditative-faces.cy.tsx:178"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-10-28T13:41:01Z",
+      "queued_at": "2026-10-28T13:57:28Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40700137214",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-28T13:50:21Z",
       "stop_requested": false,
       "taken_asks": [],
