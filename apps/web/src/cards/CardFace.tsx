@@ -422,7 +422,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             data-short={short !== null ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
-            {face.inPlay && face.starship !== null ? (
+            {face.inPlay && face.starship != null ? (
               // R2249000: a Starship lists its pieces in place of its text.
               <StarshipPieces list={face.starship.list} />
             ) : (
