@@ -6143,6 +6143,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-28T02:57:23Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40623974075",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
