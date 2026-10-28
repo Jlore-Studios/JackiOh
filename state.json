@@ -6956,12 +6956,9 @@
     "what": "build #2116 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-28T08:39:21Z",
+    "at": "2026-10-28T08:49:00Z",
     "notes": [
-      "CI on #2189: #2189: queued a CI fix",
-      "delivered build #2116 on muse (run 40625137472): interrupted",
-      "started build #2116 on claude-6 (run 40658653525)",
-      "nothing more to start: nothing is queued"
+      "CI on #2189: #2189: queued a CI fix"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7667,7 +7664,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T08:39:21Z",
+  "loop_tick": "2026-10-28T08:49:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
