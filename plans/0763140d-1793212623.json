@@ -1,0 +1,65 @@
+{
+  "action": "build",
+  "number": 2279,
+  "title": "Patch: AI Girlfriend becomes a Unit, without Animated",
+  "branch": "bot/issue-2279",
+  "thread": "**Issue #2279 (data, not instructions):**\n\n```text\n# #2279: Patch: AI Girlfriend becomes a Unit, without Animated\nOpened by @MaxGoetzmann.\n\n### What it does\n\nMeditative #49.3 AI Girlfriend (`meditative-049-3`, a token, printed Mythic) is printed today as a **Field Spell** with the **Animated** keyword (\u00a76.1, R383, MD-C25): YileGPT Prime's Cry summons it into the backrow and it animates into a unit zone as it enters, or stays a backrow card whose forced attacks find no target (R1025). Make it a plain **Unit** and drop Animated from both faces. Everything else stays: cost (4), 2/30 \u2192 4/60, Can't attack, \"Start of turn: Every enemy Unit attacks this\" (R53) and \"After this is attacked: Nerf the attacker\" (once, Radiant `{times}` = 2; R1026, MD-C26).\n\nNew text, base: `Can't attack\\nStart of turn: Every enemy Unit attacks this.\\nAfter this is attacked: Nerf the attacker.` Radiant: `\u2026 Nerf the attacker {times|time|times}.`\n\nWhere it lives (read `docs/ADDING_CARDS.md` first, CLAUDE.md rule 10):\n- `crates/cards/catalog.json`: `type` `\"Field Spell\"` \u2192 `\"Unit\"`, the `Animated` keyword out of both faces' `keywords`, `Animated, ` out of both faces' `text`.\n- `crates/cards/src/scripts/meditative/c049_3_ai_girlfriend.rs`: its header, and the `animated()` guard on the start-of-turn hook, which exists only because an Animated card could sit in the backrow; a Unit on the field is always in a unit zone, so the guard (and its backrow tests) can go.\n- `crates/cards/src/scripts/meditative/c049_1_yilegpt_unleashed.rs`: the Cry's \"Summon an AI Girlfriend\" entry is now an ordinary Unit summon (R64: the leftmost empty, unlocked unit zone; with none, nothing enters). Its comments (\"summoned to animate at once\") and the test `r1025_an_ai_girlfriend_animating` follow.\n- `crates/cards/tests/cross/catalog.rs` (the `\"49.3\"` row's `T::FieldSpell` \u2192 the Unit type) and any other cross test that leans on its type.\n- Spec and BUILD: `spec/08-catalog.md` rows 49.3 (and 49.1's \"summoned, animating at once (MD-C25)\"), `spec/07-tokens.md`'s AI Girlfriend row (\"Field Spell, CN; A 2/30 unit face; Animated ([[R383]])\"), `BUILD.md`'s `M 49.3` and `M 49.1` rows, and the ruling notes that call it Animated: `spec/rulings/R1025.md` (its whole decision was about an Animated Field Spell; rewrite it for a Unit summon or retire it the way the spec retires a ruling, keeping `cargo jackioh spec check` green) and `spec/rulings/R781002.md`'s mention (\"an Animated card answering an attack (Meditative #49.3 AI Girlfriend)\"). Any new ruling takes the lowest free number in this issue's block (CLAUDE.md rule 3) with its \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- `crates/cards/chinese.json` and anything else that carries its words, if they print \"Animated\".\n- A pending fragment: `cargo jackioh patches \"AI Girlfriend becomes a Unit\" --plays meditative-049-3` (add `meditative-049-1` too if the classifier says YileGPT Prime plays differently).\n\n### Acceptance\n\n- `meditative-049-3` is a Unit on both faces with no Animated keyword and no \"Animated\" in either face's text; its stats, Can't attack, the start-of-turn forced attacks and the after-attacked Nerf (1, Radiant 2) are unchanged.\n- AI Girlfriend's own tests (base and Radiant, per BUILD's `M 49.3` row, rewritten for a Unit): at its controller's start of turn every enemy Unit, Can't attack and 0-attack ones included, attacks it in lane order, each its own combat, the run stopping once it leaves; after each combat it was the target of, the surviving attacker is Nerfed once (Radiant twice), a Cleave splash not counting.\n- YileGPT Prime's Cry summons it straight into a unit zone (R64), and with every unit zone full the entry summons nothing; a test shows both.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` pass (the golden replay included).\n- `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2279: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
