@@ -868,10 +868,10 @@ pub struct Param {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
     /// R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
-    /// it (KY's Constant still may). Only ever `Some(true)`.
+    /// it (KY's Constant still may): on every face, or on the one face it names (R2261001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub cry: Option<bool>,
+    pub cry: Option<ParamCry>,
 }
 
 impl Param {
@@ -882,6 +882,34 @@ impl Param {
             FaceKind::Radiant => self.radiant,
         }
     }
+
+    /// R1748000, R2261001: whether only the card's Cry reads it on the face `radiant` says the card
+    /// shows.
+    pub fn cry_only_on(&self, radiant: bool) -> bool {
+        match self.cry {
+            None => false,
+            Some(ParamCry::Every(every)) => every,
+            Some(ParamCry::Face(FaceKind::Base)) => !radiant,
+            Some(ParamCry::Face(FaceKind::Radiant)) => radiant,
+        }
+    }
+}
+
+/// `Param.cry`: `true` when only the card's Cry reads the number on every face that writes it
+/// (R1748000), or the one face whose Cry alone reads it while the other face's lasting text reads it
+/// too (R2261001: Meditative #101 Gachaholic's base Cry and Radiant Activate).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(untagged)]
+pub enum ParamCry {
+    /// Every face; only ever `true`.
+    Every(bool),
+    /// That face only.
+    Face(FaceKind),
 }
 
 /// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
