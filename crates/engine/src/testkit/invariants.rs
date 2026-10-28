@@ -165,8 +165,8 @@ use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
     Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId,
-    PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice,
-    ZoneName, has_keyword, opponent_of,
+    PlayerView, PromptKind, RedirectWhat, RevealAt, RotationDirection, Row, Selection, Team, TuningChange,
+    Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -1710,7 +1710,10 @@ impl InvariantMonitor {
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
     /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
     /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
-    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action. A rotation inside
+    /// the action carries each of those zones' piles one step along its ring (R14), so the zones it
+    /// names move with them: Silly Silas played onto a pile, the pile rotated, and the trap that then
+    /// kills it uncovers the card beneath one lane over.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
@@ -1742,6 +1745,23 @@ impl InvariantMonitor {
                 GameEvent::Fused {
                     result_instance_id, ..
                 } => kept.push(result_instance_id),
+                // `rotated` names no perspective, and a step one way on the one ring is a step the other
+                // way on the other's (`zones::ring_order`), so each zone is taken to both its neighbours.
+                GameEvent::Rotated { .. } => {
+                    landed = landed
+                        .iter()
+                        .flat_map(|&(player, row, lane)| {
+                            [RotationDirection::Left, RotationDirection::Right].map(|direction| {
+                                let to = crate::zones::ring_neighbor(
+                                    crate::zones::ZoneSlot { player, row, lane },
+                                    direction,
+                                    PlayerId::P1,
+                                );
+                                (to.player, to.row, to.lane)
+                            })
+                        })
+                        .collect();
+                }
                 _ => {}
             }
         }

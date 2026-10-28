@@ -1540,6 +1540,35 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             assert!(mismatches[0].contains(&fiender.id), "{found:?}");
         }
     }
+
+    /// The fuzz gate's seed 128: Silly Silas went onto a Stack pile, rotated it a lane over (R14) and
+    /// died to Explosive Trap, which uncovered the card beneath. A rotation after the play carries the
+    /// zone the play was announced into one step along its ring with the pile; one before the play
+    /// carries nothing the play covered.
+    #[test]
+    fn r1829000_i4_follows_a_covered_zone_a_rotation_carries_one_step_along_its_ring() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let now = g.state().turn;
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(now);
+        let announced = || {
+            event(json!({
+                "type": "cardAnnounced", "player": "p1", "instanceId": "a-stack-card", "defId": FIENDER,
+                "cardType": "Unit", "costPaid": 2, "targets": [], "row": "units", "lane": 2,
+            }))
+        };
+        let rotated = || event(json!({ "type": "rotated", "direction": "left" }));
+
+        assert_eq!(
+            monitor.clone().after(&[announced(), rotated()], g.state()),
+            no_violations()
+        );
+        let found = monitor.clone().after(&[rotated(), announced()], g.state());
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+    }
 }
 
 /// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
