@@ -145,7 +145,7 @@ async fn started_bot_match(
         .seed_profile(json!({ "id": PERSON, "rating": 1000 }));
     let bot: NewBot = from(json!({
         "profileId": BOT,
-        // The strongest row: R747000's weaker rows hand some decisions, or all, to the random policy, and
+        // The strongest row: R747000's weaker rows hand some decisions, or all, to the skill miss, and
         // these tests are about what the bot's seat does with the AI's turn.
         "strength": BOT_STRENGTHS.len() - 1,
         "speed": 1.0,
