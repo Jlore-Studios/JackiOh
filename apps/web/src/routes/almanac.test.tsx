@@ -483,7 +483,7 @@ describe("R1956000 the viewer's own cards in the Almanac", SLOW_GRID, () => {
   });
 });
 
-describe("R2118000 the command menu's card detail", () => {
+describe("R2118000 the command menu's card detail", SLOW_GRID, () => {
   it("R2118000 a ?card= move made while the page is open opens that card's detail", () => {
     at(paths.almanac);
     render(<AlmanacRoute />);

@@ -885,7 +885,8 @@ export function App(): ReactElement {
       </RouteErrorBoundary>
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
-      <CommandMenu key={path} path={path} />
+      {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
+      <CommandMenu key={`command-menu:${path}`} path={path} />
     </>
   );
 }
