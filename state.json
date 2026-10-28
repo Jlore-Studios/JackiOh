@@ -6052,6 +6052,13 @@
     "2223": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T12:12:42Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule line 6 fails: the fix is in .github/workflows/ci.yml, a forbidden path, so it is never easy; nothing in it touches the engine or the AI, so it is not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-7",
