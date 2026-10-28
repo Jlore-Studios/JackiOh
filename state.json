@@ -4594,7 +4594,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T06:51:33Z",
+      "feedback_since": "2026-10-28T07:52:04Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2050,
@@ -4608,11 +4608,11 @@
       "run_id": "40652851554",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-28T07:52:04Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
