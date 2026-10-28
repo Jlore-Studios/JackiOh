@@ -99,6 +99,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
     "When one of your Units is attacked",
     "Chance to reveal",
+    // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
+    "When this attacks",
+    "After this attacks",
   ],
   "§6.3": [
     "Summon",
@@ -960,7 +963,7 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
       ["Exile", "core-093", "base", "exiles"],
       ["Fuse", "classicplus-033", "base", "fused"],
       ["Transform", "core-041", "base", "transform"],
-      ["Transform", "classicplus-073-1", "base", "transforms"],
+      ["Transform", "classicplus-073-1", "base", "transform"],
       ["Lock", "classicplus-019", "base", "Locked"],
       ["Tribute", "core-055", "base", "Tributes"],
       ["Buff", "meditative-084", "base", "Buffs"],

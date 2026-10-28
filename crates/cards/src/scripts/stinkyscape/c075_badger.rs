@@ -3,12 +3,12 @@
 //!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!
 //! Starship Piece is the engine's printed keyword: its death fuses a copy into its owner's Dormant
-//! Starship (R1852000). "Whenever this attacks" is the engine's `afterAttack` hook, Core #32 Prem
-//! Panther's: it runs once each combat this card attacked in, declared or forced (R53), is over and
-//! the state check after it has run (R59), for the player who controlled it there, even when it died
-//! in it (R426); it never runs for a defending Badger, nor for an attack called off before it fought
-//! (R44, Core #96 My Pawn). It is `gain_resources` of one random Resource into the tray (R1840000,
-//! R1840002), a ninth sold at once (R1840001). Radiant: a Radiant Resource.
+//! Starship (R1852000). "Whenever this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
+//! Titan's: it runs for the player who controls this card before any damage of each attack it makes,
+//! declared or forced (R53, R2285000), so a Badger that dies in the combat has already gained; it never
+//! runs for a defending Badger, nor for an attack called off in its trap window (R44, Core #96 My
+//! Pawn). It is `gain_resources` of one random Resource into the tray (R1840000, R1840002), a ninth
+//! sold at once (R1840001). Radiant: a Radiant Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;
@@ -20,7 +20,7 @@ const RESOURCES: i32 = 1;
 
 fn face(radiant: bool) -> Script {
     Script {
-        after_attack: Some(hook(move |_ctx| {
+        when_attacks: Some(hook(move |_ctx| {
             vec![gain_resources(json_as(
                 json!({ "count": RESOURCES, "radiant": radiant }),
             ))]
@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn r426_dying_in_the_combat_it_still_gains() {
+    fn r2285000_it_gains_before_the_damage_so_dying_in_the_combat_it_has_gained() {
         let mut s = badger(
             false,
             json!({ "hand": [FILLER], "library": filler(4), "field": [BODY] }),
@@ -112,6 +112,7 @@ mod tests {
         s.attack(ID, &target);
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(gained(&s).len(), 1);
+        s.expect_events(json!(["attackDeclared", "resourceGained", "damage", "destroyed"]));
     }
 
     #[test]

@@ -1307,6 +1307,7 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: without_lent_piece(eager_read(
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
+        when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),

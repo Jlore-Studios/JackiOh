@@ -2783,6 +2783,7 @@ export type EffectContext = {
 	chosen_recipe: (self: EffectContext) -> any,
 	chosen_tuning_number: (self: EffectContext) -> any,
 	summoned_so_far: (self: EffectContext) -> {string},
+	when_attacks_of: (self: EffectContext) -> any,
 	after_attack_of: (self: EffectContext) -> any,
 	after_attacked_of: (self: EffectContext) -> any,
 	activation_paid: (self: EffectContext) -> any,

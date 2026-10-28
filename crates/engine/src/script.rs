@@ -1148,12 +1148,20 @@ pub struct Script {
     /// Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
     /// back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
+    /// "When this attacks" / "Whenever this attacks" (Classic #45 Nature Titan, Classic+ #73.1 Classic
+    /// Golem, Stinkyscape #75 Badger): run for the attacker before any damage of each attack it makes,
+    /// a declared one's once its trap window has closed (before the defender's `allyAttacked`) and a
+    /// forced one's before its combat (R2285000). `ctx.data` holds `{ targetId, forced }`, read with
+    /// `combat::when_attacks_of`. A whole effect list followed by its state check, parkable like any
+    /// (R113); an attack whose attacker or target has left the field after it does not fight (R220).
+    pub when_attacks: Option<Hook>,
     /// "After this attacks" (Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem, Core #32
     /// Prem Panther): run for the attacker once the state check that closes each of its combats has run,
-    /// a declared attack's or a forced one's, also when it died there — then on the snapshot it fought
-    /// with, as a Death hook reads its card (R78, R89). Not for an attack called off before it fought
-    /// (R44). `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
-    /// destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
+    /// a declared attack's or a forced one's, and only when the attacker is still on the field on the
+    /// stay it attacked from: one that died in the combat, or left the field otherwise, does nothing
+    /// (R2285001). Not for an attack called off before it fought (R44). `ctx.data` holds the combat's
+    /// facts, read with `combat::after_attack_of`: `{ targetId, destroyedIds, survived, forced }`,
+    /// `survived` always true. A whole effect list, parkable like any (R113).
     pub after_attack: Option<Hook>,
     /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
     /// state check that closes each combat it was the target of has run, a declared attack's or a
@@ -1263,7 +1271,7 @@ pub struct ExileAura {
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
     /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
-    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack",
+    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "whenAttacks", "afterAttack",
     /// "afterAttacked", "evolve", "allyAttacked", "startOfOpponentTurn".
     /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
@@ -1277,6 +1285,7 @@ impl Script {
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),
             "onPlayHook" => self.on_play_hook.as_ref(),
+            "whenAttacks" => self.when_attacks.as_ref(),
             "afterAttack" => self.after_attack.as_ref(),
             "afterAttacked" => self.after_attacked.as_ref(),
             "evolve" => self.evolve.as_ref(),
