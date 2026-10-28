@@ -10,13 +10,17 @@
 //! Entry 8 is the engine's own rest-of-game rule (R1882004): a death watcher under
 //! `CHAOS_DEATH_WATCH_HOOK`, whose step `work::script_step_for` answers with `death_watch_step` whatever
 //! card made it, so the table never leans on a card file; a player holds at most
-//! `CHAOS_STINKY_DEATH_WATCH_CAP`.
+//! `CHAOS_STINKY_DEATH_WATCH_CAP`, and the watch casts at most `CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN`
+//! for a player in a turn, its terminator (R2176001).
 
 use serde_json::json;
 
 use crate::catalog::{def_by_index, query, query_cost};
 use crate::combat::{SwitchPositionOptions, switch_position};
-use crate::config::{CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_FIELD_SPELLS, CHAOS_STINKYSCAPE_COST};
+use crate::config::{
+    CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN, CHAOS_STINKY_FIELD_SPELLS,
+    CHAOS_STINKYSCAPE_COST,
+};
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::delayed_resume;
 use crate::prelude::json_as;
@@ -212,11 +216,32 @@ pub fn death_watches_held(state: &GameState, player: PlayerId) -> i32 {
         .count() as i32
 }
 
+/// R2176001: how many Calls to Chaos the death watch has cast for `player` this turn.
+pub fn death_watch_casts_this_turn(state: &GameState, player: PlayerId) -> i32 {
+    match state.players[player].death_watch_casts {
+        Some(casts) if casts.turn == state.turn => casts.count,
+        _ => 0,
+    }
+}
+
 /// R1882004: the step entry 8's watcher re-enters after each Acclaimed death, as the dead card's
 /// controller: a random Call to Chaos, cast with no `self` and so as a new chain (R28's cap per chain),
-/// the cast card a base Call.
+/// the cast card a base Call. R2176001: once the watch has cast `CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN`
+/// for that player this turn, it casts nothing more until the next.
 pub fn death_watch_step() -> Hook {
-    hook(|_ctx| vec![cast_random_call_to_chaos()])
+    hook(|ctx| {
+        let player = ctx.controller;
+        let count = death_watch_casts_this_turn(&*ctx.state, player);
+        if count >= CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN {
+            return vec![];
+        }
+        let turn = ctx.state.turn;
+        ctx.state.players[player].death_watch_casts = Some(crate::state::DrawCount {
+            turn,
+            count: count + 1,
+        });
+        vec![cast_random_call_to_chaos()]
+    })
 }
 
 /// 8. R1882004: "for the rest of the game, whenever an Acclaimed card dies, its controller casts a random
