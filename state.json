@@ -6592,6 +6592,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
+      "round_tier": "",
       "run_id": "40730941463",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T16:56:49Z",
@@ -6600,7 +6601,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2228": {
       "action": "revise",
