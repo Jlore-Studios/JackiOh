@@ -404,7 +404,11 @@ pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize
     let mut pairs: Vec<String> = Vec::with_capacity(size);
     while deck.len() < size {
         let Some(id) = shuffled.next() else { break };
-        let key = jackioh_engine::catalog::pair_key(jackioh_engine::catalog::def_of(None, &id)).to_string();
+        // The shipped catalog itself, so a deal needs no registered catalog (a test may deal first).
+        let key = CATALOG
+            .get(&id)
+            .map_or(id.as_str(), jackioh_engine::catalog::pair_key)
+            .to_string();
         if !pairs.contains(&key) {
             pairs.push(key);
             deck.push(id);
