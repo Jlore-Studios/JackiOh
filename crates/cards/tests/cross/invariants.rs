@@ -1679,6 +1679,31 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636: a fusion whose text draws its keywords as it fuses (M #65 Keymaster Keenus' Aura) and that
+    /// leaves the field later in the same action took them away with its memory; two attacks it
+    /// declared after the fuse are one legal Windfury turn (Duos fuzz seed 679 of the Stinkyscape
+    /// release: equipped onto C+ #26, two kills, then exiled).
+    #[test]
+    fn r636_a_keyword_drawing_fusion_gone_by_the_action_s_end_may_have_attacked_twice() {
+        const KEYMASTER_KEENUS: &str = "meditative-065";
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        // Off the field by the action's end, as the exiled one was: here, in p1's hand.
+        let fused = craft_fused(&mut g, PlayerId::P1, &[KEYMASTER_KEENUS, VANILLA]);
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": fused.id, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let fuse = event(json!({
+            "type": "fused", "instanceIds": ["c-gone", fused.id], "resultInstanceId": fused.id, "defId": fused.def_id,
+        }));
+        assert_eq!(
+            monitor.after(&[fuse, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
     #[test]
     fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
         let g = scenario(json!({

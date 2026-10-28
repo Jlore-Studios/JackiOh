@@ -2164,11 +2164,24 @@ impl InvariantMonitor {
                 // R636, R1086: a Fuse (an Equip among them) brings its ingredients' text, and with it a
                 // Windfury an aura of theirs gives, which no `keywordGranted` reports; a unit that holds
                 // it as the action leaves it has it from the fuse on (M #65 Keymaster Keenus' random
-                // keywords, equipped onto S #113: handicapped fuzz seed 7566).
+                // keywords, equipped onto S #113: handicapped fuzz seed 7566). One whose text draws its
+                // keywords as it fuses (that Aura's `conditionalKeywords`, read back from its memory) and
+                // that has left the field by the action's end lost them with its memory (R78), so the
+                // state can no longer say whether one was Windfury: its attacks in this stint count as
+                // Windfury's (equipped onto C+ #26 and exiled after two attacks: Duos fuzz seed 679).
                 GameEvent::Fused {
                     result_instance_id, ..
                 } => {
                     self.note_entry_windfury(result_instance_id, state);
+                    if let Some(card) = find_instance(state, result_instance_id)
+                        && card.zone.z() != ZoneName::Field
+                        && crate::scripts::script_of(state, card)
+                            .conditional_keywords
+                            .is_some()
+                    {
+                        let stint = self.stint_of(result_instance_id);
+                        self.windfury.insert(result_instance_id.clone(), stint);
+                    }
                 }
                 GameEvent::KeywordGranted {
                     instance_id,
