@@ -31,6 +31,7 @@
 .shop-wallet {
   font-size: 19px;
   color: var(--tavern-gold-pale);
+  font-variant-numeric: tabular-nums;
 }
 
 .shop-row,
@@ -69,6 +70,7 @@
   align-items: flex-start;
   gap: 8px;
   min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .shop-row__info > p {
@@ -91,6 +93,12 @@
 .token-held,
 .cosmetic-packs-held {
   margin: 0;
+}
+
+/* The held counts stand one under another. */
+.token-held,
+.cosmetic-packs-held {
+  font-variant-numeric: tabular-nums;
 }
 
 .token-bar {

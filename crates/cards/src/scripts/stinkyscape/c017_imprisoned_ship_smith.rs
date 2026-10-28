@@ -56,6 +56,8 @@ mod tests {
     const RESERVES: &str = "core-075"; // (0) Field Spell that does nothing here: a backrow zone taken.
     const FARM: &str = "core-058"; // (2) Field Spell: Start of turn: Summon a Rush Token.
     const RUSH_TOKEN: &str = "core-t-rush";
+    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: "Pierce. Deal {damage} damage to all Units."
+    const NETHER: &str = "core-088"; // (4) Spell: "Destroy all permanents."
 
     /// p1 has played the Smith (`radiant` its face) into unit zone 1, `p1_backrow` in its backrow; p2
     /// has a Vanilla in unit zone 1 and a Hit Job in hand.
@@ -124,6 +126,46 @@ mod tests {
             // The opponent's turn: its Vanilla may not attack it, and its Hit Job may not name it.
             assert!(!named_by_a_legal_action(&s, P2, &smith));
             s.expect_refused(|s| s.attack(VANILLA, &smith));
+        }
+
+        #[test]
+        fn r1839000_while_dormant_an_untargeted_effect_passes_it_by() {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [ID, FILLER], "library": crate::filler(4) },
+                "p2": { "hand": [WHIRLWIND, NETHER, FILLER], "field": [VANILLA], "library": crate::filler(4) },
+            }));
+            s.play(ID, json!({ "zone": 1 }));
+            let smith = s.card(ID).id.clone();
+            let health = s.stats(&smith).health;
+            s.end_turn();
+            s.state_mut().players[P2].mana.current = 10;
+
+            // Damage to all Units: the Vanilla takes it, the Dormant Smith does not.
+            let vanilla_health = s.stats(VANILLA).health;
+            s.play(WHIRLWIND, json!({}));
+            assert!(
+                s.stats(VANILLA).health < vanilla_health,
+                "the Whirlwind reached the Vanilla"
+            );
+            assert_eq!(s.stats(&smith).health, health);
+            assert!(!s.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Damage { target_id, .. } if *target_id == smith
+            )));
+
+            // Destroy all permanents: the Vanilla dies, the Dormant Smith stays as it was.
+            let vanilla = s.unit_at(P2, 1).id;
+            s.play(NETHER, json!({}));
+            s.expect_in_zone(&vanilla, "graveyard");
+            assert!(matches!(
+                s.card(&smith).zone,
+                Zone::Field {
+                    player: P1,
+                    row: Row::Units,
+                    ..
+                }
+            ));
+            assert_eq!(s.card(&smith).slumber, dormant_for(DORMANT_TURNS));
         }
 
         #[test]

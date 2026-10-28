@@ -196,3 +196,43 @@ fn r1846002_a_custom_card_counts_as_neither_whatever_a_table_lists() {
     assert!(!is_complicated("custom-long"));
     clear_overrides();
 }
+
+/// R2173000: a fold under a shipped version that kept its own lists reads them, not the build's, and
+/// a fold under one that kept none reads the build's (here the testkit's), as the build itself does.
+mod r2173000_a_fold_reads_its_versions_own_lists {
+    use super::*;
+
+    #[test]
+    fn r2173000_a_version_with_lists_reads_them_and_one_without_the_builds() {
+        setup();
+        // The version shipped with core-005 BUSTED and core-004 complicated: the build counts them short.
+        let kept = CardLists {
+            busted: vec!["core-005"],
+            complicated: vec!["core-005", "core-004"],
+        };
+        register_shipped(vec![
+            ShippedCatalog::new("v-lists", defs(), IndexMap::new()).with_card_lists(kept),
+            ShippedCatalog::new("v-none", defs(), IndexMap::new()),
+        ]);
+        let with_lists = shipped_catalog("v-lists").expect("registered");
+        let without = shipped_catalog("v-none").expect("registered");
+
+        with_shipped(Some(with_lists), || {
+            assert_eq!(pool(json!({ "busted": true })), vec!["core-005"]);
+            assert_eq!(pool(json!({ "complicated": true })), vec!["core-004", "core-005"]);
+            assert!(is_busted("core-005") && !is_busted("core-001"));
+            assert!(is_complicated("core-004") && !is_complicated("core-003"));
+            // The code lines stay the build's: no card reads a count.
+            assert_eq!(code_lines_of("core-001"), Some(BUSTED_CODE_LINES + 1));
+            assert_eq!(card_metrics().busted, ["core-005"]);
+        });
+        let build = card_metrics();
+        assert_eq!(with_shipped(Some(without), card_metrics), build);
+        with_shipped(Some(without), || {
+            assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
+        });
+        // Back on the build's catalog, the build's lists.
+        assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
+        clear_overrides();
+    }
+}

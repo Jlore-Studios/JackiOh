@@ -152,6 +152,50 @@ mod tests {
         }
     }
 
+    /// R1862004: aimed at a Field Spell, a Fig (whose target is a Unit or a hero) cannot take the
+    /// permanent, so it heals a target of its own picking, at random, asking nobody.
+    mod random_choice {
+        use super::*;
+
+        const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit, nothing a heal reaches.
+
+        fn fire_at_field_spell(seed: &str) -> (Scenario, String, Vec<String>) {
+            let mut s = weapon_board(
+                seed,
+                json!({ "field": [ID], "backrow": [ARMOR], "health": 20 }),
+                json!({ "field": [{ "def": VANILLA, "damage": 2 }], "health": 20 }),
+            );
+            let field_spell = s.backrow(P1, 1).expect("the Field Spell").id;
+            s.activate(
+                ID,
+                json!({ "ability": "fruit", "targets": pick::id(&field_spell) }),
+            );
+            let cast = s
+                .last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::CardPlayed { def_id, .. } => Some(def_id.clone()),
+                    _ => None,
+                })
+                .collect();
+            (s, field_spell, cast)
+        }
+
+        #[test]
+        fn r1862004_a_fruit_that_cannot_take_the_permanent_makes_its_own_choices_at_random() {
+            let seed = seed_where("s141-random", |seed| {
+                fire_at_field_spell(seed).2.first().is_some_and(|id| id == FIG)
+            });
+            let (s, field_spell, _) = fire_at_field_spell(&seed);
+            assert!(s.state().pending.is_none(), "it asks nobody");
+            let healed = healed(&s);
+            assert_eq!(healed.len(), 1, "{healed:?}");
+            assert_ne!(healed[0], field_spell, "not the Field Spell");
+            // The pick is the rng's: the same seed heals the same target.
+            assert_eq!(super::healed(&fire_at_field_spell(&seed).0), healed);
+        }
+    }
+
     mod radiant {
         use super::*;
 

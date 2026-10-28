@@ -54,8 +54,8 @@ pub fn script() -> CardScripts {
 // S #20 Tnack Trav — SPEC §8.10 row 20, BUILD M12 row S 20: "Cry (played): a Legendary or Mythic Unit on
 // either side, not itself, chosen; this Unit has its keywords, aura, triggers and Death from then on, its
 // own stats and name kept (R1850000); a bounce ends it; no target, nothing; radiant 12/12 and the target's
-// Radiant text". The copy's reach (aura, triggers, Death, abilities) and its end are the engine's, proven
-// by its tests (R1850000).
+// Radiant text". The copy's reach (aura, triggers, Death, abilities) is the engine's, proven by its tests
+// (R1850000); its end by a bounce is proven here too.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -70,6 +70,9 @@ mod tests {
     const CITADEL: &str = "stinkyscape-114";
     const VANILLA: &str = "core-008"; // (1) 4/4, Common.
     const FILLER: &str = "core-005";
+    /// C+ #73.1 Classic Golem, a unit token printed Legendary: its rarity is Token.
+    const GOLEM: &str = "classicplus-073-1";
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: "Bounce all permanents. …"
 
     fn board(radiant: bool, p2_field: Value) -> Scenario {
         scenario(json!({
@@ -116,6 +119,68 @@ mod tests {
         let vanilla = s.unit_at(P2, 2);
         let mut refused = s;
         refused.expect_refused(|s| s.play(ID, pick(&vanilla)));
+    }
+
+    #[test]
+    fn r1876003_a_token_printed_legendary_is_never_chosen() {
+        assert_eq!(crate::card_def(GOLEM).rarity, Rarity::Token);
+        assert_eq!(
+            crate::card_def(GOLEM).printed_rarity,
+            Some(PrintedRarity::Legendary)
+        );
+        let s = board(false, json!([GOLEM]));
+        let golem = s.unit_at(P2, 1);
+        let plays = offered(&s);
+        assert!(!plays.is_empty(), "the play is offered, declaring nothing (R90)");
+        assert!(plays.iter().all(Vec::is_empty), "{plays:?}");
+        let mut refused = s;
+        refused.expect_refused(|s| s.play(ID, pick(&golem)));
+        // Played with no target, it copies nothing from the token.
+        refused.play(ID, json!({ "zone": 1 }));
+        let trav = refused.unit_at(P1, 1);
+        assert!(subsystems::unit_text_of(&trav).is_none());
+    }
+
+    #[test]
+    fn r1876003_it_never_chooses_itself() {
+        let s = board(false, json!([BIG_MAX]));
+        let trav = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == ID)
+            .expect("Tnack Trav in hand");
+        for targets in offered(&s) {
+            assert!(
+                targets
+                    .iter()
+                    .all(|selection| !matches!(selection, Selection::Instance { instance_id, .. } if *instance_id == trav.id)),
+                "{targets:?}"
+            );
+        }
+        let mut refused = s;
+        refused.expect_refused(|s| s.play(ID, pick(&trav)));
+    }
+
+    #[test]
+    fn r1850000_a_bounce_ends_what_it_copied() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [ID, CORE_SYSTEM, FILLER], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [BIG_MAX], "library": filler(4) },
+        }));
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        let max = s.unit_at(P2, 1);
+        s.play(ID, pick(&max));
+        let trav = s.unit_at(P1, 1);
+        assert!(unit_has(s.state(), &trav, KeywordKind::Trample));
+        s.play(CORE_SYSTEM, json!({}));
+        let bounced = s.card(&trav.id).clone();
+        assert!(matches!(bounced.zone, Zone::Hand { .. }), "{:?}", bounced.zone);
+        assert!(
+            subsystems::unit_text_of(&bounced).is_none(),
+            "R78: the copy went with the stay"
+        );
+        assert!(!unit_has(s.state(), &bounced, KeywordKind::Trample));
+        assert!(!unit_has(s.state(), &bounced, KeywordKind::Rush));
     }
 
     #[test]

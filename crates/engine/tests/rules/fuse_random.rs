@@ -194,6 +194,7 @@ mod r1020_a_random_enemy_permanent_fused_in {
                 instance_id: card.id.clone(),
                 def_id: card.def_id.clone(),
                 position: 0,
+                creator: None,
             }],
         });
         fuse_random(
@@ -224,6 +225,7 @@ mod r1020_a_random_enemy_permanent_fused_in {
                 to_def_id: card.def_id.clone(),
                 new_instance_id: card.id.clone(),
                 hidden_from: Some(vec![P1, P2]),
+                creator: None,
             }],
         });
         fuse_random(

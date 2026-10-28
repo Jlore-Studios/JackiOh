@@ -107,7 +107,12 @@ export type RequestOptions = {
   token?: string | null;
   body?: unknown;
   signal?: AbortSignal;
+  /** R2119000: the request outlives the page (`fetch`'s `keepalive`), for one sent as it goes away. */
+  keepalive?: boolean;
 };
+
+/** R2119000: how a held deletion goes; `keepalive` when the page is going away. */
+export type SendOptions = { keepalive?: boolean };
 
 function errorBodyOf(value: unknown, status: number): ApiErrorBody {
   if (typeof value === "object" && value !== null) {
@@ -160,6 +165,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
           method: options.method ?? "GET",
           headers,
           ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+          ...(options.keepalive === true ? { keepalive: true } : {}),
           signal: controller.signal,
         }),
         timedOut,
@@ -831,10 +837,11 @@ export function putDeck(token: string, id: string, input: DeckInput): Promise<{ 
 }
 
 /** `DELETE /api/decks/:id`: idempotent; `deleted: false` when there was nothing to delete. */
-export function deleteDeck(token: string, id: string): Promise<{ deleted: boolean }> {
+export function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
   return apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
+    ...options,
   });
 }
 
@@ -877,10 +884,11 @@ export function importTrio(token: string, input: TrioImportInput): Promise<{ dec
   });
 }
 
-export function deleteTrio(token: string, id: string): Promise<{ deleted: boolean }> {
+export function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
   return apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
+    ...options,
   });
 }
 
@@ -1339,12 +1347,43 @@ export type PublicCardStat = {
   playRate: number;
   hasEnoughGames: boolean;
   /** R1367000: the card's window, and the versions its figures count. */
-  window?: {
-    from: string;
-    liveGames: number;
-    source: PublicStatsSource;
-    counted: string[];
-  };
+  window?: PublicCardWindow;
+};
+
+/** R1367000: a card's window, and the versions its figures count. */
+export type PublicCardWindow = {
+  from: string;
+  liveGames: number;
+  source: PublicStatsSource;
+  counted: string[];
+};
+
+/**
+ * R2089000: a Created card's figures, apart from the deck cards': the seats that made a copy of it
+ * during a game (a token, a generated or Discovered card, a copy, a transform's result, The Coin).
+ * Used counts the seats that used a copy, split by whether one was Radiant at its first use; Not used
+ * those that made copies and used none, the baseline the delta is taken from.
+ */
+export type PublicCreatedStat = {
+  id: string;
+  name: string;
+  cost: number;
+  rarity: string;
+  set: string;
+  /** The seats counted: `createdPlayedGames` and `createdNotPlayedGames`. */
+  games: number;
+  createdPlayedGames: number;
+  createdPlayedWinRate: number | null;
+  createdNotPlayedGames: number;
+  createdNotPlayedWinRate: number | null;
+  createdPlayedRadiantGames: number;
+  createdPlayedRadiantWinRate: number | null;
+  createdPlayedNormalGames: number;
+  createdPlayedNormalWinRate: number | null;
+  /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
+  createdPlayedDelta: number | null;
+  hasEnoughGames: boolean;
+  window: PublicCardWindow;
 };
 
 /** R654, R1367000: which records a window's figures count. */
@@ -1367,6 +1406,11 @@ export type PublicStatsCardsResponse = {
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
+  /**
+   * R2089000: the Created cards, tokens among them, under the same filters as `cards`: enough games
+   * first, then the most games, then by name. Absent from a response cached before them.
+   */
+  created?: PublicCreatedStat[];
   /**
    * R1973002: every patch the page can show, newest first: the window the cards share, its versions
    * oldest first (its figures are asked for at the last), its games and its live games. Absent from

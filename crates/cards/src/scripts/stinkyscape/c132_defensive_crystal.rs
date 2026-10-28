@@ -71,6 +71,21 @@ mod tests {
             let ship = dormant_starship_of(s.state(), PlayerId::P1).cloned();
             assert!(ship.is_some(), "a piece that died fuses a copy into a Dormant Starship");
         }
+
+        #[test]
+        fn hero_armor_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let armor = crate::upgrade_number(&mut s, CRYSTAL, "heroArmor");
+            let me = s.card(CRYSTAL).clone();
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+
+            assert_eq!(armor_of(&s, PlayerId::P1), armor);
+        }
     }
 
     mod radiant {

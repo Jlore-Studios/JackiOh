@@ -64,9 +64,8 @@ mod tests {
     }
 
     /// p1's Starship (two Startos, 6/6), launched if `launch`, with 2 damage on it; p1's hero at 20, a
-    /// Mr. Vanilla of p1's in lane 3 and the Doctrine (Radiant if `radiant`) in hand. The hero's health
-    /// after the Doctrine.
-    fn healed(seed: &str, radiant: bool, launch: bool) -> (Scenario, i32) {
+    /// Mr. Vanilla of p1's in lane 3 and the Doctrine (Radiant if `radiant`) in hand, not yet cast.
+    fn board(seed: &str, radiant: bool, launch: bool) -> Scenario {
         let (mut s, ship) = built_starship(
             seed,
             json!([{ "def": STARTOS, "lane": 1 }, { "def": STARTOS, "lane": 2 }]),
@@ -82,6 +81,12 @@ mod tests {
             s.card_mut(ship.as_str()).damage = 2;
         }
         s.state_mut().players.p1.mana.current = 10;
+        s
+    }
+
+    /// `board`, then the Doctrine cast; the hero's health after it.
+    fn healed(seed: &str, radiant: bool, launch: bool) -> (Scenario, i32) {
+        let mut s = board(seed, radiant, launch);
         s.play(ID, json!({}));
         let health = s.state().players.p1.hero.health;
         (s, health)
@@ -98,6 +103,14 @@ mod tests {
     fn r1859009_radiant_five_times_past_the_starting_health() {
         let (_s, health) = healed("r1859009-sea-radiant", true, true);
         assert_eq!(health, 20 + 5 * (6 - 2));
+    }
+
+    #[test]
+    fn multiplier_reads_through_param() {
+        let mut s = board("sea-param", false, true);
+        let multiplier = crate::upgrade_number(&mut s, ID, "multiplier");
+        s.play(ID, json!({}));
+        assert_eq!(s.state().players.p1.hero.health, 20 + multiplier * (6 - 2));
     }
 
     #[test]
