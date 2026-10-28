@@ -363,6 +363,8 @@
    on a phone. Masked, so it takes the text colour. */
 .pile::before {
   content: "";
+  /* In the row whatever index.css's hit area says (R2122000); a browsable pile's band is its ::after (inspectable.css). */
+  position: static;
   flex: 0 0 auto;
   width: 13px;
   height: 13px;
@@ -1431,6 +1433,12 @@
   box-shadow:
     0 0 0 1px var(--legal),
     0 1px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
+}
+
+/* The switch's box is its whole target, short of the tile's middle (the card's), so index.css's
+   hit area (R2122000) draws nothing round it. */
+.board .zone > .switch-button::before {
+  content: none;
 }
 
 /* A switch that cannot be pressed (every enemy unit's, and yours while switching is not legal)
