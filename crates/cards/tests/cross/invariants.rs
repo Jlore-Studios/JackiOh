@@ -1775,6 +1775,42 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R12, R636: a steal keeps a card on the field with the keywords it drew, so a Drone Corvette
+    /// summoned, attacking twice, stolen and attacking twice more for its new controller, then
+    /// bounced, all inside one AI turn, attacked legally (handicapped fuzz seed 1358 of the release).
+    #[test]
+    fn r636_r12_a_keyword_drawing_token_stolen_inside_the_action_keeps_what_it_drew() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let gone = "c-gone";
+        let declared = |target: &str| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": gone, "targetId": target, "forced": false }),
+            )
+        };
+        let summoned = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": gone, "defId": DRONE_CORVETTE, "row": "units", "lane": 3,
+        }));
+        let stolen = event(json!({
+            "type": "controlChanged", "instanceId": gone, "controller": "p2", "row": "units", "lane": 2, "how": "steal",
+        }));
+        assert_eq!(
+            monitor.after(
+                &[
+                    summoned,
+                    declared("hero-p2"),
+                    declared("hero-p2"),
+                    stolen,
+                    declared("hero-p1"),
+                    declared("hero-p1")
+                ],
+                g.state()
+            ),
+            no_violations()
+        );
+    }
+
     #[test]
     fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
         let g = scenario(json!({

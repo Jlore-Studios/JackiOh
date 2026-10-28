@@ -1550,6 +1550,9 @@ pub struct InvariantMonitor {
     /// the autopilot plays a whole turn in one action (R1183002; fuzz seeds 5325, 6431, 9388, and 6732
     /// and 7295 of the handicapped wave, #1216).
     carried_windfury: IndexSet<String>,
+    /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
+    /// change of control keeps (the card stays on the field).
+    drawn_windfury: IndexSet<String>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -1591,6 +1594,7 @@ impl InvariantMonitor {
             last_attack: IndexMap::new(),
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             kill_credits: IndexMap::new(),
@@ -1636,6 +1640,7 @@ impl InvariantMonitor {
         if draws {
             let stint = self.stint_of(id);
             self.windfury.insert(id.to_string(), stint);
+            self.drawn_windfury.insert(id.to_string());
         }
     }
 
@@ -2118,6 +2123,15 @@ impl InvariantMonitor {
                     self.note_entry_windfury(instance_id, state);
                     if let GameEvent::Summoned { def_id, .. } = event {
                         self.note_drawn_windfury(instance_id, def_id, state);
+                    }
+                    // R12, R781004: a steal keeps the card on the field, its drawn keywords with it
+                    // (a Drone Corvette summoned, stolen and bounced inside one AI turn: handicapped
+                    // fuzz seed 1358).
+                    if matches!(event, GameEvent::ControlChanged { .. })
+                        && self.drawn_windfury.contains(instance_id)
+                    {
+                        let stint = self.stint_of(instance_id);
+                        self.windfury.insert(instance_id.clone(), stint);
                     }
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
