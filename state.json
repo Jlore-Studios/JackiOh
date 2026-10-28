@@ -6956,6 +6956,13 @@
     "2251": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T17:41:46Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule line 7 fails (the economy e2e spec must change) and the item is visual polish, which is never easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
