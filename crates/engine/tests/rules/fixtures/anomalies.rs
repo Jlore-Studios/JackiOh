@@ -29,6 +29,8 @@ pub const MODE_TWO: i32 = 2;
 pub const MODE_THREE: i32 = 3;
 /// The lucky probe's printed Lucky.
 pub const PROBE_LUCKY: i32 = 30;
+/// What the flier's Cry deals the enemy hero.
+pub const FLIER_DAMAGE: i32 = 6;
 
 fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (face, radiant) = match stats {
@@ -134,6 +136,22 @@ pub static planner: LazyLock<CardDef> =
     LazyLock::new(|| card(18605, "planner", "Unit", Some((1, 3)), json!([])));
 /// A Spell: the planner in lane 1.
 pub static scheme: LazyLock<CardDef> = LazyLock::new(|| card(18606, "scheme", "Spell", None, json!([])));
+/// A 1/1 Unit with Flying: "Cry: deal 6 to the enemy hero".
+pub static flier: LazyLock<CardDef> = LazyLock::new(|| {
+    card(
+        18607,
+        "flier",
+        "Unit",
+        Some((1, 1)),
+        json!([{ "kind": "Flying" }]),
+    )
+});
+/// A Spell: the flier in backrow 1, the grunt (no Flying) in backrow 2 and a Radiant flier in
+/// Defense Position in backrow 3 (R1879001).
+pub static hangar: LazyLock<CardDef> = LazyLock::new(|| card(18608, "hangar", "Spell", None, json!([])));
+/// A Spell: a pile in unit zone 2, the wall at the bottom and the grunt on top, and the grunt alone
+/// in unit zone 4 though it is named as a pile's (R1879002).
+pub static fleet: LazyLock<CardDef> = LazyLock::new(|| card(18609, "fleet", "Spell", None, json!([])));
 
 /// A Spell whose Cry replaces its caster's board with `board`.
 fn anomaly_script(board: Value) -> CardScripts {
@@ -355,6 +373,34 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             anomaly_script(json!([entry(&planner, "units", 1, json!({}))])),
         ),
         (
+            flier.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| vec![to_enemy_hero(FLIER_DAMAGE)])),
+                ..Script::default()
+            }),
+        ),
+        (
+            hangar.id.clone(),
+            anomaly_script(json!([
+                entry(&flier, "backrow", 1, json!({})),
+                entry(&grunt, "backrow", 2, json!({})),
+                entry(
+                    &flier,
+                    "backrow",
+                    3,
+                    json!({ "radiant": true, "position": "DEF" })
+                ),
+            ])),
+        ),
+        (
+            fleet.id.clone(),
+            anomaly_script(json!([
+                entry(&wall, "units", 2, json!({})),
+                entry(&grunt, "units", 2, json!({ "stack": true })),
+                entry(&grunt, "units", 4, json!({ "stack": true })),
+            ])),
+        ),
+        (
             welcome.id.clone(),
             anomaly_script(json!([
                 entry(&greeter, "units", 1, json!({})),
@@ -393,6 +439,9 @@ pub static AN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         parley.clone(),
         planner.clone(),
         scheme.clone(),
+        flier.clone(),
+        hangar.clone(),
+        fleet.clone(),
     ]
 });
 

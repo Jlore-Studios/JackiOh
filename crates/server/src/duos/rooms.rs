@@ -59,7 +59,7 @@ use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
-use crate::seats::Seat;
+use crate::seats::{Seat, Taken};
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -286,6 +286,130 @@ pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     })))
 }
 
+/// What a co-op match starts from: the two people's seats and choices (a1's is the host's),
+/// the AI team's tier, and — for a room's join alone — the room to claim and the seed it held. Play
+/// again (R2092000, `duos::again`) starts with no room to claim and no seed to keep, so the match
+/// is dealt from a fresh one.
+pub(crate) struct CoopStart<'a> {
+    pub match_id: String,
+    pub a1: &'a str,
+    pub a2: &'a str,
+    pub host_choice: &'a DuosChoice,
+    pub guest_choice: &'a DuosChoice,
+    pub difficulty: Difficulty,
+    pub seed: Option<String>,
+    pub claim_room: Option<String>,
+}
+
+/// What `start_coop_match`'s transaction found. `Blocked` and `Unavailable` are the room claim's:
+/// only a join, which claims one, ever answers them.
+pub(crate) enum CoopStartOutcome {
+    Started,
+    Blocked,
+    Unavailable,
+}
+
+/// Starts one co-op match for `a1` and `a2` (the host stays a1, §13.9), dealing and beginning it
+/// under the running catalog exactly as the room's join does, and called by it and by Play again
+/// (R2092000): one function, so the two doors cannot drift apart.
+///
+/// In order: the running catalog is pinned (R767000); the seed is the start's or a fresh one; the
+/// match is dealt and begun under `catch_unwind`, before anything is written, so a setup the
+/// engine refuses leaves nothing behind; both people's seats are reserved in the seat ledger
+/// (R1523000), refused through `busy`; and one transaction fences on the ledger's epoch, claims the
+/// room when there is one (its loser writes nothing), writes the match row and cancels both
+/// people's open tickets. The actor starts only after the commit.
+pub(crate) async fn start_coop_match(
+    app: &Arc<App>,
+    start: CoopStart<'_>,
+    busy: impl FnOnce(Taken) -> ApiError,
+) -> Result<CoopStartOutcome, ApiError> {
+    // Everything the match is created with is settled, and the engine has begun it, before anything is
+    // written: a setup the engine refuses leaves the room open and nothing behind. The match is
+    // pinned to the running catalog (R767000).
+    let catalog_version = app.catalog.version.clone();
+    let pinned = Pinned::of(&catalog_version).map_err(|reason| {
+        ApiError::internal(format!(
+            "the running catalog {catalog_version} cannot be played: {reason}"
+        ))
+    })?;
+    // R1523000: both people's seats, or neither, before anything is written. A seat that holds a
+    // game meets `busy`'s refusal (R1065000); a rival door that reserved either first wins, and this
+    // one writes nothing.
+    let lease = app
+        .seats
+        .reserve(&[start.a1, start.a2], Seat::Duos(start.match_id.clone()))
+        .map_err(busy)?;
+    let seed = start.seed.unwrap_or_else(new_seed);
+    let options = catch_unwind(AssertUnwindSafe(|| {
+        engine::match_options(
+            pinned,
+            &catalog_version,
+            &seed,
+            start.difficulty,
+            start.host_choice,
+            start.guest_choice,
+        )
+    }))
+    .map_err(|payload| ApiError::internal(panic_text(payload)))?;
+    let now = now_ms();
+    let row = DuosMatch {
+        id: start.match_id.clone(),
+        seed,
+        a1: start.a1.to_string(),
+        a2: start.a2.to_string(),
+        difficulty: start.difficulty,
+        options,
+        created_at: now,
+        ended_at: None,
+        result: None,
+    };
+    let state = catch_unwind(AssertUnwindSafe(|| {
+        engine::create_and_begin(pinned, &engine::create_options(&row))
+    }))
+    .map_err(|payload| ApiError::internal(panic_text(payload)))?
+    .map_err(ApiError::internal)?;
+
+    // The room's single claim (B33) and the match row, in one transaction: the loser of a race
+    // writes nothing, and so does a claim a newer server's epoch has fenced (R1523000, answered
+    // 503). A start with no room to claim (Play again) writes the row alone. Either way the same
+    // transaction cancels both people's open tickets (R1065000).
+    let outcome = one_tx!(app.db, |t| {
+        t.seats_fence(app.seats.epoch()).await?;
+        if let Some(code) = start.claim_room.as_deref() {
+            match t
+                .duos_rooms_claim(code, start.a2, start.guest_choice, &start.match_id, now)
+                .await?
+            {
+                DuosRoomClaimOutcome::Claimed(_) => {}
+                // `return` leaves through the macro's async block before its commit, so nothing is
+                // written; the caller commits the lease only on `Started`.
+                DuosRoomClaimOutcome::Blocked => return Ok(CoopStartOutcome::Blocked),
+                DuosRoomClaimOutcome::Unavailable => return Ok(CoopStartOutcome::Unavailable),
+            }
+        }
+        t.duos_matches_create(&row).await?;
+        for profile_id in [&row.a1, &row.a2] {
+            if let Some(stale) = t.tickets_open_for_profile(profile_id).await? {
+                t.tickets_cancel(&stale.id, now).await?;
+            }
+        }
+        CoopStartOutcome::Started
+    })?;
+    match outcome {
+        CoopStartOutcome::Started => {
+            // R1523000: the record holds the match now, so the ledger holds both seats until its
+            // ending.
+            lease.commit();
+            registry(app).start(app, row, state, pinned);
+        }
+        // The claim lost: the transaction wrote nothing, and the lease drops here, giving its
+        // seats back. The caller answers the room's refusals.
+        CoopStartOutcome::Blocked | CoopStartOutcome::Unavailable => {}
+    }
+    Ok(outcome)
+}
+
 /// `POST /api/duos/rooms/:code/join` (B33): claims the room and starts the match, `200 { matchId }`.
 /// A room already joined is `409 full`; the host's own room `409 own_room`.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
@@ -317,89 +441,37 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     assert_free_to_play(app, &profile.id).await?;
     let guest_choice = freeze(app, &profile.id, &choice).await?;
 
-    // Everything the match is created with is settled, and the engine has begun it, before anything is
-    // written: a setup the engine refuses leaves the room open and nothing behind. The match is
-    // pinned to the running catalog (R767000).
-    let catalog_version = app.catalog.version.clone();
-    let pinned = Pinned::of(&catalog_version).map_err(|reason| {
-        ApiError::internal(format!(
-            "the running catalog {catalog_version} cannot be played: {reason}"
-        ))
-    })?;
     let match_id = new_uuid();
-    // R1523000: the guest's seat and the host's, or neither, before anything is written. A guest
-    // who holds a game meets the refusal `assert_free_to_play` answers, and a host who holds one
-    // the host's (R1065000); a rival door that reserved either first wins, and this one writes
-    // nothing.
-    let lease = app
-        .seats
-        .reserve(&[&profile.id, &room.host], Seat::Duos(match_id.clone()))
-        .map_err(|taken| {
+    let outcome = start_coop_match(
+        app,
+        CoopStart {
+            match_id: match_id.clone(),
+            a1: &room.host,
+            a2: &profile.id,
+            host_choice: &room.host_choice,
+            guest_choice: &guest_choice,
+            difficulty: room.difficulty,
+            seed: take_seed(&room.code, joiner_seed),
+            claim_room: Some(room.code.clone()),
+        },
+        |taken| {
+            // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers,
+            // and a host who holds one the host's (R1065000).
             if taken.profile == profile.id {
                 in_game(&taken.seat)
             } else {
                 host_busy()
             }
-        })?;
-    let seed = take_seed(&room.code, joiner_seed).unwrap_or_else(new_seed);
-    let options = catch_unwind(AssertUnwindSafe(|| {
-        engine::match_options(
-            pinned,
-            &catalog_version,
-            &seed,
-            room.difficulty,
-            &room.host_choice,
-            &guest_choice,
-        )
-    }))
-    .map_err(|payload| ApiError::internal(panic_text(payload)))?;
-    let now = now_ms();
-    let row = DuosMatch {
-        id: match_id.clone(),
-        seed,
-        a1: room.host.clone(),
-        a2: profile.id.clone(),
-        difficulty: room.difficulty,
-        options,
-        created_at: now,
-        ended_at: None,
-        result: None,
-    };
-    let state = catch_unwind(AssertUnwindSafe(|| {
-        engine::create_and_begin(pinned, &engine::create_options(&row))
-    }))
-    .map_err(|payload| ApiError::internal(panic_text(payload)))?
-    .map_err(ApiError::internal)?;
-
-    // B33's single claim and the match row, in one transaction: the loser of a race writes nothing,
-    // and so does a claim a newer server's epoch has fenced (R1523000, answered 503).
-    let claim = one_tx!(app.db, |t| {
-        t.seats_fence(app.seats.epoch()).await?;
-        let claim = t
-            .duos_rooms_claim(&room.code, &profile.id, &guest_choice, &match_id, now)
-            .await?;
-        if matches!(&claim, DuosRoomClaimOutcome::Claimed(_)) {
-            t.duos_matches_create(&row).await?;
-            // R1065000: a player in a co-op match is in no queue, as one in a series is: a ticket
-            // left open would let the sweep pair them while the match lasts.
-            for profile_id in [&row.a1, &row.a2] {
-                if let Some(stale) = t.tickets_open_for_profile(profile_id).await? {
-                    t.tickets_cancel(&stale.id, now).await?;
-                }
-            }
-        }
-        claim
-    })?;
-    match claim {
-        DuosRoomClaimOutcome::Claimed(_) => {}
-        DuosRoomClaimOutcome::Blocked => return Err(not_open()),
-        DuosRoomClaimOutcome::Unavailable => {
+        },
+    )
+    .await?;
+    match outcome {
+        CoopStartOutcome::Started => {}
+        CoopStartOutcome::Blocked => return Err(not_open()),
+        CoopStartOutcome::Unavailable => {
             return Ok(refusal(409, "full", "someone already joined that room"));
         }
     }
-    // R1523000: the record holds the match now, so the ledger holds both seats until its ending.
-    lease.commit();
-    registry(app).start(app, row, state, pinned);
     tracing::info!(
         event = "duos.room.joined",
         code = %room.code,

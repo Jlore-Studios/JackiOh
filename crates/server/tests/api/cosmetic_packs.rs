@@ -1271,18 +1271,30 @@ async fn r1833000_a_full_shard_bar_buys_a_new_chase_and_the_openings_replay() {
     assert_eq!(pack.shard_bar.points, CHASE_SHARD_PACKS);
     assert_replays(&app, &before_ledger, &before_holdings, &pack).await;
 
-    // The full bar buys #1833's Mythic playmat, on the account, and empties.
-    assert!(!owns_cosmetic(&app, None, "table-astral").await);
+    // The full bar buys one of #1833's chases on the account, and empties. The route's seed is
+    // fresh, so the opening can drop a Mythic: the chase bought is the first the account lacks.
+    let held = holdings(&app).await;
+    let chase = shipped()
+        .expect("the shipped registry")
+        .into_iter()
+        .find(|cosmetic| {
+            cosmetic.chase
+                && !cosmetic.starter
+                && !cosmetic.kind.is_per_card()
+                && !held.account_cosmetics.contains(&cosmetic.id)
+        })
+        .expect("a chase the account lacks")
+        .id;
     let (status, _, answer) = call(
         &app,
         "POST",
         "/api/cosmetic-packs/chase",
         Some(&token),
-        json!({ "cosmeticId": "table-astral" }),
+        json!({ "cosmeticId": chase }),
     )
     .await;
     assert_eq!(status, 200, "{answer}");
-    assert!(owns_cosmetic(&app, None, "table-astral").await);
+    assert!(owns_cosmetic(&app, None, &chase).await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
     let bought: Vec<_> = ledger(&app)
         .await
@@ -1293,7 +1305,7 @@ async fn r1833000_a_full_shard_bar_buys_a_new_chase_and_the_openings_replay() {
     assert_eq!(bought.len(), 1);
     assert_eq!(
         (bought[0].card_id.as_deref(), bought[0].cosmetic_id.as_str()),
-        (None, "table-astral")
+        (None, chase.as_str())
     );
 }
 

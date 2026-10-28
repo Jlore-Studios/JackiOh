@@ -56,10 +56,10 @@ class LaneTests(unittest.TestCase):
     def test_an_easy_build_still_avoids_its_planner(self):
         """An easy item goes weak-first even when its medium planner is free (#725): the
         planner must not spend its lane on weak work."""
-        pool = make_config(machine=("muse", "devin")).pool
-        muse, devin = pool.get("muse"), pool.get("devin")
-        seat, _note = plan_mod.builder_seat(pool, [muse, devin], "easy", avoid="muse")
-        self.assertEqual(seat.provider.id, "devin")
+        pool = make_config(machine=("muse", "lite")).pool
+        muse, lite = pool.get("muse"), pool.get("lite")
+        seat, _note = plan_mod.builder_seat(pool, [muse, lite], "easy", avoid="muse")
+        self.assertEqual(seat.provider.id, "lite")
 
     def test_a_revision_answering_an_audit_stays_at_its_tier(self):
         """A revision that answers a final audit stays at the auditor's tier or above (#725),
@@ -73,12 +73,13 @@ class LaneTests(unittest.TestCase):
         seat, _note = plan_mod.builder_seat(pool, [muse, agy], "easy", audit_tier="medium")
         self.assertEqual(seat.tier, "medium")
 
-    def test_an_easy_build_tries_devin_before_gpt(self):
-        # Devin is the one weak model; Codex has been medium since 2026-10-20.
-        pool = make_config(machine=("muse", "devin")).pool
-        gpt, devin = pool.get("gpt"), pool.get("devin")
-        seat, _note = plan_mod.builder_seat(pool, [gpt, devin], "easy")
-        self.assertEqual(seat.provider.id, "devin")
+    def test_an_easy_build_tries_the_weak_one_before_gpt(self):
+        # The tests' weak subscription is the one weak model; Codex has been medium since
+        # 2026-10-20.
+        pool = make_config(machine=("muse", "lite")).pool
+        gpt, lite = pool.get("gpt"), pool.get("lite")
+        seat, _note = plan_mod.builder_seat(pool, [gpt, lite], "easy")
+        self.assertEqual(seat.provider.id, "lite")
 
     def test_a_hard_build_takes_a_strong_seat(self):
         pool = make_config().pool

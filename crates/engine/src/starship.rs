@@ -51,6 +51,13 @@ pub const STARSHIP_LAUNCH_ABILITY: &str = "launch";
 /// its keywords as it stood (printed, granted or lent, read through the layers before it moved) and it
 /// was face-up, a face-down card having no text in force (R1487000).
 pub fn dies_as_piece(state: &GameState, card: &CardInstance) -> bool {
+    is_starship_piece(state, card)
+}
+
+/// R1852000, R1859003: whether a card is a Starship Piece now — the keyword among its keywords
+/// (printed, granted or lent, through the layers) on a face-up card; a face-down card has no text in
+/// force (R1487000), so a card set face-down is no piece played (#131 Spacerace Stimulus).
+pub fn is_starship_piece(state: &GameState, card: &CardInstance) -> bool {
     !crate::preview::is_face_down(state, card)
         && has_keyword(
             &crate::layers::unit_view(state, card).keywords,
@@ -134,6 +141,22 @@ pub fn launched_starship_of(state: &GameState, player: PlayerId) -> Option<&Card
         .map(|(_, card)| card)
 }
 
+/// R1859001: a fused piece's declared number `key`, read on the face it fused on. A fused card's
+/// `param` reads the face of the card it runs on (`ctx.radiant`, the Starship's), while a piece that
+/// fused Radiant runs its Radiant script (R469), so the script names its definition and the face it
+/// was built for; the tuning is the Starship's, as `param`'s is.
+pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radiant: bool, key: &str) -> i32 {
+    crate::params::param_value(
+        &*ctx.state,
+        ctx.live_self(),
+        key,
+        crate::params::ParamValueOptions {
+            def_id: Some(def_id.to_string()),
+            radiant: Some(radiant),
+        },
+    )
+}
+
 // ---------------------------------------------------------------------------------------------
 // A piece dies (R1852000–R1852002)
 // ---------------------------------------------------------------------------------------------
@@ -198,6 +221,7 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
                 source_id: None,
                 arrived_during: None,
                 exits_from: None,
+                creator: None,
             });
             return Some(id);
         }
@@ -258,6 +282,14 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
         def_id: snapshot.def_id.clone(),
         pieces,
     });
+}
+
+/// R1882008 (Stinkyscape #151's "fuse 4 random Starship Pieces into your Dormant Starship"): a fresh
+/// card of `def_id`, on its printed base face and owned by `player`, fuses into `player`'s Dormant
+/// Starship as a dead piece's copy does (`fuse_dead_piece`), summoning one first if they have none.
+pub fn fuse_fresh_piece(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str) {
+    let fresh = new_instance(sink.state, def_id, player, Zone::Gone { player });
+    fuse_dead_piece(sink, &fresh);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -390,9 +422,20 @@ pub fn launch(sink: &mut EngineSink<'_>, instance_id: &str) {
     }
 }
 
+/// R1852003: whether `event` is the launch of the card the trigger runs on.
+fn launches_self(ctx: &crate::script::EffectContext<'_>, event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::StarshipLaunched { instance_id, .. }
+            if ctx.self_.as_ref().is_some_and(|this| &this.id == instance_id)
+    )
+}
+
 /// §6.2 "When launched" (R1852003): the trigger a Starship Piece prints, answering the
 /// `starshipLaunched` of the Starship it is fused into and never another card's — so a piece's own
-/// "When launched" runs only as part of a Starship, after its fused Cries.
+/// "When launched" runs only as part of a Starship, after its fused Cries. The check is in `run`
+/// too: a trigger off the backrow is queued on its `on` alone (`when` is a trap's, R99), so a piece
+/// on the field, or a Starship launched before, would otherwise answer every later launch.
 pub fn when_launched(
     id: impl Into<String>,
     run: impl Fn(&mut crate::script::EffectContext<'_>, &GameEvent) -> Vec<crate::script::Effect>
@@ -400,13 +443,14 @@ pub fn when_launched(
     + Sync
     + 'static,
 ) -> TriggerDef {
-    TriggerDef::new(id, &[GameEventType::StarshipLaunched], run).with_when(|ctx, event| {
-        matches!(
-            event,
-            GameEvent::StarshipLaunched { instance_id, .. }
-                if ctx.self_.as_ref().is_some_and(|this| &this.id == instance_id)
-        )
+    TriggerDef::new(id, &[GameEventType::StarshipLaunched], move |ctx, event| {
+        if launches_self(ctx, event) {
+            run(ctx, event)
+        } else {
+            Vec::new()
+        }
     })
+    .with_when(|ctx, event| launches_self(ctx, event))
 }
 
 // ---------------------------------------------------------------------------------------------

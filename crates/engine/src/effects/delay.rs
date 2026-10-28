@@ -255,7 +255,12 @@ pub fn due_resume(entry: &DelayedEffect) -> Resume {
 /// not carried past the hook that read it; nor does it carry the run it was made in
 /// (`work.RUN_MARKS_KEY`): it resolves at its own R62 point, and a card it watches is watched through
 /// `watch` (R174). Nor are its choices random for being made in a run whose were (R1855001).
-fn delayed_resume(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, Value>, hook: &str) -> Resume {
+pub(crate) fn delayed_resume(
+    ctx: &EffectContext<'_>,
+    step: &str,
+    data: IndexMap<String, Value>,
+    hook: &str,
+) -> Resume {
     let mut built = resume_self(ctx, step, data);
     built.data.shift_remove(SELF_KEY);
     built.data.shift_remove(RUN_MARKS_KEY);
@@ -449,6 +454,31 @@ pub fn allure_enemy_units() -> Effect {
             let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), None);
             mark_delayed(ctx, &entry, &mark);
         }
+    })
+}
+
+/// R1876002 (Stinkyscape #37 Kwzka's Death): "Remove every Allure on the field" — every waiting
+/// Allure whose marked card is on the field, either side's and whoever made it, is withdrawn: its
+/// delayed steal is forgotten, so nothing is stolen, and its pink mark comes off at the next sweep
+/// (R437's `marked` event). An Allure aimed at a hand card (R1140) is not on the field and stays.
+pub fn remove_allures() -> Effect {
+    Effect::new("removeAllures", move |ctx| {
+        let state = &*ctx.state;
+        let withdrawn: Vec<String> = state
+            .marks
+            .iter()
+            .flatten()
+            .filter(|record| {
+                record.mark == ALLURE_MARK
+                    && find_instance(state, &record.instance_id)
+                        .is_some_and(|card| card.zone.z() == ZoneName::Field)
+            })
+            .map(|record| record.delayed_id.clone())
+            .collect();
+        if withdrawn.is_empty() {
+            return;
+        }
+        ctx.state.delayed.retain(|entry| !withdrawn.contains(&entry.id));
     })
 }
 
@@ -717,6 +747,9 @@ pub struct ForRestOfGameArgs {
     pub data: Option<IndexMap<String, Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R1861002: "at the end of each of your turns" instead of the start (Stinkyscape #39).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_end: Option<bool>,
 }
 
 /// B5 E28, R458 (Classic+ #52): "For the rest of the game: at the start of your turn, …". The card's
@@ -724,7 +757,9 @@ pub struct ForRestOfGameArgs {
 /// each of `player`'s turns from the next one on, in R62's delayed stage with the delayed effects, in
 /// creation order; several stack, each running once per turn. It is the player's effect now, not the
 /// card's: it resolves with no `self` whatever became of the card (R127), under the face it was made
-/// with, carrying `data`. `label` is its badge (R169), in the card's own words.
+/// with, carrying `data`. `label` is its badge (R169), in the card's own words. With `atEnd`
+/// (R1861002) it is re-entered at the end of each of `player`'s turns instead, this one included when
+/// it is made before that turn's end-of-turn stage begins.
 pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
     Effect::new("forRestOfGame", move |ctx| {
         let mut resume = delayed_resume(
@@ -735,7 +770,7 @@ pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
         );
         resume.instance_id = None;
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        add_start_of_turn_effect(ctx, player, resume, &args.label);
+        add_start_of_turn_effect(ctx, player, resume, &args.label, args.at_end == Some(true));
     })
 }
 

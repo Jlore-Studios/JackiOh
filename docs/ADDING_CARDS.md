@@ -54,7 +54,8 @@ Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) a
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
-  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
+  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
+  came early, with its look-and-sound part, issue #1883, R1883000, so its release owes none.)
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
   `tests/cross/catalog.rs`, R1857000). `docs/stinkyscape-set.md` says the rest (`docs/meditative-plus-set.md` MP3 and
@@ -146,7 +147,8 @@ with `use crate::<name>;`; use them rather than a copy: `scenario` (the shipped 
 `js` (an engine value as JSON, never `serde_json::to_value(…).expect(…)`), `merged` (TS `{ ...base, ...over }`: a
 side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(count)` (`count` Stockpiles, Core #5,
 for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
-`stand_in_backrow`, `give_flying`, `give_lucky`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
+`stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
+given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
 `can_degrade_number`. Take the engine testkit's `Scenario::unit_at` and `pick::…` the same way;
 `crates/tools/tests/acceptance.rs` refuses a copy (#1826). Keep a local helper only when its body differs.
 

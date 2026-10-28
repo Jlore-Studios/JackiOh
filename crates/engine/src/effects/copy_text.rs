@@ -67,6 +67,7 @@ pub fn copy_unit_text(args: CopyUnitTextArgs) -> Effect {
             to_def_id: copier.def_id.clone(),
             new_instance_id: copier.id.clone(),
             hidden_from: None,
+            creator: None,
         });
     })
 }

@@ -2,17 +2,19 @@
 //! the engine proves it with fixtures. These games are played with SPEC §10.7's policy, as the fuzz
 //! gate plays them, and checked against oracles it does not use:
 //!
-//!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
+//!  - the opening hands are the dealt cards the state holds once the mulligans resolve (p1's less its
 //!    first turn's draw and any card that turn's start added to a hand with no draw, and with any card
-//!    that turn's start discarded), and The Coin is in the second seat's;
+//!    that turn's start discarded); The Coin, Created (R943), is in none of them but is the second
+//!    seat's Created card (R2089000);
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
-//!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
-//!    plays out a turn inside an attack's action, and M+ #18 Cognitive Offloading's autopilot the rest
-//!    of its caster's turn inside the action that cast it (R1183002), with no `play` logged, so such a
-//!    game may hold more plays than the log names, never fewer;
-//!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
-//!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
+//!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); a dealt
+//!    card's play is in `played`, a Created card's in `createdPlayed` (R2089000), and a replacement is
+//!    Created; #96 My Pawn plays out a turn inside an attack's action, and M+ #18 Cognitive
+//!    Offloading's autopilot the rest of its caster's turn inside the action that cast it (R1183002),
+//!    with no `play` logged, so such a game may hold more plays than the log names, never fewer;
+//!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every dealt
+//!    card drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::deckable;
@@ -33,10 +35,12 @@ fn pool() -> Vec<String> {
     ids
 }
 
+/// The dealt cards of a hand: R2089000 leaves a Created card (R943) out of every opening hand.
 fn hand(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .hand
         .iter()
+        .filter(|card| card.created != Some(true))
         .map(|card| card.def_id.clone())
         .collect()
 }
@@ -52,6 +56,8 @@ struct Drawn {
     player: PlayerId,
     instance_id: String,
     def_id: String,
+    /// R943: a Created card shuffled in, which no `drawn` list holds (R2089000).
+    created: bool,
 }
 
 /// What `draws_kept` read off one step.
@@ -76,8 +82,14 @@ fn fate_instance_id(event: &GameEvent) -> Option<&str> {
 /// The cards a step drew into each hand from event `from` on, by what became of each `drawn` card:
 /// an `addedToHand` names it (it reached the hand), a `burned` does (R4), or it was cast on its draw
 /// (§2.4: its `cardPlayed`, or the `countered` or `transformed` that took its place, R448, R449). A
-/// cast's choices are asked before its announce, so a draw a prompt holds waits in `waiting`.
-fn draws_kept(events: &[GameEvent], from: usize, waiting: &mut Vec<Drawn>) -> DrawsKept {
+/// cast's choices are asked before its announce, so a draw a prompt holds waits in `waiting`. A
+/// Created card reaching the hand is kept by no seat (R2089000).
+fn draws_kept(
+    events: &[GameEvent],
+    from: usize,
+    waiting: &mut Vec<Drawn>,
+    created: &dyn Fn(&str) -> bool,
+) -> DrawsKept {
     let mut kept: PerPlayer<Vec<String>> = PerPlayer::new(Vec::new(), Vec::new());
     let mut burns = 0;
     let mut casts = 0;
@@ -93,6 +105,7 @@ fn draws_kept(events: &[GameEvent], from: usize, waiting: &mut Vec<Drawn>) -> Dr
                 player: *player,
                 instance_id: instance_id.clone(),
                 def_id: def_id.clone(),
+                created: created(instance_id),
             });
             continue;
         }
@@ -104,7 +117,8 @@ fn draws_kept(events: &[GameEvent], from: usize, waiting: &mut Vec<Drawn>) -> Dr
         };
         let drawn = waiting.remove(at);
         match event {
-            GameEvent::AddedToHand { .. } => kept[drawn.player].push(drawn.def_id),
+            GameEvent::AddedToHand { .. } if !drawn.created => kept[drawn.player].push(drawn.def_id),
+            GameEvent::AddedToHand { .. } => {}
             GameEvent::Burned { .. } => burns += 1,
             _ => casts += 1,
         }
@@ -131,6 +145,8 @@ struct Play {
     id: String,
     def_id: String,
     radiant: bool,
+    /// R943: the card is Created, so its play is in `createdPlayed`, not `played` (R2089000).
+    created: bool,
     placed: bool,
     open: bool,
     announced: bool,
@@ -162,6 +178,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut countered_plays = 0;
         let mut replaced_plays = 0;
         let mut radiant_plays = 0;
+        let mut created_plays = 0;
 
         for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
@@ -202,6 +219,7 @@ mod summarize_game_over_real_cards_s9_11 {
                         id: card.id.clone(),
                         def_id: card.def_id.clone(),
                         radiant: card.radiant,
+                        created: card.created == Some(true),
                         placed: false,
                         open: true,
                         announced: false,
@@ -212,6 +230,13 @@ mod summarize_game_over_real_cards_s9_11 {
                     panic!("{seed}: {} refused: {error}", action.action_type());
                 }
                 let events: &[GameEvent] = &result.events;
+                // R943: whether a card is Created, as the step left it or found it. A card in neither
+                // was made and gone within the step: the deal put every dealt card in the state.
+                let created = |id: &str| {
+                    find_instance(&result.state, id)
+                        .or_else(|| find_instance(&state, id))
+                        .is_none_or(|card| card.created == Some(true))
+                };
                 for event in events {
                     match event {
                         GameEvent::CardAnnounced { instance_id, .. } => {
@@ -232,6 +257,8 @@ mod summarize_game_over_real_cards_s9_11 {
                                 plays[seat][at].def_id = to_def_id.clone();
                                 plays[seat][at].radiant =
                                     find_instance(&result.state, new_instance_id).is_some_and(|c| c.radiant);
+                                // R943: the card a replacement puts in the play's place is Created.
+                                plays[seat][at].created = true;
                                 replaced_plays += 1;
                             }
                         }
@@ -272,6 +299,7 @@ mod summarize_game_over_real_cards_s9_11 {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
                                     radiant: card.radiant,
+                                    created: card.created == Some(true),
                                     placed: true,
                                     open: false,
                                     announced: true,
@@ -358,7 +386,7 @@ mod summarize_game_over_real_cards_s9_11 {
                         .position(|event| matches!(event, GameEvent::TurnStarted { .. }))
                 };
                 if let Some(from) = from {
-                    let step = draws_kept(events, from, &mut waiting);
+                    let step = draws_kept(events, from, &mut waiting, &created);
                     if !begun
                         && state.phase == Phase::Mulligan
                         && result.state.phase != Phase::Mulligan
@@ -393,6 +421,7 @@ mod summarize_game_over_real_cards_s9_11 {
                                 owner,
                             } = event
                                 && !drawn_here.contains(&instance_id)
+                                && !created(instance_id)
                             {
                                 match owner {
                                     PlayerId::P1 => p1.push(def_id.clone()),
@@ -409,8 +438,10 @@ mod summarize_game_over_real_cards_s9_11 {
                                 player,
                                 instance_id,
                                 def_id,
+                                ..
                             } = event
                                 && !drawn_here.contains(&instance_id)
+                                && !created(instance_id)
                                 && result.state.players[*player]
                                     .hand
                                     .iter()
@@ -464,13 +495,21 @@ mod summarize_game_over_real_cards_s9_11 {
                 assert_eq!(sorted(&summary.seats.p1.opening), sorted(&opening.p1), "{seed}");
                 assert_eq!(sorted(&summary.seats.p2.opening), sorted(&opening.p2), "{seed}");
             }
-            // §2.1, R244: The Coin goes to the seat going second, after its mulligan.
+            // §2.1, R244: The Coin goes to the seat going second, after its mulligan. R2089000: it is
+            // Created, so it is in no opening hand, and it is that seat's Created card, used or not.
+            for player in PLAYER_IDS {
+                assert!(
+                    !summary.seats[player].opening.iter().any(|id| id == COIN_DEF_ID),
+                    "{seed}"
+                );
+            }
+            let p2 = &summary.seats.p2;
             assert!(
-                summary.seats.p2.opening.iter().any(|id| id == COIN_DEF_ID),
-                "{seed}"
-            );
-            assert!(
-                !summary.seats.p1.opening.iter().any(|id| id == COIN_DEF_ID),
+                p2.created_used
+                    .iter()
+                    .flatten()
+                    .any(|used| used.card == COIN_DEF_ID)
+                    || p2.created_unused.iter().flatten().any(|id| id == COIN_DEF_ID),
                 "{seed}"
             );
 
@@ -481,21 +520,50 @@ mod summarize_game_over_real_cards_s9_11 {
                     "{seed} {}",
                     player.as_str()
                 );
-                let played = &summary.seats[player].played;
-                let logged: Vec<String> = plays[player].iter().map(|play| play.def_id.clone()).collect();
+                let seat = &summary.seats[player];
+                // R2089000: the dealt cards' plays in `played`, the Created cards' in `createdPlayed`.
+                let (made, dealt): (Vec<&Play>, Vec<&Play>) =
+                    plays[player].iter().partition(|play| play.created);
+                let logged: Vec<String> = dealt.iter().map(|play| play.def_id.clone()).collect();
+                let logged_made: Vec<String> = made.iter().map(|play| play.def_id.clone()).collect();
+                let created_played: Vec<String> = seat
+                    .created_played
+                    .iter()
+                    .flatten()
+                    .map(|play| play.card.clone())
+                    .collect();
                 if pawn {
-                    assert!(subsequence(&logged, played), "{seed} {}", player.as_str());
+                    assert!(subsequence(&logged, &seat.played), "{seed} {}", player.as_str());
+                    assert!(
+                        subsequence(&logged_made, &created_played),
+                        "{seed} {}",
+                        player.as_str()
+                    );
                 } else {
-                    assert_eq!(*played, logged, "{seed} {}", player.as_str());
-                    let expected_radiant: Vec<bool> = plays[player].iter().map(|play| play.radiant).collect();
+                    assert_eq!(seat.played, logged, "{seed} {}", player.as_str());
+                    let expected_radiant: Vec<bool> = dealt.iter().map(|play| play.radiant).collect();
                     assert_eq!(
-                        summary.seats[player].played_radiant.clone().unwrap_or_default(),
+                        seat.played_radiant.clone().unwrap_or_default(),
                         expected_radiant,
                         "{seed} {}",
                         player.as_str()
                     );
                     radiant_plays += expected_radiant.iter().filter(|&&r| r).count();
+                    assert_eq!(created_played, logged_made, "{seed} {}", player.as_str());
+                    let made_radiant: Vec<bool> = seat
+                        .created_played
+                        .iter()
+                        .flatten()
+                        .map(|play| play.radiant)
+                        .collect();
+                    assert_eq!(
+                        made_radiant,
+                        made.iter().map(|play| play.radiant).collect::<Vec<bool>>(),
+                        "{seed} {}",
+                        player.as_str()
+                    );
                 }
+                created_plays += made.len();
             }
             if pawn {
                 pawn_games += 1;
@@ -511,6 +579,7 @@ mod summarize_game_over_real_cards_s9_11 {
         assert!(draw_casts > 0);
         assert!(burns > 0);
         assert!(radiant_plays > 0);
+        assert!(created_plays > 0);
         assert!(pawn_games < GAMES / 2);
     }
 }
@@ -640,7 +709,14 @@ mod r831001_a_stolen_cast_is_no_play {
         };
         // p1's play was countered, so it is none (R448); p2 cast it, which is no play either.
         assert!(summary.seats.p1.played.is_empty());
-        assert_eq!(summary.seats.p2.played, [COIN_DEF_ID, PALANTIR]);
+        // R2089000: The Coin is Created, so p2's play of it is its Created card's use, not a deck play.
+        assert_eq!(summary.seats.p2.played, [PALANTIR]);
+        let cards = |uses: &Option<Vec<CreatedUse>>| -> Vec<String> {
+            uses.iter().flatten().map(|used| used.card.clone()).collect()
+        };
+        assert_eq!(cards(&summary.seats.p2.created_used), [COIN_DEF_ID]);
+        assert_eq!(cards(&summary.seats.p2.created_played), [COIN_DEF_ID]);
+        assert_eq!(summary.seats.p1.created_used, None);
     }
 }
 
@@ -977,5 +1053,385 @@ mod r1256000_per_seat_counts {
         assert_eq!(summary.seats.p1.traps_fired, Some(0));
         assert_eq!(summary.seats.p1.position_switches, Some(0));
         zeros(&summary.seats.p2);
+    }
+}
+
+/// R2089000: the Created cards (R943) a game's record credits to the seat that made them, read off
+/// `scenario()` steps through `SummaryReader`, the reader `summarize_game` folds a log with, and off
+/// recorded games by `summarize_game` itself.
+mod r2089000_created_cards {
+    use super::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const VANILLA: &str = "core-008"; // (1) Unit with no text.
+    const DUPLICATING: &str = "core-012"; // (2) Unit, Cry: Summon a copy of this.
+    const TOKEN_MAKER: &str = "core-015"; // (1) Unit, Cry: Summon a Rush Token.
+    const RUSH_TOKEN: &str = "core-t-rush";
+    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
+    const RECYCLING: &str = "core-039"; // (0) Spell, end of turn: copies of the cards played go to the hand.
+    const SHADE_IRIS: &str = "meditative-028"; // (2) Unit, Cry: Ancient Curses into the opponent's deck.
+    const CURSE: &str = "meditative-028-1"; // Spell token, Cast on draw: take damage.
+    const FATE: &str = "meditative-026"; // (4) Field Spell, end of turn: a Mana Well into every empty backrow.
+    const WELL: &str = "core-006";
+
+    /// One scenario step, read by the reader as `summarize_game` reads a logged action.
+    fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
+        let before = s.state().clone();
+        let from = s.events().len();
+        verb(s);
+        reader.step(&before, &s.events()[from..], s.state());
+    }
+
+    fn used(card: &str, turn: i32, radiant: bool) -> CreatedUse {
+        CreatedUse {
+            card: card.to_string(),
+            turn,
+            radiant,
+        }
+    }
+
+    fn cards(uses: &Option<Vec<CreatedUse>>) -> Vec<String> {
+        uses.iter().flatten().map(|used| used.card.clone()).collect()
+    }
+
+    fn created_in_hand(s: &Scenario, player: PlayerId, def_id: &str) -> CardInstance {
+        s.hand(player)
+            .into_iter()
+            .find(|card| card.def_id == def_id && card.created == Some(true))
+            .unwrap_or_else(|| panic!("a Created {def_id} in {}'s hand", player.as_str()))
+    }
+
+    #[test]
+    fn r2089000_a_token_an_effect_summons_is_its_creator_s_used_card() {
+        register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [TOKEN_MAKER] } }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+
+        step(&mut reader, &mut s, |s| {
+            s.play(TOKEN_MAKER, json!({}));
+        });
+
+        let p1 = reader.seat(P1, vec![TOKEN_MAKER.to_string()]);
+        // The dealt card is a play from the hand; the token it summoned never was in a hand.
+        assert_eq!(p1.played, [TOKEN_MAKER]);
+        assert_eq!(p1.created_used, Some(vec![used(RUSH_TOKEN, turn, false)]));
+        assert_eq!(p1.created_played, None);
+        assert_eq!(p1.created_unused, None);
+        assert_eq!(reader.seat(P2, Vec::new()).created_used, None);
+    }
+
+    #[test]
+    fn r2089000_a_created_card_added_to_its_creator_s_hand_and_played_is_no_deck_play() {
+        register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [RECYCLING, VANILLA] } }));
+        let mut reader = SummaryReader::new(s.state());
+
+        step(&mut reader, &mut s, |s| {
+            s.play(RECYCLING, json!({}));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.play(VANILLA, json!({}));
+        });
+        // p1's end of turn adds a Created copy of the Vanilla to its hand, unused through p2's turn.
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        assert_eq!(
+            reader.seat(P1, Vec::new()).created_unused,
+            Some(vec![VANILLA.to_string()])
+        );
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        let copy = created_in_hand(&s, P1, VANILLA);
+        let turn = s.state().turn;
+        step(&mut reader, &mut s, |s| {
+            s.play(copy, json!({}));
+        });
+
+        let p1 = reader.seat(P1, vec![RECYCLING.to_string(), VANILLA.to_string()]);
+        assert_eq!(p1.played, [RECYCLING, VANILLA]);
+        assert_eq!(p1.played_radiant, Some(vec![false, false]));
+        assert_eq!(p1.created_used, Some(vec![used(VANILLA, turn, false)]));
+        assert_eq!(p1.created_played, Some(vec![used(VANILLA, turn, false)]));
+        assert_eq!(p1.created_unused, None);
+    }
+
+    #[test]
+    fn r2089000_a_created_copy_of_a_deck_card_leaves_the_deck_card_s_figures_unchanged() {
+        register_all();
+        // p1 holds a dealt Duplicating Felinors and a Radiant Created one, and plays the Created one,
+        // whose Cry summons a Created copy of itself.
+        let mut s = scenario(json!({
+            "p1": { "hand": [DUPLICATING, { "def": DUPLICATING, "created": true, "radiant": true }] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+        let made = created_in_hand(&s, P1, DUPLICATING);
+        step(&mut reader, &mut s, |s| {
+            s.play(made, json!({}));
+        });
+
+        let mut p1 = reader.seat(P1, vec![DUPLICATING.to_string()]);
+        assert!(p1.played.is_empty());
+        assert_eq!(p1.created_played, Some(vec![used(DUPLICATING, turn, true)]));
+        assert_eq!(cards(&p1.created_used), [DUPLICATING, DUPLICATING]);
+        assert_eq!(
+            p1.created_used.iter().flatten().next(),
+            Some(&used(DUPLICATING, turn, true))
+        );
+
+        // The dealt copy sat in the opening hand (the reader began after the deal) and was never
+        // played, so the deck's card is drawn but not played, whatever the Created ones did: its row
+        // is the row of the same record without the Created lists.
+        p1.opening = vec![DUPLICATING.to_string()];
+        let record = |p1: SeatSummary| GameRecord {
+            id: "r2089000-copy".to_string(),
+            patch: "v0.0.1".to_string(),
+            source: GameSource::Live,
+            mode: GameMode::Bo1,
+            pilots: PerPlayer::new(Pilot::Human, Pilot::Human),
+            game: GameSummary {
+                first: P1,
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath,
+                turns: turn,
+                seats: PerPlayer::new(p1, SeatSummary::default()),
+            },
+            build: None,
+        };
+        let dealt_only = SeatSummary {
+            created_used: None,
+            created_unused: None,
+            created_played: None,
+            ..p1.clone()
+        };
+        let report = card_stats(&[record(p1)], &DEFAULT_CARD_STATS_FILTER);
+        assert_eq!(
+            report.cards,
+            card_stats(&[record(dealt_only)], &DEFAULT_CARD_STATS_FILTER).cards
+        );
+        let [deck] = report.cards.as_slice() else {
+            panic!("one deck card: {:?}", report.cards);
+        };
+        assert_eq!(deck.card, DUPLICATING);
+        assert_eq!(deck.played.games, 0);
+        assert_eq!(deck.drawn_not_played.games, 1);
+        assert_eq!(deck.played_radiant.games, 0);
+        let [made] = report.created.as_slice() else {
+            panic!("one Created card: {:?}", report.created);
+        };
+        assert_eq!(made.card, DUPLICATING);
+        assert_eq!((made.created_played.games, made.created_played.wins), (1, 1));
+        assert_eq!(made.created_played_radiant.games, 1);
+        assert_eq!(made.created_not_played.games, 0);
+    }
+
+    #[test]
+    fn r2089000_an_ancient_curse_cast_on_its_draw_is_the_creating_seat_s() {
+        register_all();
+        // p2's library is empty, so the Curse Shade-iris shuffles in is its next draw.
+        let mut s = scenario(json!({
+            "p1": { "hand": [SHADE_IRIS] },
+            "p2": { "hand": [VANILLA] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(SHADE_IRIS, json!({}));
+        });
+        assert_eq!(
+            reader.seat(P1, Vec::new()).created_unused,
+            Some(vec![CURSE.to_string()])
+        );
+        assert_eq!(reader.seat(P2, Vec::new()).created_unused, None);
+        // The record reads the maker off the `shuffledIn`, which no view forwards.
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::ShuffledIn { player: P2, def_id, creator: Some(P1), .. } if def_id == CURSE
+        )));
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            assert!(!events.contains("creator"), "{}'s view", seat.as_str());
+        }
+
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        assert!(
+            s.events().iter().any(
+                |event| matches!(event, GameEvent::CardPlayed { player: P2, def_id, .. } if def_id == CURSE)
+            ),
+            "p2 cast the Curse on its draw"
+        );
+        let turn = s.state().turn;
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.created_used, Some(vec![used(CURSE, turn, false)]));
+        assert_eq!(p1.created_unused, None);
+        // A cast is no play from the hand (§2.4, R70), and the Curse is neither a draw nor p2's.
+        let p2 = reader.seat(P2, Vec::new());
+        assert!(p2.played.is_empty());
+        assert!(p2.drawn.is_empty());
+        assert_eq!(p2.created_used, None);
+        assert_eq!(p2.created_played, None);
+        assert_eq!(p2.created_unused, None);
+    }
+
+    #[test]
+    fn r2089000_a_token_summoned_into_the_other_seat_s_backrow_is_its_summoner_s() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [FATE, VANILLA], "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+        step(&mut reader, &mut s, |s| {
+            s.play(FATE, json!({}));
+        });
+        // p1's end of turn summons a Mana Well into every empty backrow of both sides, each its own
+        // side's (R942), and each one p1's Created card, used as it lands.
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        let wells = |player: PlayerId| {
+            (1..=5)
+                .filter_map(|lane| s.backrow(player, lane))
+                .filter(|card| card.def_id == WELL)
+                .count()
+        };
+        assert!(wells(P2) > 0, "a Well in p2's backrow");
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::Summoned { player: P2, def_id, creator: Some(P1), .. } if def_id == WELL
+        )));
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            assert!(!events.contains("creator"), "{}'s view", seat.as_str());
+        }
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(
+            p1.created_used,
+            Some(vec![used(WELL, turn, false); wells(P1) + wells(P2)])
+        );
+        assert_eq!(p1.created_unused, None);
+        let p2 = reader.seat(P2, Vec::new());
+        assert_eq!(p2.created_used, None);
+        assert_eq!(p2.created_unused, None);
+    }
+
+    #[test]
+    fn r2089000_a_created_card_never_used_is_its_creator_s_not_used_card() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [SHADE_IRIS] },
+            "p2": { "library": [VANILLA, VANILLA] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(SHADE_IRIS, json!({}));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.act(ActionBody::Concede, P1, "p1 concedes");
+        });
+        assert!(s.state().result.is_some());
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.created_unused, Some(vec![CURSE.to_string()]));
+        assert_eq!(p1.created_used, None);
+        let p2 = reader.seat(P2, Vec::new());
+        assert_eq!(p2.created_unused, None);
+        assert_eq!(p2.created_used, None);
+    }
+
+    #[test]
+    fn r2089000_an_instance_used_bounced_and_used_again_counts_once() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [{ "def": VANILLA, "created": true }, FLOOD] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+        let vanilla = created_in_hand(&s, P1, VANILLA);
+        step(&mut reader, &mut s, |s| {
+            s.play(vanilla.clone(), json!({}));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.play(FLOOD, json!({}));
+        });
+        assert_eq!(s.card(vanilla.clone()).zone, Zone::Hand { player: P1 });
+        step(&mut reader, &mut s, |s| {
+            s.play(vanilla, json!({}));
+        });
+
+        let p1 = reader.seat(P1, vec![FLOOD.to_string()]);
+        assert_eq!(p1.played, [FLOOD]);
+        assert_eq!(p1.created_used, Some(vec![used(VANILLA, turn, false)]));
+        // Every play from the hand is kept for the quests, as `played` keeps a dealt card's.
+        assert_eq!(cards(&p1.created_played), [VANILLA, VANILLA]);
+        assert_eq!(p1.created_unused, None);
+    }
+
+    fn act(state: &GameState, log: &mut Vec<Action>, body: ActionBody, player: PlayerId) -> GameState {
+        let action = Action::new(body, player, format!("created-coin-{}", log.len()));
+        let result = reduce(state, &action);
+        if let Some(error) = result.error {
+            panic!("{error}");
+        }
+        log.push(action);
+        result.state
+    }
+
+    #[test]
+    fn r2089000_the_coin_never_played_is_the_second_seat_s_created_card_not_used() {
+        register_all();
+        let units: Vec<String> = pool()
+            .into_iter()
+            .filter(|id| CATALOG.get(id).is_some_and(|def| def.type_ == CardType::Unit))
+            .take(DECK_SIZE as usize)
+            .collect();
+        let decks = (units.clone(), units);
+        let seed = "created-coin".to_string();
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.clone(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        let mut log: Vec<Action> = Vec::new();
+        for player in [P1, P2] {
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            state = act(&state, &mut log, ActionBody::Mulligan { keep }, player);
+        }
+        assert!(
+            state
+                .players
+                .p2
+                .hand
+                .iter()
+                .any(|card| card.def_id == COIN_DEF_ID)
+        );
+        state = act(&state, &mut log, ActionBody::Concede, P1);
+        assert!(state.result.is_some());
+
+        let Some(summary) = summarize_game(&FoldArgs {
+            seed,
+            decks,
+            log,
+            ..FoldArgs::default()
+        }) else {
+            panic!("a finished game has a summary");
+        };
+        let p2 = &summary.seats.p2;
+        assert_eq!(p2.created_unused, Some(vec![COIN_DEF_ID.to_string()]));
+        assert_eq!(p2.created_used, None);
+        assert!(!p2.opening.iter().any(|id| id == COIN_DEF_ID));
+        assert_eq!(summary.seats.p1.created_unused, None);
     }
 }

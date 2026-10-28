@@ -14,7 +14,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { MULLIGAN_CLOCK_MS, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
@@ -22,6 +22,7 @@ import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
+import { streakWords } from "../rank/StreakFlame.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
@@ -765,6 +766,44 @@ describe("the match screen's ranks (R604, R612)", () => {
     await act(async () => {});
     expect(screen.queryByTestId("match-ranks")).toBeNull();
   });
+
+  function withStreaks(p1: number, p2: number, ranked = true): unknown {
+    return { ranked, seats: { p1: { ...ranksBody.seats.p1, streak: p1 }, p2: { ...ranksBody.seats.p2, streak: p2 } } };
+  }
+
+  it("R2101000 a ranked match's line shows each seat's flame and count at or past RANK_STREAK_FLAME_LENGTH, on both lines", async () => {
+    stubFetch(withStreaks(N, N + 2));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    for (const line of [".match-ranks__full", ".match-ranks__short"]) {
+      const flames = [...(banner.querySelector(line)?.querySelectorAll(".streak-flame") ?? [])];
+      expect(flames.map((flame) => flame.getAttribute("aria-label"))).toEqual([streakWords(N), streakWords(N + 2)]);
+      expect(flames.map((flame) => flame.textContent)).toEqual([String(N), String(N + 2)]);
+    }
+    expect(banner).toHaveTextContent(`Max#3 (you) ${String(N)} Normal Grape III`);
+  });
+
+  it("R2101000 no seat shows a flame below the threshold or after a loss", async () => {
+    stubFetch(withStreaks(N - 1, 0));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    expect(banner).toHaveTextContent("Ranked match");
+    expect(banner.querySelector(".streak-flame")).toBeNull();
+  });
+
+  it("R2101000 an unranked (casual) match's line shows no flame, whatever the streaks", async () => {
+    stubFetch(withStreaks(N + 1, N + 1, false));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    expect(banner).toHaveTextContent("Unranked match");
+    expect(banner.querySelector(".streak-flame")).toBeNull();
+  });
 });
 
 describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
@@ -1276,6 +1315,15 @@ describe("R768000 a finished match's replay from its result panel", () => {
     stubReplayFetch();
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach();
+    expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
+    expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
+  });
+
+  it("a voided match's result offers neither, since the server keeps no record of it", async () => {
+    stubReplayFetch();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: baseView({ viewer: "p1", active: "p1", phase: "over", result: { winner: "draw", reason: "voided" } }) });
+    expect(await screen.findByTestId("result-back")).toBeInTheDocument();
     expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
     expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
   });
