@@ -24,6 +24,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
+import { settle } from "../../test/settle.ts";
 import { fixtureCardId } from "./fixtures.ts";
 import {
   HISTORY_OFFLINE_MESSAGE,
@@ -52,14 +53,6 @@ const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * 1000;
 const RESTORED_AT = 9_000;
 
 // Fakes
-
-async function settle(): Promise<void> {
-  for (let round = 0; round < 5; round += 1) {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  }
-}
 
 type ManualClock = SyncClock & { advance(ms: number): Promise<void>; pending(): number };
 
@@ -90,10 +83,10 @@ function manualClock(start = 1_000): ManualClock {
         timers.delete(due[0]);
         now = due[1].at;
         due[1].run();
-        await settle();
+        await settle({ macrotasks: 5, ticks: 0, act: false });
       }
       now = target;
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     },
   };
 }
@@ -358,7 +351,7 @@ describe("the debounced save", () => {
 
     store.updateDeck(id, { cards: [fixtureCardId(7)] });
     release();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(store.getSnapshot().unsynced.has(id), "the confirmation was for the older revision").toBe(true);
 
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
@@ -374,7 +367,7 @@ describe("the debounced save", () => {
     store.start();
     const id = store.createDeck({ name: "Aggro" }) ?? "";
     window.dispatchEvent(new Event("pagehide"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls.map((call) => call.id)).toEqual([id]);
   });
 
@@ -388,7 +381,7 @@ describe("the debounced save", () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     try {
       document.dispatchEvent(new Event("visibilitychange"));
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     } finally {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
@@ -477,7 +470,7 @@ describe("offline", () => {
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     server.state.offline = false;
     window.dispatchEvent(new Event("online"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.decks.has(id)).toBe(true);
   });
 
@@ -490,7 +483,7 @@ describe("offline", () => {
     const id = first.createDeck({ name: "Made on the train", cards: [fixtureCardId(4)] }) ?? "";
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     const second = open({ api: server.api, clock: manualClock(), storage });
     expect(second.getSnapshot().decks.map((deck) => deck.id)).toEqual([id]);
@@ -568,7 +561,7 @@ describe("merging the mirror over the server", () => {
     first.deleteDeck("d1");
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     server.state.offline = false;
     const secondClock = manualClock();
@@ -857,7 +850,7 @@ describe("a trio import", () => {
     expect(result.ok ? result.trioId : "").toBe(trio?.id);
     expect(trio?.deckIds).toEqual([snapshot.decks[0]?.id, null, snapshot.decks[1]?.id]);
     expect(trio?.name).toBe("Shared trio");
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls).toHaveLength(1);
   });
 

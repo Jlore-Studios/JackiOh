@@ -45,7 +45,12 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
 export type PracticeEarning =
   | { kind: "pending" }
   | { kind: "paid"; jlore: number; xp: number; jloreCapped: boolean; tracks?: readonly TrackGain[]; quests?: readonly QuestPaid[] }
-  | { kind: "refused"; reason: string }
+  | {
+      kind: "refused";
+      reason: string;
+      /** R2208000: this device's clock cut one of the game's AI decisions short, which an `ai_mismatch` may then be. */
+      clockCut?: true;
+    }
   | { kind: "unreachable" };
 
 /**
@@ -86,8 +91,14 @@ export function earningText(earning: PracticeEarning): string {
       // R1483000: what was paid stays in the line; the cap's holdback follows it.
       return earning.jloreCapped ? `${paid} · ${t("Daily Jlore reached")}` : paid;
     }
-    case "refused":
-      return t("This game earned nothing ({reason}).", { reason: refusalText(earning.reason) });
+    case "refused": {
+      // R2208000: an AI move this device's clock cut short is the cause, so the line names it.
+      const reason =
+        earning.reason === "ai_mismatch" && earning.clockCut === true
+          ? t("this device ran out of time on one of the AI's moves")
+          : refusalText(earning.reason);
+      return t("This game earned nothing ({reason}).", { reason });
+    }
     case "unreachable":
       return t("The server could not check this game.");
   }

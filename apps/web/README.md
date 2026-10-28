@@ -34,6 +34,8 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 
 The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
+The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -45,6 +47,16 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
+`(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
+`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
+what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
+switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
+`::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
+radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
+measures the board and every menu of `46` at 390x844.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -54,6 +66,13 @@ root that clips them, so the one-screen rule holds. `main.tsx`'s `Loading` takes
 same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
 boards' "Joining …" panels.
+
+A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
+the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
+`useShownAfterDelay` sets `data-shown` on the skeleton and, through `shown`, on `ShellPanel`. It is
+a timer because Reduce motion zeroes CSS delays. The blocks are brass. An empty menu panel draws
+`empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
+for a link, `onPress` for a button). The ruling lists what stays text.
 
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
@@ -197,6 +216,14 @@ pnpm --dir apps/web test         # vitest (jsdom)
 needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
 so run one of them (or the script) once first.
 
+The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
+`scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
+`fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
+`settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
+mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
+defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
+
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
@@ -231,7 +258,7 @@ src/replay/
                   and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its notice slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
@@ -329,7 +356,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; moved from /account (#1307). The landing's bookmark
+                        reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
+                        a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
@@ -525,8 +553,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, the clock mark (R2208000), in IndexedDB `jackioh.practice`
+                      (memory in jsdom), and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -541,7 +569,16 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
+- Against the Easy AI a free game's snapshot adds `lethal: true` while the human has a sure win this
+  turn by what they can see (R2102000): the core asks `lethalHint(state, human, deadlineMs)`, which the
+  Rust AI answers from the human's own redaction, so the AI's hidden cards never change it, under a
+  wall-clock cap of its own (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). Medium, Hard and a
+  lesson never ask. The route passes it to `Game`'s `lethalHint` while the Lethal hint setting is
+  on, and the board shows it (`data-lethal-hint` on the game, which outlines the enemy hero and End
+  turn, and the `lethal-hint` line "You have lethal") once it shows the newest view, never on a
+  replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the

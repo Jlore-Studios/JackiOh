@@ -484,7 +484,7 @@ impl From<UpsertOutcome> for TrioUpsertOutcome {
     }
 }
 
-/// R2100000: one earlier version of a saved deck (migration 0065): the name and cards one save
+/// R2100000: one earlier version of a saved deck (migration 0066): the name and cards one save
 /// wrote, and when. The deck's portrait and cosmetic picks are no part of it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1983,7 +1983,7 @@ impl Tx<'_> {
         dispatch!(self, decks_remove(profile_id, deck_id))
     }
 
-    // deck versions (R2100000, migration 0065)
+    // deck versions (R2100000, migration 0066)
 
     /// R2100000: the profile's own deck's versions, newest first: `saved_at` descending, then `id`
     /// descending. Another profile's deck has none.

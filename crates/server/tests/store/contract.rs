@@ -2333,7 +2333,7 @@ mod trios {
 }
 
 // ---------------------------------------------------------------------------
-// A deck's earlier versions (R2100000; migration 0065)
+// A deck's earlier versions (R2100000; migration 0066)
 // ---------------------------------------------------------------------------
 
 mod deck_versions {
@@ -10187,6 +10187,45 @@ mod economy {
         );
     }
 
+    /// R2210000: the quests a profile replaced in a window are its own `removed` rows with the
+    /// reason `quest` and `at` in the half-open window: a completed quest, a `removed` row going
+    /// live wrote (reason `launch`) and another profile's apart.
+    async fn r2210000_removed_quest_count_uses_one_window_change_and_reason(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let (day_start, day_end) = (10 * 86_400_000_i64, 11 * 86_400_000_i64);
+        let launch = |quest_id: &str, change: &str, at: i64| -> QuestGrant {
+            from(json!({
+                "profileId": owner.id, "questId": quest_id, "change": change, "progress": 0,
+                "reason": "launch", "reference": null, "dev": false, "at": at,
+            }))
+        };
+        for grant in [
+            quest(&owner.id, "win-games", "arrived", 0, day_start - 10),
+            quest(&owner.id, "play-spells", "arrived", 0, day_start - 9),
+            quest(&owner.id, "play-units", "arrived", 0, day_start - 8),
+            quest(&owner.id, "play-traps", "arrived", 0, day_start - 7),
+            launch("play-cards", "arrived", day_start - 6),
+            quest(&other.id, "win-games", "arrived", 0, day_start - 5),
+            quest(&owner.id, "win-games", "removed", 0, day_start),
+            quest(&owner.id, "play-spells", "removed", 0, day_end - 1),
+            quest(&owner.id, "play-units", "removed", 0, day_end),
+            quest(&owner.id, "play-traps", "completed", 0, day_start + 1),
+            launch("play-cards", "removed", day_start + 2),
+            quest(&other.id, "win-games", "removed", 0, day_start + 3),
+        ] {
+            assert!(q!(harness, t => t.economy_quests_change(&grant)));
+        }
+        let count = |profile_id: &str, window: (i64, i64)| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_quests_removed_count(&profile_id, window.0, window.1)) }
+        };
+        assert_eq!(count(&owner.id, (day_start, day_end)).await, 2);
+        assert_eq!(count(&owner.id, (day_end, day_end + 1)).await, 1);
+        assert_eq!(count(&owner.id, (day_start + 1, day_end - 1)).await, 0);
+        assert_eq!(count(&other.id, (day_start, day_end)).await, 1);
+    }
+
     /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
     /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
     async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
@@ -10310,6 +10349,7 @@ mod economy {
         a_deleted_account_takes_its_economy_with_it,
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
+        r2210000_removed_quest_count_uses_one_window_change_and_reason,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
     );

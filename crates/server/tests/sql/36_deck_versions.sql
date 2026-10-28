@@ -1,4 +1,4 @@
--- A saved deck's earlier versions (migration 0065, SPEC §9.4, §9.1; R2100000; issue #2100). Runs after
+-- A saved deck's earlier versions (migration 0066, SPEC §9.4, §9.1; R2100000; issue #2100). Runs after
 -- 35_game_totals.sql; profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated them).
 -- What a save keeps (the window, the cap, a restore) is the server's, proven in
 -- tests/store/contract.rs against both stores; this file proves what the schema holds.
@@ -325,7 +325,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R2100000: 0065 gives a deck saved before it one version, itself as last saved, and re-applies adding none ###'
+\echo '### R2100000: 0066 gives a deck saved before it one version, itself as last saved, and re-applies adding none ###'
 begin;
 insert into public.decks (id, profile_id, name, cards, catalog_version, created_at, updated_at) values
   ('e2100000-0000-4000-8000-000000000031', '11111111-1111-1111-1111-111111111111', 'Old deck',
@@ -337,7 +337,7 @@ insert into public.deck_versions (id, profile_id, deck_id, name, cards, saved_at
    'e2100000-0000-4000-8000-000000000032', 'Versioned', '["core-001"]', now());
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0065_deck_versions.sql
+\i /tmp/0066_deck_versions.sql
 set local client_min_messages = notice;
 create temp table r2100000_rows (n bigint not null) on commit drop;
 insert into r2100000_rows select count(*) from public.deck_versions;
@@ -348,7 +348,7 @@ declare
   v         record;
 begin
   if (select count(*) from public.deck_versions where deck_id = old) <> 1 then
-    raise exception 'FAIL (R2100000): the deck saved before 0065 has % versions, expected one',
+    raise exception 'FAIL (R2100000): the deck saved before 0066 has % versions, expected one',
       (select count(*) from public.deck_versions where deck_id = old);
   end if;
   select * into v from public.deck_versions where deck_id = old;
@@ -364,22 +364,22 @@ begin
   if exists (select 1 from public.decks d
               where not exists (select 1 from public.deck_versions x
                                  where x.profile_id = d.profile_id and x.deck_id = d.id)) then
-    raise exception 'FAIL (R2100000): a deck has no version after 0065';
+    raise exception 'FAIL (R2100000): a deck has no version after 0066';
   end if;
 end $$;
 set local client_min_messages = warning;
-\i /tmp/0065_deck_versions.sql
+\i /tmp/0066_deck_versions.sql
 set local client_min_messages = notice;
 do $$
 begin
   if (select count(*) from public.deck_versions) <> (select n from r2100000_rows) then
-    raise exception 'FAIL (R2100000): re-applying 0065 changed the versions (% before, % after)',
+    raise exception 'FAIL (R2100000): re-applying 0066 changed the versions (% before, % after)',
       (select n from r2100000_rows), (select count(*) from public.deck_versions);
   end if;
   if (select count(*) from pg_policies where schemaname = 'public' and tablename = 'deck_versions') <> 1 then
-    raise exception 'FAIL (R2100000): re-applying 0065 left other than one policy on deck_versions';
+    raise exception 'FAIL (R2100000): re-applying 0066 left other than one policy on deck_versions';
   end if;
-  raise notice 'OK (R2100000): 0065 gives a deck with no version one, itself as last saved, leaves a versioned deck alone and re-applies adding none';
+  raise notice 'OK (R2100000): 0066 gives a deck with no version one, itself as last saved, leaves a versioned deck alone and re-applies adding none';
 end $$;
 rollback;
 

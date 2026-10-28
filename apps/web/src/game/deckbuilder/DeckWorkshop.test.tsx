@@ -14,6 +14,7 @@ import { cosmeticsOf } from "../../cards/cosmetics.ts";
 import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
 import { formatDateTime } from "../../i18n/i18n.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
+import { expectEmptyState } from "../../test/empty.ts";
 import { UNDO_WINDOW_MS } from "../../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../../undo/UndoToast.tsx";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
@@ -87,6 +88,7 @@ import {
   TRIO_VERDICT,
   WORKSHOP,
   WORKSHOP_BACK,
+  WORKSHOP_EMPTY,
   addPoolId,
   deckCardId,
   deckCompareChipId,
@@ -242,6 +244,17 @@ describe("the rail", () => {
     expect(screen.getByTestId(deckRowId("a"))).toHaveAttribute("aria-current", "true");
     fireEvent.click(screen.getByTestId(WORKSHOP_BACK));
     expect(root).toHaveAttribute("data-view", "list");
+  });
+});
+
+describe("R2108000 the workshop's empty state", () => {
+  it("R2108000 with no deck the workshop's empty state offers Make a deck, which makes and opens one", () => {
+    mount();
+    const root = expectEmptyState(
+      within(screen.getByTestId(WORKSHOP_EMPTY)).getByText("Make your first deck, or import a code someone shared."),
+    );
+    fireEvent.click(within(root).getByText("Make a deck"));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
   });
 });
 

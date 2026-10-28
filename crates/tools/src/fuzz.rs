@@ -2838,7 +2838,8 @@ pub(crate) mod tests {
 
         /// BUILD M12's foundation gate, "the fuzz tool previews it" (R1857000, R1420): every deck-legal
         /// card of a set that has not shipped is in the pool and none in the shipped pool, and a seed
-        /// dealt one plays through the gate's four checks with no preview of the caller's.
+        /// dealt one plays through the gate's four checks with no preview of the caller's. With every
+        /// set shipped (the Stinkyscape release, #1884) nothing is held, and the released set is dealt.
         #[test]
         fn r1857000_the_fuzz_tool_previews_every_held_set() {
             register_all();
@@ -2853,9 +2854,18 @@ pub(crate) mod tests {
                 })
                 .map(|(id, _)| id)
                 .collect();
-            assert!(!legal_held.is_empty(), "a held set to preview");
             assert!(legal_held.iter().all(|id| FUZZ_POOL.contains(*id)));
             assert!(!SHIPPED_FUZZ_POOL.iter().any(held));
+            if legal_held.is_empty() {
+                // Every set ships since the Stinkyscape release (#1884): there is nothing to preview,
+                // and the released set is dealt as any shipped set is.
+                assert!(
+                    FUZZ_POOL
+                        .iter()
+                        .any(|id| CATALOG[id.as_str()].set.as_str() == "Stinkyscape")
+                );
+                return;
+            }
             let seed = (1..=SWEEP_SEEDS)
                 .find(|seed| {
                     let (p1, p2) = decks_for_seed(*seed);
@@ -2863,6 +2873,21 @@ pub(crate) mod tests {
                 })
                 .expect("a seed deals a held card");
             assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
+        }
+
+        /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
+        /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.
+        #[test]
+        fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
+            register_all();
+            let training_grounds =
+                |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
+            assert!(
+                !set_ships(jackioh_engine::SetName::TrainingGrounds),
+                "held until its release, #2204"
+            );
+            assert!(FUZZ_POOL.iter().any(training_grounds));
+            assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
         }
 
         #[test]

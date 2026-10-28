@@ -13,6 +13,8 @@ export type Settings = {
   /** R82/R345: default true auto-ends only when ending is left. */
   autoEndTurn: boolean;
   hoverPreviews: boolean;
+  /** R2102000: the Easy practice tier's lethal hint; default on. */
+  lethalHint: boolean;
   reduceMotion: boolean;
   /** R644 (§5): mute opponents' emotes, default off per device. */
   muteOpponentEmotes: boolean;
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   confirmEndTurn: false,
   autoEndTurn: true,
   hoverPreviews: true,
+  lethalHint: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
 });
@@ -40,6 +43,7 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "confirmEndTurn",
   "autoEndTurn",
   "hoverPreviews",
+  "lethalHint",
   "reduceMotion",
   "muteOpponentEmotes",
 ];

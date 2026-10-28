@@ -34,22 +34,23 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`572 cards`, `138 tokens`, `710`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set is held now, issue #1836, R1857000) differs in five places, the Stinkyscape paths below standing for any held set's:
-- Its script goes in `src/scripts/stinkyscape/` (id `stinkyscape-NNN`, a token's `stinkyscape-NNN-k`, an entry outside the numbers
-  `stinkyscape-t-<name>`). The foundation (issue #1857) wrote a stub for every entry there, `STUB (#1857):` in its header: a card
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; and the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set is held now, while tracker #2193 builds it, until its release, issue #2204, R2194000) differs in five places, the Training Grounds paths below standing for any held set's:
+- Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
+  had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
+  `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
   part **replaces its stub** with the script and its tests, and updates its own entry's `loc` in `catalog.json` (`cargo jackioh
   catalog loc <path>`), the one line of the catalog it touches.
-- Rows 1, 2, 4, 5, 6, 7, 8, 9 and 13 are already written. §8.10, §7's held table, the `STINKYSCAPE` fixture, the census in
-  `crates/tools/src/catalog.rs`, `docs/radiant-audit.md`, BUILD M12, `card-audio.json5`, `flavour.json` and `chinese.json` list
-  every card of the set (`docs/stinkyscape-set.md` is its brief), so a card part corrects its rows only where its build decided
+- Rows 1, 2, 4, 5, 6, 7, 8, 9 and 13 are already written. §8.11, §7's held table, the `TRAINING_GROUNDS` fixture, the census in
+  `crates/tools/src/catalog.rs`, `docs/radiant-audit.md`, BUILD M13, `card-audio.json5`, `flavour.json` and `chinese.json` list
+  every card of the set (`docs/training-grounds-set.md` is its brief), so a card part corrects its rows only where its build decided
   otherwise.
 - There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
   claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
-  with the engine testkit's `preview_sets(&[SetName::Stinkyscape])` (one thread, until its guard drops).
+  with the engine testkit's `preview_sets(&[SetName::TrainingGrounds])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
@@ -58,8 +59,8 @@ Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) a
   came early, with its look-and-sound part, issue #1883, R1883000, so its release owes none.)
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
-  `tests/cross/catalog.rs`, R1857000). `docs/stinkyscape-set.md` says the rest (`docs/meditative-plus-set.md` MP3 and
-  `docs/meditative-set.md` M3 for the earlier held sets' builds).
+  `tests/cross/catalog.rs`, R1857000). `docs/training-grounds-set.md` TG3 says the rest (`docs/stinkyscape-set.md`,
+  `docs/meditative-plus-set.md` MP3 and `docs/meditative-set.md` M3 for the earlier held sets' builds).
 
 ## 2. Templates
 

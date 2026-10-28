@@ -42,32 +42,6 @@ function face(defId: string) {
 const FACE_A = "core-002";
 const FACE_B = "core-019";
 
-/**
- * inspect.test.tsx keeps this fuller version: where `PointerEvent` is missing, testing-library
- * drops `pointerType` and every touch reads as a mouse. Only installed when the probe shows it lost.
- */
-function ensurePointerEvent(): void {
-  const win = document.defaultView;
-  if (win === null) return;
-  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
-  if (probe !== null && probe.pointerType === "touch") return;
-
-  class TestPointerEvent extends win.MouseEvent {
-    readonly pointerType: string;
-    readonly pointerId: number;
-    readonly isPrimary: boolean;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerType = init.pointerType ?? "";
-      this.pointerId = init.pointerId ?? 1;
-      this.isPrimary = init.isPrimary ?? true;
-    }
-  }
-  for (const target of [win, globalThis]) {
-    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
-  }
-}
-
 /** An opener button plus the sheet while open, closing through the sheet's own `onClose`. */
 function Host({ onClose, children }: { onClose: () => void; children: (close: () => void) => ReactNode }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -146,7 +120,6 @@ function sheetOf(testid: string): HTMLElement {
 }
 
 beforeEach(() => {
-  ensurePointerEvent();
   vi.useFakeTimers();
 });
 

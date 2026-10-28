@@ -65,7 +65,7 @@
 //!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
 //!  - `deck_versions_keep` answers `missing` for a deck that is not the profile's (the composite
 //!    foreign key), and a deck's delete and its account's take its versions (`on delete cascade`;
-//!    0065, R2100000);
+//!    0066, R2100000);
 //!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
 //!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
 //!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
@@ -231,7 +231,7 @@ pub struct FakeTables {
     // DeckTables
     pub decks: Vec<SavedDeck>,
     pub trios: Vec<SavedTrio>,
-    // R2100000: migration 0065's `public.deck_versions`, a deck's earlier versions.
+    // R2100000: migration 0066's `public.deck_versions`, a deck's earlier versions.
     pub deck_versions: Vec<DeckVersion>,
     // CustomCardTables: the table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
     pub custom_cards: Vec<SavedCustomCard>,
@@ -2170,7 +2170,7 @@ pub fn decks_remove(f: &mut FakeTx<'_>, profile_id: &str, deck_id: &str) -> Resu
         return Ok(false);
     };
     t.decks.remove(at);
-    // 0065, R2100000: `on delete cascade`: the deck's versions go with it.
+    // 0066, R2100000: `on delete cascade`: the deck's versions go with it.
     t.deck_versions.retain(|version| version.deck_id != deck_id);
     // `on delete set null (deckN_id)`: the trio keeps its other slots and its place.
     for trio in t.trios.iter_mut() {
@@ -2275,7 +2275,7 @@ pub fn trios_remove(f: &mut FakeTx<'_>, profile_id: &str, trio_id: &str) -> Resu
 }
 
 // ---------------------------------------------------------------------------
-// A deck's earlier versions (R2100000, migration 0065)
+// A deck's earlier versions (R2100000, migration 0066)
 // ---------------------------------------------------------------------------
 
 /// Newest first: `saved_at` descending, then `id` descending, as Postgres's index orders them.
@@ -3574,7 +3574,7 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.grants, |row| row.profile_id != profile_id);
     keep_only(&mut tables.decks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.trios, |row| row.profile_id != profile_id);
-    // 0065, R2100000: a deck's versions cascade with the deck.
+    // 0066, R2100000: a deck's versions cascade with the deck.
     keep_only(&mut tables.deck_versions, |row| row.profile_id != profile_id);
     // 0037, R915008: a profile's custom cards cascade with it.
     keep_only(&mut tables.custom_cards, |row| row.profile_id != profile_id);

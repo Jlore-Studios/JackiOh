@@ -20,7 +20,10 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::deckable;
 use jackioh_engine::testkit::*;
 
-const GAMES: i32 = 40;
+/// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
+/// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
+/// games hold every kind of play the test counts.
+const GAMES: i32 = 60;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
 

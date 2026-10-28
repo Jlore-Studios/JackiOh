@@ -29,6 +29,7 @@ import { clearReadCache } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import CosmeticPacks from "./CosmeticPacks.tsx";
@@ -481,7 +482,9 @@ describe("#1309 the cosmetic packs", () => {
 
     cosmeticServer({ packs: { status: 200, body: { ...cosmeticPacksInfo(), unopened: 0 } } });
     render(<CosmeticPacks token={TOKEN} />);
-    expect(await screen.findByText("No unopened packs.")).toBeInTheDocument();
+    const noPacks = await screen.findByText("No unopened packs.");
+    expect(noPacks).toBeInTheDocument();
+    expectEmptyState(noPacks);
     expect(screen.queryByTestId(T.cosmeticPackObject)).toBeNull();
     expect(screen.queryByTestId(T.open)).toBeNull();
   });

@@ -859,3 +859,18 @@
   flex: 1 1 180px;
   max-width: 320px;
 }
+
+/* R2122000 on a phone or under a finger: a select or a field draws no ::before, so the filters,
+   the search and the column checkboxes' labels are --hit-min tall themselves; a sortable header's
+   band stops at the first row, its neighbour 0 px below. */
+@media (pointer: coarse), (max-width: 600px) {
+  .stats-select,
+  .stats-search-input,
+  .stats-col-toggle {
+    min-height: var(--hit-min);
+  }
+
+  .stats-th--sortable::before {
+    bottom: 0;
+  }
+}

@@ -7,6 +7,7 @@ import argparse
 import contextlib
 import io
 import json
+import re
 import unittest
 from datetime import timedelta
 from unittest import mock
@@ -1030,6 +1031,10 @@ class RunnersTests(unittest.TestCase):
         self.assertIn("    gh ~~~ nb ~~~ mb ~~~ pc ~~~ qu\n", diagram)
         self.assertIn("classDef busy fill:#1f883d", diagram)
         self.assertNotIn("ghost", diagram)  # one row each: nothing to pad
+        # Only the styles its boxes use: the rest would spend the issue's room.
+        for name in set(re.findall(r"classDef (\w+)", diagram)):
+            self.assertIn(f":::{name}", diagram)
+        self.assertNotIn("classDef broken", diagram)
         # A label no runner holds but a job waits for: the box is starting, or full.
         self.gh.jobs["104"][0]["labels"] = ["night-vm-gpt"]
         diagram = self.section().split("```mermaid\n")[1].split("```")[0]

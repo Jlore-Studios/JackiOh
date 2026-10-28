@@ -11,13 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeInspect } from "../cards/index.ts";
 import { __resetSettingsForTests } from "../settings/index.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../test/fixtures.ts";
 import { abilityLabel, usesText } from "./ActivateControl.tsx";
-import Board from "./Board.tsx";
 import Game from "./Game.tsx";
 import { IDLE, highlightFor } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid } from "./contract.ts";
+import { testid, type BoardProps } from "./contract.ts";
 import { DRAG_THRESHOLD_PX } from "./drag/model.ts";
 
 const lookup = lookupFromDefs(CATALOG);
@@ -102,14 +102,10 @@ function renderGame(legal: readonly ActionBody[], view: PlayerView = activateVie
   return { ...utils, onAction };
 }
 
-function renderBoard(legal: readonly ActionBody[], over: Partial<Parameters<typeof Board>[0]> = {}) {
-  const view = over.view ?? activateView();
+function renderActivate(legal: readonly ActionBody[], over: Partial<BoardProps> = {}) {
+  const { view = activateView(), ...props } = over;
   const onClick = vi.fn();
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} highlight={highlightFor(view, legal, IDLE)} onClick={onClick} {...over} />
-    </CatalogContext.Provider>,
-  );
+  renderBoard(view, { highlight: highlightFor(view, legal, IDLE), onClick, ...props });
   return { onClick };
 }
 
@@ -133,7 +129,7 @@ afterEach(() => {
 
 describe("R510 the Activate control on the card", () => {
   it("R510 a card listing one ability wears one control: the glyph, its uses left, its words filled in, live and glowing", () => {
-    renderBoard([PING_E1, PING_E2]);
+    renderActivate([PING_E1, PING_E2]);
 
     const control = el(testid.activate("act1"));
     expect(control.tagName).toBe("BUTTON");
@@ -152,7 +148,7 @@ describe("R510 the Activate control on the card", () => {
   });
 
   it("R1751000 a card listing several abilities wears one control; ♾️ counts as ∞", () => {
-    renderBoard([TURTLE_U1]);
+    renderActivate([TURTLE_U1]);
 
     expect(screen.getByTestId(testid.activate("act2"))).toBeInTheDocument();
     expect(el(testid.activateUses("act2"))).toHaveTextContent("∞");
@@ -162,7 +158,7 @@ describe("R510 the Activate control on the card", () => {
   });
 
   it("R510 a control legal does not list is greyed, says the engine's reason, and a press sends nothing", () => {
-    const { onClick } = renderBoard([PING_E1]);
+    const { onClick } = renderActivate([PING_E1]);
 
     const spent = el(testid.activate("fs1"));
     expect(spent).toHaveAttribute("data-legal", "false");
@@ -177,7 +173,7 @@ describe("R510 the Activate control on the card", () => {
   });
 
   it("R510 cards that list no ability wear no control, and a press on a live one reports the activation, not the card", () => {
-    const { onClick } = renderBoard([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
+    const { onClick } = renderActivate([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
 
     expect(within(el(testid.card("u1"))).queryByRole("button", { name: /Activate/ })).toBeNull();
     expect(within(el(testid.card("e1"))).queryByRole("button", { name: /Activate/ })).toBeNull();
@@ -189,7 +185,7 @@ describe("R510 the Activate control on the card", () => {
 
   it("R510 the keyboard presses it with Enter and Space, and the card under it does not take the key", async () => {
     const user = userEvent.setup();
-    const { onClick } = renderBoard([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
+    const { onClick } = renderActivate([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
 
     el(testid.activate("act1")).focus();
     await user.keyboard("{Enter}");
@@ -202,7 +198,7 @@ describe("R510 the Activate control on the card", () => {
   });
 
   it("R510 the control flashes while the `activated` row plays on its card, and so does a Heroic Power's button", () => {
-    renderBoard([], {
+    renderActivate([], {
       animating: new Map([
         [testid.card("act1"), "activated"],
         [testid.card("power-1"), "activated"],

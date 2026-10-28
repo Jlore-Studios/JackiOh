@@ -1066,7 +1066,7 @@ fn to_deck(row: DeckRow) -> Result<SavedDeck, StoreError> {
     })
 }
 
-/// R2100000: a deck version's columns (migration 0065), as `deck_version_of` reads them.
+/// R2100000: a deck version's columns (migration 0066), as `deck_version_of` reads them.
 macro_rules! deck_version_columns {
     () => {
         "id, profile_id, deck_id, name, cards, saved_at"
@@ -2800,7 +2800,7 @@ pub async fn decks_remove(t: &mut PgTx<'_>, profile_id: &str, deck_id: &str) -> 
 }
 
 // ---------------------------------------------------------------------------
-// A deck's earlier versions (R2100000, migration 0065)
+// A deck's earlier versions (R2100000, migration 0066)
 //
 // Not `app.*` functions: what a save keeps is `deck_version_step`'s, in Rust, so both stores decide
 // it by the same code. Every statement names the profile and the deck, so a profile reaches only

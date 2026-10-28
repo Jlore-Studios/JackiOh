@@ -392,6 +392,12 @@ pub static ROUTES: &[Route] = &[
     ),
     (
         "POST",
+        "/api/quests/:questId/replace",
+        AuthLevel::Active,
+        h!(api::quests::post_replace_quest),
+    ),
+    (
+        "POST",
         "/api/dev/quests",
         AuthLevel::Active,
         h!(api::quests::dev_give_quest),

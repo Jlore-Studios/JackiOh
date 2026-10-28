@@ -61,8 +61,8 @@ const FFMPEG_ENCODE = [
 const TRIM_THRESHOLD_DB = -50;
 /** A SAPI render's loudest sample after normalising, in dBFS (Core's `say` files peak near -5). */
 const PEAK_TARGET_DB = -4;
-/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448). */
-const BUDGET_BYTES = 12 * 1024 * 1024;
+/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448, R1884000). */
+const BUDGET_BYTES = 16 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 /** The mode every rendered file is written with. */
 const FILE_MODE = 0o644;

@@ -6,16 +6,15 @@
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FX_BANNER_TAIL_MS } from "../../fx/constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
 import { PRACTICE_SHOWCASE_HOLD_MAX_MS } from "../../practice/config.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
+import { withCatalog } from "../../test/board.tsx";
 import { baseView, withEvents } from "../../test/fixtures.ts";
 import { ANIMATIONS, createAnimationQueue, type AnimationQueue } from "../animations.ts";
-import { CatalogContext, lookupFromDefs } from "../catalog.ts";
 import CardShowcase, { chaosHoldMs } from "./CardShowcase.tsx";
 import {
   CAST_ON_DRAW_TEXT,
@@ -27,7 +26,6 @@ import {
   showcaseTestid as T,
 } from "./constants.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const HINDER = "core-021";
 const HINDER_NAME = CATALOG[HINDER]?.name ?? "";
 const BLOOD = "core-027";
@@ -35,10 +33,6 @@ const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 
 const drawn = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "drawn", player, instanceId, defId });
 const cast = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 0 });
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
 
 /** Mounts on a first view, then gives it `view` (with `events` after TURN). */
 function mountThen(events: GameEvent[], options: { queue?: AnimationQueue; view?: PlayerView } = {}) {

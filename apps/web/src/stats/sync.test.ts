@@ -1,6 +1,7 @@
 // Player statistics sync tests (SPEC §9.11, R654, R1142000, R2000000).
 
 import catalogJson from "@jackioh/cards/catalog.json";
+import { setShips, type SetName } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { putPlayerStats } from "../net/api.ts";
@@ -67,7 +68,11 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
   });
 
   it("R1142000 builds stats holding every catalog id with all five counters at 9999 and fits within PLAYER_STATS_BYTES_MAX", () => {
-    const catalogIds = Object.keys(catalogJson);
+    // Every card a player can hold counters on: the sets that ship (R1420). A held set's entries
+    // reach no game, so no device counts them (the Training Grounds set until #2204, R2194000).
+    const catalogIds = Object.entries(catalogJson)
+      .filter(([, def]) => setShips((def as { set: SetName }).set))
+      .map(([id]) => id);
     expect(catalogIds.length).toBeGreaterThanOrEqual(450);
 
     const cards: Record<string, CardCounters> = {};
