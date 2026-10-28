@@ -11,13 +11,21 @@ use jackioh_engine::testkit::*;
 use super::support::{AI, HUMAN, act, is_legal, register_cards, scenario};
 
 const PERSONAL_TRAINER: &str = "traininggrounds-002";
+const THWOMP: &str = "traininggrounds-011";
+const FORTIFY: &str = "traininggrounds-012";
 const MIDLANE_MENACE: &str = "traininggrounds-005";
 const CELESTIAL_CALLER: &str = "traininggrounds-016";
 const FLAME_TONGUE_TOTEM: &str = "traininggrounds-021";
 const RIGHT_HAND_FELINOR: &str = "traininggrounds-022";
 const GOLIATH_SITUATION: &str = "traininggrounds-024";
 const OCCIDENTAL: &str = "traininggrounds-028";
+const PATH_OF_EXILE: &str = "traininggrounds-026";
+const HOPEFUL_JELLY_BEAN: &str = "traininggrounds-027";
 const FLOODGATES: &str = "traininggrounds-030";
+const DINO_SIZE: &str = "traininggrounds-034";
+const SEANCE: &str = "traininggrounds-037";
+/// TG #38 Tutorial Master: a (4) 4/16 Human.
+const TUTORIAL_MASTER: &str = "traininggrounds-038";
 const ORIENTAL: &str = "traininggrounds-029";
 const CALL_TO_CHAOS: &str = "traininggrounds-039";
 /// TG #8 Clobberer: a (3) 14/7 Human, the hand card Goliath Situation makes cheap.
@@ -405,4 +413,146 @@ fn r2203001_the_ai_kills_an_enemy_floodgates_so_its_death_destroys_their_units()
         after.players[HUMAN].units.iter().flatten().next().is_none(),
         "its Death destroyed the enemy's other Units"
     );
+}
+
+// TG #11 Thwomp, #26 Path of Exile, #34 Dino-size, #12 Fortify, #27 Hopeful Jelly Bean, #37 Seance:
+// one declared target, which the AI picks by what the play leaves
+
+/// The id of `player`'s Unit in `lane`.
+fn unit_in(state: &GameState, player: PlayerId, lane: i32) -> String {
+    card_at(
+        state,
+        ZoneSlot {
+            player,
+            row: Row::Units,
+            lane,
+        },
+    )
+    .map(|card| card.id.clone())
+    .unwrap_or_else(|| panic!("no Unit in {player:?}'s lane {lane}"))
+}
+
+/// The AI's decision plays `card` at `target`, legally; the random policy and a timeout answer too.
+fn aims(state: &GameState, seed: &str, card: &str, target: &str) {
+    let spell = in_hand(state, card);
+    let decision = decide_at(state, seed);
+    assert!(is_legal(state, AI, &decision.action));
+    assert!(
+        matches!(
+            &decision.action,
+            ActionBody::Play { instance_id, targets: Some(targets), .. }
+                if *instance_id == spell
+                    && *targets == [Selection::Instance { instance_id: target.to_string() }]
+        ),
+        "{card} at {target}: {:?}",
+        decision.action
+    );
+    random_and_timeout_answer(state, seed);
+}
+
+#[test]
+fn r2203001_the_ai_spends_thwomp_on_the_unit_it_most_needs_gone() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-thwomp",
+        json!([THWOMP]),
+        2,
+        json!([]),
+        json!([{ "def": VANILLA, "lane": 1 }, { "def": CLOBBERER, "lane": 3 }]),
+    );
+    aims(&state, "ai-tg-thwomp", THWOMP, &unit_in(&state, HUMAN, 3));
+}
+
+#[test]
+fn r2203001_the_ai_exiles_the_big_unit_with_path_of_exile() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-path",
+        json!([PATH_OF_EXILE]),
+        4,
+        json!([]),
+        json!([{ "def": VANILLA, "lane": 1 }, { "def": CLOBBERER, "lane": 3 }]),
+    );
+    aims(&state, "ai-tg-path", PATH_OF_EXILE, &unit_in(&state, HUMAN, 3));
+}
+
+#[test]
+fn r2203001_the_ai_dino_sizes_its_own_small_unit_not_the_enemys() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-dino",
+        json!([DINO_SIZE]),
+        3,
+        json!([{ "def": VANILLA, "lane": 2 }]),
+        json!([{ "def": VANILLA, "lane": 4 }]),
+    );
+    aims(&state, "ai-tg-dino", DINO_SIZE, &unit_in(&state, AI, 2));
+}
+
+#[test]
+fn r2203001_the_ai_fortifies_its_own_unit() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-fortify",
+        json!([FORTIFY]),
+        1,
+        json!([{ "def": VANILLA, "lane": 2 }]),
+        json!([{ "def": VANILLA, "lane": 4 }]),
+    );
+    aims(&state, "ai-tg-fortify", FORTIFY, &unit_in(&state, AI, 2));
+}
+
+#[test]
+fn r2203001_the_ai_makes_its_own_unit_radiant_with_hopeful_jelly_bean() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-jelly-bean",
+        json!([HOPEFUL_JELLY_BEAN]),
+        4,
+        json!([{ "def": TUTORIAL_MASTER, "lane": 2 }]),
+        json!([{ "def": TUTORIAL_MASTER, "lane": 4 }]),
+    );
+    aims(
+        &state,
+        "ai-tg-jelly-bean",
+        HOPEFUL_JELLY_BEAN,
+        &unit_in(&state, AI, 2),
+    );
+}
+
+#[test]
+fn r2203001_the_ai_copies_a_permanent_with_seance() {
+    let _preview = preview_sets(&[SetName::TrainingGrounds]);
+    let state = board(
+        "ai-tg-seance",
+        json!([SEANCE, VANILLA]),
+        6,
+        json!([]),
+        json!([{ "def": CLOBBERER, "lane": 3 }]),
+    );
+    let seance = in_hand(&state, SEANCE);
+    let decision = decide_at(&state, "ai-tg-seance");
+    assert!(is_legal(&state, AI, &decision.action));
+    random_and_timeout_answer(&state, "ai-tg-seance");
+    // Played, the copy is the AI's: a Clobberer in its hand.
+    let clobberer = unit_in(&state, HUMAN, 3);
+    let play = candidate_actions(&state, AI)
+        .into_iter()
+        .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == seance))
+        .expect("Seance is a candidate");
+    let ActionBody::Play {
+        targets: Some(targets),
+        ..
+    } = &play
+    else {
+        panic!("Seance declares its permanent: {play:?}");
+    };
+    assert_eq!(
+        targets.as_slice(),
+        [Selection::Instance {
+            instance_id: clobberer
+        }]
+    );
+    let after = act(&state, AI, &play);
+    assert!(after.players[AI].hand.iter().any(|card| card.def_id == CLOBBERER));
 }
