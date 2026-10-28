@@ -33,9 +33,11 @@ trap backrow. This file binds every agent, not only Claude.
    free in its issue's block (issue N owns R(N×1000) to R(N×1000+999); `docs/issues-and-patches.md`, Ruling
    numbers). Name the proving test after it: in Rust a `fn` or `mod` whose name has the `_`-delimited token
    `r58` (`fn r58_…`, `fn r90_r81_…`), in TypeScript an `it(`, `test(` or `describe(` whose title has `R58` as
-   a word. List its file in `proven_in` and run `cargo jackioh spec index`; `cargo jackioh spec check` fails
-   on any mismatch between the notes, their tests, the index and the R-ids cited in `crates/`, `apps/web/src/`
-   or `e2e/`, comments included.
+   a word. List its file in `proven_in`. Its §11 paragraph (where it came from) goes in `spec/pending/<N>.md`,
+   N its issue's number, never at the end of `spec/11-rulings.md`, and no branch runs `cargo jackioh spec index`:
+   `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
+   ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
+   notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
 4. `crates/engine`, `crates/cards`, `crates/ai` and `crates/luau` are pure: no clock, I/O, environment,
    threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.

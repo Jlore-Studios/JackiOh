@@ -19778,7 +19778,7 @@
       "stinkyscape-t-narcor",
       "stinkyscape-t-red-narcor"
     ],
-    "loc": 6,
+    "loc": 69,
     "base": {
       "keywords": [
         {
@@ -21001,7 +21001,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 0,
       "health": 2,
@@ -21369,7 +21369,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 2,
       "health": 3,
@@ -21402,7 +21402,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 6,
@@ -21718,7 +21718,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Shuffle {scraps} Metal Scraps into your deck."
@@ -21742,7 +21742,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Gain a random Stinkyscape Resource."
@@ -21896,7 +21896,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Stinkyscape card."
@@ -22140,7 +22140,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 6,
@@ -22184,7 +22184,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Deal {damage} damage to both heroes and all Units. Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}."
@@ -22940,7 +22940,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 68,
     "base": {
       "attack": 0,
       "health": 20,
@@ -23924,7 +23924,7 @@
     "refs": [
       "meditative-036"
     ],
-    "loc": 66,
+    "loc": 75,
     "base": {
       "keywords": [],
       "text": "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
@@ -24679,7 +24679,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [
         {
@@ -25137,7 +25137,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 4,
@@ -25189,7 +25189,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 6,
@@ -25241,7 +25241,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 8,
@@ -25293,7 +25293,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 10,
@@ -25347,7 +25347,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 0,
       "health": 8,
@@ -25793,7 +25793,7 @@
         "buy": 6
       }
     },
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Your hero has +{armor} Armor until the start of your next turn."
@@ -25841,7 +25841,7 @@
         "buy": 10
       }
     },
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a random enemy."
@@ -25888,7 +25888,7 @@
         "buy": 20
       }
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Heal your hero {heal}."
@@ -25936,7 +25936,7 @@
         "buy": 30
       }
     },
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to an enemy, with Lifesteal."
@@ -25973,7 +25973,7 @@
         "buy": 50
       }
     },
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Add a random Rare card to your hand."
@@ -26030,7 +26030,7 @@
         "buy": 80
       }
     },
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Add a random Legendary or Mythic card to your hand. It costs ({discount}) less."
@@ -26081,7 +26081,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 1,
       "health": 3,
@@ -26117,7 +26117,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Gain a random Common or Rare Stinkyscape Resource."
@@ -26141,7 +26141,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Discover a Starship Piece. It costs (1) less."
@@ -26165,7 +26165,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
@@ -26189,7 +26189,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Your Starship launch costs (1). Draw 1."
@@ -26217,7 +26217,7 @@
       "stinkyscape-166",
       "stinkyscape-167"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add 2 Scanning Probe Mk1s to your hand. They cost (0)."
@@ -26241,7 +26241,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
@@ -26272,7 +26272,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a Drone Interceptor. It gains Starship Piece."
@@ -26299,7 +26299,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt."
@@ -26323,7 +26323,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 1,
       "health": 2,
