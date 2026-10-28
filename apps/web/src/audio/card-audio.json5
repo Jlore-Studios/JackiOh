@@ -1553,7 +1553,9 @@
       death: { voice: "alien", text: "Quarantined. Rude, honestly." },
     },
     "meditative-049-3": { // AI Girlfriend
-      cast: { voice: "diva", text: "Fight for my amusement, darlings." },
+      play: { voice: "diva", text: "Fight for my amusement, darlings." },
+      attack: { voice: "diva", text: "For me? You shouldn't." },
+      death: { voice: "diva", text: "We are so over." },
     },
     "meditative-050": { // CN Tech
       cast: { voice: "robot", text: "Winning formula found. You're welcome." },

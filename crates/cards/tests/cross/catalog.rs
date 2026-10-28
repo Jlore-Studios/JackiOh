@@ -3786,7 +3786,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "49.3",
         "AI Girlfriend",
         c(4),
-        T::FieldSpell,
+        T::Unit,
         &[G::Cn, G::Token],
         R::Token,
         st(2, 30),
