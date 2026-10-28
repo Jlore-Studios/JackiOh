@@ -2648,6 +2648,10 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.11, R2124000: hours a spend's idempotency key and its answer are kept before the
+/// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
+/// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
+pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
 /// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
 /// request past it is refused and issues nothing. Bounds one account's place in the claim queue
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).

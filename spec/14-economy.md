@@ -42,6 +42,7 @@ Every value here is a constant named in backticks, never a number (CLAUDE.md rul
 | `QUEST_INTERVAL_HOURS`, `QUEST_MAX_HELD` | How often a quest arrives, and how many are held | [[§14.9]] |
 | `QUEST_JLORE_MIN`, `QUEST_JLORE_MAX`, `QUEST_XP_PER_JLORE` | A quest's Jlore, and its XP per Jlore | [[§14.9]] |
 | `DEV_PROFILE_IDS` | The environment variable that lists the dev accounts | [[§14.10]] |
+| `IDEMPOTENCY_KEY_TTL_HOURS` | How long a spend's idempotency key and its answer are kept | [[§14.11]] |
 | `ECONOMY_LIVE` | The server's switch for the economy, on since going live | [[§14.12]] |
 | `STARTER_CARDS` | The cards a new account starts with | [[§14.12]] |
 
@@ -145,6 +146,8 @@ A game's Jlore row has the reason `game`, and an account's `game` rows over a UT
 Every row says why. The collection's reasons are `pack`, `craft`, `reward`, `refund`, `admin`, `launch` and `dev`, a dev tool's own ([[R1300000]]); every economy ledger takes `launch` too, for the reset of going live ([[R1310002]]); a new kind of grant gets its reason from the sub-issue that adds it. A row a dev tool wrote is marked `dev` ([[§14.10]]).
 
 Every roll is seeded on the server, and its seed and result are logged with the grant it makes, so any opening replays exactly and can be audited. Each opening's seed is drawn afresh, so no seed an account can read foretells a later roll.
+
+A spend runs once, however often it is sent ([[R2124000]]). Every spend, a pack bought or opened, a token redeemed, a chase bought or an invite code redeemed ([[§9.4]]), may carry an idempotency key the client mints for a press and sends again on that press's retries. The server reads it under the account's economy lock: a key the account committed a spend with answers what that spend answered and spends nothing, the same key with another request is refused, and a new key's answer is written in the transaction of its grant. Only a committed spend keeps its key, for `IDEMPOTENCY_KEY_TTL_HOURS`, and no client reads one. A spend sent without a key runs as it always did.
 
 ### 14.12 Going live
 

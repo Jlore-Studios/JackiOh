@@ -1284,6 +1284,135 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
     }
 }
 
+// R2124000: a redemption sent again under its Idempotency-Key redeems once
+
+mod r2124000_idempotency_key {
+    use super::*;
+
+    /// `redeem_request` with an `Idempotency-Key`, as `apps/web/src/net/api.ts` sends it.
+    fn keyed(token: &str, code: &str, key: &str) -> Request<Body> {
+        let mut request = redeem_request(token, code, DEFAULT_IP);
+        request.headers_mut().insert(
+            "idempotency-key",
+            axum::http::HeaderValue::from_str(key).expect("a header value"),
+        );
+        request
+    }
+
+    const KEY: &str = "00000000-0000-4000-8000-000002124301";
+
+    #[tokio::test(start_paused = true)]
+    async fn r2124000_the_same_key_twice_redeems_once_and_answers_the_same() {
+        let server = code_server().await;
+        let caller = pending_caller(&server, "retried").await;
+        let minted = mint(&server, Some(2), None).await;
+
+        let first = server.send(keyed(&caller.token, &minted.formatted, KEY)).await;
+        assert_eq!(first.status, 200, "{}", first.text);
+        assert_eq!(status_of(&server, &caller.profile_id).await, json!("active"));
+
+        // Without its key the retry would be 409, the account being active now (R145).
+        let started_at = tokio::time::Instant::now();
+        let again = server.send(keyed(&caller.token, &minted.formatted, KEY)).await;
+        assert_eq!(again.status, 200, "{}", again.text);
+        assert_eq!(again.text, first.text);
+        // The replay is padded as every redemption answer is (R107).
+        assert!(started_at.elapsed().as_millis() >= REDEMPTION_RESPONSE_FLOOR_MS as u128);
+
+        assert_eq!(codes(&server).await[0]["uses"], json!(1));
+        assert_eq!(attempts(&server).await.len(), 1);
+        assert_eq!(
+            store_of(&server.app)
+                .lock()
+                .await
+                .tables
+                .economy
+                .idempotency_keys
+                .len(),
+            1
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2124000_the_same_key_with_another_code_is_refused_and_logs_no_attempt() {
+        let server = code_server().await;
+        let caller = pending_caller(&server, "reused").await;
+        let minted = mint(&server, Some(2), None).await;
+        let other = mint(&server, Some(2), None).await;
+
+        let first = server.send(keyed(&caller.token, &minted.formatted, KEY)).await;
+        assert_eq!(first.status, 200, "{}", first.text);
+        let refused = server.send(keyed(&caller.token, &other.formatted, KEY)).await;
+        assert_eq!(refused.status, 422, "{}", refused.text);
+        assert_eq!(refused.error_code(), "idempotency_key_reused");
+
+        assert_eq!(attempts(&server).await.len(), 1, "the refusal logged no attempt");
+        let uses: Vec<Value> = codes(&server)
+            .await
+            .iter()
+            .map(|row| row["uses"].clone())
+            .collect();
+        assert_eq!(uses, vec![json!(1), json!(0)]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2124000_a_refused_redemption_keeps_nothing_so_its_key_runs_again() {
+        let server = code_server().await;
+        let caller = pending_caller(&server, "refused-first").await;
+        let minted = mint(&server, None, None).await;
+        let set_revoked = |revoked: bool| {
+            let store = store_of(&server.app);
+            let id = minted.id.clone();
+            async move {
+                let mut data = store.lock().await;
+                let stored = data
+                    .tables
+                    .codes
+                    .iter_mut()
+                    .find(|row| row.id == id)
+                    .expect("the minted code was stored");
+                stored.revoked = revoked;
+            }
+        };
+
+        set_revoked(true).await;
+        let refused = server.send(keyed(&caller.token, &minted.formatted, KEY)).await;
+        assert_eq!(refused.status, 400, "{}", refused.text);
+        assert_eq!(refused.error_message(), REDEMPTION_IDENTICAL_ERROR);
+        assert!(
+            store_of(&server.app)
+                .lock()
+                .await
+                .tables
+                .economy
+                .idempotency_keys
+                .is_empty()
+        );
+
+        set_revoked(false).await;
+        let redeemed = server.send(keyed(&caller.token, &minted.formatted, KEY)).await;
+        assert_eq!(redeemed.status, 200, "{}", redeemed.text);
+        assert_eq!(status_of(&server, &caller.profile_id).await, json!("active"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2124000_a_key_that_is_not_a_uuid_is_refused_and_logs_no_attempt() {
+        let server = code_server().await;
+        let caller = pending_caller(&server, "bad-key").await;
+        let minted = mint(&server, None, None).await;
+
+        let started_at = tokio::time::Instant::now();
+        let refused = server
+            .send(keyed(&caller.token, &minted.formatted, "not-a-uuid"))
+            .await;
+        assert_eq!(refused.status, 400, "{}", refused.text);
+        assert_eq!(refused.error_code(), "bad_request");
+        assert!(started_at.elapsed().as_millis() >= REDEMPTION_RESPONSE_FLOOR_MS as u128);
+        assert!(attempts(&server).await.is_empty());
+        assert_eq!(status_of(&server, &caller.profile_id).await, json!("pending"));
+    }
+}
+
 // BUILD M6-T1: "a pending account cannot call collection, loadout or queue endpoints (403)"
 
 mod section_9_4_the_gate_around_everything_else {

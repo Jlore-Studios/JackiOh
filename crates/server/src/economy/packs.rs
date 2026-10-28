@@ -14,7 +14,8 @@
 //!   before the commit, and the dropped `Tx` rolls it all back.
 //! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters, the odds and the
 //!   unopened packs held), `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
-//!   or `GLOBAL_PACK_NAME`.
+//!   or `GLOBAL_PACK_NAME`, and an optional `Idempotency-Key`, under which a retry answers as its
+//!   first try did and spends nothing again ([`buy_pack_once`], [`open_pack_once`], R2124000).
 
 use std::sync::Arc;
 
@@ -25,7 +26,7 @@ use serde_json::{Value, json};
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::crypto::SystemIds;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, ok_of, str};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, str};
 use crate::app::App;
 use crate::config::{
     CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
@@ -34,6 +35,7 @@ use crate::config::{
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
+use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening};
 use crate::economy::store::{
@@ -152,12 +154,31 @@ pub(crate) fn delta_of(count: usize) -> Result<i64, ApiError> {
 
 /// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction: the wallet's debit, then the
 /// pack, unopened, into the inventory, each with its ledger row. A wallet that cannot cover the
-/// price is 409 and writes nothing (§14.1).
+/// price is 409 and writes nothing (§14.1). With no key, [`buy_pack_once`]'s spend.
 pub async fn buy_pack(app: &App, profile_id: &str, pack: PackKind) -> Result<BoughtPack, ApiError> {
+    buy_pack_once(app, profile_id, pack, None).await?.now()
+}
+
+/// [`buy_pack`] under an `Idempotency-Key` (R2124000): a keyed buy takes the account's lock first,
+/// so a retry racing its first try waits for it, then answers a key it already committed as it did
+/// then, and keeps the answer of one it buys in the same transaction. A buy with no key takes no
+/// lock and keeps nothing, as before keys.
+pub async fn buy_pack_once(
+    app: &App,
+    profile_id: &str,
+    pack: PackKind,
+    request: Option<&RequestKey>,
+) -> Result<Spent<BoughtPack>, ApiError> {
     let (item, key) = inventory_of(pack);
     let reference = Some(pack.name().to_string());
     let at = crate::app::now_ms();
     let mut tx = app.db.begin(Some(profile_id)).await?;
+    if request.is_some() {
+        tx.economy_lock_account(profile_id).await?;
+    }
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let jlore = tx
         .economy_jlore_grant(&JloreGrant {
             profile_id: profile_id.to_string(),
@@ -182,13 +203,15 @@ pub async fn buy_pack(app: &App, profile_id: &str, pack: PackKind) -> Result<Bou
         })
         .await?
         .ok_or_else(|| ApiError::internal("the inventory refused a bought pack"))?;
-    tx.commit().await?;
-    tracing::info!(event = "packs.bought", "profileId" = %profile_id, pack = pack.name());
-    Ok(BoughtPack {
+    let bought = BoughtPack {
         pack: pack.name().to_string(),
         jlore,
         unopened,
-    })
+    };
+    keep(&mut tx, profile_id, request, &bought).await?;
+    tx.commit().await?;
+    tracing::info!(event = "packs.bought", "profileId" = %profile_id, pack = pack.name());
+    Ok(Spent::Now(bought))
 }
 
 /// Adds `delta` to one of the account's counters for an opening; a zero delta writes nothing,
@@ -436,7 +459,7 @@ pub(crate) async fn settle_bars(
 /// reached its size paying its tokens with the overflow kept (R1305000, R1305001). Every economy
 /// row's `ref` is the opening's log; the collection's rows have no `ref` and share the opening's
 /// `at`. No pack held is 409. Every refusal and failure returns before the commit, so it writes
-/// nothing.
+/// nothing. With no key, [`open_pack_once`]'s opening.
 pub async fn open_pack(
     app: &App,
     profile_id: &str,
@@ -444,9 +467,28 @@ pub async fn open_pack(
     registry: &[Cosmetic],
     seed: &str,
 ) -> Result<OpenedPack, ApiError> {
+    open_pack_once(app, profile_id, pack, registry, seed, None)
+        .await?
+        .now()
+}
+
+/// [`open_pack`] under an `Idempotency-Key` (R2124000): right after the account's lock, before the
+/// pack held is read (a retry finds the pack its first try spent gone), a key already committed
+/// answers the opening it kept, and an opening's answer is kept in its own transaction.
+pub async fn open_pack_once(
+    app: &App,
+    profile_id: &str,
+    pack: PackKind,
+    registry: &[Cosmetic],
+    seed: &str,
+    request: Option<&RequestKey>,
+) -> Result<Spent<OpenedPack>, ApiError> {
     let (item, key) = inventory_of(pack);
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let held = tx
         .economy_inventory_get(profile_id)
         .await?
@@ -555,6 +597,14 @@ pub async fn open_pack(
         .count();
 
     let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
+    let opened = OpenedPack {
+        pack: pack.name().to_string(),
+        slots: opening.slots,
+        pity: opening.pity,
+        unopened,
+        bars,
+    };
+    keep(&mut tx, profile_id, request, &opened).await?;
 
     tx.commit().await?;
     tracing::info!(
@@ -564,13 +614,7 @@ pub async fn open_pack(
         cards = unlocked.len(),
         spent,
     );
-    Ok(OpenedPack {
-        pack: pack.name().to_string(),
-        slots: opening.slots,
-        pity: opening.pity,
-        unopened,
-        bars,
-    })
+    Ok(Spent::Now(opened))
 }
 
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
@@ -608,20 +652,35 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     })))
 }
 
-/// `POST /api/packs/buy` (`AuthLevel::Active`): `{ pack }`; [`buy_pack`].
+/// `POST /api/packs/buy` (`AuthLevel::Active`): `{ pack }`, with an optional `Idempotency-Key`
+/// (R2124000); [`buy_pack_once`].
 pub async fn post_buy(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let pack = pack_of(&req.body)?;
-    ok_of(&buy_pack(app, &profile.id, pack).await?)
+    let request = RequestKey::of(app, &req, "/api/packs/buy")?;
+    buy_pack_once(app, &profile.id, pack, request.as_ref())
+        .await?
+        .answer()
 }
 
 /// `POST /api/packs/open` (`AuthLevel::Active`): `{ pack }`; [`open_pack`] over the shipped
 /// registry, from a fresh seed (`SystemIds::seed`, 16 random bytes), so no seed the account can
-/// read foretells a later roll (§14.11).
+/// read foretells a later roll (§14.11), with an optional `Idempotency-Key` (R2124000);
+/// [`open_pack_once`].
 pub async fn post_open(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let pack = pack_of(&req.body)?;
+    let request = RequestKey::of(app, &req, "/api/packs/open")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
-    ok_of(&open_pack(app, &profile.id, pack, &registry, &SystemIds.seed()).await?)
+    open_pack_once(
+        app,
+        &profile.id,
+        pack,
+        &registry,
+        &SystemIds.seed(),
+        request.as_ref(),
+    )
+    .await?
+    .answer()
 }

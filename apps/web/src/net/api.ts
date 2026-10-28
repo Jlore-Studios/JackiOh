@@ -107,6 +107,8 @@ export type RequestOptions = {
   token?: string | null;
   body?: unknown;
   signal?: AbortSignal;
+  /** A spend's `Idempotency-Key` (R2124000): `spendRequest` below sets it, and nothing else does. */
+  idempotencyKey?: string;
 };
 
 function errorBodyOf(value: unknown, status: number): ApiErrorBody {
@@ -133,6 +135,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.authorization = `Bearer ${options.token}`;
   }
   if (options.body !== undefined) headers["content-type"] = "application/json";
+  if (options.idempotencyKey !== undefined) headers["idempotency-key"] = options.idempotencyKey;
 
   // A request that never answers (a stalled mobile network, a dead socket) must not leave a screen
   // on "Checking your account…" or a button on "Redeeming…" for ever. The race is against our own
@@ -186,6 +189,36 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
   if (!response.ok) throw new ApiRequestError(response.status, errorBodyOf(parsed, response.status));
   return parsed as T;
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2124000: a spend runs once. Every spend (a pack bought or opened, a token redeemed, a chase
+// bought, an invite code redeemed) goes with an `Idempotency-Key`, a UUID minted when the player
+// presses and sent again by that press's retries, "Try again" after a timeout included, so a spend
+// the server finished after we gave up answers the same and spends nothing again. Any answer from
+// the server, a refusal included, ends the press: the next one is a new key. A press with no answer
+// (a timeout or a failed transport) or a server error keeps its key for the retry. A press is the
+// spend's path and body: pressing again before an answer is the retry of the press that got none.
+// ---------------------------------------------------------------------------------------------
+
+/** The first status that is the server's own failure, not its answer to the spend. */
+const FIRST_SERVER_ERROR_STATUS = 500;
+
+/** Each unanswered press's key, by `${path} ${body}`, until the server answers it. */
+const unansweredKeys = new Map<string, string>();
+
+async function spendRequest<T>(path: string, token: string, body: unknown): Promise<T> {
+  const press = `${path} ${JSON.stringify(body)}`;
+  const idempotencyKey = unansweredKeys.get(press) ?? globalThis.crypto.randomUUID();
+  unansweredKeys.set(press, idempotencyKey);
+  try {
+    const answer = await apiRequest<T>(path, { method: "POST", token, body, idempotencyKey });
+    unansweredKeys.delete(press);
+    return answer;
+  } catch (cause) {
+    if (cause instanceof ApiRequestError && cause.status < FIRST_SERVER_ERROR_STATUS) unansweredKeys.delete(press);
+    throw cause;
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -455,7 +488,7 @@ export function getCodeStatus(token: string): Promise<CodeStatusResponse> {
 export type RedeemResponse = { status: "active"; needsInviteCode: false };
 
 export function redeemCode(token: string, code: string): Promise<RedeemResponse> {
-  return apiRequest<RedeemResponse>("/api/codes/redeem", { method: "POST", token, body: { code } });
+  return spendRequest<RedeemResponse>("/api/codes/redeem", token, { code });
 }
 
 export type CollectionEntry = { cardId: string; quantity: number };
@@ -610,7 +643,7 @@ export function getPacks(token: string): Promise<PacksResponse> {
 }
 
 export function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
-  return apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+  return spendRequest<OpenedPackResponse>("/api/packs/open", token, { pack });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -653,7 +686,7 @@ export function getTracks(token: string): Promise<TracksResponse> {
 export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
 
 export function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
-  return apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+  return spendRequest<BoughtPackResponse>("/api/packs/buy", token, { pack });
 }
 
 /** One token bar's points and size, as `GET /api/tokens` states them. */
@@ -680,7 +713,7 @@ export function getTokens(token: string): Promise<TokenBarsResponse> {
 
 /** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
 export function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
-  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", { method: "POST", token, body: { cardId } });
+  return spendRequest<TokenBarsResponse>("/api/tokens/redeem-card", token, { cardId });
 }
 
 /** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
@@ -696,11 +729,11 @@ export function redeemCosmeticToken(
   cosmeticId: string,
   cardId?: string,
 ): Promise<TokenBarsResponse> {
-  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
-    method: "POST",
+  return spendRequest<TokenBarsResponse>(
+    "/api/tokens/redeem-cosmetic",
     token,
-    body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
-  });
+    cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
+  );
 }
 
 /**
@@ -747,7 +780,7 @@ export type OpenedCosmeticPackResponse = {
 };
 
 export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
-  return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });
+  return spendRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", token, {});
 }
 
 /**
@@ -755,11 +788,11 @@ export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackRespo
  * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
  */
 export function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
-  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
-    method: "POST",
+  return spendRequest<CosmeticPacksResponse>(
+    "/api/cosmetic-packs/chase",
     token,
-    body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
-  });
+    cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

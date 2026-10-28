@@ -71,6 +71,8 @@ pub enum ApiErrorCode {
     Internal,
     /// R1300000: a dev route asked by an account `DEV_PROFILE_IDS` does not list.
     Forbidden,
+    /// R2124000: a spend's `Idempotency-Key` came before with another route or body.
+    IdempotencyKeyReused,
 }
 
 impl ApiErrorCode {
@@ -100,6 +102,7 @@ impl ApiErrorCode {
             ApiErrorCode::Unavailable => 503,
             ApiErrorCode::Internal => 500,
             ApiErrorCode::Forbidden => 403,
+            ApiErrorCode::IdempotencyKeyReused => 422,
         }
     }
 
@@ -129,6 +132,7 @@ impl ApiErrorCode {
             ApiErrorCode::Unavailable => "unavailable",
             ApiErrorCode::Internal => "internal",
             ApiErrorCode::Forbidden => "forbidden",
+            ApiErrorCode::IdempotencyKeyReused => "idempotency_key_reused",
         }
     }
 }

@@ -14,15 +14,19 @@ use jackioh_engine::wire::GameRecord;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS,
-    PLAY_TELEMETRY_RETENTION_DAYS,
+    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, IDEMPOTENCY_KEY_TTL_HOURS,
+    MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
 };
 use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow};
+use jackioh_server::economy::idempotency::sweep_expired;
+use jackioh_server::economy::store::IdempotencyRow;
 
 use crate::support::deps::test_app;
 use crate::support::store::fake_lock;
 
 const DAY_MS: i64 = 86_400_000;
+const HOUR_MS: i64 = 3_600_000;
+const MINUTE_MS: i64 = 60_000;
 
 // Harness (a private copy per file)
 
@@ -240,5 +244,35 @@ mod the_retention_purge {
             .map(|row| row.match_id.clone())
             .collect();
         assert_eq!(actions, vec!["m-recent".to_string(), "m-live".to_string()]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2124000_the_sweep_takes_keys_past_their_ttl_and_keeps_the_rest() {
+        let app = test_app().await;
+        let cutoff = now_ms() - IDEMPOTENCY_KEY_TTL_HOURS * HOUR_MS;
+        let mut t = app.db.begin(None).await.expect("begin");
+        for (n, created_at) in [(1, cutoff - 1), (2, cutoff), (3, cutoff + MINUTE_MS)] {
+            let row: IdempotencyRow = from(json!({
+                "profileId": "p1", "key": format!("00000000-0000-4000-8000-00000212440{n}"),
+                "route": "/api/packs/buy", "bodyHash": "ab".repeat(32), "status": 200,
+                "body": { "pack": "Core", "jlore": 0, "unopened": n }, "createdAt": created_at,
+            }));
+            t.economy_idempotency_put(&row)
+                .await
+                .expect("economy.idempotencyKeys.put");
+        }
+        t.commit().await.expect("commit");
+
+        assert_eq!(sweep_expired(&app).await.expect("the sweep"), 1);
+        let kept: Vec<i64> = fake_lock(&app)
+            .await
+            .tables
+            .economy
+            .idempotency_keys
+            .iter()
+            .map(|row| row.created_at)
+            .collect();
+        assert_eq!(kept, vec![cutoff, cutoff + MINUTE_MS]);
+        assert_eq!(sweep_expired(&app).await.expect("the sweep again"), 0);
     }
 }

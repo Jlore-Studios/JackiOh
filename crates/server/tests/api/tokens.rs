@@ -19,15 +19,16 @@ use jackioh_server::app::{self, App};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, PACK_PRICE_JLORE};
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
 use jackioh_server::db::store::CollectionEntry;
+use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::packs::open_pack;
 use jackioh_server::economy::roll::PackKind;
 use jackioh_server::economy::store::{
     Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
-use jackioh_server::economy::tokens::redeem_cosmetic_token;
+use jackioh_server::economy::tokens::{redeem_cosmetic_token, redeem_cosmetic_token_once};
 
-use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::fake;
+use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
+use crate::support::store::{fake, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -848,4 +849,95 @@ async fn the_routes_refuse_a_signed_out_caller() {
             .map(|(method, path)| (*method, *path, true))
             .collect::<Vec<_>>()
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2124000: a redemption sent again under its Idempotency-Key spends one token
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_redeems_one_card_token() {
+    let (app, token) = setup().await;
+    let cards = three_cards(&app);
+    grant_item(&app, InventoryItem::CardToken, "", 2).await;
+    let key = uuid(2124101);
+    let redeem = || {
+        call_with_key(
+            &app,
+            "POST",
+            "/api/tokens/redeem-card",
+            Some(&token),
+            json!({ "cardId": cards[0] }),
+            &key,
+        )
+    };
+
+    let (first_status, _, first) = redeem().await;
+    assert_eq!(first_status, 200, "{first}");
+    assert_eq!(
+        first["tokens"]["card"],
+        json!(1),
+        "the answer is the tokens after the spend"
+    );
+    let after_first = everything(&app).await;
+    // The card is owned now, so without its key the retry would be 409 "already owned".
+    let (again_status, _, again) = redeem().await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first);
+    assert_eq!(everything(&app).await, after_first);
+    assert_eq!(held(&app, InventoryItem::CardToken, "").await, 1);
+    let grants = fake(&app).lock().await.tables.grants.clone();
+    let crafted: Vec<_> = grants
+        .iter()
+        .filter(|grant| grant.card_id == cards[0] && grant.reason == "craft")
+        .collect();
+    assert_eq!(crafted.len(), 1);
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_redeems_one_cosmetic_token() {
+    let (app, _) = setup().await;
+    let cards = three_cards(&app);
+    own(&app, &cards[..2]).await;
+    let registry = registry(&cards);
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 2).await;
+    let request = RequestKey {
+        key: uuid(2124102),
+        route: "/api/tokens/redeem-cosmetic",
+        body_hash: "0".repeat(64),
+    };
+    let redeem = || {
+        redeem_cosmetic_token_once(
+            &app,
+            PROFILE,
+            &registry,
+            CosmeticRarity::Rare,
+            "foil-fixture-rare",
+            Some(&cards[0]),
+            Some(&request),
+        )
+    };
+
+    let first = match redeem().await.expect("the first redemption") {
+        Spent::Now(bars) => bars,
+        Spent::Before { status, body } => panic!("the first try replayed {status} {body}"),
+    };
+    assert_eq!(first.tokens.cosmetic_rare, 1);
+    let after_first = everything(&app).await;
+    match redeem().await.expect("the retry") {
+        Spent::Before { status, body } => {
+            assert_eq!(status, 200);
+            assert_eq!(body, to(&first));
+        }
+        Spent::Now(bars) => panic!("the retry redeemed again: {bars:?}"),
+    }
+    assert_eq!(everything(&app).await, after_first);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
+    let redeemed = ledger(&app)
+        .await
+        .cosmetics
+        .iter()
+        .filter(|row| row.reason == EconomyReason::TokenRedeem)
+        .count();
+    assert_eq!(redeemed, 1);
 }

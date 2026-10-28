@@ -16,6 +16,9 @@
 //!   and the dropped `Tx` rolls it all back.
 //! - [`buy_chase`]: a full Chase Shard bar buys one Legendary or Mythic cosmetic the account
 //!   chooses and empties (R1306002).
+//! - [`open_cosmetic_pack_once`] and [`buy_chase_once`]: either under an optional
+//!   `Idempotency-Key`, under which a retry answers as its first try did and spends nothing again
+//!   (R2124000).
 //! - The routes, all `AuthLevel::Active`: `GET /api/cosmetic-packs` (the bar, the packs held and
 //!   the slots' odds), `POST /api/cosmetic-packs/open` and `POST /api/cosmetic-packs/chase`
 //!   (`{ cosmeticId, cardId? }`).
@@ -40,6 +43,8 @@ use crate::config::{
     PACK_FLOORED_SLOT,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
+use crate::db::store::Tx;
+use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::{BarsSettled, bar_before, grant_counter, grant_unlocked, settle_bars};
 use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
@@ -350,15 +355,33 @@ fn no_pack_held() -> ApiError {
 /// bar that reached its size paying its tokens with the overflow kept (R1305000, R1306001). Every
 /// economy row's `ref` is the opening's log; the collection's rows have no `ref` and share the
 /// opening's `at`. No pack held is 409. Every refusal and failure returns before the commit, so it
-/// writes nothing.
+/// writes nothing. With no key, [`open_cosmetic_pack_once`]'s opening.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,
     registry: &[Cosmetic],
     seed: &str,
 ) -> Result<OpenedCosmeticPack, ApiError> {
+    open_cosmetic_pack_once(app, profile_id, registry, seed, None)
+        .await?
+        .now()
+}
+
+/// [`open_cosmetic_pack`] under an `Idempotency-Key` (R2124000): right after the account's lock,
+/// before the pack held is read (a retry finds the pack its first try spent gone), a key already
+/// committed answers the opening it kept, and an opening's answer is kept in its own transaction.
+pub async fn open_cosmetic_pack_once(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    seed: &str,
+    request: Option<&RequestKey>,
+) -> Result<Spent<OpenedCosmeticPack>, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let inventory = tx.economy_inventory_get(profile_id).await?;
     if held(&inventory, InventoryItem::CosmeticPack, "") < 1 {
         return Err(no_pack_held());
@@ -461,15 +484,7 @@ pub async fn open_cosmetic_pack(
         .filter(|slot| slot.grant == CosmeticSlotGrant::Bars)
         .count();
     let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
-
-    tx.commit().await?;
-    tracing::info!(
-        event = "cosmetic_packs.opened",
-        "profileId" = %profile_id,
-        cards = unlocked.len(),
-        spent,
-    );
-    Ok(OpenedCosmeticPack {
+    let opened = OpenedCosmeticPack {
         slots: opening.slots,
         shard_before,
         shard_bar: BarState {
@@ -478,7 +493,17 @@ pub async fn open_cosmetic_pack(
         },
         unopened,
         bars,
-    })
+    };
+    keep(&mut tx, profile_id, request, &opened).await?;
+
+    tx.commit().await?;
+    tracing::info!(
+        event = "cosmetic_packs.opened",
+        "profileId" = %profile_id,
+        cards = unlocked.len(),
+        spent,
+    );
+    Ok(Spent::Now(opened))
 }
 
 /// §14.6: a full Chase Shard bar buys any chase cosmetic, a Legendary or Mythic one (R1333000),
@@ -488,7 +513,7 @@ pub async fn open_cosmetic_pack(
 /// cosmetic id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic
 /// sits below Legendary, a per-card cosmetic names no owned card, an account cosmetic is given
 /// one, or it is already owned (a ledger row, or a default or starter, which §14.2 gives every
-/// account), in that order.
+/// account), in that order. With no key, [`buy_chase_once`]'s purchase.
 pub async fn buy_chase(
     app: &App,
     profile_id: &str,
@@ -496,12 +521,33 @@ pub async fn buy_chase(
     cosmetic_id: &str,
     card_id: Option<&str>,
 ) -> Result<(), ApiError> {
+    buy_chase_once(app, profile_id, registry, cosmetic_id, card_id, None)
+        .await?
+        .now()?;
+    Ok(())
+}
+
+/// [`buy_chase`] under an `Idempotency-Key` (R2124000), answering the bar and packs after it, read
+/// in its transaction: right after the account's lock, before the bar is read (a retry finds the
+/// bar its first try emptied), a key already committed answers what it kept, and a purchase's
+/// answer is kept in its own transaction.
+pub async fn buy_chase_once(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    cosmetic_id: &str,
+    card_id: Option<&str>,
+    request: Option<&RequestKey>,
+) -> Result<Spent<CosmeticPacks>, ApiError> {
     let cosmetic = registry
         .iter()
         .find(|entry| entry.id == cosmetic_id)
         .ok_or_else(|| bad_request(format!("no cosmetic is named \"{cosmetic_id}\"")))?;
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let bar = bar_before(
         &tx.economy_counters_get(profile_id).await?,
         Counter::ChaseShardBar,
@@ -549,18 +595,28 @@ pub async fn buy_chase(
         at,
     )
     .await?;
+    let packs = cosmetic_packs_in(&mut tx, profile_id).await?;
+    keep(&mut tx, profile_id, request, &packs).await?;
     tx.commit().await?;
     tracing::info!(event = "cosmetic_packs.chase_bought", "profileId" = %profile_id, cosmetic = cosmetic_id);
-    Ok(())
+    Ok(Spent::Now(packs))
 }
 
-/// Reads [`CosmeticPacks`] for `get_cosmetic_packs`: the bar from the counters, the packs from the
-/// inventory and the odds from `COSMETIC_TIER_WEIGHTS`. Read-only, like the collection.
+/// Reads [`CosmeticPacks`] for `get_cosmetic_packs`, in a transaction of its own
+/// ([`cosmetic_packs_in`]). Read-only, like the collection.
 async fn read_cosmetic_packs(app: &App, profile_id: &str) -> Result<CosmeticPacks, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
+    let packs = cosmetic_packs_in(&mut tx, profile_id).await?;
+    tx.commit().await?;
+    Ok(packs)
+}
+
+/// [`CosmeticPacks`] as `tx` reads them: the bar from the counters, the packs from the inventory
+/// and the odds from `COSMETIC_TIER_WEIGHTS`. A chase's purchase reads its answer through it
+/// before its commit.
+async fn cosmetic_packs_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<CosmeticPacks, ApiError> {
     let counters = tx.economy_counters_get(profile_id).await?;
     let inventory = tx.economy_inventory_get(profile_id).await?;
-    tx.commit().await?;
     Ok(CosmeticPacks {
         shard_bar: BarState {
             points: bar_before(&counters, Counter::ChaseShardBar),
@@ -582,24 +638,38 @@ pub async fn get_cosmetic_packs(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/cosmetic-packs/open` (`AuthLevel::Active`): [`open_cosmetic_pack`] over the shipped
 /// registry, from a fresh seed (`SystemIds::seed`, 16 random bytes), so no seed the account can
-/// read foretells a later roll (§14.11).
+/// read foretells a later roll (§14.11), with an optional `Idempotency-Key` (R2124000);
+/// [`open_cosmetic_pack_once`].
 pub async fn post_open(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
+    let request = RequestKey::of(app, &req, "/api/cosmetic-packs/open")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
-    ok_of(&open_cosmetic_pack(app, &profile.id, &registry, &SystemIds.seed()).await?)
+    open_cosmetic_pack_once(app, &profile.id, &registry, &SystemIds.seed(), request.as_ref())
+        .await?
+        .answer()
 }
 
 /// `POST /api/cosmetic-packs/chase` (`AuthLevel::Active`): `{ cosmeticId, cardId? }` over the
-/// shipped registry; [`buy_chase`], answering the bar and packs after it.
+/// shipped registry, with an optional `Idempotency-Key` (R2124000); [`buy_chase_once`], answering
+/// the bar and packs after it.
 pub async fn post_chase(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let cosmetic_id = str(&req.body, "cosmeticId")?;
     let card_id = optional_str(&req.body, "cardId")?;
+    let request = RequestKey::of(app, &req, "/api/cosmetic-packs/chase")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
-    buy_chase(app, &profile.id, &registry, &cosmetic_id, card_id.as_deref()).await?;
-    ok_of(&read_cosmetic_packs(app, &profile.id).await?)
+    buy_chase_once(
+        app,
+        &profile.id,
+        &registry,
+        &cosmetic_id,
+        card_id.as_deref(),
+        request.as_ref(),
+    )
+    .await?
+    .answer()
 }
 
 #[cfg(test)]

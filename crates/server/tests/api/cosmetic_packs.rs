@@ -22,9 +22,10 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
-    CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase,
+    CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
     open_cosmetic_pack, roll_cosmetic_pack,
 };
+use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::packs::{BarSettle, BarsSettled};
 use jackioh_server::economy::roll::{PackKind, pack_pool};
 use jackioh_server::economy::store::{
@@ -33,8 +34,8 @@ use jackioh_server::economy::store::{
 use jackioh_server::economy::tiers::cosmetic_odds;
 use jackioh_server::economy::tokens::cosmetic_bar_points;
 
-use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::fake;
+use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
+use crate::support::store::{fake, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -1394,4 +1395,90 @@ async fn the_routes_refuse_a_signed_out_caller() {
             .map(|(method, path)| (*method, *path, true))
             .collect::<Vec<_>>()
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2124000: an opening or a chase sent again under its Idempotency-Key runs once
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_opens_one_cosmetic_pack() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 2).await;
+    let key = uuid(2124201);
+    let open = || {
+        call_with_key(
+            &app,
+            "POST",
+            "/api/cosmetic-packs/open",
+            Some(&token),
+            json!({}),
+            &key,
+        )
+    };
+
+    let (first_status, _, first) = open().await;
+    assert_eq!(first_status, 200, "{first}");
+    assert_eq!(opened(&first).unopened, 1);
+    let after_first = everything(&app).await;
+    let (again_status, _, again) = open().await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first, "the retry answers the first try's slots");
+    assert_eq!(
+        everything(&app).await,
+        after_first,
+        "the retry rolls and grants nothing"
+    );
+    assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 1);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 1);
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_buys_one_chase() {
+    let (app, _) = setup().await;
+    let cards = three_cards(&app);
+    own(&app, &cards).await;
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    let registry = registry(&cards[0]);
+    let request = RequestKey {
+        key: uuid(2124202),
+        route: "/api/cosmetic-packs/chase",
+        body_hash: "0".repeat(64),
+    };
+    let buy = || {
+        buy_chase_once(
+            &app,
+            PROFILE,
+            &registry,
+            "foil-fixture-legendary",
+            Some(&cards[0]),
+            Some(&request),
+        )
+    };
+
+    let first = match buy().await.expect("the purchase") {
+        Spent::Now(packs) => packs,
+        Spent::Before { status, body } => panic!("the first try replayed {status} {body}"),
+    };
+    assert_eq!(
+        first.shard_bar.points, 0,
+        "the answer is the bar after it emptied"
+    );
+    let after_first = everything(&app).await;
+    // The bar is empty now, so without its key the retry would be 409 "not full".
+    match buy().await.expect("the retry") {
+        Spent::Before { status, body } => {
+            assert_eq!(status, 200);
+            assert_eq!(body, to(&first));
+        }
+        Spent::Now(packs) => panic!("the retry bought again: {packs:?}"),
+    }
+    assert_eq!(everything(&app).await, after_first);
+    let bought = ledger(&app)
+        .await
+        .cosmetics
+        .iter()
+        .filter(|row| row.reason == EconomyReason::ChaseShard)
+        .count();
+    assert_eq!(bought, 1);
 }

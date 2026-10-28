@@ -8,6 +8,9 @@
 //!   transaction (R1305002).
 //! - [`redeem_cosmetic_token`]: a Rare or Epic cosmetic token buys one cosmetic at its tier or
 //!   below, in one transaction (R1305003).
+//! - [`redeem_card_token_once`] and [`redeem_cosmetic_token_once`]: either under an optional
+//!   `Idempotency-Key`, answering the tokens after it, read in its transaction, under which a
+//!   retry answers as its first try did and spends nothing again (R2124000).
 //! - [`read_tokens`]: both bars' points and sizes, the cosmetic cycle's next step and the tokens
 //!   held (R1305004).
 //! - The routes, all `AuthLevel::Active`: `GET /api/tokens`, `POST /api/tokens/redeem-card`
@@ -35,7 +38,8 @@ use crate::config::{
     TOKEN_BAR_POINTS_BY_CARD_RARITY, TOKEN_BAR_POINTS_BY_COSMETIC_RARITY,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
-use crate::db::store::{CollectionEntry, CollectionGrant};
+use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
+use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::bar_before;
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryEntry, InventoryGrant, InventoryItem, OwnedCosmetics,
@@ -108,10 +112,30 @@ pub(crate) fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str)
 /// transaction: the collection's two writes (reason [`CARD_TOKEN_GRANT_REASON`], R1305002), then
 /// one `CardToken` spent (reason `token_redeem`), all with the same `at`; one commit. Refuses
 /// with 409, writing nothing, when the catalog names no such card, it is a token, its set does
-/// not ship, the account already owns it, or no card token is held.
+/// not ship, the account already owns it, or no card token is held. With no key,
+/// [`redeem_card_token_once`]'s redemption.
 pub async fn redeem_card_token(app: &App, profile_id: &str, card_id: &str) -> Result<(), ApiError> {
+    redeem_card_token_once(app, profile_id, card_id, None)
+        .await?
+        .now()?;
+    Ok(())
+}
+
+/// [`redeem_card_token`] under an `Idempotency-Key` (R2124000), answering the tokens after it, read
+/// in its transaction: right after the account's lock, before the token held is read (a retry
+/// finds the token its first try spent gone), a key already committed answers what it kept, and
+/// a redemption's answer is kept in its own transaction.
+pub async fn redeem_card_token_once(
+    app: &App,
+    profile_id: &str,
+    card_id: &str,
+    request: Option<&RequestKey>,
+) -> Result<Spent<TokenBars>, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let usable = match app.catalog.defs.get(card_id) {
         Some(def) => !def.is_token() && set_ships(def.set),
         None => false,
@@ -163,9 +187,11 @@ pub async fn redeem_card_token(app: &App, profile_id: &str, card_id: &str) -> Re
     })
     .await?
     .ok_or_else(|| ApiError::internal("the inventory refused a held card token"))?;
+    let bars = tokens_in(&mut tx, profile_id).await?;
+    keep(&mut tx, profile_id, request, &bars).await?;
     tx.commit().await?;
     tracing::info!(event = "tokens.card_redeemed", "profileId" = %profile_id, card = card_id);
-    Ok(())
+    Ok(Spent::Now(bars))
 }
 
 /// What a player's choice of one cosmetic, on one card or the account, comes to (R1305003,
@@ -219,7 +245,7 @@ pub(crate) fn choice_of(
 /// token's tier (so Legendary and Mythic are unreachable: no token exceeds Epic), a per-card
 /// cosmetic names no owned card (a full art names its own card alone, R1313000), an account
 /// cosmetic is given one, or it is already owned (a ledger row, or a default or starter, which
-/// §14.2 gives every account).
+/// §14.2 gives every account). With no key, [`redeem_cosmetic_token_once`]'s redemption.
 pub async fn redeem_cosmetic_token(
     app: &App,
     profile_id: &str,
@@ -228,6 +254,25 @@ pub async fn redeem_cosmetic_token(
     cosmetic_id: &str,
     card_id: Option<&str>,
 ) -> Result<(), ApiError> {
+    redeem_cosmetic_token_once(app, profile_id, registry, token, cosmetic_id, card_id, None)
+        .await?
+        .now()?;
+    Ok(())
+}
+
+/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), answering the tokens after it,
+/// read in its transaction: right after the account's lock, before anything held is read, a key
+/// already committed answers what it kept, and a redemption's answer is kept in its own
+/// transaction.
+pub async fn redeem_cosmetic_token_once(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    token: CosmeticRarity,
+    cosmetic_id: &str,
+    card_id: Option<&str>,
+    request: Option<&RequestKey>,
+) -> Result<Spent<TokenBars>, ApiError> {
     if !matches!(token, CosmeticRarity::Rare | CosmeticRarity::Epic) {
         return Err(bad_request(format!("no cosmetic token is {token}")));
     }
@@ -237,6 +282,9 @@ pub async fn redeem_cosmetic_token(
         .ok_or_else(|| bad_request(format!("no cosmetic is named \"{cosmetic_id}\"")))?;
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
     let owned = owned_in(&mut tx, profile_id).await?;
     let cosmetics = tx.economy_cosmetics_get(profile_id).await?;
     let token_held = held(
@@ -288,9 +336,11 @@ pub async fn redeem_cosmetic_token(
     })
     .await?
     .ok_or_else(|| ApiError::internal("the inventory refused a held cosmetic token"))?;
+    let bars = tokens_in(&mut tx, profile_id).await?;
+    keep(&mut tx, profile_id, request, &bars).await?;
     tx.commit().await?;
     tracing::info!(event = "tokens.cosmetic_redeemed", "profileId" = %profile_id, cosmetic = cosmetic_id);
-    Ok(())
+    Ok(Spent::Now(bars))
 }
 
 /// One token bar's points and size.
@@ -323,13 +373,20 @@ pub struct TokenBars {
     pub tokens: TokenHoldings,
 }
 
-/// Reads [`TokenBars`] for `get_tokens`: the bars and the cycle's stored position from the
-/// counters, the tokens from the inventory. Read-only, like the collection.
+/// Reads [`TokenBars`] for `get_tokens`, in a transaction of its own ([`tokens_in`]). Read-only,
+/// like the collection.
 async fn read_tokens(app: &App, profile_id: &str) -> Result<TokenBars, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
+    let bars = tokens_in(&mut tx, profile_id).await?;
+    tx.commit().await?;
+    Ok(bars)
+}
+
+/// [`TokenBars`] as `tx` reads them: the bars and the cycle's stored position from the counters,
+/// the tokens from the inventory. A redemption reads its answer through it before its commit.
+async fn tokens_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<TokenBars, ApiError> {
     let counters = tx.economy_counters_get(profile_id).await?;
     let inventory = tx.economy_inventory_get(profile_id).await?;
-    tx.commit().await?;
     let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
     let step = COSMETIC_TOKEN_CYCLE[(cycle % COSMETIC_TOKEN_CYCLE.len() as i64) as usize];
     Ok(TokenBars {
@@ -365,17 +422,20 @@ pub async fn get_tokens(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&read_tokens(app, &profile.id).await?)
 }
 
-/// `POST /api/tokens/redeem-card` (`AuthLevel::Active`): `{ cardId }`; [`redeem_card_token`],
-/// answering the tokens after it.
+/// `POST /api/tokens/redeem-card` (`AuthLevel::Active`): `{ cardId }`, with an optional
+/// `Idempotency-Key` (R2124000); [`redeem_card_token_once`], answering the tokens after it.
 pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let card_id = str(&req.body, "cardId")?;
-    redeem_card_token(app, &profile.id, &card_id).await?;
-    ok_of(&read_tokens(app, &profile.id).await?)
+    let request = RequestKey::of(app, &req, "/api/tokens/redeem-card")?;
+    redeem_card_token_once(app, &profile.id, &card_id, request.as_ref())
+        .await?
+        .answer()
 }
 
 /// `POST /api/tokens/redeem-cosmetic` (`AuthLevel::Active`): `{ token, cosmeticId, cardId? }`
-/// over the shipped registry; [`redeem_cosmetic_token`], answering the tokens after it.
+/// over the shipped registry, with an optional `Idempotency-Key` (R2124000);
+/// [`redeem_cosmetic_token_once`], answering the tokens after it.
 pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let token = str(&req.body, "token")?;
@@ -383,18 +443,20 @@ pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
         .ok_or_else(|| bad_request(format!("no cosmetic token is named \"{token}\"")))?;
     let cosmetic_id = str(&req.body, "cosmeticId")?;
     let card_id = optional_str(&req.body, "cardId")?;
+    let request = RequestKey::of(app, &req, "/api/tokens/redeem-cosmetic")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
-    redeem_cosmetic_token(
+    redeem_cosmetic_token_once(
         app,
         &profile.id,
         &registry,
         token,
         &cosmetic_id,
         card_id.as_deref(),
+        request.as_ref(),
     )
-    .await?;
-    ok_of(&read_tokens(app, &profile.id).await?)
+    .await?
+    .answer()
 }
 
 #[cfg(test)]

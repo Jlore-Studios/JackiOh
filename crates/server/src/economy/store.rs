@@ -1,7 +1,9 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
 //! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
-//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`).
+//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`). So
+//! do migration 0065's idempotency keys (R2124000): a spend's key and the answer it committed,
+//! written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`.
 //!
 //! Same shape as `duos::store`: every store method is one method on `Tx`, named
 //! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
@@ -273,6 +275,23 @@ pub struct PracticeSeed {
     pub claimed_at: Option<i64>,
 }
 
+/// One row of `public.idempotency_keys` (migration 0065, R2124000): a spend's key under its
+/// account, the route and the keyed hash of the body it came with, and the answer it committed.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdempotencyRow {
+    pub profile_id: String,
+    /// A UUID, hyphenated and lower case.
+    pub key: String,
+    pub route: String,
+    /// 64 lower-case hex digits.
+    pub body_hash: String,
+    /// A 2xx status.
+    pub status: i64,
+    pub body: serde_json::Value,
+    pub created_at: i64,
+}
+
 // ---------------------------------------------------------------------------
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).
@@ -406,6 +425,8 @@ pub struct EconomyTables {
     pub practice_seeds: Vec<PracticeSeed>,
     /// R1834000: migration 0061's per-card picks, one per profile and card.
     pub card_picks: Vec<(String, CardPicks)>,
+    /// R2124000: migration 0065's idempotency keys, one per profile and key.
+    pub idempotency_keys: Vec<IdempotencyRow>,
 }
 
 // ---------------------------------------------------------------------------
@@ -499,6 +520,34 @@ fn check_cosmetic(grant: &CosmeticGrant) -> Result<(), StoreError> {
         )));
     }
     check_dev(grant.reason == EconomyReason::Dev, grant.dev)
+}
+
+/// Migration 0065's `status between 200 and 299`: only a success is kept.
+const IDEMPOTENCY_STATUSES: std::ops::RangeInclusive<i64> = 200..=299;
+
+/// Migration 0065's `body_hash ~ '^[0-9a-f]{64}$'`: a SHA-256 in hex.
+const IDEMPOTENCY_BODY_HASH_DIGITS: usize = 64;
+
+/// Migration 0065's checks: a 2xx status, and a body hash of 64 lower-case hex digits.
+fn check_idempotency(row: &IdempotencyRow) -> Result<(), StoreError> {
+    if !IDEMPOTENCY_STATUSES.contains(&row.status) {
+        return Err(refused(format!(
+            "an idempotency key keeps a 2xx answer, not {}",
+            row.status
+        )));
+    }
+    let hex = row.body_hash.len() == IDEMPOTENCY_BODY_HASH_DIGITS
+        && row
+            .body_hash
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if !hex {
+        return Err(refused(format!(
+            "an idempotency key's body hash is 64 lower-case hex digits, not {:?}",
+            row.body_hash
+        )));
+    }
+    Ok(())
 }
 
 /// The track `grant` leaves, from `held` (a track not yet written is at its first level with no XP
@@ -724,6 +773,28 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seeds_prune(profile_id, issued_before))
     }
 
+    /// R2124000: the profile's row for `key`, or `None` when it sent no spend with that key (another
+    /// profile's key included).
+    pub async fn economy_idempotency_get(
+        &mut self,
+        profile_id: &str,
+        key: &str,
+    ) -> StoreResult<Option<IdempotencyRow>> {
+        economy_dispatch!(self, idempotency_get(profile_id, key))
+    }
+
+    /// R2124000: writes a spend's key and its answer, in the spend's transaction. A key the profile
+    /// already holds is refused, as the primary key refuses it.
+    pub async fn economy_idempotency_put(&mut self, row: &IdempotencyRow) -> StoreResult<()> {
+        check_idempotency(row)?;
+        economy_dispatch!(self, idempotency_put(row))
+    }
+
+    /// R2124000: deletes every profile's keys written before `created_before`; answers how many.
+    pub async fn economy_idempotency_sweep(&mut self, created_before: i64) -> StoreResult<u64> {
+        economy_dispatch!(self, idempotency_sweep(created_before))
+    }
+
     /// R1301003: a lock on the account's economy until the transaction ends, so two pack openings
     /// at once run one after the other and neither rolls on counters the other is moving. A lock,
     /// not a holding: no ledger row.
@@ -757,6 +828,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
         .retain(|grant| grant.profile_id != profile_id);
     tables.practice_seeds.retain(|seed| seed.profile_id != profile_id);
     tables.card_picks.retain(|(owner, _)| owner != profile_id);
+    tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -770,9 +842,9 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
-        PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal,
-        literal, track_after,
+        GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
+        OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
+        from_literal, literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -1708,6 +1780,69 @@ mod pg {
         .await?;
         Ok(())
     }
+
+    /// Migration 0065. `body` crosses as text cast to `jsonb`, and reads back as text.
+    pub async fn idempotency_get(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        key: &str,
+    ) -> Result<Option<IdempotencyRow>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let row = sqlx::query(
+            "select route, body_hash, status::bigint as status, body::text as body, created_at
+               from public.idempotency_keys
+              where profile_id = $1::uuid and key = $2::uuid",
+        )
+        .bind(profile_id)
+        .bind(key)
+        .fetch_optional(&mut **t)
+        .await?;
+        row.map(|row| -> Result<IdempotencyRow, StoreError> {
+            let body: String = row.try_get("body")?;
+            Ok(IdempotencyRow {
+                profile_id: profile_id.to_string(),
+                key: key.to_string(),
+                route: row.try_get("route")?,
+                body_hash: row.try_get("body_hash")?,
+                status: row.try_get("status")?,
+                body: serde_json::from_str(&body)?,
+                created_at: ms_of(row.try_get("created_at")?),
+            })
+        })
+        .transpose()
+    }
+
+    pub async fn idempotency_put(t: &mut PgTx<'_>, row: &IdempotencyRow) -> Result<(), StoreError> {
+        run_as(t, Some(row.profile_id.as_str())).await?;
+        sqlx::query(
+            "insert into public.idempotency_keys (profile_id, key, route, body_hash, status, body, created_at)
+             values ($1::uuid, $2::uuid, $3::text, $4::text, $5::smallint, $6::jsonb,
+                     to_timestamp($7::double precision / 1000.0))",
+        )
+        .bind(row.profile_id.as_str())
+        .bind(row.key.as_str())
+        .bind(row.route.as_str())
+        .bind(row.body_hash.as_str())
+        .bind(row.status)
+        .bind(serde_json::to_string(&row.body)?)
+        .bind(row.created_at)
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
+
+    /// Every profile's rows, so it runs as no subject: `service_role` bypasses RLS.
+    pub async fn idempotency_sweep(t: &mut PgTx<'_>, created_before: i64) -> Result<u64, StoreError> {
+        run_as(t, None).await?;
+        let done = sqlx::query(
+            "delete from public.idempotency_keys
+              where created_at < to_timestamp($1::double precision / 1000.0)",
+        )
+        .bind(created_before)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1717,9 +1852,9 @@ mod pg {
 mod fake {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyTables, GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
-        OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
-        literal, track_after,
+        EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant,
+        JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
+        TrackGrant, count_after, literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -2244,5 +2379,44 @@ mod fake {
             .practice_seeds
             .retain(|held| held.profile_id != profile_id || held.issued_at >= issued_before);
         Ok(())
+    }
+
+    pub fn idempotency_get(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        key: &str,
+    ) -> Result<Option<IdempotencyRow>, StoreError> {
+        let tables = call(f, "economy.idempotencyKeys.get")?;
+        Ok(tables
+            .idempotency_keys
+            .iter()
+            .find(|held| held.profile_id == profile_id && held.key == key)
+            .cloned())
+    }
+
+    /// A key the profile already holds is refused, as Postgres's primary key refuses it.
+    pub fn idempotency_put(f: &mut FakeTx<'_>, row: &IdempotencyRow) -> Result<(), StoreError> {
+        let tables = call(f, "economy.idempotencyKeys.put")?;
+        if tables
+            .idempotency_keys
+            .iter()
+            .any(|held| held.profile_id == row.profile_id && held.key == row.key)
+        {
+            return Err(StoreError::Other(format!(
+                "duplicate idempotency key {} for {}",
+                row.key, row.profile_id
+            )));
+        }
+        tables.idempotency_keys.push(row.clone());
+        Ok(())
+    }
+
+    pub fn idempotency_sweep(f: &mut FakeTx<'_>, created_before: i64) -> Result<u64, StoreError> {
+        let tables = call(f, "economy.idempotencyKeys.sweep")?;
+        let before = tables.idempotency_keys.len();
+        tables
+            .idempotency_keys
+            .retain(|held| held.created_at >= created_before);
+        Ok(u64::try_from(before - tables.idempotency_keys.len()).unwrap_or(u64::MAX))
     }
 }

@@ -31,7 +31,7 @@ use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::extract::Request;
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, HeaderValue};
 use axum::response::Response;
 use serde_json::{Map, Value};
 use tower::ServiceExt;
@@ -163,6 +163,24 @@ pub async fn call(
     body: Value,
 ) -> (u16, HeaderMap, Value) {
     send(app, json_request(method, path, &body, token, None)).await
+}
+
+/// `call` with an `Idempotency-Key` header holding `key` (R2124000), as `apps/web/src/net/api.ts`
+/// sends a spend.
+pub async fn call_with_key(
+    app: impl AppHandle,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    body: Value,
+    key: &str,
+) -> (u16, HeaderMap, Value) {
+    let mut request = json_request(method, path, &body, token, None);
+    request.headers_mut().insert(
+        "idempotency-key",
+        HeaderValue::from_str(key).unwrap_or_else(|error| panic!("a header value: {error}")),
+    );
+    send(app, request).await
 }
 
 // ---------------------------------------------------------------------------

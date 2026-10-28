@@ -19,8 +19,9 @@ use axum::response::Response;
 /// The methods the router's routes use, plus the preflight itself.
 const ALLOWED_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 
-/// Exactly what `apps/web/src/net/api.ts` sets on a request.
-const ALLOWED_HEADERS: &str = "authorization, content-type";
+/// Exactly what `apps/web/src/net/api.ts` sets on a request: a spend's `Idempotency-Key` among
+/// them (R2124000), without which the browser's preflight would refuse every spend.
+const ALLOWED_HEADERS: &str = "authorization, content-type, idempotency-key";
 
 /// Not in SPEC, and no R-row: a tuning value with no consequence; ten minutes of preflight caching
 /// saves a round trip.

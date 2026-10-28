@@ -81,7 +81,7 @@ function corsHeaders(origin: unknown): Record<string, string> {
   return {
     "access-control-allow-origin": typeof origin === "string" ? origin : "*",
     "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "access-control-allow-headers": "authorization, content-type",
+    "access-control-allow-headers": "authorization, content-type, idempotency-key",
     "access-control-expose-headers": "retry-after",
     "access-control-max-age": "600",
     "content-type": "application/json",

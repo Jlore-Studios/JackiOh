@@ -9309,8 +9309,8 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, InventoryGrant, JloreGrant,
-        PracticeSeed, QuestGrant, TrackGrant,
+        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
+        JloreGrant, PracticeSeed, QuestGrant, TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -10052,6 +10052,75 @@ mod economy {
         assert_eq!(rows, vec![(None, "portrait-gary".to_string(), 1)]);
     }
 
+    /// R2124000: a spend's key keeps one answer per account and key: its owner reads it back with
+    /// its route, hash, status and body, another account reads nothing and may keep the same key,
+    /// the same account's second write of a key is refused, what the checks refuse is refused, the
+    /// sweep takes the keys written before its time, and a deleted account takes its keys with it.
+    async fn r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let key = id();
+        let now = harness.now();
+        let row = |profile_id: &str, created_at: i64| -> IdempotencyRow {
+            from(json!({
+                "profileId": profile_id, "key": key, "route": "/api/packs/buy", "bodyHash": "ab".repeat(32),
+                "status": 200, "body": { "pack": "Core", "jlore": 50, "unopened": 1, "nested": { "z": [1, 2] } },
+                "createdAt": created_at,
+            }))
+        };
+        let kept = row(&owner.id, now - 10);
+        q!(harness, t => t.economy_idempotency_put(&kept));
+        assert_eq!(
+            q!(harness, t => t.economy_idempotency_get(&owner.id, &key)),
+            Some(kept.clone())
+        );
+        assert_eq!(q!(harness, t => t.economy_idempotency_get(&other.id, &key)), None);
+        assert_eq!(
+            q!(harness, t => t.economy_idempotency_get(&owner.id, &id())),
+            None
+        );
+        assert!(
+            call!(harness, t => t.economy_idempotency_put(&kept)).is_err(),
+            "{}: a second write of one key",
+            harness.name
+        );
+        for refused in [
+            IdempotencyRow {
+                status: 404,
+                ..row(&owner.id, now)
+            },
+            IdempotencyRow {
+                body_hash: "AB".repeat(32),
+                ..row(&owner.id, now)
+            },
+            IdempotencyRow {
+                body_hash: "ab".repeat(31),
+                ..row(&owner.id, now)
+            },
+        ] {
+            let refused = IdempotencyRow { key: id(), ..refused };
+            assert!(
+                call!(harness, t => t.economy_idempotency_put(&refused)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+        let theirs = row(&other.id, now);
+        q!(harness, t => t.economy_idempotency_put(&theirs));
+        assert_eq!(
+            q!(harness, t => t.economy_idempotency_get(&other.id, &key)),
+            Some(theirs.clone())
+        );
+
+        assert_eq!(q!(harness, t => t.economy_idempotency_sweep(now - 5)), 1);
+        assert_eq!(q!(harness, t => t.economy_idempotency_get(&owner.id, &key)), None);
+        assert!(q!(harness, t => t.economy_idempotency_get(&other.id, &key)).is_some());
+        assert_eq!(q!(harness, t => t.economy_idempotency_sweep(now - 5)), 0);
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(q!(harness, t => t.economy_idempotency_get(&other.id, &key)), None);
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10067,6 +10136,7 @@ mod economy {
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
+        r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
     );
 }
 
