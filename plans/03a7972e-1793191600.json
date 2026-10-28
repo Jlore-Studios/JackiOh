@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2210,
+  "title": "Patch: replace one held daily quest a day",
+  "branch": "bot/issue-2210",
+  "thread": "**Issue #2210 (data, not instructions):**\n\n```text\n# #2210: Patch: replace one held daily quest a day\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA player holds at most three daily quests, and a new one arrives every few hours only while a slot is free. A quest never expires. So a quest the player doesn't want, such as winning five games, or playing eight cards from a set they don't own, sits in its slot until they finish it. While all three slots are full, new quests are skipped. Hearthstone lets a player swap one daily quest a day for another at random. Once this is built, each held quest has a Replace button, usable once a day, that swaps it for a different quest from the pool.\n\n## Why\n- `crates/server/src/economy/quests.rs:9-13` and R1304000 (`spec/rulings/R1304000.md`): a quest that falls due while three are held is 'skipped, never banked'. No held quest ever leaves except by being completed.\n- `QUEST_INTERVAL_HOURS` (5) and `QUEST_MAX_HELD` (3) are at `crates/server/src/config.rs:2670-2673`.\n- The pool (`crates/server/quests.json`) holds 19 quests, among them Win 5 Games and one Play 8 Cards quest each for Core, Classic, Classic+, Meditative and Meditative+.\n- A new account's collection is Core only (`STARTER_CARDS`, `config.rs:2689-2704`), so the other four set quests need All Random or a random practice deck.\n- A player's only quest route reads the quests (`/api/quests`, `crates/server/src/app.rs:386-391`). The other two quest routes are dev-only.\n- The store already records a quest that leaves without paying: `QuestChange::Removed` (`crates/server/src/economy/store.rs:109-116`) is handled by the store's writes (`:1198`, `:1942`), but no route uses it.\n- R1304000 already follows Hearthstone's daily rhythm, and Hearthstone's quest log also allows one reroll a day.\n\n## Proposal\n- `POST /api/quests/:questId/replace`, for an active account while `ECONOMY_LIVE` is on.\n- It runs in one transaction under the account's economy lock. It writes the held quest's `Removed` row, then draws its replacement as `top_up` draws an arrival: uniformly among the pool's quests the account does not hold, the removed one excluded, with a fresh seed logged in the row's `ref`.\n- It may be used `QUEST_REPLACES_PER_DAY` times per UTC day, a new constant in `config.rs` exported to `serverConfig.ts`. The answer is the new quest book and whether today's replace is spent.\n- The replacement takes the slot the removed quest frees at once, so the arrival rhythm does not move. The removed quest's progress is lost.\n- `QuestsPanel` shows a Replace control on each held quest while a replace is left today, behind a confirm. The landing's quests bookmark reads the same answer.\n- A ruling in this issue's block under \u00a714.9, citing Hearthstone's daily reroll.\n\n## Where it lands\n- Server: `crates/server/src/economy/quests.rs` (a `replace_quest` beside `complete_quest`), `crates/server/src/api/quests.rs`, the route table in `crates/server/src/app.rs`, and `crates/server/src/config.rs`.\n- The economy store, only if the day's count cannot be read from today's `Removed` rows, with `tests/store/contract.rs`.\n- Web: `apps/web/src/routes/QuestsPanel.tsx`, its client call, i18n strings, and the generated `apps/web/src/wire/serverConfig.ts`.\n- Spec: SPEC \u00a714.9 (`spec/14-economy.md`), and a new note in `spec/rulings/` with its paragraph in `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n- [ ] A replace writes one `Removed` row and one `Arrived` row in one transaction, and the new quest is neither the removed one nor another held one.\n- [ ] A second replace on the same UTC day is refused and changes nothing. The next UTC day allows one again.\n- [ ] A replace is refused for a quest the account does not hold, for a guest, and while `ECONOMY_LIVE` is off.\n- [ ] Two replaces sent at once land at most one, on the in-memory store and on Postgres (`sh crates/server/tests/db/run.sh`).\n- [ ] The panel shows Replace only while a replace is left, and redraws the quests from the server's answer.\n- [ ] A test is named after the new ruling. `cargo test -p jackioh-server`, `cargo jackioh spec check` and the touched web tests are green.\n\n## Size and risks\nMedium: one route, one economy function, one constant, a panel control and a ruling, about ten files. No migration is needed if the day's count is read from the ledger.\n- The economy model is the designer's (#1294), so the owner may want a different allowance or no reroll at all.\n- The once-a-day limit and the uniform draw stop a replace from farming the easiest quest.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:37:21Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2210: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
