@@ -7020,6 +7020,13 @@
     "2253": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T17:51:49Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "adds ruling R2253000 and edits SPEC \u00a714.9 (rule 3 fails) and spans crates/server, apps/web and spec/, so it cannot be easy; no engine, AI, migration or card work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
