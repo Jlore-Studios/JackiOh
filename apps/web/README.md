@@ -32,6 +32,8 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
+The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
