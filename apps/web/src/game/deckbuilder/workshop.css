@@ -353,17 +353,6 @@
   font-size: 12px;
 }
 
-.ws-empty {
-  padding: 40px 16px;
-  border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
-  text-align: center;
-}
-
-.ws-empty p {
-  margin: 0 auto;
-}
-
 /* --- an editor's head: the way back, the name, the server's refusal ------------------------------ */
 
 .ws-editor {

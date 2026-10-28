@@ -585,6 +585,7 @@ describe("the lobby's modes", () => {
 
     const link = await screen.findByTestId(playTestid.decksLink);
     expect(link).toHaveAttribute("href", "/decks");
+    expect(link).toHaveTextContent("Build one in Decks");
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
 
     // All Random needs no deck at all.
