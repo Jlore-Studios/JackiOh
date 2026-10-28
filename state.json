@@ -5261,9 +5261,11 @@
       "ci_run_id": 40674807136,
       "ci_sha": "092d58ed746b0e52ca26ecd0e17456863bb27bc0",
       "cleared": {
-        "at": "2026-10-28T12:13:20Z",
+        "at": "2026-10-28T13:19:48Z",
         "by": "`claude` (strong)",
-        "sha": "32f1f2981e1dd784f33c53b9f431862da026eb3e"
+        "carried_from": "32f1f2981e1dd784f33c53b9f431862da026eb3e",
+        "resolved_by": "`claude` (strong)",
+        "sha": "5362b7ca94699c18f209b8d51e5e0e735afbebf3"
       },
       "cross_rounds": 1,
       "died": 0,
