@@ -30,23 +30,16 @@ fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
     count.max(0)
 }
 
-/// R102: a fused card carries every ingredient's text, so the stricter of their costs holds.
-fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
+/// R102: a fused card carries every ingredient's text, so the stricter of their costs holds. `radiant`
+/// is the face the text is on: the card's own, or the copied Unit's for a copier (R1850000).
+fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str, radiant: bool) -> i32 {
     let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
         let entry = crate::scripts::scripts_ref(state, def_id);
-        return face_cost(
-            if self_.radiant {
-                &entry.radiant
-            } else {
-                &entry.base
-            },
-            state,
-            self_,
-        );
+        return face_cost(if radiant { &entry.radiant } else { &entry.base }, state, self_);
     };
     parts
         .iter()
-        .map(|part| fused_cost(state, self_, part))
+        .map(|part| fused_cost(state, self_, part, radiant))
         .fold(0, i32::max)
 }
 
@@ -61,8 +54,12 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     {
         return 0;
     }
-    if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {
-        return fused_cost(state, card, &card.def_id);
+    // R102, R1850000, R2271001: the text the card runs sets the cost: a copier's is the text it
+    // copied, so a copy of a fused card takes the stricter of its ingredients' costs, and a fused
+    // copier the cost of the text it copied.
+    let (text_def_id, text_radiant) = crate::subsystems::unit_text::text_def_of(card);
+    if crate::catalog::fused_id_parts(Some(state), text_def_id).is_some() {
+        return fused_cost(state, card, text_def_id, text_radiant);
     }
     face_cost(&crate::scripts::script_of(state, card), state, card)
 }

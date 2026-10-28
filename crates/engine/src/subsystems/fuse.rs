@@ -59,7 +59,7 @@ use crate::script::{
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, QuestBook, Script,
     SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
-    TriggerExtraHook, TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
+    TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
     condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
@@ -1415,6 +1415,7 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
             .map(|trigger| TriggerDef {
                 id: format!("{def_id}:{}", trigger.id),
                 run: in_trigger_ingredient(trigger, index),
+                when: trigger.when.as_ref().map(|when| in_when_ingredient(when, index)),
                 ..trigger.clone()
             })
             .collect()
@@ -1511,6 +1512,17 @@ fn in_trigger_ingredient(trigger: &TriggerDef, index: usize) -> TriggerRun {
             .into_iter()
             .map(|effect| in_ingredient(effect, patch.clone()))
             .collect()
+    })
+}
+
+/// R99, R102, R2271000: a trigger's condition, read in its ingredient's place, as its list is built
+/// there: the traps' dispatch reads it on a fused trap, `run_queued_trigger` on any other fusion.
+fn in_when_ingredient(when: &TriggerWhen, index: usize) -> TriggerWhen {
+    let when = when.clone();
+    Arc::new(move |ctx, event| {
+        let patch = part_data(&ctx.data, index);
+        let mut inner = in_place(ctx, &patch);
+        when(&mut inner, event)
     })
 }
 

@@ -860,3 +860,52 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         assert_eq!(paid, vec![false, true]);
     }
 }
+
+/// R2271001 (D-5 of #1884's audit): a copier runs the text it copied, so the cost of targeting a copy
+/// of a fused card is the fused card's, the stricter of its ingredients' (R102): a Tnack Trav that
+/// copied Nature Titan + Paul Allen's Ghost asks the Ghost's discards, as the fusion itself does.
+mod r2271001_a_copy_of_a_fused_card_takes_its_stricter_targeting_cost {
+    use super::*;
+
+    const GHOST: &str = "classic-089";
+    const TNACK_TRAV: &str = "stinkyscape-020";
+    const NATURE_TITAN: &str = "classic-045";
+    const GHOST_DISCARDS: i32 = 2;
+
+    #[test]
+    fn r2271001_a_tnack_trav_that_copied_a_fused_ghost_asks_the_ghosts_discards() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [GHOST, TNACK_TRAV, MR_VANILLA, MR_VANILLA], "mana": 10,
+                    "field": [{ "def": NATURE_TITAN, "lane": 1 }] },
+            "p2": { "hand": [MR_VANILLA] },
+        }));
+        let titan = s.unit_at(P1, 1);
+        let ghost = must(
+            s.hand(P1).iter().find(|card| card.def_id == GHOST).cloned(),
+            "the Ghost in hand",
+        );
+        let fused = must(
+            fuse_in(
+                &mut s,
+                FuseArgs {
+                    ingredients: vec![ghost],
+                    target: Some(titan),
+                    ..Default::default()
+                },
+            ),
+            "the Titan + Ghost",
+        );
+        let targeting = |s: &Scenario, card: &CardInstance| {
+            jackioh_engine::targeting::targeting_discards_of(s.state(), card)
+        };
+        assert_eq!(targeting(&s, &fused), GHOST_DISCARDS);
+
+        s.play(
+            TNACK_TRAV,
+            json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": fused.id }] }),
+        );
+        let copier = s.unit_at(P1, 2);
+        assert_eq!(copier.def_id, TNACK_TRAV);
+        assert_eq!(targeting(&s, &copier), GHOST_DISCARDS);
+    }
+}

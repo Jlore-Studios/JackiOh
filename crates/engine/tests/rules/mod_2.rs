@@ -25,6 +25,7 @@ pub mod prompt_kinds;
 pub mod prompts;
 pub mod query;
 pub mod quests;
+pub mod queued_when;
 pub mod random_entries;
 pub mod ranged_flying;
 pub mod recruit_variants;
