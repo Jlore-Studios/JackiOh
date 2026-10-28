@@ -171,10 +171,16 @@ export type GameProps = {
    */
   aim?: GameAim;
   /**
-   * #511: the board is a replay's, a view to look at: no prompt, drag, glow or R345 preference. The
-   * route passes no legal actions either, so no control is offered. Absent, off.
+   * #511: the board is a replay's, a view to look at: no drag, glow or R345 preference, and no prompt
+   * but `replayPrompt`'s read-only one. The route passes no legal actions either, so no control is
+   * offered. Absent, off.
    */
   replay?: boolean;
+  /**
+   * R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). Only the
+   * replay player sets it; a watched game and the Duos boards leave it off. Absent, off.
+   */
+  replayPrompt?: boolean;
   /**
    * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
    * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
@@ -243,6 +249,7 @@ export default function Game({
   loadouts = null,
   aim,
   replay = false,
+  replayPrompt = false,
   lesson = false,
   lethalHint = false,
   tradeBar = true,
@@ -752,7 +759,7 @@ export default function Game({
       {silent ? null : <CardShowcase view={view} queue={runner} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
-      {replay || promptOver(shown, burst, inFlight) ? null : (
+      {(replay && !replayPrompt) || promptOver(shown, burst, inFlight) ? null : (
         <Prompt
           view={shown}
           interaction={interaction}
@@ -761,6 +768,8 @@ export default function Game({
           onInteraction={setInteraction}
           animating={animating.get(animTestid.prompt)}
           lesson={lesson}
+          // R2211000: a replay's prompt is drawn as offered and sends nothing.
+          readOnly={replay}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
           // and must be answered, so it offers none: the button would do nothing (the mulligan, a
           // Discover, a trigger's choice).
