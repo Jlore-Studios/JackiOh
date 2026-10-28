@@ -6375,14 +6375,11 @@
     "what": "revise #2168 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-28T03:57:02Z",
+    "at": "2026-10-28T04:11:46Z",
     "notes": [
-      "CI on #2168: #2168: re-ran the failed jobs of run 40626723563",
-      "delivered plan #2107 on claude-6 (run 40626835168): planned",
-      "delivered revise #2145 on muse (run 40618780698): approved",
-      "started review #2145 on claude-6 (run 40629772494)",
-      "started build #2107 on muse (run 40629838869)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 65h 59m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 72h 59m"
+      "delivered review #2145 on claude-6 (run 40629772494): reviewed",
+      "started revise #2168 on claude-6 (run 40631127768)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 65h 45m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 72h 45m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7088,7 +7085,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T03:57:02Z",
+  "loop_tick": "2026-10-28T04:11:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
