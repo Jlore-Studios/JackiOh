@@ -213,7 +213,9 @@ mod tests {
         #[test]
         fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            for seed in 0..40 {
+            // Re-pinned for the Stinkyscape release (#1884): forty seeds reached every one of the nine,
+            // and eighty reach every one of the fourteen.
+            for seed in 0..80 {
                 let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
                 s.play(OOMEN, json!({ "zone": LANE }));
                 let trap = s.backrow(P1, LANE);

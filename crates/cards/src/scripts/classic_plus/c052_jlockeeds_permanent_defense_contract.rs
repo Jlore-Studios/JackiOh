@@ -395,7 +395,9 @@ mod tests {
         fn s2_3_the_discount_floors_at_0_a_lobbyist_1_costs_0() {
             let mut checked = false;
             let mut i = 0;
-            while i < 40 && !checked {
+            // Re-pinned for the Stinkyscape release (#1884): the pool is fifteen, not eight, so the
+            // search for a seed that delivers the Lobbyist runs longer.
+            while i < 120 && !checked {
                 let mut s = signed(true, Some(&format!("rfloor-{i}")), None, None);
                 i += 1;
                 play_all(&mut s);

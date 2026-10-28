@@ -538,6 +538,8 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // and 8, before its sixth crystal; game 4 holds the card affordable on four turns. Re-pinned for
     // #817 (R817000), when the Quickdraw cap re-dealt the sweep's filler decks and games 1–4 hold the
     // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
+    // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
+    // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
 
     /// R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals
     #[test]
@@ -567,7 +569,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let hard = js(sweep_card(
             "core-029",
             &SweepOptions {
-                seeds: Some(5),
+                seeds: Some(8),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Hard),
