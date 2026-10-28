@@ -1,11 +1,11 @@
-//! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 3 (2 through v0.4.12d), Rare.
+//! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 3 (2 through v0.5.0), Rare.
 //!   Base:    "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards};
 //!             or choose a Unit, which is destroyed at the start of your next turn."
 //!   Radiant: "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards};
 //!             or all enemy Units are destroyed at the start of your next turn."
 //!
-//! Issue #2179: the damage is Pierce (R346: Armor is skipped at §4.4 step 2); through v0.4.12d it was
-//! not, which `script_v0_4_12d` keeps (R767000).
+//! Issue #2179: the damage is Pierce (R346: Armor is skipped at §4.4 step 2); through v0.5.0 it was
+//! not, which `script_v0_5_0` keeps (R767000).
 //!
 //! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`
 //! action (R81), each target bound to its mode (`forModes`, R90). The discard is random (R682), so no
@@ -112,8 +112,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.12d its damage did not pierce; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+/// R767000: through v0.5.0 its damage did not pierce; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
         base: face(false, false),
         radiant: face(true, false),
@@ -275,10 +275,10 @@ mod tests {
                 s.expect_stats(&big, json!({ "health": 5, "maxHealth": 7 }));
             }
 
-            /// R767000: the script kept for the replays of v0.4.12d and before, whose damage met Armor.
+            /// R767000: the script kept for the replays of v0.5.0 and before, whose damage met Armor.
             #[test]
-            fn r767000_a_game_on_v0_4_12d_deals_damage_armor_takes() {
-                crate::under_kept(PUNISH, script_v0_4_12d(), || {
+            fn r767000_a_game_on_v0_5_0_deals_damage_armor_takes() {
+                crate::under_kept(PUNISH, script_v0_5_0(), || {
                     let mut s = setup(json!({}), json!({ "field": [BIG] }), false);
                     let big = s.card(BIG).clone();
                     activate_punish(&mut s, DAMAGE, Some(pick::instance(&big)));

@@ -12,6 +12,7 @@ import { TryAgainButton } from "../auth/AccountError.tsx";
 import { faceModel, useInspectTrigger } from "../cards/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { practiceTestid } from "./testids.ts";
 
 /** The curve's columns, Hearthstone's way: one per cost up to the last, which holds the rest. */
@@ -60,16 +61,20 @@ export type DeckPreviewProps = {
 export function DeckPreview({ title, identity, cards, defs, defsFailed, onRetry }: DeckPreviewProps): ReactElement {
   let body: ReactElement | null = null;
   if (cards !== null && defs === null) {
-    body = (
+    body = defsFailed ? (
       <p className="deck-preview__status">
-        {defsFailed ? t("The card list could not be loaded; the deck still plays.") : t("Loading the card list…")}
-        {defsFailed && onRetry !== undefined ? (
+        {t("The card list could not be loaded; the deck still plays.")}
+        {onRetry !== undefined ? (
           <>
             {" "}
             <TryAgainButton onRetry={onRetry} testId={practiceTestid.defsRetry} />
           </>
         ) : null}
       </p>
+    ) : (
+      <div className="deck-preview__status">
+        <Skeleton variant="rows" label={t("Loading the card list…")} />
+      </div>
     );
   } else if (cards !== null && defs !== null) {
     const list = previewCards(cards, defs);

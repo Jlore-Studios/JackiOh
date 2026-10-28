@@ -9,6 +9,8 @@ import { LEAN_NEWEST } from "@jackioh/shared";
 
 import { PLAY_LEAN_SET_KEY, leanLabel, readPlayLean } from "../game/LeanNewest.tsx";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer } from "../test/stubServer.ts";
 import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
@@ -94,6 +96,18 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     await waitFor(() => {
       expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
     });
+  });
+
+  it("#2115 the decks are a panel skeleton while they are read, then the deck picker", async () => {
+    serveDecks();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
+
+    // Right after render the stubbed read has not answered yet.
+    expectSkeleton(screen.getByText("Loading your decks…"), "panel");
+
+    expect(await screen.findByTestId(togetherTestid.challengeDeck)).toBeInTheDocument();
+    expect(screen.queryByText("Loading your decks…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("#1831 the last mode and trio, Send focused", async () => {

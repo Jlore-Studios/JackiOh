@@ -2,9 +2,9 @@
 // during a game (tokens, generated and Discovered cards, copies, transforms' results, The Coin), apart
 // from the deck cards. A row counts the seats that made a Created copy of the card: Used those that used
 // one, split by whether a copy was Radiant at its first use, and Not used those that used none, the
-// baseline its Δ is taken from. A rate whose games are below R654's floor shows "—", as the cards
-// table's Radiant and Normal rates do; the figures, their order and the Δ's own floor are the server's
-// (CLAUDE.md rule 7). It sits in the scrolling panel, never the fixed top (R1646000).
+// baseline it is compared with. A rate whose games are below R654's floor shows "—", as the cards
+// table's Radiant and Normal rates do; the figures, their order and the comparison's own floor are
+// the server's (CLAUDE.md rule 7). It sits in the scrolling panel, never the fixed top (R1646000).
 
 import type { ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
@@ -53,7 +53,7 @@ export function CreatedPanel({
               <th scope="col" className="stats-th">{t("Not used")}</th>
               <th scope="col" className="stats-th">{t("Used Radiant")}</th>
               <th scope="col" className="stats-th">{t("Used normal")}</th>
-              <th scope="col" className="stats-th">{t("Created Δ")}</th>
+              <th scope="col" className="stats-th">{t("Used vs not used")}</th>
             </tr>
           </thead>
           <tbody>

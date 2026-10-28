@@ -13,6 +13,9 @@ import type { Challenge, Friend, FriendRequest, PlayerRef } from "../net/social.
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { baseView } from "../test/fixtures.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { settle } from "../test/settle.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -88,14 +91,6 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "POST" && path === "/api/presence") return { status: 204 };
     return undefined;
-  });
-}
-
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
   });
 }
 
@@ -176,7 +171,7 @@ describe("#1831 who sees the button", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve(world({ incoming: [challenge("ch-1", ANN)] }));
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
       expect(server.to("GET", "/api/challenges")).toHaveLength(0);
     },
@@ -192,7 +187,7 @@ describe("#1831 who sees the button", () => {
         call.path === "/api/challenges" ? refusal(403, "forbidden", "Your account is not active yet.") : undefined,
       );
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
       expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
     },
@@ -206,7 +201,7 @@ describe("#1831 who sees the button", () => {
       signIn("tok-down");
       serve(world(), (call) => (call.path === "/api/challenges" ? refusal(500, "internal", "boom") : undefined));
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
     },
     TEST_MS,
@@ -300,6 +295,25 @@ describe("#1831 the panel", () => {
       expect(within(panel).getByText(wholeText("Me#1"))).toBeInTheDocument();
       const all = within(panel).getByTestId(friendsTestid.all);
       expect(all).toHaveAttribute("href", "/together");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "#2115 the panel's friends are a rows skeleton while the list is read, then the friends",
+    async () => {
+      signIn("tok-panel");
+      serve(world());
+      shell();
+      fireEvent.click(await button());
+      // Right after the click the stubbed read has not answered yet.
+      const panel = screen.getByTestId(friendsTestid.panel);
+      expectSkeleton(within(panel).getByText("Loading your friends…"), "rows");
+
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(3);
+      expect(within(panel).queryByText("Loading your friends…")).toBeNull();
+      expect(within(panel).queryByTestId(skeletonTestid.root)).toBeNull();
     },
     TEST_MS,
   );

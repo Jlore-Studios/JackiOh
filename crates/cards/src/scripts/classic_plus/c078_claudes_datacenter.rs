@@ -10,8 +10,8 @@
 //! Each card is its own pick (R60) through §6.3's Add to hand, so a full hand burns it, and the opponent
 //! sees the sentinel (R97).
 //!
-//! Issue #2179 made it an Activate; through v0.4.12d it added the card at its controller's end of turn
-//! (R62), which `script_v0_4_12d` keeps, and through v0.4.4b that end of turn's (0) was printed, not
+//! Issue #2179 made it an Activate; through v0.5.0 it added the card at its controller's end of turn
+//! (R62), which `script_v0_5_0` keeps, and through v0.4.4b that end of turn's (0) was printed, not
 //! declared, which `script_v0_4_4b` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -19,7 +19,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563), which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563, twenty-four since the Stinkyscape release), which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -27,7 +27,7 @@ fn ai_pool() -> Value {
 /// §8.7: "It costs (0)", as v0.4.4b printed it before it was the declared `setCost` (R1748003).
 const FREE: i32 = 0;
 
-/// The printed "a random AI generated card": one card per Activate (per end of turn through v0.4.12d).
+/// The printed "a random AI generated card": one card per Activate (per end of turn through v0.5.0).
 const CARDS: i32 = 1;
 
 /// The add; the card's price is the declared `setCost`, or the printed (0) when `declared` is off.
@@ -62,7 +62,7 @@ fn datacenter(radiant: bool) -> Script {
     }
 }
 
-/// One face through v0.4.12d: the add at its controller's end of turn (R62).
+/// One face through v0.5.0: the add at its controller's end of turn (R62).
 fn datacenter_at_end_of_turn(radiant: bool, declared: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| add_ai_card(ctx, radiant, declared))),
@@ -77,9 +77,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.12d it added its card at the end of its controller's turn; `KEPT_SCRIPTS`
+/// R767000: through v0.5.0 it added its card at the end of its controller's turn; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
         base: datacenter_at_end_of_turn(false, true),
         radiant: datacenter_at_end_of_turn(true, true),
@@ -115,7 +115,8 @@ mod tests {
 
     /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
     /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
-    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen.
+    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen; and the
+    /// Stinkyscape release (#1884) its T-AI-1 to T-AI-10, twenty-four.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
         ids.extend(
@@ -127,6 +128,7 @@ mod tests {
             ]
             .map(String::from),
         );
+        ids.extend((1..=10).map(|at| format!("stinkyscape-t-ai-{at:02}")));
         ids
     }
 
@@ -203,7 +205,7 @@ mod tests {
         }
 
         #[test]
-        fn s7_the_pool_its_text_names_is_the_fourteen_ai_generated_cards_tokens_all() {
+        fn s7_the_pool_its_text_names_is_the_twenty_four_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
                 .iter()
@@ -235,7 +237,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_every_seed_draws_from_the_fourteen_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
+            fn r60_every_seed_draws_from_the_twenty_four_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");
@@ -321,14 +323,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, which added at its controller's
+        /// R767000: the script kept for the replays of v0.5.0 and before, which added at its controller's
         /// end of turn.
-        mod v0_4_12d {
+        mod v0_5_0 {
             use super::*;
 
             #[test]
-            fn r767000_r62_a_game_on_v0_4_12d_adds_at_the_end_of_your_turn_only() {
-                crate::under_kept(DATACENTER, super::super::super::script_v0_4_12d(), || {
+            fn r767000_r62_a_game_on_v0_5_0_adds_at_the_end_of_your_turn_only() {
+                crate::under_kept(DATACENTER, super::super::super::script_v0_5_0(), || {
                     let mut s = setup(false, 1, None);
                     s.end_turn();
                     assert_eq!(ai_cards_in(&s).len(), 1);

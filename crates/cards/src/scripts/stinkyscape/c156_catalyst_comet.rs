@@ -57,14 +57,16 @@ mod tests {
     const COMET: &str = "stinkyscape-156";
     const FILLER: &str = "core-005";
 
-    /// The shipped Catalyst cards: the Comet's pool now.
-    const POOL: [&str; 6] = [
+    /// The shipped Catalyst cards: the Comet's pool, the set's own #147 IN33DH3 among them since its
+    /// release (#1884).
+    const POOL: [&str; 7] = [
         "classicplus-038",
         "classicplus-046",
         "meditative-045",
         "meditative-049",
         "meditative-091",
         "meditativeplus-016",
+        "stinkyscape-147",
     ];
 
     /// A play of one Comet over `seed`; the card it added.
@@ -83,7 +85,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1867010_adds_a_catalyst_card_each_of_the_six_seen_over_the_seeds() {
+        fn r1867010_adds_a_catalyst_card_each_of_the_seven_seen_over_the_seeds() {
             let mut seen: IndexSet<String> = IndexSet::new();
             for seed in 0..120 {
                 let added = added_card(&format!("comet-{seed}"), false);

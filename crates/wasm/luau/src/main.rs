@@ -406,6 +406,28 @@ pub extern "C" fn ai_decide(
     })
 }
 
+/// R2102000: whether `seat` has a sure win this turn by what it can see, the Easy practice tier's
+/// lethal hint: 1 for yes, 0 for no, and -1 with the message stowed for `jackioh_last_error` on
+/// failure, which `index.ts` throws. `deadline_ms` is a wall-clock time as `ai_decide`'s is: a search
+/// still running once the clock passes it lights nothing; `deadline_ms <= 0` means no clock. Its
+/// solver plays lines through the engine, so the card kit is lent to it (R915002), as `boundary`
+/// lends it.
+#[unsafe(no_mangle)]
+pub extern "C" fn lethal_hint(state_json: *const c_char, seat: *const c_char, deadline_ms: f64) -> i32 {
+    match with_custom_scripts(Rc::new(KitHost), || {
+        let state = arg("lethalHint: the state", state_json)?;
+        let seat = arg("lethalHint: the seat", seat)?;
+        wasm_core::lethal_hint(state, seat, deadline_ms, wall_now_ms)
+    }) {
+        Ok(true) => 1,
+        Ok(false) => 0,
+        Err(message) => {
+            failed::<()>(message);
+            -1
+        }
+    }
+}
+
 /// `{ deck, rngCursor }` (TS `buildAiDeck(createRng(rngSeed, rngCursor), size, options)`). Every key
 /// but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read by its own serde, so an absent
 /// `banned` (the shadow ban), an absent `theme` (roll one) and a `null` one (none) keep their meanings,

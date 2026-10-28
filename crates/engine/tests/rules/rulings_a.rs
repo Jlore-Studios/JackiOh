@@ -2136,7 +2136,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             sink.events.clone()
         };
 
-        // R2179002: no count of plays takes it (through v0.4.12d it counted as one, R40).
+        // R2179002: no count of plays takes it (through v0.5.0 it counted as one, R40).
         assert_eq!(state.players.p1.turn_log.cards_played, played_before);
         assert!(!state.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(state.counters.played, counter_before);

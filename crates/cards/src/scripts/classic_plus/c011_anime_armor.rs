@@ -2,8 +2,8 @@
 //! Aura: while it acts on the field its controller's hero, and since issue #2179 this Unit itself, takes
 //! at most {cap} from each damage instance (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside
 //! Anti-oneshot Armor's; on this Unit the cap is its guard's `guardsSelf`, R2179005). Lose health (R18)
-//! and Set health are not damage and are not capped. Through v0.4.12d it guarded the hero alone, which
-//! `script_v0_4_12d` keeps for those replays (R767000).
+//! and Set health are not damage and are not capped. Through v0.5.0 it guarded the hero alone, which
+//! `script_v0_5_0` keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -30,9 +30,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.4.12d the cap guarded its controller's hero alone; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.0 the cap guarded its controller's hero alone; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+pub fn script_v0_5_0() -> CardScripts {
     let base = anime_armor(false);
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -326,10 +326,10 @@ mod tests {
             assert_eq!(unit_hits(&s, &vanilla), vec![3]);
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, whose cap guarded the hero alone.
+        /// R767000: the script kept for the replays of v0.5.0 and before, whose cap guarded the hero alone.
         #[test]
-        fn r767000_a_game_on_v0_4_12d_caps_the_hero_and_not_the_unit() {
-            crate::under_kept(ANIME, crate::scripts::classic_plus::c011_anime_armor::script_v0_4_12d(), || {
+        fn r767000_a_game_on_v0_5_0_caps_the_hero_and_not_the_unit() {
+            crate::under_kept(ANIME, crate::scripts::classic_plus::c011_anime_armor::script_v0_5_0(), || {
                 let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, LUNAR, FILLER] }), false);
                 let anime = s.card(ANIME).id.clone();
                 s.play(LUNAR, json!({ "targets": hero_p1() }));

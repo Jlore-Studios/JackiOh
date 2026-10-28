@@ -23,8 +23,8 @@ use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{
-    AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, is_legal, js, random_decks,
-    random_policy_states, trap_pool,
+    AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, face_down_pool, is_legal,
+    js, random_decks, random_policy_states, trap_pool,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -888,6 +888,36 @@ mod decide_cannot_see_hidden_cards_b11 {
 }
 
 // ---------------------------------------------------------------------------------------------
+// R2102000: the lethal hint cannot see hidden cards either
+// ---------------------------------------------------------------------------------------------
+
+mod lethal_hint_r2102000 {
+    use super::*;
+
+    /// R2102000: the lethal hint gives one answer for random mutations of real states, asked for the
+    /// seat whose main phase it is
+    #[test]
+    fn r2102000_the_lethal_hint_gives_one_answer_for_random_mutations_of_real_states() {
+        let candidates: Vec<&GameState> = real_states()
+            .iter()
+            .filter(|state| state.result.is_none() && state.pending.is_none() && state.phase == Phase::Main)
+            .take(8)
+            .collect();
+        assert!(!candidates.is_empty());
+        for (at, state) in candidates.iter().enumerate() {
+            let seat = state.active;
+            let mutated = mutate_hidden(state, seat, at as i64 + 1);
+            assert_ne!(hash_state(&mutated), hash_state(state), "state {at}");
+            assert_eq!(
+                lethal_hint(&mutated, seat, None),
+                lethal_hint(state, seat, None),
+                "state {at}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // B12: determinize
 // ---------------------------------------------------------------------------------------------
 
@@ -942,7 +972,7 @@ mod determinize_b12 {
         let (a, _) = pair();
         let hidden = hidden_instance_ids(&a, AI);
         let pool: IndexSet<String> = ai_pool().into_iter().collect();
-        let traps: IndexSet<String> = trap_pool().into_iter().collect();
+        let traps: IndexSet<String> = face_down_pool().into_iter().collect();
         let opponent_public: IndexSet<String> = every_card(&a)
             .iter()
             .filter(|card| card.owner == PlayerId::P2 && !hidden.contains(&card.id))

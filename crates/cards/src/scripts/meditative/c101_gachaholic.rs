@@ -69,8 +69,10 @@ mod tests {
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
     /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #86 Mayor Medinamogger
     /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
-    /// Eugenics with patch v0.3.10, R831014).
-    const SHIPPED_POOL: [&str; 10] = [
+    /// Eugenics with patch v0.3.10, R831014). Re-pinned for the Stinkyscape release (#1884): its #77
+    /// Yuma, #112 Job Application, #145 Fortify Flesh, #153 Stimmycheck and #166 and #167, the Scanning
+    /// Probes, join it.
+    const SHIPPED_POOL: [&str; 16] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -81,6 +83,12 @@ mod tests {
         "meditative-036",
         "meditative-086",
         "meditative-102",
+        "stinkyscape-077",
+        "stinkyscape-112",
+        "stinkyscape-145",
+        "stinkyscape-153",
+        "stinkyscape-166",
+        "stinkyscape-167",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.

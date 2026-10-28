@@ -66,8 +66,11 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-/** R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+. */
-export const VOICE_BUDGET_BYTES = 12 * 1024 * 1024;
+/**
+ * R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+, to 12 MiB
+ * for Meditative (R1448) and to 16 MiB for Stinkyscape (R1884000).
+ */
+export const VOICE_BUDGET_BYTES = 16 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 /** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
 export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8, trigger: 8 } as const satisfies Record<CardHook, number>;

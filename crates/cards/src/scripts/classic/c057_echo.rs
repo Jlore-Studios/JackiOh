@@ -174,7 +174,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [CN_VIRUS, VANILLA, VANILLA] } }));
                 s.play(STOCKPILE, json!({}));
-                // Through v0.4.12d the CN-Virus its draw cast was the last Spell (R70).
+                // Through v0.5.0 the CN-Virus its draw cast was the last Spell (R70).
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": STOCKPILE, "radiant": false }));
                 assert_eq!(
                     own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),

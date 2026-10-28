@@ -2,9 +2,9 @@
 //! R1852006, R1857002, R1859006): (4) Unit, Common, 9/9 → 18/18, First Strike, a card of the held
 //! Stinkyscape set (R1420).
 //!
-//! Base:    "First Strike\nCry: If you are building a ship, launch it, then Discover a War Doctrine and
+//! Base:    "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and
 //!          cast it."
-//! Radiant: "First Strike\nCry: If you are building a ship, launch it, then Discover a Radiant War
+//! Radiant: "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a Radiant War
 //!          Doctrine and cast it."
 //! Engine: Cry (R1): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which launches
 //! it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover (§6.3) of

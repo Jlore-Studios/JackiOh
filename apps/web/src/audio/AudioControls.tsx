@@ -33,7 +33,7 @@ function preview(key: VolumeKey): void {
 
 const VOLUMES: readonly { key: VolumeKey; label: string; testid: string }[] = [
   { key: "master", label: "Master volume", testid: "audio-master" },
-  { key: "sfx", label: "SFX volume", testid: "audio-sfx" },
+  { key: "sfx", label: "Sound effects volume", testid: "audio-sfx" },
   { key: "crowd", label: "Crowd volume", testid: "audio-crowd" },
   { key: "voice", label: "Voice volume", testid: "audio-voice" },
   { key: "music", label: "Music volume", testid: "audio-music" },

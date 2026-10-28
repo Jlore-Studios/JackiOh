@@ -6,7 +6,7 @@
 //! once the instance is Radiant, so the radiant face carries `castOnDraw` too or a Radiant copy would
 //! go to hand uncast. `drawOne` casts the card the moment it is drawn, even with a full hand, and
 //! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and no card played, so it
-//! feeds no Combo (R40, R2179002; through v0.4.12d it was one, R70).
+//! feeds no Combo (R40, R2179002; through v0.5.0 it was one, R70).
 //!
 //! R60's pick: `setRadiantRandom` pools only non-Radiant cards, takes `count` different ones (all when
 //! fewer exist, none when none do); the resolving card never picks itself. "You lose 7 health" is

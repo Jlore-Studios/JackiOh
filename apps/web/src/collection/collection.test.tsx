@@ -40,6 +40,7 @@ import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import OwnedCosmetics from "./CosmeticsPanel.tsx";
@@ -91,6 +92,7 @@ describe("#1307 setCompletions", () => {
     expect(sets.map((entry) => [entry.owned, entry.total])).toEqual([
       [1, 2],
       [0, 1],
+      [0, 0],
       [0, 0],
       [0, 0],
       [0, 0],
@@ -258,6 +260,8 @@ describe("#1307 WalletPanel", () => {
     );
 
     expect(screen.getByTestId(T.noPacks)).toHaveTextContent("No unopened packs.");
+    const noPacks = expectEmptyState(screen.getByTestId(T.noPacks));
+    expect(within(noPacks).getByText("Get packs in the shop")).toHaveAttribute("href", "/shop");
     expect(screen.queryByTestId(T.cosmeticPacks)).toBeNull();
   });
 });

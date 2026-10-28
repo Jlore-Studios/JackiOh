@@ -19,7 +19,8 @@
  *
  * A third mark, the counted ring (`data-counted="true"`, #991), is an outline, so it never touches the
  * box-shadow contract above. So is a fourth, the Pareto hint's dashed ring on a hand card the engine
- * flags (`data-pareto-optimal="true"`, R1844001).
+ * flags (`data-pareto-optimal="true"`, R1844001), and a fifth, the lethal hint's ring on the enemy
+ * hero and End turn (`data-lethal-hint="true"` on the game, R2102000).
  */
 
 :root {
@@ -27,6 +28,7 @@
   --glow-condition: var(--pal-yellow-400);
   --glow-counted: var(--pal-purple-400);
   --glow-pareto: var(--pal-cyan-400);
+  --glow-lethal: var(--pal-red-400);
 }
 
 /* Green: anything the board marks ready. The element-specific selectors outrank a board.css rule
@@ -144,4 +146,13 @@
 .card-hand[data-pareto-optimal="true"] {
   outline: 3px dashed var(--glow-pareto);
   outline-offset: 2px;
+}
+
+/* R2102000: the Easy practice tier's lethal hint (Game.tsx `lethalHint`): the enemy hero and End
+   turn's housing ringed. An outline, as the counted ring is, so the glows' box-shadows still show
+   inside it. It never moves, so reduced motion needs nothing. */
+.game[data-lethal-hint="true"] .hero-opponent,
+.game[data-lethal-hint="true"] .turn-mechanism {
+  outline: 3px solid var(--glow-lethal);
+  outline-offset: 3px;
 }

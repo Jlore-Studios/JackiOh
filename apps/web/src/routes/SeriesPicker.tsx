@@ -106,11 +106,11 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
         </div>
         <p className="series-picker__sealed" role="status">
           {view.you.autoPick
-            ? t("{name} is your last deck that hasn’t won, so it was picked for you for game {game}.", {
+            ? t("{name} is your last deck that hasn't won, so it was picked for you for game {game}.", {
                 name,
                 game: String(view.gameNo),
               })
-            : t("You’re playing {name} in game {game}. Your pick is sealed: your opponent sees only that you’ve picked.", {
+            : t("You're playing {name} in game {game}. Your pick is sealed: your opponent sees only that you've picked.", {
                 name,
                 game: String(view.gameNo),
               })}
@@ -138,7 +138,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
       </h2>
       <p className="lobby-note">
         {t(
-          "Pick a deck that hasn’t won yet. Once you lock it in it’s final, and your opponent sees only that you’ve picked — neither of you sees the other’s deck until the game starts. If the clock runs out, your first deck that hasn’t won is picked for you.",
+          "Pick a deck that hasn't won yet. Once you lock it in it's final, and your opponent sees only that you've picked — neither of you sees the other's deck until the game starts. If the clock runs out, your first deck that hasn't won is picked for you.",
         )}
       </p>
       <fieldset className="lobby-modes series-picker__decks">

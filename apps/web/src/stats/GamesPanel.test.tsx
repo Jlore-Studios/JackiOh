@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { expectSkeleton } from "../test/skeleton.ts";
 import { GamesPanel } from "./GamesPanel.tsx";
 import { statsTestid } from "./testids.ts";
 
@@ -75,6 +76,19 @@ describe("R1994000 the Games panel", () => {
     const panel = screen.getByTestId(statsTestid.gamesPanel);
     expect(panel.textContent).not.toMatch(/\blive\b|AI/);
     expect(panel.textContent).not.toContain("Counted over");
+  });
+
+  it("#2115 a rows skeleton stands in for the figures while the read is pending", async () => {
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES)))));
+
+    render(<GamesPanel patch="v0.5.1" mode="bo1" />);
+
+    // Right after render the read has not answered.
+    expectSkeleton(screen.getByText("Loading game figures…"), "rows");
+
+    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading game figures…")).toBeNull();
+    expect(screen.queryByTestId("skeleton")).toBeNull();
   });
 
   it("R1994000 a short sample reads as not enough games", async () => {

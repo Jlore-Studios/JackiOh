@@ -17,8 +17,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
-    TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
-    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view, units_on_field_of,
+    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view,
+    units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 
@@ -871,7 +872,14 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .exertion
                 .attacks
                 .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
-            let exerted = format!("{}{}", attacks, if unit.exertion.switched { 1 } else { 0 });
+            // R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the
+            // sickness is part of the position, or two children that differ only in it would merge.
+            let exerted = format!(
+                "{}{}{}",
+                attacks,
+                if unit.exertion.switched { 1 } else { 0 },
+                if is_sick(state, unit) { "z" } else { "" }
+            );
             parts.push(format!(
                 "{}:{}:{}/{}:{}:{}:{}",
                 unit.id,

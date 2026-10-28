@@ -21,12 +21,14 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { withSession } from "../net/gate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
+  cachedFriends,
   cancelChallenge,
   cancelFriendRequest,
   declineFriendRequest,
@@ -41,6 +43,7 @@ import {
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
 import { SHARED_ANCHOR } from "./anchors.ts";
@@ -70,7 +73,7 @@ function when(iso: string): string {
 /** `undoTimer`: the undo window's timers (R2119000); a test hands a manual one. */
 export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): ReactElement {
   useLocale();
-  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const { held, hold, undo, sendNow } = useUndoHold(undoTimer);
   /** R2119000: friends a held or sent Remove took off the list, until the list no longer names them. */
   const [hiddenFriends, setHiddenFriends] = useState<ReadonlySet<string>>(() => new Set());
@@ -199,11 +202,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
               reloadFriends();
             }}
           />
-          {friends.kind === "loading" ? (
-            <p className="lobby-note" role="status">
-              {t("Loading your friends…")}
-            </p>
-          ) : null}
+          {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
           {friends.kind === "failed" ? (
             <AccountError
               message={friends.message}
@@ -214,9 +213,10 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
             />
           ) : null}
           {shownFriends !== null && shownFriends.length === 0 ? (
-            <p className="lobby-note" data-testid={togetherTestid.noFriends}>
-              {t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-            </p>
+            <EmptyState
+              text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
+              testId={togetherTestid.noFriends}
+            />
           ) : null}
           {shownFriends !== null && shownFriends.length > 0 ? (
             <ul className="together-list">
@@ -351,11 +351,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
             <h2 id="together-shared-heading" className="together-panel__heading">
               {t("Shared with me")}
             </h2>
-            {shared.kind === "loading" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading…")}
-              </p>
-            ) : null}
+            {shared.kind === "loading" ? <Skeleton variant="rows" label={t("Loading…")} /> : null}
             {shared.kind === "failed" ? (
               <>
                 <p className="notice" role="alert">
@@ -375,9 +371,10 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
               </>
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length === 0 ? (
-              <p className="lobby-note" data-testid={togetherTestid.noShared}>
-                {t("When a friend shares a replay with you, it is listed here.")}
-              </p>
+              <EmptyState
+                text={t("When a friend shares a replay with you, it is listed here.")}
+                testId={togetherTestid.noShared}
+              />
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length > 0 ? (
               <ul className="together-list">

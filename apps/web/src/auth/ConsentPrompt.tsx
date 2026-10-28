@@ -43,7 +43,7 @@ import "./tavern.css";
 import "./consent.css";
 
 /** A post that failed for any reason the server did not name: nothing was recorded, and it can be sent again. */
-export const CONSENT_FAILED = "Couldn’t save that just now. Try again in a moment.";
+export const CONSENT_FAILED = "Couldn't save that just now. Try again in a moment.";
 /** 409 `update_required`: the server holds newer terms than this page shows. */
 export const CONSENT_TERMS_CHANGED = "The terms changed. Reload the page to read them.";
 

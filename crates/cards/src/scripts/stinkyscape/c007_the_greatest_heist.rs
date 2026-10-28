@@ -181,8 +181,9 @@ mod tests {
     /// Enough to play anything a test asks, each turn.
     const MANA: i32 = 20;
 
-    /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship.
-    const POOL: [&str; 7] = [
+    /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship, the Stinkyscape
+    /// set's nine Acclaimed Units among them since its release (#1884).
+    const POOL: [&str; 16] = [
         "core-026",
         "core-027",
         "core-028",
@@ -190,6 +191,15 @@ mod tests {
         "classic-080",
         "classicplus-037",
         "meditative-049",
+        "stinkyscape-006",
+        "stinkyscape-026",
+        "stinkyscape-037",
+        "stinkyscape-087",
+        "stinkyscape-088",
+        "stinkyscape-109",
+        "stinkyscape-110",
+        "stinkyscape-111",
+        "stinkyscape-115",
     ];
 
     /// p1 holds the Heist (Radiant on `radiant`) and `hand`; p2 has a Vanilla. Each turn ends when the
@@ -243,7 +253,8 @@ mod tests {
     #[test]
     fn r1873001_its_cry_discovers_an_acclaimed_unit_or_a_jelly_bean_into_your_hand() {
         let mut seen: IndexSet<String> = IndexSet::new();
-        for seed in 0..12 {
+        // Re-pinned for the Stinkyscape release (#1884): the pool is sixteen, so more seeds see it all.
+        for seed in 0..40 {
             let mut s = holding(false, &format!("heist-{seed}"), &[]);
             s.play(ID, json!({ "zone": 1 }));
             let offer = offered(&s);

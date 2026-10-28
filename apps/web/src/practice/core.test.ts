@@ -24,7 +24,7 @@ import {
 } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
 import { AI_TUTORIAL, TUTORIAL_HUMAN, type Difficulty } from "@jackioh/engine/config";
-import { AI_DECK, AI_GATE_BUDGET, FIXTURE_BANNED_IDS, SHADOW_BAN_IDS, aiToAct, buildAiDeck } from "@jackioh/ai";
+import { AI_DECK, AI_GATE_BUDGET, FIXTURE_BANNED_IDS, SHADOW_BAN_IDS, aiToAct, buildAiDeck, lethalHint } from "@jackioh/ai";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
@@ -158,17 +158,29 @@ function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): Pra
 }
 
 /**
- * B34, for one response: the snapshot holds exactly four keys, `view` and `legal` are the human's
- * `viewFor` / `legalActions` of the true state, `aiToAct` is the AI's, and no AI hand or library
- * instance id that the human's own view does not already name appears anywhere in the response.
+ * B34, for one response: the snapshot holds exactly four keys (with `lastBoard` once the game is
+ * over, and `lethal` while R2102000's hint is lit), `view` and `legal` are the human's `viewFor` /
+ * `legalActions` of the true state, `aiToAct` is the AI's, `lethal` is the human's `lethalHint`,
+ * and no AI hand or library instance id that the human's own view does not already name appears
+ * anywhere in the response.
  */
 function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai: PlayerId): void {
   const snapshot = snapshotOf(response);
   const state = stateOf(debugOf(d));
   // R508: a finished free game adds the human's last board, which is what the human saw (R417).
   const over = state.result !== null;
-  expect(Object.keys(snapshot).sort()).toEqual(["aiToAct", "error", ...(over ? ["lastBoard"] : []), "legal", "view"]);
+  // R2102000: an Easy free game adds the lethal hint, only while the human's own check says yes.
+  const lethal = snapshot.lethal === true;
+  expect(Object.keys(snapshot).sort()).toEqual([
+    "aiToAct",
+    "error",
+    ...(over ? ["lastBoard"] : []),
+    "legal",
+    ...(lethal ? ["lethal"] : []),
+    "view",
+  ]);
   if (over) expect(snapshot.lastBoard).toEqual(lastBoardFor(state, human));
+  if (lethal) expect(lethalHint(state, human)).toBe(true);
 
   expect(snapshot.view).toEqual(viewFor(state, human));
   expect(snapshot.legal).toEqual(legalActions(state, human));

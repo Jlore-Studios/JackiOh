@@ -147,7 +147,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
               <strong>{decoded.name}</strong>
               {` · ${filled === 1 ? t("{count} deck", { count: filled }) : t("{count} decks", { count: filled })}`}
             </p>
-            {decoded.nameFellBack ? <p>{t("The code’s trio name couldn’t be used, so the trio gets this one. You can rename it.")}</p> : null}
+            {decoded.nameFellBack ? <p>{t("The code's trio name couldn't be used, so the trio gets this one. You can rename it.")}</p> : null}
             <ol className="ws-import-slots">
               {decoded.slots.map((slot, at) => (
                 <li
@@ -166,7 +166,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
                       </span>
                       <ul className="ws-import-notes">
                         {slot.nameFellBack ? (
-                          <li data-kind="dropped">{t("The code’s name for this deck couldn’t be used, so it gets this one.")}</li>
+                          <li data-kind="dropped">{t("The code's name for this deck couldn't be used, so it gets this one.")}</li>
                         ) : null}
                         {droppedLines(slot.dropped, catalog).map((line) => (
                           <li key={line} data-kind="dropped">
@@ -176,11 +176,11 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
                         {slot.unowned.length === 0 ? null : (
                           <li data-kind="unowned">
                             {slot.unowned.length === 1
-                              ? t("{cards} you don’t own yet is kept: {names}.", {
+                              ? t("{cards} you don't own yet is kept: {names}.", {
                                   cards: cardsWord(slot.unowned.length),
                                   names: cardNames(slot.unowned, catalog),
                                 })
-                              : t("{cards} you don’t own yet are kept: {names}.", {
+                              : t("{cards} you don't own yet are kept: {names}.", {
                                   cards: cardsWord(slot.unowned.length),
                                   names: cardNames(slot.unowned, catalog),
                                 })}
@@ -196,11 +196,11 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
               <p className="ws-import-shared" data-testid={TRIO_IMPORT_SHARED} data-count={String(shared.length)}>
                 {shared.length === 1
                   ? t(
-                      "{cards} is in more than one of these decks: {names}. They’re kept, and the trio editor marks each one; the trio can’t queue Conquest until every card is in one deck only.",
+                      "{cards} is in more than one of these decks: {names}. They're kept, and the trio editor marks each one; the trio can't queue Conquest until every card is in one deck only.",
                       { cards: cardsWord(shared.length), names: cardNames(shared.map((conflict) => conflict.cardId), catalog) },
                     )
                   : t(
-                      "{cards} are in more than one of these decks: {names}. They’re kept, and the trio editor marks each one; the trio can’t queue Conquest until every card is in one deck only.",
+                      "{cards} are in more than one of these decks: {names}. They're kept, and the trio editor marks each one; the trio can't queue Conquest until every card is in one deck only.",
                       { cards: cardsWord(shared.length), names: cardNames(shared.map((conflict) => conflict.cardId), catalog) },
                     )}
               </p>

@@ -27,8 +27,8 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{
-    MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
-    Ticket,
+    MatchActionRow, MatchClocks, MatchRow, MatchSeat, ProfileKind, ResultRow, SeriesRow, StartMatchInput,
+    StoreError, Ticket,
 };
 use jackioh_server::ranked::glicko2::{Glicko, rate_game, rate_game_scored};
 use jackioh_server::ranked::season::season_id_of;
@@ -37,8 +37,8 @@ use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
 use crate::support::engine::{
-    TEST_FLEE, TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game, fake_deck, hand_card, hand_ids,
-    install_test_cards,
+    FOLD_GATE_WAIT, FoldGate, TEST_FLEE, TEST_FOLD_GATE, TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game,
+    fake_deck, hand_card, hand_ids, install_gated_test_cards, install_test_cards,
 };
 use crate::support::store::{fake_ref, store};
 
@@ -386,6 +386,11 @@ async fn paired_tickets(app: &App, mode: &str) {
 /// The log a match the actor never finished holds: `inputs` as the rows the actor writes, in order.
 /// Every input carries its `playerId`; each gets the nonce `log-<seq>`.
 async fn append_log(app: &App, inputs: &[Value]) {
+    append_log_for(app, MATCH_ID, inputs).await;
+}
+
+/// `append_log` for the match `match_id`.
+async fn append_log_for(app: &App, match_id: &str, inputs: &[Value]) {
     let rows: Vec<MatchActionRow> = inputs
         .iter()
         .enumerate()
@@ -394,7 +399,7 @@ async fn append_log(app: &App, inputs: &[Value]) {
             let mut input = input.clone();
             input["nonce"] = json!(format!("log-{seq}"));
             MatchActionRow {
-                match_id: MATCH_ID.to_owned(),
+                match_id: match_id.to_owned(),
                 seq,
                 action: serde_json::from_value(input).expect("an Action"),
                 at: now_ms(),
@@ -1549,5 +1554,268 @@ mod results_m7_t2 {
                 assert_eq!(result["ratingAfter"], result["ratingBefore"]);
             }
         }
+    }
+}
+
+/// #2213: a finished match's log is folded once, before the result's transaction, and the quests and
+/// the game record both read that one fold. `TEST_FOLD_GATE`'s plays count the folds (`FoldGate::passes`):
+/// each fold of a log that plays it runs it once.
+mod one_fold_per_result {
+    use super::*;
+
+    /// How many seeds `gated_match` tries before it gives up.
+    const SEED_SEARCH: usize = 5_000;
+
+    /// A match `MATCH_ID` between A and B, never started by an actor, whose log has both mulligans keep
+    /// the whole hand, p1 play each of `cards` (all dealt to it) and `conceder` concede.
+    async fn gated_match(ranked: bool, cards: &[&str], conceder: &str) -> Arc<App> {
+        let app = scenario(ScenarioOptions {
+            started_offset_ms: Some(0),
+            ranked: Some(ranked),
+            ..Default::default()
+        })
+        .await;
+        paired_tickets(&app, "bo1").await;
+        let decks = (fake_deck(cards), fake_deck(&[]));
+        let seed = (0..SEED_SEARCH)
+            .map(|k| format!("one-fold-{k}"))
+            .find(|seed| {
+                let opening = begun_game(seed, decks.clone());
+                cards
+                    .iter()
+                    .all(|card| hand_card(&opening, PlayerId::P1, card).is_some())
+            })
+            .expect("a seed that deals every card to p1");
+        {
+            let mut data = fake_ref(&app).lock().await;
+            let row = &mut data.tables.matches[0];
+            row.seed = seed.clone();
+            row.decks.0 = decks.0.clone();
+        }
+        append_log(&app, &concede_log(&seed, &decks, cards, conceder)).await;
+        app
+    }
+
+    /// The log of a game on `decks` under `seed`: both mulligans keep the whole hand, p1 plays each of
+    /// `cards`, then `conceder` concedes.
+    fn concede_log(
+        seed: &str,
+        decks: &(Vec<String>, Vec<String>),
+        cards: &[&str],
+        conceder: &str,
+    ) -> Vec<Value> {
+        let opening = begun_game(seed, decks.clone());
+        let mut log = vec![
+            json!({ "type": "mulligan", "keep": hand_ids(&opening, PlayerId::P1), "playerId": "p1" }),
+            json!({ "type": "mulligan", "keep": hand_ids(&opening, PlayerId::P2), "playerId": "p2" }),
+        ];
+        for card in cards {
+            let played = hand_card(&opening, PlayerId::P1, card).expect("the card is dealt to p1");
+            log.push(json!({ "type": "play", "instanceId": played, "playerId": "p1" }));
+        }
+        log.push(json!({ "type": "concede", "playerId": conceder }));
+        log
+    }
+
+    /// The result of a game that ended by a concede, `winner` the other seat.
+    fn conceded(match_id: &str, seats: (MatchSeat, MatchSeat), winner: Winner) -> RecordResultInput {
+        RecordResultInput {
+            match_id: match_id.to_owned(),
+            seats,
+            outcome: TerminalOutcome {
+                winner,
+                reason: GameOverReason::Concede,
+            },
+            turns: 1,
+            at: now_ms(),
+            last_boards: None,
+            final_hash: None,
+        }
+    }
+
+    /// How many plays of the gate card `record_result` ran: one for each fold of the log.
+    async fn folds_of(gate: &FoldGate, app: &Arc<App>, input: RecordResultInput) -> usize {
+        let before = gate.passes();
+        record_result(app, input).await.expect("the result is written");
+        gate.passes() - before
+    }
+
+    /// Makes profile `id` a ladder bot (R1451).
+    async fn make_bot(app: &App, id: &str) {
+        let mut data = fake_ref(app).lock().await;
+        for profile in data.tables.profiles.iter_mut().filter(|profile| profile.id == id) {
+            profile.kind = ProfileKind::Bot;
+        }
+    }
+
+    #[tokio::test]
+    async fn a_finished_match_is_folded_once_whatever_its_kind() {
+        let (logs, _guard) = Logs::capture();
+        let (gate, _release, _parked) = FoldGate::new();
+        install_gated_test_cards(Arc::clone(&gate));
+        for (kind, ranked, bot) in [
+            ("between people", true, false),
+            ("unranked", false, false),
+            ("against a ladder bot", true, true),
+        ] {
+            let app = gated_match(ranked, &[TEST_FOLD_GATE], "p2").await;
+            if bot {
+                make_bot(&app, B).await;
+            }
+            let seats = started_seats(&app, MATCH_ID).await;
+            let folds = folds_of(&gate, &app, conceded(MATCH_ID, seats, Winner::P1)).await;
+            assert_eq!(folds, 1, "a match {kind} was folded {folds} times");
+
+            let records = table(&app, |data| j(&data.tables.game_records)).await;
+            let records = records.as_array().expect("a list");
+            assert_eq!(records.len(), 1, "a match {kind} files its game");
+            assert_eq!(records[0]["game"]["reason"], "concede");
+            let pilots = if bot {
+                json!({ "p1": "human", "p2": "ai" })
+            } else {
+                json!({ "p1": "human", "p2": "human" })
+            };
+            assert_eq!(records[0]["pilots"], pilots, "a match {kind}");
+        }
+        // The quests read the same fold: a log that did not fold would have said so.
+        assert!(logs.find("quests.game.unread").is_none());
+    }
+
+    #[tokio::test]
+    async fn a_bot_game_after_a_glitch_swap_files_the_bot_on_the_seat_it_ended_in_from_the_one_fold() {
+        let (gate, _release, _parked) = FoldGate::new();
+        install_gated_test_cards(Arc::clone(&gate));
+        let app = gated_match(true, &[TEST_FOLD_GATE, TEST_GLITCH_SWAP], "p1").await;
+        make_bot(&app, B).await;
+        // The swap moved B to engine seat p1 and A to p2, as the actor credits them (R677); p1 conceded,
+        // so the account now in p2 won.
+        let mut seats = started_seats(&app, MATCH_ID).await;
+        std::mem::swap(&mut seats.0.profile_id, &mut seats.1.profile_id);
+
+        let folds = folds_of(&gate, &app, conceded(MATCH_ID, seats, Winner::P2)).await;
+        assert_eq!(folds, 1, "the match was folded {folds} times");
+
+        let records = table(&app, |data| j(&data.tables.game_records)).await;
+        let records = records.as_array().expect("a list");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0]["pilots"], json!({ "p1": "ai", "p2": "human" }));
+    }
+
+    #[tokio::test]
+    async fn a_write_retried_on_a_duplicate_folds_the_log_once() {
+        let (gate, _release, _parked) = FoldGate::new();
+        install_gated_test_cards(Arc::clone(&gate));
+        let app = gated_match(true, &[TEST_FOLD_GATE], "p2").await;
+        let collided = Arc::new(AtomicBool::new(false));
+        {
+            let first_insert = collided.clone();
+            fake_ref(&app).lock().await.on_call =
+                Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    if method != "results.insert" || first_insert.swap(true, Ordering::SeqCst) {
+                        return Ok(());
+                    }
+                    Err(StoreError::Duplicate(MATCH_ID.to_owned()))
+                }));
+        }
+        let seats = started_seats(&app, MATCH_ID).await;
+
+        let folds = folds_of(&gate, &app, conceded(MATCH_ID, seats, Winner::P1)).await;
+        assert!(collided.load(Ordering::SeqCst), "the first insert collided");
+        assert_eq!(folds, 1, "the retry folded the log again: {folds} folds");
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
+    }
+
+    #[tokio::test]
+    async fn a_log_that_reaches_no_result_still_writes_the_result_and_logs_what_it_did() {
+        let (logs, _guard) = Logs::capture();
+        install_test_cards();
+        let app = gated_match(true, &[], "p2").await;
+        // The log's last row, the concede, never landed: the fold reaches no result.
+        fake_ref(&app).lock().await.tables.match_actions.pop();
+        let seats = started_seats(&app, MATCH_ID).await;
+
+        record_result(&app, conceded(MATCH_ID, seats, Winner::P1))
+            .await
+            .expect("the result is written all the same");
+
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
+        assert_eq!(table(&app, |data| j(&data.tables.game_records)).await, json!([]));
+        assert!(
+            logs.find("quests.game.unread").is_some(),
+            "the quests count the attacks alone"
+        );
+        assert!(
+            logs.find("game.record.unfinished").is_some(),
+            "the game record logs it as it did"
+        );
+        assert!(logs.find("game.recorded").is_none());
+    }
+
+    /// A plain `#[tokio::test]` runtime, as `tests/actor/long_fold.rs`: the fold parks on the blocking pool.
+    #[tokio::test]
+    async fn a_parked_fold_holds_back_no_other_rated_result() {
+        let (gate, release, parked) = FoldGate::new();
+        install_gated_test_cards(Arc::clone(&gate));
+        let app = gated_match(true, &[TEST_FOLD_GATE], "p2").await;
+        // A second rated match between two other people, whose log has no card that parks.
+        let (c, d) = ("profile-c", "profile-d");
+        for id in [c, d] {
+            seed_profile(
+                &app,
+                json!({ "id": id, "rating": 1000.0, "inMatchId": "match-2" }),
+            )
+            .await;
+        }
+        let started_at = now_ms();
+        let decks = (fake_deck(&[]), fake_deck(&[]));
+        let second: MatchRow = serde_json::from_value(json!({
+            "id": "match-2",
+            "seed": "seed-2",
+            "players": [c, d],
+            "decks": [decks.0, decks.1],
+            "catalogVersion": catalog_version(),
+            "ranked": true,
+            "status": "live",
+            "createdAt": started_at,
+            "finishedAt": null,
+            "clocks": j(&initial_clocks(started_at)),
+        }))
+        .expect("a MatchRow");
+        store!(&app, |t| t.matches_create(&second));
+        append_log_for(&app, "match-2", &concede_log("seed-2", &decks, &[], "p2")).await;
+        let first_seats = started_seats(&app, MATCH_ID).await;
+        let second_seats = started_seats(&app, "match-2").await;
+        gate.arm();
+
+        let first = record_result(&app, conceded(MATCH_ID, first_seats, Winner::P1));
+        let probe = async {
+            tokio::time::timeout(FOLD_GATE_WAIT, parked)
+                .await
+                .expect("the fold parks in time")
+                .expect("the fold reports it parked");
+            let result = record_result(&app, conceded("match-2", second_seats, Winner::P1)).await;
+            gate.note("result");
+            release.send(()).expect("the fold still waits");
+            result
+        };
+        let (first, second) = tokio::join!(first, probe);
+
+        assert_eq!(
+            gate.order(),
+            vec!["result", "fold"],
+            "the second result waited for the first one's fold"
+        );
+        first.expect("the first result is written");
+        second.expect("the second result is written");
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(2)
+        );
     }
 }

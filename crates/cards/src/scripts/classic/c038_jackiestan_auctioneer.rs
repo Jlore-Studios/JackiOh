@@ -264,7 +264,7 @@ mod tests {
                 let first = fillers(&s, P1).first().map(|card| card.id.clone()).unwrap_or_else(|| FILLER.to_string());
                 s.play(&first, json!({}));
                 // Stockpile is the 2nd play; its first draw casts Hinder, which is no play (through
-                // v0.4.12d it was, R70, and the 3rd).
+                // v0.5.0 it was, R70, and the 3rd).
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(count(s.events(), "trapFired"), 0);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));

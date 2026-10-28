@@ -17,6 +17,7 @@ import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { closeInspect } from "../cards/inspect/store.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { V1, V2, V3, fixtureDef, fixtureSource } from "./fixtures.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
@@ -72,7 +73,8 @@ describe("R388 the History section", () => {
     renderDetail(fixtureDef(V2, "core-001"), fixtureSource((version) => snapshots.push(version)));
     openHistory();
     expect(screen.getByTestId(patchTestid.historyToggle)).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId(patchTestid.historyLoading)).toHaveTextContent("Loading this card’s history…");
+    expect(screen.getByTestId(patchTestid.historyLoading)).toHaveTextContent("Loading this card's history…");
+    expectSkeleton(screen.getByTestId(patchTestid.historyLoading), "rows");
     await screen.findAllByTestId(patchTestid.historyEntry);
     expect(screen.getAllByTestId(patchTestid.historyEntry).map((element) => [element.dataset.version, element.dataset.kind])).toEqual([
       [V2, "changed"],
@@ -141,7 +143,7 @@ describe("R388 the History section", () => {
     };
     const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
     renderDetail(fixtureDef(V2, "core-001"), flaky, true);
-    expect(await screen.findByTestId(patchTestid.historyError)).toHaveTextContent("This card’s history didn’t load.");
+    expect(await screen.findByTestId(patchTestid.historyError)).toHaveTextContent("This card's history didn't load.");
     fireEvent.click(screen.getByTestId(patchTestid.historyRetry));
     expect(await screen.findAllByTestId(patchTestid.historyEntry)).toHaveLength(2);
     quiet.mockRestore();

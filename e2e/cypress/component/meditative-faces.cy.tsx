@@ -7,7 +7,7 @@
 //          two sizes — the hover preview's (PREVIEW_HEIGHT_PX tall) and the touch sheet's on the
 //          smallest phone (`.inspect-face--sheet`'s 56dvh of a 640 px screen) — keeps `.card-name` and
 //          `.card-text` inside their boxes on both axes (cards/fit.ts), and nothing clamps but a face
-//          whose printed text runs past TEXT_TIER_MAX.xl (which may clamp only on the sheet, at the
+//          named in LONG_FACES (which may clamp only on the sheet, at the
 //          reading floor, since the sheet prints the rules whole beside it).
 //   BOARD  the same cards where the board draws them: in the hand, as a Unit on the field and as a
 //          face-up Field Spell or Trap in the backrow, through `Game` with the real catalog at
@@ -37,7 +37,7 @@ import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
 import type { BackrowView, CardDef, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
-import { ALL_TRIBES, CardFace, FACE_ASPECT, TEXT_TIER_MAX, faceModel } from "../../../apps/web/src/cards/index.ts";
+import { ALL_TRIBES, CardFace, FACE_ASPECT, LONG_FACES, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { PREVIEW_HEIGHT_PX } from "../../../apps/web/src/cards/inspect/constants.ts";
 import { SET_MARK_MIN_FACE_PX } from "../../../apps/web/src/cards/setMark.ts";
@@ -173,7 +173,9 @@ function inspectProblems(doc: Document, def: CardDef, size: InspectSize, face: F
   }
   if (printed !== "" && (text.clientWidth === 0 || text.clientHeight === 0)) problems.push(`${at}: .card-text has no box`);
   const clamped = text.getAttribute("data-clamped") === "true";
-  const mayClamp = size.clampLong && printedLength(def, face) > TEXT_TIER_MAX.xl;
+  // Keyed by the face's own label, as the moved vitest premise names them: it pins no Chinese face
+  // long, so no Chinese face may clamp.
+  const mayClamp = size.clampLong && LONG_FACES.includes(`${def.id} ${face.label}`);
   if (clamped && !mayClamp) {
     problems.push(`${at}: the rules text is clamped (${String(printedLength(def, face))} characters printed)`);
   } else if (clamped) {
@@ -190,32 +192,9 @@ function inspectProblems(doc: Document, def: CardDef, size: InspectSize, face: F
 }
 
 describe("MN09: every Meditative face fits its frame at the inspect view's sizes", () => {
-  it("MN09 the premise: the set is in the catalog with a Chinese face for every card, and its longest faces are named", () => {
-    expect(MEDITATIVE.length, "Meditative entries in the catalog").to.be.greaterThan(0);
-    for (const def of MEDITATIVE) {
-      const chinese = modelOf(def, { label: "Chinese base", radiant: false, chinese: true });
-      expect(chinese.chinese, `${def.id} has a Chinese face (#516)`).to.eq(true);
-      expect(chinese.name, `${def.id}'s Chinese name`).to.not.eq("");
-    }
-    // The faces the phone sheet may clamp. A card that joins them is not an error, but its text is
-    // long enough that a person should read it once: these were read for #617, and since #1017 each
-    // prints a short form, its header and "…", with its whole text on its left (R1017000). No Chinese
-    // face is among them, since a Chinese face prints fewer characters for the same words.
-    const long = MEDITATIVE.flatMap((def) => FACES.filter((face) => printedLength(def, face) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`));
-    expect(long).to.have.members([
-      "meditative-008 base",
-      "meditative-008 radiant",
-      "meditative-022 base",
-      "meditative-022 radiant",
-      "meditative-022-1 base",
-      "meditative-022-1 radiant",
-      "meditative-049-1 base",
-      "meditative-049-1 radiant",
-      "meditative-095 base",
-      "meditative-095 radiant",
-    ]);
-  });
-
+  // The premise this run assumes — the set's faces over 260 printed characters, which alone may
+  // clamp on the phone sheet — is pinned per pull request in
+  // apps/web/src/cards/textLimit.test.ts against LONG_FACES.
   for (const size of INSPECT_SIZES) {
     for (const face of FACES) {
       it(`MN09 every Meditative ${face.label} face at ${size.label} (${String(size.height)} px tall): name and rules within their boxes`, () => {

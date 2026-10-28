@@ -4,6 +4,7 @@
 // M8 fixture in `localStorage` (e2e/README.md A6). Pending addresses are non-secret; recovery stays per tab (R193).
 
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "@jackioh/server-config";
+import { clearReadCache } from "./readCache.ts";
 import { sessionStorageOrNull } from "./storage.ts";
 
 export const SESSION_STORAGE_KEY = "jackioh.session";
@@ -98,6 +99,8 @@ export function writeSession(session: Session): void {
 }
 
 export function clearSession(): void {
+  // R2125000: every sign-out ends here, and the menus' kept answers go with it.
+  clearReadCache();
   if (typeof window === "undefined") return;
   remove(sessionStorageOrNull(), SESSION_STORAGE_KEY);
   remove(sharedStorage(), SESSION_STORAGE_KEY);

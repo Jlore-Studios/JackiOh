@@ -943,6 +943,63 @@ mod r1875006_would_die_in_combat {
     }
 }
 
+/// R1884001 (issue #1884, the Stinkyscape release): a card whose `resolveFirst` would-die replacement is
+/// resolving is not asked again by a state check its own follow-up runs, so one that no firing spends
+/// (a Field Spell, as a fused one holding Stinkyscape #138's text) answers a death once, not without end.
+mod r1884001_a_would_die_replacement_is_not_asked_inside_its_own_follow_up {
+    use super::*;
+
+    #[test]
+    fn r1884001_an_unspent_replacement_answers_once_and_the_unit_dies() {
+        let mut s = board(
+            "r1884001-endless",
+            json!({ "field": [{ "def": GRUNT, "lane": 2 }] }),
+            json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [ENDLESS_REPRIEVE] }),
+        );
+        let grunt = id_at(&s, P2, 2);
+        let reprieve = backrow_id(&s, P2, 1);
+        let attacker = id_at(&s, P1, 2);
+        s.attack(attacker.as_str(), grunt.as_str());
+        let bolts = s
+            .last_events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if def_id == BOLT))
+            .count();
+        assert_eq!(bolts, 1, "the follow-up ran once");
+        s.expect_in_zone(grunt.as_str(), "graveyard");
+        s.expect_in_zone(attacker.as_str(), "graveyard");
+        // A Field Spell is no Trap a firing spends: it stays, for the next death.
+        assert_eq!(backrow_id(&s, P2, 1), reprieve);
+    }
+
+    #[test]
+    fn r1884001_a_follow_up_that_waits_on_a_pick_resumes_and_still_answers_once() {
+        for pick in [0, 1] {
+            let mut s = board(
+                "r1884001-asking",
+                json!({ "field": [{ "def": GRUNT, "lane": 2 }] }),
+                json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [ASKING_REPRIEVE] }),
+            );
+            let grunt = id_at(&s, P2, 2);
+            let attacker = id_at(&s, P1, 2);
+            s.attack(attacker.as_str(), grunt.as_str());
+            // The follow-up's bolt waits on its controller's pick: the reduce ends, and the next one
+            // resumes it.
+            let pending = s.state().pending.clone().expect("the bolt's pick");
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Target, P2));
+            s.answer(json!(pending.options[pick].key));
+            let bolts = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if def_id == BOLT))
+                .count();
+            assert_eq!(bolts, 1, "pick {pick}: the replacement answered once");
+            assert!(s.state().pending.is_none(), "pick {pick}: nothing asks again");
+            s.expect_in_zone(grunt.as_str(), "graveyard");
+        }
+    }
+}
+
 /// R1859007 (issue #1859, Stinkyscape's War Doctrines): "For the rest of the game, your Units have X",
 /// a `unitsHaveKeyword` player modifier: every Unit its holder controls on the field has the keyword,
 /// those that arrive later too, but a Vanilla one, a card in a hand and the opponent's Units do not.

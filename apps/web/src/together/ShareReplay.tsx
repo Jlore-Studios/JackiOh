@@ -16,6 +16,7 @@ import { readFailureOf } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { getFriends, getReplayShares, shareReplay, unshareReplay, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { attempt, messageOf } from "./session.ts";
 import { shareTestid } from "./testids.ts";
 
@@ -36,7 +37,7 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   useEffect(() => {
     if (!open || friends !== null) return;
     let cancelled = false;
-    Promise.all([attempt(getFriends), attempt(() => getReplayShares(matchId))]).then(
+    Promise.all([attempt(() => getFriends({ keep: false })), attempt(() => getReplayShares(matchId))]).then(
       ([answer, shares]) => {
         if (cancelled) return;
         setShared(new Set(shares.friendIds));
@@ -93,7 +94,7 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
       </button>
       {open ? (
         <div className="share-friend__list">
-          {friends === null && error === null ? <p role="status">{t("Loading your friends…")}</p> : null}
+          {friends === null && error === null ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
           {friends !== null && friends.length === 0 ? (
             <p data-testid={shareTestid.none}>
               {t("You have no friends to share with yet.")}{" "}

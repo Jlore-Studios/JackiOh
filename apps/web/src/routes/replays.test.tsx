@@ -37,8 +37,10 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, replayJsonFile } from "../replay/download.ts";
 import type { ReplayJson } from "../replay/download.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -249,6 +251,23 @@ describe("R768000 /replays", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Too many requests");
     });
   });
+
+  it("R2108000 the device's games wait behind a skeleton, and none kept offers Play vs AI", async () => {
+    renderRoute(memorySaveStore());
+    expectSkeleton(screen.getByText("Reading the games kept on this device…"), "rows");
+    const root = expectEmptyState(await screen.findByTestId(replaysTestid.noPractice));
+    const link = within(root).getByText("Play vs AI");
+    expect(link).toHaveAttribute("href", paths.practice);
+  });
+
+  it("R2108000 signed in with no online game kept, the empty state offers Find a match", async () => {
+    signIn();
+    vi.mocked(getReplays).mockResolvedValue({ replays: [], nextOffset: null });
+    renderRoute(memorySaveStore());
+    const root = expectEmptyState(await screen.findByTestId(replaysTestid.noOnline));
+    const link = within(root).getByText("Find a match");
+    expect(link).toHaveAttribute("href", paths.play);
+  });
 });
 
 describe("R970000 /replays and the consent screen", () => {
@@ -303,8 +322,10 @@ describe("R768000 a route a production build keeps", () => {
     expect(documentTitleFor(paths.replays)).toMatch(/^Replays · /u);
     vi.unstubAllEnvs();
 
+    const chunks = readFileSync(join(SRC, "routes/chunks.tsx"), "utf8");
+    expect(chunks).toContain('replays: routeChunk(() => import("./replays.tsx")),');
     const main = readFileSync(join(SRC, "main.tsx"), "utf8");
-    expect(main).toContain('const ReplaysRoute = lazy(() => import("./routes/replays.tsx"));');
+    expect(main).toContain("const ReplaysRoute = routeChunks.replays.Screen;");
     expect(main).not.toContain("DevReplaysRoute");
     // The player imports the export's module only for its type; the code itself is an `import()`.
     const share = readFileSync(join(SRC, "replay/ShareGif.tsx"), "utf8");

@@ -126,7 +126,21 @@ mod tests {
     const WARDRUM: &str = "classicplus-037";
     const BIG_MAX: &str = "classic-080";
     const YILEGPT: &str = "meditative-049";
-    const SHIPPED_ACCLAIMED: [&str; 3] = [WARDRUM, BIG_MAX, YILEGPT];
+    /// The Acclaimed Units of the sets that ship, Siva 1 aside (R387): the Stinkyscape set's own since
+    /// its release (#1884).
+    const SHIPPED_ACCLAIMED: [&str; 11] = [
+        WARDRUM,
+        BIG_MAX,
+        YILEGPT,
+        "stinkyscape-006",
+        "stinkyscape-026",
+        "stinkyscape-037",
+        "stinkyscape-088",
+        "stinkyscape-109",
+        "stinkyscape-110",
+        "stinkyscape-111",
+        "stinkyscape-115",
+    ];
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005";
 

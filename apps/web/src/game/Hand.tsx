@@ -208,7 +208,7 @@ export default function Hand(props: HandProps): ReactElement {
       data-revealed={revealed && count > 0 ? "true" : undefined}
       data-hover-preview={yours ? (hoverPreviews ? "on" : "off") : undefined}
       data-marked={marked}
-      aria-label={side === "you" ? t("you hand") : t("opponent hand")}
+      aria-label={side === "you" ? t("Your hand") : t("Enemy hand")}
     >
       <span className="pile">
         <span className="pile-label">{t("Hand")}</span>

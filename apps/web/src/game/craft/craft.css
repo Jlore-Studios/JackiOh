@@ -35,7 +35,7 @@
   margin: 0;
   max-width: none;
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 /* A meter over its budget reads as a warning, which is the engine's own numbers, not a rule. */
@@ -82,7 +82,7 @@
 
 .craft-palette section h3 {
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: var(--type-sm);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dim);
@@ -101,7 +101,7 @@
   background: color-mix(in srgb, var(--pal-white) 4%, transparent);
   color: inherit;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--type-md);
   padding: 6px 10px;
   min-height: 34px;
   cursor: var(--cursor-glove-point, pointer);
@@ -161,7 +161,7 @@
 .craft-empty {
   margin: auto;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   text-align: center;
 }
 
@@ -229,7 +229,7 @@
 .craft-reasons {
   margin: 0;
   padding-left: 18px;
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--pal-red-300);
 }
 
@@ -246,7 +246,7 @@
 .craft-suggestions button {
   min-height: 32px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 /* R1563010: Scratch Pad's code, a text editor across the canvas and palette columns. */
@@ -267,8 +267,8 @@
   border-radius: 10px;
   background: var(--pal-wood-900);
   color: var(--pal-slate-100);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: var(--type-md);
   line-height: 1.5;
   tab-size: 2;
   white-space: pre;
@@ -283,8 +283,8 @@
   min-height: 1.3em;
   max-width: none;
   color: var(--pal-red-300);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--type-sm);
 }
 
 .craft-code-names {
@@ -294,8 +294,8 @@
 }
 
 .craft-code-names .craft-block {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--type-sm);
   min-height: 30px;
   padding: 4px 8px;
 }
@@ -377,7 +377,7 @@
 
   .craft-editor[data-layout="sheet"] .craft-code-text {
     min-height: 220px;
-    font-size: 16px; /* iOS zooms into a field under 16px */
+    font-size: var(--type-xl); /* iOS zooms into a field under 16px */
   }
 
   .craft-editor[data-layout="sheet"] .craft-foot {

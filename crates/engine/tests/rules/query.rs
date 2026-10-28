@@ -366,7 +366,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
             input(json!({ "type": "play", "instanceId": stockpile.id, "playerId": "p1" })),
         );
 
-        // The cast is no play (R2179002; through v0.4.12d it was one, R70, logged after Stockpile).
+        // The cast is no play (R2179002; through v0.5.0 it was one, R70, logged after Stockpile).
         let log = played_ids_this_turn(&state, P1);
         assert_eq!(log, vec![stockpile.id.clone()]);
         assert_eq!(cards_played_this_turn(&state, P1), 1);

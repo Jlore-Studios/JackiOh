@@ -52,6 +52,9 @@ WALK = 30
 TIMEOUT_SECONDS = 120
 #: A card this many standard errors from 50% is listed.
 OUTLIER_Z = 3.0
+#: How many of them the section lists, furthest first: the status issue keeps under GitHub's limit
+#: on its body (`dashboard.MAX_BODY`), and the rest are in `/api/stats/cards`.
+OUTLIERS_SHOWN = 20
 #: The endpoint's sample floor (`CARD_STATS_MIN_SAMPLE`), when a response does not say it.
 MIN_SAMPLE = 20
 #: How much of a failed read's error the section repeats.
@@ -252,7 +255,9 @@ def draw(ctx: Context, patches: list[Patch], min_sample: int, oldest: str) -> st
                   f"({len(far)})</summary>", "", "| Card | Set | Win rate | Games | z |",
                   "|---|---|---:|---:|---:|"]
         lines += [f"| {card.name} (`{card.id}`) | {card.set} | {_pct(card.wins / card.games)} | "
-                  f"{card.games:,} | {z:+.1f} |" for card, z in far]
+                  f"{card.games:,} | {z:+.1f} |" for card, z in far[:OUTLIERS_SHOWN]]
+        if len(far) > OUTLIERS_SHOWN:
+            lines += ["", f"_… and {len(far) - OUTLIERS_SHOWN} nearer 50%, in `/api/stats/cards`._"]
         lines += ["", "</details>", ""]
     lines += ["<sub>A card's win rate is its deck's, over the games it was in a deck (R377); a "
               "set's pooled rate is its cards' wins over their games, its mean and median over "

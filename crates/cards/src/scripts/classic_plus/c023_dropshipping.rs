@@ -1,6 +1,6 @@
 //! C+ #23 Dropshipping (SPEC §8.7 row 23): add {cards} random cards from every card and token but this
 //! (R382, R387), each given Temporary {temporary} (R2179001, issue #2179); Radiant: each costs (1).
-//! Through v0.4.12d each was given Brittle {brittle} (R385), which `script_v0_4_12d` keeps (R767000).
+//! Through v0.5.0 each was given Brittle {brittle} (R385), which `script_v0_5_0` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -47,8 +47,8 @@ fn dropship(radiant: bool) -> Script {
     }
 }
 
-/// v0.4.12d's face: each card given Brittle {brittle} (R385) once it is in the hand.
-fn dropship_v0_4_12d(radiant: bool) -> Script {
+/// v0.5.0's face: each card given Brittle {brittle} (R385) once it is in the hand.
+fn dropship_v0_5_0(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let n = param(&*ctx, "brittle");
@@ -73,12 +73,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.12d each card was given Brittle {brittle}; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.0 each card was given Brittle {brittle}; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_4_12d() -> CardScripts {
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
-        base: dropship_v0_4_12d(false),
-        radiant: dropship_v0_4_12d(true),
+        base: dropship_v0_5_0(false),
+        radiant: dropship_v0_5_0(true),
     }
 }
 
@@ -146,7 +146,7 @@ mod tests {
             .collect()
     }
 
-    /// The Brittle counts the owner sees on the cards `ids` names, in hand order (v0.4.12d's).
+    /// The Brittle counts the owner sees on the cards `ids` names, in hand order (v0.5.0's).
     fn brittles_of(s: &Scenario, ids: &[String]) -> Vec<Option<i32>> {
         own_hand(s)
             .into_iter()
@@ -439,15 +439,15 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, which gave Brittle 2 (R385).
-        mod v0_4_12d {
+        /// R767000: the script kept for the replays of v0.5.0 and before, which gave Brittle 2 (R385).
+        mod v0_5_0 {
             use super::*;
 
             #[test]
-            fn r767000_r385_a_game_on_v0_4_12d_gives_each_card_brittle_2_and_no_temporary() {
+            fn r767000_r385_a_game_on_v0_5_0_gives_each_card_brittle_2_and_no_temporary() {
                 crate::under_kept_as(
                     DROP,
-                    script_v0_4_12d(),
+                    script_v0_5_0(),
                     |def| {
                         for entry in def.params.iter_mut().flatten() {
                             if entry.key == "temporary" {

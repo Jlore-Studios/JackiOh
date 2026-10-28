@@ -19,7 +19,9 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, LIBRARY_CAP, SETUP_TURN};
+use crate::config::{
+    CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, LIBRARY_CAP, SETUP_TURN,
+};
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -710,10 +712,13 @@ pub fn complete_draw(
     let at = link_for(sink.state, link);
     if casts_on_draw(sink.state, &card)
         && at.chain < CAST_ON_DRAW_CHAIN_CAP
+        && sink.frontier.get().cast_on_draw_casts < CAST_ON_DRAW_ACTION_CAP
         && room_to_cast(sink.state, player, &card)
     {
         // R58, R217: counted before the cast resolves, so a draw the cast makes continues from here.
         sink.state.cast_chain = Some(at.chain + 1);
+        // R2067000: and counted against the action's cap, whichever chain it is in.
+        sink.frontier.get_mut().cast_on_draw_casts += 1;
         card.zone = Zone::Resolving { player };
         // R58: the draw is complete once this cast has resolved, and its `drawn` is answered then.
         crate::draw_complete::hold_draw(sink.state, &card.id);

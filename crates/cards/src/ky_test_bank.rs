@@ -5,10 +5,10 @@
 //! floor of `KY_TEST_MIN_PROBLEMS` per difficulty). Plain text with Unicode maths. Patch v0.3.10 (#831)
 //! made each Hard problem one step harder in its own topic, its id kept.
 //!
-//! Issue #2179 (R2179003) moved every problem of v0.4.12d's bank, Hard ones included, into Medium, ids
+//! Issue #2179 (R2179003) moved every problem of v0.5.0's bank, Hard ones included, into Medium, ids
 //! kept, and made the Hard bank graduate mathematics: qualifying-exam problems in analysis, algebra,
 //! topology, geometry, number theory, probability and combinatorics (`GRADUATE`, ids `g01` on).
-//! `KY_TEST_BANK_V0_4_12D` is v0.4.12d's bank, which its kept script asks from (R767000).
+//! `KY_TEST_BANK_V0_5_0` is v0.5.0's bank, which its kept script asks from (R767000).
 //!
 //! Port of `packages/cards/src/kyTestBank.ts`. TS's `KY_TEST_BANK` array of objects cannot be a `const`
 //! (a problem holds `String`s), so it is a read-only `LazyLock`, built once on first use like the
@@ -41,10 +41,10 @@ fn hard(id: &str, statement: &str, answer: &str, wrong: &[&str]) -> Problem {
     problem(KyTestDifficulty::Hard, id, statement, answer, wrong)
 }
 
-/// R2179003: the bank since issue #2179, in the order C+ #42's draw reads (R420): v0.4.12d's problems,
+/// R2179003: the bank since issue #2179, in the order C+ #42's draw reads (R420): v0.5.0's problems,
 /// every one now Medium, then the graduate Hard ones.
 pub static KY_TEST_BANK: LazyLock<Vec<Problem>> = LazyLock::new(|| {
-    let mut bank: Vec<Problem> = KY_TEST_BANK_V0_4_12D
+    let mut bank: Vec<Problem> = KY_TEST_BANK_V0_5_0
         .iter()
         .cloned()
         .map(|problem| Problem {
@@ -258,9 +258,9 @@ fn graduate() -> Vec<Problem> {
     ]
 }
 
-/// v0.4.12d's Medium and Hard problems, in the TS file's order (C+ #42's draw reads this order, R420),
+/// v0.5.0's Medium and Hard problems, in the TS file's order (C+ #42's draw reads this order, R420),
 /// which its kept script asks from (R767000).
-pub static KY_TEST_BANK_V0_4_12D: LazyLock<Vec<Problem>> = LazyLock::new(|| {
+pub static KY_TEST_BANK_V0_5_0: LazyLock<Vec<Problem>> = LazyLock::new(|| {
     vec![
         // Medium: double integrals.
         medium("m01", "∫₀¹ ∫₀¹ (x + y) dy dx = ?", "1", &["1/2", "2", "3/2"]),

@@ -256,6 +256,7 @@ function ResultPanel({
   onShowBoard,
   onWatchReplay,
   onLeave,
+  leaveRoute,
   playAgain,
 }: {
   view: DuosView;
@@ -264,6 +265,7 @@ function ResultPanel({
   onShowBoard: () => void;
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
+  leaveRoute: string | undefined;
   playAgain: DuosPlayAgain | undefined;
 }): ReactElement | null {
   // #1755: the panel takes focus as it comes in (and again when the rail's "Result" reopens it,
@@ -308,7 +310,7 @@ function ResultPanel({
           </button>
         )}
         {onLeave === undefined ? null : (
-          <button type="button" data-testid={duosTestid.resultBack} onClick={onLeave}>
+          <button type="button" data-testid={duosTestid.resultBack} data-route={leaveRoute} onClick={onLeave}>
             {t("Back to Play together")}
           </button>
         )}
@@ -683,6 +685,7 @@ export function DuosBoard({
           }}
           onWatchReplay={chrome?.onWatchReplay}
           onLeave={chrome?.onLeave}
+          leaveRoute={chrome?.leaveRoute}
           playAgain={chrome?.playAgain}
         />
       ) : null}

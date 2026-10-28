@@ -8,7 +8,9 @@ import { registeredCatalog } from "@jackioh/engine";
 import type { CustomCard, SandboxOp } from "@jackioh/shared";
 
 import { customDefsOf } from "../creator/useCustomCards.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { SandboxPanel } from "./SandboxPanel.tsx";
 import { practiceTestid } from "./testids.ts";
 
@@ -134,6 +136,19 @@ describe("R923000 the sandbox's dev tools panel", () => {
     expect(screen.getByTestId(practiceTestid.sandboxDestroy)).toBeDisabled();
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxRemove));
     expect(onTool).toHaveBeenLastCalledWith({ kind: "remove", instanceId: "held-1" });
+  });
+
+  it("#2115 the card search waits behind a grid until the catalog is in", () => {
+    const view = baseView({ you: emptySide("p1"), opponent: emptySide("p2") });
+    const panel = (defs: ReturnType<typeof registeredCatalog> | null) => (
+      <SandboxPanel view={view} defs={defs} held={false} onHold={vi.fn()} onTool={vi.fn()} />
+    );
+    const { rerender } = render(panel(null));
+    expectSkeleton(screen.getByText("Loading the cards…"), "grid");
+
+    rerender(panel(registeredCatalog()));
+    expect(screen.queryByText("Loading the cards…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 });
 

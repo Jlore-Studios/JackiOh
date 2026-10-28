@@ -26,7 +26,7 @@
   border-radius: 999px;
   background: linear-gradient(180deg, var(--pal-brass-800), var(--pal-brass-950));
   color: var(--pal-gold-200);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
   line-height: 1;
   cursor: var(--cursor-glove-point, pointer);
@@ -91,8 +91,9 @@
 }
 
 /* Touch sizing (B29, as the switch's): the glyph stays small on the card's edge, and a finger gets a
-   hit area round it, up to 44x44 px where the tile has room, stopping short of the card's centre
-   line, so the middle of the tile is always the card's own tap (attack, target) and drag. */
+   hit area round it, a --hit-min tall band (R2122000) and only as wide as the tile allows, short of
+   the card's centre line (R2122000's split with the card), so the middle of the tile is always the
+   card's own tap (attack, target) and drag. */
 @media (max-width: 1024px), (pointer: coarse) {
   .board .zone > .card:has(> .activate-controls) {
     container-type: size;
@@ -103,8 +104,8 @@
     --activate-reach: 22px;
     content: "";
     position: absolute;
-    top: -12px;
-    bottom: -12px;
+    top: min(-12px, (100% - var(--hit-min)) / 2);
+    bottom: min(-12px, (100% - var(--hit-min)) / 2);
     left: -2px;
     right: calc(-1 * clamp(0px, 50cqw - 100% - 3px - var(--activate-clear), var(--activate-reach)));
   }
@@ -116,7 +117,7 @@
     min-width: 18px;
     height: 16px;
     padding: 0 3px 0 1px;
-    font-size: 9px;
+    font-size: var(--type-3xs);
   }
 
   .board .activate-glyph {

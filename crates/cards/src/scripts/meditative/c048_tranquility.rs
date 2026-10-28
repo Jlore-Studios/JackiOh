@@ -7,7 +7,7 @@
 //! end. The immunity is ME-HERO-IMMUNE (MD-C21): a player modifier read as a cap of 0 at §4.4 step
 //! 3, expiring at the cleanup that ends the opponent's next turn (R757's Armor Up expiry), so it is
 //! gone as your next turn begins. "Exile this" (issue #2179) is the Spell's landing, as True
-//! Strike's is (§5.1, R178); through v0.4.12d it went to the graveyard, which `script_v0_4_12d`
+//! Strike's is (§5.1, R178); through v0.5.0 it went to the graveyard, which `script_v0_5_0`
 //! keeps for those replays (R767000).
 
 use jackioh_engine::effects::{end_turn, make_hero_immune};
@@ -40,8 +40,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.12d it went to the graveyard; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+/// R767000: through v0.5.0 it went to the graveyard; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
         base: tranquility(true, false),
         radiant: tranquility(false, false),
@@ -351,13 +351,13 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, which went to the graveyard.
-        mod v0_4_12d {
+        /// R767000: the script kept for the replays of v0.5.0 and before, which went to the graveyard.
+        mod v0_5_0 {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_4_12d_lands_it_in_the_graveyard() {
-                crate::under_kept(TRANQUILITY, super::super::super::script_v0_4_12d(), || {
+            fn r767000_a_game_on_v0_5_0_lands_it_in_the_graveyard() {
+                crate::under_kept(TRANQUILITY, super::super::super::script_v0_5_0(), || {
                     let mut s = cast("tranquility-kept", false);
                     assert_eq!(s.state().active, P2);
                     s.expect_in_zone(TRANQUILITY, "graveyard");

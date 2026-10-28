@@ -108,6 +108,23 @@ class ReadTests(unittest.TestCase):
         self.assertIn("Highest pooled: **Core**; mean: **Core**; median: **Core**.", text)
         # Stockpile, 2000 of 3800, is 3.2 standard errors over half.
         self.assertIn("| Stockpile (`core-001`) | Core | 52.6% | 3,800 | +3.2 |", text)
+        self.assertNotIn("nearer 50%", text)
+
+    def test_only_the_cards_furthest_from_half_are_listed(self):
+        """The status issue keeps under GitHub's limit: `OUTLIERS_SHOWN` of the cards far from
+        half, furthest first, and a line for the rest."""
+        extra = cardsets.OUTLIERS_SHOWN + 3
+        # Card n wins 600 + n of 1,000: z grows with n, so the last are the furthest.
+        cards = [(f"core-{n:03}", f"Card {n}", "Core", 600 + n, 1000) for n in range(extra)]
+        history = [("v0.4.2", payload("v0.4.2", "v0.4.1", cleared=True, games=1000, cards=cards),
+                    None),
+                   ("v0.4.1", payload("v0.4.1", None, cleared=True, games=10, cards=[]), None)]
+        text = cardsets.draw(make_ctx(at=DAY), *cardsets.read(Production(history)))
+        self.assertIn(f"Cards 3 or more standard errors from 50% ({extra})", text)
+        self.assertIn(f"Card {extra - 1} (`", text)
+        self.assertIn("Card 3 (`", text)
+        self.assertNotIn("Card 2 (`", text)
+        self.assertIn("_… and 3 nearer 50%, in `/api/stats/cards`._", text)
 
     def test_no_patch_with_enough_games_says_so(self):
         thin = [("v0.1.0", payload("v0.1.0", None, cleared=False, games=10, cards=[]),

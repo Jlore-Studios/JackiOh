@@ -586,7 +586,7 @@ describe("R192 a per-IP refusal on a shared network", () => {
     });
     expect(screen.queryByTestId(inviteTestid.attempts)).toBeNull();
     expect(panel.textContent).toMatch(/account or network/);
-    expect(panel.textContent).not.toMatch(/You’ve tried/);
+    expect(panel.textContent).not.toMatch(/You've tried/);
   });
 });
 
@@ -636,7 +636,7 @@ describe("an active account on the code screen", () => {
     expect(screen.queryByTestId(inviteTestid.attempts)).toBeNull();
     const onward = screen.getByTestId(inviteTestid.goToDecks);
     expect(onward).toHaveAttribute("href", paths.decks);
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You\u2019re all set");
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You're all set");
     fireEvent.click(onward);
     expect(window.location.pathname).toBe(paths.decks);
   });

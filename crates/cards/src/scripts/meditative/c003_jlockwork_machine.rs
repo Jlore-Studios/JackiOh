@@ -133,7 +133,7 @@ mod tests {
         #[test]
         fn r2179002_an_opponents_cast_on_draw_is_no_play_and_exiles_nothing() {
             // Hinder is on top of p2's deck: p1 ends its turn, p2 draws it and it is cast on the draw,
-            // which through v0.4.12d was a play and exiled 3 (R70).
+            // which through v0.5.0 was a play and exiled 3 (R70).
             let mut s = crate::scenario(json!({
                 "p1": { "field": [ID], "hand": [FILLER], "library": DECK.to_vec() },
                 "p2": { "hand": [FILLER], "library": [HINDER, VANILLA, VANILLA] },

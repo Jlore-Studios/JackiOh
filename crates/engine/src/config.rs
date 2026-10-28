@@ -173,6 +173,12 @@ pub const TIMEOUT_ANSWER_CAP: usize = 500;
 pub const CALL_TO_CHAOS_CHAIN_CAP: i32 = 20;
 /// R58: cast-on-draw cards one draw may cast before the next one goes to hand uncast.
 pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
+/// R2067000: cast-on-draw cards one action may cast over all its chains, before the next one goes to
+/// hand uncast as R58's 21st does. A trigger's draw begins a chain of its own (R217), so a trigger
+/// that draws for each cast's discard (Classic #64 Malzahar's Recycler under #21 Hinder) beside a
+/// library that refills as it is drawn (#33 Unstable Clone Machine) began chains without end. A whole
+/// library's worth, so an action that does not refill its library as it draws never reaches it.
+pub const CAST_ON_DRAW_ACTION_CAP: i32 = LIBRARY_CAP;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -653,7 +659,7 @@ pub const KY_TEST_EASY_ADDENDS: IntRange = IntRange { min: 10, max: 99 };
 /// R420: an Easy problem's three wrong sums are a + b moved by three different ones of these.
 pub const KY_TEST_EASY_MISSES: &[i32] = &[1, -1, 2, -2, 10, -10];
 /// R2179003: since issue #2179 an Easy problem is a + b or a − b with each operand four digits, in
-/// this range, inclusive (`KY_TEST_EASY_ADDENDS` and `KY_TEST_EASY_MISSES` stay v0.4.12d's).
+/// this range, inclusive (`KY_TEST_EASY_ADDENDS` and `KY_TEST_EASY_MISSES` stay v0.5.0's).
 pub const KY_TEST_FOUR_DIGIT_OPERANDS: IntRange = IntRange { min: 1000, max: 9999 };
 /// R2179003: its three wrong answers are the answer moved by three different ones of these, a slip in
 /// one column of a four-digit sum or difference.

@@ -171,7 +171,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       {phase.kind === "unknown" ? (
         <>
           <p className="auth-hint" data-testid={twoStepTestid.state} data-state="unknown">
-            {t("Two-step sign-in can’t be checked just now.")}
+            {t("Two-step sign-in can't be checked just now.")}
           </p>
           <div className="account-actions">
             <button type="button" data-testid={twoStepTestid.retry} onClick={retry}>
@@ -183,7 +183,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       {phase.kind === "off" ? (
         <>
           <p data-testid={twoStepTestid.state} data-state="off">
-            {t("Off. Turn it on to ask for a code from an authenticator app each time you sign in, so a password alone can’t get into this account.")}
+            {t("Off. Turn it on to ask for a code from an authenticator app each time you sign in, so a password alone can't get into this account.")}
           </p>
           <div className="account-actions">
             <button type="button" data-testid={twoStepTestid.start} disabled={busy} onClick={start}>

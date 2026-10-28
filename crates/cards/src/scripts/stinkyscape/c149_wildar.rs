@@ -60,10 +60,10 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos editions of the sets that ship, in catalog order.
-    const SHIPPED_EDITIONS: [&str; 3] = ["core-095", "classicplus-073", "meditative-095"];
-    /// The held set's two (R1420).
-    const HELD_EDITIONS: [&str; 2] = ["stinkyscape-150", "stinkyscape-151"];
+    /// The Call to Chaos editions of the sets that ship, in catalog order: the set's own two joined
+    /// them as it shipped (#1884, R1420).
+    const SHIPPED_EDITIONS: [&str; 5] =
+        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
     /// A (1) Unit that keeps p1's turn from ending by itself.
     const ANCHOR: &str = "core-008";
     /// How many cursors the sweeps walk.
@@ -137,24 +137,6 @@ mod tests {
             assert!(mine.iter().any(|id| id == edition), "{edition} never reached its caster");
         }
         assert!(differ, "the two picks never differed");
-        // R1420: the held set's two are in no pool that names no set.
-        for edition in HELD_EDITIONS {
-            assert!(!theirs.iter().chain(&mine).any(|id| id == edition));
-        }
-    }
-
-    #[test]
-    fn r1882000_the_set_s_own_two_join_the_pool_as_it_ships() {
-        let _preview = preview_sets(&[SetName::Stinkyscape]);
-        let mut seen: Vec<String> = Vec::new();
-        for cursor in 0..SWEEP {
-            let s = wildar_at(cursor, false);
-            seen.extend(gained(&s, P1).iter().map(|card| card.def_id.clone()));
-            seen.extend(gained(&s, P2).iter().map(|card| card.def_id.clone()));
-        }
-        for edition in HELD_EDITIONS.iter().chain(&SHIPPED_EDITIONS) {
-            assert!(seen.iter().any(|id| id == edition), "{edition} never appeared");
-        }
     }
 
     #[test]

@@ -60,7 +60,7 @@ describe("R1435 the username prompt", () => {
     prompt();
     const root = screen.getByTestId(usernameTestid.prompt);
     expect(root).toHaveTextContent("Choose your username");
-    expect(root).toHaveTextContent("You’re Player#7 for now.");
+    expect(root).toHaveTextContent("You're Player#7 for now.");
     expect(screen.getByTestId(usernameTestid.promptSkip)).toHaveTextContent("Skip for now");
     expect(screen.getByTestId(usernameTestid.save), "nothing to save before a preview").toBeDisabled();
     // The hint's numbers are the server's own constants, as words: the cooldown in hours.
@@ -73,7 +73,7 @@ describe("R1435 the username prompt", () => {
     vi.mocked(previewUsername).mockResolvedValue(TAKEN);
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     // Debounced: one question for "Max", none for "M" or "Ma".
     expect(previewUsername).toHaveBeenCalledTimes(1);
     expect(previewUsername).toHaveBeenCalledWith(TOKEN, "Max", expect.any(AbortSignal));
@@ -84,7 +84,7 @@ describe("R1435 the username prompt", () => {
     vi.mocked(previewUsername).mockResolvedValue(TAKEN);
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.clear(screen.getByTestId(usernameTestid.input));
     expect(screen.queryByTestId(usernameTestid.preview)).toBeNull();
     expect(screen.getByTestId(usernameTestid.save)).toBeDisabled();
@@ -95,7 +95,7 @@ describe("R1435 the username prompt", () => {
     vi.mocked(previewUsername).mockResolvedValue(TAKEN);
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.clear(screen.getByTestId(usernameTestid.input));
     vi.mocked(previewUsername).mockReturnValue(new Promise<UsernamePreview>(() => {}));
     await userEvent.type(screen.getByTestId(usernameTestid.input), "Max");
@@ -142,7 +142,7 @@ describe("R1435 the username prompt", () => {
     vi.mocked(saveUsername).mockResolvedValue(SAVED);
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.click(screen.getByTestId(usernameTestid.save));
 
     await waitFor(() => {
@@ -166,11 +166,11 @@ describe("R1435 the username prompt", () => {
       .mockResolvedValueOnce({ ...SAVED, name: "Max#4" });
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.click(screen.getByTestId(usernameTestid.save));
 
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you’d be Max#4");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you'd be Max#4");
     });
     expect(screen.getByTestId(usernameTestid.changed)).toHaveTextContent(USERNAME_CHANGED);
     expect(announceAccountChange, "nothing was saved").not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe("R1435 the username prompt", () => {
     );
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.click(screen.getByTestId(usernameTestid.save));
 
     await waitFor(() => {
@@ -229,7 +229,7 @@ describe("R1435 the username prompt", () => {
     vi.mocked(saveUsername).mockRejectedValue(new Error("socket hang up"));
     prompt();
 
-    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await typeAndWait("Max", "Max is taken, so you'd be Max#3");
     await userEvent.click(screen.getByTestId(usernameTestid.save));
 
     expect(await screen.findByTestId(usernameTestid.error)).toHaveTextContent(USERNAME_SAVE_FAILED);

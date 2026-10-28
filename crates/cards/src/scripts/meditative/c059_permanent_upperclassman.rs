@@ -381,14 +381,27 @@ mod tests {
         #[test]
         fn the_radiant_face_summons_radiant_and_fuses_radiant() {
             crate::register_all();
-            let mut s = casting("upperclassman-radiant", true);
-            s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
-            let summoned = s.unit("p1", 2).expect("the summoned Unit");
+            use jackioh_engine::prelude::keywords_of;
+            // Re-pinned for the Stinkyscape release (#1884): the seed's summon became Core #66 The Rock,
+            // which is Indestructible and never dies, so the test takes the first seed whose summon can.
+            let (mut s, summoned) = (0..20)
+                .map(|n| {
+                    let mut s = casting(&format!("upperclassman-radiant-{n}"), true);
+                    s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
+                    let summoned = s.unit("p1", 2).expect("the summoned Unit");
+                    (s, summoned)
+                })
+                .find(|(s, summoned)| {
+                    !keywords_of(s.state(), summoned)
+                        .iter()
+                        .any(|keyword| keyword.kind() == KeywordKind::Indestructible)
+                })
+                .expect("a seed whose summon can die");
             assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(4));
             assert!(summoned.radiant);
             kill(&mut s, &summoned);
             let made = fused(&s);
-            assert_eq!(made.len(), 1);
+            assert_eq!(made.len(), 1, "summoned {}", summoned.def_id);
             assert!(made[0].radiant);
         }
     }

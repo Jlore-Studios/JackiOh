@@ -1,5 +1,5 @@
 //! M+ #10 Medina Grifter (SPEC §8.9 row 10, BUILD M11 row M+ 10): (1) Unit, Human,
-//! Common, 3/1 → 6/2 (4/1 → 8/2 through v0.4.12d, issue #2179).
+//! Common, 3/1 → 6/2 (4/1 → 8/2 through v0.5.0, issue #2179).
 //!   Base:    "Cry: Steal {cards|random card|random cards} from your opponent's hand." (1)
 //!   Radiant: the same, plus "It costs (0)."
 //!

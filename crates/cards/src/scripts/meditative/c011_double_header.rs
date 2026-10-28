@@ -195,7 +195,7 @@ mod tests {
                 })),
                 "p2": side(json!({})),
             }));
-            // The draw casts the Jelly Bean free, no play (through v0.4.12d the turn's first card, R70).
+            // The draw casts the Jelly Bean free, no play (through v0.5.0 the turn's first card, R70).
             let jelly = s.card(JELLY).id.clone();
             s.start_turn();
             s.expect_in_zone(&jelly, "graveyard");

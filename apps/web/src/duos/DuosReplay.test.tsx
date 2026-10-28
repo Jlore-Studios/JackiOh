@@ -18,6 +18,7 @@ import { REPLAY_FAILURE_TEXT } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView } from "../test/fixtures.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { duosReplayJson } from "./download.ts";
@@ -142,8 +143,10 @@ describe("the co-op replay screen", () => {
       </CatalogContext.Provider>,
     );
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
     await flush();
     expect(screen.queryByTestId(replayTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the replay…")).toBeNull();
     expect(shownStep()).toBe(0);
     expect(screen.getByTestId(replayTestid.readout)).toHaveTextContent(`Step 1 of ${String(ROUNDS.length)} · Round 0`);
     const toolbar = screen.getByTestId(replayTestid.controls);

@@ -5,6 +5,7 @@
 import { useId, useState, type ReactElement } from "react";
 
 import { RefsInteractive } from "../cards/refContext.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChangeList } from "./ChangeList.tsx";
 import { useLoaded, usePatchSource } from "./context.tsx";
 import { cardHistory, unchangedSince, versionsForCard, type HistoryEntry } from "./history.ts";
@@ -56,17 +57,13 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   });
 
   if (read.status === "loading") {
-    return (
-      <p className="patch-status" role="status" data-testid={patchTestid.historyLoading}>
-        {t("Loading this card’s history…")}
-      </p>
-    );
+    return <Skeleton variant="rows" label={t("Loading this card's history…")} testId={patchTestid.historyLoading} />;
   }
   if (read.status === "error") {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.historyError}>
-          {t("This card’s history didn’t load.")}
+          {t("This card's history didn't load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.historyRetry} onClick={read.retry}>
           {t("Try again")}

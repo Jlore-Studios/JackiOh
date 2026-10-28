@@ -36,10 +36,11 @@ const DEFAULTS: Settings = {
   confirmEndTurn: false,
   autoEndTurn: true,
   hoverPreviews: true,
+  lethalHint: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "reduceMotion"];
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
@@ -596,6 +597,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     ["confirmEndTurn", "Confirm end turn"],
     ["autoEndTurn", "End turn automatically"],
     ["hoverPreviews", "Hover previews"],
+    ["lethalHint", "Lethal hint"],
     ["reduceMotion", "Reduce motion"],
     ["muteOpponentEmotes", "Mute opponent emotes"],
   ];
@@ -605,7 +607,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     muteOpponentEmotes: "audio",
   };
 
-  it("B24 shows gameplay (drag, confirm, auto end, hover), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
+  it("B24 shows gameplay (drag, confirm, auto end, hover, lethal hint), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
     // R643 (§5): the built-in Audio switch keeps its section visible; there is no account section.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
@@ -616,7 +618,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
       expect(section.tagName).toBe("SECTION");
       expect(within(section).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     }
-    for (const key of ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"] as const) {
+    for (const key of ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint"] as const) {
       expect(gameplay.contains(switchFor(key)), key).toBe(true);
     }
     expect(visuals.contains(switchFor("reduceMotion"))).toBe(true);
@@ -713,6 +715,25 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
 
     __resetSettingsForTests();
     expect(readSettings().muteOpponentEmotes).toBe(true);
+  });
+
+  it("R2102000 the Lethal hint switch sits in Gameplay, is on by default, and turning it off is kept", () => {
+    render(<SettingsPanel onClose={noop} />);
+
+    const toggleEl = switchFor("lethalHint");
+    expect(toggleEl).toHaveAttribute("role", "switch");
+    expect(screen.getByRole("switch", { name: "Lethal hint" })).toBe(toggleEl);
+    expect(screen.getByTestId("settings-section-gameplay").contains(toggleEl)).toBe(true);
+    expect(toggleEl.checked).toBe(true);
+
+    fireEvent.click(toggleEl);
+
+    expect(readSettings().lethalHint).toBe(false);
+    expect(toggleEl.checked).toBe(false);
+    expect(persisted()).toMatchObject({ lethalHint: false });
+
+    __resetSettingsForTests();
+    expect(readSettings().lethalHint).toBe(false);
   });
 
   it("B24 an audio slot makes the audio section appear with the slot inside it", () => {

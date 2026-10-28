@@ -7,15 +7,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CATALOG } from "@jackioh/cards";
 import type { PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { __resetSettingsForTests } from "../settings/store.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Hand, { HAND_EMPTY_TEXT, handEmptyTestid } from "./Hand.tsx";
 import { revealTestid } from "./reveal.ts";
 
@@ -98,7 +97,6 @@ describe("R504 an empty hand keeps its place", () => {
 });
 
 describe("R434 the opponent's hand row turns face up at the game's end", () => {
-  const lookup = lookupFromDefs(CATALOG);
   const REVEALED = ["core-002", "core-019", "core-055"];
 
   function finished(over: Partial<PlayerView["opponent"]> = {}): PlayerView {
@@ -115,17 +113,9 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     };
   }
 
-  function renderBoard(view: PlayerView, onClick = vi.fn()): void {
-    render(
-      <CatalogContext.Provider value={lookup}>
-        <Board view={view} onClick={onClick} />
-      </CatalogContext.Provider>,
-    );
-  }
-
   it("R434 each back turns over to its face where it lay, and none of them can be played", () => {
     const onClick = vi.fn();
-    renderBoard(finished(), onClick);
+    renderBoard(finished(), { onClick });
     const hand = screen.getByTestId("hand-opponent");
     expect(hand).toHaveAttribute("data-revealed", "true");
     expect(hand).toHaveAttribute("data-count", String(REVEALED.length));
@@ -147,7 +137,7 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
   });
 
   it("R434 while the game runs the opponent's hand stays backs", () => {
-    renderBoard(fullBoardView());
+    renderBoard(fullBoardView(), { onClick: vi.fn() });
     const hand = screen.getByTestId("hand-opponent");
     expect(hand).not.toHaveAttribute("data-revealed");
     expect(hand.querySelectorAll(".hand-slot--revealed")).toHaveLength(0);
@@ -166,7 +156,7 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     expect(face?.body).toContain("height: var(--hand-card-h)");
     expect(face?.body).toContain("max-width: var(--hand-card-w)");
     // And the row the board renders at the game's end is the one the rule selects.
-    renderBoard(finished());
+    renderBoard(finished(), { onClick: vi.fn() });
     expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
   });
 
@@ -184,16 +174,6 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
 });
 
 describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
-  const lookup = lookupFromDefs(CATALOG);
-
-  function renderBoard(view: PlayerView): void {
-    render(
-      <CatalogContext.Provider value={lookup}>
-        <Board view={view} />
-      </CatalogContext.Provider>,
-    );
-  }
-
   it("R1143 a set hand size shows beside either seat's count", () => {
     renderBoard(
       baseView({

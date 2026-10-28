@@ -815,6 +815,42 @@ mod r1852003_the_launch {
             Vec::<String>::new()
         );
     }
+
+    #[test]
+    fn r1852003_a_launch_names_its_pieces_after_the_starship_died_and_its_piece_went_back_to_a_library() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id, bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        let launched_at = s.state().applied.len() - 1;
+        bolt_at(&mut s, &ship.id);
+        assert_eq!(s.card(&ship.id).zone.z(), ZoneName::Graveyard);
+        assert!(
+            s.card(&ship.id).starship.is_none(),
+            "R78 takes the memory off with the card"
+        );
+        out_of_the_graveyard(&mut s, &piece, ZoneName::Library);
+        // The log keeps the last NONCE_HISTORY actions (`reduce::remember_nonce`): once the fusion has
+        // left it, only the launch names the piece's definition.
+        s.state_mut().applied.drain(..launched_at);
+        let launched: Vec<Value> = starship_events(&s, P2)
+            .into_iter()
+            .filter(|event| event["type"] == json!("starshipLaunched"))
+            .collect();
+        assert_eq!(launched.len(), 1, "{launched:?}");
+        assert_eq!(launched[0]["pieces"], json!([booster.id]));
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
+    }
 }
 
 mod r1852004_the_name {

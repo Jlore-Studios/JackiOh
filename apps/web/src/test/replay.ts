@@ -21,7 +21,10 @@ import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts"
 // Re-pinned for #1705's 25-card decks: "replay-player-10" now ends with the viewer's hand empty, and
 // "replay-player-4" shows no card in the steps the GIF export's clip takes (8 to 14);
 // "replay-player-5" holds cards in both hands and in that clip.
-const SEED = "replay-player-5";
+// Re-pinned for the Stinkyscape release (#1884): the shipped pools grew by the set, so "replay-player-5"
+// ends with the viewer's hand empty and its first animated step queues an event the board never plays
+// out; "replay-player-8" holds cards in both hands, animates, and passes every replay test.
+const SEED = "replay-player-8";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;
 /** The turns the folded game must span for turn moves to have somewhere to go. */

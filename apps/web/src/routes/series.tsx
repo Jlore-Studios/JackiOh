@@ -10,6 +10,7 @@ import { t } from "../i18n/i18n.ts";
 import { pageWake } from "../game/net.ts";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
 import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
@@ -247,9 +248,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
         <BackLink to={paths.play} />
         <SeriesHero />
         {loadError === null ? (
-          <p className="notice" data-testid={seriesTestid.loading} role="status">
-            {t("Loading the series…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading the series…")} testId={seriesTestid.loading} />
         ) : (
           <p className="notice" data-testid={seriesTestid.error} role="alert">
             {t(loadError)}

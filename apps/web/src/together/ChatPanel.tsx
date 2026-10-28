@@ -264,6 +264,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
                 <button
                   type="button"
                   data-testid={chatTestid.join}
+                  data-route={link.path}
                   onClick={() => {
                     navigate(link.path);
                   }}

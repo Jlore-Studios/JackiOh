@@ -44,7 +44,7 @@ const SECTIONS: readonly SectionSpec[] = [
   {
     id: "gameplay",
     title: "Gameplay",
-    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"],
+    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint"],
   },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
@@ -67,6 +67,11 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   hoverPreviews: {
     label: "Hover previews",
     hint: "Lift a card in your hand, and show any card enlarged, when the mouse rests on it.",
+  },
+  // R2102000: the teaching aid of the Easy practice tier only.
+  lethalHint: {
+    label: "Lethal hint",
+    hint: "Against the Easy practice AI, light up the enemy hero and End turn when you can win this turn.",
   },
   reduceMotion: {
     label: "Reduce motion",
@@ -306,7 +311,7 @@ export default function SettingsPanel({
         {sync.phase === "error" ? (
           <div className="settings-sync">
             <p className="settings-sync__text" role="status" data-testid="settings-sync-error">
-              {t("Settings didn’t save to your account.")}
+              {t("Settings didn't save to your account.")}
             </p>
             <TryAgainButton onRetry={retrySettingsSync} testId="settings-sync-retry" className="settings-sync__retry" />
           </div>

@@ -23,7 +23,7 @@
   min-height: 0;
   padding: 2px 8px;
   border-radius: 8px;
-  font-size: 0.72em;
+  font-size: var(--type-3xs-em);
   line-height: 1.2;
   white-space: nowrap;
   pointer-events: auto;

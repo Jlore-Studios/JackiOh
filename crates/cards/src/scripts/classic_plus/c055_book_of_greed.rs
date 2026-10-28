@@ -133,7 +133,8 @@ mod tests {
                 .collect();
             sets.sort();
             // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-            // #1187): the Meditative+ set joins it (M+ #1 Bob's Plan, #24 Bob, #26 Scratch Pad).
+            // #1187): the Meditative+ set joins it (M+ #1 Bob's Plan, #24 Bob, #26 Scratch Pad); and for
+            // the Stinkyscape release (#1884): that set.
             assert_eq!(
                 sets,
                 vec![
@@ -142,6 +143,7 @@ mod tests {
                     "Core".to_string(),
                     "Meditative".to_string(),
                     "Meditative+".to_string(),
+                    "Stinkyscape".to_string(),
                 ]
             );
         }

@@ -144,6 +144,10 @@ mod tests {
         assert_eq!((stats.attack, stats.health), (12, 22));
         let from = s.events().len();
         s.answer(json!(pending.options[0].key));
+        // The pick is cast with your choices: its own prompts are answered, each its first option.
+        while let Some(prompt) = s.state().pending.clone() {
+            s.answer(json!(prompt.options[0].key));
+        }
         let cast = cast_since(&s, from);
         assert_eq!(cast.first(), Some(&(options[0].clone(), true, 0)), "{cast:?}");
     }

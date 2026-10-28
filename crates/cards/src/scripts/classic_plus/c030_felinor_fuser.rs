@@ -8,7 +8,7 @@
 //! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit.
 //! Each Discover offers three different non-token Felinor-tagged Units of every set (R380, R405) whose
 //! printed cost (R65) is (2) or less, (3) or less on the Radiant face, never Felinor Fuser itself (R387).
-//! Through v0.4.12d the pool had no cost limit, which `script_v0_4_12d` keeps (R767000).
+//! Through v0.5.0 the pool had no cost limit, which `script_v0_5_0` keeps (R767000).
 //!
 //! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,
 //! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
@@ -119,9 +119,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.12d its Discovers offered a Felinor Unit of any cost; `KEPT_SCRIPTS` folds
+/// R767000: through v0.5.0 its Discovers offered a Felinor Unit of any cost; `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
         base: felinor_fuser(
             false,
@@ -153,9 +153,10 @@ mod tests {
     const FUSER: &str = "classicplus-030";
     /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool. #43 and #94 cost (4), so since issue
-    /// #2179 neither face offers them (`CHEAP_ENOUGH` leaves them out); none of them costs (3).
-    const FELINOR_UNITS: [&str; 12] = [
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release
+    /// (#1884) its #87 Siva 1, a (2). #43 and #94 cost (4), so since issue #2179 neither face offers
+    /// them (`CHEAP_ENOUGH` leaves them out); none of them costs (3).
+    const FELINOR_UNITS: [&str; 13] = [
         "core-012",
         "core-043",
         "core-086",
@@ -168,6 +169,7 @@ mod tests {
         "meditative-093",
         "meditative-094",
         "meditative-102",
+        "stinkyscape-087",
     ];
     /// The two of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
     const COSTING_4: [&str; 2] = ["core-043", "meditative-094"];
@@ -453,13 +455,13 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, whose Discovers had no cost limit.
-        mod v0_4_12d {
+        /// R767000: the script kept for the replays of v0.5.0 and before, whose Discovers had no cost limit.
+        mod v0_5_0 {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_4_12d_may_offer_a_felinor_that_costs_4() {
-                crate::under_kept(FUSER, crate::scripts::classic_plus::c030_felinor_fuser::script_v0_4_12d(), || {
+            fn r767000_a_game_on_v0_5_0_may_offer_a_felinor_that_costs_4() {
+                crate::under_kept(FUSER, crate::scripts::classic_plus::c030_felinor_fuser::script_v0_5_0(), || {
                     let mut costly = false;
                     for n in 0..30 {
                         let mut s = scenario(json!({ "seed": format!("fuser-kept-{n}"), "p1": { "hand": [FUSER, FILLER] } }));

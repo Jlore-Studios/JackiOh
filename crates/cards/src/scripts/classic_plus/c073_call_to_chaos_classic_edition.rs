@@ -62,8 +62,15 @@ mod tests {
     const CORE_CHAOS: &str = "core-095";
     const MEDITATIVE_CHAOS: &str = "meditative-095";
     /// The "Call to Chaos" pool: every edition, #95, this card and M #95 (§8.7 row 73, R1240, R1420).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool, M #95 with it.
-    const EDITIONS: [&str; 3] = [CORE_CHAOS, CHAOS, MEDITATIVE_CHAOS];
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool, M #95 with it; and for the Stinkyscape
+    /// release (#1884): its #150 and #151.
+    const EDITIONS: [&str; 5] = [
+        CORE_CHAOS,
+        CHAOS,
+        MEDITATIVE_CHAOS,
+        "stinkyscape-150",
+        "stinkyscape-151",
+    ];
     const GOLEM: &str = "classicplus-073-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt

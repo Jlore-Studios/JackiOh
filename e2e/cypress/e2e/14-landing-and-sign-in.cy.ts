@@ -832,7 +832,7 @@ describe("B40 the shell's exits", () => {
     stubApi();
     cy.visit("/no-such-screen");
 
-    cy.get(byTestid(shellTestid.notFound)).should("be.visible").and("contain.text", "That page doesn’t exist.");
+    cy.get(byTestid(shellTestid.notFound)).should("be.visible").and("contain.text", "That page doesn't exist.");
     cy.get(byTestid(shellTestid.notFoundHome)).click();
 
     cy.location("pathname").should("eq", LANDING);

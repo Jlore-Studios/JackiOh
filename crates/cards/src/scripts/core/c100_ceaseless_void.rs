@@ -393,7 +393,7 @@ mod tests {
         #[test]
         fn r2179002_a_cast_on_draw_is_no_play_so_only_its_draw_makes_the_void_cheaper() {
             crate::register_all();
-            // #21 Hinder casts itself on the draw: through v0.4.12d that counted as a play (R70), now as
+            // #21 Hinder casts itself on the draw: through v0.5.0 that counted as a play (R70), now as
             // none (R2179002).
             let mut s = scenario(json!({
                 "seed": "void-cast",

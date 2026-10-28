@@ -14,6 +14,8 @@ import { CHINESE } from "../cards/chinese.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { TokenBarsResponse } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { collectionOf, tokenBars } from "./fixtures.ts";
 import { fittingCards, quantitiesOf, shopTestid as T, unownedCards, type RegistryCosmetic } from "./shop.ts";
@@ -95,6 +97,20 @@ describe("#1309 the token picker", () => {
     expect(screen.queryByTestId(T.cardPick("core-001"))).toBeNull();
     expect(screen.queryByTestId(T.cardPick("core-004"))).toBeNull();
     expect(screen.queryByTestId(T.cardPick("core-051-1"))).toBeNull();
+  });
+
+  it("#2115 the picker waits as a panel skeleton, and the bars take its place when the reads answer", async () => {
+    tokenServer();
+    render(<TokenPicker token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.tokenLoading), "panel");
+    expect(screen.getByTestId(T.tokenLoading)).toHaveTextContent("Loading your tokens…");
+    expect(screen.queryByTestId(T.cardBar)).toBeNull();
+
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+    expect(screen.queryByTestId(T.tokenLoading)).toBeNull();
+    expect(screen.queryByText("Loading your tokens…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("#2053 the card picker names each card in the reader's language", async () => {

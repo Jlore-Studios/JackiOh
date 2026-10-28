@@ -5,12 +5,13 @@
 // test lets the module arrive, and `loadWasm()` answers a download the test holds, completes or fails.
 // `main.tsx` is imported once the mock is in place, so everything it imports reaches it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../auth/testids.ts";
 import { WORKSHOP } from "../game/deckbuilder/testids.ts";
 import { decksResponse } from "../game/deckbuilder/testkit.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 
 /** One `loadWasm()` download, settled by the test. */
@@ -193,12 +194,14 @@ describe("#778 a screen that calls the engine", () => {
     render(<App />);
 
     expect(await screen.findByTestId(shellTestid.engineLoading, undefined, SLOW)).toBeTruthy();
+    expectSkeleton(within(screen.getByTestId(shellTestid.engineLoading)).getByTestId(shellTestid.loading), "panel");
     expect(screen.queryByTestId(WORKSHOP)).toBeNull();
 
     await arrive();
 
     expect(await screen.findByTestId(WORKSHOP, undefined, SLOW)).toBeTruthy();
     expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
+    expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     expect(window.location.pathname).toBe("/decks");
   });
 

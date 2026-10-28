@@ -10,6 +10,7 @@
 //!  - R210: the zone a play names is held while its Tribute is paid, and a tributed Reborn unit
 //!    comes back (§6.1, §6.3 "counts as a death").
 //!  - R217, R58, §10.3: a cast's draw continues its chain; the loop's cap bounds every trigger.
+//!  - R2067000: one action casts at most 60 cast-on-draw cards over all its chains.
 
 use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
@@ -121,7 +122,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         // p1 has Quickstriker. At p1's start of turn the draw casts Hinder, the draw repeats and casts a
         // second Hinder, and the draw repeats again into Mr. Vanilla (§2.4, R58). §8 #38's X is "cards you
         // played earlier this turn", and a cast on draw is no play (R2179002), so X is 0 for both and p2's
-        // hero takes nothing (through v0.4.12d each was a play, R70, and the second dealt 1).
+        // hero takes nothing (through v0.5.0 each was a play, R70, and the second dealt 1).
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -142,7 +143,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         register_all();
         // Gifted Program: "The first card costing 1 or less you play each turn becomes Radiant as it is
         // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002; through
-        // v0.4.12d it was the first, R70, and resolved Radiant), so it stays base and the first card p1
+        // v0.5.0 it was the first, R70, and resolved Radiant), so it stays base and the first card p1
         // plays after it is the one made Radiant.
         let mut g = scenario(json!({
             "active": "p2",
@@ -185,7 +186,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.play(FULLSEND, json!({}));
         g.play(VANILLA, json!({}));
 
-        // Through v0.4.12d the Hinder was the 3rd (R70).
+        // Through v0.5.0 the Hinder was the 3rd (R70).
         assert_eq!(g.state().players.p1.turn_log.cards_played, 2);
         g.expect_in_zone(HINDER, "graveyard");
         assert_eq!(g.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 1);
@@ -202,7 +203,7 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
     fn r2179002_unstable_clone_machine_copies_no_card_cast_on_draw_and_copies_the_next_card_played() {
         register_all();
         // "After you play a card, shuffle 3 copies of it into your library": the Hinder p1's start-of-turn
-        // draw casts is no play, so nothing copies it (through v0.4.12d it was a play, R70, and copied).
+        // draw casts is no play, so nothing copies it (through v0.5.0 it was a play, R70, and copied).
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -439,6 +440,60 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
     }
 }
 
+const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
+const INTROSPECTION: &str = "meditative-007"; // M #7: "End of turn: ... Draw 1. ..."
+
+mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
+    use super::*;
+
+    #[test]
+    fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
+        register_all();
+        // Fuzz seed 9688 found the loop: each Hinder cast was a play #33 answered with three more Hinders
+        // (R70), so the library never ran dry, and its discard was answered by #64's draw, a chain of its
+        // own (R217). A cast on draw is no play since #2179 (R2179002), so #33 copies none and one library
+        // runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60 (the 21st of each chain of 20,
+        // R58, goes to the hand and the next chain's first cast discards it). The same action then starts
+        // p2's turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's casts.
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [VANILLA, VANILLA],
+                "backrow": [INTROSPECTION, RECYCLER, CLONE_MACHINE],
+                "library": vec![HINDER; LIBRARY_CAP as usize],
+            },
+            "p2": {
+                "hand": [VANILLA, VANILLA],
+                "backrow": [RECYCLER],
+                "library": vec![HINDER; LIBRARY_CAP as usize],
+            },
+        }));
+
+        s.end_turn();
+        assert!(s.state().pending.is_none());
+        assert_eq!(s.state().active, P2);
+        let casts = |player| {
+            s.last_events()
+                .iter()
+                .filter(|event| {
+                    matches!(event, GameEvent::CardPlayed { def_id, player: by, .. } if def_id == HINDER && *by == player)
+                })
+                .count() as i32
+        };
+        assert_eq!(casts(P1) + casts(P2), CAST_ON_DRAW_ACTION_CAP);
+        assert!(casts(P2) > 0, "the cap spans the turn the action ends");
+        // R2179002: #33 shuffled no copy in, so p1's library ran dry.
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
+        );
+        assert!(s.state().players[P1].library.is_empty());
+        assert_eq!(s.state().cast_chain, None);
+        // Past the cap, a Hinder p2 draws goes to the hand uncast.
+        assert!(s.hand(P2).iter().any(|card| card.def_id == HINDER));
+    }
+}
+
 const CHAOS: &str = "core-095"; // #95 Call to Chaos (Core Edition), Spell, 4
 const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so the turn never auto-ends
 
@@ -505,3 +560,4 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
         );
     }
 }
+

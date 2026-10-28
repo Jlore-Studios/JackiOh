@@ -292,7 +292,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             play_from_hand(&mut s, REPLENISH, json!({}));
-            // Draws the Bone Storm: it casts itself, no play (through v0.4.12d the 3rd, R70), then draws again.
+            // Draws the Bone Storm: it casts itself, no play (through v0.5.0 the 3rd, R70), then draws again.
             play_from_hand(&mut s, STOCKPILE, json!({}));
             assert_eq!(wardrum_in(&s), ZoneName::Hand);
             play_from_hand(&mut s, REPLENISH, json!({})); // the 3rd

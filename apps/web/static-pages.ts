@@ -237,8 +237,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     ) +
     section(
       "What we checked",
-      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer&rsquo;s " +
-        "size and at a phone&rsquo;s, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
+      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's " +
+        "size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
         "every serious or critical problem it found, except " +
         "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
         "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
@@ -251,16 +251,16 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     ) +
     section(
       "Current support",
-      "<ul><li>Menus, the deck builder, and the board&rsquo;s cards, zones and prompts can be used " +
+      "<ul><li>Menus, the deck builder, and the board's cards, zones and prompts can be used " +
         "from the keyboard.</li>" +
         "<li>Focused controls are marked, and each screen has headings.</li>" +
-        "<li>Card art is decorative and hidden from screen readers; each card&rsquo;s name and text are " +
+        "<li>Card art is decorative and hidden from screen readers; each card's name and text are " +
         "on the card as text.</li>" +
         "<li>Reduce motion, effects and sound can be changed in Settings.</li></ul>",
     ) +
     section(
       "Known gaps",
-      "<ul><li>A card shown as a button, on the home page, in the Almanac&rsquo;s card pool and in a game&rsquo;s " +
+      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool and in a game's " +
         "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
         "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
         "it goes does the same, by click or by Enter on each.</li>" +

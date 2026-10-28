@@ -159,7 +159,12 @@ describe("B18 the green and yellow glows in a real browser", () => {
 
     expectShadow("hand-card-r1", (shadow) => {
       for (const layer of shadowLayers(shadow).filter((one) => !one.includes("inset"))) {
-        expect(layer, "an outer shadow layer of a Radiant card is a plain dark shadow").to.match(/^rgba\(0, 0, 0, /);
+        // #2164 writes the shadow as a `color-mix` of the palette's black, which Chrome computes as
+        // `color(srgb 0 0 0 / 0.45)` rather than `rgba(0, 0, 0, 0.45)`: both are the same plain black.
+        // Any coloured glow (the yellow, the green, gold) still fails either spelling.
+        expect(layer, "an outer shadow layer of a Radiant card is a plain dark shadow").to.match(
+          /^(rgba\(0, 0, 0, |color\(srgb 0 0 0 \/ )/,
+        );
       }
     });
   });

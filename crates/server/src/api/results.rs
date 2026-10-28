@@ -41,7 +41,7 @@ use jackioh_engine::{ActionBody, GameOverReason, PerPlayer, PlayerId, Winner};
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::actor::{engine, match_actor, registry};
-use crate::api::game_records::{fold_args_of, record_live_game};
+use crate::api::game_records::{Finished, Folded, read_finished, record_finished_game};
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
@@ -173,17 +173,21 @@ fn insert_error(error: StoreError) -> WriteError {
 
 /// The one write, retried on the collision below. Everything it touches is inside one
 /// transaction, so a mid-write failure leaves no half-ended match: either the row, both ratings,
-/// both in-match flags and the match's own `finished` state all land, or none of them do.
+/// both in-match flags and the match's own `finished` state all land, or none of them do. #2213: the
+/// match and its log are read and folded once before the transaction, so no fold runs under the
+/// season or economy locks, and a retry on a duplicate reuses that fold. It answers the fold with the
+/// write, for the game record to read.
 async fn write_result(
     app: &App,
     input: &RecordResultInput,
     rating_policy: RatingPolicy,
-) -> Result<Written, ApiError> {
+) -> Result<(Written, Option<Finished>), ApiError> {
+    let finished = read_finished(app, &input.match_id).await.map_err(failure)?;
     let mut attempt: u32 = 1;
     loop {
         let outcome = async {
             let mut tx = app.db.begin(None).await.map_err(failed)?;
-            let written = write_once(app, &mut tx, input, rating_policy).await?;
+            let written = write_once(app, &mut tx, input, rating_policy, finished.as_ref()).await?;
             tx.commit().await.map_err(failed)?;
             Ok::<Written, WriteError>(written)
         }
@@ -200,7 +204,7 @@ async fn write_result(
                 if let Some(series) = &written.series {
                     crate::seats::free_series(app, series);
                 }
-                return Ok(written);
+                return Ok((written, finished));
             }
             // `results_get_by_match` cannot see a concurrent first writer's uncommitted row, so two
             // writers resolving one match at once both pass the read and one loses on
@@ -222,6 +226,7 @@ async fn write_once(
     tx: &mut Tx<'_>,
     input: &RecordResultInput,
     input_policy: RatingPolicy,
+    finished: Option<&Finished>,
 ) -> Result<Written, WriteError> {
     // §9.5 idempotency: one row per match. The fake store and the `results` primary key both
     // refuse a second row, so this read is what turns that refusal into a clean no-op. It only sees
@@ -362,11 +367,14 @@ async fn write_once(
         for profile_id in &ordered {
             tx.economy_lock_account(profile_id).await.map_err(failed)?;
         }
-        let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
-        let game = match &match_row {
-            Some(row) => quests_game(app, row, &log).await,
-            None => None,
+        // #2213: `read_finished` read the log, and folded it, before this transaction. The log is
+        // append-only and a finished game takes no action, so this transaction could read no row that
+        // read did not, and no fold runs under these locks.
+        let log: &[MatchActionRow] = match finished {
+            Some(finished) => &finished.log,
+            None => &[],
         };
+        let game = finished.and_then(|finished| quests_game(&input.match_id, &finished.folded));
         for seat in [seat_a, seat_b] {
             let taken = |keep: fn(&ActionBody) -> bool| {
                 let count = log
@@ -393,7 +401,7 @@ async fn write_once(
                     at: input.at,
                     bot,
                     tally: tally_seat(
-                        game.as_ref().map(|game| &game.seats[seat.player]),
+                        game.map(|game| &game.seats[seat.player]),
                         attacks,
                         &app.catalog.defs,
                     ),
@@ -491,35 +499,23 @@ async fn write_once(
 }
 
 /// §14.9: the finished game a ladder result's quests read (`economy::quests::tally_seat`): the
-/// match's `(seed, decks, log)` folded by the engine's `summarize_game`, as the game record's fold
-/// reads it (`game_records.rs`), off the runtime under the catalog the match started on (#1035,
-/// R767000). `None`, logged, when the log cannot be read or reaches no result: the quests then
-/// count the log's attacks alone, and the result is written all the same.
-async fn quests_game(
-    app: &App,
-    row: &MatchRow,
-    log: &[MatchActionRow],
-) -> Option<jackioh_engine::GameSummary> {
-    let entries: Result<Vec<_>, _> = log
-        .iter()
-        .map(|entry| serde_json::to_value(&entry.action))
-        .collect();
-    let args = match entries.and_then(|entries| fold_args_of(row, entries)) {
-        Ok(args) => args,
-        Err(error) => {
-            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = %error);
-            return None;
-        }
-    };
-    let pinned = registry::pinned_for(row);
-    match engine::off_runtime(app.engine_thread, move || engine::summarize_game(pinned, &args)).await {
-        Ok(Some(game)) => Some(game),
-        Ok(None) => {
-            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = "the log reaches no result");
+/// match's `(seed, decks, log)` folded by the engine's `summarize_game`, off the runtime under the
+/// catalog the match started on (#1035, R767000). It is the fold `read_finished` made before the
+/// transaction (#2213), the one the game record reads (`game_records.rs`). `None`, logged, when the
+/// log cannot be read or reaches no result: the quests then count the log's attacks alone, and the
+/// result is written all the same.
+fn quests_game<'a>(
+    match_id: &str,
+    folded: &'a Result<Folded, String>,
+) -> Option<&'a jackioh_engine::GameSummary> {
+    match folded {
+        Ok(Folded { game: Some(game), .. }) => Some(game),
+        Ok(Folded { game: None, .. }) => {
+            tracing::warn!(event = "quests.game.unread", matchId = %match_id, message = "the log reaches no result");
             None
         }
         Err(message) => {
-            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = %message);
+            tracing::warn!(event = "quests.game.unread", matchId = %match_id, message = %message);
             None
         }
     }
@@ -548,13 +544,13 @@ pub async fn record_result_with_economy(
     app: &Arc<App>,
     input: RecordResultInput,
 ) -> Result<Recorded, ApiError> {
-    let written = write_result(app, &input, RatingPolicy::Rated).await?;
+    let (written, finished) = write_result(app, &input, RatingPolicy::Rated).await?;
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
     resume_series(app, written.series.as_ref()).await;
     // R376: after the commit too, and never at the result's expense — it logs and swallows its
-    // own failures, and a second write of the same match files nothing, and one that failed is filed again by the retention loop while the match's log is held (R1596000).
-    record_live_game(app, &input.match_id).await;
+    // own failures, and a second write of the same match files nothing, and one that failed is filed again by the retention loop while the match's log is held (R1596000). #2213: from the write's one fold.
+    record_finished_game(app, &input.match_id, finished, &input.seats).await;
     Ok(Recorded {
         row: written.row,
         economy: written.economy,
@@ -564,7 +560,7 @@ pub async fn record_result_with_economy(
 /// R1253000: `ceiling_draw_input`'s draw, written as the reaper writes it (both ratings unchanged,
 /// no game record), then the series' next game (R332, R334).
 pub async fn record_ceiling_draw(app: &Arc<App>, input: RecordResultInput) -> Result<ResultRow, ApiError> {
-    let written = write_result(app, &input, RatingPolicy::Unchanged).await?;
+    let (written, _) = write_result(app, &input, RatingPolicy::Unchanged).await?;
     resume_series(app, written.series.as_ref()).await;
     Ok(written.row)
 }
@@ -721,7 +717,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         }
         let input = ceiling_draw_input(&match_row, now);
         let advanced = match write_result(app, &input, RatingPolicy::Unchanged).await {
-            Ok(written) => written.series,
+            Ok((written, _)) => written.series,
             Err(error) => {
                 // One wedged match must not stop the sweep.
                 tracing::error!(event = "reaper.failed", matchId = %match_row.id, message = %error.message);

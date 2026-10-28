@@ -31,6 +31,7 @@ import { replayTestid, useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { ReplayToolbar, isTyping } from "../replay/ReplayToolbar.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { DuosChromeContext } from "./context.ts";
@@ -251,9 +252,7 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
     <div className="app-shell">
       {back}
       {failure === null ? (
-        <p className="notice" role="status" data-testid={replayTestid.loading}>
-          {t("Loading the replay…")}
-        </p>
+        <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
       ) : (
         <>
           <p className="notice" role="alert" data-testid={replayTestid.failure}>

@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS } from "./config.ts";
 import { canShareFile, exportGif, shareGif } from "./gif/export.ts";
 import type { GifExportResult } from "./gif/export.ts";
@@ -139,7 +140,9 @@ describe("R768000 a result screen's way into a replay", () => {
       </CatalogContext.Provider>,
     );
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.queryByText("Loading the replay…")).toBeNull();
     unmount();
 
     vi.mocked(getReplaySteps).mockRejectedValue(
@@ -155,7 +158,7 @@ describe("R768000 a result screen's way into a replay", () => {
   it("#1568 OpenedReplay offers Try again when the source could not be loaded, and plays once it can", async () => {
     const load = vi
       .fn<() => Promise<ReplaySource>>()
-      .mockRejectedValueOnce(new ReplayFailure("error", "Couldn’t reach JackiOh."))
+      .mockRejectedValueOnce(new ReplayFailure("error", "Couldn't reach JackiOh."))
       .mockResolvedValueOnce(fakeReplaySource(steps));
     render(
       <CatalogContext.Provider value={lookup}>
@@ -163,11 +166,12 @@ describe("R768000 a result screen's way into a replay", () => {
       </CatalogContext.Provider>,
     );
 
-    expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(replayTestid.retry));
     expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(replayTestid.loading), "panel");
 
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
     expect(load).toHaveBeenCalledTimes(2);

@@ -15,7 +15,8 @@ import type { ActionBody, CustomCard, PlayerId } from "@jackioh/shared";
 import { createPracticeCore } from "../practice/core.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../practice/protocol.ts";
 import { luauBytes } from "../test/luau.ts";
-import { checkCustomCard, createGame, fold, hashState, luauModuleInUse, useLuauModule } from "./index.ts";
+import { checkCustomCard, createGame, fold, hashState, lethalHint, luauModuleInUse, useLuauModule } from "./index.ts";
+import type { GameState } from "../wire/generated/GameState.ts";
 
 /** A 0-cost Spell: "Deal {dmg} damage to the enemy hero." */
 const BURNER: CustomCard = {
@@ -156,6 +157,39 @@ describe("R915009 a practice game with a custom card runs on the Luau module", (
     const send = core();
     await send({ type: "start", config: { seed: "r915009-plain", difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" } } });
     expect(luauModuleInUse()).toBe(false);
+  });
+});
+
+describe("R2102000 the lethal hint on the Luau module", () => {
+  it("R2102000 the Luau module's lethalHint plays the human's custom card through the card kit", async () => {
+    const send = core();
+    // A seed whose opening hand holds the card; the human, in p1, plays the first main phase.
+    let last: PracticeSnapshot | null = null;
+    for (let n = 1; n <= 40 && last === null; n += 1) {
+      const started = snapshotOf(await send({ type: "start", config: tryConfig(`r915009-${String(n)}`) }));
+      const hand = Array.isArray(started.view.you.hand) ? started.view.you.hand : [];
+      if (hand.some((card) => card.defId === BURNER.id)) last = started;
+    }
+    if (last === null) throw new Error("no seed in 40 deals the custom card into the opening hand");
+    for (let step = 0; step < 20 && !(last.view.active === HUMAN && last.view.phase === "main" && last.view.pending === null); step += 1) {
+      const { view } = last;
+      if (last.aiToAct) last = snapshotOf(await send({ type: "aiStep" }));
+      else if (view.pending !== null && view.pending.forYou && view.pending.kind === "mulligan") {
+        last = snapshotOf(await send({ type: "act", action: { type: "mulligan", keep: view.pending.options.map((option) => option.key) } }));
+      } else throw new Error("the human owes something the test does not answer");
+    }
+    expect(last.view.turn, "the human's first main phase, before the AI has set anything").toBe(1);
+    expect(luauModuleInUse()).toBe(true);
+    // No board yet, and the AI on its full health: no lethal, and the snapshot says none.
+    expect("lethal" in last).toBe(false);
+
+    // The same state with the AI on 3: Burner's 3 to the face, played through its Luau script, wins.
+    const debug = await send({ type: "debug" });
+    if (debug.type !== "debug") throw new Error("a dev core answers debug");
+    const state = structuredClone(debug.debug.state) as GameState;
+    expect(lethalHint(state, HUMAN, 0)).toBe(false);
+    state.players.p2.hero.health = 3;
+    expect(lethalHint(state, HUMAN, 0)).toBe(true);
   });
 });
 

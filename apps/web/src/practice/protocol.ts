@@ -126,6 +126,12 @@ export type PracticeSnapshot = {
    * lesson or a game Glitch voided, which are not kept.
    */
   replay?: Pick<PracticeReplaySummary, "game" | "steps">;
+  /**
+   * R2102000: present, and true, only while the human of a free game against the Easy AI has a sure
+   * win this turn by what they can see (`lethalHint`); the page shows it only with the Lethal hint
+   * setting on. It never says how.
+   */
+  lethal?: true;
 };
 
 /** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */
@@ -210,7 +216,13 @@ export type PracticeResponse =
   | { id: number; type: "replays"; replays: PracticeReplayListing[] }
   | { id: number; type: "replay"; game: number; from: number; steps: ReplayStep[]; total: number }
   | { id: number; type: "debug"; debug: PracticeDebug }
-  | { id: number; type: "claim"; claim: PracticeClaim }
+  | {
+      id: number;
+      type: "claim";
+      claim: PracticeClaim;
+      /** R2208000: present, and true, when this device's clock cut one of the game's AI decisions short; never sent to the server. */
+      clockCut?: true;
+    }
   | { id: number; type: "failed"; message: string };
 
 export type PracticeRequestBody = DistributiveOmit<PracticeRequest, "id">;

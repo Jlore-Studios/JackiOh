@@ -19,6 +19,7 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `last_board_for`, `seat_played_by`, `find_instance` | as the engine's |
 | `deal_emote_hand(seed, seat)` | `EmoteId[]`: the seat's hand of eight emotes for that seed, as the server deals it (R1341), for hotseat and practice |
 | `ai_to_act(state, seat)`, `ai_decide(state, seat, options, deadline_ms)` | the AI; `options` is `{ rngSeed, rngCursor, budget? }`, the answer `{ decision, rngCursor }` |
+| `lethal_hint(state, seat, deadline_ms)` | R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`), for the Easy practice tier's lethal hint; a search still running at `deadline_ms` (as `ai_decide`'s) answers no |
 | `build_ai_deck(options)` | `{ deck, rngCursor }`; `options` is `{ rngSeed, rngCursor, size }` and `AiDeckOptions`' own keys, `leanSet` among them (R1370) |
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |

@@ -68,8 +68,9 @@ mod tests {
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
     /// tribes) and Meditative+ #20 KY's Competition and #25 KY's Intuition — no token, never #57.
     /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-    /// #1187): M+ #20 and #25 join it (§8.1 #57).
-    const KY_POOL: [&str; 13] = [
+    /// #1187): M+ #20 and #25 join it (§8.1 #57); and for the Stinkyscape release (#1884): its #25
+    /// KY's Tricknology.
+    const KY_POOL: [&str; 14] = [
         "core-031",
         "core-051",
         "core-082",
@@ -83,6 +84,7 @@ mod tests {
         "meditative-087",
         "meditativeplus-020",
         "meditativeplus-025",
+        "stinkyscape-025",
     ];
 
     /// The def ids `crate::query::pool` returns (SPEC §5.1).
@@ -102,7 +104,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_meditative_n34_n38_n45_n79_n87_and_meditative_plus_n20_n25() {
+        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_meditative_n34_n38_n45_n79_n87_meditative_plus_n20_n25_and_stinkyscape_n25() {
             crate::register_all();
             assert_eq!(pool_ids("core-057", json!({ "tags": ["KY"] })), KY_POOL);
         }
@@ -120,10 +122,18 @@ mod tests {
             // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
             // Prime, Meditative+ #20.1 Lil' Kenny) are only reachable by naming the token pool, which
             // this card never does. Re-pinned for v0.3.5: the Meditative set joins the pool; and for
-            // v0.3.15 (Meditative+ ships, #1187): M+ #20.1 joins the token pool.
+            // v0.3.15 (Meditative+ ships, #1187): M+ #20.1 joins the token pool; and for the Stinkyscape
+            // release (#1884): its #4.2 KY's Last Exam.
+            assert!(!ids.iter().any(|id| id == "stinkyscape-004-2"));
             assert_eq!(
                 query_ids(json!({ "tags": ["KY", "Token"] })),
-                ["core-051-1", "classicplus-042-1", "meditative-045-1", "meditativeplus-020-1"]
+                [
+                    "core-051-1",
+                    "classicplus-042-1",
+                    "meditative-045-1",
+                    "meditativeplus-020-1",
+                    "stinkyscape-004-2"
+                ]
             );
         }
     }

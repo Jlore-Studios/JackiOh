@@ -1,5 +1,5 @@
 //! C+ #32 Otherworldly Removal (SPEC §8.7 row 32; §2.4, §7, R4, R11). (3) Spell, Epic ((2) through
-//! v0.4.12d).
+//! v0.5.0).
 //!   Base:    "Add an Execute, a Brawl and a Blade Storm to your hand."
 //!   Radiant: "Add a Radiant Execute, a Radiant Brawl and a Radiant Blade Storm to your hand."
 //!

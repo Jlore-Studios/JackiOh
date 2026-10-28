@@ -14,7 +14,7 @@ use jackioh_engine::{
 };
 use serde_json::Value;
 
-use crate::config::AI_SEARCH;
+use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
 use crate::evaluate::{can_swing, deft_in_defense};
 use crate::reply::trade_value;
 
@@ -739,6 +739,15 @@ pub fn root_candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> 
     pool(state, seat, legal_actions(state, seat), None)
 }
 
+/// A play of a card the seat has played `AI_SAME_CARD_PLAYS_PER_TURN` times this turn already
+/// (`turnLog.playedIds`, rebuilt at each start of turn).
+fn played_out(played: &[String], action: &ActionBody) -> bool {
+    let ActionBody::Play { instance_id, .. } = action else {
+        return false;
+    };
+    played.iter().filter(|id| *id == instance_id).count() >= AI_SAME_CARD_PLAYS_PER_TURN
+}
+
 /// `candidate_pool` with `collapse_zones` keeping at most `zone_cap` lanes of a play (`None`: all).
 fn pool(
     state: &GameState,
@@ -747,11 +756,12 @@ fn pool(
     zone_cap: Option<usize>,
 ) -> Vec<ActionBody> {
     let skipped = subsystems::AI_SKIPPED_ACTIONS;
+    let played = &state.players[seat].turn_log.played_ids;
     let legal: Vec<ActionBody> = legal
         .into_iter()
         .filter(|action| {
             let kind = action.action_type();
-            !skipped.contains(&kind) && kind != ActionType::Mulligan
+            !skipped.contains(&kind) && kind != ActionType::Mulligan && !played_out(played, action)
         })
         .collect();
     let capped = cap_tribute_sets(state, seat, legal);

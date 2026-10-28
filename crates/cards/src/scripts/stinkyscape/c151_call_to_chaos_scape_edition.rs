@@ -123,7 +123,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     /// The Call to Chaos pool of the sets that ship (R380, R1420).
-    const SHIPPED_EDITIONS: [&str; 3] = ["core-095", "classicplus-073", "meditative-095"];
+    const SHIPPED_EDITIONS: [&str; 5] =
+        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     /// The Drone Battleship's layers, bottom first.

@@ -853,13 +853,20 @@ mod tests {
                 },
             );
             let all = events_json(&s);
+            // The recursion casts a random edition (R28), so the second Call played is any of them: it
+            // was #95 itself on this cursor until the Stinkyscape release (#1884) added two editions.
+            let edition = |def_id: &Value| {
+                def_id
+                    .as_str()
+                    .is_some_and(|id| crate::card_def(id).tags.contains(&Tag::CallToChaos))
+            };
             let cast_at = must(
                 all.iter()
                     .enumerate()
-                    .filter(|(_, event)| event["type"] == "cardPlayed" && event["defId"] == CHAOS)
+                    .filter(|(_, event)| event["type"] == "cardPlayed" && edition(&event["defId"]))
                     .map(|(at, _)| at)
                     .nth(1),
-                "the cast #95",
+                "the cast Call to Chaos",
             );
             let golem_at = all
                 .iter()

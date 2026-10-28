@@ -2,7 +2,7 @@
 //!
 //! Base: "Choose one: Deal X damage, heal a target 3X, or gain X mana next turn. End of turn: Return
 //! this to hand". Radiant: "Deal 2X damage, heal a target 6X, or gain X+1 mana next turn" (4X and 8X
-//! through v0.4.12d, declared numbers, so no script is kept, issue #2179), the modes,
+//! through v0.5.0, declared numbers, so no script is kept, issue #2179), the modes,
 //! target and return to hand kept (§8 Conventions). Patch v0.3.14 (#1220) dropped the +1s that v0.3.10
 //! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65).
 //!

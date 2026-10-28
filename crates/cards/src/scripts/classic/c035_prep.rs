@@ -15,7 +15,7 @@
 //! type, not a Field Spell) of the highest current cost in its controller's library, as #30 Archivist
 //! draws its highest card (R24: R65's costs, ties to the card nearest the top), by §6.3's
 //! `drawFromLibrary`, so it is a draw: R55's counter, the hand cap, the cast-on-draw path. A library
-//! with no Spell draws nothing. Through v0.4.12d it had one price and no draw, which `script_v0_4_12d`
+//! with no Spell draws nothing. Through v0.5.0 it had one price and no draw, which `script_v0_5_0`
 //! keeps (R767000).
 
 use jackioh_engine::effects::{add_player_modifier, draw_from_library};
@@ -79,8 +79,8 @@ pub fn script() -> CardScripts {
     CardScripts { radiant: base.clone(), base }
 }
 
-/// R767000: through v0.4.12d it had one price and drew nothing; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+/// R767000: through v0.5.0 it had one price and drew nothing; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_0() -> CardScripts {
     let base = prep(false);
     CardScripts { radiant: base.clone(), base }
 }
@@ -405,10 +405,10 @@ mod tests {
             assert_eq!(paid_for(&s, FLOOD), vec![0]);
         }
 
-        /// R767000: the script kept for the replays of v0.4.12d and before, which drew nothing.
+        /// R767000: the script kept for the replays of v0.5.0 and before, which drew nothing.
         #[test]
-        fn r767000_a_game_on_v0_4_12d_draws_nothing() {
-            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_4_12d(), || {
+        fn r767000_a_game_on_v0_5_0_draws_nothing() {
+            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_5_0(), || {
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, ANCHOR], "library": [STOCKPILE, FLOOD], "mana": 6 },
                     "p2": { "hand": [ANCHOR] },

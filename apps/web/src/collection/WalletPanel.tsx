@@ -4,8 +4,10 @@
 
 import type { ReactElement } from "react";
 
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CosmeticPacksResponse, PacksResponse, WalletResponse } from "../net/api.ts";
+import { paths } from "../net/navigate.ts";
 import { packName } from "../packs/packs.ts";
 import { collectionTestid } from "./collection.ts";
 
@@ -23,7 +25,11 @@ export default function WalletPanel({
     <>
       <p data-testid={collectionTestid.jlore}>{t("{jlore} Jlore", { jlore: formatNumber(wallet.jlore) })}</p>
       {none ? (
-        <p data-testid={collectionTestid.noPacks}>{t("No unopened packs.")}</p>
+        <EmptyState
+          text={t("No unopened packs.")}
+          testId={collectionTestid.noPacks}
+          action={{ label: t("Get packs in the shop"), to: paths.shop }}
+        />
       ) : (
         <ul className="collection-list">
           {packs.unopened.map(({ pack, count }) => (

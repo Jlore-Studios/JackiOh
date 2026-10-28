@@ -13,7 +13,7 @@
 //!
 //! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): played at (2) it replaces the hand and
 //! the deck, Embiggened at (4) the board too, and neither touches the graveyard or the exile pile.
-//! Through v0.4.12d it replaced all five at (2), which `script_v0_4_12d` keeps (R767000).
+//! Through v0.5.0 it replaced all five at (2), which `script_v0_5_0` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -22,15 +22,15 @@ pub const ID: &str = "core-083";
 /// R35's "other zones" since #2179, in the order this card walks them; the hand is one of them (R365).
 const OFF_FIELD_ZONES: &[OffFieldZone] = &[OffFieldZone::Hand, OffFieldZone::Library];
 
-/// Through v0.4.12d: the graveyard and the exile pile too.
-const OFF_FIELD_ZONES_V0_4_12D: &[OffFieldZone] = &[
+/// Through v0.5.0: the graveyard and the exile pile too.
+const OFF_FIELD_ZONES_V0_5_0: &[OffFieldZone] = &[
     OffFieldZone::Hand,
     OffFieldZone::Library,
     OffFieldZone::Graveyard,
     OffFieldZone::Exile,
 ];
 
-/// When the board is replaced: on the Embiggened version since #2179, always through v0.4.12d.
+/// When the board is replaced: on the Embiggened version since #2179, always through v0.5.0.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Board {
     Embiggened,
@@ -122,7 +122,7 @@ fn transmogulate(radiant_result: bool, piles: &'static [OffFieldZone], board: Bo
                     effects.extend(replace(ctx, &card, &pool, radiant_result));
                 }
             }
-            // Then hand (R365) and library (in `pile_cards` order, R223), and through v0.4.12d the
+            // Then hand (R365) and library (in `pile_cards` order, R223), and through v0.5.0 the
             // graveyard and exile: "any card from the pool, same counts".
             for &zone in piles {
                 for card in pile_cards(ctx, zone) {
@@ -143,12 +143,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.4.12d it replaced the hand, deck, board, graveyard and exile at its one price;
+/// R767000: through v0.5.0 it replaced the hand, deck, board, graveyard and exile at its one price;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_4_12d() -> CardScripts {
+pub fn script_v0_5_0() -> CardScripts {
     CardScripts {
-        base: transmogulate(false, OFF_FIELD_ZONES_V0_4_12D, Board::Always),
-        radiant: transmogulate(true, OFF_FIELD_ZONES_V0_4_12D, Board::Always),
+        base: transmogulate(false, OFF_FIELD_ZONES_V0_5_0, Board::Always),
+        radiant: transmogulate(true, OFF_FIELD_ZONES_V0_5_0, Board::Always),
     }
 }
 
@@ -559,13 +559,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.4.12d and before, which replaced all five zones.
-    mod n83_transmogulate_v0_4_12d {
+    /// R767000: the script kept for the replays of v0.5.0 and before, which replaced all five zones.
+    mod n83_transmogulate_v0_5_0 {
         use super::*;
 
         #[test]
-        fn r767000_a_game_on_v0_4_12d_replaces_the_board_graveyard_and_exile_at_its_one_price() {
-            crate::under_kept(TRANSMOGULATE, script_v0_4_12d(), || {
+        fn r767000_a_game_on_v0_5_0_replaces_the_board_graveyard_and_exile_at_its_one_price() {
+            crate::under_kept(TRANSMOGULATE, script_v0_5_0(), || {
                 let mut s = board(false);
                 let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
                 let exile: Vec<String> = s.pile(P1, "exile").into_iter().map(|card| card.id).collect();

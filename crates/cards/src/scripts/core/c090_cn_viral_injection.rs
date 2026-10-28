@@ -666,7 +666,7 @@ mod tests {
 
             s.start_turn();
 
-            // Through v0.4.12d each cast of the chain counted (R70).
+            // Through v0.5.0 each cast of the chain counted (R70).
             assert_eq!(s.state().players[P1].turn_log.cards_played, 0);
             assert!(s.state().players[P1].turn_log.played_ids.is_empty());
             // A cast is free (R70): the mana the start of turn refreshed is untouched.

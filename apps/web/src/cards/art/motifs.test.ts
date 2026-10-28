@@ -81,9 +81,9 @@ describe("R503 the Book, Pancake and AI families", () => {
       }
     }
     // T-AI-1 to 10, and Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day,
-    // the plans Bob's Plan offers (R1563003). R1857000: the held Stinkyscape set's ten AI cards join them
-    // when it ships.
-    expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(14);
+    // the plans Bob's Plan offers (R1563003), and since its release the Stinkyscape set's ten AI cards
+    // (R1857000).
+    expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(24);
   });
 
   it("R503 each family has its palette, its own emblem first in its pool, a hue drift and its motes", () => {

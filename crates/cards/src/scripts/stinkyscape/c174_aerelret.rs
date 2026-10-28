@@ -90,6 +90,8 @@ mod tests {
     use super::{ID, PARAGON_MK1, WARP_DISRUPTOR};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    /// Moths to the Flame: enemy Units must attack it (R121).
+    const MOTHS: &str = "core-009";
     /// Aerelret's printed chance, out of `PERCENT`, and its printed Paragons.
     const CHANCE: i32 = 30;
     const PARAGONS: usize = 5;
@@ -186,6 +188,22 @@ mod tests {
             assert_ne!(set.face_up, Some(true));
             assert!(summoned_defs(&s).is_empty());
             s.expect_health(P2, HERO_HEALTH - 4);
+        }
+
+        #[test]
+        fn r1875002_a_forced_attack_rolls_nothing() {
+            // Moths to the Flame on Aerelret's side makes p1's Vanilla attack it at p2's start of turn:
+            // an enemy Unit's attack that no one declared (R121).
+            let mut s = trapped("aerelret-forced", false, json!([{ "def": MOTHS, "lane": 2 }]));
+            let cursor = s.state().rng_cursor;
+            s.end_turn();
+            assert!(s.events().iter().any(|event| matches!(
+                event,
+                GameEvent::AttackDeclared { forced: true, .. }
+            )));
+            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
+            assert_eq!(s.backrow(P2, 5).map(|card| card.def_id), Some(ID.to_string()));
+            assert_eq!(s.state().rng_cursor, cursor);
         }
 
         #[test]

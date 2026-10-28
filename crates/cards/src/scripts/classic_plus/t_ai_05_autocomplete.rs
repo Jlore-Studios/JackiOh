@@ -274,7 +274,7 @@ mod tests {
                     false,
                 );
                 s.play(AUTOCOMPLETE, json!({}));
-                // Through v0.4.12d the Hinder was the last play and copied (R70).
+                // Through v0.5.0 the Hinder was the last play and copied (R70).
                 assert_eq!(copies_in(&s, HINDER), 0);
                 assert_eq!(copies_in(&s, STOCKPILE), 1);
             }

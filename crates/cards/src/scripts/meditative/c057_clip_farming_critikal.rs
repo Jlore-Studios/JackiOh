@@ -140,7 +140,7 @@ mod tests {
                 crate::register_all();
                 // The Love Bomb on top of the library casts on the opening draw: a cast on draw is no
                 // play (R2179002), so Critikal is the turn's first card and returns nothing (through
-                // v0.4.12d it was a play, R70, and the Bomb came back).
+                // v0.5.0 it was a play, R70, and the Bomb came back).
                 let mut s = scenario(json!({
                     "seed": "critikal-cast",
                     "p1": {

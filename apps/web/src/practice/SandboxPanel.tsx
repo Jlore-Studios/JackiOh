@@ -19,6 +19,7 @@ import { opponentOf, type CardDef, type CardDefs, type PlayerId, type PlayerView
 
 import { CardFace, faceModel } from "../cards/index.ts";
 import { t } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { searchCards, spawnableDefs, visibleCards, type VisibleCard } from "./sandbox.ts";
 import { practiceTestid } from "./testids.ts";
 
@@ -174,7 +175,7 @@ export function SandboxPanel({ view, defs, customs, held, onHold, onTool }: Sand
           {t("Radiant")}
         </label>
         {defs === null ? (
-          <p className="sandbox-panel__note">{t("Loading the cards…")}</p>
+          <Skeleton variant="grid" label={t("Loading the cards…")} />
         ) : results.length === 0 ? (
           <p className="sandbox-panel__note">{t("No card matches.")}</p>
         ) : (

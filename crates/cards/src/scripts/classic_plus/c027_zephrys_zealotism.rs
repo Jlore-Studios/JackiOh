@@ -187,7 +187,7 @@ mod tests {
                 pool.sort();
                 let mut expected: Vec<String> = crate::CATALOG
                     .values()
-                    .filter(|def| !is_token(def) && SHIPPED_SETS.contains(&def.set) && def.id != ZEALOTISM)
+                    .filter(|def| !is_token(def) && !jackioh_engine::catalog::made_by_a_rule(def) && SHIPPED_SETS.contains(&def.set) && def.id != ZEALOTISM)
                     .map(|def| def.id.clone())
                     .collect();
                 expected.sort();

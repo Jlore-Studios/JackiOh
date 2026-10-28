@@ -86,9 +86,10 @@ mod tests {
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
     /// #71, #96, Classic #63 Crop Dusting, and Meditative #64 Traitorous Blood and #68 Catnip (a Field
     /// Trap). Re-pinned for v0.3.5: the Meditative set joins the pool; for v0.3.10, where Classic #10
-    /// Exile went to (2) and #63 Crop Dusting to (1); and for #2179, where Classic+ #22 Blood Moon went
-    /// to (2).
-    const TRAP_POOL: [&str; 8] = [
+    /// Exile went to (2) and #63 Crop Dusting to (1); for the Stinkyscape release (#1884), where its #5
+    /// Masochism Unmasked and #131 Spacerace Stimulus (Field Traps), #135 Sacked, #138 Pocket Peptides
+    /// and #144 Prepare For Liftoff join it; and for #2179, where Classic+ #22 Blood Moon went to (2).
+    const TRAP_POOL: [&str; 13] = [
         "core-018",
         "core-041",
         "core-060",
@@ -97,6 +98,11 @@ mod tests {
         "classic-063",
         "meditative-064",
         "meditative-068",
+        "stinkyscape-005",
+        "stinkyscape-131",
+        "stinkyscape-135",
+        "stinkyscape-138",
+        "stinkyscape-144",
     ];
 
     fn query_ids(args: Value) -> Vec<String> {
@@ -205,7 +211,9 @@ mod tests {
         #[test]
         fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            for seed in 0..40 {
+            // Re-pinned for the Stinkyscape release (#1884): forty seeds reached every one of the nine,
+            // and eighty reach every one of the fourteen.
+            for seed in 0..80 {
                 let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
                 s.play(OOMEN, json!({ "zone": LANE }));
                 let trap = s.backrow(P1, LANE);

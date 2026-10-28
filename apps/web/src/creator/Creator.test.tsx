@@ -10,6 +10,8 @@ import type { CustomCard } from "@jackioh/shared";
 import { manualClock } from "../game/deckbuilder/testkit.ts";
 import { ApiRequestError, type SendOptions } from "../net/api.ts";
 import type { CustomCardInput } from "../net/customCards.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { UNDO_WINDOW_MS } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import type { ScriptProblem } from "../wasm/index.ts";
@@ -142,6 +144,17 @@ describe("R915010 the creator builds a card with blocks and saves it to the acco
 
     fireEvent.click(screen.getByTestId(creatorTestid.tryIt));
     await waitFor(() => expect(onTry).toHaveBeenCalledWith(server.cards()[0]?.id));
+  });
+
+  it("#2115 the list waits as a rows skeleton, and the count takes its place when the read answers", async () => {
+    render(<Creator token={TOKEN} api={fakeServer().api} onTry={vi.fn()} />);
+
+    expectSkeleton(screen.getByText("Loading your cards…"), "rows");
+    expect(screen.queryByText("0 of 50 cards")).toBeNull();
+
+    expect(await screen.findByText("0 of 50 cards")).toBeTruthy();
+    expect(screen.queryByText("Loading your cards…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("R915010 a card saved on one device is listed on another, and opens in the builder there", async () => {
