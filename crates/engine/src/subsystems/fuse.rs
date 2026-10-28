@@ -548,6 +548,7 @@ fn build_def(
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
         craft: None,
+        snapshot_of: None,
         base: kept_piece_only(
             fused_face(ingredients, defs, false, forced),
             target_def.map(|def| &def.base),
