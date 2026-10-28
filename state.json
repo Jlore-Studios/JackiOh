@@ -4642,15 +4642,6 @@
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-28T08:35:54Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nPass 2 of 3 on issue #2116 (prefetch a screen's code + the engine on hover/focus/touch).\nPass 1 implemented the plan and is committed: `routes/chunks.tsx` (routeChunk/routeChunks/\nprefetchRoute/watchRouteIntent), `routes/chunks.test.tsx` (8 R2116000 tests), `main.tsx`\nscreens from `routeChunks`, one `data-route` each on BackLink / result-back / DECK_TO_PRACTICE /\nWatch buttons, replays.test source check follows the moved import, README bullet, ruling\n`R2116000` + `spec/pending/2116.md`.\n\nReviewer verdict: one BLOCKING placeholder finding only \u2014 build + full-suite evidence still\npending; every check otherwise passed or was already red on main. So: verify, don't redesign.\n\n- Done this pass: confirmed no `lazy(`/`DEV_ONLY` left in `main.tsx`; Watch button renders\n  only when `matchId !== null` (null-safe); tree clean; no extra worktrees.\n- Next: `cargo jackioh spec check` (running), targeted vitest files, typecheck, eslint,\n  `pnpm build` + dev-chunk grep, `sh scripts/build-wasm.sh` rebuild, then final report with\n  PR body (`Closes #2116`, `Part of #2036`, one-line `## Player note`).\n- Decisions kept from pass 1: plan steps 9\u201310 (append to `spec/11-rulings.md`, run\n  `spec index`) NOT followed \u2014 CLAUDE.md rule 3 forbids both on a branch; the \u00a711 paragraph\n  lives in `spec/pending/2116.md`. Explicit generics on the `invite`/`decks` chunks kept:\n  their props are optional, so inference needs the names (typecheck).\n\n## Log\n\n- Pass 2 start: read diff vs `17d45db8`, checked review finding (placeholder only).\n- Ran `cargo jackioh spec check` in background; result pending.\n- Verified `main.tsx` markers, `DeckEditor`/`FriendRows` `data-route`, clean tree.\n- `spec check`: ok (1394 rulings, 3117 proofs, 43855 citations, 16774 links).\n- Targeted vitest (chunks, replays, shell-load-failed, engine-gate) running in background.\n- 30m overdue probe: rustc actively compiling wasm deps (jackioh_ai etc.); not stuck, just a\n  cold wasm build. `tail -30` hides progress until the end. Keep waiting.\n- 08:08 probe: still compiling (engine/cards/ai for wasm32); pkg wasm refreshed 08:04. Waiting.\n",
-        "provider": "muse",
-        "reason": "the run's time budget is spent",
-        "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2116 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2116/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- received SIGTERM; flushed session logs"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
