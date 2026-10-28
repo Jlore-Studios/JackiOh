@@ -6137,15 +6137,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/i18n/zh-CN.json"
+          ],
+          "from": "51b5adec900a57cfa602660220b618e7a777c4a3",
+          "main": "225b8a0c8544cac803e04c8847370ab1555c540a"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40618730528",
+            "run": "40627004828",
             "tier": "strong"
           }
         ],
-        "sha": "51b5adec900a57cfa602660220b618e7a777c4a3",
+        "sha": "2191f5eee7482d0fe4dab36a38ff4ce5d576ef84",
         "tiers": {
           "claude": "strong"
         }
