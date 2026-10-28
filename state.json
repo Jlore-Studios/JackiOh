@@ -5984,8 +5984,8 @@
       "ci_run_id": 40675700984,
       "ci_sha": "0501957549247c58e27837e58ad2d33da59a6801",
       "cleared": {
-        "at": "2026-10-28T11:01:59Z",
-        "by": "`muse` (medium), `claude` (strong)",
+        "at": "2026-10-28T11:58:33Z",
+        "by": "`muse` (medium) twice, `claude` (strong)",
         "sha": "0501957549247c58e27837e58ad2d33da59a6801"
       },
       "cross_rounds": 0,
