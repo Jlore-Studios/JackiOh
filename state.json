@@ -5958,6 +5958,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-28T10:53:49Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40675801316",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
