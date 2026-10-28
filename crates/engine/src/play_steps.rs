@@ -1326,6 +1326,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             } else {
                 Some(hidden_from)
             },
+            creator: None,
         });
 
         run.instance_id = fresh.id.clone();
@@ -1606,6 +1607,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
             source_id: None,
             arrived_during: arrivals,
             exits_from: Some(exits_from),
+            creator: None,
         });
     }
 }

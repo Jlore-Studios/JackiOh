@@ -27,7 +27,7 @@ import { baseView, card, emptySide, opponentModifiers, unit, withEvents, yourMod
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
-import { DuosChromeContext, type DuosChrome } from "./context.ts";
+import { DuosChromeContext, type DuosChrome, type DuosPlayAgain } from "./context.ts";
 import { DuosBoard, type DuosBoardProps } from "./DuosBoard.tsx";
 
 type ReceivedPing = DuosBoardProps["pings"][number];
@@ -876,6 +876,73 @@ describe("#1755 the result panel takes the focus and opens again", () => {
 
     renderBoard({ replay: true, view: OVER });
     expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R2092000: Play again on the result panel
+// ---------------------------------------------------------------------------------------------
+
+describe("R2092000 Play again on the result panel", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+  const HERE = { youOffered: false, teammateOffered: false, teammateHere: true, matchId: null };
+
+  function again(over: Partial<DuosPlayAgain> = {}): DuosPlayAgain {
+    return { status: HERE, offering: false, refusal: null, offer: vi.fn<() => void>(), ...over };
+  }
+
+  it("R2092000 the panel draws Play again beside Watch the replay when the route hangs it, and Back to Play together is no longer primary", () => {
+    const offer = vi.fn<() => void>();
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offer }) });
+    const buttons = within(screen.getByTestId("duos-result")).getAllByRole("button");
+    expect(buttons.map((button) => button.getAttribute("data-testid"))).toEqual([
+      "duos-result-board",
+      "duos-result-replay",
+      "duos-result-again",
+      "duos-result-back",
+    ]);
+    const play = screen.getByTestId("duos-result-again");
+    expect(play).toHaveClass("button-primary");
+    expect(play).toHaveTextContent("Play again");
+    expect(screen.getByTestId("duos-result-back")).not.toHaveClass("button-primary");
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+    fireEvent.click(play);
+    expect(offer).toHaveBeenCalledTimes(1);
+  });
+
+  it("R2092000 while the offer is in flight Play again is disabled and busy", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offering: true }) });
+    const play = screen.getByTestId("duos-result-again");
+    expect(play).toBeDisabled();
+    expect(play).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("R2092000 no Play again before the server's read, and none once the teammate has left", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ status: null }) });
+    expect(screen.queryByTestId("duos-result-again")).toBeNull();
+    expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
+    cleanup();
+
+    renderBoard(
+      { view: OVER },
+      { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ status: { ...HERE, teammateHere: false } }) },
+    );
+    expect(screen.queryByTestId("duos-result-again")).toBeNull();
+    const line = screen.getByTestId("duos-result-again-status");
+    expect(line).toHaveAttribute("role", "status");
+    expect(line).toHaveTextContent("Your teammate has left");
+  });
+
+  it("R2092000 no Play again in the co-op replay, nor without one, as on /dev/duos", () => {
+    renderBoard({ replay: true, view: OVER }, { playAgain: again() });
+    expect(screen.queryByTestId("duos-result-again")).toBeNull();
+    expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
+    cleanup();
+
+    renderBoard({ view: OVER }, { onLeave: vi.fn() });
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-again")).toBeNull();
+    expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
   });
 });
 

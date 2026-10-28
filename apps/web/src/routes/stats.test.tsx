@@ -1607,3 +1607,98 @@ describe("R1973000 the Daily runs tab is gone", () => {
     expect(requested("/api/stats/ci")).toEqual([]);
   });
 });
+
+describe("R2089000 the Created cards", () => {
+  /**
+   * Rush Token, made during 55 seats' games: 30 used a copy (60%, 8 of them Radiant at its first use, too
+   * few for a rate) and 25 used none (52%), 8 points under.
+   */
+  const RUSH = {
+    id: "core-t-rush",
+    name: "Rush Token",
+    cost: 1,
+    rarity: "Token",
+    set: "Core",
+    games: 55,
+    createdPlayedGames: 30,
+    createdPlayedWinRate: 0.6,
+    createdNotPlayedGames: 25,
+    createdNotPlayedWinRate: 0.52,
+    createdPlayedRadiantGames: 8,
+    createdPlayedRadiantWinRate: 0.75,
+    createdPlayedNormalGames: 22,
+    createdPlayedNormalWinRate: 12 / 22,
+    createdPlayedDelta: 0.08,
+    hasEnoughGames: true,
+    window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
+  };
+
+  /** Answers the card statistics with `body`, and anything else with nothing. */
+  function serveCards(body: unknown): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const answer = url.pathname === "/api/stats/cards" ? body : {};
+        return Promise.resolve(new Response(JSON.stringify(answer), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R2089000 the Cards tab lists Created cards apart from the deck table", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH] });
+    render(<StatsRoute />);
+
+    const panel = await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
+    expect(screen.getByRole("tabpanel")).toContainElement(panel);
+    expect(within(panel).getByRole("heading", { name: "Created cards" })).toBeInTheDocument();
+    expect(panel).toHaveTextContent("each needs 20 games");
+    const table = within(panel).getByTestId(statsTestid.createdTable);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Card",
+      "Games",
+      "Used",
+      "Not used",
+      "Used Radiant",
+      "Used normal",
+      "Created Δ",
+    ]);
+    const row = within(table).getByText("Rush Token").closest("tr")!;
+    expect(row).toHaveAttribute("data-card-id", "core-t-rush");
+    expect([...row.querySelectorAll("td")].map((td) => td.textContent)).toEqual(["55", "60%", "52%", "—", "55%", "+8%"]);
+    // The 8 Radiant seats are below R654's floor: no 75%.
+    expect(within(row).queryByText("75%")).toBeNull();
+
+    // The deck table has no row for it.
+    const deck = screen.getByTestId(statsTestid.cardsTable);
+    expect(within(deck).queryByText("Rush Token")).toBeNull();
+    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
+
+    // The search box asks of the Created cards what it asks of the deck's.
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
+    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
+    expect(within(screen.getByTestId(statsTestid.createdPanel)).getByText("Rush Token")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "spark" } });
+    expect(screen.getByText("Spark Pup")).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+
+    // The Sets tab counts the deck cards alone and shows no Created section.
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    const sets = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(sets).not.toHaveTextContent("Rush Token");
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+  });
+
+  it("R2089000 shows no Created section when the response has none", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    cleanup();
+
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByText("Created cards")).toBeNull();
+  });
+});

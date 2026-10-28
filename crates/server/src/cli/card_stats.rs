@@ -198,6 +198,8 @@ pub async fn card_stats_window(
     );
     if let Some(only) = &options.card {
         report.cards.retain(|card| &card.stats.card == only);
+        // R2089000: the Created table is filtered as the deck's is.
+        report.created.retain(|card| &card.stats.card == only);
     }
     Ok(report)
 }
@@ -217,6 +219,8 @@ pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<Ca
     let mut report = card_stats_of(&totals, &options.filter);
     if let Some(only) = &options.card {
         report.cards.retain(|stats| &stats.card == only);
+        // R2089000: the Created table is filtered as the deck's is.
+        report.created.retain(|stats| &stats.card == only);
     }
     Ok(report)
 }
@@ -233,6 +237,7 @@ pub fn render_card_stats(
     let table = format_card_stats(report, name_of);
     if let Some(card) = &options.card
         && report.cards.is_empty()
+        && report.created.is_empty()
     {
         return format!("{table}\nNo deck the filter counts held {card}.");
     }

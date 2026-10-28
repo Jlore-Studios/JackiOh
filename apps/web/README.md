@@ -432,6 +432,12 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
+- on a live game's result, Play again (`duos-result-again`, R2092000) sends this seat's offer
+  (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
+  `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
+  to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
+  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
+  no button.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
