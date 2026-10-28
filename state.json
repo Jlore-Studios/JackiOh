@@ -4209,6 +4209,7 @@
     "2067": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T17:30:06Z",
         "difficulty": "hard",
@@ -4217,6 +4218,7 @@
         "why": "the endless-loop fix is an engine rule in crates/engine/src/draw.rs with a new ruling (R2067000), beside web and e2e work across three apps"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-28T04:55:54Z",
         "family": "claude",
