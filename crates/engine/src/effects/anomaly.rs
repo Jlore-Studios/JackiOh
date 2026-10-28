@@ -17,14 +17,13 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::catalog::def_of;
 use crate::combat::{SwitchPositionOptions, switch_position};
 use crate::config::{
     ANOMALY_PLAIN_CHANCE, ANOMALY_PLAIN_STEP, ANOMALY_RADIANT_CHANCE, ANOMALY_RADIANT_STEP,
     ANOMALY_ROLL_SIDES,
 };
 use crate::cry_trigger::trigger_random_cry_of;
-use crate::faces::card_type_of_face;
+use crate::faces::{card_type_of_face, running_face_of};
 use crate::plague::permanents_on_field;
 use crate::query::{luck_of, lucky_on};
 use crate::resolve::lazy_part;
@@ -217,9 +216,8 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
 
 /// R1879001: whether a face of `def_id` prints Flying, the keyword a Unit stands in the backrow by.
 fn prints_flying(state: &GameState, def_id: &str, radiant: bool) -> bool {
-    let def = def_of(Some(state), def_id);
-    let face = if radiant { &def.radiant } else { &def.base };
-    face.keywords
+    running_face_of(state, def_id, radiant)
+        .keywords
         .iter()
         .any(|keyword| keyword.kind() == KeywordKind::Flying)
 }

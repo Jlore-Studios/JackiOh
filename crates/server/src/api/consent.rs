@@ -20,7 +20,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use crate::api::auth::remove_account;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, now_ms};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, now_ms};
 use crate::app::App;
 use crate::config::{BIRTH_YEAR_EARLIEST, MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION};
 use crate::db::store::{ConsentRow, Profile, ProfileStatus, TermsSource};
@@ -59,10 +59,6 @@ pub fn terms_owed(consent: &ConsentRow) -> bool {
 /// R757000, R757001: either of the two, which redemption refuses.
 pub fn consent_owed(profile: &Profile, consent: &ConsentRow) -> bool {
     age_check_owed(profile, consent) || terms_owed(consent)
-}
-
-fn bad_request(message: &str) -> ApiError {
-    ApiError::new(ApiErrorCode::BadRequest, message)
 }
 
 /// The birth month and year as sent: both or neither, each a whole number.

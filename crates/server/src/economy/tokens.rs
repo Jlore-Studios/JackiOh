@@ -36,9 +36,9 @@ use crate::config::{
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant};
+use crate::economy::packs::bar_before;
 use crate::economy::store::{
-    CosmeticGrant, Counter, CounterEntry, EconomyReason, InventoryEntry, InventoryGrant, InventoryItem,
-    OwnedCosmetics,
+    CosmeticGrant, Counter, EconomyReason, InventoryEntry, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
 
 /// The collection ledger's reason for a card a card token unlocks: migration 0002's `craft`, one
@@ -94,15 +94,6 @@ pub fn cosmetic_bar_points(rarity: CosmeticRarity) -> i64 {
 /// (`InventoryItem::CosmeticToken` takes a rarity key).
 fn token_key(token: CosmeticRarity) -> String {
     token.as_str().to_string()
-}
-
-/// One counter's value: a counter never written is 0. Only the account-wide row (`""`); pity
-/// counters kept per kind of pack are another sub-issue's (R1298000).
-fn counter_value(counters: &[CounterEntry], counter: Counter) -> i64 {
-    counters
-        .iter()
-        .find(|entry| entry.counter == counter && entry.pack.is_empty())
-        .map_or(0, |entry| entry.value)
 }
 
 /// How many of `item` under `key` the inventory rows hold.
@@ -339,15 +330,15 @@ async fn read_tokens(app: &App, profile_id: &str) -> Result<TokenBars, ApiError>
     let counters = tx.economy_counters_get(profile_id).await?;
     let inventory = tx.economy_inventory_get(profile_id).await?;
     tx.commit().await?;
-    let cycle = counter_value(&counters, Counter::CosmeticTokenCycle);
+    let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
     let step = COSMETIC_TOKEN_CYCLE[(cycle % COSMETIC_TOKEN_CYCLE.len() as i64) as usize];
     Ok(TokenBars {
         card_bar: BarState {
-            points: counter_value(&counters, Counter::CardTokenBar),
+            points: bar_before(&counters, Counter::CardTokenBar),
             size: CARD_TOKEN_BAR_SIZE,
         },
         cosmetic_bar: BarState {
-            points: counter_value(&counters, Counter::CosmeticTokenBar),
+            points: bar_before(&counters, Counter::CosmeticTokenBar),
             size: COSMETIC_TOKEN_BAR_SIZE,
         },
         next_step: step,
