@@ -860,3 +860,39 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         assert_eq!(paid, vec![false, true]);
     }
 }
+
+/// R1850000: a fused copier runs the text it copied, so the cost of targeting it is its copy's: a
+/// Paul Allen's Ghost + Tnack Trav that copied Nature Titan asks no discards, where one that copied
+/// nothing asks the Ghost's (fuzz seed 5285 of the Stinkyscape release, which panicked reading the
+/// Ghost's number off the copied text).
+mod r1850000_a_fused_copier_s_targeting_cost_is_its_copy_s {
+    use super::*;
+
+    const GHOST: &str = "classic-089";
+    const TNACK_TRAV: &str = "stinkyscape-020";
+    const NATURE_TITAN: &str = "classic-045";
+    const GHOST_DISCARDS: i32 = 2;
+
+    fn played(copy: bool) -> i32 {
+        let mut g = scenario(json!({
+            "p1": { "hand": [MR_VANILLA, MR_VANILLA, MR_VANILLA], "mana": 10,
+                    "field": [{ "def": if copy { NATURE_TITAN } else { MR_VANILLA }, "lane": 1 }] },
+            "p2": { "hand": [MR_VANILLA] },
+        }));
+        let card = craft_fused(&mut g, P1, &[GHOST, TNACK_TRAV]);
+        let targets = if copy {
+            json!([{ "pick": "instance", "instanceId": g.unit_at(P1, 1).id }])
+        } else {
+            json!([])
+        };
+        g.play(&card.id, json!({ "zone": 2, "targets": targets }));
+        let fused = g.unit_at(P1, 2);
+        jackioh_engine::targeting::targeting_discards_of(g.state(), &fused)
+    }
+
+    #[test]
+    fn r1850000_a_fused_ghost_tnack_trav_that_copied_nature_titan_asks_no_discards() {
+        assert_eq!(played(false), GHOST_DISCARDS);
+        assert_eq!(played(true), 0);
+    }
+}

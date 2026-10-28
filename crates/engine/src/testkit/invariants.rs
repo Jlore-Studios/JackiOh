@@ -1561,6 +1561,9 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R424, R1869002: whether the last action left a prompt or work owed, so a combat it declared may
+    /// still be resolving (an ambush's Discovers, S #22) and its attack is kept for the next action.
+    attack_open: bool,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
@@ -1593,6 +1596,7 @@ impl InvariantMonitor {
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
@@ -1994,7 +1998,11 @@ impl InvariantMonitor {
         let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
         // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
-        self.attack = None;
+        // An action that left a prompt or work owed is the attack's own still resolving (R1869002: a kill
+        // an ambush's Discovers delayed credits its attacker when it lands), so the attack is kept then.
+        if !self.attack_open {
+            self.attack = None;
+        }
 
         // I5: the check that ends the game is the last thing that happens (§2.5, R216).
         if let Some(over) = events
@@ -2153,6 +2161,15 @@ impl InvariantMonitor {
                         attack.target_id = to_id.clone();
                     }
                 }
+                // R636, R1086: a Fuse (an Equip among them) brings its ingredients' text, and with it a
+                // Windfury an aura of theirs gives, which no `keywordGranted` reports; a unit that holds
+                // it as the action leaves it has it from the fuse on (M #65 Keymaster Keenus' random
+                // keywords, equipped onto S #113: handicapped fuzz seed 7566).
+                GameEvent::Fused {
+                    result_instance_id, ..
+                } => {
+                    self.note_entry_windfury(result_instance_id, state);
+                }
                 GameEvent::KeywordGranted {
                     instance_id,
                     keyword,
@@ -2268,6 +2285,7 @@ impl InvariantMonitor {
             self.note_uncoverings(events, state, began_on);
         }
         self.dormant = dormant_cards(state);
+        self.attack_open = state.pending.is_some() || !state.work.is_empty();
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {

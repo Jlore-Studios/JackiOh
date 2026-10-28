@@ -1653,6 +1653,32 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636: a Fuse brings its ingredients' text, and with it a Windfury an aura of theirs gives, which no
+    /// `keywordGranted` reports; the fused unit has it from the fuse on, inside the one action that fused
+    /// it and attacked twice (a handicapped seat's AI turn: M #65 Keymaster Keenus equipped onto S #113,
+    /// handicapped fuzz seed 7566 of the Stinkyscape release).
+    #[test]
+    fn r636_a_windfury_a_fuse_brings_allows_two_attacks_in_the_action_that_fused_it() {
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let unit = g.unit_at(PlayerId::P1, 1).id;
+        let mut monitor = create_invariant_monitor(g.state());
+        find_instance_mut(g.state_mut(), &unit)
+            .expect("the Vanilla")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Windfury" }))];
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let fused = event(json!({
+            "type": "fused", "instanceIds": ["c-gone", unit], "resultInstanceId": unit, "defId": VANILLA,
+        }));
+        assert_eq!(
+            monitor.after(&[fused, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
     #[test]
     fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
         let g = scenario(json!({
@@ -1675,6 +1701,38 @@ mod r1869002_i2_a_kill_credit {
         let found = monitor.after(&events, g.state());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    #[test]
+    fn r1869002_a_kill_an_ambush_s_prompt_delayed_still_credits_the_attack_it_paused() {
+        // The attack is declared, an ambush's Discover (S #22 Gatinsir's Phalanxes) pauses its combat,
+        // and the kill lands in the answer's action: the attack the action left open is still the one
+        // resolving, so the kill frees Tmack Trav (fuzz seed 4195 of the release's super run).
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        let mut paused = g.state().clone();
+        paused.pending = Some(json_as(json!({
+            "id": "q1", "playerId": "p2", "kind": "discover", "prompt": "Discover", "options": [],
+            "min": 1, "max": 1,
+            "resume": { "defId": "stinkyscape-022", "hook": "trap", "step": "discover", "radiant": false, "data": {} },
+        })));
+        let declared = event(
+            json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": prey.id, "forced": false }),
+        );
+        assert_eq!(monitor.after(&[declared], &paused), no_violations());
+        let killed = event(json!({
+            "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+            "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+        }));
+        assert_eq!(monitor.after(&[killed], g.state()), no_violations());
+        let again = json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": "hero-p2", "forced": false });
+        assert_eq!(monitor.after(&[event(again)], g.state()), no_violations());
     }
 
     #[test]

@@ -1278,6 +1278,11 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     if event_stay.is_some() {
         ctx.event_stay = event_stay;
     }
+    // R102, R1884003: a trap's text fused onto a card that is no trap is queued like any trigger, and
+    // still answers only what its R99 condition admits (Wormhole on a Unit: an opponent's Spell alone).
+    if def.when.as_ref().is_some_and(|when| !when(&mut ctx, &event)) {
+        return;
+    }
     let effects = (def.run)(&mut ctx, &event);
     crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);
 }

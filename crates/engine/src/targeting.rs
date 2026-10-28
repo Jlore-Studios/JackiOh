@@ -61,7 +61,10 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     {
         return 0;
     }
-    if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {
+    // R1850000: a copier runs the text it copied, a fused one too, so its copy's cost is read then.
+    if crate::subsystems::unit_text::unit_text_of(card).is_none()
+        && crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some()
+    {
         return fused_cost(state, card, &card.def_id);
     }
     face_cost(&crate::scripts::script_of(state, card), state, card)

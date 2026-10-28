@@ -145,6 +145,67 @@ mod tests {
         }
     }
 
+    /// R102, R1884003: Wormhole's text fused onto a Unit keeps its condition: its controller's own Spell
+    /// aimed at their own Unit resolves, and only the opponent's is countered and cast for them.
+    #[test]
+    fn r1884003_fused_onto_a_unit_it_still_answers_only_an_enemy_spell() {
+        use jackioh_engine::prelude::*;
+        crate::register_all();
+        let mut s = crate::scenario(json!({
+            "seed": "wormhole-fused",
+            "active": "p2",
+            "p1": {
+                "hand": [BOOK],
+                "field": [{ "def": VANILLA, "lane": 1 }],
+                "library": crate::filler(6),
+                "mana": 10,
+            },
+            "p2": { "hand": [BOOK], "library": crate::filler(6), "mana": 10 },
+        }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        // A Vanilla and a Wormhole fused into p2's hand, as Craft a Card fuses (R77).
+        let mut events: Vec<GameEvent> = vec![];
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        let fused = {
+            let state = s.state_mut();
+            let ingredients: Vec<CardInstance> = [VANILLA, ID]
+                .iter()
+                .map(|def_id| new_instance(&mut *state, def_id, P2, Zone::Gone { player: P2 }))
+                .collect();
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            subsystems::fuse(
+                &mut sink,
+                subsystems::FuseArgs {
+                    ingredients,
+                    to_hand: Some(P2),
+                    ..subsystems::FuseArgs::default()
+                },
+            )
+        }
+        .expect("the fused card");
+        s.state_mut().rng_cursor = rng.cursor();
+        s.play(&fused.id, json!({ "zone": 1 }));
+        let fused = s.unit_at(P2, 1);
+
+        let countered = |s: &Scenario| {
+            s.last_events()
+                .iter()
+                .any(|event| event.event_type() == GameEventType::Countered)
+        };
+        s.play(BOOK, json!({ "targets": pick::instance(&fused) }));
+        assert!(!countered(&s), "its controller's own Spell resolves");
+        s.expect_stats(&fused, json!({ "attack": 4 + BUFF, "health": 4 + BUFF }));
+
+        s.end_turn();
+        let mine = s.unit_at(P1, 1);
+        s.play(BOOK, json!({ "targets": pick::instance(&mine) }));
+        assert!(countered(&s), "the opponent's is countered");
+        let pending = s.state().pending.clone().expect("the cast's target prompt");
+        assert_eq!(pending.player_id, P2);
+    }
+
     mod radiant {
         use super::*;
 
