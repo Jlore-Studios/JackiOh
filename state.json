@@ -6593,7 +6593,7 @@
       "pending_request": false,
       "provider": "claude-5",
       "round_tier": "",
-      "run_id": "pending:3e939e35-1793211020",
+      "run_id": "40742670733",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T18:10:41Z",
       "stop_requested": false,
