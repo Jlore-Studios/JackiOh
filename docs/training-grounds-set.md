@@ -1163,7 +1163,10 @@ correction to the rows, and after it ships a patch of its own.
   recast pools gain #39; M #22 Mind Games' refs; R1370000); the server's seed takes the set (no new tag, so no
   `cards_tags_check` change); deck and trio codes take its offset after Stinkyscape's ([[R1410]]); the golden traces are
   re-blessed once for the bigger pools; the Almanac's and the deck builder's chips, the newest set's ribbon, the
-  `RELEASES` line; and every stated total moves.
+  `RELEASES` line; and every stated total moves. The account's statistics cap (`PLAYER_STATS_BYTES_MAX`, 65,536 bytes,
+  [[R1142000]]) no longer holds every entry at four-digit counters once the set's 61 entries ship (751 entries need
+  more): the release raises it, with the server's body bound and `apps/web/src/stats/sync.test.ts`, which reads the
+  shipped sets until then.
 - **The tutorial** (P12, #2205) is remade from the shipped set: five lessons, the fifth the first to deal a Legendary or
   Mythic, the human's hero unlosable by P8's rule, and a coach that sets up each mechanic, asks rather than tells, names
   the rule once the player finds it and hints harder only when the player stalls. It replaces [[§9.10]]'s four lessons;

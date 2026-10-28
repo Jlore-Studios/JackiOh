@@ -3022,7 +3022,7 @@
       cast: { voice: "sapi-ghost", text: "Is anyone there? Come back to me." },
     },
     "traininggrounds-038": { // Tutorial Master
-      play: { voice: "sapi-teacher", text: "Lesson one: pay attention." },
+      play: { voice: "sapi-teacher", text: "Lesson one, pay attention." },
       attack: { voice: "sapi-teacher", text: "Pop quiz!" },
       death: { voice: "sapi-teacher", text: "Class dismissed." },
     },
