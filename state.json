@@ -6199,7 +6199,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-28T12:44:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:a186bb24-1793201867",
+      "run_id": "40717950455",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T15:38:05Z",
       "stop_requested": false,
