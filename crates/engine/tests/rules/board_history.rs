@@ -14,7 +14,7 @@ use crate::rules::fixtures::board_history::{phoenix, register_board_history_fixt
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::field::{banner, playing, spatula, tower, watcher};
 use crate::rules::fixtures::harness::{
-    act, events_of_type, json_of, matches_object, put, round_trip, setup_catalog, slot,
+    act, events_of_type, ids_of, json_of, matches_object, put, round_trip, setup_catalog, slot,
 };
 
 /// p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied.
@@ -51,10 +51,6 @@ fn restore(
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut sink = EngineSink::new(state, events, &mut rng);
     restore_board(&mut sink, by, turns_ago, only)
-}
-
-fn ids_of<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
-    cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
 fn instance_ids<E: serde::Serialize>(events: &[E]) -> Vec<Value> {

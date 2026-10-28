@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, live, live_mut, new_game, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_of_type, in_hand, live, live_mut, new_game, put, slot};
 
 fn def(id: &str, type_: &str, index: u32) -> CardDef {
     json_as(json!({
@@ -107,29 +107,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `sinkFor(state)`'s three parts side by side, so the state stays readable between engine calls
-/// (TS read the same object through `state` and `sink.state`).
-struct Bench {
-    state: GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn sink_for(state: GameState) -> Bench {
-        let rng = Rng::new(&state.seed, state.rng_cursor);
-        Bench {
-            state,
-            events: Vec::new(),
-            rng,
-        }
-    }
-
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
-    }
-}
-
 fn zone_of(state: &GameState, card: &CardInstance) -> ZoneName {
     live(state, card).zone.z()
 }
@@ -187,11 +164,11 @@ mod r403_when_tribute_this_is_read_at_every_state_check_c88 {
             Default::default(),
         );
         live_mut(&mut state, &trap).face_up = Some(false);
-        let mut b = Bench::sink_for(state);
+        let mut b = Bench::new(&state);
 
-        state_check(&mut b.sink());
+        state_check(&mut b.sink(&mut state));
 
-        assert_eq!(zone_of(&b.state, &trap), ZoneName::Graveyard);
+        assert_eq!(zone_of(&state, &trap), ZoneName::Graveyard);
         let destroyed: Vec<Value> = events_of_type(&b.events, GameEventType::Destroyed)
             .into_iter()
             .map(|event| serde_json::to_value(event).unwrap()["instanceId"].clone())
@@ -214,16 +191,16 @@ mod r403_when_tribute_this_is_read_at_every_state_check_c88 {
             slot(PlayerId::P2, Row::Units, 1),
             Default::default(),
         );
-        let mut b = Bench::sink_for(state);
+        let mut b = Bench::new(&state);
 
-        state_check(&mut b.sink());
-        assert_eq!(zone_of(&b.state, &trap), ZoneName::Field);
+        state_check(&mut b.sink(&mut state));
+        assert_eq!(zone_of(&state, &trap), ZoneName::Field);
 
-        live_mut(&mut b.state, &enemy).marked_destroyed = Some(true);
-        state_check(&mut b.sink());
+        live_mut(&mut state, &enemy).marked_destroyed = Some(true);
+        state_check(&mut b.sink(&mut state));
 
-        assert_eq!(zone_of(&b.state, &enemy), ZoneName::Graveyard);
-        assert_eq!(zone_of(&b.state, &trap), ZoneName::Graveyard);
+        assert_eq!(zone_of(&state, &enemy), ZoneName::Graveyard);
+        assert_eq!(zone_of(&state, &trap), ZoneName::Graveyard);
     }
 }
 
@@ -246,15 +223,15 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
             slot(PlayerId::P2, Row::Units, 1),
             Default::default(),
         );
-        let mut b = Bench::sink_for(state);
-        let ingredient = in_hand(&mut b.state, &blank().id, PlayerId::P1, 1)
+        let mut b = Bench::new(&state);
+        let ingredient = in_hand(&mut state, &blank().id, PlayerId::P1, 1)
             .into_iter()
             .next()
             .expect("no ingredient");
 
-        let on = live(&b.state, &target).clone();
+        let on = live(&state, &target).clone();
         let fused = fuse(
-            &mut b.sink(),
+            &mut b.sink(&mut state),
             FuseArgs {
                 ingredients: vec![ingredient],
                 target: Some(on),
@@ -264,16 +241,16 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
 
         assert_eq!(fused.map(|card| card.id), Some(target.id.clone()));
         // R1487000: face-down, the fused aura sleeps; revealed, it zeroes their Attack.
-        assert_eq!(unit_view(&b.state, &live(&b.state, &enemy)).attack, 4);
-        let mut shown = b.state.clone();
+        assert_eq!(unit_view(&state, &live(&state, &enemy)).attack, 4);
+        let mut shown = state.clone();
         live_mut(&mut shown, &target).revealed = Some(true);
         assert_eq!(unit_view(&shown, &live(&shown, &enemy)).attack, 0);
         // R403's self-Tribute is read face-down.
-        state_check(&mut b.sink());
-        assert_eq!(zone_of(&b.state, &target), ZoneName::Field);
+        state_check(&mut b.sink(&mut state));
+        assert_eq!(zone_of(&state, &target), ZoneName::Field);
 
-        live_mut(&mut b.state, &enemy).marked_destroyed = Some(true);
-        state_check(&mut b.sink());
-        assert_eq!(zone_of(&b.state, &target), ZoneName::Graveyard);
+        live_mut(&mut state, &enemy).marked_destroyed = Some(true);
+        state_check(&mut b.sink(&mut state));
+        assert_eq!(zone_of(&state, &target), ZoneName::Graveyard);
     }
 }

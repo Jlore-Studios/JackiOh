@@ -8,15 +8,7 @@
 use jackioh_engine::effects::hand_exile::exile_random_from_hand;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, run_effect};
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
-}
+use crate::rules::fixtures::harness::{events_of_type, hand_ids, in_hand, new_game, run_effect};
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {

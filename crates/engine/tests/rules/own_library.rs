@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{radiant_chance, set_radiant, shuffle_into, swap_library, transform};
 
 use crate::rules::fixtures::catalog::{spell_def, unit_def, vanilla_deck};
-use crate::rules::fixtures::harness::{new_game, run_effect, set_library};
+use crate::rules::fixtures::harness::{ids_of, new_game, run_effect, set_library};
 
 // Three cards that sort by cost, then name, then id, whatever order they lie in (R310).
 fn cheap() -> CardDef {
@@ -92,11 +92,6 @@ fn list_of(state: &GameState, viewer: PlayerId) -> LibraryView {
 
 fn total(list: &LibraryView) -> i32 {
     list.cards.iter().map(|entry| entry.count).sum::<i32>() + list.unknown
-}
-
-/// Every instance id in a library, which must never reach a view (§9.1, R97).
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {

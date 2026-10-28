@@ -1,8 +1,10 @@
 // Tests for CardStatsBlock (SPEC §9.11, R377, R654).
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { CardStatsBlock } from "./CardStatsBlock.tsx";
 
 const SLOW = { timeout: 10_000 } as const;
@@ -72,6 +74,28 @@ describe("R377 CardStatsBlock", () => {
     expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("+20%")).toBeInTheDocument();
     expect(screen.getByText("(30 / 10)")).toBeInTheDocument();
+  });
+
+  it("#2115 a panel skeleton stands in for the figures while the read is pending", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify(mockStatsResponse(SPARK_PUP)),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(<CardStatsBlock cardId="core-001" />);
+
+    // Right after render the read has not answered: the block keeps its frame and its title.
+    const block = screen.getByTestId(INSPECT_STATS);
+    expectSkeleton(within(block).getByText("Loading stats…"), "panel");
+
+    expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading stats…")).toBeNull();
+    expect(screen.queryByTestId("skeleton")).toBeNull();
   });
 
   it("R654 renders not enough data for Played Δ when below sample floor", async () => {

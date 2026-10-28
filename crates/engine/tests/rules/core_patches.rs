@@ -34,27 +34,9 @@ use crate::rules::fixtures::core_patches::{
     quiet_trap, uncounted,
 };
 use crate::rules::fixtures::harness::{
-    act_ok, events_of_type, in_hand, json_of, matches_object, new_game, next_nonce, put, round_trip, slot,
+    Bench, act_ok, events_of_type, in_hand, json_of, matches_object, new_game, next_nonce, put, round_trip,
+    slot,
 };
-
-/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
@@ -193,9 +175,9 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let mut state = board("r429-cast");
         let card = new_instance(&mut state, &counted.id, P1, Zone::Resolving { player: P1 });
         state.players.p1.resolving.push(card.clone());
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
 
-        cast_card(&mut sink.on(&mut state), &card, CastOptions::default());
+        cast_card(&mut sink.sink(&mut state), &card, CastOptions::default());
 
         assert_eq!(
             times_played_of(find_instance(&state, &card.id).expect("the cast card")),
@@ -715,9 +697,9 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         let Marked {
             mut state, target, ..
         } = marked("r437-leave");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine = sink.on(&mut state);
+            let mut engine = sink.sink(&mut state);
             let mut ctx = make_context(
                 &mut engine,
                 None,
@@ -731,7 +713,7 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
             ))
             .apply)(&mut ctx);
         }
-        state_check(&mut sink.on(&mut state));
+        state_check(&mut sink.sink(&mut state));
         // The next time the loop collects events, the removal is said.
         let after = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
