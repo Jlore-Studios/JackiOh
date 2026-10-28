@@ -6657,6 +6657,7 @@
       ],
       "pending_request": false,
       "provider": "claude-6",
+      "question": "Pull request #2189's body needs two additions that only a person with a GitHub account can make. Issue #2117 requires both, and the technical log reads the player note from the body. This revision run cannot edit the body: it has no GitHub credential, and the harness's revise step only posts the builder's report as a comment (bot/harness/deliver.py, `_revise`). Please edit #2189's description and add these lines under `Closes #2117`:\n\nPart of #2036\n\n## Player note\n\nMenus fade into one another instead of cutting; games, replays and Reduce motion stay as they were.\n\nThe line passes the player-note rules: it cites no ruling, issue number or spec section and is under 200 characters. The code needs no change. Once the body is edited the pull request can merge as it stands; `/harness revise` re-runs the review if you want it.",
       "queued_at": "2026-10-28T06:45:01Z",
       "review_floor": "",
       "review_notes": "",
