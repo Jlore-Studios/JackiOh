@@ -2525,7 +2525,9 @@
       death: { voice: "snob", text: "Typical." },
     },
     "stinkyscape-116": { // Megabase
-      cast: { voice: "sapi-announcer", text: "Megabase online. Credits for everyone!" },
+      play: { voice: "sapi-announcer", text: "Megabase online. Credits for everyone!" },
+      attack: { voice: "sapi-announcer", text: "Launch the fleet!" },
+      death: { voice: "sapi-announcer", text: "The base has fallen." },
     },
     "stinkyscape-117": { // Core System
       cast: { voice: "robot", text: "Rebooting all systems." },
