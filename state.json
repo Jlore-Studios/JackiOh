@@ -11371,17 +11371,21 @@
         {
           "at": "2026-10-28T02:02:39Z",
           "minutes": 165.0
+        },
+        {
+          "at": "2026-10-28T02:57:05Z",
+          "minutes": 84.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-28T06:39:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
-        "observed_at": "2026-10-28T02:02:39Z",
+        "observed_at": "2026-10-28T02:57:05Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.07
+          "utilization": 0.08
         },
         "status": "allowed"
       }
