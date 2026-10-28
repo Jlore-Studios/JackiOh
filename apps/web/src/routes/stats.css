@@ -151,6 +151,15 @@
   margin: 6px 0 0;
 }
 
+/* R2089000: the Created cards, below the Cards tab's table; their rows open nothing, so take no pointer. */
+.stats-created-panel {
+  margin-top: 16px;
+}
+
+.stats-created-panel .stats-tr {
+  cursor: inherit;
+}
+
 /* Tabs */
 .stats-tabs {
   display: flex;

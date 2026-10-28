@@ -261,6 +261,8 @@ fn summon_onto_as(
         live.face_up = Some(true);
     }
     let placed = find_instance(ctx.state, &card.id).cloned().unwrap_or(placed);
+    // R2089000: the seat whose effect summoned it, for the game record, when it is not the side's.
+    let creator = (ctx.controller != slot.player).then_some(ctx.controller);
 
     ctx.events.push(GameEvent::Summoned {
         player: slot.player,
@@ -272,6 +274,7 @@ fn summon_onto_as(
         source_id: at.source_id.clone(),
         arrived_during: None,
         exits_from: None,
+        creator,
     });
     // R783010: a Crater Unit Locks the zone it was summoned into, before its Cry.
     crate::crater::lock_on_arrival(ctx, &placed.id);
