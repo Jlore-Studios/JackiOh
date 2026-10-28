@@ -6032,6 +6032,13 @@
     "2213": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T13:07:56Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 1: six files and about 350 changed lines, near the 400 limit, and line 2 fails since docs/architecture.md is outside the crate; the concurrency test also needs care"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
