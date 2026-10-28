@@ -211,10 +211,8 @@ pub const BOT_CALIBRATION_GENERATION: i64 = 13;
   generation 13, and the gaps between neighbours are 51 to 116 Elo where they were 141 to 168.
   #2214 asked for the strengths to stay at least as far apart as they were. No temperature does that
   and keeps a miss a beginner's move: the issue's plan measured the miss's mistakes at temperatures of
-  3, 4, 6, 8 and 12 and its strength up to 16, and at 6 it already ends a turn with a card it could
-  play about half as often as the random policy (0.049 against 0.096), while even at 16 the weakest
-  strength won 6 of 100 against the reference. A wider
-  spread needs a miss weaker than one-ply play.
+  3, 4, 6, 8 and 12, and at 6 it already ends a turn with a card it could play about half as often as
+  the random policy (0.049 against 0.096). A wider spread needs a miss weaker than one-ply play.
 - **The rows went in.** The printed row is over `BOT_SEED_RATINGS` and the same readings over
   `SKILL_ELO_TABLE`, so `r747000_strength_seed_ratings_match_skill_curve` holds them equal; the anchor
   and `BOT_CALIBRATION_GENERATION` are unchanged. Strength 0 now seeds at 1517, not 1216, which is 517
