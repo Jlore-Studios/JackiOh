@@ -333,6 +333,36 @@ describe("R2035000 the landing's quests bookmark", () => {
     expect(screen.getByTestId(questsTestid.next)).toHaveTextContent(/^Next quest in /);
   });
 
+  it("R2210000 the bookmark's quests offer Replace and draw the server's answer", async () => {
+    signIn();
+    const traps = quest({ questId: "traps-3", title: "Play 3 Traps", progress: 0, jlore: 60, xp: 3000 });
+    const server = stubServer((call) => {
+      if (call.path === "/api/auth/me") {
+        return { status: 200, body: meBody({ profile: { id: "profile-1", status: "active" } }) };
+      }
+      if (call.method === "GET" && call.path === "/api/quests") {
+        return book({ quests: [quest(), traps], replacesLeft: 1 });
+      }
+      if (call.method === "POST" && call.path === "/api/quests/win-3/replace") {
+        return book({ quests: [traps], replacesLeft: 0 });
+      }
+      return undefined;
+    });
+    render(<LandingRoute />);
+
+    fireEvent.click(await screen.findByTestId(landingTestid.questsBookmark));
+    fireEvent.click(await screen.findByRole("button", { name: "Replace Win 3 games" }));
+    fireEvent.click(screen.getByTestId(questsTestid.replaceConfirm));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Win 3 games")).toBeNull();
+    }, SLOW);
+    expect(screen.getByText("Play 3 Traps")).toBeInTheDocument();
+    expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    expect(server.to("POST", "/api/quests/win-3/replace")).toHaveLength(1);
+    expect(questReads(server)).toBe(1);
+  });
+
   it("R2035000 nothing held and nothing due shows no bookmark", async () => {
     signIn();
     const server = serve([book({ quests: [], nextDueAt: null })]);
