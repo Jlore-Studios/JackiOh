@@ -373,7 +373,7 @@ mod r1839001_dormant_for_n_turns_counts_its_controllers_turns {
     use super::*;
 
     #[test]
-    fn r1839001_it_awakens_at_the_start_of_its_controllers_nth_turn_not_sick_its_trigger_first() {
+    fn r1839001_r2259000_it_awakens_at_the_start_of_its_controllers_nth_turn_sick_its_trigger_first() {
         let mut s = board(
             "p1",
             json!([imprisoned.id, plain.id]),
@@ -425,16 +425,25 @@ mod r1839001_dormant_for_n_turns_counts_its_controllers_turns {
             awakened < drawn,
             "it awakens at the start of the turn, before the draw"
         );
-        // Awake, it is a Unit for every rule, and not summoning sick: it may attack at once.
-        assert!(legal_actions(s.state(), P1).iter().any(
-            |action| matches!(action, ActionBody::Attack { attacker_id, target_id } if *attacker_id == id && target_id == "hero-p2")
-        ));
+        // Awake, it is a Unit for every rule, and summoning sick for the turn it awakened in (R2259000).
+        let attacks_hero = |s: &Scenario| {
+            legal_actions(s.state(), P1).iter().any(
+                |action| matches!(action, ActionBody::Attack { attacker_id, target_id } if *attacker_id == id && target_id == "hero-p2"),
+            )
+        };
+        assert_eq!(s.card(&id).summoned_turn, Some(s.state().turn));
+        assert!(!attacks_hero(&s));
         assert_eq!(
             s.view(P2).opponent.units[0]
                 .as_ref()
                 .and_then(|unit| unit.slumber),
             None
         );
+        // Its controller's next turn, it may attack.
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
+        assert!(attacks_hero(&s));
     }
 
     #[test]
@@ -482,7 +491,7 @@ mod r1839002_awakening_by_its_own_activate_and_the_awaken_verb {
     }
 
     #[test]
-    fn r1839002_a_dormant_card_keeps_only_its_wake_ability_which_awakens_it_unsick_on_the_turn_it_arrived() {
+    fn r1839002_r2259000_a_dormant_card_keeps_only_its_wake_ability_which_awakens_it_sick_this_turn() {
         let mut s = board(
             "p1",
             json!([starship.id, plain.id]),
@@ -504,13 +513,17 @@ mod r1839002_awakening_by_its_own_activate_and_the_awaken_verb {
         assert_eq!(slumber_of(&s, &id), None);
         assert_eq!(awakened_ids(s.last_events()), vec![id.clone()]);
         assert_eq!(s.state().players.p1.mana.current, mana - LAUNCH_MANA);
-        // Awake on the turn it was played, it is not summoning sick, and its other ability wakes too.
-        assert!(
+        // Awake, it is summoning sick for the rest of the turn (R2259000), and its other ability wakes too.
+        let attacks = |s: &Scenario| {
             legal_actions(s.state(), P1)
                 .iter()
                 .any(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == id))
-        );
+        };
+        assert!(!attacks(&s));
         assert!(offers(&s, &id, ZAP));
+        s.end_turn();
+        s.end_turn();
+        assert!(attacks(&s), "it attacks on its controller's next turn");
     }
 
     fn refused_any(s: &Scenario, body: ActionBody) {

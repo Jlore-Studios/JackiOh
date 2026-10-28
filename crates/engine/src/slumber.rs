@@ -75,11 +75,10 @@ pub fn acts_to_awaken(state: &GameState, card: &CardInstance) -> bool {
         && (wakes_by_of(state, card).is_some() || crate::starship::is_dormant_starship(card))
 }
 
-/// R1839002: the card awakens: its status comes off, it is not summoning sick (it entered the field
-/// long ago, or, awakened by its own Activate on the turn it arrived, it is no sicker than one that slept
-/// through its countdown), and `awakened` says so, which its own "When this awakens" answers (§6.2). False,
-/// changing nothing, for a card that is not Dormant or lies beneath a Stack pile, where it acts for
-/// nothing (its countdown waits there, R1839003).
+/// R1839002: the card awakens: its status comes off, it is summoning sick for the rest of this turn as a
+/// card that entered the field now is (R2259000), and `awakened` says so, which its own "When this
+/// awakens" answers (§6.2). False, changing nothing, for a card that is not Dormant or lies beneath a
+/// Stack pile, where it acts for nothing (its countdown waits there, R1839003).
 pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
     let Some(card) = find_instance(sink.state, instance_id) else {
         return false;
@@ -92,10 +91,9 @@ pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
         return false;
     };
     live.slumber = None;
-    // §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which an awakening lifts.
-    if live.summoned_turn == Some(turn) {
-        live.summoned_turn = None;
-    }
+    // R2259000, §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which an awakening
+    // starts afresh, whenever the card arrived.
+    live.summoned_turn = Some(turn);
     let event = GameEvent::Awakened {
         player: live.controller,
         instance_id: live.id.clone(),

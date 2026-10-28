@@ -31,9 +31,9 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
-//!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` on the turn it entered is
-//!     readied too (R1839002: a Dormant Starship summoned and launched in one turn, fuzz seed 2), and
-//!     `slumber::awaken_card` leaves it with no `summonedTurn`;
+//!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` enters afresh: summoning sick
+//!     for the rest of that turn, its `summonedTurn` the turn it awakened in (R2259000; before it, R1839002
+//!     readied one awakened on the turn it entered, fuzz seed 2);
 //!   - `kill_credits`, the fresh exertion a kill gives without a transform (B5 E35's `mayAttackAgain`,
 //!     Stinkyscape #94 Tmack Trav, R1869002): an attacker that destroyed the Unit its attack targeted,
 //!     declared or forced, and whose running text answers its attacks (`afterAttack`, the only text that
@@ -2068,11 +2068,9 @@ impl InvariantMonitor {
                     self.fired.insert(instance_id.clone());
                 }
                 GameEvent::Awakened { instance_id, .. } => {
-                    // R1839002: a card awakened on the turn it entered is not summoning sick, and
-                    // `awaken_card` takes its `summonedTurn` off, as R424's readying transform does.
-                    if self.entered.get(instance_id) == Some(&self.turn) {
-                        self.readied.insert(instance_id.clone());
-                    }
+                    // R2259000: a card that awakens is summoning sick for the rest of the turn, as one
+                    // that entered the field now is, and `awaken_card` stamps its `summonedTurn` so.
+                    self.enter(instance_id);
                 }
                 GameEvent::Animated {
                     player,

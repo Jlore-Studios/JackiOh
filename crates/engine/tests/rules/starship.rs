@@ -740,7 +740,7 @@ mod r1852003_the_launch {
     }
 
     #[test]
-    fn r1852003_a_starship_summoned_and_launched_in_one_turn_is_not_sick_and_the_monitor_agrees() {
+    fn r1852003_r2259000_a_starship_summoned_and_launched_in_one_turn_is_sick_and_the_monitor_agrees() {
         let mut s = board(
             "p1",
             json!([bolt.id]),
@@ -761,8 +761,9 @@ mod r1852003_the_launch {
         );
         let from = s.events().len();
         launch(&mut s, &ship.id);
-        // R1839002: its awakening lifts the sickness, and the monitor's shadow reads it so (I4).
-        assert_eq!(s.card(&ship.id).summoned_turn, None);
+        // R2259000: its awakening makes it sick for the rest of the turn, and the monitor's shadow reads
+        // it so (I4).
+        assert_eq!(s.card(&ship.id).summoned_turn, Some(s.state().turn));
         assert_eq!(
             monitor.after(&s.events()[from..], s.state()),
             Vec::<String>::new()
@@ -771,10 +772,11 @@ mod r1852003_the_launch {
             attacker_id: ship.id.clone(),
             target_id: "hero-p2".to_string(),
         };
-        assert!(legal_actions(s.state(), P1).contains(&attack));
-        // I1 agrees it may attack; the scenario's own cards arrived with no event, which I3 reports.
+        assert!(!legal_actions(s.state(), P1).contains(&attack));
+        // I1 agrees no attack of it is offered; the scenario's own cards arrived with no event, which I3
+        // reports.
         let found: Vec<String> = monitor
-            .before(s.state(), P1, &attack)
+            .before(s.state(), P1, &ActionBody::EndTurn)
             .into_iter()
             .filter(|finding| !finding.starts_with("I3"))
             .collect();
