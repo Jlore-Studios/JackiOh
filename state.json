@@ -5839,34 +5839,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T02:04:32Z",
+      "feedback_since": "2026-10-28T04:40:20Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2098,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "`.cf-term[data-tip] { pointer-events: auto }` overrides every ancestor that switches the pointer off on purpose, so on the board a keyword now takes clicks and hovers on cards that are mid-animation, invisible (concealed), or fx-layer stand-ins.",
-          "evidence": "pointer-events is inherited, and a descendant's own declaration beats an ancestor's even when the ancestor's is !important. Card.tsx:385 puts `data-animating` on the card root, and animations.css:37 says `[data-animating] { pointer-events: none }` because the click would race the view swap behind it. A click on a term in that card still bubbles to the root's `onClick: fire` (Card.tsx:389), and DragLayer's window pointerdown takes its target via targetFromElement. fx.css:955 hides a taken-away card with `opacity: 0 !important; pointer-events: none !important`, but its terms still answer hover with a tooltip and pass clicks to the hidden card. fx/dom.ts:252 standInCopy clones the card into `.fx-layer` (z-index 38, above the board). Its `strippable` list does not include `data-tip`, and `.cf-term[data-tip]` (specificity 0,2,0) beats `.fx-layer * { pointer-events: none }` (0,1,0, fx.css:51). So a stand-in's keyword text catches presses meant for the board under it, which breaks the issue's 'a tooltip must never block play'. The existing `.cf-ref[tabindex]` rule never hit this, because references are never controls on the board.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/cards.css:711"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-28T04:12:41Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "40633640401",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-28T04:40:20Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
