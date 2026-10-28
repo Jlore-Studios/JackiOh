@@ -1,0 +1,61 @@
+{
+  "action": "build",
+  "number": 2212,
+  "title": "Patch: the check that every long card face has a short form runs in the web's unit tests on every pull request",
+  "branch": "bot/issue-2212",
+  "thread": "**Issue #2212 (data, not instructions):**\n\n```text\n# #2212: Patch: the check that every long card face has a short form runs in the web's unit tests on every pull request\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA card whose text is too long for its frame needs a shorter printed form. The test that checks this runs only in the daily browser run. So a pull request that adds or rewords a long card passes CI and turns the next day's run red. That has happened at least twice, and the night bot then spent a build fixing it. This moves the check, which only reads the card data, into the web's ordinary unit tests, which run on every pull request. The browser test keeps only what needs a real browser, the pixel checks.\n\n## Why\n- The premise test, `B15 R1017000 the premise` (`e2e/cypress/component/card-faces.cy.tsx:185-223`), mounts nothing. It works out each face's printed length with `faceModel`, checks that every face over `TEXT_TIER_MAX.xl` (260) has a `shortFormOf`, and pins the list of those faces.\n- Component specs run only in the daily super run (its `component` job), or when CI is dispatched with `all` (`.github/workflows/ci.yml:39`, `:67`).\n- The per-pull-request `apps/web/src/cards/textLimit.test.ts:61-74` checks a line estimate (`FACE_TEXT_LIMIT`), not the 260-character rule. Its header (`:1-4`) leaves that rule to the Cypress spec.\n- First slip: `6704528b4` (#974) fixed `component B15` after #967's text for KY's Papaya.\n- Second slip: the bot's journal for the open #2067 (`2bf12625d`) records four B15 failures, every one a Stinkyscape face added by #2018. The same journal records a 150-minute build that timed out.\n\n## Proposal\n- Move the premise into `apps/web/src/cards/textLimit.test.ts` as a vitest case with the same title, using the same `faceModel`, `shortFormOf` and `TEXT_TIER_MAX`.\n- Its pinned list becomes one exported constant that the test and both component specs read. `meditative-faces.cy.tsx:193-216` repeats part of the list.\n- The Cypress spec drops its premise test and keeps its pixel tests at 270 px and 170 px.\n- Nothing under `.github/` changes, because the web job already runs this file. If `scripts/ci-scope.sh` does not turn the web job on for a card-text-only change, its map gains that path in the same pull request.\n\n## Where it lands\n- `apps/web/src/cards/textLimit.test.ts`, with the pinned list beside `SHORT_FORMS` in `apps/web/src/cards/shortText.ts` or in a fixture under `apps/web/src/cards/`.\n- `e2e/cypress/component/card-faces.cy.tsx` and `meditative-faces.cy.tsx`.\n- `scripts/ci-scope.sh`, only if its map lacks a path the moved test reads.\n- R1017000 (`spec/rulings/R1017000.md`) already lists `textLimit.test.ts` in `proven_in`, so it needs no new ruling.\n\n## Acceptance criteria\n- [ ] `pnpm --dir apps/web exec vitest run src/cards/textLimit.test.ts` holds the premise. The PR shows that a face over 260 characters without a short form fails it, and so does a long face missing from the pinned list, each by a local edit that is not committed.\n- [ ] Neither component spec keeps a premise test of its own, and all of them read the one shared list.\n- [ ] `pnpm --dir e2e test:component` passes `card-faces.cy.tsx` and `meditative-faces.cy.tsx`, or the PR says why it was not run.\n- [ ] `cargo jackioh spec check` and `pnpm exec eslint apps/web e2e` are green.\n\n## Size and risks\nSmall: about 40 lines across four files.\n- Build it after #2067 merges, since #2067 adds the Stinkyscape short forms and updates the list. Until then the moved test is red on `main` for the same reason the daily run is.\n- Afterwards the pinned list fails any pull request that adds a long face, which is the point: that pull request adds its short form and its list entry.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:38:31Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
