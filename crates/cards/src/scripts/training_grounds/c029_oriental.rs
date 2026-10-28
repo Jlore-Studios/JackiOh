@@ -1,28 +1,178 @@
-//! SPEC §8.11 Training Grounds 29 Oriental, a card of the held Training Grounds set (R1420,
-//! R2194000). STUB (#2194): no behaviour yet; P3 (#2196) writes its script and its tests
-//! (CLAUDE.md rule 6), from `docs/training-grounds-set.md` TG5. Its catalog row, sound, flavour and
-//! Chinese entries are already written.
+//! SPEC §8.11 Training Grounds 29 Oriental: (3) Unit, CN, Epic, 5/9 → 10/18, a card of the held
+//! Training Grounds set (R1420, R2194000).
+//!
+//! Base:    "Cry: Destroy all permanents in the leftmost lane."
+//! Radiant: "Cry: Destroy all enemy permanents in the leftmost lane."
+//! Engine: C+ #24 Crushing Walls' sweep on one lane: the top card of each zone of lane 1 (§3: a
+//! lane is a column, numbered left to right from each owner's seat, so the leftmost is lane 1,
+//! never mirrored), both sides and both rows (Radiant: the enemy's alone), passing a Unit standing on an
+//! Ivory Tower as its play resolves (R446, R653). The base face destroys this Unit too when it stands
+//! there, Hearthstone's "destroy all minions" (R2196003). TG #28 Occidental is its mirror on the last lane.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-029";
 
-pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+/// The leftmost lane, the board's last (§3.1, R2196003).
+const LEFTMOST: i32 = 1;
+
+fn sweep(side: ScopeSide) -> Script {
+    let in_the_lane = move |ctx: &mut EffectContext<'_>| -> Vec<String> {
+        cards_in_scope(ctx, &json_as(json!({ "side": side, "rows": ["units", "backrow"] })))
+            .into_iter()
+            .filter(|card| !is_carried(&*ctx.state, card))
+            .filter(|card| slot_of(&*ctx.state, card).is_some_and(|at| at.lane == LEFTMOST))
+            .map(|card| card.id.clone())
+            .collect()
+    };
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(in_the_lane),
+                each: Arc::new(|instance_id: &str| {
+                    destroy(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
 }
 
-// STUB (#2194): the card's BUILD M13 must-pass tests replace this one with its script.
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: sweep(ScopeSide::Any),
+        radiant: sweep(ScopeSide::Enemy),
+    }
+}
+
+// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29: "played in lanes 2–5: both sides' lane-1 Units
+// and backrow cards are destroyed, a face-down one included; lanes 2–5 untouched; an Indestructible one
+// stays; a card beneath a Stack in lane 1 resumes; played into lane 1, it destroys itself as well; a
+// destroyed card's Death fires. radiant 10/18; only the enemy's lane-1 Unit and backrow card are
+// destroyed, yours stay, itself included".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    #[test]
-    fn the_stub_is_a_card_of_the_held_training_grounds_set() {
-        crate::register_all();
-        let def = catalog::def_of(None, super::ID);
-        assert_eq!(def.set, SetName::TrainingGrounds);
-        assert!(!set_ships(def.set));
+    use crate::scenario;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const ORIENTAL: &str = super::ID;
+    const LANE: i32 = super::LEFTMOST;
+    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const ROCK: &str = "core-066"; // Indestructible
+    const FIENDER: &str = "core-092"; // Stack
+    const FIELD_SPELL: &str = "core-064";
+    const TRAP: &str = "core-060";
+    const FLAGBEARER: &str = "classicplus-046"; // Death: shuffle a Felinor Flagbearer Prime into your deck
+    const PRIME: &str = "classicplus-046-1";
+    const FILLER: &str = "core-005";
+
+    /// Each side holds a Mr. Vanilla in lanes 1 and 4 and a backrow card in lanes 1 and 4 (p1's lane-1
+    /// one a face-down Trap).
+    fn swept(radiant: bool, zone: i32) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [{ "def": ORIENTAL, "radiant": radiant }, FILLER],
+                "field": [{ "def": BODY, "lane": 4 }, { "def": BODY, "lane": LANE }],
+                "backrow": [{ "def": FIELD_SPELL, "lane": 4 }, { "def": TRAP, "lane": LANE, "faceUp": false }],
+            },
+            "p2": {
+                "hand": [FILLER],
+                "field": [{ "def": BODY, "lane": 4 }, { "def": BODY, "lane": LANE }],
+                "backrow": [{ "def": FIELD_SPELL, "lane": 4 }, { "def": FIELD_SPELL, "lane": LANE }],
+            },
+        }));
+        s.play(ORIENTAL, json!({ "zone": zone }));
+        s
+    }
+
+    fn holds(s: &Scenario, player: PlayerId, lane: i32) -> (bool, bool) {
+        (s.unit(player, lane).is_some(), s.backrow(player, lane).is_some())
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn r2196003_both_sides_lane_1_units_and_backrow_cards_are_destroyed_face_down_included() {
+            let s = swept(false, 5);
+            assert_eq!(holds(&s, P1, LANE), (false, false));
+            assert_eq!(holds(&s, P2, LANE), (false, false));
+        }
+
+        #[test]
+        fn r2196003_lanes_2_to_5_are_untouched() {
+            let s = swept(false, 5);
+            assert!(s.unit(P1, 5).is_some_and(|card| card.def_id == ORIENTAL));
+            assert_eq!(holds(&s, P1, 4), (true, true));
+            assert_eq!(holds(&s, P2, 4), (true, true));
+        }
+
+        #[test]
+        fn s6_1_an_indestructible_one_stays() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": ROCK, "lane": LANE }] },
+            }));
+            s.play(ORIENTAL, json!({ "zone": 5 }));
+            assert!(s.unit(P2, LANE).is_some_and(|card| card.def_id == ROCK));
+        }
+
+        #[test]
+        fn r13_a_card_beneath_a_stack_in_lane_1_resumes() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }, { "def": FIENDER, "lane": LANE, "stack": true }] },
+            }));
+            s.play(ORIENTAL, json!({ "zone": 5 }));
+            assert!(s.unit(P2, LANE).is_some_and(|card| card.def_id == BODY));
+        }
+
+        #[test]
+        fn r2196003_played_into_lane_1_it_destroys_itself_as_well() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }] },
+            }));
+            s.play(ORIENTAL, json!({ "zone": LANE }));
+            s.expect_in_zone(ORIENTAL, "graveyard");
+            assert!(s.unit(P2, LANE).is_none());
+        }
+
+        #[test]
+        fn s4_5_a_destroyed_card_s_death_fires() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER], "field": [{ "def": FLAGBEARER, "lane": LANE }] },
+            }));
+            s.play(ORIENTAL, json!({ "zone": 5 }));
+            assert!(s.pile(P2, "library").iter().any(|card| card.def_id == PRIME));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn r2196003_a_10_18_that_destroys_only_the_enemy_s_lane_1_cards() {
+            let mut s = swept(true, 5);
+            s.expect_stats(ORIENTAL, json!({ "attack": 10, "health": 18 }));
+            assert_eq!(holds(&s, P2, LANE), (false, false));
+            assert_eq!(holds(&s, P1, LANE), (true, true));
+        }
+
+        #[test]
+        fn r2196003_played_into_lane_1_it_spares_itself() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": ORIENTAL, "radiant": true }, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }] },
+            }));
+            s.play(ORIENTAL, json!({ "zone": LANE }));
+            s.expect_in_zone(ORIENTAL, "field");
+            assert!(s.unit(P2, LANE).is_none());
+        }
     }
 }
