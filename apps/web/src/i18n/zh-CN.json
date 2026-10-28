@@ -1250,7 +1250,7 @@
   "Joining the co-op match…": "正在加入合作对局…",
   "{reason}. Head back to Play together.": "{reason}。请返回一起玩。",
   "Your co-op room closed before anyone joined.": "在有人加入之前，你的合作房间已关闭。",
-  "Join my co-op game against the AI: the room code is {code}.": "来和我一起合作对抗 AI 吧：房间号是 {code}。",
+  "Join my co-op game against the AI here: {link} (room code {code}).": "来和我一起合作对抗 AI 吧，从这里加入：{link} （房间号 {code}）。",
   "Invite sent to {name}.": "已向 {name} 发送邀请。",
   "Duos co-op": "双人合作",
   "Back to your co-op game": "回到你的合作对局",
