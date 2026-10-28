@@ -1,0 +1,58 @@
+/* R2118000: the command menu's look. No transition or animation: it opens and closes at once. */
+
+.command-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
+}
+
+.command-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(560px, 100%);
+  max-height: 70vh;
+  padding: 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.command-menu__input {
+  width: 100%;
+}
+
+.command-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.command-menu__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.command-menu__option[aria-selected="true"] {
+  outline: 2px solid var(--selected);
+  background: var(--bg-sunken);
+}
+
+.command-menu__kind {
+  color: var(--text-dim);
+}

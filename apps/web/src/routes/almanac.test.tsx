@@ -37,7 +37,7 @@ import {
   filterTypeId,
   poolCardId,
 } from "../game/deckbuilder/testids.ts";
-import { SITE_ORIGIN, paths } from "../net/navigate.ts";
+import { navigate, SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
 import { collectionOwning } from "../collection/fixtures.ts";
 import { at, meBody, signIn, stubServer } from "../test/stubServer.ts";
@@ -474,5 +474,17 @@ describe("R1956000 the viewer's own cards in the Almanac", () => {
       await Promise.resolve();
     });
     expect(failed.result.current).toBeNull();
+  });
+});
+
+describe("R2118000 the command menu's card detail", () => {
+  it("R2118000 a ?card= move made while the page is open opens that card's detail", () => {
+    at(paths.almanac);
+    render(<AlmanacRoute />);
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    act(() => {
+      navigate(paths.almanacCard("core-001"));
+    });
+    expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("data-card", "core-001");
   });
 });

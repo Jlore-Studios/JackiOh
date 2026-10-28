@@ -35,7 +35,7 @@ import {
 import { useCardWinRates } from "../game/deckbuilder/useCardWinRates.ts";
 import { useLocale, t } from "../i18n/i18n.ts";
 import { useAccount } from "../net/gate.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 import { BackLink } from "./nav.tsx";
 
@@ -74,11 +74,11 @@ export default function AlmanacRoute(): ReactElement {
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   // `?card=<id>` opens that card's detail (`paths.almanacCard`, the statistics drill-down's link),
-  // and the URL follows the detail a player opens and closes, so a card's page can be shared.
-  const [detailCardId, setDetailCardId] = useState<string | null>(() => {
-    const linked = new URLSearchParams(window.location.search).get("card");
-    return linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
-  });
+  // and the URL follows the detail a player opens and closes, so a card's page can be shared. The
+  // detail follows the address on every move (R2118000: the command menu opens a card there), not
+  // only on the first render.
+  const linked = new URLSearchParams(useSearch()).get("card");
+  const detailCardId = linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
   const winRates = useCardWinRates(sort.key);
   // R1956000: an active account's own cards, as the gated screens' ownership has them (main.tsx).
   const account = useAccount();
@@ -93,7 +93,6 @@ export default function AlmanacRoute(): ReactElement {
   const openDetail = useCallback((cardId: string) => {
     // At most one inspect overlay at a time, as in the deck editor.
     closeInspect();
-    setDetailCardId(cardId);
     navigate(paths.almanacCard(cardId), { replace: true });
   }, []);
 
@@ -129,7 +128,6 @@ export default function AlmanacRoute(): ReactElement {
             // deck builder's, reading the public card aggregates.
             showStats
             onCloseDetail={() => {
-              setDetailCardId(null);
               navigate(paths.almanac, { replace: true });
             }}
           />

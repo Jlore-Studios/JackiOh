@@ -3444,5 +3444,10 @@
   "{share}% of games reach fatigue": "{share}% 的对局进入疲劳",
   "{fired} of {set} set traps fired": "设置的 {set} 张陷阱中有 {fired} 张触发",
   "Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.": "统计了本版本 {total} 局中的 {games} 局：开始记录这些数据之前的对局不计在内。",
-  "{count} ranked wins in a row": "排位赛{count}连胜"
+  "{count} ranked wins in a row": "排位赛{count}连胜",
+  "Command menu": "命令菜单",
+  "Search pages, actions and cards": "搜索页面、操作和卡牌",
+  "No matches": "没有匹配项",
+  "Action": "操作",
+  "Page": "页面"
 }

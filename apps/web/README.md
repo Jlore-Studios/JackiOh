@@ -45,6 +45,14 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+**The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
+`routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
+`commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
+shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animation). It is never
+mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
+marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
+opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

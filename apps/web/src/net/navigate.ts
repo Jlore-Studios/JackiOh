@@ -270,6 +270,19 @@ export function practiceDeckPath(place: number): string {
   return `${paths.practice}?deck=saved:${String(place)}`;
 }
 
+/**
+ * R2118000: the command menu's New deck action: `/decks` asking for one new deck, which the
+ * workshop makes and opens, then drops from the address.
+ */
+export function newDeckPath(): string {
+  return `${paths.decks}?new=deck`;
+}
+
+/** R2118000: whether `search` (`window.location.search`) asks the workshop for one new deck. */
+export function wantsNewDeck(search: string): boolean {
+  return queryValue(search, "new") === "deck";
+}
+
 function queryValue(search: string, key: string): string | null {
   return new URLSearchParams(search).get(key);
 }

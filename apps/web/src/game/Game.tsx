@@ -46,6 +46,7 @@ import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
+import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
@@ -233,6 +234,8 @@ export default function Game({
   tradeBar = true,
 }: GameProps): ReactElement {
   useLocale();
+  // R2118000: no command menu over a board.
+  useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
