@@ -189,9 +189,10 @@ mod tests {
             .expect("p1's Stimulus")
             .id
             .clone();
-        s.play(mine.as_str(), json!({ "zone": 3 }));
+        // Backrow lane 3 holds the Dormant Starship (R2249000); lane 4 is open.
+        s.play(mine.as_str(), json!({ "zone": 4 }));
         assert!(is_set(&s, &id));
-        let set = s.backrow(P1, 3).expect("p1's Stimulus, set");
+        let set = s.backrow(P1, 4).expect("p1's Stimulus, set");
         assert_eq!(set.def_id, ID);
         assert_ne!(set.face_up, Some(true));
     }

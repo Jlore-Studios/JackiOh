@@ -193,8 +193,15 @@ fn starship_zone(state: &GameState, player: PlayerId) -> (ZoneSlot, bool) {
             .map(move |lane| ZoneSlot { player, row, lane })
     };
     let rows = [Row::Backrow, Row::Units];
-    let open = rows.iter().flat_map(|row| in_order(*row)).find(|slot| is_open(state, *slot));
-    let locked = || rows.iter().flat_map(|row| in_order(*row)).find(|slot| takes_move(state, *slot));
+    let open = rows
+        .iter()
+        .flat_map(|row| in_order(*row))
+        .find(|slot| is_open(state, *slot));
+    let locked = || {
+        rows.iter()
+            .flat_map(|row| in_order(*row))
+            .find(|slot| takes_move(state, *slot))
+    };
     match open.or_else(locked) {
         Some(slot) => (slot, false),
         None => (

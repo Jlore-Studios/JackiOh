@@ -17,12 +17,24 @@ use crate::rules::fixtures::starship::*;
 /// p1's or p2's turn 9, its main phase, with the given hands and fields; both libraries hold plain
 /// cards to draw, so no turn ends by itself (§2.5).
 fn board(active: &str, p1_hand: Value, p1_field: Value, p2_hand: Value, p2_field: Value) -> Scenario {
+    board_with_backrow(active, p1_hand, p1_field, json!([]), p2_hand, p2_field)
+}
+
+/// `board`, with p1's backrow set as given.
+fn board_with_backrow(
+    active: &str,
+    p1_hand: Value,
+    p1_field: Value,
+    p1_backrow: Value,
+    p2_hand: Value,
+    p2_field: Value,
+) -> Scenario {
     register_starship_fixtures();
     let library = json!([plain.id, plain.id, plain.id, plain.id, plain.id, plain.id]);
     scenario(json!({
         "seed": "r1852000",
         "active": active,
-        "p1": { "hand": p1_hand, "field": p1_field, "library": library },
+        "p1": { "hand": p1_hand, "field": p1_field, "backrow": p1_backrow, "library": library },
         "p2": { "hand": p2_hand, "field": p2_field, "library": library },
     }))
 }
@@ -31,6 +43,36 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
     s.unit(player, lane)
         .unwrap_or_else(|| panic!("no unit at {player:?}'s lane {lane}"))
         .id
+}
+
+/// R2249000: the id of the card in `player`'s backrow zone `lane`, where a Dormant Starship stands first.
+fn backrow_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
+    s.backrow(player, lane)
+        .unwrap_or_else(|| panic!("nothing in {player:?}'s backrow lane {lane}"))
+        .id
+}
+
+/// A countdown Trap in each of a backrow's zones, so a Starship finds none of them open (R2249000).
+fn full_backrow() -> Value {
+    json!(
+        (1..=BACKROW_ZONES)
+            .map(|lane| json!({ "def": countdown.id, "lane": lane }))
+            .collect::<Vec<_>>()
+    )
+}
+
+/// R2249000: the Starship `id` as `side` of a view shows it, a Unit in a unit zone or standing in a
+/// backrow zone.
+fn ship_unit<'a>(side: &'a SideView, id: &str) -> &'a jackioh_engine::wire::UnitView {
+    side.units
+        .iter()
+        .flatten()
+        .chain(side.backrow.iter().flatten().filter_map(|card| match card {
+            BackrowView::Public(card) => card.unit.as_ref(),
+            BackrowView::FaceDown(_) => None,
+        }))
+        .find(|unit| unit.instance_id == id)
+        .unwrap_or_else(|| panic!("the view shows no Starship {id}"))
 }
 
 fn pick(id: &str) -> Value {
@@ -161,7 +203,8 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
     use super::*;
 
     #[test]
-    fn r1852000_a_dying_piece_summons_a_dormant_starship_into_the_leftmost_open_zone_and_fuses_into_it() {
+    fn r1852000_r2249000_a_dying_piece_summons_a_dormant_starship_into_the_middle_of_the_backrow_and_fuses_into_it()
+     {
         let mut s = board(
             "p1",
             json!([bolt.id]),
@@ -174,9 +217,9 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         bolt_at(&mut s, &piece);
         // The original goes to its graveyard as usual.
         assert_eq!(s.card(&piece).zone.z(), ZoneName::Graveyard);
-        // The Starship takes the leftmost open zone, the piece's own, Dormant, holding the piece.
+        // The Starship stands in the middle of the backrow (R2249000), Dormant, holding the piece.
         let ship = ship_of(&s, P1);
-        assert_eq!(id_at(&s, P1, 2), ship.id);
+        assert_eq!(backrow_id(&s, P1, STARSHIP_LANE_ORDER[0]), ship.id);
         assert_eq!(
             ship.slumber,
             Some(Slumber { turns: None }),
@@ -211,7 +254,7 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         for viewer in [P1, P2] {
             let view = s.view(viewer);
             let side = if viewer == P1 { &view.you } else { &view.opponent };
-            let unit = side.units[1].as_ref().expect("lane 2 shows the Starship");
+            let unit = ship_unit(side, &ship.id);
             let memory = unit
                 .starship
                 .as_ref()
@@ -234,9 +277,9 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         s.play(quake.id.as_str(), json!({}));
         let ship = ship_of(&s, P1);
         assert_eq!(
-            id_at(&s, P1, 1),
+            backrow_id(&s, P1, STARSHIP_LANE_ORDER[0]),
             ship.id,
-            "the first piece's zone, the leftmost open"
+            "the middle of the backrow (R2249000)"
         );
         assert!(s.unit(P1, 3).is_none(), "one Starship, not two");
         assert_eq!(piece_defs(&ship), vec![gunner.id.clone(), gunner.id.clone()]);
@@ -251,8 +294,9 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
     }
 
     #[test]
-    fn r1852000_a_piece_killed_while_its_owners_row_is_full_stacks_the_starship_onto_lane_3_locked_or_not() {
-        let mut s = board(
+    fn r1852000_r2249000_a_piece_killed_while_both_its_owners_rows_are_full_stacks_the_starship_onto_lane_3_locked_or_not()
+     {
+        let mut s = board_with_backrow(
             "p1",
             json!([bolt.id]),
             json!([
@@ -262,6 +306,7 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
                 { "def": plain.id, "lane": 4 },
                 { "def": phoenix.id, "lane": 5 },
             ]),
+            full_backrow(),
             json!([plain.id]),
             json!([]),
         );
@@ -382,9 +427,7 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         // left it, only the Starship's memory names the piece's definition.
         s.state_mut().applied.clear();
         let view = s.view(P2);
-        let unit = view.opponent.units[0]
-            .as_ref()
-            .expect("lane 1 shows the Starship");
+        let unit = ship_unit(&view.opponent, &ship.id);
         assert_eq!(unit.instance_id, ship.id);
         let memory = unit
             .starship
@@ -515,7 +558,11 @@ mod r1852002_a_stolen_piece {
         assert_eq!(s.card(&piece).zone, Zone::Graveyard { player: P1 });
         assert!(!building_a_ship(s.state(), P2), "its controller builds no ship");
         let ship = ship_of(&s, P1);
-        assert_eq!(id_at(&s, P1, 1), ship.id, "its owner's, on its owner's side");
+        assert_eq!(
+            backrow_id(&s, P1, STARSHIP_LANE_ORDER[0]),
+            ship.id,
+            "its owner's, on its owner's side"
+        );
         assert_eq!(ship.controller, P1);
         assert_eq!(piece_defs(&ship), vec![booster.id.clone()]);
         assert!(s.last_events().iter().any(|event| matches!(
@@ -536,7 +583,7 @@ mod r1852003_the_launch {
         // Its one ability is the launch, offered, and named with its price on its controller's view.
         assert!(offers_launch(&s, P1, &ship.id));
         let view = s.view(P1);
-        let unit = view.you.units[0].as_ref().expect("lane 1 shows the Starship");
+        let unit = ship_unit(&view.you, &ship.id);
         let abilities = unit.activations.clone().expect("the launch is on the view");
         assert_eq!(abilities.len(), 1);
         assert_eq!(abilities[0].ability, STARSHIP_LAUNCH_ABILITY);
@@ -619,7 +666,7 @@ mod r1852003_the_launch {
         );
         assert_eq!(result.error.as_deref(), Some(reason.as_str()));
         let view = s.view(P1);
-        let unit = view.you.units[0].as_ref().expect("lane 1 shows the Starship");
+        let unit = ship_unit(&view.you, &ship.id);
         let ability = &unit.activations.as_ref().expect("the launch is on the view")[0];
         assert!(!ability.usable);
         assert_eq!(ability.reason.as_deref(), Some(reason.as_str()));
@@ -939,7 +986,7 @@ mod r1852005_the_memory_and_building_a_ship {
         for viewer in [P1, P2] {
             let view = s.view(viewer);
             let side = if viewer == P1 { &view.you } else { &view.opponent };
-            let unit = side.units[0].as_ref().expect("lane 1 shows the Starship");
+            let unit = ship_unit(side, &ship.id);
             let memory = unit.starship.as_ref().expect("its memory");
             assert_eq!(memory.pieces.len(), 2, "{viewer:?}");
             assert!(memory.name.is_some(), "{viewer:?}");
@@ -963,7 +1010,7 @@ mod r1852006_the_launch_price {
                 .iter()
                 .any(|badge| badge.label == "Your Starship launch costs (0)")
         );
-        let unit = view.you.units[0].as_ref().expect("lane 1 shows the Starship");
+        let unit = ship_unit(&view.you, &ship.id);
         assert_eq!(
             unit.activations.as_ref().expect("the launch")[0].label,
             "Launch (0)"
@@ -1000,18 +1047,22 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
 
     #[test]
     fn r1852007_a_stack_card_played_onto_a_dormant_starship_is_exiled_before_it_resolves() {
-        let mut s = board(
+        // A full backrow puts the Starship in the unit row's middle (R2249000), where a Stack card lands.
+        let mut s = board_with_backrow(
             "p1",
             json!([bolt.id, lander.id]),
             json!([{ "def": booster.id, "lane": 1 }]),
+            full_backrow(),
             json!([plain.id]),
             json!([]),
         );
+        let lane = STARSHIP_LANE_ORDER[0];
         let piece = id_at(&s, P1, 1);
         bolt_at(&mut s, &piece);
         let ship = ship_of(&s, P1);
         let health = health_of(&s, P2);
-        s.play(lander.id.as_str(), json!({ "zone": 1 }));
+        assert_eq!(id_at(&s, P1, lane), ship.id);
+        s.play(lander.id.as_str(), json!({ "zone": lane }));
         // It was played, and exiled before its Cry.
         assert!(
             s.last_events()
@@ -1031,7 +1082,7 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
         assert_eq!(lander_card.zone.z(), ZoneName::Exile);
         assert_eq!(health_of(&s, P2), health, "its Cry never resolved");
         // The Starship tops its zone again, still Dormant.
-        assert_eq!(id_at(&s, P1, 1), ship.id);
+        assert_eq!(id_at(&s, P1, lane), ship.id);
         assert!(is_dormant_starship(s.card(&ship.id)));
     }
 }
@@ -1111,7 +1162,12 @@ mod r2249000_a_dormant_starship_arrives_in_the_middle_of_the_backrow {
         let s = summoned_with(&[], &[]);
         assert_eq!(ship_zone(&s), (Row::Backrow, 3));
         assert_eq!(STARSHIP_LANE_ORDER, [3, 2, 4, 1, 5]);
-        for (taken, expected) in [(vec![3], 2), (vec![3, 2], 4), (vec![3, 2, 4], 1), (vec![3, 2, 4, 1], 5)] {
+        for (taken, expected) in [
+            (vec![3], 2),
+            (vec![3, 2], 4),
+            (vec![3, 2, 4], 1),
+            (vec![3, 2, 4, 1], 5),
+        ] {
             let s = summoned_with(&[], &taken);
             assert_eq!(ship_zone(&s), (Row::Backrow, expected), "{taken:?} taken");
         }

@@ -309,6 +309,13 @@ mod summarize_game_over_real_cards_s9_11 {
                                 });
                             }
                         }
+                        // A play whose own cost ends the game (a hero paying with health it does not have)
+                        // is announced and never played: the game is over before its `cardPlayed`.
+                        GameEvent::GameOver { .. } => {
+                            for seat in PLAYER_IDS {
+                                plays[seat].retain(|play| !(play.open && !play.placed));
+                            }
+                        }
                         // A Death the play's own Tribute set off can discard the hand the card still stands in
                         // (§10.5 step 2), before any announce: the card was never played.
                         GameEvent::Discarded { instance_id, .. } => {
