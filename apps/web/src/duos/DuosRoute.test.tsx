@@ -7,13 +7,17 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayerView } from "@jackioh/shared";
+import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
+import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
+import { PLAY_LEAN_SET_KEY } from "../game/playLean.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
-import { must, stubServer } from "../test/stubServer.ts";
+import { at, must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
+import type { DuosAgainStatus } from "../net/duos.ts";
 import { DuosRoute } from "./DuosRoute.tsx";
 import { duosTestid } from "./testids.ts";
 
@@ -183,5 +187,189 @@ describe("the co-op route's tab title (#1792)", () => {
     expect(document.title).toBe("Duos · JackiOh");
     push(a1(3, { pending: flood }, [true, false]));
     expect(document.title).toBe("Your turn · JackiOh");
+  });
+});
+
+describe("R2092000 Play again on the co-op result", () => {
+  const AGAIN = "/api/duos/matches/dm-1/again";
+  const FINISHED = duosView(3, { outcome: "win", winner: "b", reason: "concede" });
+  const HERE: DuosAgainStatus = { youOffered: false, teammateOffered: false, teammateHere: true, matchId: null };
+
+  function serve(
+    status: () => DuosAgainStatus,
+    offer: (call: Call) => Reply = () => ({ status: 200, body: { matchId: null } }),
+  ): StubServer {
+    return stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/catalog") return { status: 200, body: { version: "v1", defs: {} } };
+      if (call.method === "GET" && call.path === AGAIN) return { status: 200, body: status() };
+      if (call.method === "POST" && call.path === AGAIN) return offer(call);
+      return undefined;
+    });
+  }
+
+  function finished() {
+    const route = render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify({ type: "view", view: FINISHED, legal: [] }) });
+    });
+    return route;
+  }
+
+  async function flush(): Promise<void> {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  beforeEach(() => {
+    at("/duos/dm-1");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    at("/");
+  });
+
+  it("R2092000 a live game's result offers Play again, a press sends one offer with the device's lean pick, and the status waits for the teammate", async () => {
+    window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
+    let offered = false;
+    const server = serve(
+      () => ({ ...HERE, youOffered: offered }),
+      () => {
+        offered = true;
+        return { status: 200, body: { matchId: null } };
+      },
+    );
+    finished();
+    await flush();
+
+    const play = screen.getByTestId(duosTestid.resultAgain);
+    expect(play).toHaveTextContent("Play again");
+    fireEvent.click(play);
+    expect(play).toBeDisabled();
+    expect(play).toHaveAttribute("aria-busy", "true");
+    await flush();
+
+    const posts = server.to("POST", AGAIN);
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toEqual({ leanSet: "Classic" });
+    const line = screen.getByTestId(duosTestid.resultAgainStatus);
+    expect(line).toHaveAttribute("role", "status");
+    expect(line).toHaveTextContent("Waiting for your teammate…");
+    expect(screen.getByTestId(duosTestid.resultAgain)).not.toBeDisabled();
+  });
+
+  it("R2092000 with the teammate's offer read, the panel says the teammate wants to play again, and a press makes the offer", async () => {
+    const server = serve(() => ({ ...HERE, teammateOffered: true }));
+    finished();
+    await flush();
+
+    const line = screen.getByTestId(duosTestid.resultAgainStatus);
+    expect(line).toHaveTextContent("Your teammate wants to play again");
+    expect(screen.getByTestId(duosTestid.resultAgain)).toHaveTextContent("Play again");
+    fireEvent.click(screen.getByTestId(duosTestid.resultAgain));
+    await flush();
+    const posts = server.to("POST", AGAIN);
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toEqual({});
+  });
+
+  it("R2092000 an offer answered with the new match takes the board to /duos/<id>, whose socket is the new match's, not the old one's", async () => {
+    serve(
+      () => ({ ...HERE, teammateOffered: true }),
+      () => ({ status: 200, body: { matchId: "dm-2" } }),
+    );
+    const route = finished();
+    await flush();
+
+    fireEvent.click(screen.getByTestId(duosTestid.resultAgain));
+    await flush();
+    expect(window.location.pathname).toBe("/duos/dm-2");
+
+    const old = latest();
+    route.rerender(<DuosRoute matchId="dm-2" token="tok-duos" />);
+    expect(latest()).not.toBe(old);
+    expect(latest().url).toContain("matchId=dm-2");
+    expect(old.readyState).toBe(3);
+    expect(screen.queryByTestId(duosTestid.result)).toBeNull();
+    expect(screen.getByTestId(duosTestid.connecting)).toBeInTheDocument();
+  });
+
+  it("R2092000 a status read naming the new match takes the board there too", async () => {
+    const server = serve(() => ({ ...HERE, youOffered: true, teammateOffered: true, matchId: "dm-3" }));
+    finished();
+    await flush();
+    expect(window.location.pathname).toBe("/duos/dm-3");
+    expect(server.to("POST", AGAIN)).toHaveLength(0);
+  });
+
+  it("R2092000 a teammate who has left hides Play again and is named in the status", async () => {
+    serve(() => ({ ...HERE, teammateHere: false }));
+    finished();
+    await flush();
+    expect(screen.queryByTestId(duosTestid.resultAgain)).toBeNull();
+    expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Your teammate has left");
+  });
+
+  it("R2092000 a refused offer shows the server's words", async () => {
+    const words = "The cards changed since this game. Start a new one.";
+    const server = serve(() => ({ ...HERE }), () => refusal(409, "update_required", words));
+    finished();
+    await flush();
+
+    fireEvent.click(screen.getByTestId(duosTestid.resultAgain));
+    await flush();
+    const line = screen.getByTestId(duosTestid.resultAgainStatus);
+    expect(line).toHaveAttribute("role", "alert");
+    expect(line).toHaveTextContent(words);
+    expect(screen.getByTestId(duosTestid.resultAgain)).not.toBeDisabled();
+    expect(window.location.pathname).toBe("/duos/dm-1");
+    expect(server.to("POST", AGAIN)).toHaveLength(1);
+  });
+
+  it("R2092000 folding the result to Result and opening it again keeps the waiting status", async () => {
+    let offered = false;
+    const server = serve(
+      () => ({ ...HERE, youOffered: offered }),
+      () => {
+        offered = true;
+        return { status: 200, body: { matchId: null } };
+      },
+    );
+    finished();
+    await flush();
+
+    fireEvent.click(screen.getByTestId(duosTestid.resultAgain));
+    await flush();
+    expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Waiting for your teammate…");
+
+    fireEvent.click(screen.getByTestId(duosTestid.resultBoard));
+    expect(screen.queryByTestId(duosTestid.result)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(duosTestid.resultReopen));
+    expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Waiting for your teammate…");
+    expect(server.to("POST", AGAIN)).toHaveLength(1);
+  });
+
+  it("R2092000 the status is read again every SERIES_POLL_SECONDS while the result is up", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let wants = false;
+    const server = serve(() => ({ ...HERE, teammateOffered: wants }));
+    finished();
+    await flush();
+    expect(server.to("GET", AGAIN)).toHaveLength(1);
+    expect(screen.queryByTestId(duosTestid.resultAgainStatus)).toBeNull();
+
+    wants = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SERIES_POLL_SECONDS * MS_PER_SECOND + 1);
+    });
+    await flush();
+    expect(server.to("GET", AGAIN)).toHaveLength(2);
+    expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Your teammate wants to play again");
   });
 });

@@ -157,6 +157,16 @@ pub fn tray_holds(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool
         .any(|card| def_ids.contains(&card.def_id.as_str()))
 }
 
+/// R1881007: whether a card of one of these definitions is mid-resolution for this player (§10.5: a
+/// Spell sits in `resolving` between its play and its graveyard), as S #138 Pocket Peptides asks of its
+/// controller's CN Peptides cast.
+pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
+    state.players[player]
+        .resolving
+        .iter()
+        .any(|card| def_ids.contains(&card.def_id.as_str()))
+}
+
 /// R1861001: "if Brittle destroyed this" (Stinkyscape #39 The Narcor Project): the card's Brittle count
 /// in force is spent, at 0. A Death hook reads it off its snapshot, taken before R78's reset drops the
 /// spent count (`state_check.rs`'s collect, R441), so a crumble's death reads true and any other

@@ -183,9 +183,9 @@ export function useModalOverlay(
       if (event.key !== "Escape") return;
       // A dialog that cannot close now (the pack scene while its open is out, #1757) ignores Escape.
       if (!closableRef.current) return;
-      // R279: Escape over an open reference's tooltip closes the tooltip alone (CardRef.tsx).
+      // R279, R2098000: Escape over an open reference's or term's tooltip closes the tooltip alone (CardRef.tsx, TermTip.tsx).
       const dialog = focusRef.current?.closest('[role="dialog"]') ?? null;
-      if (dialog !== null && dialog.querySelector('[data-ref-open="true"]') !== null) return;
+      if (dialog !== null && dialog.querySelector('[data-ref-open="true"], [data-tip-open="true"]') !== null) return;
       restoreFocus(restoreRef.current);
       onCloseRef.current();
     };

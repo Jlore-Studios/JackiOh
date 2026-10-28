@@ -970,6 +970,10 @@ pub const CHAOS_STINKY_FIELD_SPELLS: i32 = 3;
 /// §8.10 row 150 entry 8, R1882004: the most rest-of-game Acclaimed death rules one player holds, bounded
 /// as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at the cap resolves into nothing.
 pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
+/// §8.10 row 150 entry 8, R2176001: the most Calls to Chaos the death watch casts for one player in one
+/// turn, its terminator (REVIEW A3.6): each cast is a chain with R28's cap of its own, and a cast that
+/// kills an Acclaimed Unit starts another, so an Acclaimed death past this many that turn casts nothing.
+pub const CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN: i32 = 5;
 /// §8.10 row 151 entry 2: "summon 3 Drone Corvettes".
 pub const CHAOS_SCAPE_CORVETTES: i32 = 3;
 /// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).
