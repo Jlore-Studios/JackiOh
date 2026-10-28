@@ -33,7 +33,7 @@ export const CONQUEST_MESSAGES = {
   explainerTitle: "How Conquest works",
   winsNeeded: "Win a game with each of your {wins} decks to take the series (first to {wins} wins).",
   lockOnWin: "A deck that wins a game is locked for the rest of the series. Decks that lost or drew may be played again.",
-  sealedPicks: "Picks are simultaneous and sealed: neither player sees the opponent’s choice until both have picked and the game starts.",
+  sealedPicks: "Picks are simultaneous and sealed: neither player sees the opponent's choice until both have picked and the game starts.",
   pickClock: "You have {seconds} seconds to pick. If time runs out, your first unlocked deck is chosen automatically.",
   draws: "A drawn game counts for neither player and locks neither deck. The series ends after at most {games} games.",
   concedeVsForfeit: "Conceding or disconnecting during a game loses only that game. Between games, you may forfeit the entire series.",
@@ -42,7 +42,7 @@ export const CONQUEST_MESSAGES = {
   toggleOpen: "How Conquest works",
   lockInReminder: "Locking in is final and sealed. A win locks this deck for the rest of the series.",
   seriesEndRatingReminder: "Your rating moves once for the whole series, not for each of its games.",
-  trioL4Hint: "Three decks with no cards in common make a trio for Conquest (Rule L4). Each card can appear in only one deck.",
+  trioL4Hint: "Three decks with no card in common make a trio for Conquest: each card can be in only one of them.",
 } as const;
 
 export type ConquestMessageKey = keyof typeof CONQUEST_MESSAGES;

@@ -1685,7 +1685,8 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         assert_eq!(wrong, Vec::<String>::new());
         // The eight embiggen cards of issue #1175, and Meditative+ #3, #4, #5, #19 and #23
         // (#1179, #1181). Every face above is held to the label, a held set's too; the list pinned
-        // is the shipped sets' (R1857000: the Stinkyscape set's join at its release).
+        // is the shipped sets' (R1857000: the Stinkyscape set's #79, #127, #128, #129 and #154 joined
+        // at its release, #1884).
         let shipped: Vec<String> = cards
             .into_iter()
             .filter(|id| {
@@ -1711,6 +1712,11 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 "meditativeplus-005",
                 "meditativeplus-019",
                 "meditativeplus-023",
+                "stinkyscape-079",
+                "stinkyscape-127",
+                "stinkyscape-128",
+                "stinkyscape-129",
+                "stinkyscape-154",
             ])
         );
     }

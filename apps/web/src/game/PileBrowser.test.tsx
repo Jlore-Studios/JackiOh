@@ -6,10 +6,11 @@
 
 import { CATALOG } from "@jackioh/cards";
 import type { LibraryView, PlayerView } from "@jackioh/shared";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  GLOSSARY,
   INSPECT_CLOSE,
   INSPECT_LIST_BACK,
   INSPECT_LIST_CARD,
@@ -20,22 +21,13 @@ import {
   INSPECT_LIST_SHEET,
   closeInspect,
 } from "../cards/index.ts";
+import { must } from "../test/stubServer.ts";
 import { HOVER_DELAY_MS, LIST_PREVIEW_MAX, LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { renderBoard } from "../test/board.tsx";
 import { card, fullBoardView } from "../test/fixtures.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
-
-function renderBoard(view: PlayerView = fullBoardView()): void {
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  );
-}
 
 function hover(element: HTMLElement): void {
   fireEvent.pointerEnter(element, { pointerType: "mouse" });
@@ -69,7 +61,7 @@ afterEach(() => {
 
 describe("a pile that holds cards can be looked through", () => {
   it("graveyards and exile piles that hold cards are buttons; a library the view does not list and an empty pile are not", () => {
-    renderBoard();
+    renderBoard(fullBoardView());
     for (const id of ["graveyard-you", "exile-you", "graveyard-opponent"]) {
       const pile = screen.getByTestId(id);
       expect(pile, id).toHaveAttribute("data-browsable", "true");
@@ -89,7 +81,7 @@ describe("a pile that holds cards can be looked through", () => {
   });
 
   it("a resting mouse shows the count and the faces, newest first, click-through; leaving hides it", () => {
-    renderBoard();
+    renderBoard(fullBoardView());
     const pile = screen.getByTestId("graveyard-you");
     fireEvent.pointerEnter(pile, { pointerType: "mouse" });
     act(() => {
@@ -124,7 +116,7 @@ describe("a pile that holds cards can be looked through", () => {
   });
 
   it("a click opens every card newest first in a dialog; a face opens large, and Back and Escape step out", () => {
-    renderBoard();
+    renderBoard(fullBoardView());
     const pile = screen.getByTestId("graveyard-you");
     pile.focus();
     fireEvent.click(pile);
@@ -153,7 +145,7 @@ describe("a pile that holds cards can be looked through", () => {
   });
 
   it("Enter or Space on the focused pile opens the dialog", () => {
-    renderBoard();
+    renderBoard(fullBoardView());
     const pile = screen.getByTestId("exile-you");
     fireEvent.keyDown(pile, { key: "Enter" });
     expect(screen.getByTestId(INSPECT_LIST_SHEET)).toHaveTextContent(nameOf("core-007"));
@@ -164,7 +156,7 @@ describe("a pile that holds cards can be looked through", () => {
   });
 
   it("a touch long-press opens the dialog once, and the tap it ends with opens no second one", () => {
-    renderBoard();
+    renderBoard(fullBoardView());
     const pile = screen.getByTestId("graveyard-opponent");
     fireEvent.pointerDown(pile, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     act(() => {
@@ -179,7 +171,7 @@ describe("a pile that holds cards can be looked through", () => {
 
   it("with hover previews off there is no preview and the pile's label is its tooltip again; a click still opens it", () => {
     writeSettings({ hoverPreviews: false });
-    renderBoard();
+    renderBoard(fullBoardView());
     const pile = screen.getByTestId("graveyard-you");
     expect(pile).toHaveAttribute("title", "Graveyard");
     hover(pile);
@@ -289,5 +281,29 @@ describe("R313 your own library, without its order", () => {
     cleanup();
     renderBoard(fullBoardView());
     expect(screen.getByTestId("library-you")).not.toHaveAttribute("data-browsable");
+  });
+});
+
+describe("R2098000 a pile dialog's opened face shows its terms' rules", () => {
+  it("R2098000 a face opened in a pile's dialog makes its terms tab stops that show their rule, and Escape closes the rule first", () => {
+    renderBoard(fullBoardView());
+    const pile = screen.getByTestId("graveyard-you");
+    pile.focus();
+    fireEvent.click(pile);
+    const cards = within(screen.getByTestId(INSPECT_LIST_SHEET)).getAllByTestId(INSPECT_LIST_CARD);
+    fireEvent.click(must(cards[1], "the pile's second card (core-003)"));
+    const detail = screen.getByTestId(INSPECT_LIST_DETAIL);
+    const term = must(
+      detail.querySelector<HTMLElement>('.cf-term[data-term="Taunt"]'),
+      "the opened face's Taunt term",
+    );
+    expect(term).toHaveAttribute("tabindex", "0");
+    act(() => term.focus());
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent(GLOSSARY.Taunt.rule);
+    expect(term).toHaveAttribute("aria-describedby", tooltip.id);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(screen.getByTestId(INSPECT_LIST_SHEET)).toBeInTheDocument();
   });
 });

@@ -65,7 +65,7 @@ function draw(face: FaceModel): HTMLElement {
   return render(<CardFace face={face} layout="full" />).container;
 }
 
-function withCatalog(node: ReactElement): ReactElement {
+function withDefs(node: ReactElement): ReactElement {
   return <CardDefsProvider defs={CATALOG}>{node}</CardDefsProvider>;
 }
 
@@ -157,7 +157,7 @@ describe("R1301 a Chinese card in a match", () => {
   it("R1301 its refs are marked by their Chinese names", () => {
     // Core #90 CN-Viral Injection names CN-Virus; its Radiant face names the Radiant one ("光辉CN病毒").
     for (const radiant of [false, true]) {
-      const root = render(withCatalog(<CardFace face={inPlay(card({ defId: "core-090", cost: 2, radiant, chinese: true }))} layout="full" />)).container;
+      const root = render(withDefs(<CardFace face={inPlay(card({ defId: "core-090", cost: 2, radiant, chinese: true }))} layout="full" />)).container;
       const refs = [...root.querySelectorAll(".cf-ref")];
       expect(refs.map((ref) => [ref.getAttribute("data-ref"), ref.getAttribute("data-ref-face"), ref.textContent])).toEqual([
         ["core-090-1", radiant ? "radiant" : "base", zh("core-090-1").name],

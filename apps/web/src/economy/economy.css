@@ -28,6 +28,7 @@
   grid-column: 2;
   font-size: 13px;
   color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+  font-variant-numeric: tabular-nums;
 }
 
 .fill-bar__track {

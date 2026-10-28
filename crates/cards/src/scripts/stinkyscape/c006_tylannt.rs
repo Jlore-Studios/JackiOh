@@ -55,8 +55,8 @@ pub fn script() -> CardScripts {
 // Cry (played): each Quest of yours on the field has its open quest completed and pays its reward at the next
 // state check, In Too Deep's included, the opponent's untouched, a line hearing back untouched (R1854001);
 // radiant 12/8, S #7 summoned first, its Cry's Discover asked (R411, R1873000), its Stage 1 opened and
-// completed". Tradable,
-// In Too Deep's line and a line hearing back are the engine's, proven by its tests (R1838000, R1854001).
+// completed". Tradable, In Too Deep's line and a line hearing back are the engine's (R1838000, R1854001),
+// each also proven here on the card.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,6 +70,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const MANA_WELL: &str = "core-006"; // (1) Field Spell.
     const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit Units of (1) Cost or less; Radiant (2).
+    const IN_TOO_DEEP: &str = "classic-090"; // (1) Field Spell, a Quest: quest 1 "Draw 2 cards" opens as it enters.
+    const JOB_APPLICATION: &str = "stinkyscape-112"; // A staged Quest whose Stage 1 reward hears back.
+    /// Job Application's Stage 1 Activate: send a card from hand in as the resume.
+    const SEND: &str = "send-resume";
+    /// In Too Deep's first quest.
+    const FIRST_QUEST: &str = "1";
 
     /// Enough to play anything a test asks.
     const MANA: i32 = 10;
@@ -123,6 +129,120 @@ mod tests {
             s.events()
                 .iter()
                 .any(|event| matches!(event, GameEvent::QuestCompleted { player: P1, .. }))
+        );
+    }
+
+    /// p1's main phase with `hand` (each turn ended by the test, R82), p2 holding a card to play.
+    fn holding(seed: &str, hand: Value) -> Scenario {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": hand, "library": filler(8), "mana": MANA },
+            "p2": { "hand": [VANILLA], "library": filler(8) },
+        }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    /// The ids of p1's hand cards of `def_id`, in hand order.
+    fn in_hand(s: &Scenario, def_id: &str) -> Vec<String> {
+        s.hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == def_id)
+            .map(|card| card.id)
+            .collect()
+    }
+
+    /// The backrow card of `def_id` p1 played: its id.
+    fn backrow_id(s: &Scenario, def_id: &str) -> String {
+        s.state()
+            .players
+            .p1
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.def_id == def_id)
+            .unwrap_or_else(|| panic!("{def_id} in p1's backrow"))
+            .id
+            .clone()
+    }
+
+    fn completed(events: &[GameEvent], id: &str) -> Vec<String> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::QuestCompleted {
+                    instance_id, quest, ..
+                } if instance_id == id => Some(quest.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r1838000_both_faces_are_tradable_in_hand_one_trade_a_turn() {
+        for radiant in [false, true] {
+            let mut s = holding(
+                "tylannt-trade",
+                json!([{ "def": ID, "radiant": radiant }, { "def": ID, "radiant": radiant }]),
+            );
+            let tylannts = in_hand(&s, ID);
+            assert!(
+                is_tradable(s.state(), s.card(tylannts[0].as_str())),
+                "radiant {radiant}: Tradable"
+            );
+            let (hand, mana) = (s.hand(P1).len(), s.state().players.p1.mana.current);
+            s.trade(tylannts[0].as_str());
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+            assert_eq!(
+                s.hand(P1).len(),
+                hand,
+                "one card went into the deck and one was drawn"
+            );
+            assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
+            assert_eq!(trades_left(s.state(), P1), 0);
+            // The turn's one Trade is made: the other Tylannt stays.
+            s.expect_refused(|s| s.trade(tylannts[1].as_str()));
+            assert!(s.hand(P1).iter().any(|card| card.id == tylannts[1]));
+            // A new turn of p1's brings a Trade back.
+            s.end_turn().end_turn();
+            s.trade(tylannts[1].as_str());
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+        }
+    }
+
+    #[test]
+    fn r1854001_in_too_deep_s_open_quest_is_completed_too() {
+        let mut s = holding("tylannt-in-too-deep", json!([IN_TOO_DEEP, ID]));
+        s.play(IN_TOO_DEEP, json!({}));
+        let tree = backrow_id(&s, IN_TOO_DEEP);
+        assert!(completed(s.events(), &tree).is_empty(), "nothing drawn yet");
+        s.play(ID, json!({ "zone": 1 }));
+        assert_eq!(completed(s.last_events(), &tree), vec![FIRST_QUEST.to_string()]);
+        // Its base face asks for its reward, as any completion of it does (R404).
+        let pending = s.state().pending.clone().expect("In Too Deep's reward prompt");
+        assert_eq!((pending.kind, pending.player_id), (PromptKind::Reward, P1));
+    }
+
+    #[test]
+    fn r1854001_a_line_hearing_back_is_untouched() {
+        let mut s = holding("tylannt-hearing-back", json!([JOB_APPLICATION, VANILLA, ID]));
+        s.play(JOB_APPLICATION, json!({}));
+        let application = backrow_id(&s, JOB_APPLICATION);
+        let resume = in_hand(&s, VANILLA)[0].clone();
+        s.activate(
+            application.as_str(),
+            json!({ "ability": SEND, "targets": pick::id(&resume) }),
+        );
+        let waiting = subsystems::quest_memory_of(s.card(application.as_str())).expect("its line");
+        assert!(waiting.hear_back.is_some(), "Stage 1's reward hears back");
+        s.play(ID, json!({ "zone": 1 }));
+        assert!(completed(s.last_events(), &application).is_empty());
+        assert_eq!(
+            subsystems::quest_memory_of(s.card(application.as_str())),
+            Some(waiting),
+            "the wait is untouched"
         );
     }
 

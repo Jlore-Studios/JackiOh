@@ -62,6 +62,7 @@ mod tests {
     const JAMMED: &str = "core-036"; // (1) Spell: "Destroy a backrow card. Lock its zone."
     const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile a permanent and a random card …"
     const TRAP: &str = "core-041"; // (1) Trap Sheepish, to set face-down.
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: "Bounce all permanents. …"
 
     /// p1, active with 10 mana, holds Ticketed (`radiant` its face) and `hand`; p2 has `field` in its
     /// unit zones and `backrow` in its backrow. No turn ends by itself.
@@ -140,6 +141,40 @@ mod tests {
                     "{seed}"
                 );
             }
+        }
+
+        #[test]
+        fn r1875001_bounced_it_releases_at_once() {
+            let mut s = board(
+                false,
+                json!([CORE_SYSTEM]),
+                json!([{ "def": VANILLA, "lane": 4 }]),
+                json!([]),
+            );
+            let vanilla = s.unit_at(P2, 4).id;
+            ticket(&mut s, &vanilla);
+            assert_eq!(held_ids(&s), vec![vanilla.clone()]);
+            s.play(CORE_SYSTEM, json!({}));
+            assert!(
+                s.hand(P1).iter().any(|card| card.def_id == ID),
+                "Ticketed Bounced to hand"
+            );
+            assert!(held_ids(&s).is_empty());
+            // It comes back after the Bounce, for its controller, summoning sick.
+            let back = s.card(vanilla.as_str()).clone();
+            assert!(
+                matches!(
+                    back.zone,
+                    Zone::Field {
+                        player: P2,
+                        row: Row::Units,
+                        ..
+                    }
+                ),
+                "{:?}",
+                back.zone
+            );
+            assert_eq!(back.summoned_turn, Some(s.state().turn), "summoning sick");
         }
 
         #[test]

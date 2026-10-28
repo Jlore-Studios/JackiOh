@@ -42,6 +42,10 @@ mod card_metrics {
 }
 pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED};
 
+/// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, and whether it reads
+/// the BUSTED or complicated lists.
+pub mod code_lines;
+
 /// SPEC §5.1's single pool source over the shipped catalog (`catalog.query`, `catalog.pool`, …).
 pub mod query;
 

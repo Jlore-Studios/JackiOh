@@ -27,7 +27,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    act_result, both, in_hand, json_of, matches_object, new_game, put, run_effect, slot,
+    act_result, both, hand_ids, in_hand, json_of, matches_object, new_game, put, run_effect, slot,
 };
 use crate::rules::fixtures::scripts::{going_long, x_bolt};
 
@@ -386,14 +386,6 @@ fn board(seed: &str) -> GameState {
     state.phase = Phase::Main;
     state.players.p1.mana = four_mana();
     state
-}
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
 }
 
 /// Past both mulligans, in p1's main phase, the way playChoices-filters.test.ts sets up.

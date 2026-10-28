@@ -19,17 +19,14 @@
 //!           exactly one of them at a time and `legal_actions`, the refusal and the view read one.
 
 use crate::config::{STARSCAPE_EDGE_TRAVELS, STARSCAPE_REWARDS, STARSCAPE_TRAVEL_MANA};
-use crate::effects::{
-    AddToHandArgs, DamageEffectArgs, DamageFlagArgs, DrawArgs, GainManaArgs, HealArgs, TargetSpec,
-    add_to_hand, damage, draw, gain_mana, heal,
-};
+use crate::effects::travel_starscape;
 use crate::rng::Rng;
 use crate::script::{
-    ActivationCost, ActivationDecl, ActivationUses, ConditionContext, Effect, HasHook, condition_hook, hook,
+    ActivationCost, ActivationDecl, ActivationUses, ConditionContext, HasHook, condition_hook, hook,
     read_hook,
 };
-use crate::state::{GameState, StarscapeMap};
-use crate::wire::{GameEvent, PlayerId, StarscapeNodeView, StarscapeReward, StarscapeView};
+use crate::state::GameState;
+use crate::wire::{PlayerId, StarscapeNodeView, StarscapeReward, StarscapeView};
 
 /// R1847002: the paid travel's ability id, the base face's only one.
 pub const STARSCAPE_TRAVEL_ABILITY: &str = "travel";
@@ -38,7 +35,7 @@ pub const STARSCAPE_FREE_TRAVEL_ABILITY: &str = "free-travel";
 
 /// R1847000: a new map, its nodes before the edge drawn uniformly from `STARSCAPE_REWARDS`, the edge
 /// last.
-fn chart(rng: &mut Rng) -> Vec<StarscapeReward> {
+pub(crate) fn chart(rng: &mut Rng) -> Vec<StarscapeReward> {
     let mut nodes: Vec<StarscapeReward> = (1..STARSCAPE_EDGE_TRAVELS)
         .filter_map(|_| rng.pick(STARSCAPE_REWARDS).map(|&(reward, _)| reward))
         .collect();
@@ -70,61 +67,6 @@ pub fn starscape_travelled_this_turn(state: &GameState, player: PlayerId) -> boo
         .starscape
         .as_ref()
         .is_some_and(|map| map.travelled_on == state.turn)
-}
-
-/// R1847000, R1847001: the running card's controller travels one node of their map, charting it first
-/// when it is absent, and takes the node's reward: at the edge, a card of `edge_def_id` to their hand.
-pub fn travel_starscape(edge_def_id: &'static str) -> Effect {
-    Effect::new("travelStarscape", move |ctx| {
-        let player = ctx.controller;
-        if !can_travel_starscape(ctx.state, player) {
-            return;
-        }
-        if ctx.state.players[player].starscape.is_none() {
-            let nodes = chart(&mut *ctx.sink.rng);
-            ctx.sink.state.players[player].starscape = Some(StarscapeMap {
-                nodes,
-                at: 0,
-                travelled_on: 0,
-            });
-        }
-        let turn = ctx.state.turn;
-        let Some(map) = ctx.sink.state.players[player].starscape.as_mut() else {
-            return;
-        };
-        map.at += 1;
-        map.travelled_on = turn;
-        let node = map.at;
-        let Some(&reward) = map.nodes.get((node - 1) as usize) else {
-            return;
-        };
-        ctx.sink
-            .events
-            .push(GameEvent::StarscapeTravelled { player, node, reward });
-        let amount = starscape_amount(reward).unwrap_or(0);
-        let effect = match reward {
-            StarscapeReward::Heal => heal(HealArgs::Amount {
-                target: TargetSpec::SelfHero,
-                amount,
-            }),
-            StarscapeReward::Draw => draw(DrawArgs {
-                count: amount,
-                player: None,
-            }),
-            StarscapeReward::Mana => gain_mana(GainManaArgs { amount, player: None }),
-            StarscapeReward::Damage => damage(DamageEffectArgs {
-                to: TargetSpec::EnemyHero,
-                amount,
-                flags: DamageFlagArgs::default(),
-            }),
-            // §2.4: a full hand burns it.
-            StarscapeReward::Edge => add_to_hand(AddToHandArgs {
-                def_id: Some(edge_def_id.to_string()),
-                ..AddToHandArgs::default()
-            }),
-        };
-        (effect.apply)(ctx);
-    })
 }
 
 /// One travel ability: Activate ♾️, no targets or modes, while a node is left (R1847001).

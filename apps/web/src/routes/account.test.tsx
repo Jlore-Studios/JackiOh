@@ -27,6 +27,7 @@ import {
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
@@ -218,9 +219,12 @@ describe("the account screen", () => {
 
     fireEvent.click(screen.getByTestId(accountTestid.retry));
     expect(screen.getByTestId(accountTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(accountTestid.loading), "panel");
     expect(screen.queryByTestId(accountTestid.retry)).toBeNull();
 
     expect(await screen.findByTestId(accountTestid.email)).toHaveTextContent("player1@example.com");
+    expect(screen.queryByTestId(accountTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading your account…")).toBeNull();
     expect(getProfile).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -369,7 +373,7 @@ describe("R1435 the username on the account page", () => {
     };
   }
 
-  it("R1435 the change field says 'Max is taken, so you’d be Max#3' for a tagged preview and 'You’d be Max' for an untagged one", async () => {
+  it("R1435 the change field says 'Max is taken, so you'd be Max#3' for a tagged preview and 'You'd be Max' for an untagged one", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     let taken = true;
     vi.mocked(previewUsername).mockImplementation((_token, name) =>
@@ -389,7 +393,7 @@ describe("R1435 the username on the account page", () => {
     const input = screen.getByTestId(usernameTestid.input);
     await userEvent.type(input, "Max");
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you’d be Max#3");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you'd be Max#3");
     }, PREVIEW);
 
     taken = false;
@@ -397,7 +401,7 @@ describe("R1435 the username on the account page", () => {
     expect(screen.queryByTestId(usernameTestid.preview), "an empty box shows no preview").toBeNull();
     await userEvent.type(input, "Max");
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You’d be Max");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You'd be Max");
     }, PREVIEW);
 
     await userEvent.click(screen.getByTestId(usernameTestid.save));

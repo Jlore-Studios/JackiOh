@@ -538,6 +538,8 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // and 8, before its sixth crystal; game 4 holds the card affordable on four turns. Re-pinned for
     // #817 (R817000), when the Quickdraw cap re-dealt the sweep's filler decks and games 1–4 hold the
     // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
+    // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
+    // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
 
     /// R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals
     #[test]
@@ -567,7 +569,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let hard = js(sweep_card(
             "core-029",
             &SweepOptions {
-                seeds: Some(5),
+                seeds: Some(8),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Hard),
@@ -1587,9 +1589,9 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
             assert!(
                 matches!(
                     def_of(None, def_id).set,
-                    SetName::Meditative | SetName::MeditativePlus
+                    SetName::Meditative | SetName::MeditativePlus | SetName::Stinkyscape
                 ),
-                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000)"
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000)"
             );
         }
         for (set, cards) in [
@@ -1605,6 +1607,19 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
                 "{banned} of the {cards} {set:?} cards banned, more than half"
             );
         }
+    }
+
+    #[test]
+    fn r1885000_the_shadow_ban_holds_at_most_stinkyscape_ban_ceiling_stinkyscape_cards() {
+        jackioh_cards::register_all();
+        let banned = SHADOW_BAN
+            .iter()
+            .filter(|(def_id, _)| def_of(None, def_id).set == SetName::Stinkyscape)
+            .count();
+        assert!(
+            banned <= STINKYSCAPE_BAN_CEILING,
+            "{banned} Stinkyscape cards banned, more than {STINKYSCAPE_BAN_CEILING} (R1885000)"
+        );
     }
 
     #[test]
@@ -1630,7 +1645,13 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
         // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // The gate holds the Stinkyscape set alone since its release (#1884), until a sweep of record
+        // measures the AI on it.
+        assert!(
+            !AI_DECK_GATED_SETS.contains(&SetName::Meditative),
+            "{AI_DECK_GATED_SETS:?}"
+        );
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
         assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");

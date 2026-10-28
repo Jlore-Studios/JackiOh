@@ -12,6 +12,9 @@
 //
 // #1991: a complete deck, while the workshop is saved, offers practice with it picked (`practicePath`,
 // worked out by DeckWorkshop).
+//
+// R2119000: Delete deck asks nothing. The workshop takes the deck off at once and holds its DELETE
+// behind an undo toast.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -39,8 +42,6 @@ import {
   DECK_CONFLICTS,
   DECK_COPY_CODE,
   DECK_DELETE,
-  DECK_DELETE_CANCEL,
-  DECK_DELETE_CONFIRM,
   DECK_DUPLICATE,
   DECK_DUPLICATE_REASON,
   DECK_DRAG_MIME,
@@ -107,6 +108,7 @@ export type DeckEditorProps = {
   /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
+  /** R2119000: at once, with no question; the workshop offers Undo. */
   onDelete: () => void;
   /** #2096: a new deck with this one's cards, portrait and picks, opened in its place. */
   onDuplicate: () => void;
@@ -138,13 +140,10 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const [refusedCardId, setRefusedCardId] = useState<string | null>(null);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
   const [codeShown, setCodeShown] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [awaitingComplete, setAwaitingComplete] = useState(false);
   const dragged = useRef<string | null>(null);
-  const keepButton = useRef<HTMLButtonElement>(null);
   const nameId = useId();
   const verdictTitleId = useId();
-  const confirmTextId = useId();
   const duplicateReasonId = useId();
 
   // Timed by the words it shows, as when it held them: saying the same again leaves its timer running.
@@ -170,11 +169,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       setStatus({ say: () => t(DECK_COMPLETE_SAVED) });
     }
   }, [awaitingComplete, saved, deck.cards.length]);
-
-  // Focus the safe answer so a stray Enter keeps the deck.
-  useEffect(() => {
-    if (confirming) keepButton.current?.focus();
-  }, [confirming]);
 
   const compared = useMemo(() => comparedDecks(compare, deck.id, decks, trios), [compare, deck.id, decks, trios]);
   const holders = useMemo(() => holdersOf(compared, limits.nameLength), [compared, limits.nameLength]);
@@ -326,7 +320,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
   const atCap = decks.length >= limits.decks;
-  const triosNamingIt = inTrios.length;
   const conflictNames = joinNames([...new Set([...conflicts.values()].map((holder) => holder.name))]);
   const detail: BrowserDetail | null =
     detailCardId === null
@@ -471,7 +464,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               </ul>
             )}
             {compared.length === 0 ? null : (
-              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can’t be added here.")}</p>
+              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can't be added here.")}</p>
             )}
             {conflicts.size === 0 ? null : (
               <p className="ws-conflicts" data-testid={DECK_CONFLICTS} data-count={String(conflicts.size)}>
@@ -512,7 +505,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               ))}
             </ul>
             {collection === null ? (
-              <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
+              <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
             ) : null}
           </section>
 
@@ -525,6 +518,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 type="button"
                 className="ws-action"
                 data-testid={DECK_TO_PRACTICE}
+                data-route={practicePath}
                 aria-label={t("Practice with this deck")}
                 onClick={() => {
                   navigate(practicePath);
@@ -550,10 +544,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               type="button"
               className="ws-action ws-action--danger"
               data-testid={DECK_DELETE}
-              aria-expanded={confirming}
-              onClick={() => {
-                setConfirming(true);
-              }}
+              onClick={onDelete}
             >
               {t("Delete deck")}
             </button>
@@ -576,33 +567,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 }}
               />
             </label>
-          ) : null}
-          {confirming ? (
-            <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
-              <p id={confirmTextId}>
-                {triosNamingIt === 0
-                  ? t("Delete “{deck}”? This can’t be undone.", { deck: label })
-                  : triosNamingIt === 1
-                    ? t("Delete “{deck}”? Its slot in {count} trio will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })
-                    : t("Delete “{deck}”? Its slot in {count} trios will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })}
-              </p>
-              <div className="ws-confirm-actions">
-                <button type="button" className="ws-action ws-action--danger" data-testid={DECK_DELETE_CONFIRM} onClick={onDelete}>
-                  {t("Delete")}
-                </button>
-                <button
-                  ref={keepButton}
-                  type="button"
-                  className="ws-action"
-                  data-testid={DECK_DELETE_CANCEL}
-                  onClick={() => {
-                    setConfirming(false);
-                  }}
-                >
-                  {t("Keep it")}
-                </button>
-              </div>
-            </div>
           ) : null}
         </DeckSidebar>
 

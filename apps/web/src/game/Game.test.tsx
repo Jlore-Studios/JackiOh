@@ -410,6 +410,28 @@ describe("a replay board (#511)", () => {
     expect(screen.getByTestId("game")).toHaveAttribute("data-replay", "true");
   });
 
+  it("R2211000 a replay board with replayPrompt draws the open mulligan read-only and folded, and no click sends anything", () => {
+    const onAction = vi.fn();
+    render(<Game view={mulligan()} legal={[]} onAction={onAction} replay replayPrompt />);
+
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "mulligan");
+    expect(modal).toHaveAttribute("data-read-only", "true");
+    expect(modal).toHaveAttribute("data-collapsed", "true");
+    expect(document.querySelector("[data-glow]")).toBeNull();
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-peek"));
+    const options = [...document.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']")];
+    expect(options.length).toBeGreaterThan(0);
+    for (const option of options) {
+      expect(option).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(option);
+    }
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("a replay board sends no \"End turn automatically\" preference where a live one does", () => {
     // The step's view says the engine ends turns automatically; the player's setting says not to.
     act(() => {

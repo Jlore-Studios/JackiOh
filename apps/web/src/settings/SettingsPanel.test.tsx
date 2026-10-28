@@ -83,7 +83,7 @@ describe("R1758000 the settings dialog's notice of a failed account save", () =>
     render(<Screen account={ready("p1")} api={api} />);
     await flush();
     expect(readSettingsSyncState().phase).toBe("error");
-    expect(notice()).toHaveTextContent("Settings didn’t save to your account.");
+    expect(notice()).toHaveTextContent("Settings didn't save to your account.");
     expect(notice()?.closest('[role="tabpanel"]')).toBeNull();
     expect(screen.getByTestId("settings-sync-retry")).toHaveTextContent("Try again");
 

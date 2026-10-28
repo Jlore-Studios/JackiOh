@@ -11,15 +11,17 @@
 // The client renders them and decides nothing (CLAUDE.md rule 7).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
 
 import { closeInspect } from "../cards/index.ts";
+import { createSoundDirector } from "../audio/director.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
+import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import type { PingKind, PingTarget } from "../net/duos.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
@@ -27,8 +29,17 @@ import { baseView, card, emptySide, opponentModifiers, unit, withEvents, yourMod
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
+import { DUOS_BOTH_KEY } from "./config.ts";
 import { DuosChromeContext, type DuosChrome, type DuosPlayAgain } from "./context.ts";
 import { DuosBoard, type DuosBoardProps } from "./DuosBoard.tsx";
+
+vi.mock("../audio/director.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../audio/director.ts")>();
+  return {
+    ...actual,
+    createSoundDirector: vi.fn(() => ({ onView: vi.fn(), onEntryStart: vi.fn(), onIdle: vi.fn() })),
+  };
+});
 
 type ReceivedPing = DuosBoardProps["pings"][number];
 
@@ -37,6 +48,9 @@ const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
 const ID = {
   portal: "duos-portal",
+  both: "duos-both",
+  boardOwn: "duos-board-own",
+  boardTeammate: "duos-board-teammate",
   pass: "duos-pass",
   pool: "duos-pool",
   ownHp: "duos-own-hp",
@@ -44,6 +58,8 @@ const ID = {
   pingWheel: "duos-ping-wheel",
   pingMarker: "duos-ping-marker",
   round: "duos-round",
+  lifeStrip: "duos-life-strip",
+  concede: "duos-concede",
   ping: (kind: PingKind): string => `duos-ping-${kind}`,
 } as const;
 
@@ -183,7 +199,7 @@ type Board = {
   rerender: (over: Partial<DuosBoardProps>) => void;
 };
 
-function renderBoard(over: Partial<DuosBoardProps> = {}, chrome: DuosChrome | null = null): Board {
+function renderDuosBoard(over: Partial<DuosBoardProps> = {}, chrome: DuosChrome | null = null): Board {
   const onAction = vi.fn<(body: DuosActionBody) => void>();
   const onPing = vi.fn<(ping: PingKind, target: PingTarget) => void>();
   const base: DuosBoardProps = { view: duosView(), legal: [], onAction, pings: [], onPing, error: null, jloreCapped: false };
@@ -235,6 +251,24 @@ function flipPortal(): void {
   });
 }
 
+function toggleBoth(): void {
+  fireEvent.click(screen.getByTestId(ID.both));
+  act(() => {
+    vi.advanceTimersByTime(0);
+  });
+}
+
+/** jsdom has no `document.elementFromPoint`, which the drop reads on release to find its target:
+ * stand one in that always answers `target`, and give back what restores the document. */
+function pointAt(target: Element): () => void {
+  const own = Object.getOwnPropertyDescriptor(document, "elementFromPoint");
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  return () => {
+    if (own === undefined) Reflect.deleteProperty(document, "elementFromPoint");
+    else Object.defineProperty(document, "elementFromPoint", own);
+  };
+}
+
 /**
  * Bring up a control that lives "on a hovered/inspected card": a mouse hover, then a touch long-press,
  * then a right-click, then a plain click, stopping as soon as the control is on the page.
@@ -267,32 +301,6 @@ function reveal(target: HTMLElement, id: string): HTMLElement | null {
   return now();
 }
 
-/** If jsdom lacks `PointerEvent`, testing-library drops `pointerType`; keep it (as inspect.test.tsx does). */
-function ensurePointerEvent(): void {
-  const win = document.defaultView;
-  if (win === null) return;
-  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
-  if (probe !== null && probe.pointerType === "touch") return;
-  class TestPointerEvent extends win.MouseEvent {
-    readonly pointerType: string;
-    readonly pointerId: number;
-    readonly isPrimary: boolean;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerType = init.pointerType ?? "";
-      this.pointerId = init.pointerId ?? 1;
-      this.isPrimary = init.isPrimary ?? true;
-    }
-  }
-  for (const target of [win, globalThis]) {
-    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
-  }
-}
-
-beforeAll(() => {
-  ensurePointerEvent();
-});
-
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -311,7 +319,7 @@ afterEach(() => {
 
 describe("B61 the own duel and the life strip", () => {
   it("B61 renders the board for the seat's own duel: its own hand, not the teammate's", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(screen.getByTestId("game")).toBeInTheDocument();
     expect(screen.getByTestId(testid.handCard("h1"))).toBeInTheDocument();
     expect(screen.getByTestId(testid.handCard("h2"))).toBeInTheDocument();
@@ -319,7 +327,7 @@ describe("B61 the own duel and the life strip", () => {
   });
 
   it("B61 the board's moves go out as {kind: \"duel\", body}", () => {
-    const board = renderBoard({ legal: [END_TURN] });
+    const board = renderDuosBoard({ legal: [END_TURN] });
     const endTurn = screen.getByTestId(testid.endTurn);
     expect(endTurn).not.toBeDisabled();
     fireEvent.click(endTurn);
@@ -327,7 +335,7 @@ describe("B61 the own duel and the life strip", () => {
   });
 
   it("B61 a move legal does not hold is not offered: End turn stays disabled and sends nothing", () => {
-    const board = renderBoard({ legal: [PASS_H1] });
+    const board = renderDuosBoard({ legal: [PASS_H1] });
     const endTurn = screen.getByTestId(testid.endTurn);
     expect(endTurn).toBeDisabled();
     fireEvent.click(endTurn);
@@ -335,19 +343,19 @@ describe("B61 the own duel and the life strip", () => {
   });
 
   it("B61 the life strip shows the seat's own HP and its team's pool", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(anyShows(ID.ownHp, OWN_HP), `own HP ${String(OWN_HP)} in ${JSON.stringify(texts(ID.ownHp))}`).toBe(true);
     expect(anyShows(ID.pool, TEAM_POOL), `team pool in ${JSON.stringify(texts(ID.pool))}`).toBe(true);
   });
 
   it("B61 the life strip shows the enemy team's pool and own HP too", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(anyShows(ID.pool, ENEMY_POOL), `enemy pool in ${JSON.stringify(texts(ID.pool))}`).toBe(true);
     expect(anyShows(ID.ownHp, ACROSS_HP), `the enemy across's own HP in ${JSON.stringify(texts(ID.ownHp))}`).toBe(true);
   });
 
   it("B61 once the seat is spent its own bar gives way to the pool: no own-HP bar reads 0", () => {
-    renderBoard({ view: duosView({ spent: true }) });
+    renderDuosBoard({ view: duosView({ spent: true }) });
     for (const text of texts(ID.ownHp)) {
       expect(showsNumber(text, 0), `a spent seat's own bar still drawn: ${text}`).toBe(false);
     }
@@ -355,7 +363,7 @@ describe("B61 the own duel and the life strip", () => {
   });
 
   it("B61 seat a2's board shows its own HP and its team's pool as well", () => {
-    renderBoard({ view: duosView({ seat: "a2" }) });
+    renderDuosBoard({ view: duosView({ seat: "a2" }) });
     expect(anyShows(ID.ownHp, OWN_HP)).toBe(true);
     expect(anyShows(ID.pool, TEAM_POOL)).toBe(true);
   });
@@ -367,7 +375,7 @@ describe("B61 the own duel and the life strip", () => {
 
 describe("B62 the pass control", () => {
   it("B62 on a hand card legal lets pass, duos-pass sends {kind: \"pass\", instanceId}", () => {
-    const board = renderBoard({ legal: [PASS_H1, END_TURN] });
+    const board = renderDuosBoard({ legal: [PASS_H1, END_TURN] });
     const pass = must(reveal(screen.getByTestId(testid.handCard("h1")), ID.pass), "the pass control on h1");
     expect(usable(pass)).toBe(true);
     fireEvent.click(pass);
@@ -376,7 +384,7 @@ describe("B62 the pass control", () => {
   });
 
   it("B62 the pass control shows the pass's cost and the passes left", () => {
-    renderBoard({ legal: [PASS_H1] });
+    renderDuosBoard({ legal: [PASS_H1] });
     const pass = must(reveal(screen.getByTestId(testid.handCard("h1")), ID.pass), "the pass control on h1");
     const scope = pass.parentElement ?? pass;
     const words = `${scope.textContent ?? ""} ${pass.getAttribute("aria-label") ?? ""} ${pass.getAttribute("title") ?? ""}`;
@@ -385,14 +393,14 @@ describe("B62 the pass control", () => {
   });
 
   it("B62 a hand card legal does not let pass sends no pass for it", () => {
-    const board = renderBoard({ legal: [PASS_H1] });
+    const board = renderDuosBoard({ legal: [PASS_H1] });
     const pass = reveal(screen.getByTestId(testid.handCard("h2")), ID.pass);
     if (pass !== null && usable(pass)) fireEvent.click(pass);
     expect(passesSent(board).some((body) => body.kind === "pass" && body.instanceId === "h2")).toBe(false);
   });
 
   it("B62 with no pass in legal (ended, out of passes or mana) the control sends nothing", () => {
-    const board = renderBoard({ legal: [END_TURN] });
+    const board = renderDuosBoard({ legal: [END_TURN] });
     const pass = reveal(screen.getByTestId(testid.handCard("h1")), ID.pass);
     if (pass !== null) {
       expect(usable(pass)).toBe(false);
@@ -402,7 +410,7 @@ describe("B62 the pass control", () => {
   });
 
   it("B62 a pass legal names for a card not in the hand is not drawn on another card", () => {
-    const board = renderBoard({ legal: [{ kind: "pass", instanceId: "h9" }] });
+    const board = renderDuosBoard({ legal: [{ kind: "pass", instanceId: "h9" }] });
     for (const id of ["h1", "h2"]) {
       const pass = reveal(screen.getByTestId(testid.handCard(id)), ID.pass);
       if (pass !== null && usable(pass)) fireEvent.click(pass);
@@ -412,7 +420,7 @@ describe("B62 the pass control", () => {
   });
 
   it("B62 with legal empty no pass is offered on any hand card", () => {
-    const board = renderBoard({ legal: [] });
+    const board = renderDuosBoard({ legal: [] });
     for (const id of ["h1", "h2"]) {
       const pass = reveal(screen.getByTestId(testid.handCard(id)), ID.pass);
       if (pass !== null) {
@@ -431,7 +439,7 @@ describe("B62 the pass control", () => {
 
 describe("B63 the portal", () => {
   it("B63 the portal flips the board to the teammate's duel, and back", () => {
-    renderBoard({ legal: [END_TURN] });
+    renderDuosBoard({ legal: [END_TURN] });
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
     expect(screen.queryByTestId(testid.handCard("h1"))).toBeNull();
@@ -441,7 +449,7 @@ describe("B63 the portal", () => {
   });
 
   it("B63 flipping the portal is not a move: it sends nothing", () => {
-    const board = renderBoard({ legal: [END_TURN, PASS_H1] });
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
     const before = board.onAction.mock.calls.length;
     flipPortal();
     flipPortal();
@@ -450,7 +458,7 @@ describe("B63 the portal", () => {
   });
 
   it("B63 the teammate's duel is read-only: no move is offered and nothing is sent", () => {
-    const board = renderBoard({ legal: [END_TURN, PASS_H1] });
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
     flipPortal();
     const before = board.onAction.mock.calls.length;
     const endTurn = screen.queryByTestId(testid.endTurn);
@@ -467,7 +475,7 @@ describe("B63 the portal", () => {
   });
 
   it("B63 the teammate's duel offers no pass, even with passes in legal", () => {
-    const board = renderBoard({ legal: [END_TURN, PASS_H1] });
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
     flipPortal();
     const before = board.onAction.mock.calls.length;
     const pass = reveal(screen.getByTestId(testid.handCard("t1")), ID.pass);
@@ -476,7 +484,7 @@ describe("B63 the portal", () => {
   });
 
   it("B63 the teammate strip shows the teammate's HP, mana and hand count, on both views", () => {
-    renderBoard();
+    renderDuosBoard();
     for (const view of ["own", "teammate"]) {
       const strip = screen.getByTestId(ID.teammateStrip);
       const text = strip.textContent ?? "";
@@ -488,7 +496,7 @@ describe("B63 the portal", () => {
   });
 
   it("B63 the teammate strip shows whether the teammate has ended", () => {
-    const board = renderBoard({ view: duosView({ ended: [false, false] }) });
+    const board = renderDuosBoard({ view: duosView({ ended: [false, false] }) });
     const playing = screen.getByTestId(ID.teammateStrip).outerHTML;
     board.rerender({ view: duosView({ ended: [false, true] }) });
     const ended = screen.getByTestId(ID.teammateStrip).outerHTML;
@@ -496,12 +504,12 @@ describe("B63 the portal", () => {
   });
 
   it("B63 \"Waiting for your teammate\" shows after the seat has ended", () => {
-    renderBoard({ view: duosView({ ended: [true, false] }) });
+    renderDuosBoard({ view: duosView({ ended: [true, false] }) });
     expect(document.body).toHaveTextContent(/waiting for your teammate/i);
   });
 
   it("B63 no waiting notice while the seat has not ended", () => {
-    renderBoard({ view: duosView({ ended: [false, true] }) });
+    renderDuosBoard({ view: duosView({ ended: [false, true] }) });
     expect(document.body).not.toHaveTextContent(/waiting for your teammate/i);
   });
 
@@ -509,7 +517,7 @@ describe("B63 the portal", () => {
     // A1's round turn ended as it began: duel 0 is already on B1's turn, a turn ahead of the round,
     // while A1 is still the round seat there, ended.
     const ahead = duosView({ ended: [true, false] });
-    renderBoard({ view: { ...ahead, own: { ...ahead.own, active: "p2" } } });
+    renderDuosBoard({ view: { ...ahead, own: { ...ahead.own, active: "p2" } } });
     expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
     expect(document.body).toHaveTextContent(/waiting for your teammate/i);
   });
@@ -517,7 +525,7 @@ describe("B63 the portal", () => {
   it("R1168001 the teammate strip says the teammate is playing only while the round is theirs", () => {
     // An extra-turn round: A1 plays on in duel 0 while duel 1's round is B2's, though A2 is that
     // duel's active player for nothing it may do.
-    renderBoard({ view: duosView({ roundSeats: ["a1", "b2"] }) });
+    renderDuosBoard({ view: duosView({ roundSeats: ["a1", "b2"] }) });
     expect(screen.getByTestId(ID.teammateStrip).querySelector(".duos-teammate__turn")).toHaveAttribute(
       "data-state",
       "waiting",
@@ -532,12 +540,12 @@ describe("B63 the portal", () => {
 
 describe("B64 the ping wheel", () => {
   it("B64 no card inspected, no ping wheel", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(screen.queryByTestId(ID.pingWheel)).toBeNull();
   });
 
   it("B64 the wheel on an inspected card offers exactly the five pings", () => {
-    renderBoard();
+    renderDuosBoard();
     const wheel = must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
     const offered = within(wheel)
       .queryAllByTestId(/^duos-ping-/)
@@ -547,34 +555,34 @@ describe("B64 the ping wheel", () => {
   });
 
   it("B64 a ping on an enemy unit names its duel, side and 0-based lane", () => {
-    const board = renderBoard();
+    const board = renderDuosBoard();
     const wheel = must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
     fireEvent.click(within(wheel).getByTestId(ID.ping("killThis")));
     expect(board.onPing).toHaveBeenCalledWith("killThis", { duel: 0, at: "unit", side: "p2", lane: 2 });
   });
 
   it("B64 a ping on the seat's own hand card names the hand side and index", () => {
-    const board = renderBoard();
+    const board = renderDuosBoard();
     const wheel = must(reveal(screen.getByTestId(testid.handCard("h2")), ID.pingWheel), "the ping wheel on h2");
     fireEvent.click(within(wheel).getByTestId(ID.ping("thumbsUp")));
     expect(board.onPing).toHaveBeenCalledWith("thumbsUp", { duel: 0, at: "hand", side: "p1", index: 1 });
   });
 
   it("B64 seat a2's pings name duel 1, its own duel", () => {
-    const board = renderBoard({ view: duosView({ seat: "a2" }) });
+    const board = renderDuosBoard({ view: duosView({ seat: "a2" }) });
     const wheel = must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
     fireEvent.click(within(wheel).getByTestId(ID.ping("careful")));
     expect(board.onPing).toHaveBeenCalledWith("careful", { duel: 1, at: "unit", side: "p2", lane: 2 });
   });
 
   it("B64 opening the wheel sends no ping until a kind is picked", () => {
-    const board = renderBoard();
+    const board = renderDuosBoard();
     must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
     expect(board.onPing).not.toHaveBeenCalled();
   });
 
   it("B64 a ping is never an action: pinging sends nothing through onAction", () => {
-    const board = renderBoard({ legal: [END_TURN, PASS_H1] });
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
     const before = board.onAction.mock.calls.length;
     const wheel = must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
     for (const kind of PING_KINDS) {
@@ -595,17 +603,17 @@ describe("B64 received pings", () => {
   const ON_E2: PingTarget = { duel: 1, at: "unit", side: "p2", lane: 0 };
 
   it("B64 no ping received, no marker", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(screen.queryByTestId(ID.pingMarker)).toBeNull();
   });
 
   it("B64 a received ping marks its card", () => {
-    renderBoard({ pings: [ping(ON_E1)] });
+    renderDuosBoard({ pings: [ping(ON_E1)] });
     expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
   });
 
   it("B64 the mark stays for PING_SHOW_MS and then goes", () => {
-    renderBoard({ pings: [ping(ON_E1)] });
+    renderDuosBoard({ pings: [ping(ON_E1)] });
     act(() => {
       vi.advanceTimersByTime(Math.floor(PING_SHOW_MS / 2));
     });
@@ -617,24 +625,24 @@ describe("B64 received pings", () => {
   });
 
   it("B64 a ping older than PING_SHOW_MS marks nothing", () => {
-    renderBoard({ pings: [ping(ON_E1, PING_SHOW_MS + 1_000)] });
+    renderDuosBoard({ pings: [ping(ON_E1, PING_SHOW_MS + 1_000)] });
     expect(screen.queryByTestId(ID.pingMarker)).toBeNull();
   });
 
   it("B64 a ping on a hand card of the seat's own marks it too", () => {
-    renderBoard({ pings: [ping({ duel: 0, at: "hand", side: "p1", index: 0 }, 0, "thumbsUp")] });
+    renderDuosBoard({ pings: [ping({ duel: 0, at: "hand", side: "p1", index: 0 }, 0, "thumbsUp")] });
     expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
   });
 
   it("B64 a ping on the teammate's duel marks its card on the portal's view", () => {
-    renderBoard({ pings: [ping(ON_E2, 0, "killThis")] });
+    renderDuosBoard({ pings: [ping(ON_E2, 0, "killThis")] });
     flipPortal();
     expect(screen.getByTestId(testid.card("e2"))).toBeInTheDocument();
     expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
   });
 
   it("B64 a ping arriving after the board is up marks its card", () => {
-    const board = renderBoard();
+    const board = renderDuosBoard();
     expect(screen.queryByTestId(ID.pingMarker)).toBeNull();
     board.rerender({ pings: [ping(ON_E1)] });
     expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
@@ -650,19 +658,19 @@ describe("#965 the replay door and the board's replay mode", () => {
 
   it("#965 the result panel offers Watch the replay when the route hangs it on the board, and it calls it", () => {
     const onWatchReplay = vi.fn<() => void>();
-    renderBoard({ view: OVER }, { onWatchReplay });
+    renderDuosBoard({ view: OVER }, { onWatchReplay });
     fireEvent.click(screen.getByTestId("duos-result-replay"));
     expect(onWatchReplay).toHaveBeenCalledTimes(1);
   });
 
   it("#965 no replay door without one, as on /dev/duos", () => {
-    renderBoard({ view: OVER });
+    renderDuosBoard({ view: OVER });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("duos-result-replay")).toBeNull();
   });
 
   it("#965 replay mode offers nothing live, even with moves in legal", () => {
-    const board = renderBoard({
+    const board = renderDuosBoard({
       replay: true,
       view: duosView({ ended: [true, false] }),
       legal: [END_TURN, PASS_H1, { kind: "concede" }],
@@ -683,13 +691,13 @@ describe("#965 the replay door and the board's replay mode", () => {
   });
 
   it("#965 replay mode draws no result panel over the last step; the rail names the team's result", () => {
-    renderBoard({ replay: true, view: OVER }, { onWatchReplay: vi.fn<() => void>() });
+    renderDuosBoard({ replay: true, view: OVER }, { onWatchReplay: vi.fn<() => void>() });
     expect(screen.queryByTestId("duos-result")).toBeNull();
     expect(screen.getByTestId("duos-round")).toHaveTextContent("Your team lost");
   });
 
   it("#965 the portal still shows the teammate's duel in replay mode", () => {
-    renderBoard({ replay: true });
+    renderDuosBoard({ replay: true });
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
     expect(screen.queryByTestId(testid.handCard("h1"))).toBeNull();
@@ -704,12 +712,12 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
 
   it("R1483000 the result panel names the daily cap only for a capped seat", () => {
-    renderBoard({ view: OVER, jloreCapped: true });
+    renderDuosBoard({ view: OVER, jloreCapped: true });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.getByTestId("duos-result-jlore")).toHaveTextContent("Daily Jlore reached");
     cleanup();
 
-    renderBoard({ view: OVER, jloreCapped: false });
+    renderDuosBoard({ view: OVER, jloreCapped: false });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("duos-result-jlore")).toBeNull();
   });
@@ -733,7 +741,7 @@ describe("R169 the modifier list on the co-op board", () => {
       },
       teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
     };
-    renderBoard({ view });
+    renderDuosBoard({ view });
 
     const chip = screen.getByTestId(modifierListTestid.chip);
     expect(chip, "the teammate's duel is no part of the count").toHaveAttribute("data-count", "3");
@@ -753,7 +761,7 @@ describe("R169 the modifier list on the co-op board", () => {
       ...base,
       teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
     };
-    renderBoard({ view });
+    renderDuosBoard({ view });
     expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
   });
 });
@@ -789,7 +797,7 @@ describe("#1664 the result panel plays what the game paid the seat's person", ()
       window.removeEventListener("jackioh:wallet-changed", onChanged);
     });
 
-    const board = renderBoard({ view: OVER });
+    const board = renderDuosBoard({ view: OVER });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("xp-reveal")).toBeNull();
     expect(announced).toBe(0);
@@ -828,12 +836,12 @@ describe("#1755 the result panel takes the focus and opens again", () => {
   };
 
   it("#1755 the panel takes the focus on its first way on as it comes in", () => {
-    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
     expect(screen.getByTestId("duos-result-board")).toHaveFocus();
   });
 
   it("#1755 View the board still dismisses to the board, and the rail's Result takes the focus", () => {
-    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
     fireEvent.click(screen.getByTestId("duos-result-board"));
     expect(screen.queryByTestId("duos-result")).toBeNull();
     expect(screen.getByTestId("game")).toBeInTheDocument();
@@ -842,7 +850,7 @@ describe("#1755 the result panel takes the focus and opens again", () => {
 
   it("#1755 Result opens the panel again, its replay door and XP reveal with it, and the panel takes the focus", () => {
     const onWatchReplay = vi.fn<() => void>();
-    renderBoard({ view: OVER, economy: ECONOMY }, { onWatchReplay });
+    renderDuosBoard({ view: OVER, economy: ECONOMY }, { onWatchReplay });
     fireEvent.click(screen.getByTestId("duos-result-board"));
     expect(screen.queryByTestId("xp-reveal")).toBeNull();
 
@@ -857,7 +865,7 @@ describe("#1755 the result panel takes the focus and opens again", () => {
   });
 
   it("#1755 the rail's Result is on the teammate's board too", () => {
-    renderBoard({ view: OVER });
+    renderDuosBoard({ view: OVER });
     fireEvent.click(screen.getByTestId("duos-result-board"));
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
@@ -866,15 +874,15 @@ describe("#1755 the result panel takes the focus and opens again", () => {
   });
 
   it("#1755 no Result before the game ends, while the panel is up, or in replay mode", () => {
-    renderBoard();
+    renderDuosBoard();
     expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
     cleanup();
 
-    renderBoard({ view: OVER });
+    renderDuosBoard({ view: OVER });
     expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
     cleanup();
 
-    renderBoard({ replay: true, view: OVER });
+    renderDuosBoard({ replay: true, view: OVER });
     expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
   });
 });
@@ -893,7 +901,7 @@ describe("R2092000 Play again on the result panel", () => {
 
   it("R2092000 the panel draws Play again beside Watch the replay when the route hangs it, and Back to Play together is no longer primary", () => {
     const offer = vi.fn<() => void>();
-    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offer }) });
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offer }) });
     const buttons = within(screen.getByTestId("duos-result")).getAllByRole("button");
     expect(buttons.map((button) => button.getAttribute("data-testid"))).toEqual([
       "duos-result-board",
@@ -911,19 +919,19 @@ describe("R2092000 Play again on the result panel", () => {
   });
 
   it("R2092000 while the offer is in flight Play again is disabled and busy", () => {
-    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offering: true }) });
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ offering: true }) });
     const play = screen.getByTestId("duos-result-again");
     expect(play).toBeDisabled();
     expect(play).toHaveAttribute("aria-busy", "true");
   });
 
   it("R2092000 no Play again before the server's read, and none once the teammate has left", () => {
-    renderBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ status: null }) });
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ status: null }) });
     expect(screen.queryByTestId("duos-result-again")).toBeNull();
     expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
     cleanup();
 
-    renderBoard(
+    renderDuosBoard(
       { view: OVER },
       { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain: again({ status: { ...HERE, teammateHere: false } }) },
     );
@@ -934,12 +942,12 @@ describe("R2092000 Play again on the result panel", () => {
   });
 
   it("R2092000 no Play again in the co-op replay, nor without one, as on /dev/duos", () => {
-    renderBoard({ replay: true, view: OVER }, { playAgain: again() });
+    renderDuosBoard({ replay: true, view: OVER }, { playAgain: again() });
     expect(screen.queryByTestId("duos-result-again")).toBeNull();
     expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
     cleanup();
 
-    renderBoard({ view: OVER }, { onLeave: vi.fn() });
+    renderDuosBoard({ view: OVER }, { onLeave: vi.fn() });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("duos-result-again")).toBeNull();
     expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
@@ -956,7 +964,7 @@ describe("#1146 the team result waits for the own duel's lethal burst", () => {
   const LETHAL: DuosView["result"] = { outcome: "win", winner: "a", reason: "duelResult" };
 
   it("#1146 holds the panel while the burst plays, and opens it once the board settles", async () => {
-    const board = renderBoard({ view: { ...duosView(), own: withEvents(ownDuel(), START) } });
+    const board = renderDuosBoard({ view: { ...duosView(), own: withEvents(ownDuel(), START) } });
     expect(screen.queryByTestId("duos-result")).toBeNull();
 
     board.rerender({
@@ -980,5 +988,232 @@ describe("#1146 the team result waits for the own duel's lethal burst", () => {
     });
     expect(screen.queryByTestId("animation-queue")).toBeNull();
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R2095000: Both boards, the teammate's duel beside the own one
+// ---------------------------------------------------------------------------------------------
+
+describe("R2095000 both boards render side by side with the teammate's read-only", () => {
+  it("R2095000 with the toggle on, both boards render, the teammate's inside duos-board-teammate", () => {
+    renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    expect(screen.getAllByTestId("game")).toHaveLength(1);
+    toggleBoth();
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    const own = screen.getByTestId(ID.boardOwn);
+    const mate = screen.getByTestId(ID.boardTeammate);
+    expect(own).toHaveClass("duos-board-own");
+    expect(mate).toHaveClass("duos-board-teammate");
+    expect(within(own).getByTestId(testid.handCard("h1"))).toBeInTheDocument();
+    expect(within(mate).getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+    expect(within(own).queryByTestId(testid.handCard("t1"))).toBeNull();
+    expect(within(mate).queryByTestId(testid.handCard("h1"))).toBeNull();
+  });
+
+  it("R2095000 the own board still sends duel moves and passes", () => {
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    toggleBoth();
+    const own = screen.getByTestId(ID.boardOwn);
+    fireEvent.click(within(own).getByTestId(testid.endTurn));
+    expect(board.onAction).toHaveBeenCalledWith(END_TURN);
+    const pass = must(reveal(within(own).getByTestId(testid.handCard("h1")), ID.pass), "the pass control on h1");
+    fireEvent.click(pass);
+    expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
+  });
+
+  it("R2095000 the teammate's board sends nothing", () => {
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    toggleBoth();
+    const before = board.onAction.mock.calls.length;
+    const mate = screen.getByTestId(ID.boardTeammate);
+    const endTurn = within(mate).queryByTestId(testid.endTurn);
+    if (endTurn !== null) {
+      expect(endTurn).toBeDisabled();
+      fireEvent.click(endTurn);
+    }
+    fireEvent.click(within(mate).getByTestId(testid.handCard("t1")));
+    fireEvent.click(within(mate).getByTestId(testid.card("e2")));
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(reveal(within(mate).getByTestId(testid.handCard("t1")), ID.pass)).toBeNull();
+    expect(board.onAction.mock.calls.length).toBe(before);
+  });
+});
+
+describe("R2095000 the Both boards choice persists per device and starts off", () => {
+  it("R2095000 the choice persists per device and starts off with nothing stored", () => {
+    renderDuosBoard({ legal: [END_TURN] });
+    expect(screen.getAllByTestId("game")).toHaveLength(1);
+    expect(screen.getByTestId(ID.both)).toHaveAttribute("aria-pressed", "false");
+    toggleBoth();
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    expect(window.localStorage.getItem(DUOS_BOTH_KEY)).toBe("1");
+    cleanup();
+
+    renderDuosBoard({ legal: [END_TURN] });
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    expect(screen.getByTestId(ID.both)).toHaveAttribute("aria-pressed", "true");
+    window.localStorage.clear();
+    cleanup();
+
+    renderDuosBoard({ legal: [END_TURN] });
+    expect(screen.getAllByTestId("game")).toHaveLength(1);
+    expect(screen.getByTestId(ID.both)).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+describe("R2095000 pings and passes on the teammate's board", () => {
+  it("R2095000 a ping made on the teammate's board is sent and marked there", () => {
+    const board = renderDuosBoard();
+    toggleBoth();
+    const mate = screen.getByTestId(ID.boardTeammate);
+    const wheel = must(reveal(within(mate).getByTestId(testid.card("e2")), ID.pingWheel), "the ping wheel on e2");
+    expect(mate.contains(wheel)).toBe(true);
+    fireEvent.click(within(wheel).getByTestId(ID.ping("killThis")));
+    expect(board.onPing).toHaveBeenCalledWith("killThis", { duel: 1, at: "unit", side: "p2", lane: 0 });
+    board.rerender({
+      pings: [{ from: "a2", ping: "killThis", target: { duel: 1, at: "unit", side: "p2", lane: 0 }, at: Date.now() }],
+    });
+    expect(within(mate).getByTestId(ID.pingMarker)).toBeInTheDocument();
+    expect(within(screen.getByTestId(ID.boardOwn)).queryByTestId(ID.pingMarker)).toBeNull();
+  });
+
+  it("R2095000 dragging a listed pass onto the teammate's board passes it, an unlisted card sends nothing", () => {
+    const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    toggleBoth();
+    const mate = screen.getByTestId(ID.boardTeammate);
+    const restore = pointAt(mate);
+    try {
+      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
+      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(start, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+      expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
+    } finally {
+      restore();
+    }
+    const passesBefore = passesSent(board).length;
+    board.rerender({ legal: [END_TURN] });
+    const restoreUnlisted = pointAt(screen.getByTestId(ID.boardTeammate));
+    try {
+      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
+      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(start, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+    } finally {
+      restoreUnlisted();
+    }
+    expect(passesSent(board)).toHaveLength(passesBefore);
+  });
+});
+
+describe("R2095000 a drop on the teammate's board is no drop on the own board", () => {
+  it("R2095000 dragging a card onto the teammate's lane passes it and plays nothing on the own board", () => {
+    const play: DuosActionBody = {
+      kind: "duel",
+      body: { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+    };
+    const board = renderDuosBoard({ legal: [END_TURN, play, PASS_H1] });
+    toggleBoth();
+    const mate = within(screen.getByTestId(ID.boardTeammate));
+    // The teammate's board draws the own board's test ids: its lane 3 must not take the own card.
+    const lane = mate.getByTestId("zone-you-units-3");
+    const restore = pointAt(screen.getByTestId(ID.boardTeammate));
+    document.elementsFromPoint = (() => [lane, screen.getByTestId(ID.boardTeammate)]) as Document["elementsFromPoint"];
+    try {
+      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
+      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(window, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+      fireEvent.pointerUp(window, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+    } finally {
+      delete (document as Partial<Document>).elementsFromPoint;
+      restore();
+    }
+    expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
+    expect(board.onAction).not.toHaveBeenCalledWith(play);
+  });
+});
+
+describe("R2095000 the teammate's board draws no effects of its own", () => {
+  it("R2095000 only the own board mounts an effects layer, so the teammate's duel never marks the own board", () => {
+    renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    toggleBoth();
+    expect(within(screen.getByTestId(ID.boardOwn)).getAllByTestId("fx-layer")).toHaveLength(1);
+    expect(within(screen.getByTestId(ID.boardTeammate)).queryByTestId("fx-layer")).toBeNull();
+  });
+});
+
+describe("R2095000 the teammate's board feeds no audio", () => {
+  it("R2095000 the teammate's board feeds no audio", () => {
+    vi.mocked(createSoundDirector).mockClear();
+    const view = duosView();
+    window.localStorage.setItem(DUOS_BOTH_KEY, "1");
+    renderDuosBoard({ view, legal: [END_TURN, PASS_H1] });
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    const fed = vi
+      .mocked(createSoundDirector)
+      .mock.results.flatMap((result) =>
+        result.type === "return" ? vi.mocked(result.value.onView).mock.calls.map(([fedView]) => fedView) : [],
+      );
+    expect(fed.length).toBeGreaterThan(0);
+    for (const fedView of fed) expect(fedView).toBe(view.own);
+  });
+});
+
+describe("R2095000 the portal hides while both boards show", () => {
+  it("R2095000 the portal hides while both boards show and returns when the toggle is off", () => {
+    renderDuosBoard();
+    expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
+    toggleBoth();
+    // The portal stays mounted while both boards show (CSS hides it on a wide screen and
+    // shows it again on a narrowed one, where it is the only flip control), and the toggle
+    // coming back off leaves it in place.
+    expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    toggleBoth();
+    expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
+    expect(screen.getAllByTestId("game")).toHaveLength(1);
+  });
+
+  it("R2095000 the portal still flips while both boards show, for a narrowed screen", () => {
+    renderDuosBoard({ legal: [END_TURN, { kind: "concede" }] });
+    toggleBoth();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    // A narrowed screen draws only the showing board (duos.css), so the rail, the portal in it,
+    // must ride that board: the own board's while it shows...
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.portal)).toBeInTheDocument();
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
+    expect(screen.getAllByTestId("game")).toHaveLength(2);
+    // ...and the teammate's once the portal flips to it, with the way back and the rest of the
+    // rail, none of it left on the own board that CSS now hides.
+    const own = screen.getByTestId(ID.boardOwn);
+    const mate = screen.getByTestId(ID.boardTeammate);
+    const back = within(mate).getByTestId(ID.portal);
+    expect(back).toHaveAttribute("aria-pressed", "true");
+    expect(within(mate).getByTestId(ID.lifeStrip)).toBeInTheDocument();
+    expect(within(mate).getByTestId(ID.concede)).toBeEnabled();
+    expect(within(own).queryByTestId(ID.portal)).toBeNull();
+    expect(within(own).queryByTestId(ID.lifeStrip)).toBeNull();
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.portal)).toBeInTheDocument();
+    expect(within(screen.getByTestId(ID.boardTeammate)).queryByTestId(ID.portal)).toBeNull();
+  });
+
+  it("R2095000 pressing Both boards while the teammate's board shows opens both on the own one", () => {
+    renderDuosBoard();
+    flipPortal();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
+    toggleBoth();
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "own");
+    expect(within(screen.getByTestId(ID.boardOwn)).getByTestId(ID.both)).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("R2095000 replay mode keeps the portal flip and draws no Both boards toggle", () => {
+    renderDuosBoard({ replay: true });
+    expect(screen.queryByTestId(ID.both)).toBeNull();
+    flipPortal();
+    expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
   });
 });

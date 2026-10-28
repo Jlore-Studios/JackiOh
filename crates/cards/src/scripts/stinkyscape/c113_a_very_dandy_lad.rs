@@ -59,6 +59,7 @@ mod tests {
     const ARMOR: &str = "core-073"; // (2) Field Spell, face-up.
     const SHEEPISH: &str = "core-041"; // (1) Trap, face-down.
     const FILLER: &str = "core-005";
+    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
 
     /// p1 holds the Lad (`radiant` its face) beside two Vanillas to tribute, a Timmy, a Pointmaster and a
     /// face-down Trap; p2 has a Vanilla, a Menace and a face-up Field Spell.
@@ -126,6 +127,24 @@ mod tests {
         s.play(VANILLA, json!({}));
         assert_eq!(exiled(&s), vec![VANILLA]);
         assert!(s.unit(P1, 1).is_some(), "the Lad stays");
+    }
+
+    #[test]
+    fn r1850002_leaving_the_field_ends_it() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [FILLER], "field": [ID], "library": filler(4) },
+            "p2": { "hand": [HIT_JOB, VANILLA, FILLER], "library": filler(4), "mana": 10 },
+            "active": "p2",
+        }));
+        let lad = s.unit_at(P1, 1).id;
+        s.play(HIT_JOB, json!({ "targets": pick::id(&lad) }));
+        s.expect_in_zone(&lad, "graveyard");
+        s.play(VANILLA, json!({ "zone": 1 }));
+        assert!(exiled(&s).is_empty());
+        assert!(
+            s.unit(P2, 1).is_some_and(|unit| unit.def_id == VANILLA),
+            "a (1) now stays"
+        );
     }
 
     #[test]

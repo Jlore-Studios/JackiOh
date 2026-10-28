@@ -15,6 +15,13 @@
 //
 // Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
 // (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
+//
+// R2119000: a deletion is held behind the workshop's undo toast before it happens here. `hide` takes
+// a deck or trio off the snapshot (no list shows it, and no trio slot names a hidden deck) and out of
+// every save; `unhide` is Undo, and sends any edit the hold kept back. When the hold ends, the
+// workshop calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when the page is
+// going away. A DELETE the server refuses for an item deleted on this visit puts it back, in the
+// server's words; a transport failure is retried, as every save is (R256).
 
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName } from "@jackioh/validator";
 
@@ -30,6 +37,7 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type SendOptions,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
@@ -57,14 +65,20 @@ export type WorkshopSnapshot = {
   /** Ids the server refused, with its message verbatim; the item's next edit clears it. */
   refused: ReadonlyMap<string, string>;
   limits: WorkshopLimits;
+  /** R2119000: the deck or trio whose deletion the undo toast holds (`hide`), listed nowhere above. */
+  held: HeldItem | null;
 };
+
+/** R2119000: a deck or trio a held deletion has taken off the screen. */
+export type HeldItem = { kind: "deck" | "trio"; id: string };
 
 /** The writes, bound to the session's token by the route (`routes/decks.tsx`). */
 export type DeckSyncApi = {
   putDeck(id: string, input: DeckInput): Promise<unknown>;
-  deleteDeck(id: string): Promise<unknown>;
+  /** R2119000: `options.keepalive` when the page is going away. */
+  deleteDeck(id: string, options?: SendOptions): Promise<unknown>;
   putTrio(id: string, input: TrioInput): Promise<unknown>;
-  deleteTrio(id: string): Promise<unknown>;
+  deleteTrio(id: string, options?: SendOptions): Promise<unknown>;
   /** R341: a trio code's decks and the trio, all or nothing, in one request. */
   importTrio(input: TrioImportInput): Promise<unknown>;
 };
@@ -106,7 +120,7 @@ export type DeckStore = {
   /** Null at `limits.decks`. The UI supplies the name. */
   createDeck(init: { name: string; cards?: readonly string[]; portrait?: string | null } & DeckCosmeticFields): string | null;
   updateDeck(id: string, patch: { name?: string; cards?: readonly string[]; portrait?: string | null } & DeckCosmeticFields): void;
-  /** Also empties every trio slot that named it (R252), as the server does. */
+  /** Also empties every trio slot that named it (R252), as the server does. Ends a `hide` of it. */
   deleteDeck(id: string): void;
   /** Null at `limits.trios`. */
   createTrio(init: { name: string; deckIds?: TrioSlots }): string | null;
@@ -119,8 +133,18 @@ export type DeckStore = {
    * ids are minted once per import and reused on a retry, so a lost answer never makes it twice.
    */
   importTrio(init: TrioImport): Promise<TrioImportResult>;
-  /** Saves now (the debounce is skipped); settles once this flush and any re-run it caused have. */
-  flush(): Promise<void>;
+  /**
+   * R2119000: takes a deck or trio off the snapshot and out of every save while its deletion is held.
+   * One at a time: hiding another shows the first again.
+   */
+  hide(kind: HeldItem["kind"], id: string): void;
+  /** R2119000: Undo; the hidden item is listed and saved again. */
+  unhide(): void;
+  /**
+   * Saves now (the debounce is skipped); settles once this flush and any re-run it caused have.
+   * `keepalive` (R2119000): the page is going away, so its deletions go as `keepalive` requests.
+   */
+  flush(options?: SendOptions): Promise<void>;
   /** Saves on `pagehide`, on the page going hidden and on coming back online. Idempotent. */
   start(): void;
   /** Detaches, clears the timers and sends what is unsaved one last time. Idempotent. */
@@ -303,10 +327,10 @@ function randomId(): string {
 export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
 
 /** R341: why an import made nothing, when the server could not be asked. */
-export const IMPORT_OFFLINE_MESSAGE = "You’re offline, so nothing was imported. Try again once you’re back online.";
+export const IMPORT_OFFLINE_MESSAGE = "You're offline, so nothing was imported. Try again once you're back online.";
 /** R341: why an import made nothing, when earlier edits (a deletion made to make room) have not landed. */
 export const IMPORT_UNSAVED_MESSAGE =
-  "Your latest changes haven’t reached the server yet, so nothing was imported. Try again once they’re saved.";
+  "Your latest changes haven't reached the server yet, so nothing was imported. Try again once they're saved.";
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TIMEOUT = 408;
@@ -445,6 +469,19 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   let started = false;
   /** After `stop()`: nothing is scheduled any more, so a left screen leaves no timer behind. */
   let stopped = false;
+  /** R2119000: the item `hide` took off the snapshot, if any. */
+  let hidden: HeldItem | null = null;
+  /** R2119000: the flush under way was asked for as the page goes away. */
+  let keepalive = false;
+  /**
+   * R2119000: what this visit deleted, kept until its DELETE has an answer, so a refusal can put it
+   * back. A deletion the mirror brought from an earlier visit is not here.
+   */
+  const removed = new Map<string, { kind: "deck"; entry: Tracked<DeckItem> } | { kind: "trio"; entry: Tracked<TrioItem> }>();
+
+  function isHidden(id: string): boolean {
+    return hidden !== null && hidden.id === id;
+  }
 
   function persist(): void {
     if (storage === null) return;
@@ -462,9 +499,9 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     }
   }
 
-  /** Unsaved, not refused, and not waiting on a deck: something a pass would send. */
-  function sendable<T>(entry: Tracked<T>): boolean {
-    return entry.dirty && entry.refused === null && !entry.blocked;
+  /** Unsaved, not refused, not waiting on a deck and not hidden: something a pass would send. */
+  function sendable<T extends { id: string }>(entry: Tracked<T>): boolean {
+    return entry.dirty && entry.refused === null && !entry.blocked && !isHidden(entry.item.id);
   }
 
   function hasWork(): boolean {
@@ -475,7 +512,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     if (offline) return { state: "offline", message: OFFLINE_MESSAGE };
     if (transient !== null) return { state: "error", message: transient };
     if (debounce !== null || running !== null || hasWork()) return { state: "saving", message: null };
-    const refusal = [...decks, ...trios].find((entry) => entry.refused !== null)?.refused ?? null;
+    const refusal = [...decks, ...trios].find((entry) => entry.refused !== null && !isHidden(entry.item.id))?.refused ?? null;
     if (refusal !== null) return { state: "error", message: refusal };
     return { state: "saved", message: null };
   }
@@ -525,6 +562,18 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
 
   function trioInput(item: TrioItem): TrioInput {
     return { name: trioNameForSave(item.name, limits.nameLength), deckIds: [...item.deckIds] as TrioSlots };
+  }
+
+  /** R2119000: a deletion made on this visit that the server refused comes back, in its words. */
+  function putBack(id: string, message: string): void {
+    const gone = removed.get(id);
+    if (gone === undefined) return;
+    gone.entry.refused = message;
+    if (gone.kind === "deck") {
+      if (!decks.some((entry) => entry.item.id === id)) decks = [...decks, gone.entry].sort(byAge);
+    } else if (!trios.some((entry) => entry.item.id === id)) {
+      trios = [...trios, gone.entry].sort(byAge);
+    }
   }
 
   /** How a pass ended: everything it could send went, or it stopped on a failure worth retrying. */
@@ -599,12 +648,16 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     ] as const) {
       for (const id of [...pending]) {
         try {
-          await remove.call(api, id);
+          if (keepalive) await remove.call(api, id, { keepalive: true });
+          else await remove.call(api, id);
         } catch (cause: unknown) {
           const failure = failureOf(cause);
           if (failure.kind !== "refused") return { end: halt(failure), deckLanded };
-          // A refused deletion (someone else's id, say) has nothing to try again: forget it.
+          // A refused deletion has nothing to try again. One made on this visit comes back in the
+          // server's words (R2119000); one only the mirror knew about is forgotten.
+          putBack(id, failure.message);
         }
+        removed.delete(id);
         offline = false;
         transient = null;
         pending.delete(id);
@@ -641,7 +694,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     }
   }
 
-  function flush(): Promise<void> {
+  function flush(options: SendOptions = {}): Promise<void> {
+    if (options.keepalive === true) keepalive = true;
     if (debounce !== null) {
       clock.clearTimeout(debounce);
       debounce = null;
@@ -656,6 +710,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       })
       .finally(() => {
         running = null;
+        keepalive = false;
         emit();
       });
     emit();
@@ -780,13 +835,22 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
           if (entry.dirty) unsynced.add((entry.item as { id: string }).id);
           if (entry.refused !== null) refused.set((entry.item as { id: string }).id, entry.refused);
         }
+        // R2119000: a hidden deck is in no list and no trio's slot; a hidden trio is in no list.
+        const hiddenDeck = hidden?.kind === "deck" ? hidden.id : null;
         snapshot = {
-          decks: decks.map((entry) => entry.item),
-          trios: trios.map((entry) => entry.item),
+          decks: decks.filter((entry) => !isHidden(entry.item.id)).map((entry) => entry.item),
+          trios: trios
+            .filter((entry) => !isHidden(entry.item.id))
+            .map((entry) =>
+              hiddenDeck !== null && entry.item.deckIds.includes(hiddenDeck)
+                ? { ...entry.item, deckIds: entry.item.deckIds.map((slot) => (slot === hiddenDeck ? null : slot)) as TrioSlots }
+                : entry.item,
+            ),
           status: statusNow(),
           unsynced,
           refused,
           limits,
+          held: hidden,
         };
       }
       return snapshot;
@@ -841,7 +905,10 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     },
 
     deleteDeck(id) {
-      if (!decks.some((entry) => entry.item.id === id)) return;
+      const gone = decks.find((entry) => entry.item.id === id);
+      if (gone === undefined) return;
+      removed.set(id, { kind: "deck", entry: gone });
+      if (isHidden(id)) hidden = null;
       decks = decks.filter((entry) => entry.item.id !== id);
       deletingDecks.add(id);
       for (const trio of trios) {
@@ -877,13 +944,24 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       const entry = trios.find((candidate) => candidate.item.id === id);
       if (entry === undefined) return;
       const name = patch.name ?? entry.item.name;
-      const deckIds = patch.deckIds ?? entry.item.deckIds;
+      // R2119000: the editor shows a hidden deck's slot empty, so an empty slot there keeps it.
+      const kept = entry.item.deckIds;
+      const deckIds =
+        patch.deckIds === undefined
+          ? kept
+          : (patch.deckIds.map((slot, at) => {
+              const before = kept[at] ?? null;
+              return slot === null && hidden?.kind === "deck" && before === hidden.id ? before : slot;
+            }) as TrioSlots);
       if (name === entry.item.name && sameSlots(deckIds, entry.item.deckIds)) return;
       edited(entry, { ...entry.item, name, deckIds: [...deckIds] as TrioSlots, updatedAt: clock.now() });
     },
 
     deleteTrio(id) {
-      if (!trios.some((entry) => entry.item.id === id)) return;
+      const gone = trios.find((entry) => entry.item.id === id);
+      if (gone === undefined) return;
+      removed.set(id, { kind: "trio", entry: gone });
+      if (isHidden(id)) hidden = null;
       trios = trios.filter((entry) => entry.item.id !== id);
       deletingTrios.add(id);
       changed();
@@ -891,6 +969,21 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     },
 
     importTrio,
+
+    hide(kind, id) {
+      const list: readonly Tracked<{ id: string }>[] = kind === "deck" ? decks : trios;
+      if (!list.some((entry) => entry.item.id === id)) return;
+      hidden = { kind, id };
+      emit();
+    },
+
+    unhide() {
+      if (hidden === null) return;
+      hidden = null;
+      emit();
+      // An edit the hold kept back goes now.
+      if (hasWork()) schedule();
+    },
 
     flush,
 

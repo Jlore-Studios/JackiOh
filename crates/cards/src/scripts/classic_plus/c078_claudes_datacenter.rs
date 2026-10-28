@@ -15,7 +15,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563), which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563, twenty-four since the Stinkyscape release), which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -75,7 +75,8 @@ mod tests {
 
     /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
     /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
-    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen.
+    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen; and the
+    /// Stinkyscape release (#1884) its T-AI-1 to T-AI-10, twenty-four.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
         ids.extend(
@@ -87,6 +88,7 @@ mod tests {
             ]
             .map(String::from),
         );
+        ids.extend((1..=10).map(|at| format!("stinkyscape-t-ai-{at:02}")));
         ids
     }
 
@@ -158,7 +160,7 @@ mod tests {
         }
 
         #[test]
-        fn s7_the_pool_its_text_names_is_the_fourteen_ai_generated_cards_tokens_all() {
+        fn s7_the_pool_its_text_names_is_the_twenty_four_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
                 .iter()
@@ -190,7 +192,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_every_seed_draws_from_the_fourteen_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
+            fn r60_every_seed_draws_from_the_twenty_four_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");

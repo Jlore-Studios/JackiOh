@@ -16,17 +16,20 @@ import { KEYWORD_KINDS, type BackrowView, type CardView, type PlayerView, type U
 import {
   CARD_SETTINGS_DEFAULTS,
   CardBack,
+  GLOSSARY,
   INSPECT_HOVER,
   INSPECT_SHEET,
   KEYWORD_MARK,
+  TERM_TOOLTIP_TESTID,
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
+import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid, type AnimatingMap, type BoardProps, type ClickTarget, type Highlight } from "./contract.ts";
+import { testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
+import { renderBoard } from "../test/board.tsx";
 import { card, faceUpBackrow, fullBoardView } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 
@@ -40,20 +43,10 @@ afterEach(() => {
 
 /* -------------------------------------------------------------------------------------- helpers */
 
-const lookup = lookupFromDefs(CATALOG);
-
 /** Longer than any inspect delay (hover or long-press), so "nothing opened" is not "not yet". */
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
 type FaceUpBackrow = Extract<NonNullable<BackrowView>, { faceDown: false }>;
-
-function renderBoard(view: PlayerView, props: Omit<BoardProps, "view"> = {}, withCatalog = true): HTMLElement {
-  const board = <Board view={view} {...props} />;
-  const { container } = render(
-    withCatalog ? <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider> : board,
-  );
-  return container;
-}
 
 function yourUnit(view: PlayerView, lane: number): UnitView {
   return must(view.you.units[lane - 1], `your unit in lane ${lane}`);
@@ -561,7 +554,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
 
   it("B17 with no catalog every face-up card still renders, named by its def id", () => {
     const view = fullBoardView();
-    renderBoard(view, {}, false);
+    render(<Board view={view} />);
     for (const u of allUnits(view)) {
       const root = cardRoot(u.instanceId);
       expect(inside(root, ".card-name").textContent, u.instanceId).toBe(u.defId);
@@ -591,7 +584,7 @@ describe("B18: Card picks its form from its props", () => {
 
   it("B18 a face-up backrow card is the compact form, and .card-type reads the BackrowView.type (no catalog)", () => {
     const view = fullBoardView();
-    renderBoard(view, {}, false);
+    render(<Board view={view} />);
     for (const lane of [1, 2, 5]) {
       const slot = yourBackrow(view, lane);
       const root = cardRoot(slot.instanceId);
@@ -705,7 +698,7 @@ describe("B19: what a face-up root adds", () => {
 
   it("B19 with no catalog there is no data-rarity anywhere, but data-card-type is still set", () => {
     const view = fullBoardView();
-    const container = renderBoard(view, {}, false);
+    const { container } = render(<Board view={view} />);
     for (const root of faceUpRoots(container)) {
       expect(root.hasAttribute("data-rarity"), root.dataset.testid).toBe(false);
       expect((root.getAttribute("data-card-type") ?? "") !== "", root.dataset.testid).toBe(true);
@@ -829,7 +822,7 @@ describe("B19: what a face-up root adds", () => {
 
   it("B19 with no catalog every minion's tones are base", () => {
     const view = fullBoardView();
-    renderBoard(view, {}, false);
+    render(<Board view={view} />);
     for (const u of allUnits(view)) {
       const root = cardRoot(u.instanceId);
       expect(inside(root, ".stat-attack").getAttribute("data-tone"), u.defId).toBe("base");
@@ -939,5 +932,43 @@ describe("R1046 the owner's face-down play wears its reveal timing", () => {
     expect(screen.getByTestId(testid.revealAt("set1"))).toHaveTextContent("Start of your next turn");
     // The badge is the owner's alone: backs and every other card show none.
     expect(container.querySelectorAll(".reveal-at-badge")).toHaveLength(1);
+  });
+});
+
+describe("R2098000 a hand card's term shows its rule on hover and on a long press, and a tap on it still reports the card", () => {
+  it("R2098000 hovering, tapping and holding a hand card's Cry term", () => {
+    vi.useFakeTimers();
+    const view = fullBoardView();
+    const bigot = must(handOf(view)[0], "a hand card");
+    const onClick = vi.fn<(target: ClickTarget) => void>();
+    renderBoard(view, { highlight: highlightOf([testid.handCard(bigot.instanceId)]), onClick });
+    const term = inside(handRoot(bigot.instanceId), '.cf-term[data-term="Cry"]');
+    expect(term).toHaveAttribute("data-tip", "pointer");
+    expect(term).not.toHaveAttribute("tabindex");
+
+    // Hover shows the glossary line; leaving hides it.
+    fireEvent.pointerEnter(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TERM_HOVER_DELAY_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(`${GLOSSARY.Cry.label} ${GLOSSARY.Cry.rule}`);
+    fireEvent.pointerLeave(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+
+    // A tap on the term still reports the card.
+    fireEvent.click(term);
+    expect(onClick).toHaveBeenLastCalledWith({ on: "hand", instanceId: bigot.instanceId });
+
+    // A held touch shows the rule and opens no sheet; the lift's click goes nowhere.
+    fireEvent.pointerDown(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(GLOSSARY.Cry.rule);
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+    fireEvent.pointerUp(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.click(term);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

@@ -21,32 +21,10 @@ use super::fixtures::datacenter::{
     field_trap, free, guard, hard_field, one, runner, scripts as datacenter_scripts, trap, two, x_cost,
 };
 use super::fixtures::field::{flush, playing, tower};
-use super::fixtures::harness::{act_result, events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{
+    Bench, act_result, events_of_type, in_hand, new_game, put, set_library, slot,
+};
 use super::fixtures::scripts::{fixture_catalog, scripts as fixture_scripts};
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
@@ -72,9 +50,9 @@ fn resolving(state: &mut GameState, player: PlayerId) -> CardInstance {
 /// Apply one effect as the resolving Spell, then the state check §10.5 runs after its list (§4.5).
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
     let me = resolving(state, controller);
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut engine_sink = sink.sink();
+        let mut engine_sink = sink.sink(state);
         let mut ctx = make_context(
             &mut engine_sink,
             Some(&me),
@@ -85,7 +63,7 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
         );
         (effect.apply)(&mut ctx);
     }
-    state_check(&mut sink.sink());
+    state_check(&mut sink.sink(state));
     let cursor = sink.rng.cursor();
     let events = std::mem::take(&mut sink.events);
     state.rng_cursor = cursor;
@@ -182,7 +160,7 @@ mod draw_while_cheap_t_ai_4_chain_of_thought {
         let mut taxed = game("chain-tax");
         let taxed_library = set_library(&mut taxed, P1, &[one.id.clone(), one.id.clone()]);
         add_modifier(
-            &mut sink_for(&mut taxed).sink(),
+            &mut Bench::new(&taxed).sink(&mut taxed),
             P1,
             ModifierExpiry::Never,
             json_as(json!({ "kind": "costRule", "rule": { "amount": 1 } })),
@@ -335,7 +313,7 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
         let mut state = game("fire-animated");
         let animated = put(&mut state, &animated_field.id, slot(P2, Backrow, 1), json!({}));
         assert!(animate_card(
-            &mut sink_for(&mut state).sink(),
+            &mut Bench::new(&state).sink(&mut state),
             &animated,
             Default::default()
         ));

@@ -9,7 +9,12 @@
 //! player reads and no game does, every other field plays. Each card script's code, the lines
 //! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
 //! `SHIPPED_SETS` names on each side: a set that ships is a major, and a card of a set that has not
-//! shipped is no change (R1420). And the paths of everything else (`area`).
+//! shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
+//! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
+//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
+//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
+//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
+//! differently, so `--claims` asks for its fragment.
 //!
 //! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
 //! build what the diff cannot say:
@@ -33,12 +38,13 @@ use std::process::Command as Process;
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
 use jackioh_engine::config::CRAFT_ID_PREFIX;
-use jackioh_engine::wire::SetName;
+use jackioh_engine::wire::{SINGLE_PLAYER_SETS, SetName};
 use jackioh_engine::{GameState, find_instance};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::catalog::code_lines;
+use crate::card_lists::{self, CardLists, Scripts};
+use crate::catalog::{code_lines, code_lines_with_uses};
 use crate::golden::{record_seeds, text_at};
 use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
@@ -207,12 +213,18 @@ fn area(path: &str) -> Area {
     Area::Internal
 }
 
-/// Whether a file's code changed: for Rust and TypeScript the lines `catalog loc` counts, all white
-/// space removed (so a reflow is no change); any other file byte for byte.
+/// Whether a file's code changed, all white space removed (so a reflow is no change): for a card
+/// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
+/// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
+/// can change which code runs (R2050000); any other file byte for byte.
 fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
-    let code = |text: Option<&str>| {
-        text.map(|text| code_lines(text).concat().split_whitespace().collect::<String>())
+    let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
+        code_lines
+    } else {
+        code_lines_with_uses
     };
+    let code =
+        |text: Option<&str>| text.map(|text| lines(text).concat().split_whitespace().collect::<String>());
     if path.ends_with(".rs") || path.ends_with(".ts") || path.ends_with(".tsx") {
         code(before) != code(after)
     } else {
@@ -249,13 +261,44 @@ pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
         .collect()
 }
 
-/// One side of the change: its catalog, every set's cards, and the sets that ship.
+/// One side of the change: its catalog, every set's cards, the sets that ship, and its card scripts
+/// as the BUSTED and complicated lists see them (R2173001; none where only the catalog is read).
 pub(crate) struct Side {
     pub catalog: Catalog,
     pub sets: Vec<SetName>,
+    pub scripts: Scripts,
 }
 
 impl Side {
+    /// A side read off its catalog alone, with no scripts.
+    pub(crate) fn of_catalog(catalog: Catalog, sets: Vec<SetName>) -> Side {
+        Side {
+            catalog,
+            sets,
+            scripts: Scripts::default(),
+        }
+    }
+
+    /// R2173001: whether a list's card can join a pool on this side: a card of a set that ships, or
+    /// of a single-player set, which an `everySet` pool takes (R1846001). A held set's is in none.
+    fn pooled(&self, id: &str) -> bool {
+        let single_player = self
+            .catalog
+            .get(id)
+            .and_then(|entry| entry.get("set"))
+            .and_then(|set| set.as_str())
+            .is_some_and(|set| SINGLE_PLAYER_SETS.iter().any(|single| single.as_str() == set));
+        self.ships(id) || single_player
+    }
+
+    /// R2173001: this side's BUSTED and complicated lists, of the cards that can join a pool.
+    fn pooled_lists(&self) -> CardLists {
+        let mut lists = self.scripts.lists();
+        lists.busted.retain(|id| self.pooled(id));
+        lists.complicated.retain(|id| self.pooled(id));
+        lists
+    }
+
     fn ships(&self, id: &str) -> bool {
         let set = self
             .catalog
@@ -345,6 +388,18 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
             Area::App => diff.app = true,
             Area::Catalog | Area::Internal => {}
         }
+    }
+    // R2173001: while a card that reads the BUSTED or complicated lists ships on both sides, a change
+    // that moves a card across a threshold (a script edit, a card added or removed, a threshold
+    // moved) plays every such reader differently: its pool is not what it was.
+    let readers: Vec<&String> = after
+        .scripts
+        .readers
+        .iter()
+        .filter(|id| after.ships(id) && before.ships(id) && before.scripts.readers.contains(*id))
+        .collect();
+    if !readers.is_empty() && before.pooled_lists() != after.pooled_lists() {
+        diff.play.extend(readers.into_iter().map(|id| family(id)));
     }
     diff.wording.retain(|family| !diff.play.contains(family));
     diff
@@ -729,6 +784,31 @@ fn refuses_decks(error: &anyhow::Error) -> bool {
     format!("{error:#}").contains(PARENT_REFUSED_DECKS)
 }
 
+/// R1884002: the text of the parent's refusal of a card of a set it does not ship (§2.6 L3, R1420),
+/// which `validate_setup` words as "\"<id>\" is a card of <set>, which has not shipped yet".
+const PARENT_REFUSED_HELD: &str = "which has not shipped yet (§2.6 L3";
+
+/// R1884002: whether the parent's `golden check` failed because the head's games deal cards of a set
+/// the parent holds back, as main refuses every Stinkyscape card before the set's release: the
+/// change ships that set, a major already (`diff.sets`), and the replay can say nothing more.
+fn refuses_held_cards(error: &anyhow::Error) -> bool {
+    format!("{error:#}").contains(PARENT_REFUSED_HELD)
+}
+
+/// What the parent's failure to replay the head's unforced games says: a rule every game meets when it
+/// refuses the head's decks (R1705004); nothing more when the head ships a set whose cards it refuses,
+/// the release being the major it reads (R1884002); and an error otherwise, a refusal of held cards
+/// with no set shipping among them.
+fn read_refusal(error: anyhow::Error, ships_a_set: bool) -> Result<bool> {
+    if refuses_decks(&error) {
+        Ok(true)
+    } else if ships_a_set && refuses_held_cards(&error) {
+        Ok(false)
+    } else {
+        Err(error)
+    }
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     let mut checked = Checked::default();
@@ -773,9 +853,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
                     checked.touched.extend(touched);
                 }
             }
-            // R1705004: the parent cannot set up the head's games at all, a rule every game meets.
-            Err(error) if refuses_decks(&error) => checked.rule = true,
-            Err(error) => return Err(error),
+            Err(error) => checked.rule |= read_refusal(error, !diff.sets.is_empty())?,
         }
         let _ = fs::remove_file(&traces);
     }
@@ -808,8 +886,10 @@ pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
 pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     let catalog = show(root, rev, CATALOG_PATH).with_context(|| format!("{rev} has no {CATALOG_PATH}"))?;
     let sets = show(root, rev, SETS_PATH).with_context(|| format!("{rev} has no {SETS_PATH}"))?;
+    let catalog: Catalog = serde_json::from_str(&catalog).with_context(|| format!("{rev}'s catalog"))?;
     Ok(Side {
-        catalog: serde_json::from_str(&catalog).with_context(|| format!("{rev}'s catalog"))?,
+        scripts: card_lists::at_rev(root, rev, &catalog).with_context(|| format!("{rev}'s card scripts"))?,
+        catalog,
         sets: shipped_sets(&sets).with_context(|| format!("{rev}'s SHIPPED_SETS"))?,
     })
 }
@@ -918,10 +998,7 @@ mod tests {
     }
 
     fn side(cards: Vec<(String, crate::patches::js::Object)>, sets: &[SetName]) -> Side {
-        Side {
-            catalog: cards.into_iter().collect(),
-            sets: sets.to_vec(),
-        }
+        Side::of_catalog(cards.into_iter().collect(), sets.to_vec())
     }
 
     const SHIPPED: &[SetName] = &[SetName::Core, SetName::Meditative];
@@ -1042,6 +1119,98 @@ mod tests {
     }
 
     const SCRIPT: &str = "use jackioh_engine::prelude::*;\n\npub const ID: &str = \"core-001\";\n\npub fn script() -> CardScripts {\n    CardScripts::default()\n}\n\n#[cfg(test)]\nmod tests {}\n";
+
+    /// R2173001: a side whose catalog holds `ids`, its scripts counted from `scripts`.
+    fn side_with_scripts(ids: &[(&str, &str)], sets: &[SetName], scripts: &[String]) -> Side {
+        let mut side = side(ids.iter().map(|(id, set)| card(id, set, 1, "x")).collect(), sets);
+        let config =
+            "pub const BUSTED_CODE_LINES: usize = 100;\npub const COMPLICATED_CODE_LINES: usize = 60;\n";
+        side.scripts = Scripts::read(scripts, &side.catalog, config).expect("the scripts");
+        side
+    }
+
+    #[test]
+    fn r2173001_a_script_edit_across_a_threshold_plays_the_readers_differently() {
+        use crate::card_lists::tests::script;
+        let ids = [
+            ("core-001", "Core"),
+            ("core-002", "Core"),
+            ("stinkyscape-109", "Stinkyscape"),
+            ("stinkyscape-050", "Stinkyscape"),
+        ];
+        let reader = script("stinkyscape-109", 30, true);
+        let with = |lines: usize, held: usize, sets: &[SetName]| {
+            side_with_scripts(
+                &ids,
+                sets,
+                &[
+                    script("core-001", lines, false),
+                    script("core-002", 10, false),
+                    reader.clone(),
+                    script("stinkyscape-050", held, false),
+                ],
+            )
+        };
+        let shipping = [SetName::Core, SetName::Stinkyscape];
+        let edit = |before: &Side, after: &Side| {
+            let files = [file(
+                "crates/cards/src/scripts/core/c001_x.rs",
+                &script("core-001", 1, false),
+                &script("core-001", 2, false),
+            )];
+            read_diff(before, after, &files)
+        };
+
+        // core-001 grows from 60 lines to 61: complicated now, so xxFreshJack's family plays differently.
+        let diff = edit(&with(60, 10, &shipping), &with(61, 10, &shipping));
+        assert_eq!(diff.play, BTreeSet::from(["stinkyscape-109".to_string()]));
+        assert_eq!(diff.scripts, BTreeSet::from(["core-001".to_string()]));
+        // Across BUSTED's 100 too; an edit that stays on one side of both moves no reader.
+        let diff = edit(&with(100, 10, &shipping), &with(101, 10, &shipping));
+        assert!(diff.play.contains("stinkyscape-109"));
+        let diff = edit(&with(62, 10, &shipping), &with(90, 10, &shipping));
+        assert!(diff.play.is_empty(), "{diff:?}");
+        // A card no pool can draw (a held set's) moves no reader, nor does any move while no reader ships
+        // on both sides: before the release (#1884) the rule is inert.
+        let core_only = [SetName::Core];
+        let held = side_with_scripts(
+            &[
+                ("core-001", "Core"),
+                ("stinkyscape-109", "Core"),
+                ("stinkyscape-050", "Stinkyscape"),
+            ],
+            &core_only,
+            &[
+                script("core-001", 10, false),
+                reader.clone(),
+                script("stinkyscape-050", 10, false),
+            ],
+        );
+        let held_long = side_with_scripts(
+            &[
+                ("core-001", "Core"),
+                ("stinkyscape-109", "Core"),
+                ("stinkyscape-050", "Stinkyscape"),
+            ],
+            &core_only,
+            &[
+                script("core-001", 10, false),
+                reader.clone(),
+                script("stinkyscape-050", 200, false),
+            ],
+        );
+        assert!(read_diff(&held, &held_long, &[]).play.is_empty());
+        let diff = edit(&with(60, 10, &core_only), &with(61, 10, &core_only));
+        assert!(diff.play.is_empty(), "no reader ships: {diff:?}");
+        let diff = edit(&with(60, 10, &core_only), &with(61, 10, &shipping));
+        assert!(
+            !diff.play.contains("stinkyscape-109"),
+            "the reader's own set shipping is the release's major, not a threshold move"
+        );
+        // The classification names the reader, so `--claims` asks a fragment for it (R1370000).
+        let classification = classify(&edit(&with(60, 10, &shipping), &with(61, 10, &shipping)), None);
+        assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
+    }
 
     #[test]
     fn r1365000_a_script_edit_to_comments_tests_or_layout_is_internal() {
@@ -1253,6 +1422,75 @@ mod tests {
         assert!(code_changed("a.json", Some("{}"), Some("{ }")));
     }
 
+    // R2050000: outside a card script a `use` line is code, so a moved import is checked.
+    const MODULE: &str = "use crate::a::run;\n\npub fn go() {\n    run()\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n";
+
+    #[test]
+    fn r2050000_a_use_only_change_outside_a_card_script_is_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let moved = MODULE.replace("use crate::a::run;", "use crate::b::run;");
+        for path in ["crates/engine/src/combat.rs", "crates/cards/src/query.rs"] {
+            let diff = read_diff(&both, &both, &[file(path, MODULE, &moved)]);
+            assert!(diff.play_code, "{path}");
+            assert_eq!(
+                classify(&diff, None).unchecked,
+                vec!["play-code".to_string()],
+                "{path}"
+            );
+        }
+        let diff = read_diff(&both, &both, &[file("crates/ai/src/search.rs", MODULE, &moved)]);
+        let classified = classify(&diff, None);
+        assert_eq!(classified.kind, Kind::Ai);
+        assert_eq!(classified.unchecked, vec!["ai".to_string()]);
+    }
+
+    #[test]
+    fn r2050000_a_use_only_change_in_a_card_script_is_still_no_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let edited = SCRIPT.replace(
+            "use jackioh_engine::prelude::*;",
+            "use jackioh_engine::prelude::{CardScripts, *};",
+        );
+        let diff = read_diff(
+            &both,
+            &both,
+            &[file("crates/cards/src/scripts/core/c001.rs", SCRIPT, &edited)],
+        );
+        assert_eq!(diff, Diff::default());
+        let classified = classify(&diff, None);
+        assert_eq!(classified.kind, Kind::Internal);
+        assert!(classified.unchecked.is_empty(), "{:?}", classified.unchecked);
+        assert_eq!(
+            crate::catalog::count_loc(SCRIPT),
+            crate::catalog::count_loc(&edited)
+        );
+    }
+
+    #[test]
+    fn r2050000_comment_layout_and_test_changes_outside_a_card_script_are_no_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let edited = "use crate::a::run; // the runner\n\n/// Goes.\npub fn go() { run() }\n\n#[cfg(test)]\nmod tests {\n    use super::go;\n\n    #[test]\n    fn goes() {\n        go()\n    }\n}\n";
+        for path in [
+            "crates/engine/src/combat.rs",
+            "crates/cards/src/query.rs",
+            "crates/ai/src/search.rs",
+        ] {
+            let diff = read_diff(&both, &both, &[file(path, MODULE, edited)]);
+            assert_eq!(diff, Diff::default(), "{path}");
+        }
+    }
+
+    #[test]
+    fn r1365000_every_ai_tooling_entry_names_a_file() {
+        let src = repo_root().join("crates/ai/src");
+        for file in AI_TOOLING {
+            assert!(
+                src.join(file).is_file(),
+                "AI_TOOLING names crates/ai/src/{file}, which is no file"
+            );
+        }
+    }
+
     #[test]
     fn r1705004_a_base_build_refusing_the_heads_deck_size_is_a_rule() {
         // `parent_check`'s failure when main's `golden check` panics in `create_game` on a 25-card deck.
@@ -1266,5 +1504,41 @@ mod tests {
         assert!(!refuses_decks(&other));
         let handicap = anyhow::anyhow!("p2: handicap.manaCap must be a non-negative integer (R180)");
         assert!(!refuses_decks(&handicap));
+    }
+
+    #[test]
+    fn r1884002_a_base_build_refusing_the_set_the_head_ships_reads_as_that_release() {
+        // `parent_check`'s failure when main's `golden check` panics in `create_game` on a deck
+        // holding a card of the held Stinkyscape set, as it did on the set's release (#1884).
+        let refused = anyhow::anyhow!(
+            "/tmp/main-jackioh could not check /tmp/traces.jsonl: thread '<unnamed>' panicked at \
+             crates/engine/src/state.rs:2475:9:\np1: \"stinkyscape-156\" is a card of Stinkyscape, which \
+             has not shipped yet (§2.6 L3, R1420)"
+        );
+        assert!(refuses_held_cards(&refused));
+        assert!(!refuses_decks(&refused), "no deck size moved");
+        assert!(refuses_held_cards(
+            &refused.context("checking the unforced games")
+        ));
+        let other = anyhow::anyhow!("/tmp/main-jackioh could not check /tmp/traces.jsonl: No such file");
+        assert!(!refuses_held_cards(&other));
+    }
+
+    #[test]
+    fn r1884002_the_refusal_reads_as_the_release_only_when_a_set_ships() {
+        let held = || {
+            anyhow::anyhow!(
+                "/tmp/main-jackioh could not check /tmp/traces.jsonl: p1: \"stinkyscape-156\" is a card of \
+                 Stinkyscape, which has not shipped yet (§2.6 L3, R1420)"
+            )
+        };
+        // A set ships: the replay ends there, no rule.
+        assert!(!read_refusal(held(), true).expect("the release"));
+        // No set ships: the same refusal is still an error.
+        assert!(read_refusal(held(), false).is_err());
+        // R1705004's refused deck size is a rule either way.
+        let decks = || anyhow::anyhow!("p1: deck must hold exactly 20 cards (§2.6 L2), got 25");
+        assert!(read_refusal(decks(), false).expect("a rule"));
+        assert!(read_refusal(decks(), true).expect("a rule"));
     }
 }

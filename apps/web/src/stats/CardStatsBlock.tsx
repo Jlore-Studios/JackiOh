@@ -5,6 +5,7 @@ import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { formatPlayedDelta, winPercent } from "./model.ts";
 import { usePlayerStats } from "./store.ts";
 
@@ -54,7 +55,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
     return (
       <div className="inspect-stats inspect-stats--loading" data-testid={INSPECT_STATS}>
         <span className="inspect-stats-title">{t("Statistics")}</span>
-        <p className="inspect-stats-loading">{t("Loading stats…")}</p>
+        <Skeleton variant="panel" label={t("Loading stats…")} />
       </div>
     );
   }
@@ -129,7 +130,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">{t("Played Δ")}</span>
+          <span className="inspect-stats-metric-label">{t("Played vs held")}</span>
           <span className="inspect-stats-metric-value">{playedDeltaDisplay}</span>
         </div>
       </div>

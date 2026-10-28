@@ -331,6 +331,7 @@
   margin: 0;
   text-align: right;
   color: var(--text, #fff);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tables */
@@ -347,6 +348,7 @@
   border-collapse: collapse;
   text-align: left;
   font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .stats-th {
@@ -575,6 +577,7 @@
 .stats-pager-page {
   font-size: 13px;
   color: var(--text-dim, #9aa1b8);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Modal drill-down */
@@ -855,4 +858,19 @@
 .stats-patch-bar .stats-select {
   flex: 1 1 180px;
   max-width: 320px;
+}
+
+/* R2122000 on a phone or under a finger: a select or a field draws no ::before, so the filters,
+   the search and the column checkboxes' labels are --hit-min tall themselves; a sortable header's
+   band stops at the first row, its neighbour 0 px below. */
+@media (pointer: coarse), (max-width: 600px) {
+  .stats-select,
+  .stats-search-input,
+  .stats-col-toggle {
+    min-height: var(--hit-min);
+  }
+
+  .stats-th--sortable::before {
+    bottom: 0;
+  }
 }

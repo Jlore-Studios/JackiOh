@@ -25,7 +25,7 @@ import { shellTestid, usernameTestid } from "./testids.ts";
 import "./tavern.css";
 
 /** A skip that failed for any reason: the server's prompt is still owed, and Skip still works. */
-export const USERNAME_SKIP_FAILED = "Couldn’t skip just now. Try again in a moment.";
+export const USERNAME_SKIP_FAILED = "Couldn't skip just now. Try again in a moment.";
 
 export type UsernamePromptProps = {
   token: string;
@@ -39,9 +39,9 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
   const leaving = useSigningOut();
   const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // "You’re Player#7 for now. …": split around the name, so English keeps the text nodes it had.
+  // "You're Player#7 for now. …": split around the name, so English keeps the text nodes it had.
   const [heldBefore = "", heldAfter = ""] = t(
-    "You’re {name} for now. Pick the name other players will see; you can change it later on your account page.",
+    "You're {name} for now. Pick the name other players will see; you can change it later on your account page.",
   ).split("{name}");
 
   const skip = (): void => {

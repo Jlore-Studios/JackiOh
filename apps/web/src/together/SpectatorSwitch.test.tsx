@@ -6,9 +6,10 @@
 // The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
 // `net/session.ts` reads it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { settle } from "../test/settle.ts";
 import { must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 
@@ -39,16 +40,6 @@ function theSwitch(): HTMLInputElement {
   return screen.getByTestId(SWITCH) as HTMLInputElement;
 }
 
-/** Run every timer the switch set, whatever its delay, then let the stubbed round trips and React's updates settle. */
-async function settle(): Promise<void> {
-  await act(async () => {
-    for (let round = 0; round < 3; round += 1) {
-      await vi.runAllTimersAsync();
-      for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-    }
-  });
-}
-
 beforeEach(() => {
   window.localStorage.clear();
   signIn("tok-spectators");
@@ -68,7 +59,7 @@ describe("B50 the spectator switch", () => {
     window.localStorage.clear();
     const server = serve(true);
     const { container } = render(<SpectatorSwitch />);
-    await settle();
+    await settle({ runAllTimers: 3 });
     expect(container).toBeEmptyDOMElement();
     expect(server.calls).toHaveLength(0);
   });
@@ -77,7 +68,7 @@ describe("B50 the spectator switch", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
     const server = serve(undefined);
     const { container } = render(<SpectatorSwitch />);
-    await settle();
+    await settle({ runAllTimers: 3 });
     expect(server.to("GET", "/api/settings").length).toBeGreaterThan(0);
     expect(container).toBeEmptyDOMElement();
   });

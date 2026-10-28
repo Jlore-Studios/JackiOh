@@ -16,11 +16,9 @@ import { DeckPreview } from "../practice/DeckPreview.tsx";
 import { RANDOM_DECK_IDENTITY } from "../practice/decks.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, emptySide } from "../test/fixtures.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
 
 /** A dealt deck at the start of a game: two cards its owner has been shown, the rest unknown. */
@@ -36,14 +34,6 @@ const DEALT_TOTAL = 20;
 function dealtView(library: LibraryView = DEALT): PlayerView {
   const count = library.cards.reduce((sum, entry) => sum + entry.count, 0) + library.unknown;
   return baseView({ you: emptySide("p1", { libraryCount: count, ownLibrary: library }) });
-}
-
-function renderBoard(view: PlayerView): void {
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  );
 }
 
 beforeEach(() => {
