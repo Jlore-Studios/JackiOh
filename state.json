@@ -7549,6 +7549,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2296": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-28T18:52:13Z",
+      "issue": 2276,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
