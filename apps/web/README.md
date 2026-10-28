@@ -362,6 +362,19 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
 
+**A deletion is undone, not asked** (R2119000, `undo/`). Delete deck, Delete trio, the creator's
+Delete and Remove on a friend's row take the item off the screen at once and show a toast, "Deck
+deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
+`UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
+motion). The request waits for the window to close and goes at once when a second deletion takes the
+toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
+goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
+creator before a new card's first save, since the item counts against the server's caps until then.
+Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
+trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
+trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
+and `unhide` (Undo) brings it and its trio slots back. Block and Concede still ask.
+
 ## Play together and Duos
 
 Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §13) are screens over the server's answers and

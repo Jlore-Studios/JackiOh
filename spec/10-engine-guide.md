@@ -262,6 +262,8 @@ The Marketplace ([[R1853003]]) is a button on the board once the view carries `m
 
 The Trade control ([[R1838000]]) borrows the Duos pass control ([[§13.5]]): pointing at a hand card of the viewer's that `legalActions` lists a `trade` for, or whose view carries a `tradeReason`, puts a small bar on it with "Trade", its price and the Trades left from the view's `trades`, live exactly when the `trade` is listed and greyed with the reason otherwise. Presentation only (CLAUDE.md rule 7): the client works out no Trade itself.
 
+Deleting a deck, a trio or a custom card, and removing a friend, ask nothing ([[R2119000]]): the item leaves the screen at once behind an undo toast ("Deck deleted · Undo", "Trio deleted · Undo", "Card deleted · Undo", "Friend removed · Undo") that stays `UNDO_WINDOW_MS` (8 seconds), a status that takes no focus, inside the safe-area insets and without a slide under Reduce motion. The request waits for the window to close and goes at once when another deletion takes the toast, when the page hides (as a `keepalive` request) or when the player leaves the screen; Undo puts the item back and sends nothing, a held deck's trio slots filled again, and a held deck or trio is never saved meanwhile. A request the server refuses puts the item back in the server's words. Block and Concede still ask. Presentation only (CLAUDE.md rule 7).
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.
