@@ -6030,12 +6030,9 @@
     "what": "revise #2221 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-28T11:12:26Z",
+    "at": "2026-10-28T11:19:56Z",
     "notes": [
-      "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2217 on claude-7 (run 40675873266): blocked",
-      "started revise #2221 on muse (run 40678310673)",
-      "nothing more to start: nothing is queued"
+      "CI on #2189: #2189: queued a CI fix"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6741,7 +6738,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T11:12:26Z",
+  "loop_tick": "2026-10-28T11:19:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
