@@ -6844,6 +6844,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2239": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T13:11:13Z",
+      "issue": 2210,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
