@@ -9,10 +9,15 @@
 // card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
 // changed on screen.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 
+import { CATALOG } from "@jackioh/cards";
+
+import { CardDefsProvider, closeInspect } from "../cards/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
+import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
+import { DEFAULT_FILTER, DEFAULT_SORT, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
 import { t } from "../i18n/i18n.ts";
 import {
   getCollection,
@@ -26,7 +31,8 @@ import { paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { nextStepWords, shopTestid, unownedCards } from "./shop.ts";
+import { nextStepWords, shopTestid, tokenPoolIds, unownedCards } from "./shop.ts";
+import "../game/deckbuilder/deckbuilder.css";
 import "./shop.css";
 
 /** What a failed request says: the server's words, else the error's. */
@@ -169,7 +175,40 @@ function TokenBody({
   busy: string | null;
   onPickCard: (cardId: string) => void;
 }): ReactElement {
-  const cards = unownedCards(collection);
+  // The browse pane's filter, sort, open detail view and pending confirm live here, so the page's
+  // reads (bars, collection) still own what the server decided (CLAUDE.md rule 7).
+  const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
+  const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
+  const [detailCardId, setDetailCardId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
+  const unowned = useMemo(() => unownedCards(collection), [collection]);
+  const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort]);
+  const detailDef = detailCardId === null ? undefined : CATALOG[detailCardId];
+  const confirmDef = confirmId === null ? undefined : CATALOG[confirmId];
+  // The detail closes behind the inspect overlay, as in the deck editor: at most one at a time.
+  const openDetail = (cardId: string): void => {
+    closeInspect();
+    setDetailCardId(cardId);
+  };
+  const detail =
+    detailCardId === null || detailDef === undefined
+      ? null
+      : {
+          cardId: detailCardId,
+          actions: (
+            <button
+              type="button"
+              data-testid={shopTestid.cardPick(detailCardId)}
+              disabled={bars.tokens.card < 1 || busy !== null}
+              onClick={() => {
+                setConfirmId(detailCardId);
+              }}
+            >
+              {busy === detailCardId ? t("Redeeming…") : t("Unlock")}
+            </button>
+          ),
+        };
   return (
     <>
       <FillBar
@@ -194,27 +233,58 @@ function TokenBody({
       <p className="token-held" data-testid={shopTestid.heldCard}>
         {t("Card tokens held: {count}", { count: bars.tokens.card })}
       </p>
-      {cards.length === 0 ? (
+      {unowned.length === 0 ? (
         <p data-testid={shopTestid.cardNone}>{t("No cards to pick.")}</p>
       ) : (
-        cards.map((card) => (
-          <div key={card.id} className="token-row">
-            <span>{readerName(card)}</span>
-            <div className="account-actions">
-              <button
-                type="button"
-                data-testid={shopTestid.cardPick(card.id)}
-                disabled={bars.tokens.card < 1 || busy !== null}
-                onClick={() => {
-                  onPickCard(card.id);
-                }}
-              >
-                {busy === card.id ? t("Redeeming…") : t("Pick")}
-              </button>
-            </div>
-          </div>
-        ))
+        <CardDefsProvider defs={CATALOG}>
+          <CardBrowser
+            catalog={catalog}
+            pool={pool}
+            filter={filter}
+            onFilter={setFilter}
+            sort={sort}
+            onSort={setSort}
+            ownedControl={false}
+            onInspect={openDetail}
+            detail={detail}
+            onCloseDetail={() => {
+              setDetailCardId(null);
+            }}
+          />
+        </CardDefsProvider>
       )}
+      {confirmId === null ? null : (
+        <div role="alertdialog" aria-modal="true" data-testid={shopTestid.cardDialog} className="token-confirm">
+          <p>{t("Unlock {name}? This spends 1 card token.", { name: confirmDef === undefined ? confirmId : readerName(confirmDef) })}</p>
+          <div className="token-confirm__actions">
+            <button
+              type="button"
+              data-testid={shopTestid.cardConfirm}
+              onClick={() => {
+                onPickCard(confirmId);
+                setConfirmId(null);
+                setDetailCardId(null);
+              }}
+            >
+              {t("Confirm")}
+            </button>
+            <button
+              type="button"
+              data-testid={shopTestid.cardCancel}
+              onClick={() => {
+                setConfirmId(null);
+              }}
+            >
+              {t("Cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+      {bars.tokens.card < 1 ? (
+        <p className="token-held" data-testid={shopTestid.cardHint}>
+          {t("A full card token bar pays a card token.")}
+        </p>
+      ) : null}
 
       <h4 className="shop-subheading">{t("Cosmetic tokens")}</h4>
       <p className="token-held" data-testid={shopTestid.heldRare}>
