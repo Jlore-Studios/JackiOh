@@ -4,8 +4,8 @@
 //!   Radiant: "Destroy a Unit with {attack} or more Attack, and the Units adjacent to it." — 5.
 //!
 //! Engine: a declared target, any Unit whose Attack, read through the layers (§10.4), is the
-//! declared number or more as it is chosen and as it resolves (R81) — a `target_checks` predicate
-//! off the running face's `attack` (C #7 InfiniScepter's shape), the pick needed (R703: with no
+//! declared number or more as it is chosen (R81), and not again as it resolves (R1868000) — a
+//! `target_checks` predicate off the running face's `attack` (C #7 InfiniScepter's shape), the pick needed (R703: with no
 //! Unit to choose the Spell cannot be played). `destroy` on the chosen Unit (Indestructible
 //! survives, R46). Radiant: `destroy_adjacent_to` as well (Core #16 Hit Job's Radiant), the Units
 //! beside it in its row on its side whatever their Attack, all marked before one state check (R59).

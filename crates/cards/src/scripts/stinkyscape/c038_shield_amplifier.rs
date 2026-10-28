@@ -219,6 +219,20 @@ mod tests {
             // A piece equipped onto a Unit that is no piece leaves it no piece (R1852001).
             assert!(!kinds.contains(&"Starship Piece".to_string()), "{kinds:?}");
         }
+
+        #[test]
+        fn buff_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let buff = crate::upgrade_number(&mut s, AMPLIFIER, "buff");
+            s.attack(AMPLIFIER, "hero");
+
+            assert_eq!(buffs_of(&s, AMPLIFIER), (buff, buff));
+        }
     }
 
     mod radiant {

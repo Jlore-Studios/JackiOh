@@ -102,6 +102,32 @@ mod tests {
         }
 
         #[test]
+        fn r4_a_full_hand_burns_the_triscuit() {
+            crate::register_all();
+            // Full as the add comes: a hand one past the cap, so the play leaves it full (as a cast by
+            // an effect, which frees no slot, would find it).
+            let mut hand = vec![json!(CONJURE)];
+            hand.extend((0..HAND_CAP).map(|_| json!(FILLER)));
+            let mut s = conjuring(json!(hand));
+
+            s.play(CONJURE, json!({}));
+
+            assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+            assert!(!def_ids(&s.hand(P1)).contains(&TRISCUIT.to_string()));
+            assert!(
+                def_ids(&s.pile(P1, "graveyard")).contains(&TRISCUIT.to_string()),
+                "it burned"
+            );
+            assert_eq!(
+                library_defs(&s, P1)
+                    .into_iter()
+                    .filter(|def| def == WARDRUM)
+                    .count(),
+                1
+            );
+        }
+
+        #[test]
         fn r80_a_full_deck_refuses_the_wardrum_and_reports_libraryoverflow() {
             crate::register_all();
             let library = vec![json!(FILLER); 60];

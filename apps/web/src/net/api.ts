@@ -109,7 +109,12 @@ export type RequestOptions = {
   signal?: AbortSignal;
   /** A spend's `Idempotency-Key` (R2124000): `spendRequest` below sets it, and nothing else does. */
   idempotencyKey?: string;
+  /** R2119000: the request outlives the page (`fetch`'s `keepalive`), for one sent as it goes away. */
+  keepalive?: boolean;
 };
+
+/** R2119000: how a held deletion goes; `keepalive` when the page is going away. */
+export type SendOptions = { keepalive?: boolean };
 
 function errorBodyOf(value: unknown, status: number): ApiErrorBody {
   if (typeof value === "object" && value !== null) {
@@ -163,6 +168,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
           method: options.method ?? "GET",
           headers,
           ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+          ...(options.keepalive === true ? { keepalive: true } : {}),
           signal: controller.signal,
         }),
         timedOut,
@@ -864,10 +870,11 @@ export function putDeck(token: string, id: string, input: DeckInput): Promise<{ 
 }
 
 /** `DELETE /api/decks/:id`: idempotent; `deleted: false` when there was nothing to delete. */
-export function deleteDeck(token: string, id: string): Promise<{ deleted: boolean }> {
+export function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
   return apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
+    ...options,
   });
 }
 
@@ -910,10 +917,11 @@ export function importTrio(token: string, input: TrioImportInput): Promise<{ dec
   });
 }
 
-export function deleteTrio(token: string, id: string): Promise<{ deleted: boolean }> {
+export function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
   return apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
+    ...options,
   });
 }
 
