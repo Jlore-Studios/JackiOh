@@ -822,6 +822,7 @@
   "{rank} · Season {season}": "{rank} · 赛季 {season}",
   "No season best yet — finish placements to earn one.": "尚无赛季最佳——完成定位赛即可获得。",
   "Season best:": "赛季最佳：",
+  "This season (ranked): {wins}–{losses}–{draws}": "本赛季（排位）：{wins}–{losses}–{draws}",
   "Record": "战绩",
   "W–L–D": "胜–负–平",
   "Played": "已进行",
