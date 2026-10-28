@@ -191,6 +191,22 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(delta !== null && dataOnly(delta)).toBe(true);
   });
 
+  it("R388 R2261001 a number newly marked cry on one face is a params change that names the face", () => {
+    const bolt = fixtureDef(V3, "core-002");
+    const cry = { ...bolt, params: (bolt.params ?? []).map((param) => ({ ...param, cry: "base" as const })) };
+    const delta = diffCard(bolt, cry);
+    expect(changed(delta)).toEqual([
+      {
+        kind: "value",
+        field: "params",
+        label: expect.any(String) as string,
+        before: "damage 4, Radiant 6, step 1, at least 1, more is better",
+        after: "damage 4, Radiant 6, step 1, at least 1, tuned only off the field on the base face, more is better",
+      },
+    ]);
+    expect(delta !== null && dataOnly(delta)).toBe(true);
+  });
+
   it("R388 R277 the text diff is R277's: one alignment, marks never start or end on a separator", () => {
     const diff = wordDiff("Cast on draw: Your opponent has 1 less mana next turn.", "Cast on draw: Your opponent has 1 less mana next turn. Discard 1.");
     expect(diff.removed).toEqual([]);

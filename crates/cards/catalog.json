@@ -16594,7 +16594,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": "base"
       }
     ],
     "loc": 29,
@@ -26651,7 +26652,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 7,
       "health": 7,
@@ -27015,7 +27016,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 57,
     "base": {
       "attack": 3,
       "health": 2,
@@ -27119,7 +27120,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 0,
       "health": 4,
@@ -27275,7 +27276,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 3,
       "health": 3,
@@ -27426,7 +27427,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 60,
     "base": {
       "attack": 0,
       "health": 12,
@@ -27494,7 +27495,7 @@
     "flavor": "Holy",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 2,
       "health": 1,
@@ -27616,7 +27617,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 0,
       "health": 3,
@@ -27693,7 +27694,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 4,
       "health": 16,
