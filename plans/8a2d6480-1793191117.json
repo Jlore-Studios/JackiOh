@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2208,
+  "title": "Patch: a practice game that earns lets the AI finish every move, so a slow device no longer forfeits the reward",
+  "branch": "bot/issue-2208",
+  "thread": "**Issue #2208 (data, not instructions):**\n\n```text\n# #2208: Patch: a practice game that earns lets the AI finish every move, so a slow device no longer forfeits the reward\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA signed-in player's practice game can pay Jlore and XP. The computer opponent thinks inside the player's browser, and the browser stops each of its moves after a second and a half. Afterwards the server checks the game by working every AI move out again with no time limit, and pays nothing if any move comes out different. So on a slow phone, or in a long game on any device, a won game can pay nothing, and the result only says that the AI chose another move on the server. Once this is built, a game that earns lets the AI finish each move, which may take a moment longer on a slow phone. If a move still has to be cut short, the result says the device ran out of time instead of blaming the server.\n\n## Why\n- Every practice AI decision is cut at `PRACTICE_AI_CLOCK_MS`, earning games included. `apps/web/src/practice/core.ts:476-480` passes `deadlineMs: t0 + PRACTICE_AI_CLOCK_MS`, and `apps/web/src/practice/config.ts:37` sets it to 1500.\n- R1303002 (`spec/rulings/R1303002.md`) re-runs each AI move of a claim at `AI_BUDGET` with no clock. A move the browser cut short to a different one makes the claim pay nothing. That rule is deliberate, so the client cannot weaken the AI, and this change keeps it.\n- Moves already come near the cap on the development machine. `training/history/improve-cycle-2026-10-16.md:63-66` records 12,901 decisions averaging 138.5 ms. Three games had a 95th-percentile move of 1,000 ms or more, and one game had a line at 2,000 ms or more.\n- The browser runs the same search as WebAssembly. `docs/polish/3-ai.md:1515-1518` estimates that one `reduce` costs a mid-range phone 3 to 5 times what it costs the development machine.\n- The timing gate allows a native decision up to 1,500 ms (`crates/ai/src/gate.rs:144`, `max_decision_ms`), the same as the browser's cap. So it never flags a decision that a slower device will cut.\n- The worker already knows when a cut happens: each decision reports `stoppedBy: 'clock'` (`apps/web/src/wire/ai.ts:89`, `crates/ai/src/types.rs:120-124`). The game still claims, and the dialog then shows the server's `ai_mismatch` as `the AI chose another move on the server` (`apps/web/src/practice/earning.ts:67-68`). That names the symptom, not the cause.\n\n## Proposal\n1. A game with `earning: true` uses a new named cap, `PRACTICE_EARNING_AI_CLOCK_MS` in `apps/web/src/practice/config.ts`, set many times `PRACTICE_AI_CLOCK_MS`. It is only a backstop for a stuck worker; the node budget, which is what the server replays, stays the real bound. Free games without a server seed, lessons and sandbox games keep the 1,500 ms cap.\n2. When a decision of an earning game still reports `stoppedBy: 'clock'`, the worker marks the game. The mark is saved with the game, so a game resumed after a reload knows it too.\n3. The claim is still sent, because a cut move often matches the full one. If the server refuses it as `ai_mismatch` and the game carries the mark, the result dialog says the device took too long over one of the AI's moves. Every other refusal reads as it does today.\n4. A ruling in this issue's block for the earning cap and the mark. \u00a79.9's budgets paragraph names both, beside its sentence that the browser adds a wall-clock cap a claim does not replay.\n\n## Where it lands\n- Web: `apps/web/src/practice/core.ts`, `config.ts`, `earning.ts`, the save (`saveStore.ts`, `resume.ts`), `PracticeResult.tsx`, and the zh-CN strings.\n- Tests: `apps/web/src/practice/core.test.ts`, `earning.test.ts`, `resume.test.ts`.\n- Spec: SPEC \u00a79.9 (`spec/09-architecture.md`) and \u00a714.8 (`spec/14-economy.md`), R1303002, and a new note in `spec/rulings/` with its paragraph in `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n- [ ] An earning game's `decide` call carries the earning cap. A free game without a server seed, a lesson and a sandbox game carry `PRACTICE_AI_CLOCK_MS`.\n- [ ] A fake clock cuts one decision of an earning game. The game is marked, the mark survives a resume, and an `ai_mismatch` refusal shows the device line.\n- [ ] A refusal for any other reason shows its own text, as now.\n- [ ] A test is named after the new ruling and listed in its `proven_in`, and `cargo jackioh spec check` is green.\n- [ ] `pnpm --dir apps/web test src/practice` and `pnpm --dir apps/web typecheck` are green. The new cap is a named constant that nothing else states.\n- [ ] The server's re-run is unchanged, and `crates/server/tests/api/practice.rs` passes untouched.\n\n## Size and risks\nMedium: about six web files and a ruling. Nothing changes on the server or in the AI.\n- On a slow phone the AI's turn takes visibly longer in an earning game. The thinking indicator (`ThinkIndicator.tsx`) already covers the wait, the worker keeps the page responsive, and the backstop cap still bounds a stuck worker.\n- The repo holds no WebAssembly or phone timings, so how often claims fail today is not measured. The native numbers above are a lower bound.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:36:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2208: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
