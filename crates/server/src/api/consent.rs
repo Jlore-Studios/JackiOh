@@ -70,7 +70,7 @@ fn birth_of(body: &Value) -> Result<Option<(i32, i32)>, ApiError> {
                 .as_i64()
                 .and_then(|n| i32::try_from(n).ok())
                 .map(Some)
-                .ok_or_else(|| bad_request(&format!("\"{key}\" must be a whole number"))),
+                .ok_or_else(|| bad_request(format!("\"{key}\" must be a whole number"))),
         }
     };
     match (number("birthYear")?, number("birthMonth")?) {
