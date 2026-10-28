@@ -37,12 +37,12 @@ Read the whole change before editing: `git diff $base...HEAD`.
   a breakage already on `main`), change nothing and say so plainly with the evidence.
 - `conflict`: resolve every marker so both `main`'s change and this branch's change survive with
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
-  The rulings collide on nearly every merge, because each branch takes the next R number: both
-  sides add `spec/rulings/R<nnnn>.md` under the same number, and `spec/INDEX.md` conflicts on its
-  last rows. A ruling of this branch takes the next number free after `main`'s highest: rename its
-  note, its `id`, its test names (`r<n>_…`, `R<n>`) and every citation of it on this branch to
-  match; `main`'s notes stay exactly as they are. Never merge `spec/INDEX.md` by hand: rewrite it
-  with `cargo jackioh spec index`, then run `cargo jackioh spec check`. Before you stop, run
+  A ruling of this branch whose number `main` took meanwhile takes the next number free in its
+  issue's block: rename its note, its `id`, its test names (`r<n>_…`, `R<n>`) and every citation of
+  it on this branch to match; `main`'s notes stay exactly as they are. A conflict on `spec/INDEX.md`
+  or the end of `spec/11-rulings.md` (a branch from before the daily fold) takes `main`'s side: the
+  branch's §11 paragraph moves to `spec/pending/<issue>.md`, and the fold rewrites the index. Then
+  run `cargo jackioh spec check`. Before you stop, run
   `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec` and every other file the merge left
   conflicted, and make sure it prints nothing. A change that still holds a marker is never
   delivered.
