@@ -7016,6 +7016,13 @@
     "2255": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T17:41:01Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 3 fails: the change edits \u00a79.12 in spec/09-architecture.md and adds ruling R2255000, which the easy rule rules out; the rest is a client-only change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
