@@ -363,3 +363,57 @@ fn r963_steal_otherwise_destroy_needs_no_room_to_destroy() {
     assert!(events.is_empty(), "a plain steal refused reports nothing");
     assert_eq!(top_id(&state, P2, 1), Some(victim.id));
 }
+
+/// Apply `effect` for `controller` with no card running it, then settle, as a resolving card's would.
+fn apply_settled(state: &mut GameState, controller: PlayerId, effect: Effect) -> Vec<GameEvent> {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(controller),
+                    ..Default::default()
+                },
+            );
+            (effect.apply)(&mut ctx);
+        }
+        settle(&mut sink, SettleOptions::default());
+    }
+    state.rng_cursor = rng.cursor();
+    events
+}
+
+#[test]
+fn r1876002_remove_allures_withdraws_every_allure_on_the_field_so_nothing_is_stolen() {
+    let mut state = playing("remove");
+    let theirs = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
+    let mut cast = allure(&mut state, P1).state;
+    assert!(
+        jackioh_engine::marks::marks_on(&cast, &theirs.id)
+            .iter()
+            .any(|mark| mark.mark == "allure")
+    );
+    let events = apply_settled(&mut cast, P2, jackioh_engine::effects::delay::remove_allures());
+    // The mark comes off, said by a `marked` event, and no Allure waits.
+    assert!(jackioh_engine::marks::marks_on(&cast, &theirs.id).is_empty());
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::Marked { instance_id, added: false, .. } if *instance_id == theirs.id
+    )));
+    assert!(
+        cast.delayed
+            .iter()
+            .all(|entry| entry.resume.hook != DELAYED_ALLURE_HOOK)
+    );
+    let mine = pass(&pass(&cast).state).state;
+    assert_eq!(mine.active, P1);
+    assert_eq!(
+        find_instance(&mine, &theirs.id).map(|card| card.controller),
+        Some(P2),
+        "not stolen"
+    );
+}

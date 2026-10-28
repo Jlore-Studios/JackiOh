@@ -128,6 +128,10 @@ export const DECK_COMPARE_SELECT = "deck-compare-select";
  */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
 
+/** #2099: the open deck's Undo and Redo, in the top bar; each is off with nothing to move. */
+export const DECK_UNDO = "deck-undo";
+export const DECK_REDO = "deck-redo";
+
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }

@@ -366,16 +366,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(muse_row, body)
         self.assertIn(claude_row, body)
         self.assertLess(body.index(muse_row), body.index(claude_row))
-        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n# 🤖 "))
+        # The date first, then how far the PC's two local jobs have played (no heartbeat here).
+        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n"
+                                        f"{dashboard.PROGRESS_START}\n```mermaid\n"))
+        self.assertIn("<sub>The owner's PC: no heartbeat set up (JACKIOH_PC_GIST).</sub>", body)
+        self.assertIn(f"{dashboard.PROGRESS_END}\n\n# 🤖 ", body)
         self.assertIn("`bot-status` rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
-        self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
-                      body)
+        self.assertIn(f"```mermaid\n{dashboard.TIMELINE_STYLE}\ngantt\n    title Runs going now, "
+                      "as of 22:00 (Central time)", body)
         self.assertIn("    tickInterval 30minute\n    todayMarker off", body)
-        self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :active, "
+        self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :"
                       "2026-09-29 21:13, 2026-09-29 22:00", body)
-        self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :active, ", body)
-        gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
+        self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :", body)
+        gantt = body.split(f"{dashboard.TIMELINE_STYLE}\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # Every subscription as a box, with what it does or why not and its usage, always:
         # the Claude accounts, then the night box's.
@@ -1131,6 +1135,129 @@ class RunnersTests(unittest.TestCase):
         self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 learn · export (shard 3)', group)
         self.assertIn('pc1["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch', group)
         self.assertIn('<br/>on 1.9 CPUs"]:::busy', group)
+
+    def both_playing(self, learn: dict | None = None, gather: dict | None = None) -> None:
+        """A learn shard and gather both going on the PC, as above, with each runner's `progress`
+        in the heartbeat as given (bot/machine/local/supervisor.ps1, `Get-Progress`)."""
+        self.gather_going()
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        self.gh.runs["104"]["status"] = "in_progress"
+        self.gh.jobs["104"] = [{"name": "export (shard 3)", "status": "in_progress",
+                                "labels": [dashboard.LOCAL_LABEL], "runner_name": "pc-selfplay-1",
+                                "started_at": ago(40), "steps": []}]
+        beat = self.beat()
+        beat["runners"].insert(0, {"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL,
+                                   "busy": True, "cpus": 5.8, "throttled": False})
+        for runner, played in zip(beat["runners"], (learn, gather)):
+            if played is not None:
+                runner["progress"] = played
+        self.heartbeat(beat)
+
+    def heartbeat(self, beat: dict | None, gist: str = "g1") -> None:
+        self.ctx = make_ctx(self.gh, at=NIGHT,
+                            cfg=make_config(env={"JACKIOH_PC_GIST": gist} if gist else {}))
+        if beat is not None:
+            self.gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(beat)}}}}
+
+    def top(self) -> str:
+        """The top of the issue: how far the PC's two local jobs have played, as a chart."""
+        return dashboard.progress(self.ctx, dashboard.read_runners(self.ctx))
+
+    def bars(self) -> tuple[str, str, str]:
+        """The progress chart's labels, its played bar and the line under it."""
+        lines = self.top().split("\n")
+        return (next(line for line in lines if line.startswith("    x-axis")),
+                [line for line in lines if line.startswith("    bar ")][1],
+                next(line for line in lines if line.startswith("<sub>")))
+
+    def test_the_top_of_the_issue_charts_how_far_the_pcs_two_jobs_have_played(self):
+        """Under the issue's date, a Mermaid bar chart: the learn lane's export as the game it is
+        at of learn.yml's 100,000, its shard's games, and gather's games, each in percent over a
+        grey bar to 100, from the heartbeat's `progress` (the games each `jackioh` has written so
+        far); under it, the shard's range, gather's patch and when the PC was heard."""
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 2304, "from": 65001},
+                          gather={"kind": "stats", "games": 2000, "done": 1320, "from": 300001,
+                                  "patch": "v0.4.12d"})
+        text = self.top()
+        self.assertTrue(text.startswith(f"{dashboard.PROGRESS_START}\n```mermaid\n"
+                                        f"{dashboard.PROGRESS_CHART}\nxychart-beta horizontal\n"
+                                        "    title \"The owner's PC: how far its two local jobs "
+                                        "have played, %\"\n"))
+        self.assertIn('    x-axis ["learn: game 67,304 of 100,000", "its shard: 2,304 of 5,000", '
+                      '"gather: game 1,320 of 2,000"]\n    y-axis "% played" 0 --> 100\n'
+                      "    bar [100, 100, 100]\n    bar [67.3, 46.1, 66.0]\n```\n", text)
+        self.assertTrue(text.endswith("<sub>The shard plays games 65,001–70,000 · gather plays "
+                                      f"v0.4.12d · heard 21:59.</sub>\n{dashboard.PROGRESS_END}"))
+        # An export larger than learn.yml's default: its shard alone, and the game it is at.
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 10, "from": 100001})
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["its shard: 10 of 5,000", "gather: working, no '
+                         'games"]')
+        self.assertEqual(played, "    bar [0.2, 0.0]")
+        self.assertEqual(note, "<sub>Learn is at game 100,010, past learn.yml's 100,000 · the "
+                         "shard plays games 100,001–105,000 · gather is playing no games now (its "
+                         "build) · heard 21:59.</sub>")
+        # Busy but playing no games: building, retraining, gating.
+        self.both_playing()
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["learn: working, no games", "gather: working, no '
+                         'games"]')
+        self.assertEqual(played, "    bar [0.0, 0.0]")
+        self.assertIn("<sub>Learn is playing no games now (a build, the retrain, the screen or "
+                      "the gate) · gather is playing no games now (its build)", note)
+        # Jobs queued for runners the PC has not started (it is not quiet yet), then none at all.
+        self.gather_going(status="queued")
+        self.gh.runs["104"]["status"] = "queued"
+        self.gh.jobs["104"] = [{"name": "plan", "status": "queued",
+                                "labels": [dashboard.LOCAL_LABEL]}]
+        self.heartbeat(self.beat(runners=[]))
+        self.assertEqual(self.bars()[0], '    x-axis ["learn: waiting for its runner", '
+                         '"gather: waiting for its runner"]')
+        self.gh.runs.clear()
+        self.assertEqual(self.bars()[0], '    x-axis ["learn: not playing", "gather: not '
+                         'playing"]')
+        # No heartbeat to trust: the line under the chart says why.
+        self.heartbeat(self.beat(minutes_ago=30))
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["learn: no heartbeat", "gather: no heartbeat"]')
+        self.assertEqual(note, "<sub>The owner's PC: not heard since 21:30.</sub>")
+        self.heartbeat(None, gist="")
+        self.assertEqual(self.bars()[2], "<sub>The owner's PC: no heartbeat set up "
+                         "(JACKIOH_PC_GIST).</sub>")
+
+    def test_the_export_size_is_learn_ymls_default(self):
+        text = (ROOT / ".github" / "workflows" / "learn.yml").read_text(encoding="utf-8")
+        self.assertIn(f"games: ${{{{ inputs.games || '{dashboard.LEARN_GAMES}' }}}}", text)
+
+    def test_the_timeline_draws_the_pcs_jobs(self):
+        """The runs-going-now timeline draws the PC's jobs too, by workflow and job, in readable
+        colours: plain bars, whose name beside a short bar is grey, not the dark theme's dark."""
+        self.both_playing()
+        found = dashboard.read_runners(self.ctx)
+        chart = "\n".join(dashboard.timeline(self.ctx, {}, {}, found))
+        self.assertTrue(chart.startswith(f"```mermaid\n{dashboard.TIMELINE_STYLE}\ngantt\n"))
+        self.assertIn('"taskTextOutsideColor": "#6e7781"', dashboard.TIMELINE_STYLE)
+        self.assertIn("    section The owner's PC\n"
+                      "    learn · export (shard 3) · 40m :2026-09-29 21:20, 2026-09-29 22:00\n"
+                      "    gather · gather the newest patch · 12m :2026-09-29 21:48, "
+                      "2026-09-29 22:00", chart)
+        self.assertNotIn(":active", chart)
+        self.assertEqual(dashboard.timeline(self.ctx, {}, {}), ["Nothing is running right now."])
+
+    def test_a_redraw_keeps_the_top_lines_fresh(self):
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 2304, "from": 65001})
+        self.gh.add_issue(148, dashboard.TITLE, "x", user=OPERATOR)
+        self.ctx.store.update(lambda s: s.update(dashboard={"issue": 148}))
+        self.gh.threads[148]["body"] = (
+            f"date\n\n{dashboard.PROGRESS_START}\nold lines\n{dashboard.PROGRESS_END}\n\ntop\n"
+            f"{dashboard.RUNNERS_START}\nold runners\n{dashboard.RUNNERS_END}\nbottom")
+        self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
+        body = self.gh.threads[148]["body"]
+        self.assertTrue(body.startswith(f"date\n\n{dashboard.PROGRESS_START}\n```mermaid\n"))
+        self.assertIn('"learn: game 67,304 of 100,000"', body)
+        self.assertNotIn("old lines", body)
+        self.assertNotIn("old runners", body)
+        self.assertTrue(body.endswith(dashboard.RUNNERS_END + "\nbottom"))
 
     def test_a_pc_gone_quiet_or_never_heard(self):
         group = self.pc(self.beat(minutes_ago=30))

@@ -154,7 +154,7 @@ A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-priced Resource in the viewer's tray. Each is live exactly when `legal` lists its `marketBuy` or
+sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
 ## Commands
@@ -236,7 +236,8 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
-                        one POST /api/trios/import, never the autosave (R341)
+                        one POST /api/trios/import, never the autosave (R341);
+                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
@@ -268,7 +269,9 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
-                        (#1650), for this screen, the account, Play and the board
+                        (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
+                        draws a ranked win streak as a flame on the account and a ranked match's
+                        line (R2101000)
 routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
                         Card builder (/creator) as links, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
@@ -379,7 +382,11 @@ routes (net/navigate.ts paths, and both vercel.json route tables):
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+                         this site's room link draws a Join button that navigates in-app (R2094000)
+net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
+                         (/together?coop=…): built for the share sheet or the clipboard, read once off
+                         the address bar into this tab, through a sign-in, for the lobby or the co-op panel
 together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
                          landing and a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
@@ -398,8 +405,9 @@ together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenge
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
-                         invite a friend by sending the code in chat, join by code; both players go to
-                         /duos/:matchId once the guest joins
+                         offer its link, invite a friend by sending the link in chat, join by code or by
+                         a co-op link that fills the join form and focuses Join (R2094000); both players
+                         go to /duos/:matchId once the guest joins
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          teammate strip and the ping wheel
@@ -432,7 +440,7 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
 `duos-ping-<kind>` and `duos-ping-marker`.
 

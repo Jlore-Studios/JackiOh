@@ -1308,6 +1308,29 @@ describe("R767 a room shared as a link", () => {
     expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo3"));
   });
 
+  it("R2094000 a room link opened on /play itself, as a chat Join does, fills the code, the mode and the focus", async () => {
+    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
+    openLink("");
+    const trioSelect = await screen.findByTestId(playTestid.trioSelect);
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("");
+    // The same path with a new query: no remount, as `navigate` does it.
+    act(() => {
+      window.history.pushState(null, "", `${paths.play}?room=abc234&mode=bo1`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    const deckSelect = await screen.findByTestId(playTestid.deckSelect);
+    expect(trioSelect).not.toBeInTheDocument();
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+    expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
+    await waitFor(() => {
+      expect(deckSelect).toHaveFocus();
+    });
+    expect(window.location.search).toBe("");
+    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
+  });
+
   it("R767 a code that is no room code is ignored without a word", async () => {
     // abc123 has a 1 (R104's alphabet has none), abc23 is short and abc2345 is long.
     for (const code of ["abc123", "abc23", "abc2345"]) {

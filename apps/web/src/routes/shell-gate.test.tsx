@@ -22,7 +22,7 @@ import { clearConsumedAuthRedirect } from "../auth/redirect.ts";
 import { inviteTestid, landingTestid, loginTestid, shellTestid } from "../auth/testids.ts";
 import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import { ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { COOP_LINK_STORAGE_KEY, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
 import { at } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
@@ -495,6 +495,45 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
       navigate(paths.play);
     });
     expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("");
+  });
+
+  it("R2094000 a co-op link opened while signed out waits through the sign-in, and /together uses it once", async () => {
+    stubFetch((url) => {
+      if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
+      if (url === `${API}/api/auth/me`) return json(200, me("active"));
+      return "hang";
+    });
+    at(`${paths.together}?coop=abc234`);
+    render(<App />);
+    await screen.findByTestId(loginTestid.form, undefined, SLOW);
+    // The link is out of the address bar, and what waits is the code alone, never a path (B35).
+    expect(window.location.pathname).toBe(paths.login);
+    expect(window.location.search).toBe("");
+    const kept = window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY);
+    expect(kept).not.toBeNull();
+    expect(kept).not.toContain(paths.together);
+
+    signIn();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.landing);
+    }, SLOW);
+    act(() => {
+      navigate(paths.together);
+    });
+    expect(await screen.findByTestId("coop-join-input", undefined, SLOW)).toHaveValue("ABC234");
+    // /together forgets the link in an effect, which can run just after the form shows.
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
+    });
+
+    // Used once: back to the menu and in again, the form starts empty.
+    act(() => {
+      navigate(paths.landing);
+    });
+    act(() => {
+      navigate(paths.together);
+    });
+    expect(await screen.findByTestId("coop-join-input", undefined, SLOW)).toHaveValue("");
   });
 
   it("B35 the gate remembers no destination: a signed-out visit to a gated screen stores none", async () => {

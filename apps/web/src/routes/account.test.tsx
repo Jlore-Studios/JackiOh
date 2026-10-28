@@ -8,7 +8,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { RANK_STREAK_FLAME_LENGTH as N } from "@jackioh/server-config";
 import { usernameTestid } from "../auth/testids.ts";
+import { streakWords } from "../rank/StreakFlame.tsx";
 import {
   getCosmeticPacks,
   getOwnRank,
@@ -324,6 +326,29 @@ describe("the account screen", () => {
       resetSigningOutForTests();
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
+    }
+  });
+
+  it("R2101000 shows a flame with the streak beside the rank at or past RANK_STREAK_FLAME_LENGTH", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ streak: N }));
+    render(<AccountRoute token={TOKEN} />);
+
+    const rank = await screen.findByTestId("account-rank");
+    const flame = within(rank).getByRole("img", { name: streakWords(N) });
+    expect(flame).toHaveAttribute("data-size", "large");
+    expect(flame).toHaveTextContent(String(N));
+  });
+
+  it("R2101000 shows no flame below the threshold, nor once a loss has set the streak to 0", async () => {
+    for (const streak of [N - 1, 0]) {
+      vi.mocked(getProfile).mockResolvedValue(profileBody());
+      vi.mocked(getOwnRank).mockResolvedValue(rankBody({ streak }));
+      render(<AccountRoute token={TOKEN} />);
+
+      const rank = await screen.findByTestId("account-rank");
+      expect(rank.querySelector(".streak-flame")).toBeNull();
+      cleanup();
     }
   });
 });

@@ -1355,8 +1355,8 @@ pub struct TradesView {
 }
 
 /// R1853000–R1853003, §10.8: the open Marketplace as the viewer reads it (`marketplace::marketplace_view`):
-/// the lots offered to them and their own Resources' sale prices. Which buys and sales are offered stays
-/// `legal_actions`' answer.
+/// the lots offered to them and the sale prices of their own Resources and hand sales (R1861000). Which
+/// buys and sales are offered stays `legal_actions`' answer.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1404,7 +1404,8 @@ pub struct MarketOfferView {
     pub reason: Option<String>,
 }
 
-/// R1853002, R1853003: a Resource in the viewer's own tray and what it sells for this turn.
+/// R1853002, R1853003: a Resource in the viewer's own tray, or a card in their hand that sells from there
+/// (R1861000), and what it sells for this turn.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",

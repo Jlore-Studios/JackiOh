@@ -83,7 +83,7 @@ import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
-import { adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
+import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   duosIdOf,
@@ -619,6 +619,8 @@ export function App(): ReactElement {
   useState(() => adoptAuthRedirect(paths.login));
   // R767: a room link leaves the address bar and waits in this tab before the gate can send a signed-out visitor to sign in.
   useState(adoptRoomLink);
+  // R2094000: a co-op link does the same for /together.
+  useState(adoptCoopLink);
   const path = usePathname();
   useDocumentHead(path);
   // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.
