@@ -6585,6 +6585,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2229": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T12:48:21Z",
+      "issue": 2212,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
