@@ -5687,7 +5687,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
+      "question": "CI is red only because main is. `cargo jackioh spec check` fails on main's own `spec/rulings/R2102000.md`, which came in with #2177: its `cards` line names `#2102`, and an issue there must be written `issue #2102`. The fix is that one line on main, the way #2222 fixed R2115000. Then merge main into this branch. Or say this PR may carry that one-line fix, even though it is outside #2124's scope.",
       "queued_at": "2026-10-28T13:11:41Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
