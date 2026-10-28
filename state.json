@@ -6552,7 +6552,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
-      "run_id": "pending:538376d0-1793206589",
+      "run_id": "40730941463",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T16:56:49Z",
       "stop_requested": false,
