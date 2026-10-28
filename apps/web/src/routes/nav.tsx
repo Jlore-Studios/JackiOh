@@ -52,6 +52,7 @@ export function BackLink({
         type="button"
         className="link-button"
         data-testid={navTestid.back}
+        data-route={to}
         onClick={() => {
           if (onPress !== undefined) {
             onPress();

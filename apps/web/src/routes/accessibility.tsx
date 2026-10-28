@@ -44,7 +44,7 @@ export default function AccessibilityRoute(): ReactElement {
           <h3 id="a11y-checked">{t("What we checked")}</h3>
           <p>
             {t(
-              "On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer’s size and at a phone’s, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except those listed below. The same check runs every day, and fails when a new one appears.",
+              "On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except those listed below. The same check runs every day, and fails when a new one appears.",
             )}
           </p>
           <ul>
@@ -59,17 +59,17 @@ export default function AccessibilityRoute(): ReactElement {
         <section aria-labelledby="a11y-features">
           <h3 id="a11y-features">{t("Current support")}</h3>
           <ul>
-            <li>{t("Menus, the deck builder, and the board’s cards, zones and prompts can be used from the keyboard.")}</li>
+            <li>{t("Menus, the deck builder, and the board's cards, zones and prompts can be used from the keyboard.")}</li>
             <li>{t("Focused controls are marked, and each screen has headings.")}</li>
-            <li>{t("Card art is decorative and hidden from screen readers; each card’s name and text are on the card as text.")}</li>
+            <li>{t("Card art is decorative and hidden from screen readers; each card's name and text are on the card as text.")}</li>
             <li>{t("Reduce motion, effects and sound can be changed in Settings.")}</li>
           </ul>
         </section>
         <section aria-labelledby="a11y-gaps">
           <h3 id="a11y-gaps">{t("Known gaps")}</h3>
           <ul>
-            <li>{t("A card shown as a button, on the home page, in the Almanac’s card pool and in a game’s prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
-            <li>{t("In the deck builder, a card in the pool is named by the same short summary, and a card in the open deck by what pressing it does, “Remove” and the card’s name, not by the cost shown beside it.")}</li>
+            <li>{t("A card shown as a button, on the home page, in the Almanac's card pool and in a game's prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
+            <li>{t("In the deck builder, a card in the pool is named by the same short summary, and a card in the open deck by what pressing it does, “Remove” and the card's name, not by the cost shown beside it.")}</li>
             <li>{t("Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where it goes does the same, by click or by Enter on each.")}</li>
             <li>{t("With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.")}</li>
             <li>{t("Colour contrast is checked only where the tool can measure it, so text over card art and gradients has not been checked.")}</li>

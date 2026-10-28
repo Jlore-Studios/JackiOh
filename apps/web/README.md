@@ -55,6 +55,20 @@ same drawing. Still text: the deck builder's win-rate line and the chat's and th
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
 boards' "Joining …" panels.
 
+A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
+menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
+reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
+packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's table (public) and
+`FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
+reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
+skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
+`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
+accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
+a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
+for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
+`key`, when the decks that land differ, since its store is made once.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -711,6 +725,11 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
+  `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
+  buttons and prefetches each route's code once per page load, and the Practice, Play and match
+  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
   and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
@@ -757,6 +776,13 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   module, records no card statistics, and keeps its custom cards in its save, its replay and its
   debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
   in the log.
+
+## Player-facing words
+
+Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
+`src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
+client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
+apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 

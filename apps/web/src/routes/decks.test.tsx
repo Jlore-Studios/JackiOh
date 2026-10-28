@@ -14,7 +14,7 @@ import {
   legalDecks,
 } from "../game/deckbuilder/fixtures.ts";
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
-import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
+import { DECKBUILDER_ERROR, DECKBUILDER_LOADING, DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
 import {
   ApiRequestError,
@@ -22,10 +22,12 @@ import {
   getDecks,
   getMe,
   getOwnedCosmetics,
+  keptPaths,
   putDeck,
   type DecksResponse,
 } from "../net/api.ts";
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
+import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import DecksRoute from "./decks.tsx";
@@ -418,4 +420,95 @@ describe("when another account signs in under an open workshop", () => {
     const savedAsFirst = vi.mocked(putDeck).mock.calls.some(([token, , input]) => token === TOKEN && input.name === "Deck 1");
     if (!savedAsFirst) expect(kept).toContain('"dirty":true');
   }, SWITCH_TEST_TIMEOUT_MS);
+});
+
+describe("R2125000 the workshop opens on the decks the last visit kept", () => {
+  /** A read that answers when the test says. */
+  function deferDecks(): (answer: DecksResponse) => Promise<void> {
+    let resolve: (answer: DecksResponse) => void = () => undefined;
+    vi.mocked(getDecks).mockReturnValue(
+      new Promise<DecksResponse>((answered) => {
+        resolve = answered;
+      }),
+    );
+    return async (answer) => {
+      await act(async () => {
+        resolve(answer);
+        await Promise.resolve();
+      });
+    };
+  }
+
+  const keptDecks = (): DecksResponse =>
+    decksResponse([savedDeck("d-kept", "Kept", ONE, 1, catalog.version)], [], catalog.version);
+
+  it("R2125000 a revisit opens the workshop on the kept decks, then on the server's when they differ", async () => {
+    rememberRead(TOKEN, keptPaths.decks, keptDecks());
+    const answer = deferDecks();
+    render(<DecksRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("deck-row-d-kept")).toHaveTextContent("Kept");
+    expect(screen.queryByTestId(DECKBUILDER_LOADING)).toBeNull();
+
+    await answer(
+      decksResponse([savedDeck("d-aggro", "Aggro", ONE, 1, catalog.version)], [], catalog.version),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("deck-row-d-aggro")).toHaveTextContent("Aggro");
+    });
+    expect(screen.queryByTestId("deck-row-d-kept")).toBeNull();
+    expect(screen.queryByTestId(DECKBUILDER_ERROR)).toBeNull();
+  });
+
+  it("R2125000 the same decks behind the kept ones leave the workshop where it is", async () => {
+    rememberRead(TOKEN, keptPaths.decks, keptDecks());
+    const answer = deferDecks();
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    const before = screen.getByTestId("workshop");
+
+    await answer(keptDecks());
+
+    expect(screen.getByTestId("workshop"), "not reopened").toBe(before);
+    expect(screen.getByTestId("deck-row-d-kept")).toBeInTheDocument();
+  });
+
+  it("R2125000 a failed read keeps the kept decks and shows no error", async () => {
+    rememberRead(TOKEN, keptPaths.decks, keptDecks());
+    vi.mocked(getDecks).mockRejectedValue(new Error("the server could not be reached"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(getDecks).toHaveBeenCalledWith(TOKEN);
+    expect(screen.getByTestId("deck-row-d-kept")).toHaveTextContent("Kept");
+    expect(screen.queryByTestId(DECKBUILDER_ERROR)).toBeNull();
+    expect(screen.queryByTestId(DECKBUILDER_RETRY)).toBeNull();
+  });
+
+  it("R2125000 another account's kept decks never open the workshop", async () => {
+    rememberRead("e2e-token-other", keptPaths.decks, keptDecks());
+    deferDecks();
+    render(<DecksRoute />);
+
+    await waitFor(() => {
+      expect(getDecks).toHaveBeenCalledWith(TOKEN);
+    });
+    expect(screen.getByTestId(DECKBUILDER_LOADING)).toBeInTheDocument();
+    expect(screen.queryByTestId("workshop")).toBeNull();
+    expect(screen.queryByTestId("deck-row-d-kept")).toBeNull();
+  });
 });

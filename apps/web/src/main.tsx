@@ -52,6 +52,11 @@
 // the reset and code screens and the legal pages never call it. The page paints once the language is
 // in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
 //
+// SCREEN CODE ON INTENT (#2116, R2116000). The screens are chunks of one map
+// (`routes/chunks.tsx`), which the prefetch shares: intent toward a control starts its screen's
+// code, and a game screen's engine, before the click, and a screen whose code is already in skips
+// the loading panel.
+//
 // FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57). While the tab holds a session, the shell sends the
 // presence heartbeat (`together/presence.ts`) and shows the challenge toast (`together/ChallengeToast.tsx`)
 // over every screen, whichever is open: both are this file's, as the queue's follow is, so neither
@@ -61,7 +66,6 @@ import {
   Component,
   StrictMode,
   Suspense,
-  lazy,
   useEffect,
   useState,
   type ErrorInfo,
@@ -104,6 +108,7 @@ import { watchFriendOf } from "./together/watchLink.ts";
 // screen that failed to load anything else, so account.tsx is in the entry chunk either way.
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
+import { routeChunks, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -113,40 +118,33 @@ import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 import "./index.css";
 import "./auth/tavern.css";
 
-const DEV_ONLY = import.meta.env.MODE !== "production";
-
-// Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
-// behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
-const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
-// #936 B65: the four-seat Duos hotseat, outside production only, as the 1v1 hotseat is.
-const DevDuosRoute = DEV_ONLY ? lazy(() => import("./duos/DevDuosRoute.tsx")) : null;
-// #936 B61–B64: the networked co-op board.
-const DuosRoute = lazy(() => import("./duos/DuosRoute.tsx"));
-// R768000: the recent games and their replays.
-const ReplaysRoute = lazy(() => import("./routes/replays.tsx"));
-const LoginRoute = lazy(() => import("./routes/login.tsx"));
-const ResetPasswordRoute = lazy(() => import("./routes/reset-password.tsx"));
-const InviteRoute = lazy(() => import("./routes/invite.tsx"));
-const DecksRoute = lazy(() => import("./routes/decks.tsx"));
-const PlayRoute = lazy(() => import("./routes/play.tsx"));
-const MatchRoute = lazy(() => import("./routes/match.tsx"));
-const SeriesRoute = lazy(() => import("./routes/series.tsx"));
-const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
-const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
-const TermsRoute = lazy(() => import("./routes/terms.tsx"));
-const PurchasesRoute = lazy(() => import("./routes/purchases.tsx"));
-const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
-const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
-const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
-const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
-const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
-const CollectionRoute = lazy(() => import("./routes/collection.tsx"));
-const ShopRoute = lazy(() => import("./routes/shop.tsx"));
-const StatsRoute = lazy(() => import("./routes/stats.tsx"));
-const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
-// #936: Play together and a friend's game watched.
-const TogetherRoute = lazy(() => import("./together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute })));
-const WatchRoute = lazy(() => import("./together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute })));
+// #2116: each screen's code is a chunk of routes/chunks.tsx's, which a prefetch on intent shares.
+const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
+const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
+const DuosRoute = routeChunks.duos.Screen;
+const ReplaysRoute = routeChunks.replays.Screen;
+const LoginRoute = routeChunks.login.Screen;
+const ResetPasswordRoute = routeChunks.resetPassword.Screen;
+const InviteRoute = routeChunks.invite.Screen;
+const DecksRoute = routeChunks.decks.Screen;
+const PlayRoute = routeChunks.play.Screen;
+const MatchRoute = routeChunks.match.Screen;
+const SeriesRoute = routeChunks.series.Screen;
+const PracticeRoute = routeChunks.practice.Screen;
+const PrivacyRoute = routeChunks.privacy.Screen;
+const TermsRoute = routeChunks.terms.Screen;
+const PurchasesRoute = routeChunks.purchases.Screen;
+const AccessibilityRoute = routeChunks.accessibility.Screen;
+const CopyrightRoute = routeChunks.copyright.Screen;
+const PatchNotesRoute = routeChunks.patchNotes.Screen;
+const AlmanacRoute = routeChunks.almanac.Screen;
+const LeaderboardRoute = routeChunks.leaderboard.Screen;
+const CollectionRoute = routeChunks.collection.Screen;
+const ShopRoute = routeChunks.shop.Screen;
+const StatsRoute = routeChunks.stats.Screen;
+const CreatorRoute = routeChunks.creator.Screen;
+const TogetherRoute = routeChunks.together.Screen;
+const WatchRoute = routeChunks.watch.Screen;
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -215,7 +213,7 @@ function NotFound({ path }: { path: string }): ReactElement {
   );
   return (
     <ShellPanel testId={shellTestid.notFound}>
-      <p className="notice">{t("That page doesn’t exist.")}</p>
+      <p className="notice">{t("That page doesn't exist.")}</p>
       <p className="auth-hint">
         {nothingBefore}
         <code>{path}</code>
@@ -327,7 +325,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
     return (
       <ShellPanel testId={shellTestid.loadFailed}>
         <p className="notice" role="alert">
-          {t("This screen didn’t load. Check your connection, then reload the page.")}
+          {t("This screen didn't load. Check your connection, then reload the page.")}
         </p>
         <div className="row">
           <button
@@ -386,7 +384,7 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
     return (
       <ShellPanel testId={shellTestid.engineFailed}>
         <p className="notice" role="alert">
-          {t("The game didn’t load. Check your connection, then try again.")}
+          {t("The game didn't load. Check your connection, then try again.")}
         </p>
         <div className="row">
           <button
@@ -636,6 +634,8 @@ export function App(): ReactElement {
   // (which moves to another path) starts both.
   const signedIn = readSession() !== null;
   usePresenceHeartbeat(signedIn);
+  // R2116000: see SCREEN CODE ON INTENT above.
+  useEffect(() => watchRouteIntent(document), []);
 
   // #778: every screen but the engine-free ones (the signed-out Play hub among them, R1578000) waits in EngineGate, inside the account gate so its redirects do not wait.
   const route = ((): ReactElement => {

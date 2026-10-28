@@ -235,7 +235,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
             ))}
           </ul>
           {collection === null ? (
-            <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
+            <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
           ) : null}
         </section>
 

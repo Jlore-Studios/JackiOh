@@ -29,7 +29,7 @@ describe("B40 a screen that fails to load", () => {
     render(<App />);
 
     const panel = await screen.findByTestId(shellTestid.loadFailed);
-    expect(panel.textContent).toMatch(/didn’t load/);
+    expect(panel.textContent).toMatch(/didn't load/);
     expect(screen.getByTestId(shellTestid.reload)).toBeInTheDocument();
     // A real link, not an in-app move: a fresh page load fetches the current build.
     expect(screen.getByTestId(shellTestid.loadFailedHome)).toHaveAttribute("href", paths.landing);

@@ -29,6 +29,8 @@ export type DuosChrome = {
   teammate?: { connected: boolean; aiPlaying: boolean } | null;
   /** Where the result panel's "back" goes. */
   onLeave?: () => void;
+  /** #2116: the route `onLeave` goes to, so the button names it for a prefetch (R2116000); absent, none. */
+  leaveRoute?: string;
   /** #965: the result panel's "Watch the replay" (§13.9); absent, it offers none (/dev/duos has no server replay). */
   onWatchReplay?: () => void;
   /** R2092000: the result panel's Play again; absent, it offers none. */
