@@ -22,7 +22,7 @@ import { paths } from "../net/navigate.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
-import { collectionOf, tokenBars } from "./fixtures.ts";
+import { collectionOf, collectionOwningAllBut, tokenBars } from "./fixtures.ts";
 import {
   fittingCards,
   quantitiesOf,
@@ -85,23 +85,9 @@ describe("#1309 the picker model", () => {
   });
 });
 
-/**
- * A collection owning every catalog card at `MAX_COPIES` but `free`: the pool stays a few faces,
- * so mounting the browse pane is cheap whatever the catalog holds. `core-002` stays free, the
- * card every pick test unlocks; `core-003` stays free beside it, a card no search below matches.
- */
-function ownedAllBut(...free: string[]): CollectionResponse {
-  return {
-    catalogVersion: "test",
-    entries: Object.keys(CATALOG)
-      .filter((id) => !free.includes(id))
-      .map((cardId) => ({ cardId, quantity: 1 })),
-  };
-}
-
 /** The collection the stubbed server reads: everything owned but `core-002` and `core-003`. */
 function smallCollection(): CollectionResponse {
-  return ownedAllBut("core-002", "core-003");
+  return collectionOwningAllBut("core-002", "core-003");
 }
 
 /** The picker's reads, answered from the fixtures unless a test says otherwise. */
