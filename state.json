@@ -5955,7 +5955,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-28T10:53:49Z",
-      "run_id": "pending:58b4664f-1793184849",
+      "run_id": "40675801316",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-28T10:54:26Z",
