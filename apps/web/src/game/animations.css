@@ -491,7 +491,16 @@
   height: 200%;
   z-index: var(--z-overlay);
   pointer-events: none;
-  background: color-mix(in srgb, var(--pal-orange-400) 40%, transparent);
+  background: linear-gradient(
+    to top,
+    var(--bg-sunken) 0%,
+    var(--bg-sunken) 36%,
+    var(--pal-wood-800) 40%,
+    var(--pal-red-500) 43%,
+    color-mix(in srgb, var(--radiant) 80%, var(--pal-white)) 45%,
+    color-mix(in srgb, var(--pal-orange-400) 40%, transparent) 47%,
+    transparent 50%
+  );
   animation-name: jk-burn-climb;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);

@@ -47,8 +47,10 @@ const LAYERS = [...read("surfaces.css").matchAll(/^\s*--z-([a-z-]+):\s*(-?\d+);$
 ]);
 
 /** A background gradient the board keeps: the locked/facedown hatch, the countered badge's strike
- * and bubbles, the drag reticle and the cell-pick crosshair. Everything else goes flat. */
+ * and bubbles, the drag reticle, the cell-pick crosshair and a dying card's burn front. Everything
+ * else goes flat. */
 const GRADIENT_KEEP = [
+  /^linear-gradient\(\s*to top,\s*var\(--bg-sunken\) 0%,\s*var\(--bg-sunken\) 36%,/, // B45's burn front: its sunken lower part eats the card as it climbs
   /repeating-(linear|radial|conic)-gradient/, // the locked-zone and facedown hatch weaves
   /var\(--countered-bubble\)/, // R667's rising bubbles
   /var\(--drag-reticle-colour\)/, // the drop reticle and its tick bars

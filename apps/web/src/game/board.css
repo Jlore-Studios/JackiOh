@@ -1499,6 +1499,8 @@
   inset: 0;
   pointer-events: none;
   background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
+  mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   animation: giga-vignette-flash 400ms ease-out both;
 }
 
@@ -1534,6 +1536,8 @@
   inset: 0;
   pointer-events: none;
   background: color-mix(in srgb, var(--pal-wood-800) 42%, transparent);
+  mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   animation: giga-vignette-flash 400ms ease-out both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
