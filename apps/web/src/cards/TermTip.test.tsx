@@ -3,6 +3,10 @@
 // it shows it too, while an ordinary tap still reaches the card, and the term's long press takes
 // over from the card's. Where the surface allows a control the term is a tab stop.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +24,7 @@ import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_FACE_BASE, INSPECT_SHEET } from "./inspect/testids.ts";
 import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
+import { standInCopy } from "../fx/dom.ts";
 import { must } from "../test/stubServer.ts";
 
 /** Bigot (core-002): "Cry: Destroy an enemy non-Human Unit." */
@@ -145,6 +150,42 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     });
     advance(PAST_ANY_DELAY_MS);
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+  });
+
+  it("R2098000 a term takes the pointer only where its card does: never mid-animation, taken away by a burst, or as a stand-in on the fx layer", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({ selector: (match[1] ?? "").trim(), body: match[2] ?? "" }));
+    const takes = rules.findIndex((rule) => rule.selector === ".cf-term[data-tip]" && /pointer-events:\s*auto/.test(rule.body));
+    const gives = rules.findIndex((rule) => rule.selector.endsWith(" .cf-term[data-tip]") && /pointer-events:\s*none/.test(rule.body));
+    expect(takes, "the term takes the pointer back from its face").toBeGreaterThanOrEqual(0);
+    // The same selector under an ancestor, and later in the sheet: it wins wherever it matches.
+    expect(gives, "the term gives the pointer up again under an ancestor that switches it off").toBeGreaterThan(takes);
+    const off = must(rules[gives], "the rule giving the pointer up").selector;
+
+    render(<Host />);
+    const host = screen.getByTestId("host");
+    const term = cry(host);
+    expect(term.matches(off), "a card at rest").toBe(false);
+    // animations.css's `[data-animating]` and fx.css's concealed card (B47), on the card's root.
+    const switchedOff: [string, string][] = [
+      ["data-animating", "cardPlayed"],
+      ["data-fx-concealed", "now"],
+      ["data-fx-concealed", "after"],
+    ];
+    for (const [name, value] of switchedOff) {
+      host.setAttribute(name, value);
+      expect(term.matches(off), `${name}="${value}"`).toBe(true);
+      host.removeAttribute(name);
+    }
+
+    // fx.css's stand-in (B46): a copy of the card on the fx layer, above the board.
+    const layer = document.createElement("div");
+    layer.className = "fx-layer";
+    layer.appendChild(standInCopy(host));
+    document.body.appendChild(layer);
+    const copied = cry(layer);
+    expect(!copied.hasAttribute("data-tip") || copied.matches(off), "the stand-in's term").toBe(true);
+    layer.remove();
   });
 
   it("R2098000 where the surface allows a control a term is a tab stop: focus shows the tooltip and describes the term, blur hides it", () => {
