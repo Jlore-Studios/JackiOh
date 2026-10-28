@@ -12,16 +12,18 @@
 #   rust_engine_rules  `rust (test engine rules)`, and so on: each `rust_<group>` is one entry of
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
 #   rust_cards_lib     `rust_tools_wasm`, which also runs `tools fuzz` and `tools duos, selfplay`;
-#   rust_cards         `rust_engine` also runs `engine golden`, and `rust_engine_rules` `engine
-#   rust_server        rules 2`)
+#   rust_cards         `rust_engine` also runs `engine golden`, `rust_engine_rules` `engine
+#   rust_server        rules 2`, and `rust_server` `server api`, `server practice` and `server
+#                      practice rulings`)
 #   rust_ai
 #   rust_ai_slow
 #   rust_luau
 #   rust_tools_wasm
-#   web                `web (typecheck, eslint)` and `web (unit k/3)`; the WASM modules and the client
+#   web                `web (typecheck, eslint)` and `web (unit k/4)`; the WASM modules and the client
 #                      build run on `web` or `e2e`
-#   web_promote        `web (unit 1/3)`'s own run of apps/web/src/net/promote-production.test.ts, which
-#                      the shards leave out (the daily super run runs it whatever changed)
+#   web_promote        `web (promote-production)`, ci.yml's run of
+#                      apps/web/src/net/promote-production.test.ts, which the shards leave out (the
+#                      daily super run runs it whatever changed)
 #   e2e                `e2e smoke`
 #   infra              `rust (checks, fuzz 200)`'s terraform steps over infra/ (#1708): fmt, init
 #                      without the backend, validate, and the lock file
