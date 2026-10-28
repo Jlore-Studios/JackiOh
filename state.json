@@ -6214,15 +6214,25 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/deckbuilder/sync.test.ts",
+            "apps/web/src/game/deckbuilder/sync.ts",
+            "apps/web/src/game/deckbuilder/testkit.ts"
+          ],
+          "from": "18d77a44d551813b6570ddaa357add5111756257",
+          "main": "9be40afae2cff476ddcddc3a312506c8fb4d84fd"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40626946400",
+            "run": "40649505880",
             "tier": "strong"
           }
         ],
-        "sha": "18d77a44d551813b6570ddaa357add5111756257",
+        "sha": "1339f99249aadb6a4b86410cf5ae998289dbd080",
         "tiers": {
           "claude": "strong"
         }
