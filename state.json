@@ -6972,11 +6972,13 @@
         "by": "`claude` (strong)",
         "sha": "c76481e00cb9e01137339077a7edb107e22f6d09"
       },
+      "closed_at": "2026-10-28T09:25:40Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-28T07:34:44Z",
       "issue": 2024,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
