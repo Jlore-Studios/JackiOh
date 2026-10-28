@@ -13,6 +13,7 @@ import { t } from "../i18n/i18n.ts";
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
 import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -85,9 +86,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
           ) : null}
 
           {board === null && error === null ? (
-            <p className="notice shell-panel__loading" data-testid={leaderboardTestid.loading} role="status">
-              {t("Loading the ladder…")}
-            </p>
+            <Skeleton variant="rows" label={t("Loading the ladder…")} testId={leaderboardTestid.loading} />
           ) : null}
 
           {board !== null ? (

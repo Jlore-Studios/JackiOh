@@ -31,6 +31,7 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { acceptFriendRequest, declineFriendRequest, getFriends, type Friend, type PlayerRef } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
@@ -188,11 +189,7 @@ function FriendsPanel({
           </ul>
         )}
 
-        {friends.kind === "loading" ? (
-          <p className="lobby-note" role="status">
-            {t("Loading your friends…")}
-          </p>
-        ) : null}
+        {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
         {friends.kind === "failed" ? (
           <AccountError
             message={friends.message}

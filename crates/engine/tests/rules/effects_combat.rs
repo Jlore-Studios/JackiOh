@@ -19,32 +19,8 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::{big_body, plain, taunter};
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, in_hand, new_game, put, slot};
 use crate::rules::fixtures::harness::{json_of, live, live_mut};
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Fixture cards: the two bodies fixtures/combat.ts does not carry.
@@ -299,9 +275,9 @@ fn run_all(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> 
         targets,
     } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut inner = sink.sink();
+        let mut inner = sink.sink(state);
         let mut ctx = make_context(
             &mut inner,
             self_.as_ref(),
@@ -606,9 +582,9 @@ fn marked_board(seed: &str) -> (GameState, Vec<GameEvent>, CardInstance) {
     let mut state = busy_board(seed);
     let marked = card_at(&state, slot(P1, Units, 1)).expect("p1's unit").clone();
     live_mut(&mut state, &marked).marked_destroyed = Some(true);
-    let mut sink = sink_for(&mut state);
+    let mut sink = Bench::new(&state);
     open_prompt(
-        &mut sink.sink(),
+        &mut sink.sink(&mut state),
         inert_prompt(P2, "target", "not yours", &["x", "y"]),
     );
     let events = std::mem::take(&mut sink.events);
@@ -621,35 +597,35 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     #[test]
     fn r44_sets_ai_turn_on_the_named_player_and_takes_no_action_while_another_players_prompt_is_open() {
         let mut state = busy_board("ai-flag");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
         // §9.3: somebody else's open prompt blocks every action, so the playout stops at once and the
         // only thing left to observe is the lockout flag this verb sets before handing over.
         open_prompt(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             inert_prompt(P2, "target", "not yours", &["x", "y"]),
         );
 
         // The trap's controller is p2 (#96 is the defender's card), so "enemy" is the attacker, p1.
         apply_as(
-            sink.sink(),
+            sink.sink(&mut state),
             ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
             P2,
         );
 
-        assert!(sink.state.players.p1.ai_turn);
-        assert!(!sink.state.players.p2.ai_turn);
+        assert!(state.players.p1.ai_turn);
+        assert!(!state.players.p2.ai_turn);
         assert!(events_of_type(&sink.events, GameEventType::CardPlayed).is_empty());
-        assert_eq!(sink.state.active, P1);
+        assert_eq!(state.active, P1);
     }
 
     #[test]
     fn r84_hands_the_rest_of_the_turn_to_s10_7s_policy_which_plays_it_out_and_never_concedes() {
         let mut state = busy_board("ai-playout");
         let address: *const GameState = &state;
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         apply_as(
-            sink.sink(),
+            sink.sink(&mut state),
             ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
             P2,
         );
@@ -659,15 +635,15 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
             field_of(&sink.events, GameEventType::TurnEnded, "player"),
             vec![json!("p1")]
         );
-        assert!(std::ptr::eq(&*sink.state, address));
-        assert_eq!(sink.state.active, P2);
+        assert!(std::ptr::eq(&state, address));
+        assert_eq!(state.active, P2);
         // R84: the policy never picks `concede`, so the game is still running.
-        assert!(sink.state.result.is_none());
+        assert!(state.result.is_none());
         assert!(sink.events.len() > 1);
         // R152: the lockout lasts "until end of turn" (§8 #96), so `turn.ts`'s cleanup clears it as the
         // turn the AI just played out closes — a player is never locked out of a turn that is no longer
         // the one the effect took. `startTurn` keeps its own clear only as a backstop.
-        assert!(!sink.state.players.p1.ai_turn);
+        assert!(!state.players.p1.ai_turn);
     }
 
     // `subsystems/aiPolicy.playOutTurn` drives a NESTED `reduce` per action of the playout, and each
@@ -705,16 +681,16 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let mut first = busy_board("ai-replay");
         let mut second = busy_board("ai-replay");
 
-        let mut first_sink = sink_for(&mut first);
+        let mut first_sink = Bench::new(&first);
         apply_as(
-            first_sink.sink(),
+            first_sink.sink(&mut first),
             ai_plays_out_turn(json_as(json!({ "player": "self" }))),
             P1,
         );
         let first_events = std::mem::take(&mut first_sink.events);
-        let mut second_sink = sink_for(&mut second);
+        let mut second_sink = Bench::new(&second);
         apply_as(
-            second_sink.sink(),
+            second_sink.sink(&mut second),
             ai_plays_out_turn(json_as(json!({ "player": "self" }))),
             P1,
         );
@@ -735,9 +711,9 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
      {
         let (mut settled, mut settled_events, marked) = marked_board("ai-settle-first");
         {
-            let mut sink = sink_for(&mut settled);
+            let mut sink = Bench::new(&settled);
             apply_as(
-                sink.sink(),
+                sink.sink(&mut settled),
                 ai_plays_out_turn(json_as(json!({ "player": "enemy", "settleFirst": true }))),
                 P2,
             );
@@ -762,9 +738,9 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
 
         let (mut plain_run, mut plain_events, plain_marked) = marked_board("ai-settle-first");
         {
-            let mut sink = sink_for(&mut plain_run);
+            let mut sink = Bench::new(&plain_run);
             apply_as(
-                sink.sink(),
+                sink.sink(&mut plain_run),
                 ai_plays_out_turn(json_as(json!({ "player": "enemy" }))),
                 P2,
             );
@@ -784,16 +760,16 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     fn r283_settle_first_ends_the_effect_when_its_check_ends_the_game_the_ai_takes_no_action() {
         let mut state = busy_board("ai-settle-first-over");
         state.players.p2.hero.health = 0;
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         apply_as(
-            sink.sink(),
+            sink.sink(&mut state),
             ai_plays_out_turn(json_as(json!({ "player": "self", "settleFirst": true }))),
             P1,
         );
 
         assert_eq!(
-            sink.state.result,
+            state.result,
             Some(GameResult {
                 winner: Winner::P1,
                 reason: GameOverReason::HeroDeath
@@ -816,8 +792,8 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
                         ai_plays_out_turn(json_as(json!({ "player": "self", "settleFirst": settle_first })))
                     }
                 };
-                let mut sink = sink_for(&mut state);
-                apply_as(sink.sink(), effect, P1);
+                let mut sink = Bench::new(&state);
+                apply_as(sink.sink(&mut state), effect, P1);
                 let events = std::mem::take(&mut sink.events);
                 (
                     serde_json::to_string(&state).expect("serialises"),
@@ -858,7 +834,7 @@ fn attack_action(attacker_id: &str, target_id: &str, nonce: &str) -> Action {
     )
 }
 
-fn types_of(events: &[GameEvent]) -> Vec<&'static str> {
+fn type_names(events: &[GameEvent]) -> Vec<&'static str> {
     events.iter().map(|event| event.event_type().as_str()).collect()
 }
 
@@ -880,10 +856,10 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     fn r44_a_cancelled_attack_resolves_no_combat_and_emits_attack_cancelled() {
         let (mut state, attacker, defender, backrow) = swing("cancel", &[canceller().id]);
         let trap = backrow[0].clone();
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         // §4.2 step 4's window belongs inside this call, before any damage: the trap fires there.
-        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         assert_eq!(
             json_of(events_of_type(&sink.events, GameEventType::AttackCancelled)),
@@ -891,15 +867,15 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         );
         // R44: no combat resolved, and the exertion is gone either way.
         assert!(events_of_type(&sink.events, GameEventType::Damage).is_empty());
-        assert_eq!(live(sink.state, &defender).damage, 0);
-        assert_eq!(live(sink.state, &attacker).damage, 0);
-        assert!(live(sink.state, &attacker).exertion.attacked);
+        assert_eq!(live(&state, &defender).damage, 0);
+        assert_eq!(live(&state, &attacker).damage, 0);
+        assert!(live(&state, &attacker).exertion.attacked);
         // §4.2 step 5 has had its answer, so the window is shut again.
-        assert!(sink.state.declared_attack.is_none());
+        assert!(state.declared_attack.is_none());
         // §3.2: the trap is spent whatever its effects achieved (R61), and the attacker is untouched.
-        assert_eq!(live(sink.state, &trap).zone.z(), ZoneName::Graveyard);
+        assert_eq!(live(&state, &trap).zone.z(), ZoneName::Graveyard);
         assert_eq!(
-            card_at(sink.state, slot(P2, Units, 1)).map(|card| card.id.clone()),
+            card_at(&state, slot(P2, Units, 1)).map(|card| card.id.clone()),
             Some(attacker.id.clone())
         );
     }
@@ -907,22 +883,22 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     #[test]
     fn s4_2_step_4_the_window_opens_between_the_declaration_and_the_damage_not_after_it() {
         let (mut state, attacker, defender, _backrow) = swing("window-order", &[watcher().id]);
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
-        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
-        let order = types_of(&sink.events);
+        let order = type_names(&sink.events);
         assert!(index_of(&order, "attackDeclared") >= 0);
         assert!(index_of(&order, "trapFired") > index_of(&order, "attackDeclared"));
         assert!(index_of(&order, "damage") > index_of(&order, "trapFired"));
         // R61: the trap fired and did nothing, so the combat is the ordinary one — the 3/3 hits the
         // 5/10 for 3 and is struck back for 5, which kills it and takes it off the field (§4.5, R78).
-        assert_eq!(live(sink.state, &defender).damage, 3);
+        assert_eq!(live(&state, &defender).damage, 3);
         assert_eq!(
             field_of(&sink.events, GameEventType::Damage, "amount"),
             vec![json!(3), json!(5)]
         );
-        assert!(card_at(sink.state, slot(P2, Units, 1)).is_none());
+        assert!(card_at(&state, slot(P2, Units, 1)).is_none());
     }
 
     #[test]
@@ -1020,18 +996,18 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     fn r121_a_forced_attack_opens_no_window_so_nothing_can_cancel_it() {
         let (mut state, attacker, defender, backrow) = swing("forced-window", &[canceller().id]);
         let trap = backrow[0].clone();
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         // §4.2's last paragraph: the compelling effect declares this, so there is no open declaration
         // at any point — and R53's combat and state check happen inside the call, as before.
-        force_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
-        assert!(sink.state.declared_attack.is_none());
-        assert_eq!(live(sink.state, &defender).damage, 3);
-        assert!(!live(sink.state, &attacker).exertion.attacked);
+        force_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
+        assert!(state.declared_attack.is_none());
+        assert_eq!(live(&state, &defender).damage, 3);
+        assert!(!live(&state, &attacker).exertion.attacked);
 
         // The forced declaration still reaches the traps, through §10.3's immediate check — it is only
         // the window that a forced attack skips — and `cancelAttack` there has nothing to mark.
-        settle(&mut sink.sink(), Default::default());
+        settle(&mut sink.sink(&mut state), Default::default());
         assert_eq!(
             field_of(&sink.events, GameEventType::TrapFired, "instanceId"),
             vec![json!(trap.id)]
@@ -1103,7 +1079,8 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
     /// §4.3 between allies, two 3/3s: the attacker hits its neighbour for 3 and is struck back for
     /// 3, and the state check destroys both. The original target is untouched.
     fn assert_allies_fought(
-        sink: &Bench<'_>,
+        sink: &Bench,
+        state: &GameState,
         attacker: &CardInstance,
         defender: &CardInstance,
         neighbour: &CardInstance,
@@ -1120,25 +1097,25 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         let mut both = vec![attacker.id.clone(), neighbour.id.clone()];
         both.sort();
         assert_eq!(gone, both);
-        assert_eq!(live(&*sink.state, neighbour).zone.z(), ZoneName::Graveyard);
-        assert_eq!(live(&*sink.state, defender).damage, 0);
+        assert_eq!(live(state, neighbour).zone.z(), ZoneName::Graveyard);
+        assert_eq!(live(state, defender).damage, 0);
     }
 
     #[test]
     fn r1122_redirected_attack_fights_the_ally() {
         let (mut state, attacker, defender, neighbour, trap) = redirect_swing("redirect", &redirector().id);
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         // Declare on P1's big body; the window re-aims at the attacker's own neighbour.
-        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         assert_eq!(
             json_of(events_of_type(&sink.events, GameEventType::Redirected)),
             json!([{ "type": "redirected", "what": "attack", "fromId": defender.id, "toId": neighbour.id, "byInstanceId": trap.id }])
         );
-        assert_allies_fought(&sink, &attacker, &defender, &neighbour);
+        assert_allies_fought(&sink, &state, &attacker, &defender, &neighbour);
         // The window is shut again.
-        assert!(sink.state.declared_attack.is_none());
+        assert!(state.declared_attack.is_none());
     }
 
     #[test]
@@ -1149,16 +1126,16 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         let (mut state, attacker, defender, backrow) =
             swing("redirect-skip", &[redirector().id, canceller().id]);
         let neighbour = card_at(&state, slot(P2, Units, 2)).cloned().unwrap();
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
-        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         assert_eq!(events_of_type(&sink.events, GameEventType::Redirected).len(), 1);
         assert!(events_of_type(&sink.events, GameEventType::AttackCancelled).is_empty());
-        let canceller = live(sink.state, &backrow[1]);
+        let canceller = live(&state, &backrow[1]);
         assert_eq!(canceller.zone.z(), ZoneName::Field);
         assert_ne!(canceller.face_up, Some(true));
-        assert_allies_fought(&sink, &attacker, &defender, &neighbour);
+        assert_allies_fought(&sink, &state, &attacker, &defender, &neighbour);
     }
 
     #[test]
@@ -1166,12 +1143,12 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         // A forced attack resolves as aimed: no window, no redirect, the trap stays set.
         let (mut state, attacker, defender, backrow) = swing("redirect-forced", &[redirector().id]);
         let trap = backrow.into_iter().next().unwrap();
-        let mut sink = sink_for(&mut state);
-        force_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let mut sink = Bench::new(&state);
+        force_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         assert!(events_of_type(&sink.events, GameEventType::Redirected).is_empty());
-        assert_eq!(live(sink.state, &defender).damage, 3);
-        assert_eq!(live(sink.state, &trap).zone.z(), ZoneName::Field);
+        assert_eq!(live(&state, &defender).damage, 3);
+        assert_eq!(live(&state, &trap).zone.z(), ZoneName::Field);
     }
 
     #[test]
@@ -1189,13 +1166,13 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
             slot(P1, Backrow, 1),
             json!({}),
         );
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
-        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+        let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         // The copy stands for P1, fresh: no damage on it, a new id, the victim in the graveyard. P1's
         // own 3/3, the attack's first target, is not the copy.
-        let copies: Vec<CardInstance> = active_units_of(sink.state, P1)
+        let copies: Vec<CardInstance> = active_units_of(&state, P1)
             .into_iter()
             .filter(|unit| unit.def_id == plain.id && unit.id != defender.id)
             .cloned()
@@ -1204,8 +1181,8 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         assert_ne!(copies[0].id, neighbour.id);
         assert_eq!(copies[0].damage, 0);
         assert!(!copies[0].radiant);
-        assert_eq!(live(sink.state, &neighbour).zone.z(), ZoneName::Graveyard);
+        assert_eq!(live(&state, &neighbour).zone.z(), ZoneName::Graveyard);
         assert_eq!(events_of_type(&sink.events, GameEventType::Summoned).len(), 1);
-        assert_eq!(live(sink.state, &defender).damage, 0);
+        assert_eq!(live(&state, &defender).damage, 0);
     }
 }

@@ -1727,9 +1727,11 @@ pub fn count_loc(source: &str) -> usize {
     code_lines(source).len()
 }
 
-/// The lines `count_loc` counts, each trimmed: what `classify` compares to tell a change to a file's
-/// code from one to its comments, tests, imports or layout (R1365000).
-pub fn code_lines(source: &str) -> Vec<String> {
+/// The lines that hold code once comments are removed, each trimmed, above the file's first
+/// `#[cfg(test)]`, its `use` declarations included: what `classify` compares for a Rust or
+/// TypeScript file that is no card script, where an import can change which code a call reaches
+/// (R2050000).
+pub fn code_lines_with_uses(source: &str) -> Vec<String> {
     let mut code_lines: Vec<String> = Vec::new();
     let mut block_depth = 0usize;
     let mut quote: Option<Quote> = None;
@@ -1815,17 +1817,21 @@ pub fn code_lines(source: &str) -> Vec<String> {
         }
         code_lines.push(code.trim().to_string());
     }
+    code_lines
+        .into_iter()
+        // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
+        .take_while(|line| !line.starts_with("#[cfg(test)]"))
+        .filter(|line| !line.is_empty())
+        .collect()
+}
 
+/// The lines `count_loc` counts, each trimmed: `code_lines_with_uses` without its `use`
+/// declarations, what `classify` compares to tell a change to a card script's code from one to its
+/// comments, tests, imports or layout (R1365000).
+pub fn code_lines(source: &str) -> Vec<String> {
     let mut code = Vec::new();
     let mut in_use = false;
-    for line in code_lines {
-        // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
-        if line.starts_with("#[cfg(test)]") {
-            break;
-        }
-        if line.is_empty() {
-            continue;
-        }
+    for line in code_lines_with_uses(source) {
         if !in_use && starts_use(&line) {
             in_use = true;
         }
@@ -2731,6 +2737,16 @@ mod tests {
 }
 "##;
         assert_eq!(count_loc(source), 7);
+    }
+
+    #[test]
+    fn r2050000_code_lines_with_uses_keeps_use_declarations_and_drops_comments_tests_and_blank_lines() {
+        let source = "//! A module.\n\nuse crate::a::{\n    f,\n};\n\n/// It.\npub fn g() -> i32 {\n    f() // the call\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n";
+        assert_eq!(
+            code_lines_with_uses(source),
+            ["use crate::a::{", "f,", "};", "pub fn g() -> i32 {", "f()", "}"]
+        );
+        assert_eq!(code_lines(source), ["pub fn g() -> i32 {", "f()", "}"]);
     }
 
     #[test]

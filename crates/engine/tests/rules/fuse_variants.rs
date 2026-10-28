@@ -34,33 +34,12 @@ use crate::rules::fixtures::generation::{
     plain_trap, playing, replayed, slime, slop, x_unit,
 };
 use crate::rules::fixtures::harness::{
-    json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
+    Bench, json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
 };
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
-/// the rng are kept beside the state, so the test can change the state between calls as TS's shared
-/// objects let it.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 /// TS `run(sink, effect, self = null)`: the effect applied in a context of p1's.
-fn run(state: &mut GameState, sink: &mut Sink, effect: Effect, self_: Option<&CardInstance>) {
-    let mut engine = sink.on(state);
+fn run(state: &mut GameState, sink: &mut Bench, effect: Effect, self_: Option<&CardInstance>) {
+    let mut engine = sink.sink(state);
     let mut ctx = make_context(
         &mut engine,
         self_,
@@ -73,14 +52,14 @@ fn run(state: &mut GameState, sink: &mut Sink, effect: Effect, self_: Option<&Ca
 }
 
 /// `fuse(sink, args)`, `args` the TS object literal (its instances as the state holds them now).
-fn fuse_in(state: &mut GameState, sink: &mut Sink, args: Value) -> Option<CardInstance> {
+fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
-    fuse(&mut sink.on(state), args)
+    fuse(&mut sink.sink(state), args)
 }
 
 /// `fuse(sinkFor(state), args)`.
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
-    let mut sink = Sink::for_state(state);
+    let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
 }
 
@@ -162,7 +141,7 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
      {
         let mut state = playing("fuse-digest").state;
         let kept = put(&mut state, &slime.id, slot(P1, Row::Units, 1), json!({}));
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
 
         let ingredient = phantom(&mut state, &slime.id);
         let target = live(&state, &kept.id);
@@ -305,7 +284,7 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
     fn r468_every_fused_definition_keeps_its_ingredient_list_and_sums_its_ingredients_lines_of_code_e36() {
         let mut state = playing("fuse-loc").state;
         let kept = put(&mut state, &fuse_a.id, slot(P1, Row::Units, 1), json!({}));
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let ingredient = phantom(&mut state, &fuse_b.id);
         let result = must(
             fuse_in(
@@ -413,7 +392,7 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
         let mut state = playing("fuse-twice-forward").state;
         let trap = put(&mut state, &field_trap.id, slot(P1, Row::Backrow, 1), json!({}));
         let played = put(&mut state, &fuse_a.id, slot(P2, Row::Units, 1), json!({}));
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         run(
             &mut state,
             &mut sink,
@@ -546,7 +525,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     fn r470_an_x_cost_or_embiggen_hand_card_keeps_its_printed_form_a_card_with_an_override_keeps_the_override()
      {
         let mut state = playing("fuse-keep-forms").state;
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let x = hand_card(&mut state, &x_unit.id, P1);
         let big = hand_card(&mut state, &big_unit.id, P1);
         let crafted = hand_card(&mut state, &fuse_a.id, P1);
@@ -604,7 +583,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     fn r470_into_takes_only_a_hand_or_library_card_target_only_a_field_card_and_an_immutable_card_refuses_either()
      {
         let mut state = playing("fuse-into-refusals").state;
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let on_field = put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
         let held = hand_card(&mut state, &body.id, P1);
         let locked = hand_card(&mut state, &immutable.id, P1);
@@ -732,7 +711,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         // An empty library fuses nothing and draws nothing (R129).
         let mut empty = playing("fuse-deck-empty").state;
         empty.players.p1.library = vec![];
-        let mut sink = Sink::for_state(&empty);
+        let mut sink = Bench::new(&empty);
         let cursor = sink.rng.cursor();
         run(
             &mut empty,
@@ -812,7 +791,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         // Every ingredient Radiant and no kept card: the fused card is Radiant too.
         assert!(made.radiant);
 
-        let mut sink = Sink::for_state(&start.state);
+        let mut sink = Bench::new(&start.state);
         let cursor = sink.rng.cursor();
         run(
             &mut start.state,
@@ -1159,7 +1138,7 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         let mut run = animated_game("fused-turn");
         let keep = put(&mut run.state, "fv-keep", slot(P1, Row::Backrow, 1), json!({}));
         let turn = put(&mut run.state, "fv-turn", slot(P1, Row::Backrow, 2), json!({}));
-        let mut sink = Sink::for_state(&run.state);
+        let mut sink = Bench::new(&run.state);
         let kept = must(
             fuse_in(
                 &mut run.state,
@@ -1178,8 +1157,8 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         assert!(animated_events(&sink.events).is_empty());
 
         // At its controller's next start of turn it animates, with the summed stats.
-        let mut sink = Sink::for_state(&run.state);
-        animate_at_turn_start(&mut sink.on(&mut run.state), P1);
+        let mut sink = Bench::new(&run.state);
+        animate_at_turn_start(&mut sink.sink(&mut run.state), P1);
         let kept = must(find_instance(&run.state, &kept.id).cloned(), "the keeper");
         assert!(is_animated(&run.state, &kept));
         assert_eq!(animated_events(&sink.events).len(), 1);
@@ -1192,7 +1171,7 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         let mut game = animated_game("fused-plain");
         let keep = put(&mut game.state, "fv-keep", slot(P1, Row::Backrow, 1), json!({}));
         let plain = put(&mut game.state, "fv-plain", slot(P1, Row::Backrow, 2), json!({}));
-        let mut sink = Sink::for_state(&game.state);
+        let mut sink = Bench::new(&game.state);
         let kept = must(
             fuse_in(
                 &mut game.state,
@@ -1206,15 +1185,15 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         // and none at the next start of turn either.
         assert!(!is_animated(&game.state, &kept));
         assert!(animated_events(&sink.events).is_empty());
-        let mut sink = Sink::for_state(&game.state);
-        animate_at_turn_start(&mut sink.on(&mut game.state), P1);
+        let mut sink = Bench::new(&game.state);
+        animate_at_turn_start(&mut sink.sink(&mut game.state), P1);
         let kept = must(find_instance(&game.state, &kept.id).cloned(), "the keeper");
         assert!(!is_animated(&game.state, &kept));
         assert!(animated_events(&sink.events).is_empty());
 
         // Bounced and played again, it enters animated.
         let kept_id = kept.id.clone();
-        let mut sink = Sink::for_state(&game.state);
+        let mut sink = Bench::new(&game.state);
         let bounce = Effect::new("bounce-back", move |ctx| {
             if let Some(card) = find_instance(ctx.state, &kept_id).cloned() {
                 bounce_card(&mut ctx.sink, &card);

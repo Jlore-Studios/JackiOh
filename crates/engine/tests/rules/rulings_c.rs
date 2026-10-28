@@ -24,7 +24,7 @@
 //! Porting notes (part 25.6): TS read and wrote its cards through the live objects `put`, `inHand`
 //! and `newInstance` handed back; here those are copies, so a read after the engine has run looks the
 //! card up again by id (`live`) and a write goes to the card in the state (`live_mut`). TS's
-//! `sinkFor(state)` aliased the state; `SinkFor` keeps the sink's events and rng apart and lends them
+//! `sinkFor(state)` aliased the state; `Bench` keeps the sink's events and rng apart and lends them
 //! to an `EngineSink` for each call, so one sink's rng and event list carry from call to call as TS's
 //! did while the test reads the state in between.
 
@@ -51,7 +51,8 @@ use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions
 
 use super::fixtures::combat::stacker;
 use super::fixtures::harness::{
-    act, act_result, both, in_hand, live, live_mut, new_game, put as put_with, set_library, slot, spread,
+    Bench, act, act_result, both, in_hand, live, live_mut, new_game, put as put_with, set_library, slot,
+    spread,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -1020,31 +1021,9 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     put_with(state, def_id, at, json!({ "radiant": true }))
 }
 
-/// `sinkFor(state, events)` (fixtures/harness.ts): a sink whose rng starts at the state's cursor, as
-/// reduce does. Its events and rng are kept here and lent to an `EngineSink` over the state for each
-/// call, so they carry across calls exactly as TS's one sink object did.
-struct SinkFor {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl SinkFor {
-    fn new(state: &GameState) -> SinkFor {
-        SinkFor {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn run<T>(&mut self, state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
-        let mut sink = EngineSink::new(state, &mut self.events, &mut self.rng);
-        call(&mut sink)
-    }
-}
-
 /// `f(sinkFor(state), …)`: one call on a fresh sink.
 fn with_sink<T>(state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
-    let mut sink = SinkFor::new(state);
+    let mut sink = Bench::new(state);
     sink.run(state, call)
 }
 
@@ -1057,7 +1036,7 @@ fn as_controller(controller: PlayerId) -> HookOptions {
 }
 
 /// `applyEffects(effects, makeContext(sink, null, { controller }))`.
-fn apply_as(sink: &mut SinkFor, state: &mut GameState, controller: PlayerId, list: Vec<Effect>) {
+fn apply_as(sink: &mut Bench, state: &mut GameState, controller: PlayerId, list: Vec<Effect>) {
     sink.run(state, |engine| {
         let mut ctx = resolve::make_context(engine, None, as_controller(controller));
         resolve::apply_effects(&list, &mut ctx);
@@ -1281,7 +1260,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         assert_eq!(live(&state, &unit).position, Some(Position::Atk));
 
         // The player's action, naming the position the unit is already in: no event, no exertion.
-        let mut attack_events = SinkFor::new(&state);
+        let mut attack_events = Bench::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
             refusal(attack_events.run(&mut state, |sink| combat::switch_position(
@@ -1308,7 +1287,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         ));
 
         // The same on the other face: a real flip spends the exertion and emits, a repeat does neither.
-        let mut flip_events = SinkFor::new(&state);
+        let mut flip_events = Bench::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
             refusal(flip_events.run(&mut state, |sink| combat::switch_position(
@@ -1326,7 +1305,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             switched: false,
             attacks: None,
         };
-        let mut repeat_events = SinkFor::new(&state);
+        let mut repeat_events = Bench::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
             refusal(repeat_events.run(&mut state, |sink| combat::switch_position(
@@ -1342,7 +1321,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         // #48's "switch every unit" reaches units already in the position it would set (R20's effect
         // path spends no exertion either way, so the event list is what says nothing happened).
-        let mut sweep_events = SinkFor::new(&state);
+        let mut sweep_events = Bench::new(&state);
         let already = put(&mut state, BODY, slot(P1, Row::Units, 2));
         assert_eq!(
             refusal(sweep_events.run(&mut state, |sink| {
@@ -1369,7 +1348,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
 
         // R91: "Does nothing: no error, no event and no exertion spent." Nothing about the unit's
         // exertion changes that, because nothing is being spent — there is no switch to refuse.
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
             refusal(events.run(&mut state, |sink| combat::switch_position(
@@ -1433,7 +1412,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             slot(P1, Row::Units, 1),
             PlaceOnFieldOptions { stack: Some(true) },
         ));
-        let mut dormant_events = SinkFor::new(&state);
+        let mut dormant_events = Bench::new(&state);
         let dormant = live(&state, &under);
         assert_eq!(
             refusal(dormant_events.run(&mut state, |sink| {
@@ -1476,7 +1455,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut state = game("r93-attacker");
         let attacker = put(&mut state, QUICK, slot(P1, Row::Units, 1)); // 2/20 First Strike
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 1)); // 4/20
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         assert_eq!(
             refusal(events.run(&mut state, |sink| combat::declare_attack(
                 sink,
@@ -1499,7 +1478,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut other = game("r93-defender");
         let plain_attacker = put(&mut other, BODY, slot(P1, Row::Units, 1));
         let quick_defender = put(&mut other, QUICK, slot(P2, Row::Units, 1));
-        let mut other_events = SinkFor::new(&other);
+        let mut other_events = Bench::new(&other);
         assert_eq!(
             refusal(other_events.run(&mut other, |sink| {
                 combat::declare_attack(sink, &plain_attacker, &on_unit(&quick_defender))
@@ -1522,7 +1501,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut lethal = game("r93-defender-kills");
         let attacking = put(&mut lethal, DOOMED, slot(P1, Row::Units, 1));
         let point = put(&mut lethal, POINTMASTER, slot(P2, Row::Units, 1));
-        let mut lethal_events = SinkFor::new(&lethal);
+        let mut lethal_events = Bench::new(&lethal);
         assert_eq!(
             refusal(lethal_events.run(&mut lethal, |sink| combat::declare_attack(
                 sink,
@@ -1542,7 +1521,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut trade = game("r93-trade");
         let left = put(&mut trade, QUICK, slot(P1, Row::Units, 1));
         let right = put(&mut trade, QUICK, slot(P2, Row::Units, 1));
-        let mut trade_events = SinkFor::new(&trade);
+        let mut trade_events = Bench::new(&trade);
         assert_eq!(
             refusal(trade_events.run(&mut trade, |sink| combat::declare_attack(
                 sink,
@@ -1565,7 +1544,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let defender = put(&mut state, QUICK, slot(P2, Row::Units, 1)); // 2/20 First Strike
         assert_eq!(layers::unit_view(&state, &live(&state, &attacker)).attack, 4);
 
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         assert_eq!(
             refusal(events.run(&mut state, |sink| combat::declare_attack(
                 sink,
@@ -1601,7 +1580,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 1)); // 4/20, undamaged
         assert_eq!(layers::unit_view(&state, &live(&state, &defender)).attack, 4);
 
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         assert_eq!(
             refusal(events.run(&mut state, |sink| combat::declare_attack(
                 sink,
@@ -1646,7 +1625,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 2));
         let right = put(&mut state, BODY, slot(P2, Row::Units, 3));
 
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         assert_eq!(
             refusal(events.run(&mut state, |sink| combat::declare_attack(
                 sink,
@@ -1681,7 +1660,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             put(&mut back, BODY, slot(P1, Row::Units, 3)),
         ];
         let cleave_defender = put(&mut back, CLEAVER, slot(P2, Row::Units, 2));
-        let mut back_events = SinkFor::new(&back);
+        let mut back_events = Bench::new(&back);
         assert_eq!(
             refusal(back_events.run(&mut back, |sink| {
                 combat::declare_attack(sink, &plain_attacker, &on_unit(&cleave_defender))
@@ -1710,7 +1689,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             put(&mut hero, BODY, slot(P2, Row::Units, 1)),
             put(&mut hero, BODY, slot(P2, Row::Units, 2)),
         ];
-        let mut hero_events = SinkFor::new(&hero);
+        let mut hero_events = Bench::new(&hero);
         assert_eq!(
             refusal(hero_events.run(&mut hero, |sink| combat::declare_attack(
                 sink,
@@ -1744,7 +1723,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         zones::remove_from_any_zone(&mut state, &mut gone);
         gone.zone = Zone::Graveyard { player: P1 };
 
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         events.run(&mut state, |sink| {
             combat::force_attacks_on(sink, &[gone.clone(), present.clone()], &on_unit(&victim), None);
         });
@@ -1774,7 +1753,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             winner: Winner::Draw,
             reason: GameOverReason::TurnCap,
         });
-        let mut over_events = SinkFor::new(&over);
+        let mut over_events = Bench::new(&over);
         over_events.run(&mut over, |sink| {
             combat::force_attacks_on(sink, &[first.clone(), second.clone()], &on_unit(&target), None);
         });
@@ -1812,7 +1791,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
                 .collect::<Vec<_>>(),
             vec![trap.id.clone()]
         );
-        let mut mine_sink = SinkFor::new(&state);
+        let mut mine_sink = Bench::new(&state);
         assert!(
             mine_sink
                 .run(&mut state, |sink| traps::fire_traps_for(sink, &played(P1)))
@@ -1828,7 +1807,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         // The same event from the other side satisfies the predicate, so the trap fires and is spent.
-        let mut theirs_sink = SinkFor::new(&state);
+        let mut theirs_sink = Bench::new(&state);
         assert_eq!(
             theirs_sink
                 .run(&mut state, |sink| traps::fire_traps_for(sink, &played(P2)))
@@ -1843,7 +1822,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         // With the predicate satisfied, an empty effect list still spends the trap (R61).
         let mut empty = game("r99-empty");
         let spent = put(&mut empty, EMPTY_TRAP, slot(P1, Row::Backrow, 2));
-        let mut empty_sink = SinkFor::new(&empty);
+        let mut empty_sink = Bench::new(&empty);
         assert_eq!(
             empty_sink
                 .run(&mut empty, |sink| traps::fire_traps_for(sink, &played(P2)))
@@ -1885,7 +1864,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         );
 
         // The immediate check declines the event: it belongs to the scheduled window.
-        let mut immediate = SinkFor::new(&state);
+        let mut immediate = Bench::new(&state);
         let declined = immediate.run(&mut state, |sink| traps::fire_traps_for(sink, &turn_ended));
         assert!(declined.fired.is_empty());
         assert!(!declined.paused);
@@ -1893,7 +1872,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         // The window delivers it, once.
-        let mut window = SinkFor::new(&state);
+        let mut window = Bench::new(&state);
         assert_eq!(
             window
                 .run(&mut state, |sink| traps::run_trap_window(sink, &turn_ended))
@@ -2194,7 +2173,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             vec!["fire"]
         );
 
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let result = must(
             sink.run(&mut state, |engine| {
                 fuse(engine, fuse_args(&[&target, &food], &target))
@@ -2235,7 +2214,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let host_a = put(&mut state, FUSE_HOST_A, slot(P1, Row::Units, 1)); // 1/1
         let host_b = put(&mut state, FUSE_HOST_B, slot(P1, Row::Units, 2)); // 2/2
         let mut shared = put(&mut state, FUSE_SHARED, slot(P1, Row::Units, 3)); // 7/3, the played permanent
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
 
         // The first fusion consumes the shared ingredient: 1/1 plus 7/3 is 8/4.
         let first = must(
@@ -2287,7 +2266,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let eaten = put(&mut state, FUSE_DYING, slot(P1, Row::Units, 2)); // a Death hook worth 7 to the hero
         let before = state.counters.destroyed;
 
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let result = must(
             sink.run(&mut state, |engine| {
                 let result = fuse(engine, fuse_args(&[&target, &eaten], &target));
@@ -2431,7 +2410,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
      {
         // A power that pauses on a prompt has already spent the turn's activation.
         let mut state = game("r103-marked");
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let card = put(&mut state, HEROIC, slot(P1, Row::Backrow, 1));
         live_mut(&mut state, &card)
             .memory
@@ -2466,7 +2445,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         register_catalog(without_token);
         assert!(catalog::def_by_index(SetName::Core, RUSH_TOKEN_INDEX).is_none());
 
-        let mut token_sink = SinkFor::new(&missing);
+        let mut token_sink = Bench::new(&missing);
         let rusher = put(&mut missing, HEROIC, slot(P1, Row::Backrow, 1));
         live_mut(&mut missing, &rusher)
             .memory
@@ -2512,7 +2491,7 @@ mod spec_11_r113_the_work_cursor_m3_gate {
     fn r113_parks_one_cascades_sequences_innermost_first_and_a_pause_during_a_resumption_ahead_of_everything_owed()
      {
         let mut state = game("r113-cursor");
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         assert!(state.work.is_empty());
         assert_eq!(state.work_cursor, 0);
 
@@ -2561,7 +2540,7 @@ mod spec_11_r113_the_work_cursor_m3_gate {
     #[test]
     fn r113_raises_rather_than_drop_a_work_item_nothing_knows_how_to_resume() {
         let mut state = game("r113-raise");
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         // No engine sequence registered this hook and `body`'s script has no step by that name, so
         // nothing can resume it: a lost sequence must never be dropped in silence.
         let orphan = sink.run(&mut state, |engine| {
@@ -2631,7 +2610,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         let control_source = put(&mut control, TRAMPLER, slot(P1, Row::Units, 1));
         let control_victim = put(&mut control, FRAIL, slot(P2, Row::Units, 1));
         control.players.p1.hero.health -= 20; // room for the Lifesteal to show
-        let mut control_events = SinkFor::new(&control);
+        let mut control_events = Bench::new(&control);
         let control_before = control.players.p1.hero.health;
         assert_eq!(
             control_events.run(&mut control, |sink| {
@@ -2691,7 +2670,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
 
         state.players.p1.hero.health -= 20; // room for the Lifesteal to show
         let before = state.players.p1.hero.health;
-        let mut events = SinkFor::new(&state);
+        let mut events = Bench::new(&state);
         let at_zero = live(&state, &victim);
         let dealt = events.run(&mut state, |sink| {
             damage::deal_damage(
@@ -3175,7 +3154,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
 
     /// One hit on p2's hero, and what it actually dealt.
     fn hit_hero(state: &mut GameState, amount: i32) -> (i32, Vec<GameEvent>) {
-        let mut sink = SinkFor::new(state);
+        let mut sink = Bench::new(state);
         let dealt = sink.run(state, |engine| {
             damage::deal_damage(
                 engine,
@@ -3247,7 +3226,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // the assertions below could pass on a fatigue that never fired.
         let mut bare = game("r125-no-armor");
         bare.players.p1.library = vec![];
-        let mut bare_sink = SinkFor::new(&bare);
+        let mut bare_sink = Bench::new(&bare);
         for n in [1, 2, 3, 4] {
             let before = bare.players.p1.hero.health;
             assert!(matches!(
@@ -3265,7 +3244,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let mut armoured = game("r125-armour");
         armoured.players.p1.library = vec![];
         armoured.players.p1.hero.armor = 3;
-        let mut sink = SinkFor::new(&armoured);
+        let mut sink = Bench::new(&armoured);
         let full = HERO_HEALTH;
 
         for n in [1, 2, 3] {
@@ -3305,7 +3284,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         let mut capped = game("r125-capped");
         capped.players.p1.library = vec![];
         put_radiant(&mut capped, GUARD, slot(P1, Row::Backrow, 1)); // cap 3
-        let mut capped_sink = SinkFor::new(&capped);
+        let mut capped_sink = Bench::new(&capped);
         capped.players.p1.fatigue_count = 8; // the next empty draw is the 9th
         let before_cap = capped.players.p1.hero.health;
         assert!(matches!(
@@ -3322,7 +3301,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // about fatigue rather than about heroes.
         let mut losing = game("r125-lose-health");
         losing.players.p1.hero.armor = 3;
-        let mut losing_sink = SinkFor::new(&losing);
+        let mut losing_sink = Bench::new(&losing);
         assert_eq!(
             losing_sink.run(&mut losing, |engine| damage::lose_health(engine, P1, 2)),
             2
@@ -3340,10 +3319,10 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
     use super::*;
 
     /// A game with the note log in place and a delayed effect due at p1's next turn start.
-    fn scheduled(seed: &str, resume: Resume) -> (GameState, SinkFor) {
+    fn scheduled(seed: &str, resume: Resume) -> (GameState, Bench) {
         let mut state = game(seed);
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         sink.run(&mut state, |engine| {
             modifiers::schedule_delayed(
                 engine,
@@ -3450,7 +3429,7 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         // delayed path to match (§9.3's resumable-work queue).
         let mut other = game("r127-work-path");
         put(&mut other, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
-        let mut work_sink = SinkFor::new(&other);
+        let mut work_sink = Bench::new(&other);
         assert!(work_sink.run(&mut other, |engine| {
             prompts::run_resume(
                 engine,
@@ -3468,7 +3447,7 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
     fn r127_resolves_a_delayed_continuation_whose_instance_has_since_ceased_to_exist() {
         let mut state = game("r127-instance-gone");
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let mut scheduler = put(&mut state, GHOST_CARD, slot(P1, Row::Backrow, 1));
         let mut data = IndexMap::new();
         data.insert("carried".to_string(), json!("payload"));
@@ -3529,7 +3508,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
             put(&mut state, BODY, slot(P2, Row::Units, 4)),
         ];
 
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         apply_as(
             &mut sink,
             &mut state,
@@ -3550,7 +3529,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         flipped.active = P2;
         let flipped_mine = vec![put(&mut flipped, BODY, slot(P1, Row::Units, 1))];
         let flipped_theirs = vec![put(&mut flipped, BODY, slot(P2, Row::Units, 2))];
-        let mut flipped_sink = SinkFor::new(&flipped);
+        let mut flipped_sink = Bench::new(&flipped);
         apply_as(
             &mut flipped_sink,
             &mut flipped,
@@ -3570,7 +3549,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         let mut lethal = game("r128-sweep-lethal");
         let doomed = put(&mut lethal, FRAIL, slot(P1, Row::Units, 1)); // 1/3
         let after = put(&mut lethal, BODY, slot(P1, Row::Units, 2));
-        let mut lethal_sink = SinkFor::new(&lethal);
+        let mut lethal_sink = Bench::new(&lethal);
         apply_as(
             &mut lethal_sink,
             &mut lethal,
@@ -3596,7 +3575,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         // card, so `rngCursor` would depend on the board at that moment (§10.7).
         let mut random = game("r129-random-discard");
         in_hand(&mut random, BODY, P1, 5);
-        let mut random_sink = SinkFor::new(&random);
+        let mut random_sink = Bench::new(&random);
         let started_at = random_sink.rng.cursor();
         apply_as(
             &mut random_sink,
@@ -3610,7 +3589,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         // R129: the whole-hand verb reaches the same end state and draws nothing at all.
         let mut whole = game("r129-discard-hand");
         in_hand(&mut whole, BODY, P1, 5);
-        let mut whole_sink = SinkFor::new(&whole);
+        let mut whole_sink = Bench::new(&whole);
         let before = whole_sink.rng.cursor();
         apply_as(
             &mut whole_sink,
@@ -3625,7 +3604,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         // And an effect that finds nothing to do takes no draw either, so the cursor does not depend on
         // whether the hand happened to be empty.
         let mut empty = game("r129-fizzle");
-        let mut empty_sink = SinkFor::new(&empty);
+        let mut empty_sink = Bench::new(&empty);
         let empty_before = empty_sink.rng.cursor();
         apply_as(
             &mut empty_sink,
@@ -3651,7 +3630,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         // game with no Lucky anywhere would leave it.
         let mut state = game("r130-coins");
         let target = put(&mut state, BODY, slot(P1, Row::Units, 1));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let before = sink.rng.cursor();
         apply_as(
             &mut sink,
@@ -3802,7 +3781,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         assert!(grade_rises(&state, &live(&state, &index)));
 
         // Control changes. The counter is the card's, so it travels with the instance.
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         apply_as(
             &mut sink,
             &mut state,
@@ -3828,7 +3807,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         // watching sees one `exiled` event per card rather than a batch.
         let mut state = game("r135-per-card");
         let hand = in_hand(&mut state, BODY, P1, 3);
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let before = state.counters.exiled;
         apply_as(
             &mut sink,
@@ -3863,7 +3842,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         // card whose cost per R65 is above it, and the cheap ones go one exile each (R135).
         let mut state = game("r831014-max-cost");
         let library = set_library(&mut state, P1, &[BODY, TRIBUTE_TWO, FUSE_PRICEY, BODY, FUSE_DEAR]);
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         apply_as(
             &mut sink,
             &mut state,
@@ -3898,7 +3877,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let mut quiet = game("r136-control");
         put(&mut quiet, BODY, slot(P1, Row::Units, 1));
         let quiet_victim = put(&mut quiet, BODY, slot(P2, Row::Units, 1));
-        let mut quiet_sink = SinkFor::new(&quiet);
+        let mut quiet_sink = Bench::new(&quiet);
         apply_as(
             &mut quiet_sink,
             &mut quiet,
@@ -3913,7 +3892,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let mut state = game("r136-window");
         let earlier = put(&mut state, BODY, slot(P1, Row::Units, 1));
         let victim = put(&mut state, BODY, slot(P2, Row::Units, 1));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
 
         // Something earlier in the same action summoned a unit, so its `summoned` event is already on
         // the sink's list — a second copy of a card, or a trap firing mid-action, does exactly this.
@@ -4010,7 +3989,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     fn r154_carries_the_traps_row_and_lane_on_trapfired_with_its_identity_redacted_for_the_other_player() {
         let mut state = game("r154-trap-lane");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         assert_eq!(
             sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2)))
                 .fired,
@@ -4059,7 +4038,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     fn r763_hides_a_fired_trap_from_its_controller_once_it_is_shuffled_into_a_library() {
         let mut state = game("r763-trap-to-library");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         assert_eq!(
             sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2)))
                 .fired,
@@ -4104,7 +4083,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         // does cast a permanent and the row below is about the full row rather than a broken cast.
         let mut roomy = game("r138-control");
         put(&mut roomy, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
-        let mut roomy_sink = SinkFor::new(&roomy);
+        let mut roomy_sink = Bench::new(&roomy);
         // Cast it straight out of the hand: `castCard` takes it out of whatever pile holds it.
         let lands = must(
             in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(),
@@ -4124,7 +4103,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         }
         assert_eq!(zones::active_units_of(&state, P1).len(), 5);
 
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         let cast = must(
             in_hand(&mut state, CRIER, P1, 1).into_iter().next(),
             "a permanent to cast",
@@ -4256,7 +4235,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         // `aiPlaysOutTurn` sets the lockout and then plays the turn out, so the flag is only observable
         // mid-turn; R152 is about where it is *cleared*, which is what this sets up directly.
         let mut state = game("r152-ai-turn");
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
         assert!(!state.players.p1.ai_turn);
         state.players.p1.ai_turn = true; // the lockout `aiPlaysOutTurn` sets on the active player
         assert_eq!(state.active, P1);
@@ -4284,7 +4263,7 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
     #[test]
     fn r151_rolls_a_heroic_powers_power_as_it_arrives_in_a_hand_not_only_at_the_start_of_the_game() {
         let mut state = game("r151-arrival");
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
 
         // A copy that reached a hand some other way than the opening draw: returned from a graveyard.
         // The premise, and the bug R151 closes — it carries no power, so it would cost 0 for ever.
@@ -4395,7 +4374,7 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
     fn r155_flags_a_spell_that_asks_to_return_as_step_7_lands_it_in_the_graveyard_and_clears_it_that_turn() {
         let mut state = game("r155-flag");
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
-        let mut sink = SinkFor::new(&state);
+        let mut sink = Bench::new(&state);
 
         // The real call site: a cast goes through the same landing a play does (R70), so this is §10.5
         // step 7 doing the flagging rather than the setter being poked directly.

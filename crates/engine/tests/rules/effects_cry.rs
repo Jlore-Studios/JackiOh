@@ -15,7 +15,7 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, put, slot};
 use super::fixtures::prompt_harness::{
     answer_keys, board, cast_now, event_types, expect_replays, hand_card, open_as, replayable,
     resolving_card, round_trip,
@@ -25,44 +25,20 @@ use super::fixtures::prompts::{
 };
 use crate::rules::fixtures::harness::{act_logged, json_of, live};
 
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
-
 /// Rewind resolving with its declared target (R81), as the play pipeline hands it over.
 fn rewind_on(state: &mut GameState, target: &CardInstance, player: PlayerId, radiant: bool) -> Vec<String> {
-    let mut sink = sink_for(state);
-    let card = resolving_card(sink.state, &rewind().id, player, radiant);
+    let mut sink = Bench::new(state);
+    let card = resolving_card(state, &rewind().id, player, radiant);
     let targets = vec![Selection::Instance {
         instance_id: target.id.clone(),
     }];
     run_hook_resumable(
-        &mut sink.sink(),
+        &mut sink.sink(state),
         &card,
         "cry",
         json_as(json!({ "controller": player, "targets": targets })),
     );
-    settle(&mut sink.sink(), Default::default());
+    settle(&mut sink.sink(state), Default::default());
     let cursor = sink.rng.cursor();
     let events = std::mem::take(&mut sink.events);
     state.rng_cursor = cursor;
@@ -296,9 +272,9 @@ mod e13_trigger_a_cry {
         assert!(!has_triggerable_cry(&state, &live(&state, &spell)));
         assert!(has_triggerable_cry(&state, &live(&state, &dead)));
         for card in [&buried, &plain_unit, &spell] {
-            let mut sink = sink_for(&mut state);
+            let mut sink = Bench::new(&state);
             {
-                let mut inner = sink.sink();
+                let mut inner = sink.sink(&mut state);
                 let mut ctx = make_context(
                     &mut inner,
                     None,
@@ -309,7 +285,7 @@ mod e13_trigger_a_cry {
                 );
                 (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
             }
-            settle(&mut sink.sink(), Default::default());
+            settle(&mut sink.sink(&mut state), Default::default());
             assert_eq!(sink.events, Vec::<GameEvent>::new());
         }
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
@@ -375,9 +351,9 @@ mod r1873003_a_field_spell_on_the_field {
 
     /// `trigger_cry` aimed at `card` by id, for p1, settled.
     fn trigger(state: &mut GameState, card: &CardInstance) {
-        let mut sink = sink_for(state);
+        let mut sink = Bench::new(state);
         {
-            let mut inner = sink.sink();
+            let mut inner = sink.sink(state);
             let mut ctx = make_context(
                 &mut inner,
                 None,
@@ -388,7 +364,7 @@ mod r1873003_a_field_spell_on_the_field {
             );
             (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
         }
-        settle(&mut sink.sink(), Default::default());
+        settle(&mut sink.sink(state), Default::default());
         let cursor = sink.rng.cursor();
         state.rng_cursor = cursor;
     }
@@ -419,9 +395,9 @@ mod r1869001_a_random_trigger {
 
     /// `trigger_cry` with `random` on `card`, for p1, its rng cursor written back as `rewind_on`'s is.
     fn random_trigger(state: &mut GameState, card: &CardInstance) -> Vec<String> {
-        let mut sink = sink_for(state);
+        let mut sink = Bench::new(state);
         {
-            let mut inner = sink.sink();
+            let mut inner = sink.sink(state);
             let mut ctx = make_context(
                 &mut inner,
                 None,
@@ -432,7 +408,7 @@ mod r1869001_a_random_trigger {
             );
             (trigger_cry(json_as(json!({ "instanceId": card.id, "random": true }))).apply)(&mut ctx);
         }
-        settle(&mut sink.sink(), Default::default());
+        settle(&mut sink.sink(state), Default::default());
         let cursor = sink.rng.cursor();
         let events = std::mem::take(&mut sink.events);
         state.rng_cursor = cursor;

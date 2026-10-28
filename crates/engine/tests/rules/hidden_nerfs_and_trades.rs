@@ -54,7 +54,7 @@ fn held(s: &Scenario, player: PlayerId, def_id: &str) -> String {
         .unwrap_or_else(|| panic!("{player:?} holds a {def_id}"))
 }
 
-fn hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
+fn scenario_hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
     s.hand(player).into_iter().map(|card| card.id).collect()
 }
 
@@ -396,7 +396,7 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id, big_body.id], "field": [plain.id] }),
             json!({ "hand": [DUD.id, plain.id, STOIC.id] }),
         );
-        let theirs = hand_ids(&s, P2);
+        let theirs = scenario_hand_ids(&s, P2);
         offer_and_pass(&mut s);
         let from = s.events().len();
 
@@ -404,7 +404,7 @@ mod r1845002_a_trade_offer {
         assert_eq!(pending.player_id, P1, "on p2's turn (R1279000)");
         assert_eq!(s.state().active, P2);
         assert_eq!(pending.kind, PromptKind::Hand);
-        assert_eq!(offered(&s), hand_ids(&s, P1));
+        assert_eq!(offered(&s), scenario_hand_ids(&s, P1));
         let body = held(&s, P1, &big_body.id);
         s.answer(pick::id(&body));
         let given = s.card(body.as_str());
@@ -459,11 +459,11 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id], "field": [plain.id] }),
             json!({ "hand": [] }),
         );
-        let mine = hand_ids(&s, P1);
+        let mine = scenario_hand_ids(&s, P1);
         offer_and_pass(&mut s);
         assert!(s.state().pending.is_none());
         assert!(stolen(s.events()).is_empty());
-        assert_eq!(hand_ids(&s, P1), mine[1..].to_vec());
+        assert_eq!(scenario_hand_ids(&s, P1), mine[1..].to_vec());
     }
 
     #[test]
@@ -503,7 +503,7 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id, big_body.id], "field": [plain.id] }),
             json!({ "hand": [DUD.id, plain.id, STOIC.id] }),
         );
-        let theirs = hand_ids(&s, P2);
+        let theirs = scenario_hand_ids(&s, P2);
         offer_and_pass(&mut s);
         let body = held(&s, P1, &big_body.id);
         // At the give, a card of the other hand is not on offer; at the Discover, the given card is not.

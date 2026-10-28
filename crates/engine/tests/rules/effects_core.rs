@@ -24,32 +24,9 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::{plain, spikey_pillow, taunter};
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{Bench, events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{anti_oneshot, stockpile};
 use crate::rules::fixtures::harness::{json_of, live, live_mut, matches_object};
-
-/// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
-/// borrows all three, so they live here and `sink()` lends them out.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 /// Like `put`, but the card is made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
@@ -161,8 +138,8 @@ fn with_context<R>(
         targets,
     } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
-    let mut bench = sink_for(state);
-    let mut sink = bench.sink();
+    let mut bench = Bench::new(state);
+    let mut sink = bench.sink(state);
     let mut ctx = make_context(
         &mut sink,
         self_.as_ref(),
@@ -184,9 +161,9 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
         targets,
     } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut engine_sink = sink.sink();
+        let mut engine_sink = sink.sink(state);
         let mut ctx = make_context(
             &mut engine_sink,
             self_.as_ref(),
@@ -241,18 +218,18 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     #[test]
     fn r70_a_cast_counts_as_a_play_with_cost_paid_0_and_fires_the_cards_script() {
         let mut state = game("r70-cast");
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
         let card = must(
-            in_hand(sink.state, &castable().id, P1, 1).into_iter().next(),
+            in_hand(&mut state, &castable().id, P1, 1).into_iter().next(),
             "a castable Spell",
         ); // printed cost 3
-        sink.state.players.p1.mana.current = 3;
-        let played_before = sink.state.counters.played;
+        state.players.p1.mana.current = 3;
+        let played_before = state.counters.played;
 
-        cast_card(&mut sink.sink(), &card, Default::default());
+        cast_card(&mut sink.sink(&mut state), &card, Default::default());
 
         // "A cast is free": no mana moved, and the event the whole game reads says costPaid 0.
-        assert_eq!(sink.state.players.p1.mana.current, 3);
+        assert_eq!(state.players.p1.mana.current, 3);
         let played = events_of_type(&sink.events, GameEventType::CardPlayed);
         assert_eq!(played.len(), 1);
         let first = json_of(&played[0]);
@@ -265,14 +242,13 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
 
         // "Counts as a play for every rule that counts or reacts to plays": the Combo counter, the
         // played list and the game counter Ceaseless Void reads (R55).
-        assert_eq!(sink.state.players.p1.turn_log.cards_played, 1);
-        assert_eq!(sink.state.players.p1.turn_log.played_ids, vec![card.id.clone()]);
-        assert_eq!(sink.state.counters.played, played_before + 1);
+        assert_eq!(state.players.p1.turn_log.cards_played, 1);
+        assert_eq!(state.players.p1.turn_log.played_ids, vec![card.id.clone()]);
+        assert_eq!(state.counters.played, played_before + 1);
 
         // "It fires the card's Cry or spell script", and the Spell then goes to the graveyard (§10.5).
-        assert_eq!(sink.state.players.p2.hero.health, 30 - 2);
-        let graveyard: Vec<String> = sink
-            .state
+        assert_eq!(state.players.p2.hero.health, 30 - 2);
+        let graveyard: Vec<String> = state
             .players
             .p1
             .graveyard
@@ -280,7 +256,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
             .map(|entry| entry.id.clone())
             .collect();
         assert_eq!(graveyard, vec![card.id.clone()]);
-        assert!(sink.state.players.p1.hand.is_empty());
+        assert!(state.players.p1.hand.is_empty());
     }
 
     #[test]

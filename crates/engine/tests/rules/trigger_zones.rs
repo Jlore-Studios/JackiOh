@@ -16,7 +16,7 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, both, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, both, hand_ids, in_hand, new_game, put, slot};
 
 // Fixtures.
 
@@ -246,14 +246,6 @@ fn game(seed: &str) -> GameState {
     }
     register_scripts(registry);
     state
-}
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.

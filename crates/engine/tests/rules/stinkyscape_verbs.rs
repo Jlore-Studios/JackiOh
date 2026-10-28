@@ -9,6 +9,8 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::harness::types_of;
+
 use crate::rules::fixtures::stinkyscape_verbs::*;
 
 /// `active`'s turn 9, its main phase; each side's setup as given, with plain cards to draw, and no
@@ -47,10 +49,6 @@ fn backrow_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
 
 fn pick(id: &str) -> Value {
     json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn has_flying(s: &Scenario, id: &str) -> bool {

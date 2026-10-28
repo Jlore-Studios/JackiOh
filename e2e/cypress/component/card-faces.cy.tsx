@@ -183,7 +183,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, and five Meditative cards) each print a short form", () => {
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards and five held Stinkyscape rows) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
@@ -196,7 +196,9 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
     // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text, and C+ #62 KY's
     // Papaya joined it with v0.3.10's Discover text (#967) and left it with #1017's cut. Each face
     // left prints a short form, its header and "…", the whole text standing on its left in the
-    // hover preview (R1017000).
+    // hover preview (R1017000). The held Stinkyscape set's rows (R1857000) bring five more: #7 The
+    // Greatest Heist, #112 Job Application, the set's two Call to Chaos editions (#150, #151) and
+    // the Dormant Starship.
     for (const entry of long) {
       const [id, label] = entry.split(" ");
       expect(shortFormOf(id ?? "", label === "radiant"), entry).to.not.equal(null);
@@ -220,6 +222,16 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-098 radiant",
       "classicplus-073 base",
       "classicplus-073 radiant",
+      "stinkyscape-007 base",
+      "stinkyscape-007 radiant",
+      "stinkyscape-112 base",
+      "stinkyscape-112 radiant",
+      "stinkyscape-150 base",
+      "stinkyscape-150 radiant",
+      "stinkyscape-151 base",
+      "stinkyscape-151 radiant",
+      "stinkyscape-t-dormant-starship base",
+      "stinkyscape-t-dormant-starship radiant",
     ]);
   });
 

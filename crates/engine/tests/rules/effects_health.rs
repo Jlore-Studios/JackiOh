@@ -10,38 +10,18 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{
     blood_moon, gambit, grunt, playing, recorder, replays_to, vital_kill,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_of_type, in_hand, put, slot};
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call (`on`).
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-
-    /// `applyEffects(effects, makeContext(sink, self))`, the card read as it stands now.
-    fn apply(&mut self, state: &mut GameState, effects: &[Effect], self_id: Option<&str>) {
-        let self_: Option<CardInstance> = self_id.map(|id| {
-            find_instance(&*state, id)
-                .expect("the card is in the state")
-                .clone()
-        });
-        let mut engine = self.on(state);
-        let mut ctx = make_context(&mut engine, self_.as_ref(), HookOptions::default());
-        apply_effects(effects, &mut ctx);
-    }
+/// `applyEffects(effects, makeContext(sink, self))`, the card read as it stands now.
+fn apply(bench: &mut Bench, state: &mut GameState, effects: &[Effect], self_id: Option<&str>) {
+    let self_: Option<CardInstance> = self_id.map(|id| {
+        find_instance(&*state, id)
+            .expect("the card is in the state")
+            .clone()
+    });
+    let mut engine = bench.sink(state);
+    let mut ctx = make_context(&mut engine, self_.as_ref(), HookOptions::default());
+    apply_effects(effects, &mut ctx);
 }
 
 fn of_type(events: &[GameEvent], kind: GameEventType) -> Value {
@@ -68,9 +48,9 @@ mod e7_set_health {
         );
         state.players[PlayerId::P1].hero.armor = 5;
         state.players[PlayerId::P2].hero.health = 40;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine = sink.on(&mut state);
+            let mut engine = sink.sink(&mut state);
             let mut ctx = make_context(&mut engine, Some(&self_), HookOptions::default());
             apply_effects(
                 &[
@@ -112,8 +92,9 @@ mod e7_set_health {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             &[set_health(json_as(
                 json!({ "to": { "of": "self" }, "value": 13 }),
@@ -170,8 +151,9 @@ mod e8_convert_healing {
         find_instance_mut(&mut state, &moon.id)
             .expect("the card is in the state")
             .face_up = Some(true);
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             &[convert_healing(Default::default())],
             Some(moon.id.as_str()),
@@ -192,7 +174,7 @@ mod e8_convert_healing {
             json!({ "kind": "healToDamage", "converterId": moon.id, "expiry": { "until": "thisTurn", "turn": state.turn } })
         );
         state.players[PlayerId::P1].hero.armor = 2;
-        heal_hero(&mut sink.on(&mut state), PlayerId::P1, 7);
+        heal_hero(&mut sink.sink(&mut state), PlayerId::P1, 7);
         assert_eq!(state.players[PlayerId::P1].hero.health, 23);
         // A unit of the enemy's: a heal of 3 on it deals 3.
         let body = put(
@@ -201,7 +183,8 @@ mod e8_convert_healing {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        sink.apply(
+        apply(
+            &mut sink,
             &mut state,
             &[heal(json_as(
                 json!({ "target": { "of": "instance", "instanceId": body.id }, "amount": 3 }),
@@ -245,8 +228,9 @@ mod e8_convert_healing {
             slot(PlayerId::P2, Row::Backrow, 2),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             &[convert_healing(Default::default())],
             Some(moon.id.as_str()),
@@ -258,7 +242,7 @@ mod e8_convert_healing {
             json!({}),
         );
         state.players[PlayerId::P1].hero.health = 3;
-        heal_hero(&mut sink.on(&mut state), PlayerId::P1, 5);
+        heal_hero(&mut sink.sink(&mut state), PlayerId::P1, 5);
         // p1's Final Gambit sent the 5 to p2's hero.
         assert_eq!(state.players[PlayerId::P1].hero.health, 3);
         assert_eq!(state.players[PlayerId::P2].hero.health, 25);
@@ -268,11 +252,16 @@ mod e8_convert_healing {
     #[test]
     fn with_no_card_to_come_from_it_does_nothing() {
         let mut state = playing("dc-convert-none");
-        let mut sink = sink_for(&state);
-        sink.apply(&mut state, &[convert_healing(Default::default())], None);
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
+            &mut state,
+            &[convert_healing(Default::default())],
+            None,
+        );
         assert_eq!(state.players[PlayerId::P1].mods, Vec::<PlayerModifier>::new());
         deal_damage(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             DamageArgs {
                 source: None,
                 target: DamageTarget::Hero { player: PlayerId::P1 },
