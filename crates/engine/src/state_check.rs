@@ -1009,6 +1009,9 @@ fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
 }
 
 pub fn state_check(sink: &mut EngineSink<'_>) {
+    // R460, R1875006: the cards whose would-die follow-up resolved in this check, which answer no
+    // later pass of it, as each card replaces an event at most once.
+    let mut resolved_first: Vec<String> = Vec::new();
     for _pass in 0..STATE_CHECK_PASS_CAP {
         if sink.state.result.is_some() {
             return;
@@ -1116,7 +1119,17 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
 
         // B5 E5: before any card moves, the units that would die meet the "would die" replacements
         // (Classic #14's Radiant flicker), which take some of them out of the collection (R462).
-        let remaining: Vec<CardInstance> = crate::replacements::would_die_window(sink, &dying);
+        let remaining: Vec<CardInstance> =
+            match crate::replacements::would_die_window(sink, &dying, &mut resolved_first) {
+                crate::replacements::WouldDie::Die(remaining) => remaining,
+                // R1875006: a replacement resolved before anything moved: judge the board it left again.
+                crate::replacements::WouldDie::StartOver => {
+                    if sink.state.result.is_some() || sink.state.pending.is_some() {
+                        return;
+                    }
+                    continue;
+                }
+            };
         // R1849002: what a destroy-to-exile aura reaches is exiled instead, judged for every card
         // before any moves, and exiled first in R68's order — not collected, so no Death, Reborn or
         // `destroyed` (R461, R1124's shape). Without such an aura every card is collected, as before.

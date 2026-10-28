@@ -649,6 +649,18 @@ fn asker_script() -> Script {
     }
 }
 
+/// R1873003: a Field Spell whose Cry hits the enemy hero for 2.
+pub fn field_crier() -> CardDef {
+    def(3133, "field-crier", "Field Spell", json!({ "cost": 1 }))
+}
+
+fn field_crier_script() -> Script {
+    Script {
+        cry: Some(hook(|_ctx| vec![damage_enemy_hero(2)])),
+        ..Script::default()
+    }
+}
+
 /// A Cry whose first declaration is a Tribute (a play's price), then a target (R90, R123).
 pub fn tribute_crier() -> CardDef {
     unit(3119, "tribute-crier", 3, 3, json!({ "cost": 2 }))
@@ -1062,6 +1074,7 @@ pub static PROMPT_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         moder(),
         asker(),
         tribute_crier(),
+        field_crier(),
         rewind(),
         grave_rewind(),
         striker(),
@@ -1121,6 +1134,7 @@ fn base_scripts() -> IndexMap<String, CardScripts> {
     table.insert(moder().id, both(moder_script()));
     table.insert(asker().id, both(asker_script()));
     table.insert(tribute_crier().id, both(tribute_crier_script()));
+    table.insert(field_crier().id, both(field_crier_script()));
     table.insert(rewind().id, rewind_scripts());
     table.insert(grave_rewind().id, both(grave_rewind_script()));
     table.insert(striker().id, both(striker_script()));

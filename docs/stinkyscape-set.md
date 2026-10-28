@@ -849,8 +849,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Tradable / Cry: Complete the current stage on all your Quests.
 - **Radiant:** Tradable / Cry: Summon The Greatest Heist. Complete the current stage on all your Quests.
-- **Engine:** Tradable ([[R1838000]]). Cry ([[R1]]): `complete_quests` ([[R1854001]]): every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward given at the next state check; a line hearing back or done has nothing open. Radiant: `summon { defId: stinkyscape-007 }` into the leftmost open backrow zone first ([[R64]]), with no Cry, since a summon is no play ([[R1]]) and the triggered Cry reaches Units alone; its first stage, opened as it entered, is completed with the rest ([[R1854001]], [[R1873000]]).
-- **Rulings:** ST-S09-1: the Radiant summon names The Greatest Heist, so its Cry runs before the completion; a full backrow summons nothing and the completion reaches the other Quests alone. ST-S09-2: the opponent's Quests and an untagged card with a quest line are passed by (R1854001). Built by S09 (#1873) as [[R1873000]], which decides otherwise on ST-S09-1's Cry: a summon is no play, so the Heist asks no Discover.
+- **Engine:** Tradable ([[R1838000]]). Cry ([[R1]]): `complete_quests` ([[R1854001]]): every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward given at the next state check; a line hearing back or done has nothing open. Radiant: `summon { defId: stinkyscape-007 }` into the leftmost open backrow zone first ([[R64]]), then its Cry is triggered there, the summon naming it ([[R411]], [[R1873003]]): its Discover is asked before the completion, and its first stage, opened as it entered, is completed with the rest ([[R1854001]], [[R1873000]]).
+- **Rulings:** ST-S09-1: the Radiant summon names The Greatest Heist, so its Cry runs before the completion; a full backrow summons nothing and the completion reaches the other Quests alone. ST-S09-2: the opponent's Quests and an untagged card with a quest line are passed by (R1854001). Built by S09 (#1873) as [[R1873000]], ST-S09-1's Cry included: the engine's triggered Cry reaches a face-up Field Spell on the field ([[R1873003]]).
 - **Numbers:** none (a verb and a summon).
 - **Check:** R275: stats doubled, and the Radiant face brings its own Quest and completes its first stage at once. Tradable as printed (L2).
 - **Class:** C (staged Quests, M07).
@@ -1265,8 +1265,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy).
 - **Radiant:** Choose a zone. Its Jacobian stretches a unit square. Summon a random Radiant Starship Piece in each of your zones it covers. F(x, y) = (x² − y, xy).
-- **Engine:** The build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5, y 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 their backrow. A zone chosen (`choose_cell`, B5 E18) maps the unit square through the Jacobian J, rows (2x, −1) and (y, x), with its corner at the zone; NEW: each zone whose centre lies in that parallelogram, open and unlocked, gets a random non-token Starship Piece Unit summoned (a pool by keyword, of the sets that ship, [[R380]]) for the side it is on ([[R64]]'s placement, no Cry, [[R1]]), a backrow zone taking it as a Unit standing there ([[R1081000]]). Radiant: only the caster's zones, each piece Radiant.
-- **Rulings:** ST-S18-1: an occupied or Locked zone gets none; the chosen zone itself gets one when it lies in the parallelogram. ST-S18-2: a covered backrow zone takes the piece as a Unit standing in the backrow; S18 may keep pieces to unit zones instead. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Engine:** The build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5, y 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 their backrow. A zone chosen (`choose_cell`, B5 E18) maps the unit square through the Jacobian J, rows (2x, −1) and (y, x), with its corner at the zone; each unit zone whose centre lies in that parallelogram, open and unlocked, gets a random Starship Piece Unit summoned (`query::starship_pieces()`, [[R1878000]]) for the side it is on (no Cry, [[R1]]). Radiant: only the caster's zones, each piece Radiant.
+- **Rulings:** [[R1877000]] (built from ST-S18-1 and ST-S18-2): an occupied or Locked zone gets none; the chosen zone always covers itself (edges included); the build kept the pieces to unit zones, so a covered backrow zone gets none, as no summon puts a Unit in the backrow.
 - **Numbers:** none (the formula is the card's text, not a number; it prints no ASCII digit).
 - **Check:** D6: "Sinkyscape" is Stinkyscape. ST9 Q14 (the coordinates are the build's). R275: Radiant pieces, and only yours.
 - **Class:** D (the Jacobian cover).
@@ -1942,7 +1942,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Flying / Cry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you.
 - **Radiant:** Starship Piece, Flying, Lucky 1 / Cry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you.
 - **Engine:** Starship Piece ([[R1852000]]), Flying. Cry ([[R1]]): `trade_offer` ([[R1845002]]): a delayed effect due at the start of the opponent's next turn, a countdown badge on its side; with a card in each hand its controller picks one of theirs (a `hand` prompt), it goes to the opponent's hand as theirs ([[R12]]), then the opponent Discovers one of their other hand cards and it comes to its controller's; an empty hand asks nothing. Radiant: Lucky 1 ([[§6.1]], [[R1438]]).
-- **Rulings:** ST-S18-3: Lucky 1 reaches the rolls its own text makes, the Discover's three options drawn twice; S18 names the comparator (default: the set whose cheapest card costs most, since the opponent gives the worst). These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** [[R1877001]] (built from ST-S18-3): the offer carries Yuma's Lucky as it is made; Lucky 1 draws the Discover's options twice and keeps the set whose cheapest card costs most, the earlier on a tie.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and Lucky 1.
 - **Class:** C (hidden Nerfs and trade offers, M11).
@@ -2189,7 +2189,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Radiant:** Add a Radiant Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** ST8: the Radiant face keeps Vxyl. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -2371,7 +2371,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Cast a random BUSTED card from anywhere in the game's code.
 - **Radiant:** Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it.
 - **Engine:** Cry ([[R1]]): one pick from `{ busted: true, everySet: true }` ([[R1846000]], [[R1846001]]): every BUSTED catalog card of the sets that ship and the single-player sets, never this card ([[R387]]), cast as a new card (`cast_new`, [[R70]]), a random cast's choices all random ([[§6.3]] Cast). Radiant: a Discover of three from the same pool, Radiant, the pick cast with its caster's choices.
-- **Rulings:** ST-S18-4: "Play" is a Cast (free, a play for every rule, R70); "anywhere in the game's code" is `everySet` (R1846001), single-player sets included once they exist. ST-S18-5: the BUSTED list is the build's (R1846000), so the pool grows with the catalog. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-4 and ST-S18-5 proposed, so no new ruling: "Play" is a Cast (free, a play for every rule, R70); "anywhere in the game's code" is `everySet` (R1846001), single-player sets included once they exist; the BUSTED list is the build's (R1846000), so the pool grows with the catalog.
 - **Numbers:** none.
 - **Check:** ⚠ designer: no Radiant stats printed: 12/22 (R275 doubled, R1857001). The designer's "For AI" note is M12's (R1846000, R1846001). R275: stats doubled and a chosen, Radiant cast.
 - **Class:** C (card metrics, M12).
@@ -2397,7 +2397,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Has {keywords|random combat keyword|random combat keywords}. / Cry: Replace both players' hands with random complicated cards.
 - **Radiant:** Aura: Has {keywords|random combat keyword|random combat keywords}. / Cry: Replace both players' hands with random complicated cards. Make yours Radiant.
 - **Engine:** M #65 Keymaster Keenus's aura (`draw_combat_keywords`, [[R781004]]): three different combat keywords drawn as it arrives and kept on it. Cry ([[R1]]): C+ #65.5's `replace_hand_with_random` for each player, its controller's first: each hand moved to its owner's graveyard (no discard) and as many random cards from `{ complicated: true }` ([[R1846000]]) added, repeats allowed ([[R60]]), never this card ([[R387]]). Radiant: its controller's new cards Radiant.
-- **Rulings:** ST-S18-6: each hand is replaced by as many complicated cards as it held; an empty hand gets none (R129). ST-S18-7: the pool is the sets that ship, as no `everySet` is asked (R1846001). These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-6 and ST-S18-7 proposed, so no new ruling: each hand is replaced by as many complicated cards as it held, an empty hand none (R129); the pool is the sets that ship, as no `everySet` is asked (R1846001).
 - **Numbers:** keywords 3 ↑ (Radiant 3).
 - **Check:** Typo "both player's" read as both players'. R275: stats doubled and your new hand Radiant.
 - **Class:** C (card metrics, M12).
@@ -2566,7 +2566,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cloaked / Cry: Secretly Nerf a random Unit in your opponent's hand {times|time|times}, never its cost. No one sees the Nerfs until it is played.
 - **Radiant:** Cloaked / Cry: Secretly Nerf a random Unit in your opponent's hand {times|time|times}, never its cost. No one sees the Nerfs until it is played.
 - **Engine:** Cloaked ([[R783004]]; set face-down, its Cry runs as it is revealed, [[R783006]]). Cry ([[R1]]): `degrade_secretly { random: 1, times }` ([[R1845000]]) over the Unit cards of the opponent's hand that can take Nerfs (not Immutable): a hidden count on the card, nothing drawn or reported, no view showing it, the AI's redaction dropping it. It lands as the card is next played, at [[§10.5]] step 3, each Nerf drawn from every row but the cost's ([[R1845001]]).
-- **Rulings:** ST-S18-8: "nerfs avoid cost" and "the opponent does not see the nerfs until they play the card" are R1845001's landing; Gokugains' controller does not see them either (R1845000). An empty hand or one with no Unit, nothing. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-8 proposed, so no new ruling: "nerfs avoid cost" and "the opponent does not see the nerfs until they play the card" are R1845001's landing; Gokugains' controller does not see them either (R1845000). An empty hand or one with no Unit, nothing.
 - **Numbers:** times 3 ↑ (Radiant 30), its Cry's (`cry: true`).
 - **Check:** The designer's {…} notes are M11's (R1845000, R1845001). R275: stats doubled and 30 Nerfs against 3 (10×).
 - **Class:** C (hidden Nerfs, M11).
@@ -3151,7 +3151,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Radiant:** Add a Radiant iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3164,7 +3164,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Radiant:** Add a Radiant Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** The list's "Paragon mk1", "mk2" and "Paragon X" are S #72 Paragon Mk1, #73 Paragon Mk2 and #74 Paragon-X. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3177,7 +3177,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Radiant:** Add a Radiant A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** The list's Radiant face drops "to your hand"; it is the same move. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3190,7 +3190,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Radiant:** Add a Radiant Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** ST8: the Radiant face adds the five Radiant, and the name is Star-jumper Core, as #163 writes it. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3203,7 +3203,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Radiant:** Choose a Radiant Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Engine:** A choice of five ([[R81]]'s declared modes, or a `pick` prompt its caster alone sees): the chosen bundle added to the hand (Radiant on the Radiant face, [[§5.2]]), a full hand burning it ([[§2.4]]). Then every card its caster owns of the four other definitions is exiled ([[§6.3]] Exile) from their hand, deck and graveyard, as Core #94 Genn's Greed's exile reaches those zones; the opponent's are untouched.
-- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three.
+- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three. Built by S24 (#1880) as [[R1880001]] and [[R1880002]], as five declared modes chosen with the play.
 - **Numbers:** none.
 - **Check:** ST8: "Golden" is Golden Accord; the name Swear Loyalities kept as written. R275: the chosen bundle Radiant (about 2×). ⚠ designer: E9.
 - **Class:** B (a choice and an exile across zones).
@@ -3798,7 +3798,7 @@ build uses, and the entry in ST13 says the rest.
 | D18 | #18.3 CASPER | "a random enemy Unit on the field and hand" (Radiant) | Two Allures: a random enemy Unit on the field ([[R963]]) and a random Unit card in your opponent's hand, taken into yours at the start of your next turn if it is still there ([[R1140]]'s hand watch, [[R12]]). NEW (S11): Allure has no hand form on `main` |
 | D19 | #19 Imprisoned Cosmality | "deal 10 damage split among enemies" | Ten hits of 1 on random enemies, the hero included, a Unit at 0 passed by (C+ #3's split); each hit's source is this Unit, so each pierces Armor ([[R346]]) |
 | D20 | #20 Tnack Trav | "a Legendary or Mythic Unit on the Field" | A declared target on either side, not itself, by its rarity: a token's rarity is Token, whatever it printed |
-| D21 | #25 KY's Tricknology | "Choose a zone … lands on each zone it covers" | ST9's coordinates; each covered zone that is open gets a random Starship Piece for the side it is on (none for an occupied or Locked one), a backrow zone taking it as a Unit standing there ([[R1081000]]); Radiant: only your zones. NEW (S18), which may keep pieces to unit zones |
+| D21 | #25 KY's Tricknology | "Choose a zone … lands on each zone it covers" | ST9's coordinates; each covered zone that is open gets a random Starship Piece for the side it is on (none for an occupied or Locked one), a backrow zone taking it as a Unit standing there ([[R1081000]]); Radiant: only your zones. S18 kept the pieces to unit zones ([[R1877000]]) |
 | D22 | #26 ZolarKeth | "Its Activate is locked" | The summoned University cannot use its own Activate; no zone is Locked, and ZolarKeth's Activate still runs it |
 | D23 | #26 ZolarKeth | "or Activate your Universities"; "then" | The base face's "or" is a choice of modes, the Radiant face's "then" both in order; every University of yours runs its Activate's effect, spending none of its uses. NEW (S17): an Activate run by another card |
 | D24 | #37 Kwzka | "Allure all enemy Units played that cost less than this" | Each Unit your opponent plays (not summons) while Kwzka acts on the field, whose cost paid is less than Kwzka's cost now, is Allured as it arrives ([[R963]]) |
@@ -3806,7 +3806,7 @@ build uses, and the entry in ST13 says the rest.
 | D26 | #46 Circadian Halfcycler | "the first 3 actions of your turn" | The first 3 plays or attacks of every one of your turns while it stands (ST9, [[R1844000]]), answers belonging to the action that asked |
 | D27 | #70 Z'Zoth | "Death Units" | Unit cards whose own text prints a Death; a Death granted on the field is gone in the graveyard ([[R78]]) |
 | D28 | #71 A'Zoth | "Activate each Cry with random targets" | Trigger a Cry ([[R467]]) on each Unit it summoned, its targets and choices drawn from the match rng, no prompt asked. NEW (S16); the summon itself fires none ([[R1]]) |
-| D29 | #77 Yuma | Lucky 1 (Radiant) | The trade's Discover options are drawn twice, keeping the set better for Yuma's controller (default: the set whose cheapest card costs most, the opponent giving the worst); S18 names the comparator |
+| D29 | #77 Yuma | Lucky 1 (Radiant) | The trade's Discover options are drawn twice, keeping the set better for Yuma's controller (default: the set whose cheapest card costs most, the opponent giving the worst); the comparator is [[R1877001]]'s |
 | D30 | #88 Siva 2 | "Your Humans"; "Fill your hand with Bigots" | Your Human Units on the field, this one included; Bigots (Core #2) until your hand is full, none burned |
 | D31 | #91, #92 The Propagation's Wasp and Hornet | "After these attacks" | After this attacks, a forced attack included ([[R1849001]]): the copy first, made before it evolves, so the copy lacks Flying |
 | D32 | #94 Tmack Trav | "After this kills a unit" | The Unit it attacked destroyed in that combat (C+ #73.1's reading); a kill while defending does not count; no cap on the attacks it chains |

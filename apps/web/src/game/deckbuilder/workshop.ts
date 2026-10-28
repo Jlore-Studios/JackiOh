@@ -77,6 +77,29 @@ export function nextName(prefix: string | ((number: number) => string), taken: r
   }
 }
 
+/** `make(name)`, with `name` cut (and its trailing spaces dropped) until the whole fits in `max` characters as D1 counts them. */
+function fitName(name: string, make: (name: string) => string, max: number): string {
+  const over = [...make(name)].length - max;
+  return over <= 0 ? make(name) : make(clampName(name, Math.max(0, [...name].length - over)).trimEnd());
+}
+
+/**
+ * #2096: a duplicate's name, `<name> (copy)`, then `<name> (copy 2)`, `(copy 3)`, …: the first no name
+ * in `taken` uses (trimmed, any case, as `nextName` compares). `name` is cut so the whole fits in
+ * `nameLength`, or the save's own cut (D1) would take the "(copy)" off again.
+ */
+export function copyName(name: string, taken: readonly string[], nameLength: number): string {
+  const used = new Set(taken.map((other) => other.trim().toLowerCase()));
+  for (let number = 1; ; number += 1) {
+    const candidate = fitName(
+      name,
+      (base) => (number === 1 ? t("{name} (copy)", { name: base }) : t("{name} (copy {number})", { name: base, number })),
+      nameLength,
+    );
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+}
+
 // Verdicts (R253), and the status chip
 
 /**
