@@ -1710,13 +1710,31 @@ impl InvariantMonitor {
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
     /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
     /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
-    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// uncover, followed one step through a rotation the action made, R14) takes `summonedTurn`'s word
+    /// only when it names a turn of the action.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
+        // §8 #52: the rotating player is the one whose card played (`RotationArgs.perspective`).
+        let mut playing: Option<PlayerId> = None;
         for event in events {
             match event {
+                GameEvent::CardPlayed { player, .. } => playing = Some(*player),
+                // R14: the rings turn with every pile on them, so a zone a play covered is one step on.
+                GameEvent::Rotated { direction } => {
+                    if let Some(perspective) = playing {
+                        for (player, row, lane) in landed.iter_mut() {
+                            let from = crate::zones::ZoneSlot {
+                                player: *player,
+                                row: *row,
+                                lane: *lane,
+                            };
+                            let to = crate::zones::ring_neighbor(from, *direction, perspective);
+                            (*player, *row, *lane) = (to.player, to.row, to.lane);
+                        }
+                    }
+                }
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
                 GameEvent::Summoned {
                     player, row, lane, ..
