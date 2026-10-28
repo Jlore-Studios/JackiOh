@@ -161,6 +161,35 @@ or the raw media type instead. Separately, `update` should refuse to write when 
 but could not be parsed, not start again from `default_state()`. A test with a 1 MB file the fake
 returns without content would hold it.
 
+## 6. Runs "died" when a box's runner was stopped mid-job (added 2026-10-28)
+
+"The run working on this died … the model job left no result" (#2155) came 10 times from
+2026-10-12 to 10-28 (`died #…` commits on `bot-state`), out of about 1,800 claims. Three were
+claude-7 on GitHub's runners, whose `Install the claude CLI` step failed. The other seven were on
+the boxes, and every one of those ended the same way: the work step was **cancelled** partway
+through, its log saying "The runner has received a shutdown signal", with Muse, cargo and rustc
+still running. Six were Muse's, one agy's:
+
+| When (UTC) | Runner | What stopped it |
+|---|---|---|
+| 10-14 13:45 | `night-vm-muse-2` | not found |
+| 10-22 07:00, twice in one second | `night-vm-muse-3`, `-4` | Ubuntu's unattended upgrades (06:00 to 07:00) |
+| 10-24 06:20 | `night-vm-agy` | the same window |
+| 10-26 23:00 | `night-vm-muse` | runners re-registered four minutes after #2028 merged |
+| 10-28 03:11, 03:13 | `night-vm-muse-fill`, `night-vm-muse-3-b2` | `setup.sh` installing zram (finding 4), one per box |
+
+On Ubuntu 24.04, needrestart restarts every service whose libraries an apt run replaced, at the end
+of the run, whether interactive or not. The two on 10-28 came from this audit's own zram change:
+its apt install ran needrestart, with its output sent to `/dev/null`. The 06:00 to 07:00 deaths fit
+the daily unattended upgrade. The box's own logs (`/var/log/unattended-upgrades/`, the runners'
+journal) were not read here and would confirm it. Each death throws away the run's work: #2155
+lost two hours of Muse, #2115 an hour and twenty minutes.
+
+**Fix (on this branch):** `setup.sh` writes `/etc/needrestart/conf.d/night-vm.conf` before its
+first apt run. It sets `override_rc` to 0 for `actions.runner.*` and `jackioh-train@*`, so no apt
+run restarts a runner or a training lane; they take new libraries at their next restart.
+Re-registering runners while one holds a job still kills it, which `bot/machine/README.md` now says.
+
 ## What to do
 
 1. **Fix finding 5 first.** It will happen again, to every subscription, and it caused the wasted

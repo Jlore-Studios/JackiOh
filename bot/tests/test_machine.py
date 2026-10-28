@@ -372,6 +372,13 @@ class SetupTests(unittest.TestCase):
     def test_it_parses(self):
         self.assertEqual(subprocess.run(["bash", "-n", str(SETUP)]).returncode, 0)
 
+    def test_no_apt_run_restarts_a_runner_in_the_middle_of_its_job(self):
+        """needrestart restarted runners after apt runs (unattended upgrades and this script's),
+        and each restart killed the job the runner held."""
+        rule = "$nrconf{override_rc}{qr(^actions\\.runner\\.)} = 0;"
+        self.assertIn(f"/etc/needrestart/conf.d/night-vm.conf <<'EOF'\n{rule}\n", self.text)
+        self.assertLess(self.text.index(rule), self.text.index("apt-get update"))
+
     def test_both_boxes_swap_to_compressed_memory_before_the_swapfile(self):
         """Three jobs overrun an 8 GB box; paging to the swapfile on EBS stalled one for 766 s."""
         shared = self.text.split('if [ -n "$training" ]; then', 1)[0]

@@ -48,6 +48,18 @@ if [ ! -f /swapfile ]; then
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
+# Ubuntu 24.04's needrestart restarts every service whose libraries an apt run replaced, at the end
+# of that run, unattended upgrades (06:00 to 07:00 UTC) and this script's own included. A runner
+# restarted in the middle of a job kills the job ("received a shutdown signal": 2026-10-22 07:00,
+# 10-24 06:20, and 10-28 when this script installed zram; reviews/2026-10-27-muse-usage.md, finding
+# 6). Written before the first apt run here, so the runners and the training lanes are never among
+# them: they take the new libraries at their next restart.
+mkdir -p /etc/needrestart/conf.d
+cat > /etc/needrestart/conf.d/night-vm.conf <<'EOF'
+$nrconf{override_rc}{qr(^actions\.runner\.)} = 0;
+$nrconf{override_rc}{qr(^jackioh-train@)} = 0;
+EOF
+
 apt-get update -qq
 apt-get install -y -qq git curl unzip zip jq build-essential ca-certificates gnupg python3 \
   python3-venv python3-pip bubblewrap util-linux cloud-guest-utils >/dev/null

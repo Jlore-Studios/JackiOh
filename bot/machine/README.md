@@ -389,6 +389,13 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   login, and run `register-runners.sh`.
 - **A login stopped working** (the job's doctor or the run says it was refused): log that user in
   again as in step 3. Nothing else changes.
+- **Upgrades never stop a job.** Ubuntu's unattended upgrades run every morning (06:00 to 07:00
+  UTC), and on 24.04 needrestart restarts each service whose libraries an apt run replaced, at the
+  end of that run. A runner restarted mid-job kills the job ("The runner has received a shutdown
+  signal"), so `setup.sh` writes `/etc/needrestart/conf.d/night-vm.conf`, which leaves the runners
+  and the training lanes out; they take new libraries at their next restart. Re-registering a
+  runner that holds a job (`register-runners.sh`) kills that job the same way, so run it while
+  the box is idle.
 - **Disk:** every subscription's jobs share the one disk, and a full one fails whichever job
   writes next (on 2026-10-04 a revision of #206 died on `No space left on device`, 66 MB free when
   its job began). What keeps it clear:
