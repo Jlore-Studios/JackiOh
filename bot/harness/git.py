@@ -176,21 +176,6 @@ class Git:
         self.run("commit", "--quiet", "--no-verify", "-m", message, extra_env=env)
         return True
 
-    def restore_paths(self, base: str, paths: Iterable[str]) -> list[str]:
-        """Put `paths` back as they are at `base` (deleting ones `base` lacks). Returns them."""
-        restored: list[str] = []
-        for path in paths:
-            exists = self.run("cat-file", "-e", f"{base}:{path}", check=False).returncode == 0
-            if exists:
-                self.run("checkout", base, "--", path)
-            else:
-                self.run("rm", "-r", "--quiet", "--cached", "--ignore-unmatch", "--", path)
-                target = self.cwd / path
-                if target.is_file() or target.is_symlink():
-                    target.unlink()
-            restored.append(path)
-        return restored
-
     def discard_worktree_changes(self) -> None:
         """Drop uncommitted edits and untracked, non-ignored files."""
         self.run("reset", "--quiet", "--hard", "HEAD")
@@ -281,10 +266,6 @@ def _matches(path: str, patterns: Iterable[str]) -> bool:
         elif fnmatch.fnmatchcase(name, pattern) or fnmatch.fnmatchcase(clean, pattern):
             return True
     return False
-
-
-def is_forbidden(path: str, forbidden: Iterable[str]) -> bool:
-    return matches(path, forbidden)
 
 
 def worktree_add(repo: Git, path: Path, branch: str, start: str) -> Git:
