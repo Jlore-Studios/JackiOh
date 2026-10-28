@@ -101,7 +101,7 @@ crates/
                client and server)
   cards/       catalog.json (572 cards + 138 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape),
                patches/ (one snapshot per card patch), src/scripts/core/, classic/, classic_plus/, meditative/,
-               meditative_plus/: one file per card, its tests inside it
+               meditative_plus/, stinkyscape/: one file per card, its tests inside it
   ai/          the practice opponent
   wasm/        the engine, cards, AI and validator as WebAssembly for the client
   server/      API functions, match actor, matchmaking

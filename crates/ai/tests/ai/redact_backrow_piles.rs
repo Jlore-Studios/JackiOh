@@ -1,6 +1,6 @@
 //! R185 and B5 E21 (R447): a card dormant under a backrow pile is on the board, and a face-down one there
 //! is as hidden from the other seat as a face-down trap on top — `redact` makes it a placeholder,
-//! `determinize` fills it from the trap pool, and a carrier's Unit (R446) stays a public card. Real
+//! `determinize` fills it from the face-down pool, and a carrier's Unit (R446) stays a public card. Real
 //! catalog, real dealt game; the AI is p1 as in every AI test.
 //!
 //! Port of `packages/ai/test/redact-backrow-piles.test.ts`.
@@ -66,9 +66,9 @@ fn pile_game(seed: &str, trap_def: &str) -> (GameState, String, String) {
 mod r447_the_ais_seat_and_a_backrow_pile {
     use super::*;
 
-    /// R447 a face-down trap under the opponent's pile is hidden, placeholdered and resampled from the trap pool
+    /// R447 a face-down trap under the opponent's pile is hidden, placeholdered and resampled from the face-down pool
     #[test]
-    fn r447_a_face_down_trap_under_the_opponents_pile_is_hidden_placeholdered_and_resampled_from_the_trap_pool()
+    fn r447_a_face_down_trap_under_the_opponents_pile_is_hidden_placeholdered_and_resampled_from_the_face_down_pool()
      {
         let traps = trap_pool();
         let first = traps.first().cloned().unwrap_or_default();

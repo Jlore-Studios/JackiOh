@@ -795,6 +795,20 @@ fn refuses_held_cards(error: &anyhow::Error) -> bool {
     format!("{error:#}").contains(PARENT_REFUSED_HELD)
 }
 
+/// What the parent's failure to replay the head's unforced games says: a rule every game meets when it
+/// refuses the head's decks (R1705004); nothing more when the head ships a set whose cards it refuses,
+/// the release being the major it reads (R1884002); and an error otherwise, a refusal of held cards
+/// with no set shipping among them.
+fn read_refusal(error: anyhow::Error, ships_a_set: bool) -> Result<bool> {
+    if refuses_decks(&error) {
+        Ok(true)
+    } else if ships_a_set && refuses_held_cards(&error) {
+        Ok(false)
+    } else {
+        Err(error)
+    }
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     let mut checked = Checked::default();
@@ -839,11 +853,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
                     checked.touched.extend(touched);
                 }
             }
-            // R1705004: the parent cannot set up the head's games at all, a rule every game meets.
-            Err(error) if refuses_decks(&error) => checked.rule = true,
-            // R1884002: the head ships a set the parent refuses; the release is the major it reads.
-            Err(error) if !diff.sets.is_empty() && refuses_held_cards(&error) => {}
-            Err(error) => return Err(error),
+            Err(error) => checked.rule |= read_refusal(error, !diff.sets.is_empty())?,
         }
         let _ = fs::remove_file(&traces);
     }
@@ -1512,5 +1522,23 @@ mod tests {
         ));
         let other = anyhow::anyhow!("/tmp/main-jackioh could not check /tmp/traces.jsonl: No such file");
         assert!(!refuses_held_cards(&other));
+    }
+
+    #[test]
+    fn r1884002_the_refusal_reads_as_the_release_only_when_a_set_ships() {
+        let held = || {
+            anyhow::anyhow!(
+                "/tmp/main-jackioh could not check /tmp/traces.jsonl: p1: \"stinkyscape-156\" is a card of \
+                 Stinkyscape, which has not shipped yet (§2.6 L3, R1420)"
+            )
+        };
+        // A set ships: the replay ends there, no rule.
+        assert!(!read_refusal(held(), true).expect("the release"));
+        // No set ships: the same refusal is still an error.
+        assert!(read_refusal(held(), false).is_err());
+        // R1705004's refused deck size is a rule either way.
+        let decks = || anyhow::anyhow!("p1: deck must hold exactly 20 cards (§2.6 L2), got 25");
+        assert!(read_refusal(decks(), false).expect("a rule"));
+        assert!(read_refusal(decks(), true).expect("a rule"));
     }
 }
