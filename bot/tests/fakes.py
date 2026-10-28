@@ -13,7 +13,6 @@ from typing import Any
 from harness.errors import GitHubError
 from harness.gh import with_marker
 
-OWNER = "jgoetzmann"
 REPO = "jgoetzmann/JackiOh"
 BOT = {"login": "jgoetzmann-bot", "id": 324324626}
 OPERATOR = {"login": "jgoetzmann", "id": 95732896}
@@ -458,9 +457,6 @@ class FakeGitHub:
 
     def viewer(self) -> dict[str, Any]:
         return dict(BOT)
-
-    def get_protection(self, branch: str) -> dict[str, Any] | None:
-        return self.protection
 
     def set_protection(self, branch: str, checks: list[str]) -> None:
         self.protection = {"required_status_checks": {"contexts": list(checks)}}

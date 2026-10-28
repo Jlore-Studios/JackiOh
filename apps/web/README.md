@@ -32,6 +32,8 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
+The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -269,7 +271,9 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
-                        (#1650), for this screen, the account, Play and the board
+                        (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
+                        draws a ranked win streak as a flame on the account and a ranked match's
+                        line (R2101000)
 routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
                         Card builder (/creator) as links, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
@@ -393,7 +397,11 @@ routes (net/navigate.ts paths, and both vercel.json route tables):
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
-together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
+                         this site's room link draws a Join button that navigates in-app (R2094000)
+net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
+                         (/together?coop=…): built for the share sheet or the clipboard, read once off
+                         the address bar into this tab, through a sign-in, for the lobby or the co-op panel
 together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
                          landing and a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
@@ -412,8 +420,9 @@ together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenge
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
-                         invite a friend by sending the code in chat, join by code; both players go to
-                         /duos/:matchId once the guest joins
+                         offer its link, invite a friend by sending the link in chat, join by code or by
+                         a co-op link that fills the join form and focuses Join (R2094000); both players
+                         go to /duos/:matchId once the guest joins
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          teammate strip and the ping wheel
@@ -446,7 +455,7 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
 `duos-ping-<kind>` and `duos-ping-marker`.
 

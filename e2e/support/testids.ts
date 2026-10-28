@@ -817,6 +817,7 @@ export const CHAT_REPORT = "chat-report";
 export const CHAT_REPORT_REASON = "chat-report-reason";
 export const CHAT_REPORT_SEND = "chat-report-send";
 export const CHAT_REPORTED = "chat-reported";
+export const CHAT_JOIN = "chat-join";
 /** #1831: the Friends button every signed-in screen has at the top right, its badge and its panel. */
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
@@ -879,6 +880,7 @@ export function duosPingId(kind: DuosPingKind): string {
 
 export const COOP_DECK = "coop-deck";
 export const COOP_ERROR = "coop-error";
+export const COOP_LINK = "duos-coop-link";
 export const DUOS_BOARD = "duos-board";
 export const DUOS_CARD_ACTIONS = "duos-card-actions";
 export const DUOS_ROUND = "duos-round";
