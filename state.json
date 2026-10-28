@@ -5977,7 +5977,7 @@
     "2221": {
       "action": "revise",
       "asks": [],
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_reruns": {
         "0501957549247c58e27837e58ad2d33da59a6801": 1
       },
@@ -6001,7 +6001,7 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-28T11:03:43Z",
+      "queued_at": "2026-10-28T12:00:25Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -6009,7 +6009,7 @@
       "run_id": "40678310673",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-28T11:13:43Z",
       "stop_requested": false,
       "taken_asks": [],
