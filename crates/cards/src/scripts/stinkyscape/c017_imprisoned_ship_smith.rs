@@ -111,8 +111,32 @@ mod tests {
             .collect()
     }
 
+    /// R2271000: an awake Smith in p1's unit zone 1 (`radiant` both faces) while a second, played into
+    /// zone 2, lies Dormant until its awakening.
+    fn awake_beside_a_dormant_one(radiant: bool) -> Scenario {
+        let mut s = crate::scenario(json!({
+            "p1": {
+                "field": [{ "def": ID, "lane": 1, "radiant": radiant }],
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "library": crate::filler(4),
+            },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }));
+        s.play(ID, json!({ "zone": 2 }));
+        to_its_awakening(&mut s);
+        s
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_summons_nothing() {
+            // "When THIS awakens": the awake Smith let every awakening through, so each one summoned
+            // a Waraxe for it too, until its condition was read (R2271000).
+            let s = awake_beside_a_dormant_one(false);
+            assert_eq!(summoned_waraxes(&s).len(), 1);
+        }
 
         #[test]
         fn r1839000_played_it_lies_dormant_for_2_turns_no_attack_no_switch_no_target() {
@@ -225,6 +249,12 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_summons_nothing_on_the_radiant_face() {
+            let s = awake_beside_a_dormant_one(true);
+            assert_eq!(summoned_waraxes(&s).len(), 1);
+        }
 
         #[test]
         fn r275_a_4_4_whose_awakening_summons_a_radiant_fiery_waraxe_6_4_with_pierce() {

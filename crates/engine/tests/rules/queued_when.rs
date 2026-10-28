@@ -6,10 +6,11 @@
 //! Fixtures are this file's own: `fx-` defs indexed from 22710 (BUILD §0).
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
+use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
-use crate::rules::fixtures::harness::both;
+use crate::rules::fixtures::harness::{both, setup_catalog};
 
 /// Damage the warden deals its controller's enemy hero when it answers.
 const STING: i32 = 1;
@@ -48,6 +49,7 @@ fn warden_script() -> Script {
 }
 
 fn register() {
+    setup_catalog();
     let mut catalog = registered_catalog().clone();
     for def in [warden(), body()] {
         catalog.insert(def.id.clone(), def);
