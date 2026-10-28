@@ -66,11 +66,11 @@ use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, CardWindow, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX,
-    FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord, GameReport,
-    PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, WindowQuery,
-    WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats, game_report,
-    windowed_card_stats,
+    CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
+    DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
+    GameReport, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, WindowQuery,
+    WindowRequest, WindowedReport, Winner, card_stats, created_played_delta, describe_filter,
+    format_card_stats, format_delta, format_tally, game_report, windowed_card_stats,
 };
 
 use crate::arena::{paired_interval, wilson_interval};
@@ -274,6 +274,8 @@ pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     let mut report = card_stats(&records, &filter_of(args));
     if let Some(only) = &args.card {
         report.cards.retain(|stats| &stats.card == only);
+        // R2089000: the Created table is filtered as the deck's is.
+        report.created.retain(|stats| &stats.card == only);
     }
     Ok(report)
 }
@@ -289,7 +291,9 @@ pub fn render(
     }
     let table = format_card_stats(report, name_of);
     match &args.card {
-        Some(card) if report.cards.is_empty() => format!("{table}\nNo deck the filter counts held {card}."),
+        Some(card) if report.cards.is_empty() && report.created.is_empty() => {
+            format!("{table}\nNo deck the filter counts held {card}.")
+        }
         _ => table,
     }
 }
@@ -406,6 +410,7 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
     );
     if let Some(only) = &args.card {
         report.cards.retain(|card| &card.stats.card == only);
+        report.created.retain(|card| &card.stats.card == only);
     }
     Ok(report)
 }
@@ -442,6 +447,7 @@ pub fn render_window(
             games: i32::try_from(report.games).unwrap_or(i32::MAX),
             decks: i32::try_from(report.decks).unwrap_or(i32::MAX),
             cards: report.cards.iter().map(|card| card.stats.clone()).collect(),
+            created: report.created.iter().map(|card| card.stats.clone()).collect(),
         },
         name_of,
     );
@@ -450,6 +456,14 @@ pub fn render_window(
         table,
     ];
     for card in report.cards.iter().filter(|card| card.window != report.patch) {
+        lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
+    }
+    // R2089000: a Created card's window, when no deck row above named it.
+    for card in report
+        .created
+        .iter()
+        .filter(|card| card.window != report.patch && report.card(&card.stats.card).is_none())
+    {
         lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
     }
     lines.join("\n")
@@ -608,6 +622,23 @@ pub struct Comparison {
     pub paired: Option<PairedDifference>,
     /// The table that lists the card and the reason it gives: the AI plays it badly or times out on it.
     pub shadow: Option<(&'static str, &'static str)>,
+    /// R2089000: each side's Created figures for the card, over every seat that made a copy of it.
+    pub created_before: Option<CreatedStats>,
+    pub created_after: Option<CreatedStats>,
+}
+
+/// R2089000: the card's Created figures over every seat of `records`, if any seat made a copy of it.
+fn created_of(records: &[GameRecord], card: &str) -> Option<CreatedStats> {
+    let every = CardStatsFilter {
+        source: SourceFilter::All,
+        mode: None,
+        patch: None,
+        pilot: PilotFilter::Unified,
+    };
+    card_stats(records, &every)
+        .created
+        .into_iter()
+        .find(|stats| stats.card == card)
 }
 
 /// R1284000: the two sides' records compared on the seat that holds `card`.
@@ -618,6 +649,8 @@ pub fn compare(before: &[GameRecord], after: &[GameRecord], card: &str) -> Compa
         after: holder_rate(after, card),
         paired: paired_difference(before, after, card),
         shadow: shadow_row(card),
+        created_before: created_of(before, card),
+        created_after: created_of(after, card),
     }
 }
 
@@ -672,6 +705,23 @@ pub fn render_compare(comparison: &Comparison, name: Option<&str>) -> String {
         lines.push(format!(
             "  left out: {before_left} game(s) before and {after_left} after, where no seat or both seats hold {card}"
         ));
+    }
+    // R2089000: the seats that made a Created copy of it, when a seat on either side did.
+    if comparison.created_before.is_some() || comparison.created_after.is_some() {
+        for (label, created) in [
+            ("before", &comparison.created_before),
+            ("after", &comparison.created_after),
+        ] {
+            lines.push(match created {
+                Some(created) => format!(
+                    "  created {label:<6}  used {}, not used {}, Created Δ {}",
+                    format_tally(&created.created_played),
+                    format_tally(&created.created_not_played),
+                    format_delta(created_played_delta(created))
+                ),
+                None => format!("  created {label:<6}  no seat made one"),
+            });
+        }
     }
     if let Some((table, reason)) = comparison.shadow {
         lines.push(format!(
@@ -1784,6 +1834,90 @@ mod tests {
         let apart = compare(&before[..1], &after[1..2], "test-card");
         assert_eq!(apart.paired, None);
         assert!(render_compare(&apart, None).contains("\n  paired  no game is on both sides"));
+    }
+
+    #[test]
+    fn r2089000_compare_adds_the_card_s_created_figures_on_each_side() {
+        let (before, after) = forced_runs();
+        // No seat made a Created test-card, so the comparison prints what it did before.
+        let plain = compare(&before, &after, "test-card");
+        assert_eq!((&plain.created_before, &plain.created_after), (&None, &None));
+        assert!(!render_compare(&plain, None).contains("created"));
+
+        // After: game 1's p1 holds the card, wins and used a Created copy; game 2's p1 loses and made
+        // one it never used.
+        let made = |line: String, used: bool| {
+            let mut value: Value = serde_json::from_str(&line).unwrap();
+            let p1 = &mut value["game"]["seats"]["p1"];
+            if used {
+                p1["createdUsed"] = serde_json::json!([{ "card": "test-card", "turn": 2, "radiant": false }]);
+            } else {
+                p1["createdUnused"] = serde_json::json!(["test-card"]);
+            }
+            value.to_string()
+        };
+        let lines = [
+            made(forced_game("v0.2.3b", 1, true), true),
+            made(forced_game("v0.2.3b", 2, true), false),
+        ];
+        let after = parse_game_record_lines(&lines.join("\n")).unwrap();
+        let compared = compare(&before, &after, "test-card");
+        assert_eq!(compared.created_before, None);
+        let made_after = compared.created_after.clone().expect("a seat made one after");
+        assert_eq!(
+            (made_after.created_played.games, made_after.created_played.wins),
+            (1, 1)
+        );
+        assert_eq!(
+            (
+                made_after.created_not_played.games,
+                made_after.created_not_played.wins
+            ),
+            (1, 0)
+        );
+        let text = render_compare(&compared, None);
+        assert!(
+            text.ends_with(
+                "\n  created before  no seat made one\n  created after   used 100.0% (1), not used 0.0% (1), Created Δ +100.0"
+            ),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn r2089000_report_keeps_only_the_named_card_in_both_tables() {
+        let mut value: Value =
+            serde_json::from_str(&record_line("m1", "live", "bo1", "p1", &["core-002"])).unwrap();
+        value["game"]["seats"]["p1"]["createdUsed"] = serde_json::json!([
+            { "card": "core-t-rush", "turn": 2, "radiant": false },
+            { "card": "core-001", "turn": 3, "radiant": true },
+        ]);
+        let (dir, paths) = scratch(&[("made.jsonl", format!("{value}\n"))]);
+        let ids = |report: &CardStatsReport| -> (Vec<String>, Vec<String>) {
+            (
+                report.cards.iter().map(|stats| stats.card.clone()).collect(),
+                report.created.iter().map(|stats| stats.card.clone()).collect(),
+            )
+        };
+
+        let (args, every) = report_of(&paths, &[]);
+        assert_eq!(
+            ids(&every),
+            (
+                vec!["core-001".into(), "core-002".into()],
+                vec!["core-001".into(), "core-t-rush".into()]
+            )
+        );
+        assert!(render(&every, &args, |_| None).contains("\n\nCreated cards: "));
+        // A token no deck held is one card --card can name, its table the only one with a row.
+        let (rush_args, rush) = report_of(&paths, &["--card=core-t-rush"]);
+        assert_eq!(ids(&rush), (vec![], vec!["core-t-rush".into()]));
+        let text = render(&rush, &rush_args, |_| None);
+        assert!(!text.contains("No deck"), "{text}");
+        assert!(text.contains("core-t-rush"), "{text}");
+        let (_, deck) = report_of(&paths, &["--card=core-002"]);
+        assert_eq!(ids(&deck), (vec!["core-002".into()], vec![]));
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

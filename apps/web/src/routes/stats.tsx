@@ -21,6 +21,8 @@
 //    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
 //  - Games panel (R1994000): at the head of the Cards tab's scrolling panel, how the patch's games went
 //    (stats/GamesPanel.tsx).
+//  - Created cards (R2089000): below the Cards tab's table, the cards made during games, apart from the deck
+//    cards and answering the same search box (stats/CreatedPanel.tsx).
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -42,8 +44,9 @@ import {
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
+import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
-import { formatPlayedDelta, winPercent } from "../stats/model.ts";
+import { faceRate, formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { usePlayerStats } from "../stats/store.ts";
@@ -61,6 +64,16 @@ const PERCENT_PLACES = 2;
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
   return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
+}
+
+/** Whether a card answers the search box: the server's name, the name as the reader reads it, or the id holds the text. */
+function matchesSearch(card: { id: string; name: string }, search: string): boolean {
+  const q = search.trim().toLowerCase();
+  return (
+    card.name.toLowerCase().includes(q) ||
+    shownName(card.id, card.name).toLowerCase().includes(q) ||
+    card.id.toLowerCase().includes(q)
+  );
 }
 
 function keywordKinds(id: string): KeywordKind[] {
@@ -94,17 +107,6 @@ function tokensOf(def: CardDef): CardDef[] {
     const named = CATALOG[id];
     return named !== undefined && named.token && id !== def.id ? [named] : [];
   });
-}
-
-function faceRate(
-  games: number | undefined,
-  rate: number | null | undefined,
-  minSample: number,
-): number | null {
-  if (games === undefined || rate === undefined || rate === null || games < minSample) {
-    return null;
-  }
-  return rate;
 }
 
 /**
@@ -509,13 +511,7 @@ export default function StatsRoute(): ReactElement {
     let list = [...cardStatsData.cards];
 
     if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          shownName(c.id, c.name).toLowerCase().includes(q) ||
-          c.id.toLowerCase().includes(q),
-      );
+      list = list.filter((c) => matchesSearch(c, search));
     }
 
     if (keywordFilter) {
@@ -591,6 +587,9 @@ export default function StatsRoute(): ReactElement {
 
     return list;
   }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, minSample]);
+
+  // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
+  const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
 
   const summary = cardStatsData?.summary;
 
@@ -1378,6 +1377,11 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {/* R2089000: the Created cards, apart from the deck cards above */}
+            {!cardStatsLoading && !cardStatsError && (
+              <CreatedPanel created={createdCards} minSample={minSample} nameOf={shownName} />
             )}
           </section>
         )}

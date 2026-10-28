@@ -310,6 +310,7 @@ fn deal_as_draw(sink: &mut EngineSink, player: PlayerId, mut card: CardInstance)
         player,
         instance_id: card.id.clone(),
         def_id: card.def_id.clone(),
+        creator: None,
     });
 }
 
@@ -508,6 +509,7 @@ fn finish_mulligan(
             instance_id: card.id.clone(),
             def_id: card.def_id.clone(),
             position,
+            creator: None,
         });
     }
 

@@ -73,6 +73,28 @@ export function getDuosReplay(matchId: string): Promise<{ seat: DuosSeat; steps:
   );
 }
 
+/** `POST /api/duos/matches/:matchId/again` (R2092000): the new match's id once both seats offered, else null. */
+export type DuosAgainOffer = { matchId: string | null };
+
+/** `GET /api/duos/matches/:matchId/again` (R2092000): what each seat offered, whether the teammate is here, and the new game. */
+export type DuosAgainStatus = { youOffered: boolean; teammateOffered: boolean; teammateHere: boolean; matchId: string | null };
+
+/** R2092000: record this seat's Play again offer, carrying the device's lean pick for a dealt seat (`leanSet`, R924000, R2031000). */
+export function offerDuosAgain(matchId: string, lean: LeanPick | null): Promise<DuosAgainOffer> {
+  return withSession((token) =>
+    apiRequest<DuosAgainOffer>(`/api/duos/matches/${encodeURIComponent(matchId)}/again`, {
+      method: "POST",
+      token,
+      body: lean === null ? {} : { leanSet: lean },
+    }),
+  );
+}
+
+/** R2092000: read the two seats' Play again offers. */
+export function getDuosAgain(matchId: string): Promise<DuosAgainStatus> {
+  return withSession((token) => apiRequest<DuosAgainStatus>(`/api/duos/matches/${encodeURIComponent(matchId)}/again`, { token }));
+}
+
 // ---------------------------------------------------------------------------------------------
 // Pings (S6's socket frames, B39, B64): cosmetic, team-only, never in a view or the log
 // ---------------------------------------------------------------------------------------------
