@@ -64,7 +64,7 @@ mod tests {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player: to, instance_id, def_id } if *to == player && def_id == APPLE => {
+                GameEvent::AddedToHand { player: to, instance_id, def_id, .. } if *to == player && def_id == APPLE => {
                     Some((instance_id.clone(), def_id.clone()))
                 }
                 _ => None,

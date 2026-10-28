@@ -489,5 +489,3 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     </section>
   );
 }
-
-export default CoopPanel;

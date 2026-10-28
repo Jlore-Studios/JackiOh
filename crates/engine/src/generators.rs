@@ -13,8 +13,8 @@
 //! crafted, fused or custom card, which wears no per-card pick).
 
 use crate::script::EffectContext;
-use crate::state::{CardInstance, GameState};
-use crate::wire::PlayerId;
+use crate::state::{CardInstance, GameState, find_instance};
+use crate::wire::{GameEvent, PlayerId};
 
 /// Record the card running `ctx`'s script as `card`'s generator (`record_generator_of`). A script
 /// whose card has ceased to exist still names its definition (R127), which stands in for the card.
@@ -40,6 +40,43 @@ fn record(state: &mut GameState, owner: PlayerId, root: String, card: &CardInsta
         return;
     }
     state.generators.insert(card.id.clone(), root);
+}
+
+/// R2089000: the seat running `ctx` made `card_id`, which it has just put in a hand, a library or
+/// another card's place; when that is another seat's, the event that put it there names the maker as
+/// its `creator`, so the game record credits the Created card to the seat that made it (§9.11). The
+/// last `addedToHand`, `shuffledIn` or `transformed` that names the card is that event: nothing has
+/// moved it since. A card that went elsewhere (burned by a full hand, dropped by a full library) is
+/// credited to the seat it went to. Engine bookkeeping: no rule reads it and no view forwards it.
+pub fn credit_creator(ctx: &mut EffectContext<'_>, card_id: &str) {
+    let creator = ctx.controller;
+    let controller = find_instance(ctx.sink.state, card_id).map(|card| card.controller);
+    for event in ctx.sink.events.iter_mut().rev() {
+        let (receiver, slot) = match event {
+            GameEvent::AddedToHand {
+                player,
+                instance_id,
+                creator: slot,
+                ..
+            }
+            | GameEvent::ShuffledIn {
+                player,
+                instance_id,
+                creator: slot,
+                ..
+            } if instance_id == card_id => (Some(*player), slot),
+            GameEvent::Transformed {
+                new_instance_id,
+                creator: slot,
+                ..
+            } if new_instance_id == card_id => (controller, slot),
+            _ => continue,
+        };
+        if receiver.is_some_and(|receiver| receiver != creator) {
+            *slot = Some(creator);
+        }
+        return;
+    }
 }
 
 /// R227: a Created card that takes a fresh id going face-down (set from hand, summoned or flickered

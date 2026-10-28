@@ -396,6 +396,27 @@ pub fn add_play_watch(
     )
 }
 
+/// R1882004: Call to Chaos (Stinky Edition)'s death watcher — a `never` modifier on `player` that
+/// answers every death of a card printing `tag`, on either side (Stinkyscape #150, entry 8).
+pub fn add_death_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    tag: crate::wire::Tag,
+    resume: Resume,
+    label: &str,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::Never,
+        ModifierKind::DeathWatch {
+            tag,
+            resume,
+            label: label.to_string(),
+        },
+    )
+}
+
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
 /// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage), or with
 /// `at_end` at each end of their turn (R1861002). Its `seq` is the one its id is numbered from

@@ -15,6 +15,7 @@ import { REPLAY_GIF_REVOKE_MS, REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } fr
 import { ReplayFailure } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 import { createStepCache, loadClip } from "./steps.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** What a reader of the file checks first: what it is, and which shape of it. */
 export const REPLAY_JSON_FORMAT = "jackioh-replay";
@@ -84,10 +85,6 @@ export const TOO_BIG = "This replay file is too big to open.";
 export const NOT_A_REPLAY = "This file is not a JackiOh replay file.";
 export const UNSUPPORTED = "This replay file uses an unsupported format.";
 export const OTHER_PATCH = "This replay file is from another patch and cannot be opened here.";
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** A file's parsed JSON, held to the byte caps and to being an object, before its shape is read. */
 export async function readReplayJsonFile(file: File): Promise<Record<string, unknown>> {

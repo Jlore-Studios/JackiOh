@@ -32,6 +32,8 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
+The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -430,6 +432,12 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
+- on a live game's result, Play again (`duos-result-again`, R2092000) sends this seat's offer
+  (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
+  `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
+  to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
+  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
+  no button.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for

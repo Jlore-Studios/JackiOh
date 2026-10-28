@@ -27,14 +27,14 @@
 }
 
 .starscape-node[data-here="true"] {
-  border-color: #fde68a;
-  background: #facc15;
-  box-shadow: 0 0 4px #facc15;
+  border-color: var(--pal-gold-200);
+  background: var(--pal-yellow-400);
+  box-shadow: 0 0 4px var(--pal-yellow-400);
 }
 
 .starscape-node[data-reward="edge"] {
   width: 8px;
   height: 8px;
-  border-color: #c4b5fd;
-  background: radial-gradient(circle at 35% 30%, #c4b5fd, #6d28d9 60%, #2e1065);
+  border-color: var(--pal-violet-300);
+  background: radial-gradient(circle at 35% 30%, var(--pal-violet-300), var(--pal-violet-700) 60%, var(--pal-slate-800));
 }
