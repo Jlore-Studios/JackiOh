@@ -6076,11 +6076,15 @@
     "what": "revise #2145 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-28T01:50:19Z",
+    "at": "2026-10-28T02:01:10Z",
     "notes": [
-      "delivered revise #2149 on muse (run 40604785470): approved",
-      "started build #2115 on muse (run 40617535408)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 68h 08m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 75h 07m"
+      "delivered revise #2135 on claude-5 (run 40608483047): approved",
+      "delivered build #2089 on claude-1 (run 40601875453): approved",
+      "delivered revise #2145 on muse (run 40599391689): approved",
+      "started review #2149 on claude-3 (run 40618686582)",
+      "started revise #2158 on claude-3 (run 40618730528)",
+      "started revise #2145 on muse (run 40618780698)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 67h 55m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 74h 55m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6786,7 +6790,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T01:50:19Z",
+  "loop_tick": "2026-10-28T02:01:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
