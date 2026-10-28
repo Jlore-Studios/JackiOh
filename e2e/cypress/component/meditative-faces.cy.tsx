@@ -173,9 +173,9 @@ function inspectProblems(doc: Document, def: CardDef, size: InspectSize, face: F
   }
   if (printed !== "" && (text.clientWidth === 0 || text.clientHeight === 0)) problems.push(`${at}: .card-text has no box`);
   const clamped = text.getAttribute("data-clamped") === "true";
-  // Chinese faces key by their underlying face: the moved vitest premise pins no Chinese face
-  // long, so only a listed base or radiant face may clamp.
-  const mayClamp = size.clampLong && LONG_FACES.includes(`${def.id} ${face.radiant ? "radiant" : "base"}`);
+  // Keyed by the face's own label, as the moved vitest premise names them: it pins no Chinese face
+  // long, so no Chinese face may clamp.
+  const mayClamp = size.clampLong && LONG_FACES.includes(`${def.id} ${face.label}`);
   if (clamped && !mayClamp) {
     problems.push(`${at}: the rules text is clamped (${String(printedLength(def, face))} characters printed)`);
   } else if (clamped) {
