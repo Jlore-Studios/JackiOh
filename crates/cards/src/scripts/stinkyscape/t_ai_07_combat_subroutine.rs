@@ -105,4 +105,23 @@ mod tests {
             assert_ne!(keywords[0].kind(), keywords[1].kind());
         }
     }
+
+    #[test]
+    fn r1881004_a_dormant_card_is_passed_by() {
+        const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+        let (mut s, ship) = crate::built_starship(
+            "subroutine-dormant",
+            json!([{ "def": STARTOS, "lane": 2 }]),
+            json!({ "hand": [SUBROUTINE, FILLER], "field": [{ "def": VANILLA, "lane": 1 }] }),
+            json!({}),
+        );
+        let ship_keywords = keywords_of(s.state(), s.card(ship.as_str()));
+        s.play(SUBROUTINE, json!({ "zone": 3 }));
+        assert_eq!(keywords_at(&s, P1, 1).len(), 1, "the Vanilla gains one");
+        assert!(
+            s.card(ship.as_str()).granted_keywords.is_empty(),
+            "the Dormant Starship none"
+        );
+        assert_eq!(keywords_of(s.state(), s.card(ship.as_str())), ship_keywords);
+    }
 }

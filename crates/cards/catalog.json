@@ -19211,7 +19211,7 @@
         "min": 1
       }
     ],
-    "loc": 53,
+    "loc": 65,
     "base": {
       "keywords": [],
       "text": "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
@@ -23933,7 +23933,7 @@
     "refs": [
       "meditative-036"
     ],
-    "loc": 75,
+    "loc": 71,
     "base": {
       "keywords": [],
       "text": "Reveals when one of your Units would die in combat: Cast CN Peptides on it."

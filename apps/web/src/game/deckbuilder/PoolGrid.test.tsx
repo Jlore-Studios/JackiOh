@@ -5,15 +5,25 @@
 // defaults. The browse pane's rules are browse.test.tsx's; the Almanac's own route is almanac.test.tsx's.
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
 import { resetCosmeticsForTests, writeCardPick, writeCosmetics } from "../../cards/cosmetics.ts";
 import { OwnCopy } from "../../cards/fullArt.ts";
-import { CARD_SETTINGS_DEFAULTS, INSPECT_FACE_BASE, closeInspect, writeCardSettings } from "../../cards/index.ts";
+import { TERM_HOVER_DELAY_MS } from "../../cards/constants.ts";
+import { LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
+import {
+  CARD_SETTINGS_DEFAULTS,
+  GLOSSARY,
+  INSPECT_FACE_BASE,
+  TERM_TOOLTIP_TESTID,
+  closeInspect,
+  writeCardSettings,
+} from "../../cards/index.ts";
+import { must } from "../../test/stubServer.ts";
 import CardBrowser from "./CardBrowser.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DEFAULT_FILTER, DEFAULT_SORT } from "./filters.ts";
@@ -68,6 +78,7 @@ afterEach(() => {
   cleanup();
   resetCosmeticsForTests();
   localStorage.clear();
+  vi.useRealTimers();
 });
 
 describe("R1956000 the deck builder's pool and deck list wear the viewer's picks", () => {
@@ -205,5 +216,43 @@ describe("R1956000 a read-only grid's own copies", () => {
     closeInspect();
     render(browser(OTHER));
     expect(detailFrame()).toBeNull();
+  });
+});
+
+describe("R2098000 a pool tile's term shows its rule", () => {
+  it("R2098000 a pool tile's term (the Almanac's and the deck builder's grid) shows its rule on hover and on a long press, and a tap still opens the card", () => {
+    vi.useFakeTimers();
+    const onInspect = vi.fn();
+    render(<PoolGrid ids={[PICKED]} catalog={CATALOG_HERE} onInspect={onInspect} />);
+    const term = must(
+      screen.getByTestId(poolCardId(PICKED)).querySelector<HTMLElement>('.cf-term[data-term="Cry"]'),
+      "the pool tile's Cry term",
+    );
+    expect(term).not.toHaveAttribute("tabindex");
+
+    // Hover shows the glossary line; leaving hides it.
+    fireEvent.pointerEnter(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TERM_HOVER_DELAY_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(`${GLOSSARY.Cry.label} ${GLOSSARY.Cry.rule}`);
+    fireEvent.pointerLeave(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+
+    // A tap on the term still opens the card.
+    fireEvent.click(term);
+    expect(onInspect).toHaveBeenCalledTimes(1);
+    expect(onInspect).toHaveBeenLastCalledWith(PICKED);
+
+    // A held touch shows the rule and opens no second detail; the lift's click goes nowhere.
+    fireEvent.pointerDown(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(GLOSSARY.Cry.rule);
+    fireEvent.pointerUp(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.click(term);
+    expect(onInspect).toHaveBeenCalledTimes(1);
   });
 });

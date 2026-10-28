@@ -232,5 +232,23 @@ mod tests {
             // A (0) card stays (0): the pool's zeroes came up and priced at 0.
             assert!(zeros > 0, "a (0) card stays (0)");
         }
+
+        #[test]
+        fn discount_reads_through_param() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "moonberry-param",
+                "p1": { "hand": [{ "def": MOONBERRY, "radiant": true }, FILLER] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let discount = crate::upgrade_number(&mut s, MOONBERRY, "discount");
+            s.play(MOONBERRY, json!({}));
+            let added = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id != FILLER)
+                .expect("a card added");
+            assert_eq!(added.cost_mod, -discount);
+        }
     }
 }

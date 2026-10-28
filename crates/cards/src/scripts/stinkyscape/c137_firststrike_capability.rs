@@ -169,6 +169,25 @@ mod tests {
     }
 
     #[test]
+    fn radiant_18_18_and_the_doctrine_cast_radiant() {
+        let (mut s, _ship) = played("s137-radiant", true);
+        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, 18);
+        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).health, 18);
+        let pick = offered(&s)[0].clone();
+        s.answer(json!(pick));
+        let doctrine = s
+            .state()
+            .players
+            .p1
+            .graveyard
+            .iter()
+            .find(|card| card.def_id == pick)
+            .expect("the Doctrine in the graveyard")
+            .clone();
+        assert!(doctrine.radiant, "the Doctrine is cast Radiant");
+    }
+
+    #[test]
     fn r1859006_the_launch_spends_no_launch_price() {
         let (mut s, _ship) = built_starship(
             "r1859006-price",

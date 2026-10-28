@@ -487,6 +487,59 @@ mod tests {
             }
         }
 
+        /// R2176001: sets `player`'s count of the death watch's casts to `count` on `turn`.
+        fn watch_casts(s: &mut Scenario, player: PlayerId, turn: i32, count: i32) {
+            s.state_mut().players[player].death_watch_casts = Some(jackioh_engine::state::DrawCount { turn, count });
+        }
+
+        #[test]
+        fn r2176001_a_player_the_watch_has_cast_for_its_bound_this_turn_casts_nothing_more() {
+            let mut s = death_rule();
+            let turn = s.state().turn;
+            watch_casts(&mut s, P2, turn, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN);
+            let mine = s.unit(P1, 1).expect("p1's Menace").id.clone();
+            let prey = s.unit(P2, 1).expect("p2's Siva").id.clone();
+            s.attack(mine, prey.clone());
+            s.expect_in_zone(prey.as_str(), "graveyard");
+            assert!(casts(&s).is_empty(), "{:?}", casts(&s));
+            // The bound is each player's own: p1's Siva still casts, and counts.
+            let siva = s.unit(P1, 2).expect("p1's Siva").id.clone();
+            let vanilla = s.unit(P2, 2).expect("p2's Vanilla").id.clone();
+            s.attack(siva, vanilla);
+            let cast = casts(&s);
+            assert_eq!(cast.len(), 1, "{cast:?}");
+            assert_eq!(cast[0].0, "p1");
+            assert_eq!(subsystems::death_watch_casts_this_turn(s.state(), P1), 1);
+        }
+
+        #[test]
+        fn r2176001_one_cast_short_of_the_bound_still_casts_and_reaches_it() {
+            let mut s = death_rule();
+            let turn = s.state().turn;
+            watch_casts(&mut s, P2, turn, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN - 1);
+            let mine = s.unit(P1, 1).expect("p1's Menace").id.clone();
+            let prey = s.unit(P2, 1).expect("p2's Siva").id.clone();
+            s.attack(mine, prey);
+            assert_eq!(casts(&s).len(), 1);
+            assert_eq!(
+                subsystems::death_watch_casts_this_turn(s.state(), P2),
+                CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN
+            );
+        }
+
+        #[test]
+        fn r2176001_a_count_kept_on_an_earlier_turn_reads_as_none() {
+            let mut s = death_rule();
+            let turn = s.state().turn;
+            watch_casts(&mut s, P2, turn - 1, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN);
+            assert_eq!(subsystems::death_watch_casts_this_turn(s.state(), P2), 0);
+            let mine = s.unit(P1, 1).expect("p1's Menace").id.clone();
+            let prey = s.unit(P2, 1).expect("p2's Siva").id.clone();
+            s.attack(mine, prey);
+            assert_eq!(casts(&s).len(), 1);
+            assert_eq!(subsystems::death_watch_casts_this_turn(s.state(), P2), 1);
+        }
+
         #[test]
         fn entry_golem_summons_a_stinkyscape_golem() {
             let mut s = chaos("golem", side(false, json!([])), json!({ "hand": [VANILLA] }));
