@@ -1616,6 +1616,29 @@ impl InvariantMonitor {
         }
     }
 
+    /// R636, R781004: a unit whose text draws its keywords as it arrives or fuses (M #65 Keymaster
+    /// Keenus' Aura, the Stinkyscape Drones', a `conditionalKeywords` text) keeps them in its memory,
+    /// which leaving the field resets (R78) and ceasing to exist takes with it. One gone from the field
+    /// by the action's end leaves no state to say whether it drew Windfury, so its attacks in this stint
+    /// count as Windfury's (Keenus equipped onto C+ #26 and exiled: Duos fuzz seed 679; a Drone
+    /// Corvette summoned and killed inside one autopilot action: fuzz seed 8567).
+    fn note_drawn_windfury(&mut self, id: &str, def_id: &str, state: &GameState) {
+        let draws = match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field => false,
+            Some(card) => crate::scripts::script_of(state, card)
+                .conditional_keywords
+                .is_some(),
+            None => crate::scripts::script_of(state, def_id)
+                .base
+                .conditional_keywords
+                .is_some(),
+        };
+        if draws {
+            let stint = self.stint_of(id);
+            self.windfury.insert(id.to_string(), stint);
+        }
+    }
+
     /// R636: a unit that just entered and carries Windfury, as it was before the action
     /// (`carried_windfury`) or as the action left it, has it in this stint.
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
@@ -2071,6 +2094,9 @@ impl InvariantMonitor {
                 | GameEvent::ControlChanged { instance_id, .. } => {
                     self.enter(instance_id);
                     self.note_entry_windfury(instance_id, state);
+                    if let GameEvent::Summoned { def_id, .. } = event {
+                        self.note_drawn_windfury(instance_id, def_id, state);
+                    }
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
@@ -2164,24 +2190,15 @@ impl InvariantMonitor {
                 // R636, R1086: a Fuse (an Equip among them) brings its ingredients' text, and with it a
                 // Windfury an aura of theirs gives, which no `keywordGranted` reports; a unit that holds
                 // it as the action leaves it has it from the fuse on (M #65 Keymaster Keenus' random
-                // keywords, equipped onto S #113: handicapped fuzz seed 7566). One whose text draws its
-                // keywords as it fuses (that Aura's `conditionalKeywords`, read back from its memory) and
-                // that has left the field by the action's end lost them with its memory (R78), so the
-                // state can no longer say whether one was Windfury: its attacks in this stint count as
-                // Windfury's (equipped onto C+ #26 and exiled after two attacks: Duos fuzz seed 679).
+                // keywords, equipped onto S #113: handicapped fuzz seed 7566), and one gone by the action's
+                // end may have drawn it (`note_drawn_windfury`).
                 GameEvent::Fused {
-                    result_instance_id, ..
+                    result_instance_id,
+                    def_id,
+                    ..
                 } => {
                     self.note_entry_windfury(result_instance_id, state);
-                    if let Some(card) = find_instance(state, result_instance_id)
-                        && card.zone.z() != ZoneName::Field
-                        && crate::scripts::script_of(state, card)
-                            .conditional_keywords
-                            .is_some()
-                    {
-                        let stint = self.stint_of(result_instance_id);
-                        self.windfury.insert(result_instance_id.clone(), stint);
-                    }
+                    self.note_drawn_windfury(result_instance_id, def_id, state);
                 }
                 GameEvent::KeywordGranted {
                     instance_id,

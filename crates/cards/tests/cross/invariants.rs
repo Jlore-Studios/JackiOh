@@ -1704,6 +1704,30 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636: a token whose text draws its keywords as it arrives (the Stinkyscape Drone Corvette) and
+    /// that ceased to exist later in the same action took them with it; two attacks it declared are one
+    /// legal Windfury turn (fuzz seed 8567 of the release: summoned, two kills, killed, all inside one
+    /// autopilot action).
+    #[test]
+    fn r636_a_keyword_drawing_token_gone_by_the_action_s_end_may_have_attacked_twice() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let gone = "c-gone";
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": gone, "targetId": "hero-p1", "forced": false }),
+            )
+        };
+        let summoned = event(json!({
+            "type": "summoned", "player": "p2", "instanceId": gone, "defId": DRONE_CORVETTE, "row": "units", "lane": 4,
+        }));
+        assert_eq!(
+            monitor.after(&[summoned, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
     #[test]
     fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
         let g = scenario(json!({
