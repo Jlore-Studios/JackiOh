@@ -964,6 +964,10 @@ struct SharedHelpers {
     names: &'static [&'static str],
     /// The statics' names, each declared once in `home` (the rules tests' nonce counter, #1997).
     statics: &'static [&'static str],
+    /// The field lists of the structs defined once in `home`: no file under `dirs` but `home` may
+    /// define a struct whose named fields are exactly one of them, in any order (the rules tests' sink
+    /// bench, #2024).
+    structs: &'static [&'static [&'static str]],
     /// The trees, from the repository's root, where no file but `home` may define one.
     dirs: &'static [&'static str],
     /// Fewer Rust files than this under `dirs` means the scan lost them.
@@ -995,8 +999,13 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "live",
             "live_mut",
             "run_effect",
+            "sink_for",
+            "ids_of",
+            "types_of",
+            "hand_ids",
         ],
         statics: &["NONCE"],
+        structs: &[&["events", "rng"]],
         dirs: &["crates/engine/tests/rules"],
         more_than: 200,
     },
@@ -1004,6 +1013,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         home: "crates/engine/src/testkit/scenario.rs",
         names: &["unit_at"],
         statics: &[],
+        structs: &[],
         dirs: KIT_READERS,
         more_than: 800,
     },
@@ -1017,6 +1027,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "tributes_of",
         ],
         statics: &[],
+        structs: &[],
         dirs: &["crates/cards/tests/cross"],
         more_than: 40,
     },
@@ -1024,6 +1035,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         home: "crates/ai/tests/ai/support.rs",
         names: &["det", "ai_options", "js"],
         statics: &[],
+        structs: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
     },
@@ -1073,6 +1085,46 @@ fn shared_static_declarations(text: &str, statics: &[&str]) -> Vec<usize> {
         .collect()
 }
 
+/// The 1-based lines of `text` that open a struct whose named fields are exactly one of `field_sets`,
+/// in any order (`struct Sink {` with `events` and `rng` on the lines below it, `pub struct Bench<'a>
+/// { pub rng: Rng, pub events: Vec<GameEvent> }`), a `//` comment aside.
+fn shared_struct_definitions(text: &str, field_sets: &[&[&str]]) -> Vec<usize> {
+    let code: Vec<&str> = text
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect();
+    (0..code.len())
+        .filter(|&index| {
+            if !code[index].split_whitespace().any(|word| word == "struct") {
+                return false;
+            }
+            let rest = code[index..].join("\n");
+            let Some((_, declaration)) = rest.split_once("struct") else {
+                return false;
+            };
+            let Some(open) = declaration.find(['{', ';', '(']) else {
+                return false;
+            };
+            if !declaration[open..].starts_with('{') {
+                return false;
+            }
+            let body = declaration[open + 1..].split('}').next().unwrap_or("");
+            let mut fields: Vec<&str> = body
+                .split(',')
+                .filter_map(|field| field.split_once(':'))
+                .filter_map(|(name, _)| name.split_whitespace().last())
+                .collect();
+            fields.sort_unstable();
+            field_sets.iter().any(|set| {
+                let mut wanted = set.to_vec();
+                wanted.sort_unstable();
+                fields == wanted
+            })
+        })
+        .map(|index| index + 1)
+        .collect()
+}
+
 /// The 1-based header lines of `text`'s one-instance pick builders: a function whose signature
 /// returns a `Value` and whose body, `//` comments aside, holds PICK_LITERAL closed by `}])` with no
 /// second `"pick"`.
@@ -1114,8 +1166,9 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
 }
 
 /// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
-/// one of a SHARED_TEST_HELPERS row's names or a declaration of one of its statics under its trees
-/// outside its home, and a one-instance pick builder under KIT_READERS.
+/// one of a SHARED_TEST_HELPERS row's names, a declaration of one of its statics or a struct of one
+/// of its field lists under its trees outside its home, and a one-instance pick builder under
+/// KIT_READERS.
 fn shared_helper_copies(root: &Path) -> Vec<String> {
     let at =
         |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
@@ -1128,6 +1181,7 @@ fn shared_helper_copies(root: &Path) -> Vec<String> {
                 let text = fs::read_to_string(file).unwrap_or_default();
                 let mut lines = shared_helper_definitions(&text, row.names);
                 lines.extend(shared_static_declarations(&text, row.statics));
+                lines.extend(shared_struct_definitions(&text, row.structs));
                 copies.extend(lines.into_iter().map(|line| at(file, line)));
             }
         }
@@ -1178,6 +1232,14 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
                 row.home
             );
         }
+        for fields in row.structs {
+            assert_eq!(
+                shared_struct_definitions(&home, &[fields]).len(),
+                1,
+                "{} defines a struct of exactly {fields:?} once",
+                row.home
+            );
+        }
     }
     let picks = fs::read_to_string(root.join(PICK_HOME)).unwrap_or_default();
     assert_eq!(
@@ -1189,7 +1251,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper or nonce counter (#1777, #1826, #1997): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2024): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1203,6 +1265,12 @@ fn helpers_the_scan_finds_each_local_copy() {
 fn helpers_the_scan_finds_each_nonce_static() {
     let text = "static NONCE: AtomicU32 = AtomicU32::new(0);\nthread_local! {\n    static NONCE: Cell<u32> = const { Cell::new(0) };\n}\npub static NONCE: u32 = 0;\nstatic NONCES: u32 = 0;\nstatic SEQ: AtomicU32 = AtomicU32::new(0);\n// static NONCE: u32 = 0;\nlet nonce = NONCE.with(|n| n.get());\n";
     assert_eq!(shared_static_declarations(text, &["NONCE"]), [1, 3, 5]);
+}
+
+#[test]
+fn helpers_the_scan_finds_each_sink_bench() {
+    let text = "struct Bench {\n    events: Vec<GameEvent>,\n    rng: Rng,\n}\npub struct Sink<'a> { pub rng: Rng, pub events: Vec<GameEvent> }\nstruct Held<'a> {\n    state: &'a mut GameState,\n    events: Vec<GameEvent>,\n    rng: Rng,\n}\nstruct Log {\n    events: Vec<GameEvent>,\n}\nstruct Pair(Vec<GameEvent>, Rng);\n// struct Bench { events: Vec<GameEvent>, rng: Rng }\nlet bench = Bench { events: Vec::new(), rng };\n";
+    assert_eq!(shared_struct_definitions(text, &[&["events", "rng"]]), [1, 5]);
 }
 
 #[test]
@@ -1260,12 +1328,17 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
                     .iter()
                     .map(|name| format!("static {name}: u32 = 0;\n")),
             )
+            .chain(row.structs.iter().enumerate().map(|(j, fields)| {
+                let fields: Vec<String> = fields.iter().map(|field| format!("{field}: u32")).collect();
+                format!("struct Planted{j} {{ {} }}\n", fields.join(", "))
+            }))
             .collect();
         write(row.home, &defs);
         for dir in row.dirs {
             write(&format!("{dir}/copy_{i}.rs"), &defs);
             expected.extend(
-                (1..=row.names.len() + row.statics.len()).map(|line| format!("{dir}/copy_{i}.rs:{line}")),
+                (1..=row.names.len() + row.statics.len() + row.structs.len())
+                    .map(|line| format!("{dir}/copy_{i}.rs:{line}")),
             );
         }
     }

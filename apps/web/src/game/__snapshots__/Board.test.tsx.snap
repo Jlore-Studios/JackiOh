@@ -204,7 +204,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     </span>
   </div>
   <div
-    aria-label="opponent hand"
+    aria-label="Enemy hand"
     class="hand hand-opponent"
     data-count="6"
     data-side="opponent"
@@ -647,7 +647,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <div
         aria-disabled="true"
-        aria-label="opponent backrow lane 1"
+        aria-label="Enemy backrow, lane 1"
         class="zone zone-backrow"
         data-lane="1"
         data-legal="false"
@@ -723,7 +723,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="opponent units lane 1"
+        aria-label="Enemy units, lane 1"
         class="zone zone-units"
         data-lane="1"
         data-legal="false"
@@ -852,7 +852,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you units lane 1"
+        aria-label="Your units, lane 1"
         class="zone zone-units"
         data-lane="1"
         data-legal="false"
@@ -984,7 +984,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you backrow lane 1"
+        aria-label="Your backrow, lane 1"
         class="zone zone-backrow"
         data-lane="1"
         data-legal="false"
@@ -1059,7 +1059,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <div
         aria-disabled="true"
-        aria-label="opponent backrow lane 2"
+        aria-label="Enemy backrow, lane 2"
         class="zone zone-backrow"
         data-lane="2"
         data-legal="false"
@@ -1135,7 +1135,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="opponent units lane 2"
+        aria-label="Enemy units, lane 2"
         class="zone zone-units zone-locked"
         data-lane="2"
         data-legal="false"
@@ -1279,7 +1279,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you units lane 2"
+        aria-label="Your units, lane 2"
         class="zone zone-units"
         data-lane="2"
         data-legal="false"
@@ -2110,7 +2110,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you backrow lane 2"
+        aria-label="Your backrow, lane 2"
         class="zone zone-backrow"
         data-lane="2"
         data-legal="false"
@@ -2194,7 +2194,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <div
         aria-disabled="true"
-        aria-label="opponent backrow lane 3"
+        aria-label="Enemy backrow, lane 3"
         class="zone zone-backrow"
         data-lane="3"
         data-legal="false"
@@ -2264,7 +2264,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="opponent units lane 3"
+        aria-label="Enemy units, lane 3"
         class="zone zone-units"
         data-lane="3"
         data-legal="false"
@@ -2383,7 +2383,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you units lane 3"
+        aria-label="Your units, lane 3"
         class="zone zone-units"
         data-lane="3"
         data-legal="false"
@@ -2494,7 +2494,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you backrow lane 3"
+        aria-label="Your backrow, lane 3"
         class="zone zone-backrow zone-locked"
         data-lane="3"
         data-legal="false"
@@ -2608,7 +2608,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <div
         aria-disabled="true"
-        aria-label="opponent backrow lane 4"
+        aria-label="Enemy backrow, lane 4"
         class="zone zone-backrow"
         data-lane="4"
         data-legal="false"
@@ -2684,7 +2684,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="opponent units lane 4"
+        aria-label="Enemy units, lane 4"
         class="zone zone-units"
         data-lane="4"
         data-legal="false"
@@ -2800,7 +2800,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you units lane 4"
+        aria-label="Your units, lane 4"
         class="zone zone-units"
         data-lane="4"
         data-legal="false"
@@ -2943,7 +2943,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you backrow lane 4"
+        aria-label="Your backrow, lane 4"
         class="zone zone-backrow"
         data-lane="4"
         data-legal="false"
@@ -3024,7 +3024,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     >
       <div
         aria-disabled="true"
-        aria-label="opponent backrow lane 5"
+        aria-label="Enemy backrow, lane 5"
         class="zone zone-backrow"
         data-lane="5"
         data-legal="false"
@@ -3100,7 +3100,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="opponent units lane 5"
+        aria-label="Enemy units, lane 5"
         class="zone zone-units"
         data-lane="5"
         data-legal="false"
@@ -3276,7 +3276,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you units lane 5"
+        aria-label="Your units, lane 5"
         class="zone zone-units"
         data-lane="5"
         data-legal="false"
@@ -3402,7 +3402,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </div>
       <div
         aria-disabled="true"
-        aria-label="you backrow lane 5"
+        aria-label="Your backrow, lane 5"
         class="zone zone-backrow"
         data-lane="5"
         data-legal="false"
@@ -3709,7 +3709,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     </span>
   </div>
   <div
-    aria-label="you hand"
+    aria-label="Your hand"
     class="hand hand-you"
     data-count="4"
     data-hover-preview="on"

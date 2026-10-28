@@ -344,8 +344,13 @@ class SectionCases(unittest.TestCase):
         idle = dashboard.section(World().ctx)
         self.assertIn("Nothing is running right now.", idle)
         self.assertEqual(idle.count("Nothing is running right now."), 1)
-        self.assertIn("<details><summary>Squishy's full status</summary>", text)
-        self.assertIn("**Squishy status**", text)
+        # No full status in the shared issue: the line under its heading points to it.
+        self.assertNotIn("Squishy's full status", text)
+        self.assertNotIn("**Squishy status**", text)
+        self.assertIn("`/squishy status` gives the same facts on demand", text)
+        # Only the box styles its chart uses.
+        self.assertIn("classDef busy", text)
+        self.assertNotIn("classDef broken", text)
 
     def test_its_section_of_the_statistics_issue(self):
         world = World()

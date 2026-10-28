@@ -5,16 +5,16 @@
 // answers as it answers any other.
 
 use jackioh_engine::effects::{
-    TRADE_OFFER_HOOK, TRADE_OFFER_LABEL, TuneDirection, TuneRow, applicable_changes,
+    TRADE_OFFER_HOOK, TRADE_OFFER_LABEL, TRADE_OFFER_LUCKY_KEY, TuneDirection, TuneRow, applicable_changes,
 };
 use jackioh_engine::subsystems::ai_policy::choose_action;
 use jackioh_engine::subsystems::scorer::concealed_copy;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat::{big_body, plain};
+use crate::rules::fixtures::combat::{big_body, plain, taunter, zero_attack};
 use crate::rules::fixtures::hidden_trades::{
-    DUD, HEAVY_NERFS, SECRET_NERFS, SNEAK, STOIC, TRADER, register_hidden_trade_fixtures,
+    DUD, HEAVY_NERFS, LUCKY_TRADER, SECRET_NERFS, SNEAK, STOIC, TRADER, register_hidden_trade_fixtures,
 };
 
 /// `p1`'s turn 9, its main phase (or `active`'s); each side's setup as given, with plain cards to
@@ -54,7 +54,7 @@ fn held(s: &Scenario, player: PlayerId, def_id: &str) -> String {
         .unwrap_or_else(|| panic!("{player:?} holds a {def_id}"))
 }
 
-fn hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
+fn scenario_hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
     s.hand(player).into_iter().map(|card| card.id).collect()
 }
 
@@ -396,7 +396,7 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id, big_body.id], "field": [plain.id] }),
             json!({ "hand": [DUD.id, plain.id, STOIC.id] }),
         );
-        let theirs = hand_ids(&s, P2);
+        let theirs = scenario_hand_ids(&s, P2);
         offer_and_pass(&mut s);
         let from = s.events().len();
 
@@ -404,7 +404,7 @@ mod r1845002_a_trade_offer {
         assert_eq!(pending.player_id, P1, "on p2's turn (R1279000)");
         assert_eq!(s.state().active, P2);
         assert_eq!(pending.kind, PromptKind::Hand);
-        assert_eq!(offered(&s), hand_ids(&s, P1));
+        assert_eq!(offered(&s), scenario_hand_ids(&s, P1));
         let body = held(&s, P1, &big_body.id);
         s.answer(pick::id(&body));
         let given = s.card(body.as_str());
@@ -459,11 +459,11 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id], "field": [plain.id] }),
             json!({ "hand": [] }),
         );
-        let mine = hand_ids(&s, P1);
+        let mine = scenario_hand_ids(&s, P1);
         offer_and_pass(&mut s);
         assert!(s.state().pending.is_none());
         assert!(stolen(s.events()).is_empty());
-        assert_eq!(hand_ids(&s, P1), mine[1..].to_vec());
+        assert_eq!(scenario_hand_ids(&s, P1), mine[1..].to_vec());
     }
 
     #[test]
@@ -503,7 +503,7 @@ mod r1845002_a_trade_offer {
             json!({ "hand": [TRADER.id, plain.id, big_body.id], "field": [plain.id] }),
             json!({ "hand": [DUD.id, plain.id, STOIC.id] }),
         );
-        let theirs = hand_ids(&s, P2);
+        let theirs = scenario_hand_ids(&s, P2);
         offer_and_pass(&mut s);
         let body = held(&s, P1, &big_body.id);
         // At the give, a card of the other hand is not on offer; at the Discover, the given card is not.
@@ -602,5 +602,99 @@ mod r1845002_a_trade_offer {
         s.act(ActionBody::Timeout, P2, "the opponent's clock runs out");
         assert!(s.state().pending.is_none());
         assert_eq!(stolen(s.events()).len(), 2);
+    }
+}
+
+mod r1877001_a_lucky_trade_offer {
+    use super::*;
+
+    /// R65's cost of a hand card, as the offer compares them.
+    fn cost_of(s: &Scenario, id: &str) -> i32 {
+        jackioh_engine::mana::effective_cost(s.state(), s.card(id), Default::default())
+    }
+
+    /// The offer `trader` makes on `seed`: p1 gives its plain card, and the opponent's Discover opens
+    /// over six cards of costs 0 to 3. Returns the cheapest option's cost and the rng cursor after.
+    fn discover_after(trader: &str, seed: &str) -> (i32, u32, Scenario) {
+        let mut s = board(
+            seed,
+            json!({ "hand": [trader, plain.id], "field": [plain.id] }),
+            json!({ "hand": [DUD.id, plain.id, big_body.id, zero_attack.id, taunter.id, DUD.id] }),
+        );
+        s.play(trader, json!({ "zone": 2 }));
+        s.end_turn();
+        let mine = held(&s, P1, &plain.id);
+        s.answer(pick::id(&mine));
+        let pending = s.state().pending.clone().expect("the opponent Discovers");
+        assert_eq!(pending.kind, PromptKind::Discover);
+        assert_eq!(offered(&s).len(), DISCOVER_OPTIONS as usize);
+        let cheapest = offered(&s)
+            .iter()
+            .map(|id| cost_of(&s, id))
+            .min()
+            .expect("options");
+        (cheapest, s.state().rng_cursor, s)
+    }
+
+    #[test]
+    fn r1877001_a_card_with_no_lucky_makes_the_offer_as_before_with_nothing_carried() {
+        let mut s = board(
+            "r1877001-plain",
+            json!({ "hand": [TRADER.id, plain.id], "field": [plain.id] }),
+            json!({ "hand": [DUD.id, plain.id] }),
+        );
+        s.play(TRADER.id.as_str(), json!({ "zone": 2 }));
+        assert!(
+            !s.state().delayed[0]
+                .resume
+                .data
+                .contains_key(TRADE_OFFER_LUCKY_KEY)
+        );
+
+        let mut s = board(
+            "r1877001-lucky",
+            json!({ "hand": [LUCKY_TRADER.id, plain.id], "field": [plain.id] }),
+            json!({ "hand": [DUD.id, plain.id] }),
+        );
+        s.play(LUCKY_TRADER.id.as_str(), json!({ "zone": 2 }));
+        assert_eq!(
+            s.state().delayed[0].resume.data.get(TRADE_OFFER_LUCKY_KEY),
+            Some(&json!(1)),
+            "the card's Lucky, carried whatever becomes of it (R76)"
+        );
+    }
+
+    #[test]
+    fn r1877001_lucky_1_draws_the_options_twice_and_keeps_the_set_whose_cheapest_card_costs_most() {
+        let mut better = 0;
+        for n in 0..16 {
+            let seed = format!("r1877001-{n}");
+            let (plain_min, plain_cursor, _) = discover_after(&TRADER.id, &seed);
+            let (lucky_min, lucky_cursor, _) = discover_after(&LUCKY_TRADER.id, &seed);
+            // The same first draw, then one more: the kept set is never worse for the offerer.
+            assert!(lucky_min >= plain_min, "{seed}: {lucky_min} against {plain_min}");
+            assert!(lucky_cursor > plain_cursor, "{seed}: Lucky draws again");
+            if lucky_min > plain_min {
+                better += 1;
+            }
+        }
+        assert!(better > 0, "a second draw sometimes offers a dearer set");
+    }
+
+    #[test]
+    fn r1877001_a_hand_no_bigger_than_the_options_is_drawn_once() {
+        let small = |trader: &str| {
+            let mut s = board(
+                "r1877001-small",
+                json!({ "hand": [trader, plain.id], "field": [plain.id] }),
+                json!({ "hand": [DUD.id, big_body.id, taunter.id] }),
+            );
+            s.play(trader, json!({ "zone": 2 }));
+            s.end_turn();
+            let mine = held(&s, P1, &plain.id);
+            s.answer(pick::id(&mine));
+            (sorted(offered(&s)), s.state().rng_cursor)
+        };
+        assert_eq!(small(&TRADER.id), small(&LUCKY_TRADER.id));
     }
 }

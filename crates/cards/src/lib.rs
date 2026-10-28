@@ -42,11 +42,18 @@ mod card_metrics {
 }
 pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED};
 
+/// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, and whether it reads
+/// the BUSTED or complicated lists.
+pub mod code_lines;
+
 /// SPEC §5.1's single pool source over the shipped catalog (`catalog.query`, `catalog.pool`, …).
 pub mod query;
 
 /// Classic+ #42 KY's Test's problem bank (R420).
 pub mod ky_test_bank;
+
+/// Stinkyscape #4.2 KY's Last Exam's bank of impossible problems (R1870002).
+pub mod ky_last_exam_bank;
 
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
@@ -185,6 +192,67 @@ pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scen
     jackioh_engine::testkit::scenario(opts)
 }
 
+/// Apply one effect as `controller`'s, the way `resolve.rs` runs a hook's effects, with no card as its
+/// source: a test's stand-in for whatever would have run it (an open Marketplace's first Credits, a
+/// summon that is no play).
+#[cfg(test)]
+pub(crate) fn run_as(
+    s: &mut jackioh_engine::testkit::Scenario,
+    effect: jackioh_engine::Effect,
+    controller: jackioh_engine::PlayerId,
+) -> Vec<jackioh_engine::GameEvent> {
+    use jackioh_engine::resolve::{HookOptions, make_context};
+    let mut events: Vec<jackioh_engine::GameEvent> = Vec::new();
+    let mut rng = jackioh_engine::rng::Rng::new(&s.state().seed, s.state().rng_cursor);
+    {
+        let mut sink = jackioh_engine::EngineSink::new(s.state_mut(), &mut events, &mut rng);
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+    s.state_mut().rng_cursor = rng.cursor();
+    events
+}
+
+/// R1840003: `player` plays the oldest Resource of `def_id` in their tray, with `targets` declared
+/// (`Value::Null` for none). Panics when the tray holds none or `reduce` refuses the play.
+#[cfg(test)]
+pub(crate) fn play_from_tray<'a>(
+    s: &'a mut jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    def_id: &str,
+    targets: serde_json::Value,
+) -> &'a mut jackioh_engine::testkit::Scenario {
+    let instance_id = s
+        .pile(player, "tray")
+        .into_iter()
+        .find(|card| card.def_id == def_id)
+        .unwrap_or_else(|| panic!("{player}'s tray holds a {def_id}"))
+        .id;
+    s.act(
+        jackioh_engine::ActionBody::Play {
+            instance_id,
+            zone: None,
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: (!targets.is_null()).then(|| jackioh_engine::prelude::json_as(targets)),
+            modes: None,
+            plague: None,
+            face_down: None,
+        },
+        player,
+        "play from the tray",
+    )
+}
+
 /// The price a play of p1's `id` reads: with one mana less than `cost`, the play is refused for it.
 #[cfg(test)]
 pub(crate) fn expect_costs(
@@ -243,6 +311,78 @@ pub(crate) fn stand_in_backrow(s: &mut jackioh_engine::testkit::Scenario, id: &s
         state,
         find_instance(state, id).expect("placed")
     ));
+}
+
+/// R1852000 (Stinkyscape's Starship cards, #1859): p1's main phase with p1's Dormant Starship built
+/// from `pieces` — field entries of p1's (`{ "def", "lane", "radiant" }`), each destroyed by a Core
+/// #16 Hit Job in the order given, so each fuses its copy into the Starship in that order — and p1's
+/// mana as it was before the Hit Jobs. `p1` and `p2` go over each side's defaults, p1's `hand` and
+/// `field` beside the Hit Jobs and the pieces; no turn ends by itself. Returns the scenario and the
+/// Dormant Starship's id.
+#[cfg(test)]
+pub(crate) fn built_starship(
+    seed: &str,
+    pieces: serde_json::Value,
+    p1: serde_json::Value,
+    p2: serde_json::Value,
+) -> (jackioh_engine::testkit::Scenario, String) {
+    use jackioh_engine::testkit::{PlayerId, json, pick};
+    const HIT_JOB: &str = "core-016";
+    const HIT_JOB_COST: i32 = 3;
+    let pieces: Vec<serde_json::Value> = pieces.as_array().cloned().unwrap_or_default();
+    let listed = |side: &serde_json::Value, key: &str| -> Vec<serde_json::Value> {
+        side.get(key)
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+    };
+    let mut hand = vec![json!(HIT_JOB); pieces.len()];
+    hand.extend(listed(&p1, "hand"));
+    let mut field = pieces.clone();
+    field.extend(listed(&p1, "field"));
+    let mut p1 = merged(json!({ "library": filler(4), "mana": 10 }), p1);
+    p1["hand"] = json!(hand);
+    p1["field"] = json!(field);
+    let mut s = scenario(json!({
+        "seed": seed,
+        "active": "p1",
+        "p1": p1,
+        "p2": merged(json!({ "hand": filler(1), "library": filler(4) }), p2),
+    }));
+    for player in [PlayerId::P1, PlayerId::P2] {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    let mana = s.state().players.p1.mana.current;
+    let lanes: Vec<i32> = pieces
+        .iter()
+        .map(|piece| {
+            piece["lane"]
+                .as_i64()
+                .and_then(|lane| i32::try_from(lane).ok())
+                .expect("a piece names its lane")
+        })
+        .collect();
+    for lane in lanes {
+        s.state_mut().players.p1.mana.current = mana.max(HIT_JOB_COST);
+        let targets = pick::unit_at(&s, PlayerId::P1, lane);
+        s.play(HIT_JOB, json!({ "targets": targets }));
+    }
+    s.state_mut().players.p1.mana.current = mana;
+    let ship = jackioh_engine::prelude::dormant_starship_of(s.state(), PlayerId::P1)
+        .expect("the pieces built p1 a Dormant Starship")
+        .id
+        .clone();
+    (s, ship)
+}
+
+/// R1852003: p1 launches the Dormant Starship `ship` by its Activate, at its price.
+#[cfg(test)]
+pub(crate) fn launch_starship(s: &mut jackioh_engine::testkit::Scenario, ship: &str) {
+    use jackioh_engine::testkit::json;
+    s.activate(
+        ship,
+        json!({ "ability": jackioh_engine::prelude::STARSHIP_LAUNCH_ABILITY }),
+    );
 }
 
 /// R1081000: give the card `id` Flying (`grantedKeywords`), so that in hand it may be played into an

@@ -9,12 +9,12 @@
   max-width: min(640px, calc(100vw - 88px));
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--line, rgb(201 149 63 / 30%));
+  border-top: 1px solid var(--line);
 }
 
 .their-hand__title {
   margin: 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
   font-size: 0.78em;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -29,7 +29,7 @@
 
 .their-hand__empty {
   margin: 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
   font-size: 0.9em;
 }
 
@@ -69,7 +69,7 @@
 }
 
 .their-hand__card:focus-visible {
-  outline: 2px solid var(--selected, #f0c04a);
+  outline: 2px solid var(--selected);
   outline-offset: 2px;
 }
 
@@ -134,14 +134,14 @@
 /* A call to act, so the brightest line in the panel after the outcome, as the draw offer's is. */
 .rematch > .rematch-incoming {
   order: -1;
-  color: var(--text, #efe0bf);
+  color: var(--text);
   font-weight: 700;
 }
 
 .rematch > .rematch-note,
 .rematch > .rematch-status {
   order: 1;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
 }
 
 /* R1372: an All Random rematch's "More cards from the newest set" (game/LeanNewest.tsx), a line of
@@ -152,10 +152,10 @@
   justify-content: center;
   order: 1;
   margin: 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
 }
 
 /* A refused offer reads as one: colour and words, never colour alone (auth.css's field error). */
 .rematch > .rematch-status[role="alert"] {
-  color: color-mix(in srgb, var(--opponent, #c0453f) 55%, var(--text, #efe0bf));
+  color: color-mix(in srgb, var(--opponent) 55%, var(--text));
 }

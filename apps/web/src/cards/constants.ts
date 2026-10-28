@@ -49,6 +49,9 @@ export const FACE_TEXT_MIN_HEIGHT_PX = 150;
 /** R279: a mouse or pen resting this long on a reference in a card's text opens the card it names. */
 export const REF_HOVER_DELAY_MS = 250;
 
+/** R2098000: a mouse or pen resting this long on a glossary term in a card's text shows its rule. */
+export const TERM_HOVER_DELAY_MS = 250;
+
 /** R279: the height of the card face a reference's tooltip shows. */
 export const REF_TOOLTIP_HEIGHT_PX = 300;
 

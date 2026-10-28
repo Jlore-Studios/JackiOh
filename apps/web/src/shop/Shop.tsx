@@ -3,9 +3,9 @@
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). The price comes from `GET /api/packs` and the balance
 // from `GET /api/wallet`; a short wallet disables the button and says the shortfall, and a
-// refused buy shows the server's words verbatim with nothing changed on screen (no optimistic
-// update: the wallet and the counts move only on the answer). Buy presses the pack while the
-// request is out; on the answer a copy of the pack flies into that kind's count (transform and
+// refused buy shows the server's words through `t()` (R711000) with nothing changed on screen (no
+// optimistic update: the wallet and the counts move only on the answer). Buy presses the pack while
+// the request is out; on the answer a copy of the pack flies into that kind's count (transform and
 // opacity, `shop.css`; with Reduce motion the count just changes) and every pill is told the
 // balance (`announceWallet`).
 
@@ -18,12 +18,15 @@ import {
   buyPack,
   getPacks,
   getWallet,
+  keptPaths,
   type BoughtPackResponse,
   type PacksResponse,
   type WalletResponse,
 } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
 import "./shop.css";
 
@@ -57,8 +60,13 @@ export default function Shop({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [info, setInfo] = useState<PacksResponse | null>(null);
-  const [wallet, setWallet] = useState<WalletResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<PacksResponse | null>(
+    () => cachedRead<PacksResponse>(token, keptPaths.packs) ?? null,
+  );
+  const [wallet, setWallet] = useState<WalletResponse | null>(
+    () => cachedRead<WalletResponse>(token, keptPaths.wallet) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -82,8 +90,17 @@ export default function Shop({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptInfo = cachedRead<PacksResponse>(token, keptPaths.packs);
+          const keptWallet = cachedRead<WalletResponse>(token, keptPaths.wallet);
+          if (keptInfo === undefined || keptWallet === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(keptInfo);
+            setWallet(keptWallet);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -118,7 +135,7 @@ export default function Shop({
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.loadError}>
-            {loadError}
+            {t(loadError)}
           </p>
           <div className="account-actions">
             <button
@@ -136,9 +153,7 @@ export default function Shop({
       )}
       {info === null || wallet === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.loading}>
-            {t("Loading your shop…")}
-          </p>
+          <Skeleton variant="rows" label={t("Loading your shop…")} testId={shopTestid.loading} />
         ) : null
       ) : (
         <>
@@ -199,7 +214,7 @@ export default function Shop({
       )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={shopTestid.error}>
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

@@ -295,8 +295,9 @@ fn max_actions_per_game() -> usize {
 }
 
 /// §2.5 plus R84: the policy never concedes or offers a draw, so only these can occur, a Glitch that
-/// voids the match (R679) and the Brains' votes (R1843001) among them, and, in a game that takes the
-/// endings channel, `ENDINGS_TERMINAL_REASONS` (#1572).
+/// voids the match (R679), the Brains' votes (R1843001) and Stinkyscape #148.1 Edge of the
+/// Universe's flight (R1843002) among them, and, in a game that takes the endings channel,
+/// `ENDINGS_TERMINAL_REASONS` (#1572).
 const TERMINAL_REASONS: &[&str] = &[
     "hero-death",
     "both-heroes-dead",
@@ -306,6 +307,8 @@ const TERMINAL_REASONS: &[&str] = &[
     "voided",
     "voted-out",
     "both-voted-out",
+    "fled",
+    "fled-decisive",
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -2833,6 +2836,45 @@ pub(crate) mod tests {
             assert_ne!(decks_for_seed(1), decks_for_seed(2));
         }
 
+        /// BUILD M12's foundation gate, "the fuzz tool previews it" (R1857000, R1420): every deck-legal
+        /// card of a set that has not shipped is in the pool and none in the shipped pool, and a seed
+        /// dealt one plays through the gate's four checks with no preview of the caller's. With every
+        /// set shipped (the Stinkyscape release, #1884) nothing is held, and the released set is dealt.
+        #[test]
+        fn r1857000_the_fuzz_tool_previews_every_held_set() {
+            register_all();
+            let held = |id: &String| !set_ships(CATALOG[id.as_str()].set);
+            let legal_held: Vec<&String> = CATALOG
+                .iter()
+                .filter(|(id, def)| {
+                    !set_ships(def.set)
+                        && !def.is_token()
+                        && !made_by_a_rule(def)
+                        && !EXCLUDED_IDS.contains(id.as_str())
+                })
+                .map(|(id, _)| id)
+                .collect();
+            assert!(legal_held.iter().all(|id| FUZZ_POOL.contains(*id)));
+            assert!(!SHIPPED_FUZZ_POOL.iter().any(held));
+            if legal_held.is_empty() {
+                // Every set ships since the Stinkyscape release (#1884): there is nothing to preview,
+                // and the released set is dealt as any shipped set is.
+                assert!(
+                    FUZZ_POOL
+                        .iter()
+                        .any(|id| CATALOG[id.as_str()].set.as_str() == "Stinkyscape")
+                );
+                return;
+            }
+            let seed = (1..=SWEEP_SEEDS)
+                .find(|seed| {
+                    let (p1, p2) = decks_for_seed(*seed);
+                    p1.iter().chain(p2.iter()).any(held)
+                })
+                .expect("a seed deals a held card");
+            assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
+        }
+
         #[test]
         fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
             // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).
@@ -2980,6 +3022,42 @@ pub(crate) mod tests {
                     .map(|failure| failure.message),
                 None
             );
+        }
+
+        #[test]
+        fn r1843002_a_flight_is_a_real_ending() {
+            register_all();
+            // R1420: the fuzz pool holds the sets that have not shipped, so the decks it deals are
+            // legal only while every set is previewed, as `fuzz_seed` previews them.
+            let _preview = preview_every_set();
+            let decks = decks_for_seed(1);
+            for reason in [GameOverReason::Fled, GameOverReason::FledDecisive] {
+                let mut state = create_game(&CreateGameOptions {
+                    seed: "jackioh-fuzz-1".to_string(),
+                    decks: decks.clone(),
+                    ..CreateGameOptions::default()
+                });
+                state.result = Some(GameResult {
+                    winner: Winner::P1,
+                    reason,
+                });
+                state.phase = Phase::Over;
+                let run = GameRun {
+                    state,
+                    log: Vec::new(),
+                    decks: decks.clone(),
+                    heaviest: Heaviest::default(),
+                    paused: Vec::new(),
+                };
+                assert_eq!(
+                    check_termination(&GameSetup::plain(1), &run)
+                        .err()
+                        .map(|failure| failure.message),
+                    None,
+                    "{}",
+                    reason.as_str()
+                );
+            }
         }
     }
 

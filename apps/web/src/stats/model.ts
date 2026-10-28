@@ -263,3 +263,18 @@ export function formatPlayedDelta(delta: number | null): string | null {
   const sign = points > 0 ? "+" : "";
   return `${sign}${points}%`;
 }
+
+/**
+ * R654, R1147000: a server-calculated rate to show, or null when there is none or its games are below
+ * the sample floor: the cards table's Radiant and Normal rates, and (R2089000) the Created cards' rates.
+ */
+export function faceRate(
+  games: number | undefined,
+  rate: number | null | undefined,
+  minSample: number,
+): number | null {
+  if (games === undefined || rate === undefined || rate === null || games < minSample) {
+    return null;
+  }
+  return rate;
+}

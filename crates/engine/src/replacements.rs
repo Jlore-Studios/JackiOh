@@ -327,6 +327,24 @@ fn finish(
     record: &ReplacementRecord,
     fired: bool,
 ) {
+    let Some(resume) = spend(sink, cand, def, record, fired) else {
+        return;
+    };
+    // R462: owed as the card's own continuation the moment it fires (R113's cursor), so it resolves once
+    // the effect the replaced event happened in has finished or paused, before the resolution loop pops
+    // any queued trigger — where a trap answering that event would resolve.
+    crate::work::push_work(sink, resume, Some(cand.controller));
+}
+
+/// `finish`'s first half: a fired Trap spent, and the card's follow-up, when it has one, as the
+/// continuation that carries the record.
+fn spend(
+    sink: &mut EngineSink<'_>,
+    cand: &Candidate,
+    def: &ReplacementDef,
+    record: &ReplacementRecord,
+    fired: bool,
+) -> Option<Resume> {
     let mut card = live(sink.state, &cand.card);
     if fired
         && crate::faces::card_type_of(sink.state, &card) == CardType::Trap
@@ -341,26 +359,20 @@ fn finish(
         card = live(sink.state, &card);
         crate::zones::report_graveyard_landing(sink, &card, result);
     }
-    let Some(then) = &def.then else {
-        return;
-    };
+    let then = def.then.as_ref()?;
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(
         REPLACED_KEY.to_string(),
         serde_json::to_value(record).expect("a replacement record is plain JSON (§10.1)"),
     );
-    let resume = Resume {
+    Some(Resume {
         def_id: card.def_id.clone(),
         hook: "resume".to_string(),
         step: then.clone(),
         radiant: card.radiant,
         instance_id: Some(card.id.clone()),
         data,
-    };
-    // R462: owed as the card's own continuation the moment it fires (R113's cursor), so it resolves once
-    // the effect the replaced event happened in has finished or paused, before the resolution loop pops
-    // any queued trigger — where a trap answering that event would resolve.
-    crate::work::push_work(sink, resume, Some(cand.controller));
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -635,16 +647,56 @@ fn in_unit_zone(state: &GameState, card: &CardInstance) -> bool {
     crate::zones::in_units_row_or_standing(state, card)
 }
 
+/// R1875006 (Stinkyscape #138 Pocket Peptides, "would die in combat"): a hit killed `card` (R42's
+/// credit) and the last hit it took in this action was combat damage (`damage.combat`, Cleave's
+/// included). A Unit a destroy marked, or one whose lethal hit came from a Spell or a text, is not.
+fn killed_in_combat(sink: &EngineSink<'_>, card: &CardInstance) -> bool {
+    card.last_damaged_by.is_some()
+        && sink
+            .events
+            .iter()
+            .rev()
+            .find_map(|event| match event {
+                GameEvent::Damage {
+                    target_id, combat, ..
+                } if *target_id == card.id => Some(*combat),
+                _ => None,
+            })
+            .unwrap_or(false)
+}
+
+/// What the would-die window leaves the state check.
+pub enum WouldDie {
+    /// The cards that still die.
+    Die(Vec<CardInstance>),
+    /// R1875006: a `resolveFirst` replacement resolved its follow-up before anything moved, so the
+    /// check starts over and judges every unit again (R460's re-check of the changed event).
+    StartOver,
+}
+
 /// §4.5 step 1, before any card moves: the units the check collected would die, and a `wouldDie`
 /// replacement takes its controller's among them — one firing for all of them — and flickers them
-/// instead (Classic #14's Radiant face). Returns the cards that still die. R462: the check's own
+/// instead (Classic #14's Radiant face), or resolves its follow-up at once (`resolveFirst`, Stinkyscape
+/// #138, R1875006), once a check: `resolved_first` holds the cards that did so earlier in it (R460).
+/// Returns the cards that still die, or that the check must start over. R462: the check's own
 /// collection only; a Sacrifice is an effect's (§6.3) and is not offered.
-pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Vec<CardInstance> {
+pub fn would_die_window(
+    sink: &mut EngineSink<'_>,
+    dying: &[CardInstance],
+    resolved_first: &mut Vec<String>,
+) -> WouldDie {
     let mut left: Vec<CardInstance> = dying.to_vec();
     if !left.iter().any(|card| in_unit_zone(sink.state, card)) {
-        return left;
+        return WouldDie::Die(left);
     }
     for mut cand in candidates(sink.state, None) {
+        // R1884001: nor, inside its own follow-up, a card whose replacement is resolving up this call: a
+        // check that follow-up runs (its cast's own state check, R460) would ask it again, and a card
+        // that is never spent (no Trap in the backrow, as a fused Field Spell holding Stinkyscape #138's
+        // text) would answer it without end.
+        if resolved_first.contains(&cand.card.id) || sink.dying_replaced_by.contains(&cand.card.id) {
+            continue;
+        }
         let theirs: Vec<CardInstance> = left
             .iter()
             .filter(|card| in_unit_zone(sink.state, card) && card.controller == cand.controller)
@@ -660,6 +712,7 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
                 .map(|card| DyingUnit {
                     instance_id: card.id.clone(),
                     controller: card.controller,
+                    combat: killed_in_combat(sink, card).then_some(true),
                 })
                 .collect(),
         };
@@ -667,6 +720,27 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
             continue;
         };
         let fired = fire(sink, &mut cand);
+        if def.instead.resolve_first == Some(true) {
+            resolved_first.push(cand.card.id.clone());
+            let record = ReplacementRecord {
+                event,
+                redirected_to: None,
+                flickered: None,
+            };
+            if let Some(resume) = spend(sink, &cand, &def, &record, fired) {
+                sink.dying_replaced_by.push(cand.card.id.clone());
+                crate::prompts::run_resume(
+                    sink,
+                    &resume,
+                    crate::prompts::ResumeOptions {
+                        controller: Some(cand.controller),
+                        ..crate::prompts::ResumeOptions::default()
+                    },
+                );
+                sink.dying_replaced_by.pop();
+            }
+            return WouldDie::StartOver;
+        }
         let mut flickered: Vec<FlickeredCard> = Vec::new();
         for unit in &theirs {
             let record = FlickeredCard {
@@ -688,7 +762,7 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
         };
         finish(sink, &cand, &def, &record, fired);
     }
-    left
+    WouldDie::Die(left)
 }
 
 /// R1849002 (Stinkyscape #105 Disintegrex): whether this card, which §4.5 step 1 collected and no
@@ -813,6 +887,7 @@ pub fn answer_targeting(
             source_id: None,
             arrived_during: None,
             exits_from: None,
+            creator: None,
         });
         // R783010: a Crater Joro Locks the zone it was summoned into.
         crate::crater::lock_on_arrival(sink, &card.id);

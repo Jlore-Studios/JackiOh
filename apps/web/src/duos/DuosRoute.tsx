@@ -11,24 +11,32 @@
 // A finished game's result panel offers "Watch the replay" (#965, §13.9): the route then swaps the
 // board for `DuosReplay.tsx`, which reads the server's replay once, and "back" returns to the result.
 //
+// PLAY AGAIN (R2092000): `usePlayAgain` reads the two seats' offers every SERIES_POLL_SECONDS while
+// the result is up, as Rematch.tsx reads the rematch's, and holds the state above the panel, so the
+// #1755 fold keeps it. On a new path, `<Gated key={path}>` remounts the route and `useDuosMatch`
+// opens the new match's socket.
+//
 // The route takes the bearer the gate resolved, as `/match/<id>` does, and hands each renewal to the
 // socket (R194, R1115000); the gate in main.tsx has already let a signed-in, active account through,
 // and keys the route by the provider session, so a new session opens a new socket.
 
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody } from "@jackioh/shared";
+import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
-import { awaitsYou, installDevHandle, viewDerivedState } from "../game/net.ts";
+import { awaitsYou, installDevHandle, pageWake, viewDerivedState } from "../game/net.ts";
+import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
+import { getDuosAgain, offerDuosAgain, type DuosAgainStatus } from "../net/duos.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { DUOS_CLOCK_TICK_MS } from "./config.ts";
-import { DuosChromeContext, type DuosChrome } from "./context.ts";
+import { DuosChromeContext, type DuosChrome, type DuosPlayAgain } from "./context.ts";
 import { DuosBoard } from "./DuosBoard.tsx";
 import DuosReplay from "./DuosReplay.tsx";
 import { duelOf } from "./seats.ts";
@@ -47,7 +55,7 @@ function connectionWords(state: DuosConnection): string {
     case "reconnecting":
       return t("Reconnecting…");
     case "refused":
-      return t("This match isn’t available");
+      return t("This match isn't available");
     case "closed":
       return t("Disconnected");
   }
@@ -110,6 +118,82 @@ function RoundClock({ clock }: { clock: DuosClockReading | null }): ReactElement
   );
 }
 
+/** R2092000: both offers made a match; the board goes there. */
+function goToMatch(matchId: string): void {
+  navigate(paths.duos(matchId), { force: true });
+}
+
+/**
+ * R2092000: this seat's Play again offer and the two seats' status, read every SERIES_POLL_SECONDS
+ * while the result is up, as Rematch.tsx reads the rematch's. The state lives above the panel, so
+ * the #1755 fold keeps it; on a new path, `<Gated key={path}>` remounts the route and `useDuosMatch`
+ * opens the new match's socket.
+ */
+function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
+  const [status, setStatus] = useState<DuosAgainStatus | null>(null);
+  const [offering, setOffering] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const inFlight = useRef(false);
+
+  useEffect(() => {
+    if (!reading) return undefined;
+    let cancelled = false;
+    let out = false; // one read at a time, as Rematch.tsx's
+    const read = (): void => {
+      if (out) return;
+      out = true;
+      getDuosAgain(matchId)
+        .then(
+          (answer) => {
+            if (cancelled) return;
+            setStatus(answer);
+            if (answer.matchId !== null) goToMatch(answer.matchId);
+          },
+          () => undefined,
+        )
+        .finally(() => {
+          out = false;
+        });
+    };
+    read();
+    const timer = window.setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    const stopWake = pageWake(read);
+    return () => {
+      cancelled = true;
+      stopWake();
+      window.clearInterval(timer);
+    };
+  }, [matchId, reading]);
+
+  const offer = useCallback((): void => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setOffering(true);
+    setRefusal(null);
+    void (async (): Promise<void> => {
+      try {
+        const answer = await offerDuosAgain(matchId, readPlayLean());
+        if (answer.matchId !== null) {
+          goToMatch(answer.matchId);
+          return;
+        }
+        // No match yet: read whether the offer stands, as Rematch.tsx does.
+        const fresh = await getDuosAgain(matchId).catch(() => null);
+        if (fresh === null) return;
+        setStatus(fresh);
+        if (fresh.matchId !== null) goToMatch(fresh.matchId);
+      } catch (cause) {
+        setRefusal(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        inFlight.current = false;
+        setOffering(false);
+      }
+    })();
+  }, [matchId]);
+
+  return useMemo(() => ({ status, offering, refusal, offer }), [status, offering, refusal, offer]);
+}
+
 export function DuosRoute({ matchId, token }: { matchId: string; token: string }): ReactElement {
   const locale = useLocale();
   const match = useDuosMatch({ matchId, token });
@@ -117,6 +201,9 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
   const lookup = useCatalogLookup();
   // #965: the result panel's replay is open. Held above the early returns, which a hook may not follow.
   const [watching, setWatching] = useState(false);
+  // R2092000: the result panel's Play again, held above the early returns with it, so the #1755
+  // fold keeps the offer's state.
+  const playAgain = usePlayAgain(matchId, match.view !== null && match.view.result !== null && !watching);
 
   // BUILD M5-T3's `window.__jackioh` outside production: the own duel's view-derived state, which is
   // what the shared Cypress commands read (`cy.keepMulligans` waits on it), and a dispatch of a duel
@@ -184,12 +271,14 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       onLeave: () => {
         navigate(paths.together);
       },
+      leaveRoute: paths.together,
       onWatchReplay: () => {
         setWatching(true);
       },
+      playAgain,
     }),
     // `locale`: the words are drawn in the reader's language, and follow a switch (#711).
-    [match.connection, match.connect, match.clock, match.teammate, matchId, locale],
+    [match.connection, match.connect, match.clock, match.teammate, matchId, locale, playAgain],
   );
 
   if (view === null) {
@@ -197,7 +286,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       return (
         <ShellPanel testId={duosTestid.connecting}>
           <p className="notice" data-testid={duosTestid.refused} role="alert">
-            {t("This co-op match isn’t available. It may have ended, or it may not be yours to join.")}
+            {t("This co-op match isn't available. It may have ended, or it may not be yours to join.")}
           </p>
           <div className="row">
             <a className="button-primary" href={paths.together} onClick={followInApp(paths.together)}>

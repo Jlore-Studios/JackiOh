@@ -272,6 +272,7 @@ fn build_eternal() -> Effect {
             hook: Some(CHAOS_ETERNAL_HOOK.into()),
             data: None,
             player: None,
+            at_end: None,
         })]
     })
 }

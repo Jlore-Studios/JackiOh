@@ -9,12 +9,15 @@ import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { rememberRead } from "../net/readCache.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
@@ -501,6 +504,21 @@ describe("R654 public statistics route", () => {
     expect(within(table).queryByText(/rating/i)).not.toBeInTheDocument();
   });
 
+  it("#2115 a table skeleton stands in for the players while the read is pending", async () => {
+    const held = holdFetch((url) => url.pathname === "/api/stats/players");
+    render(<StatsRoute />);
+
+    fireEvent.click(await screen.findByTestId(statsTestid.tabPlayers, undefined, SLOW));
+    expectSkeleton(await screen.findByText("Loading players…", undefined, SLOW), "table");
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    await act(async () => {
+      held[0]!.answer(MOCK_PLAYERS);
+    });
+    expect(await screen.findByTestId(statsTestid.playersTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading players…")).toBeNull();
+  });
+
   it("R1436 players tab shows usernames, isolated, never a profile id nor any slice of one, and searches by username", async () => {
     const ids = ["7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f", "0f9e8d7c-6b5a-4f4e-9d3c-2b1a0f9e8d7c"];
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
@@ -714,14 +732,14 @@ describe("R654 public statistics route", () => {
     expect(within(modal).getByText("Win rate by patch")).toBeInTheDocument();
   });
 
-  it("R377 reveals Played Δ column and renders signed points and cohort sample sizes", async () => {
+  it("R377 reveals Played vs held column and renders signed points and cohort sample sizes", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Played Δ column header is shown by default
-    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
+    // Played vs held column header is shown by default
+    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
 
     // Spark Pup (eligible, delta = +0.20): renders +20% and (30 / 10)
     expect(screen.getByText("+20%")).toBeInTheDocument();
@@ -735,16 +753,16 @@ describe("R654 public statistics route", () => {
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(3);
 
-    // Toggle Played Δ off: the column header leaves
-    await user.click(screen.getByLabelText(/Played Δ/i));
-    expect(screen.queryByRole("columnheader", { name: /Played Δ/i })).not.toBeInTheDocument();
+    // Toggle Played vs held off: the column header leaves
+    await user.click(screen.getByLabelText(/Played vs held/i));
+    expect(screen.queryByRole("columnheader", { name: /Played vs held/i })).not.toBeInTheDocument();
 
     // Toggle it back on: the column header returns
-    await user.click(screen.getByLabelText(/Played Δ/i));
-    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Played vs held/i));
+    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
   });
 
-  it("R654 renders not enough data for a Played Δ the server withholds or a card below the floor", async () => {
+  it("R654 renders not enough data for a Played vs held the server withholds or a card below the floor", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
@@ -757,17 +775,17 @@ describe("R654 public statistics route", () => {
 
     // The explainer says what the delta's floor is.
     expect(
-      screen.getByText(/Played Δ needs 20 games on each side, played and drawn but not played/),
+      screen.getByText(/Played vs held needs 20 games on each side, played and drawn but not played/),
     ).toBeInTheDocument();
   });
 
-  it("R377 sorts cards by Played Δ descending and ascending", async () => {
+  it("R377 sorts cards by Played vs held descending and ascending", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    const deltaHeader = screen.getByRole("columnheader", { name: /Played Δ/i });
+    const deltaHeader = screen.getByRole("columnheader", { name: /Played vs held/i });
     expect(deltaHeader).toHaveAttribute("aria-sort", "none");
 
     // Click to sort descending: Spark Pup (+20%) first, then Aqua Warden (-10%), then Lava Hound (< minSample)
@@ -978,7 +996,7 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Columns:")).toBeInTheDocument();
   });
 
-  it("shows Played Δ and hides cost, rarity and keywords by default", async () => {
+  it("shows Played vs held and hides cost, rarity and keywords by default", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
@@ -990,13 +1008,13 @@ describe("R654 public statistics route", () => {
     expect(screen.queryByRole("columnheader", { name: "Rarity" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Keywords" })).not.toBeInTheDocument();
 
-    expect(screen.getByLabelText("Played Δ")).toBeChecked();
+    expect(screen.getByLabelText("Played vs held")).toBeChecked();
     expect(screen.getByLabelText("Games")).toBeChecked();
     expect(screen.getByLabelText("When drawn")).toBeChecked();
     expect(screen.getByLabelText("Radiant")).toBeChecked();
     expect(screen.getByLabelText("Normal")).toBeChecked();
     expect(screen.getByLabelText("Play rate")).toBeChecked();
-    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
   });
 });
 
@@ -1110,13 +1128,14 @@ describe("card statistics requests", () => {
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
-    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+    expectSkeleton(screen.getByText("Loading card statistics…"), "table");
+    expect(screen.queryByText("The card statistics didn't load.")).not.toBeInTheDocument();
 
     await act(async () => {
       held[1]!.answer(MOCK_KEYWORD_CARDS);
     });
     expect(await screen.findByText("Midrange Menace", undefined, SLOW)).toBeInTheDocument();
-    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The card statistics didn't load.")).not.toBeInTheDocument();
   });
 
   it("the table's Retry asks again, and a filter changed while the retry loads cancels it", async () => {
@@ -1127,7 +1146,7 @@ describe("card statistics requests", () => {
     await act(async () => {
       held[0]!.answer({}, 500);
     });
-    expect(await screen.findByText("Failed to load card statistics.", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("The card statistics didn't load.", undefined, SLOW)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(held).toHaveLength(2), SLOW);
@@ -1140,7 +1159,7 @@ describe("card statistics requests", () => {
       held[2]!.answer(MOCK_KEYWORD_CARDS);
     });
     expect(await screen.findByText("Midrange Menace", undefined, SLOW)).toBeInTheDocument();
-    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The card statistics didn't load.")).not.toBeInTheDocument();
   });
 
   it("a card's details opened while another's load end on that card's, never Details unavailable", async () => {
@@ -1157,7 +1176,8 @@ describe("card statistics requests", () => {
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
     const modal = screen.getByTestId(statsTestid.drillDownModal);
-    expect(within(modal).getByText("Loading drill-down data…")).toBeInTheDocument();
+    expect(within(modal).getByText("Loading this card's details…")).toBeInTheDocument();
+    expectSkeleton(within(modal).getByText("Loading this card's details…"), "rows");
     expect(within(modal).queryByText("Details unavailable.")).not.toBeInTheDocument();
 
     await act(async () => {
@@ -1393,7 +1413,7 @@ describe("R1966000 the Sets tab", () => {
     patch: "0.2.0",
     previousPatch: "0.1.0",
     cards: [
-      row("core-001", "Spark Pup", "Core", 700, 1200), // 58.3%: 5.8 standard errors over 50%
+      row("core-001", "Spark Pup", "Core", 700, 1200), // 58.3%: 5.8 margins over 50%
       row("core-002", "Lava Hound", "Core", 450, 1000), // 45%: 3.2 under
       row("classic-001", "Palantir", "Classic", 520, 1000),
       row("classic-002", "Counterspell", "Classic", 480, 1000),
@@ -1453,17 +1473,29 @@ describe("R1966000 the Sets tab", () => {
     expect(best).toHaveTextContent("Highest mean cardCore");
     expect(best).toHaveTextContent("Highest median cardCore");
 
-    // Spark Pup is 5.8 standard errors over 50% and Lava Hound 3.2 under; the Classic cards are nearer.
+    // Spark Pup is 5.8 margins over 50% and Lava Hound 3.2 under; the Classic cards are nearer.
     const far = screen.getByTestId(statsTestid.setsOutliers);
     const strongest = within(far).getByRole("region", { name: "Strongest cards" });
     const weakest = within(far).getByRole("region", { name: "Weakest cards" });
     expect(within(strongest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-001"]);
-    expect(strongest).toHaveTextContent("Core · 58.3% over 1,200 games · +5.8 standard errors");
+    expect(strongest).toHaveTextContent("Core · 58.3% over 1,200 games · +5.8 margins");
     expect(within(weakest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-002"]);
 
     // A card opens its details, as a row of the Cards tab does.
     await user.click(within(strongest).getByRole("button", { name: "Spark Pup" }));
     expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("#2115 a table skeleton stands in for the sets while the read is pending", async () => {
+    serveSets();
+    at("/stats?tab=sets");
+    render(<StatsRoute />);
+
+    // Right after render the read has not answered.
+    expectSkeleton(screen.getByText("Loading set statistics…"), "table");
+
+    expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Loading set statistics…")).toBeNull();
   });
 
   it("R1966000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {
@@ -1491,7 +1523,7 @@ describe("R1966000 the Sets tab", () => {
     at("/stats?tab=sets");
     render(<StatsRoute />);
     const retry = await screen.findByTestId(statsTestid.setsRetry, undefined, SLOW);
-    expect(screen.getByText("Failed to load the set statistics.")).toBeInTheDocument();
+    expect(screen.getByText("The set statistics didn't load.")).toBeInTheDocument();
     up = true;
     fireEvent.click(retry);
     expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
@@ -1508,7 +1540,7 @@ describe("R1966000 the Sets tab", () => {
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
     expect(within(table).getByRole("columnheader", { name: "Change" })).toBeInTheDocument();
-    expect(within(screen.getByTestId(statsTestid.setsOutliers)).getAllByText("No card is 3 standard errors from 50% yet.")).toHaveLength(2);
+    expect(within(screen.getByTestId(statsTestid.setsOutliers)).getAllByText("No card is 3 margins or more from 50% yet.")).toHaveLength(2);
   });
 });
 
@@ -1605,5 +1637,133 @@ describe("R1973000 the Daily runs tab is gone", () => {
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Cards", "Sets", "Players"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
+  });
+});
+
+describe("R2089000 the Created cards", () => {
+  /**
+   * Rush Token, made during 55 seats' games: 30 used a copy (60%, 8 of them Radiant at its first use, too
+   * few for a rate) and 25 used none (52%), 8 points under.
+   */
+  const RUSH = {
+    id: "core-t-rush",
+    name: "Rush Token",
+    cost: 1,
+    rarity: "Token",
+    set: "Core",
+    games: 55,
+    createdPlayedGames: 30,
+    createdPlayedWinRate: 0.6,
+    createdNotPlayedGames: 25,
+    createdNotPlayedWinRate: 0.52,
+    createdPlayedRadiantGames: 8,
+    createdPlayedRadiantWinRate: 0.75,
+    createdPlayedNormalGames: 22,
+    createdPlayedNormalWinRate: 12 / 22,
+    createdPlayedDelta: 0.08,
+    hasEnoughGames: true,
+    window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
+  };
+
+  /** Answers the card statistics with `body`, and anything else with nothing. */
+  function serveCards(body: unknown): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const answer = url.pathname === "/api/stats/cards" ? body : {};
+        return Promise.resolve(new Response(JSON.stringify(answer), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R2089000 the Cards tab lists Created cards apart from the deck table", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH] });
+    render(<StatsRoute />);
+
+    const panel = await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
+    expect(screen.getByRole("tabpanel")).toContainElement(panel);
+    expect(within(panel).getByRole("heading", { name: "Created cards" })).toBeInTheDocument();
+    expect(panel).toHaveTextContent("each needs 20 games");
+    const table = within(panel).getByTestId(statsTestid.createdTable);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Card",
+      "Games",
+      "Used",
+      "Not used",
+      "Used Radiant",
+      "Used normal",
+      "Used vs not used",
+    ]);
+    const row = within(table).getByText("Rush Token").closest("tr")!;
+    expect(row).toHaveAttribute("data-card-id", "core-t-rush");
+    expect([...row.querySelectorAll("td")].map((td) => td.textContent)).toEqual(["55", "60%", "52%", "—", "55%", "+8%"]);
+    // The 8 Radiant seats are below R654's floor: no 75%.
+    expect(within(row).queryByText("75%")).toBeNull();
+
+    // The deck table has no row for it.
+    const deck = screen.getByTestId(statsTestid.cardsTable);
+    expect(within(deck).queryByText("Rush Token")).toBeNull();
+    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
+
+    // The search box asks of the Created cards what it asks of the deck's.
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
+    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
+    expect(within(screen.getByTestId(statsTestid.createdPanel)).getByText("Rush Token")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "spark" } });
+    expect(screen.getByText("Spark Pup")).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+
+    // The Sets tab counts the deck cards alone and shows no Created section.
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    const sets = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(sets).not.toHaveTextContent("Rush Token");
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+  });
+
+  it("R2089000 shows no Created section when the response has none", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    cleanup();
+
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByText("Created cards")).toBeNull();
+  });
+});
+
+describe("R2125000 the Cards tab opens on its last table", () => {
+  it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
+    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+
+    expect(screen.queryByText("Loading card statistics…")).not.toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    await act(async () => {
+      held[0]!.answer({}, 503);
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading card statistics…")).not.toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+  });
+
+  it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
+    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(held).toHaveLength(2), SLOW);
+
+    expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
   });
 });

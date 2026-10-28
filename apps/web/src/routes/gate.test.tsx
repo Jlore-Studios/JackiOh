@@ -12,6 +12,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
 // `main.tsx` is the app's entry point and mounts itself, except under vitest — see the guard at the
@@ -238,7 +239,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
     expect(pathname()).toBe("/invite");
   });
 
-  it("holds the screen while /api/auth/me is in flight, instead of guessing", () => {
+  it("holds the screen while /api/auth/me is in flight, instead of guessing", async () => {
     signIn();
     serveAs("active");
     at("/decks");
@@ -250,7 +251,12 @@ describe("the gate, as specs 09 and 10 read it", () => {
       </Gated>,
     );
     expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId("gate-loading"), "panel");
     expect(pathname()).toBe("/decks");
+
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByText("Checking your account…")).toBeNull();
   });
 });
 
@@ -268,7 +274,7 @@ describe("R1435 the username prompt at the gate", () => {
     render(<App />);
 
     const prompt = await screen.findByTestId("username-prompt", undefined, SLOW);
-    expect(prompt).toHaveTextContent("You’re Player#7 for now.");
+    expect(prompt).toHaveTextContent("You're Player#7 for now.");
     expect(screen.getByTestId("username-prompt-skip")).toBeInTheDocument();
     expect(pathname(), "the prompt stands in place, it does not move the browser").toBe("/decks");
   });

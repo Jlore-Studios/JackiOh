@@ -28,12 +28,13 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PlayerId, PlayerState, Position, SeatOutcome, UnitView, active_brittle_count,
-    active_units_of, animated_kind_of, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
-    board_totals, cannot_attack, card_keywords, card_type_of_face, credit_lapsing, effective_cost,
-    effective_life, find_def, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of,
-    is_temporary_card, lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost,
-    reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
+    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, UnitView,
+    acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
+    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
+    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
+    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
+    owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
+    takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -71,6 +72,23 @@ pub(crate) fn heal_worth(state: &GameState, player: PlayerId, amount: i32, w: &E
     hero_value(life.saturating_add(healed), start, w) - hero_value(life, start, w)
 }
 
+/// E8, R413: whether a heal of `player`'s hero is replaced by Pierce damage from the
+/// converter, the read-only half of `replacements::healing_replaced`: a live `HealToDamage`
+/// modifier on any other player (R169, both seats see it), or a face-up `heal_to_damage`
+/// card acting on any other player's side (`acting_with_flag`, whose board walk drops
+/// face-down traps per R33/R1487000, so a hidden converter correctly stays unmodeled).
+pub(crate) fn heal_converted(state: &GameState, player: PlayerId) -> bool {
+    PLAYER_IDS
+        .into_iter()
+        .filter(|other| *other != player)
+        .any(|other| {
+            state.players[other].mods.iter().any(|modifier| {
+                matches!(modifier.kind, ModifierKind::HealToDamage { .. })
+                    && modifier_is_live(state, modifier)
+            }) || acting_with_flag(state, other, |flags| flags.heal_to_damage)
+        })
+}
+
 /// §10.8, R33, R686: whether `seat` may read this backrow card, by the rule `view_for` reads
 /// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
@@ -99,7 +117,7 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
 /// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
 /// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
 /// swings next turn).
-fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
+pub(crate) fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
     !has_keyword(&view.keywords, KeywordKind::CantAttack)
         && !cannot_attack(state, unit)
         && !frozen_next_turn(state, unit)

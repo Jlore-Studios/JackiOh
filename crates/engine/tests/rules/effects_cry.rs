@@ -15,54 +15,30 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, put, slot};
 use super::fixtures::prompt_harness::{
     answer_keys, board, cast_now, event_types, expect_replays, hand_card, must, open_as, replayable,
     resolving_card, round_trip,
 };
 use super::fixtures::prompts::{
-    aimer, asker, crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
+    aimer, asker, crier, field_crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
 };
 use crate::rules::fixtures::harness::{act_logged, json_of, live};
 
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
-
 /// Rewind resolving with its declared target (R81), as the play pipeline hands it over.
 fn rewind_on(state: &mut GameState, target: &CardInstance, player: PlayerId, radiant: bool) -> Vec<String> {
-    let mut sink = sink_for(state);
-    let card = resolving_card(sink.state, &rewind().id, player, radiant);
+    let mut sink = Bench::new(state);
+    let card = resolving_card(state, &rewind().id, player, radiant);
     let targets = vec![Selection::Instance {
         instance_id: target.id.clone(),
     }];
     run_hook_resumable(
-        &mut sink.sink(),
+        &mut sink.sink(state),
         &card,
         "cry",
         json_as(json!({ "controller": player, "targets": targets })),
     );
-    settle(&mut sink.sink(), Default::default());
+    settle(&mut sink.sink(state), Default::default());
     let cursor = sink.rng.cursor();
     let events = std::mem::take(&mut sink.events);
     state.rng_cursor = cursor;
@@ -296,9 +272,9 @@ mod e13_trigger_a_cry {
         assert!(!has_triggerable_cry(&state, &live(&state, &spell)));
         assert!(has_triggerable_cry(&state, &live(&state, &dead)));
         for card in [&buried, &plain_unit, &spell] {
-            let mut sink = sink_for(&mut state);
+            let mut sink = Bench::new(&state);
             {
-                let mut inner = sink.sink();
+                let mut inner = sink.sink(&mut state);
                 let mut ctx = make_context(
                     &mut inner,
                     None,
@@ -309,7 +285,7 @@ mod e13_trigger_a_cry {
                 );
                 (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
             }
-            settle(&mut sink.sink(), Default::default());
+            settle(&mut sink.sink(&mut state), Default::default());
             assert_eq!(sink.events, Vec::<GameEvent>::new());
         }
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
@@ -364,5 +340,118 @@ mod e13_trigger_a_cry {
         expect_replays("cry-replay", &decks, &log, &state);
         let pile = must(state.players.p1.units[0].clone(), "the aimer's pile");
         assert_eq!(pile.first().map(|card| card.id.clone()), Some(unit.id.clone()));
+    }
+}
+
+// R1873003 (Stinkyscape #6 Tylannt's Radiant summon of #7 The Greatest Heist): a face-up Field Spell on
+// the field has its Cry triggered where it stands, as itself; out of a graveyard only a Unit's is.
+mod r1873003_a_field_spell_on_the_field {
+    use super::*;
+    use jackioh_engine::Row::Backrow;
+
+    /// `trigger_cry` aimed at `card` by id, for p1, settled.
+    fn trigger(state: &mut GameState, card: &CardInstance) {
+        let mut sink = Bench::new(state);
+        {
+            let mut inner = sink.sink(state);
+            let mut ctx = make_context(
+                &mut inner,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (trigger_cry(json_as(json!({ "instanceId": card.id }))).apply)(&mut ctx);
+        }
+        settle(&mut sink.sink(state), Default::default());
+        let cursor = sink.rng.cursor();
+        state.rng_cursor = cursor;
+    }
+
+    #[test]
+    fn r1873003_a_face_up_field_spells_cry_is_triggered_where_it_stands() {
+        let mut state = board("cry-field-spell");
+        let field = put(&mut state, &field_crier().id, slot(P1, Backrow, 1), json!({}));
+        assert!(has_triggerable_cry(&state, &live(&state, &field)));
+        trigger(&mut state, &field);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
+    }
+
+    #[test]
+    fn r1873003_one_in_a_graveyard_has_no_cry_to_trigger() {
+        let mut state = board("cry-field-spell-grave");
+        let dead = grave_unit(&mut state, P1, &field_crier().id);
+        assert!(!has_triggerable_cry(&state, &live(&state, &dead)));
+        trigger(&mut state, &dead);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
+    }
+}
+
+// R1869001 (Stinkyscape #71 A'Zoth): `trigger_cry` with `random` asks the controller nothing; each of
+// their choices is drawn from the match rng, as R1855001's are.
+mod r1869001_a_random_trigger {
+    use super::*;
+
+    /// `trigger_cry` with `random` on `card`, for p1, its rng cursor written back as `rewind_on`'s is.
+    fn random_trigger(state: &mut GameState, card: &CardInstance) -> Vec<String> {
+        let mut sink = Bench::new(state);
+        {
+            let mut inner = sink.sink(state);
+            let mut ctx = make_context(
+                &mut inner,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (trigger_cry(json_as(json!({ "instanceId": card.id, "random": true }))).apply)(&mut ctx);
+        }
+        settle(&mut sink.sink(state), Default::default());
+        let cursor = sink.rng.cursor();
+        let events = std::mem::take(&mut sink.events);
+        state.rng_cursor = cursor;
+        event_types(&events)
+    }
+
+    /// p1's aimer (Cry: 3 to an enemy Unit or hero) in unit zone 1, p2's plain in unit zone 3.
+    fn aiming(seed: &str) -> (GameState, CardInstance, CardInstance) {
+        let mut state = board(seed);
+        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1), json!({}));
+        let enemy = put(&mut state, &plain.id, slot(P2, Units, 3), json!({}));
+        (state, unit, enemy)
+    }
+
+    #[test]
+    fn r1869001_a_random_trigger_of_aimers_cry_asks_nothing_and_hits_one_target() {
+        let (mut state, unit, enemy) = aiming("cry-random");
+        random_trigger(&mut state, &unit);
+        assert!(state.pending.is_none(), "nothing is asked");
+        let hero_hit = state.players.p2.hero.health == HERO_HEALTH - 3;
+        // The plain dies of the 3, which takes its damage off with it (R78).
+        let unit_hit = live(&state, &enemy).zone.z() == ZoneName::Graveyard;
+        assert!(hero_hit != unit_hit, "exactly one of the two took the 3");
+    }
+
+    #[test]
+    fn r1869001_the_same_seed_draws_the_same_target() {
+        let (state, unit, _) = aiming("cry-random-replay");
+        let run = |mut copy: GameState| {
+            random_trigger(&mut copy, &unit);
+            hash_state(&copy)
+        };
+        assert_eq!(run(round_trip(&state)), run(round_trip(&state)));
+    }
+
+    #[test]
+    fn r1869001_a_random_trigger_draws_the_crys_mode_too() {
+        let mut state = board("cry-random-mode");
+        let unit = put(&mut state, &moder().id, slot(P1, Units, 1), json!({}));
+        random_trigger(&mut state, &unit);
+        assert!(state.pending.is_none(), "nothing is asked");
+        let hit = state.players.p2.hero.health == HERO_HEALTH - 4;
+        let healed = state.players.p1.hero.health == HERO_HEALTH + 4;
+        assert!(hit != healed, "one mode ran");
     }
 }

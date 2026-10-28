@@ -101,8 +101,9 @@ mod tests {
     const FUSER: &str = "classicplus-030";
     /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool.
-    const FELINOR_UNITS: [&str; 12] = [
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release
+    /// (#1884) its #87 Siva 1.
+    const FELINOR_UNITS: [&str; 13] = [
         "core-012",
         "core-043",
         "core-086",
@@ -115,6 +116,7 @@ mod tests {
         "meditative-093",
         "meditative-094",
         "meditative-102",
+        "stinkyscape-087",
     ];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";

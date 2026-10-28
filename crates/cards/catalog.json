@@ -3434,7 +3434,9 @@
       "core-t-rush",
       "core-095-1",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -10818,7 +10820,9 @@
       "classicplus-073-1",
       "core-095",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -15841,7 +15845,9 @@
       "meditative-039-5",
       "meditative-095-1",
       "core-095",
-      "classicplus-073"
+      "classicplus-073",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 22,
     "base": {
@@ -17917,7 +17923,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Discover a Terminus card. If your deck is empty, it costs (0)."
@@ -17942,7 +17948,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Exile all permanents and every card in both graveyards."
@@ -17979,7 +17985,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Solve an impossible problem. If you get it right, deal {damage} damage to the enemy hero, and this gains Echo +1."
@@ -18004,7 +18010,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "Take an extra turn after this one."
@@ -18040,7 +18046,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 68,
     "base": {
       "keywords": [],
       "text": "Reveals when your hero would take lethal damage: Prevent it and end the turn. The next turn is yours: your Units have Charge during it, and you lose the game at its end."
@@ -18068,7 +18074,7 @@
     "refs": [
       "classicplus-071"
     ],
-    "loc": 6,
+    "loc": 61,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent's turn ends: Lock every lane but one, picked at random. Set each hero's health to 1. Both players discard every Spell in their hand."
@@ -18100,7 +18106,7 @@
       "stinkyscape-150",
       "stinkyscape-151"
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Cast one of each Call to Chaos."
@@ -18131,7 +18137,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when you take damage on your turn: Redirect all damage you take on your turn to your opponent, up to {cap} each turn."
@@ -18158,7 +18164,7 @@
     "refs": [
       "stinkyscape-007"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 6,
       "health": 4,
@@ -18206,7 +18212,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 108,
     "base": {
       "keywords": [],
       "text": "Cry: Discover an Acclaimed Unit or a Jelly Bean.\nQuest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit.\nQuest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource.\nQuest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals."
@@ -18286,7 +18292,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [
         {
@@ -18774,7 +18780,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 4,
       "health": 5,
@@ -18812,7 +18818,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 2,
       "health": 3,
@@ -18849,7 +18855,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 1,
       "health": 1,
@@ -19107,7 +19113,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 6,
       "health": 6,
@@ -19205,7 +19211,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 65,
     "base": {
       "keywords": [],
       "text": "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
@@ -19236,7 +19242,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 88,
     "base": {
       "keywords": [
         {
@@ -19283,7 +19289,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 88,
     "base": {
       "keywords": [
         {
@@ -19322,7 +19328,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 90,
     "base": {
       "keywords": [],
       "text": "Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy)."
@@ -19349,7 +19355,7 @@
     "refs": [
       "meditative-097-6"
     ],
-    "loc": 6,
+    "loc": 104,
     "base": {
       "attack": 2,
       "health": 9,
@@ -19690,7 +19696,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 50,
     "base": {
       "attack": 6,
       "health": 9,
@@ -19729,7 +19735,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 1,
       "health": 1,
@@ -19778,7 +19784,7 @@
       "stinkyscape-t-narcor",
       "stinkyscape-t-red-narcor"
     ],
-    "loc": 6,
+    "loc": 69,
     "base": {
       "keywords": [
         {
@@ -19830,7 +19836,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 2,
       "health": 2,
@@ -19942,7 +19948,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 2,
@@ -20051,7 +20057,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon a Drone Interceptor."
@@ -20075,7 +20081,7 @@
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [
         {
@@ -20161,7 +20167,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 5,
       "health": 1,
@@ -20806,7 +20812,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 0,
       "health": 1,
@@ -20845,7 +20851,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 0,
       "health": 2,
@@ -20884,7 +20890,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 4,
@@ -20923,7 +20929,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 6,
@@ -20962,7 +20968,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 0,
       "health": 8,
@@ -21001,7 +21007,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 0,
       "health": 2,
@@ -21127,7 +21133,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "attack": 5,
       "health": 7,
@@ -21164,7 +21170,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 7,
       "health": 5,
@@ -21303,7 +21309,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 10,
       "health": 1,
@@ -21369,7 +21375,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 2,
       "health": 3,
@@ -21402,7 +21408,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 6,
@@ -21441,7 +21447,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 9,
     "base": {
       "attack": 1,
       "health": 8,
@@ -21484,7 +21490,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 4,
       "health": 4,
@@ -21520,7 +21526,7 @@
       "base": 4,
       "embiggen": 5
     },
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 8,
       "health": 8,
@@ -21559,7 +21565,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 10,
       "health": 10,
@@ -21718,7 +21724,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Shuffle {scraps} Metal Scraps into your deck."
@@ -21742,7 +21748,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Gain a random Stinkyscape Resource."
@@ -21871,7 +21877,7 @@
     "refs": [
       "core-002"
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "attack": 4,
       "health": 4,
@@ -21896,7 +21902,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Stinkyscape card."
@@ -21927,7 +21933,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 8,
@@ -21962,7 +21968,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 3,
       "health": 3,
@@ -21989,7 +21995,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 4,
       "health": 4,
@@ -22032,7 +22038,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 3,
       "health": 4,
@@ -22073,7 +22079,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 9,
       "health": 9,
@@ -22117,7 +22123,7 @@
       "stinkyscape-103",
       "stinkyscape-115"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
@@ -22140,7 +22146,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 6,
@@ -22184,7 +22190,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Deal {damage} damage to both heroes and all Units. Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}."
@@ -22454,7 +22460,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 0,
       "health": 6,
@@ -22493,7 +22499,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 3,
@@ -22536,7 +22542,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 3,
@@ -22579,7 +22585,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 4,
@@ -22669,7 +22675,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "attack": 6,
       "health": 11,
@@ -22697,7 +22703,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 6,
@@ -22735,7 +22741,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 4,
       "health": 7,
@@ -22858,7 +22864,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 9,
       "health": 15,
@@ -22885,7 +22891,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 4,
       "health": 4,
@@ -22913,7 +22919,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 12,
       "health": 9,
@@ -22940,7 +22946,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 68,
     "base": {
       "attack": 0,
       "health": 20,
@@ -23202,7 +23208,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23247,7 +23253,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23270,7 +23276,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Activate: Add a random Starship Piece to your hand."
@@ -23312,7 +23318,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game.\nStart of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand."
@@ -23338,7 +23344,7 @@
       "base": 3,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 8,
       "health": 5,
@@ -23368,7 +23374,7 @@
       "base": 2,
       "embiggen": 3
     },
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 4,
       "health": 1,
@@ -23422,7 +23428,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23460,7 +23466,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add a random Jlockeed card to your hand. It gains Starship Piece."
@@ -23481,7 +23487,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 49,
     "base": {
       "attack": 6,
       "health": 6,
@@ -23530,7 +23536,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 3,
       "health": 6,
@@ -23573,7 +23579,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 2,
@@ -23609,7 +23615,7 @@
     "refs": [
       "core-t-felinor"
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 2,
       "health": 1,
@@ -23645,7 +23651,7 @@
     "refs": [
       "stinkyscape-135-1"
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: After it resolves, stuff it into a Sack they control."
@@ -23709,7 +23715,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 4,
       "health": 3,
@@ -23756,7 +23762,10 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "refs": [
+      "stinkyscape-t-dormant-starship"
+    ],
+    "loc": 46,
     "base": {
       "attack": 9,
       "health": 9,
@@ -23765,7 +23774,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike\nCry: If you are building a ship, launch it, then Discover a War Doctrine and cast it."
+      "text": "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
     },
     "radiant": {
       "attack": 18,
@@ -23775,7 +23784,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike\nCry: If you are building a ship, launch it, then Discover a Radiant War Doctrine and cast it."
+      "text": "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a Radiant War Doctrine and cast it."
     }
   },
   "stinkyscape-137-1": {
@@ -23793,7 +23802,7 @@
     "flavor": "Physical",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
@@ -23828,7 +23837,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your Starship's Health."
@@ -23864,7 +23873,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Rush. Deal damage equal to {multiplier}× your Starship's Attack, split randomly among all enemies."
@@ -23900,7 +23909,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, your Units have Flying. Fill your hand with copies of the Starship Pieces fused into your Starship."
@@ -23924,7 +23933,7 @@
     "refs": [
       "meditative-036"
     ],
-    "loc": 6,
+    "loc": 71,
     "base": {
       "keywords": [],
       "text": "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
@@ -23945,7 +23954,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell aimed only at their hero or permanents they control: Counter it and cast it for yourself, aimed only at your hero or permanents you control."
@@ -24147,7 +24156,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [
         {
@@ -24254,7 +24263,7 @@
       "stinkyscape-147",
       "stinkyscape-147-1"
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 1,
       "health": 2,
@@ -24288,7 +24297,7 @@
       "classicplus-037",
       "stinkyscape-147-2"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 9,
       "health": 5,
@@ -24316,7 +24325,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: An AI always helps you make the Pareto Optimal decisions.\nStart of turn: Do something helpful."
@@ -24343,7 +24352,7 @@
     "refs": [
       "stinkyscape-148-1"
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [
         {
@@ -24376,7 +24385,7 @@
     "flavor": "Dark",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Escape the Universe: you win the game, and it is a draw for your opponent."
@@ -24404,7 +24413,7 @@
       "stinkyscape-150",
       "stinkyscape-151"
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand."
@@ -24439,7 +24448,7 @@
       "stinkyscape-151",
       "stinkyscape-159"
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "One random effect: Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
@@ -24533,7 +24542,7 @@
       "stinkyscape-t-propagation-layer",
       "stinkyscape-t-meltdown-layer"
     ],
-    "loc": 6,
+    "loc": 77,
     "base": {
       "keywords": [],
       "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos."
@@ -24566,7 +24575,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [
         {
@@ -24648,7 +24657,7 @@
       "base": 0,
       "embiggen": 1
     },
-    "loc": 6,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
@@ -24679,7 +24688,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [
         {
@@ -24748,7 +24757,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [
         {
@@ -24782,7 +24791,7 @@
     "refs": [
       "stinkyscape-068"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Fill your board with Startos."
@@ -24811,7 +24820,7 @@
       "stinkyscape-110",
       "stinkyscape-111"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
@@ -24838,7 +24847,7 @@
       "stinkyscape-073",
       "stinkyscape-074"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand."
@@ -24865,7 +24874,7 @@
       "stinkyscape-114",
       "stinkyscape-123"
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
@@ -24893,7 +24902,7 @@
       "stinkyscape-079",
       "stinkyscape-080"
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
@@ -24921,7 +24930,7 @@
       "stinkyscape-161",
       "stinkyscape-162"
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [],
       "text": "Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is."
@@ -25034,7 +25043,7 @@
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "keywords": [],
       "text": "5% chance to add a Radiant Anomaly Found! to your hand.\n20% chance to add an Anomaly Found! to your hand instead.\nOtherwise, your future Scanning Probes have +1% and +4% to these chances."
@@ -25063,7 +25072,7 @@
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "keywords": [
         {
@@ -25137,7 +25146,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 4,
@@ -25189,7 +25198,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 6,
@@ -25241,7 +25250,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 8,
@@ -25293,7 +25302,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 6,
+    "loc": 53,
     "base": {
       "attack": 0,
       "health": 10,
@@ -25347,7 +25356,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 0,
       "health": 8,
@@ -25403,7 +25412,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "{chance}% chance to reveal when an enemy Unit attacks: Summon a Warp Disruptor, then {paragons|Paragon Mk1|Paragon Mk1s}. The attack goes on."
@@ -25424,7 +25433,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 1,
@@ -25793,7 +25802,7 @@
         "buy": 6
       }
     },
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Your hero has +{armor} Armor until the start of your next turn."
@@ -25841,7 +25850,7 @@
         "buy": 10
       }
     },
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a random enemy."
@@ -25888,7 +25897,7 @@
         "buy": 20
       }
     },
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Heal your hero {heal}."
@@ -25936,7 +25945,7 @@
         "buy": 30
       }
     },
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to an enemy, with Lifesteal."
@@ -25973,7 +25982,7 @@
         "buy": 50
       }
     },
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Add a random Rare card to your hand."
@@ -26030,7 +26039,7 @@
         "buy": 80
       }
     },
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Add a random Legendary or Mythic card to your hand. It costs ({discount}) less."
@@ -26054,7 +26063,7 @@
     "flavor": "Chaos",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 222,
     "base": {
       "keywords": [],
       "text": "Replace your side of the field with a random Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices."
@@ -26081,7 +26090,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 1,
       "health": 3,
@@ -26117,7 +26126,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Gain a random Common or Rare Stinkyscape Resource."
@@ -26141,7 +26150,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Discover a Starship Piece. It costs (1) less."
@@ -26165,7 +26174,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
@@ -26189,7 +26198,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Your Starship launch costs (1). Draw 1."
@@ -26217,7 +26226,7 @@
       "stinkyscape-166",
       "stinkyscape-167"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add 2 Scanning Probe Mk1s to your hand. They cost (0)."
@@ -26241,18 +26250,18 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Give each of your other Units a random Combat Keyword."
+      "text": "Cry: Give each of your other Units a random combat keyword."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Give each of your other Units 2 random Combat Keywords."
+      "text": "Cry: Give each of your other Units 2 random combat keywords."
     }
   },
   "stinkyscape-t-ai-08": {
@@ -26272,7 +26281,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a Drone Interceptor. It gains Starship Piece."
@@ -26299,7 +26308,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt."
@@ -26323,7 +26332,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 1,
       "health": 2,

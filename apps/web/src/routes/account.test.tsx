@@ -8,7 +8,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { RANK_STREAK_FLAME_LENGTH as N } from "@jackioh/server-config";
 import { usernameTestid } from "../auth/testids.ts";
+import { streakWords } from "../rank/StreakFlame.tsx";
 import {
   getCosmeticPacks,
   getOwnRank,
@@ -25,6 +27,7 @@ import {
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
@@ -216,9 +219,12 @@ describe("the account screen", () => {
 
     fireEvent.click(screen.getByTestId(accountTestid.retry));
     expect(screen.getByTestId(accountTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(accountTestid.loading), "panel");
     expect(screen.queryByTestId(accountTestid.retry)).toBeNull();
 
     expect(await screen.findByTestId(accountTestid.email)).toHaveTextContent("player1@example.com");
+    expect(screen.queryByTestId(accountTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading your account…")).toBeNull();
     expect(getProfile).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -326,6 +332,29 @@ describe("the account screen", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("R2101000 shows a flame with the streak beside the rank at or past RANK_STREAK_FLAME_LENGTH", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ streak: N }));
+    render(<AccountRoute token={TOKEN} />);
+
+    const rank = await screen.findByTestId("account-rank");
+    const flame = within(rank).getByRole("img", { name: streakWords(N) });
+    expect(flame).toHaveAttribute("data-size", "large");
+    expect(flame).toHaveTextContent(String(N));
+  });
+
+  it("R2101000 shows no flame below the threshold, nor once a loss has set the streak to 0", async () => {
+    for (const streak of [N - 1, 0]) {
+      vi.mocked(getProfile).mockResolvedValue(profileBody());
+      vi.mocked(getOwnRank).mockResolvedValue(rankBody({ streak }));
+      render(<AccountRoute token={TOKEN} />);
+
+      const rank = await screen.findByTestId("account-rank");
+      expect(rank.querySelector(".streak-flame")).toBeNull();
+      cleanup();
+    }
+  });
 });
 
 // R1435: the username, from the gate's read of the account, with its change field or its cooldown.
@@ -344,7 +373,7 @@ describe("R1435 the username on the account page", () => {
     };
   }
 
-  it("R1435 the change field says 'Max is taken, so you’d be Max#3' for a tagged preview and 'You’d be Max' for an untagged one", async () => {
+  it("R1435 the change field says 'Max is taken, so you'd be Max#3' for a tagged preview and 'You'd be Max' for an untagged one", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     let taken = true;
     vi.mocked(previewUsername).mockImplementation((_token, name) =>
@@ -364,7 +393,7 @@ describe("R1435 the username on the account page", () => {
     const input = screen.getByTestId(usernameTestid.input);
     await userEvent.type(input, "Max");
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you’d be Max#3");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you'd be Max#3");
     }, PREVIEW);
 
     taken = false;
@@ -372,7 +401,7 @@ describe("R1435 the username on the account page", () => {
     expect(screen.queryByTestId(usernameTestid.preview), "an empty box shows no preview").toBeNull();
     await userEvent.type(input, "Max");
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You’d be Max");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You'd be Max");
     }, PREVIEW);
 
     await userEvent.click(screen.getByTestId(usernameTestid.save));

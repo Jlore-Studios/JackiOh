@@ -211,12 +211,16 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Quest",
       "Otherworldly",
       "Jelly Bean",
+      "Drone Core",
+      "Weapon",
+      "Swarm",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime" and Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000), and the pool never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
     expect(FILTER_TAGS).not.toContain("Other-Origins");
+    expect(FILTER_TAGS).not.toContain("War Doctrine");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -622,13 +626,14 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
       "db-filter-set-classic-plus",
       "db-filter-set-meditative",
       "db-filter-set-meditative-plus",
+      "db-filter-set-stinkyscape",
     ]);
   });
 
@@ -649,7 +654,9 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(pool(["Meditative"])).toHaveLength(deckableIn(["Meditative"]));
     expect(pool(["Meditative+"])).toHaveLength(deckableIn(["Meditative+"]));
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
-    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]));
+    expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
+    expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
+    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]));
   });
 });
 
@@ -667,6 +674,10 @@ describe("the Jlockeed tag (R278)", () => {
     // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
     // set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
+    // And for the Stinkyscape release (#1884): its #124 to #130, Jlockeed's space program.
+    const stinkyscape = setShips("Stinkyscape")
+      ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
+      : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -676,6 +687,7 @@ describe("the Jlockeed tag (R278)", () => {
       "core-014",
       ...meditative,
       ...meditativePlus,
+      ...stinkyscape,
     ]);
   });
 });
@@ -767,8 +779,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -802,21 +814,19 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...shippedTags(["Human", "Potion"], [fixture("c-1", "Core", ["Potion"])])]).toEqual(["Potion"]);
   });
 
-  it("R1857000 the Stinkyscape set has no chip and lends no tag, its four own included, until it ships", () => {
-    // The third held set (issue #1836), sixth in the catalog order, until its release (#1884).
-    expect(setShips("Stinkyscape")).toBe(false);
-    expect(FILTER_SETS.includes("Stinkyscape")).toBe(setShips("Stinkyscape"));
+  it("R1857000 the Stinkyscape set has a chip and lends its tags, its four own included, once it ships", () => {
+    // The third held set (issue #1836), sixth in the catalog order, shipped by its release (#1884).
+    expect(setShips("Stinkyscape")).toBe(true);
+    expect(FILTER_SETS.includes("Stinkyscape")).toBe(true);
     expect(filterSetId("Stinkyscape")).toBe("db-filter-set-stinkyscape");
     const four: Tag[] = ["Drone Core", "Weapon", "War Doctrine", "Swarm"];
     const drone = fixture("s-27", "Stinkyscape", ["Drone Core", "Human"]);
-    expect([...shippedTags(["Human", ...four], [drone])]).toEqual(setShips("Stinkyscape") ? ["Human", "Drone Core"] : []);
-    // A shipped card's would lend their chips: the four are tags like any other.
+    expect([...shippedTags(["Human", ...four], [drone])]).toEqual(["Human", "Drone Core"]);
     expect([...shippedTags(["Human", ...four], [fixture("c-1", "Core", four)])]).toEqual(four);
-    // So no chip of the bundled catalog's is one of them while the set is held, whatever has landed.
-    for (const tag of four) {
-      expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(false);
-      expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(false);
-    }
+    // The bundled catalog's shipped cards carry them, so their chips show: the deck builder's three
+    // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
+    for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
+    for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {

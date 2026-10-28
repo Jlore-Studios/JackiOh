@@ -18,7 +18,8 @@ use serde_json::{Value, json};
 
 use jackioh_server::actor::contracts::RecordResultInput;
 use jackioh_server::api::ranked::{
-    RankedGameInput, SeasonDeps, leaderboard, open_season, open_season_in_tx, own_rank, rate_ranked_game,
+    RankedGameInput, SeasonDeps, ladder_tiers, leaderboard, match_ranks, open_season, open_season_in_tx,
+    own_rank, rate_ranked_game,
 };
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::App;
@@ -26,9 +27,9 @@ use jackioh_server::config::{
     BOT_PROMOTION_DEVIATION_BOOST, JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START,
     SEASON_RESET_STRENGTH,
 };
-use jackioh_server::db::store::{BotRating, MatchRow, SeriesRow};
+use jackioh_server::db::store::{BotRating, MatchRow, SeriesRow, StoreError};
 use jackioh_server::ranked::glicko2::START_GLICKO;
-use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank, tier_bottom};
+use jackioh_server::ranked::ladder::{RankTier, SeasonRank, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 
 use crate::support::deps::{add_user, call, test_app};
@@ -533,6 +534,63 @@ mod r608_jlorious_through_the_server {
         assert_eq!(golden, vec![json!("golden")]);
         assert_eq!(JLORIOUS_SIZE, 100);
     }
+
+    /// #2022: GET /api/ranked, the match screen's ranks and the telemetry's tiers read only the rows
+    /// they show and Mythic Grape's, never the whole season, and rank each player as the leaderboard,
+    /// which still reads it whole, does: A in Jlorious mid-list, B the first Mythic Grape player past
+    /// its cut.
+    #[tokio::test(start_paused = true)]
+    async fn r608_the_rank_reads_skip_the_whole_season_and_rank_as_the_leaderboard_does() {
+        let app = test_app().await;
+        let mythic = tier_bottom(4);
+        for n in 0..i32::try_from(JLORIOUS_SIZE).expect("a size") - 1 {
+            seed_placed(
+                &app,
+                &format!("m-{n:03}"),
+                2000.0 - f64::from(n),
+                mythic,
+                json!({}),
+            )
+            .await;
+        }
+        seed_placed(&app, A, 1950.5, mythic + 1, json!({})).await;
+        seed_placed(&app, B, 900.0, mythic + 2, json!({})).await;
+        seed_placed(&app, "golden", 2500.0, tier_bottom(3) + 8, json!({})).await;
+        q!(app, matches_create(&live_match("match-1", "s", true)));
+        fake_lock(&app).await.on_call = Some(Arc::new(|called: &str| {
+            if called == "ranked.standings" {
+                Err(StoreError::Other("a rank read read the whole season".to_string()))
+            } else {
+                Ok(())
+            }
+        }));
+
+        let a_rank = own(&app, A).await["rank"].clone();
+        let b_rank = own(&app, B).await["rank"].clone();
+        assert_eq!(a_rank, json!({ "tier": "jlorious", "position": 51 }));
+        assert_matches(&b_rank, &json!({ "tier": "mythic" }), "B, past Jlorious's cut");
+        let seats = json_of(
+            &match_ranks(&app, "match-1", A)
+                .await
+                .expect("matchRanks")
+                .expect("A's match"),
+        )["seats"]
+            .clone();
+        assert_eq!(seats["p1"]["rank"], a_rank);
+        assert_eq!(seats["p2"]["rank"], b_rank);
+        assert_eq!(
+            ladder_tiers(&app, &(A.to_string(), B.to_string()))
+                .await
+                .expect("ladderTiers"),
+            (RankTier::Jlorious, RankTier::Mythic)
+        );
+
+        fake_lock(&app).await.on_call = None;
+        let listed = board(&app, A).await;
+        assert_eq!(listed["jlorious"][50]["profileId"], A);
+        assert_eq!(listed["you"], a_rank);
+        assert_eq!(board(&app, B).await["you"], b_rank);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -911,8 +969,8 @@ mod r612_what_the_client_reads {
             json!({
                 "ranked": true,
                 "seats": {
-                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "you": true },
-                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "you": false },
+                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "streak": 0, "you": true },
+                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "streak": 0, "you": false },
                 },
             })
         );
@@ -927,6 +985,34 @@ mod r612_what_the_client_reads {
                 .status,
             404
         );
+    }
+
+    /// R2101000: both seats carry their season row's win streak, the opponent's included.
+    #[tokio::test(start_paused = true)]
+    async fn r2101000_get_api_matches_id_ranks_carries_each_seat_s_win_streak() {
+        let Routed { app, token_a, .. } = routed().await;
+        put_rank(
+            &app,
+            merged(
+                json_of(&fresh_rank(&season(), A, 0)),
+                json!({ "games": 4, "wins": 4, "streak": 4 }),
+            ),
+        )
+        .await;
+        put_rank(
+            &app,
+            merged(
+                json_of(&fresh_rank(&season(), B, 0)),
+                json!({ "games": 3, "wins": 2, "losses": 1, "streak": 0 }),
+            ),
+        )
+        .await;
+        q!(app, matches_create(&live_match("match-1", "s", true)));
+        let got = get(&app, "/api/matches/match-1/ranks", &token_a).await;
+        assert_eq!(got.status, 200);
+        assert_eq!(got.body["seats"]["p1"]["streak"], json!(4));
+        assert_eq!(got.body["seats"]["p2"]["streak"], json!(0));
+        mentions_none(&got.text, &["rating", "\"tag\""]);
     }
 
     /// R1436: the ladder names nobody; it joins each username in from `profiles`, so a rename shows

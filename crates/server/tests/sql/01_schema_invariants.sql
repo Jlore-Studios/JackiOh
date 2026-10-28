@@ -928,15 +928,17 @@ begin
     array_length(expected, 1);
 end $$;
 
-\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Wincon, Potion, Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean included, and refuses any other ==='
+\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Wincon, Potion, Terminus, Quest, Otherworldly, Other-Origins, Jelly Bean, Drone Core, Weapon, War Doctrine and Swarm included, and refuses any other ==='
 \echo '### R1411: cards_tags_check admits Wincon and a Meditative row as seed-catalog writes it ###'
 \echo '### R1178000: cards_tags_check admits Potion and a Meditative+ row as seed-catalog writes it ###'
 \echo '### R1837000: cards_tags_check admits the five tags #1837 puts on shipped cards, rows as seed-catalog writes them ###'
+\echo '### R1857000: cards_tags_check admits the four Stinkyscape tags and rows of the set as seed-catalog writes them ###'
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
 -- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), 0020 with the
 -- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, 0030 with
--- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), and 0058
--- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000). Each probe
+-- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), 0058
+-- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
+-- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000). Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.
 do $$
@@ -945,7 +947,8 @@ declare
   catalog_tags constant text[] := array[
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
-    'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Token'];
+    'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
+    'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -961,14 +964,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All twenty-three on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All twenty-seven on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twenty-three tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twenty-seven tags';
   end;
   delete from public.cards where id = 'check18-probe';
 
@@ -1018,6 +1021,26 @@ begin
     raise exception 'FAIL (CHECK 18): a row carrying a tag of #1837 was refused (R1837000)';
   end;
   delete from public.cards where id in ('check18-probe', 'check18-probe-quest', 'check18-probe-token');
+
+  -- Rows as `seed-catalog` writes Stinkyscape #27 Drone Core I, a Drone Core Spell, #50 Beam v3, a
+  -- Weapon Unit, #91 The Propagation's Wasp, a Swarm Unit, and #137.1 Land Doctrine, a War
+  -- Doctrine token, are admitted (R1857000).
+  begin
+    insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
+                              catalog_version)
+    values ('check18-probe', '27', 'Check 18 probe', 'Stinkyscape', 'Spell', array['Drone Core'],
+            'Common', false, '0'::jsonb, 'core-1'),
+           ('check18-probe-quest', '50', 'Check 18 probe weapon', 'Stinkyscape', 'Unit',
+            array['Weapon'], 'Rare', false, '2'::jsonb, 'core-1'),
+           ('check18-probe-swarm', '91', 'Check 18 probe swarm', 'Stinkyscape', 'Unit',
+            array['Swarm'], 'Common', false, '1'::jsonb, 'core-1'),
+           ('check18-probe-token', '137.1', 'Check 18 probe token', 'Stinkyscape', 'Spell',
+            array['War Doctrine', 'Token'], 'Token', true, '4'::jsonb, 'core-1');
+  exception when check_violation then
+    raise exception 'FAIL (CHECK 18): a row carrying a tag of the Stinkyscape set was refused (R1857000)';
+  end;
+  delete from public.cards
+   where id in ('check18-probe', 'check18-probe-quest', 'check18-probe-swarm', 'check18-probe-token');
 
   -- A near miss is still refused: the check was widened by one name, not dropped.
   refused := false;
@@ -1157,5 +1180,66 @@ begin
   raise notice 'OK (CHECK 20): the readout''s two queries and the refile scan each read their window through % and read no table whole',
     'tickets_claimed_at_idx, results_ended_at_idx and matches_over_ended_at_idx';
 end $$;
+
+\echo '=== CHECK 21 (#2022): the rank reads take a season''s asked rows and its Mythic Grape rows, each through an index ==='
+-- own_rank, match_ranks and ladder_tiers (src/api/ranked.rs) read ranked_standings_subset (src/db/pg.rs):
+-- a season's rows for the profiles shown plus every row from the Jlorious floor up (R608), on every
+-- match screen, rank read and match's telemetry. Over 2,000 analysed probe rows with sequential scans
+-- priced out, the Mythic range must be an Index Cond of season_ranks_season_ladder_idx (migration
+-- 0064), never a Filter over the season, and the asked ids an Index Cond. Without 0064 the planner
+-- walks season_ranks_profile_idx whole and filters. The probe is pg.rs's query with its binds as
+-- literals: 36 is jlorious_floor(), Mythic Grape's index 4 x RANK_DIVISIONS_PER_TIER 3 x
+-- RANK_PIPS_PER_DIVISION 3. Rolled back, rows and column statistics; ANALYZE's in-place pg_class
+-- counts stay, and no later file plans a query.
+begin;
+insert into public.seasons (id, patch_version, started_at) values ('check-21', 'check-21.0', now());
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-21-%s@example.test', n), now() from generate_series(1, 2000) as n;
+insert into public.season_ranks (season_id, profile_id, games, wins, losses, draws, ladder, floor,
+                                 streak, peak_ladder, peak_jlorious, updated_at)
+  select 'check-21', u.id, 10, 5, 5, 0, (row_number() over (order by u.id))::integer % 40, 0, 0,
+         null, null, now()
+    from auth.users u
+   where u.email like 'check-21-%';
+analyze public.season_ranks;
+do $$
+declare
+  asked     text;
+  probe     text;
+  plan_text text := '';
+  line      text;
+begin
+  select string_agg(profile_id::text, ',') into asked
+    from (select profile_id from public.season_ranks where season_id = 'check-21' and ladder < 36
+           order by profile_id limit 2) as two;
+  probe := format(
+    'select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
+            r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+            coalesce(b.rating, p.rating) as rating, p.kind
+       from public.season_ranks r
+       join public.profiles p on p.id = r.profile_id
+       left join public.bot_ratings b on p.kind = ''bot'' and b.bot_id = p.id::text
+      where r.season_id = ''check-21''::text
+        and (r.profile_id = any(''{%s}''::uuid[]) or r.ladder >= 36)
+      order by r.profile_id', asked);
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for line in execute 'explain ' || probe loop
+    plan_text := plan_text || line || E'\n';
+  end loop;
+  if plan_text ~ 'Seq Scan on season_ranks\M' then
+    raise exception E'FAIL (CHECK 21): the rank read reads season_ranks whole:\n%', plan_text;
+  end if;
+  if plan_text !~ '\mseason_ranks_season_ladder_idx\M'
+     or plan_text !~ 'Index Cond: [^\n]*ladder >= 36'
+     or plan_text ~ 'Filter: [^\n]*ladder >= 36' then
+    raise exception E'FAIL (CHECK 21): the rank read filters its season for the Mythic rows instead of reading their range through season_ranks_season_ladder_idx:\n%', plan_text;
+  end if;
+  if plan_text !~ 'Index Cond: [^\n]*profile_id = ANY' then
+    raise exception E'FAIL (CHECK 21): the rank read does not take the asked rows through an index:\n%', plan_text;
+  end if;
+  raise notice 'OK (CHECK 21): the rank read takes its asked rows through an index and its Mythic rows as a range of season_ranks_season_ladder_idx, and reads no season whole';
+end $$;
+rollback;
 
 \echo '=== ALL CHECKS RAN ==='

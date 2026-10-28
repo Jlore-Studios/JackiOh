@@ -131,6 +131,7 @@ macro_rules! register_modules {
 }
 
 register_modules! {
+    activations,
     add_to_hand,
     after_check,
     animate,

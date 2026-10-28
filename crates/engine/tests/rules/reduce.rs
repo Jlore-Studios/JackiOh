@@ -6,14 +6,10 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{new_game, next_nonce};
+use crate::rules::fixtures::harness::{hand_ids, new_game, next_nonce};
 
 fn action(body: Value) -> Action {
     json_as(body)
-}
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|c| c.id.clone()).collect()
 }
 
 fn playing(seed: &str) -> GameState {

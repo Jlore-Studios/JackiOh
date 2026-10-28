@@ -81,12 +81,12 @@ use crate::db::store::{
     NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
-    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput,
-    RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile,
-    SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource,
-    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -3696,6 +3696,97 @@ pub async fn replays_list(
     Ok(replays)
 }
 
+/// R768: what `replays_list` answers, each row already paired with what `matches_mode_of` answers
+/// for it, in one query: the matches, their results and their action counts joined, with the mode
+/// derived in Rust by the same precedence `matches_mode_of` uses (a series' game is `bo3`, else a
+/// rematch's own mode, else its room's mode or `bo1`, else its tickets' mode).
+pub async fn replays_list_with_modes(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayWithMode>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select m.id, m.status, m.seed, m.p1_profile_id, m.p2_profile_id, m.p1_deck, m.p2_deck,
+                m.catalog_version, m.turn_deadline_at, m.prompt_deadline_at, m.p1_disconnected_at,
+                m.p2_disconnected_at, m.ceiling_at, m.created_at, m.ended_at, m.p1_last_board,
+                m.p2_last_board, m.ranked, m.p1_portrait, m.p2_portrait, m.mode, m.stake,
+                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts,
+                r.match_id as r_match_id, r.p1_profile_id as r_p1_profile_id,
+                r.p2_profile_id as r_p2_profile_id, r.winner_profile_id as r_winner_profile_id,
+                r.reason as r_reason, r.turns as r_turns,
+                r.p1_rating_before as r_p1_rating_before, r.p1_rating_after as r_p1_rating_after,
+                r.p2_rating_before as r_p2_rating_before, r.p2_rating_after as r_p2_rating_after,
+                r.ended_at as r_ended_at,
+                (select count(*) from public.match_actions a where a.match_id = m.id) as actions,
+                m.room_code, m.room_mode,
+                (select t.mode from public.tickets t where t.match_id = m.id
+                  order by t.enqueued_at, t.id limit 1) as ticket_mode,
+                exists (select 1 from public.series s where s.state -> 'games'
+                  @> jsonb_build_array(jsonb_build_object('matchId', m.id::text))) as in_series
+           from public.matches m
+           join public.results r on r.match_id = m.id
+          where m.status = 'over'
+            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
+            and exists (select 1 from public.results r where r.match_id = m.id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
+          order by m.ended_at desc nulls last, m.id desc
+          limit $2::bigint offset $3::bigint",
+    )
+    .bind(profile_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut replays = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let mut shape = MatchDbRow::read(row)?;
+        // As `replay_row` reads it: a deleted second seat is the empty id, so the replay is kept.
+        shape.p2_profile_id.get_or_insert_with(String::new);
+        let replay = ReplayRow {
+            row: to_match(shape)?,
+            result: to_result(ResultDbRow {
+                match_id: uuid_text(row, "r_match_id")?,
+                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
+                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
+                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
+                reason: get(row, "r_reason")?,
+                turns: get(row, "r_turns")?,
+                p1_rating_before: get(row, "r_p1_rating_before")?,
+                p1_rating_after: get(row, "r_p1_rating_after")?,
+                p2_rating_before: get(row, "r_p2_rating_before")?,
+                p2_rating_after: get(row, "r_p2_rating_after")?,
+                ended_at: get(row, "r_ended_at")?,
+            })?,
+            actions: get(row, "actions")?,
+        };
+        // R376, R672: the precedence `matches_mode_of` answers, in the same order.
+        let own: Option<String> = get(row, "mode")?;
+        let room_code: Option<String> = get(row, "room_code")?;
+        let room_mode: Option<String> = get(row, "room_mode")?;
+        let ticket_mode: Option<String> = get(row, "ticket_mode")?;
+        let mode = if get::<bool>(row, "in_series")? {
+            from_literal("bo3").map(Some)?
+        } else if let Some(own) = own.as_deref() {
+            queue_mode_of(own).map(Some)?
+        } else if room_code.is_some() {
+            match room_mode.as_deref() {
+                None => from_literal("bo1").map(Some)?,
+                Some(mode) => queue_mode_of(mode).map(Some)?,
+            }
+        } else {
+            ticket_mode.as_deref().map(queue_mode_of).transpose()?
+        };
+        replays.push(ReplayWithMode { replay, mode });
+    }
+    Ok(replays)
+}
+
 pub async fn replays_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
     if !is_uuid(match_id) {
         return Ok(None);
@@ -5862,39 +5953,74 @@ pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> 
     Ok(())
 }
 
-/// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
-/// TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the rating, through their
-/// serde form. R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
-pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(
+/// What `ranked_standings` and `ranked_standings_subset` select, up to their `where`: a season row
+/// joined to its player's CURRENT rating, a ladder bot's being the bot's own (R640000, R610).
+macro_rules! standings_from {
+    () => {
         "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
                 r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
                 coalesce(b.rating, p.rating) as rating, p.kind
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
-           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text
-          where r.season_id = $1::text
-          order by r.profile_id",
-    )
+           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text"
+    };
+}
+
+/// One `standings_from!` row. TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the
+/// rating, through their serde form, marked `bot` for a ladder bot's row (R640000).
+fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
+    let rank = to_season_rank(SeasonRankDbRow::read(row)?);
+    let rating: f64 = get(row, "rating")?;
+    let kind: String = get(row, "kind")?;
+    let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
+    if let Value::Object(fields) = &mut standing {
+        fields.insert(String::from("rating"), json!(rating));
+        fields.insert(String::from("bot"), json!(kind == "bot"));
+    }
+    from_json(standing)
+}
+
+/// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
+/// R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
+pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        standings_from!(),
+        " where r.season_id = $1::text
+          order by r.profile_id"
+    ))
     .bind(season_id)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter()
-        .map(|row| -> Result<SeasonStanding, StoreError> {
-            let rank = to_season_rank(SeasonRankDbRow::read(row)?);
-            let rating: f64 = get(row, "rating")?;
-            let kind: String = get(row, "kind")?;
-            let mut standing =
-                serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
-            if let Value::Object(fields) = &mut standing {
-                fields.insert(String::from("rating"), json!(rating));
-                fields.insert(String::from("bot"), json!(kind == "bot"));
-            }
-            from_json(standing)
-        })
-        .collect()
+    rows.iter().map(standing_of).collect()
+}
+
+/// `ranked_standings` cut to `profile_ids`' rows and every row from `min_ladder` up (#2022), joined
+/// and read as it is, so a ladder bot's row reads its own rating (R640000). An id that is no uuid (a
+/// deleted account's empty seat) names no row and is not bound. Migration 0064's
+/// `season_ranks_season_ladder_idx` serves the ladder range (tests/sql CHECK 21).
+pub async fn ranked_standings_subset(
+    t: &mut PgTx<'_>,
+    season_id: &str,
+    profile_ids: &[String],
+    min_ladder: i32,
+) -> Result<Vec<SeasonStanding>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        standings_from!(),
+        " where r.season_id = $1::text
+            and (r.profile_id = any($2::uuid[]) or r.ladder >= $3::integer)
+          order by r.profile_id"
+    ))
+    .bind(season_id)
+    .bind(ids)
+    .bind(min_ladder)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(standing_of).collect()
 }
 
 pub async fn ranked_rank(

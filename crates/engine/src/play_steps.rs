@@ -1326,6 +1326,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             } else {
                 Some(hidden_from)
             },
+            creator: None,
         });
 
         run.instance_id = fresh.id.clone();
@@ -1552,6 +1553,18 @@ fn announce_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 // Step 4 — move the card and announce the play (§10.5 step 4)
 // ---------------------------------------------------------------------------
 
+/// R1870000: the win a card carries (`effects::WIN_ON_PLAY_KEY`), taken off it as it is played and
+/// set on its player's won flag.
+fn claim_win_on_play(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &str) {
+    let Some(card) = find_instance_mut(sink.state, instance_id) else {
+        return;
+    };
+    if card.memory.shift_remove(crate::effects::WIN_ON_PLAY_KEY) != Some(Value::Bool(true)) {
+        return;
+    }
+    sink.state.players[player].won_by_effect = Some(true);
+}
+
 fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, former_id: Option<String>) {
     // R119: what has already arrived on the field during the play — a tributed unit's Death at step 2
     // (#22's copies of a Sheepish) — does not answer it, which the step-4 pair names, as step 7's does.
@@ -1594,6 +1607,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
             source_id: None,
             arrived_during: arrivals,
             exits_from: Some(exits_from),
+            creator: None,
         });
     }
 }
@@ -1857,6 +1871,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    // R1870000: a card carrying the win wins its player the game as it is played, a cast too (R70); the
+    // state check that closes this play holds the flag, a hero at 0 losing first (R850).
+    claim_win_on_play(sink, run.player, &card.id);
     // R1852007: a Stack card played onto a Dormant Starship lands, is played and counted, and is exiled
     // at once, before anything of it resolves: step 5 finds it gone, so its Cry is lost (R17). The
     // Starship tops its zone again, still Dormant.

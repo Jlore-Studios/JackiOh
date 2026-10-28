@@ -19,8 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, SetName, StarscapeReward, Tag,
-    string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, ResourcePrice, SetName,
+    StarscapeReward, Tag, string_union,
 };
 
 /// §2.6, R1705000
@@ -173,6 +173,12 @@ pub const TIMEOUT_ANSWER_CAP: usize = 500;
 pub const CALL_TO_CHAOS_CHAIN_CAP: i32 = 20;
 /// R58: cast-on-draw cards one draw may cast before the next one goes to hand uncast.
 pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
+/// R2067000: cast-on-draw cards one action may cast over all its chains, before the next one goes to
+/// hand uncast as R58's 21st does. A trigger's draw begins a chain of its own (R217), so a trigger
+/// that draws for each cast's discard (Classic #64 Malzahar's Recycler under #21 Hinder) beside a
+/// library that refills as it is drawn (#33 Unstable Clone Machine) began chains without end. A whole
+/// library's worth, so an action that does not refill its library as it draws never reaches it.
+pub const CAST_ON_DRAW_ACTION_CAP: i32 = LIBRARY_CAP;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -882,6 +888,11 @@ pub const HEAL_MULTIPLIER: i32 = 2;
 /// nothing. A deck that refills itself with answering cards would otherwise answer forever.
 pub const SPELL_ANSWER_CHAIN_CAP: i32 = 20;
 
+/// R1870002 (Stinkyscape #4.2 KY's Last Exam, issue #1870): the most Echo repeats one play of a card may
+/// give itself (`effects::gain_echo`). A run of right guesses is one in four each, but a Spell that gains
+/// a repeat with every resolution would otherwise be owed one more for as long as the guesses held.
+pub const SELF_ECHO_GAIN_CAP: i32 = 20;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).
@@ -949,6 +960,33 @@ pub const CHAOS_MED_COST: i32 = 0;
 /// §8.8 row 95 entry 9, R1241: the most rest-of-game "cast a random Call to Chaos" effects one player
 /// holds; a roll of the entry for a player at the cap resolves into nothing.
 pub const CALL_TO_CHAOS_ETERNAL_CAP: i32 = 3;
+
+// Stinkyscape #150 Call to Chaos (Stinky Edition) and #151 (Scape Edition) (SPEC §8.10 rows 150 and
+// 151, issue #1882): their tables' numbers, as printed.
+/// §8.10 row 150 entry 2 and row 151 entries 5 and 8: the cards "cost (0)" (`costOverride`).
+pub const CHAOS_STINKYSCAPE_COST: i32 = 0;
+/// §8.10 row 150 entry 3: "summon 3 random Quest or Wincon Field Spells" (R1882001).
+pub const CHAOS_STINKY_FIELD_SPELLS: i32 = 3;
+/// §8.10 row 150 entry 8, R1882004: the most rest-of-game Acclaimed death rules one player holds, bounded
+/// as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at the cap resolves into nothing.
+pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
+/// §8.10 row 150 entry 8, R2176001: the most Calls to Chaos the death watch casts for one player in one
+/// turn, its terminator (REVIEW A3.6): each cast is a chain with R28's cap of its own, and a cast that
+/// kills an Acclaimed Unit starts another, so an Acclaimed death past this many that turn casts nothing.
+pub const CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN: i32 = 5;
+/// §8.10 row 151 entry 2: "summon 3 Drone Corvettes".
+pub const CHAOS_SCAPE_CORVETTES: i32 = 3;
+/// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).
+pub const CHAOS_SCAPE_SYSTEMS: i32 = 2;
+/// §8.10 row 151 entry 5: "add 4 random Starship Pieces to your hand".
+pub const CHAOS_SCAPE_HAND_PIECES: i32 = 4;
+/// §8.10 row 151 entry 7: "fuse 4 random Starship Pieces into your Dormant Starship" (R1882008).
+pub const CHAOS_SCAPE_FUSED_PIECES: i32 = 4;
+/// §8.10 row 151 entry 8: "add 2 random Radiant Weapons to your hand".
+pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
+/// §8.10 row 151 entry 9, R1882009: the Marketplace's Call to Chaos "for 20 Credits", a price that never
+/// moves (R1853005).
+pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /// T-AI-4: the repeats after the first draw, a termination bound: five draws at most.
@@ -1155,6 +1193,9 @@ pub enum MarketPool {
     Ids(&'static [&'static str]),
     /// Every card of the set that is no token, in catalog order.
     Set(SetName),
+    /// R1881006: every card of the set that is no token and prints the keyword on its base face, in
+    /// catalog order (S21's two Starship Pieces, `query::starship_pieces()`'s pool).
+    SetKeyword(SetName, KeywordKind),
 }
 
 /// R1853001: one lot of the Marketplace's table: `count` different cards of `pool`, each stocked
@@ -1167,10 +1208,113 @@ pub struct MarketLot {
     pub stock_max: i32,
 }
 
-/// R1853001: the Marketplace's table of lots, rolled as it opens and every `MARKETPLACE_CYCLE_TURNS`.
-/// Empty until the set's own (S21) ships, so an open Marketplace offers nothing but the lots an effect
-/// adds; a test registers a fixture table (`testkit::register_marketplace_table`).
-pub const MARKETPLACE_TABLE: &[MarketLot] = &[];
+/// R1881006: the twelve v3–v5 Weapons (Stinkyscape #50 to #61), one lot of S21's table.
+pub const MARKETPLACE_WEAPONS: &[&str] = &[
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
+    "stinkyscape-053",
+    "stinkyscape-054",
+    "stinkyscape-055",
+    "stinkyscape-056",
+    "stinkyscape-057",
+    "stinkyscape-058",
+    "stinkyscape-059",
+    "stinkyscape-060",
+    "stinkyscape-061",
+];
+/// R1881006: both Warp Disruptors (Stinkyscape #23, #24).
+pub const MARKETPLACE_WARP_DISRUPTORS: &[&str] = &["stinkyscape-023", "stinkyscape-024"];
+/// R1881006: Scanning Probe Mk1 (Stinkyscape #166), a lot of its own.
+pub const MARKETPLACE_PROBE_MK1: &[&str] = &["stinkyscape-166"];
+/// R1881006: Scanning Probe Mk2 (Stinkyscape #167), a lot of its own.
+pub const MARKETPLACE_PROBE_MK2: &[&str] = &["stinkyscape-167"];
+/// R1881006: the ten Drone Cores (Stinkyscape #27 to #36).
+pub const MARKETPLACE_DRONE_CORES: &[&str] = &[
+    "stinkyscape-027",
+    "stinkyscape-028",
+    "stinkyscape-029",
+    "stinkyscape-030",
+    "stinkyscape-031",
+    "stinkyscape-032",
+    "stinkyscape-033",
+    "stinkyscape-034",
+    "stinkyscape-035",
+    "stinkyscape-036",
+];
+/// R1881006: the four Launchers (Stinkyscape #140 to #143).
+pub const MARKETPLACE_LAUNCHERS: &[&str] = &[
+    "stinkyscape-140",
+    "stinkyscape-141",
+    "stinkyscape-142",
+    "stinkyscape-143",
+];
+/// R1881006: the ten AI cards (Stinkyscape T-AI-1 to T-AI-10, ST15).
+pub const MARKETPLACE_AI_CARDS: &[&str] = &[
+    "stinkyscape-t-ai-01",
+    "stinkyscape-t-ai-02",
+    "stinkyscape-t-ai-03",
+    "stinkyscape-t-ai-04",
+    "stinkyscape-t-ai-05",
+    "stinkyscape-t-ai-06",
+    "stinkyscape-t-ai-07",
+    "stinkyscape-t-ai-08",
+    "stinkyscape-t-ai-09",
+    "stinkyscape-t-ai-10",
+];
+/// R1881006: the stock range of the Resources' lot.
+pub const MARKETPLACE_RESOURCE_STOCK_MIN: i32 = 4;
+pub const MARKETPLACE_RESOURCE_STOCK_MAX: i32 = 8;
+/// R1881006: the stock of each Scanning Probe's lot, Mk1 and Mk2.
+pub const MARKETPLACE_PROBE_MK1_STOCK: i32 = 6;
+pub const MARKETPLACE_PROBE_MK2_STOCK: i32 = 3;
+/// R1881006: the stock range of every other lot.
+pub const MARKETPLACE_CARD_STOCK_MIN: i32 = 1;
+pub const MARKETPLACE_CARD_STOCK_MAX: i32 = 3;
+
+/// R1881006: one of S21's lots of `count` cards of `pool` at the card lots' stock range.
+const fn card_lot(pool: MarketPool, count: i32) -> MarketLot {
+    MarketLot {
+        pool,
+        count,
+        stock_min: MARKETPLACE_CARD_STOCK_MIN,
+        stock_max: MARKETPLACE_CARD_STOCK_MAX,
+    }
+}
+
+/// R1853001, R1881006: the Marketplace's table of lots, rolled as it opens and every
+/// `MARKETPLACE_CYCLE_TURNS`: the set's own (S21), in the order ST3 lists them. A test registers a
+/// fixture table in its place (`testkit::register_marketplace_table`).
+pub const MARKETPLACE_TABLE: &[MarketLot] = &[
+    MarketLot {
+        pool: MarketPool::Resources,
+        count: 4,
+        stock_min: MARKETPLACE_RESOURCE_STOCK_MIN,
+        stock_max: MARKETPLACE_RESOURCE_STOCK_MAX,
+    },
+    card_lot(MarketPool::Ids(MARKETPLACE_WEAPONS), 3),
+    card_lot(MarketPool::Ids(MARKETPLACE_WARP_DISRUPTORS), 2),
+    MarketLot {
+        pool: MarketPool::Ids(MARKETPLACE_PROBE_MK1),
+        count: 1,
+        stock_min: MARKETPLACE_PROBE_MK1_STOCK,
+        stock_max: MARKETPLACE_PROBE_MK1_STOCK,
+    },
+    MarketLot {
+        pool: MarketPool::Ids(MARKETPLACE_PROBE_MK2),
+        count: 1,
+        stock_min: MARKETPLACE_PROBE_MK2_STOCK,
+        stock_max: MARKETPLACE_PROBE_MK2_STOCK,
+    },
+    card_lot(MarketPool::Ids(MARKETPLACE_DRONE_CORES), 2),
+    card_lot(MarketPool::Ids(MARKETPLACE_LAUNCHERS), 1),
+    card_lot(
+        MarketPool::SetKeyword(SetName::Stinkyscape, KeywordKind::StarshipPiece),
+        2,
+    ),
+    card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
+    card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
+];
 /// R1853001: the turns between two rolls of the offering, counted on `GameState.turn` from the turn
 /// it was last rolled.
 pub const MARKETPLACE_CYCLE_TURNS: i32 = 6;
@@ -1190,6 +1334,20 @@ pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
 pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
 /// R1853005: the stock each cycle renews for a lot an effect added for the rest of the game.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
+/// R1861000: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice) draws
+/// each turn, its base face's: "its price is determined like all other Resources", so a Rare Resource's,
+/// Gellium's. `buy` is never read: such a card is no Resource and its lot, if any, is priced as a card.
+pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
+    sell_min: 3,
+    sell_max: 10,
+    buy: 0,
+};
+/// R1861000: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's.
+pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
+    sell_min: 6,
+    sell_max: 20,
+    buy: 0,
+};
 
 // ---------------------------------------------------------------------------------------------
 // Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,

@@ -38,6 +38,7 @@
   justify-self: start;
   font-weight: 700;
   transform-origin: 0 50%;
+  font-variant-numeric: tabular-nums;
 }
 
 .xp-reveal__heading {
@@ -54,6 +55,7 @@
 
 .xp-reveal__quest-pay {
   color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes xp-reveal-level-pop {

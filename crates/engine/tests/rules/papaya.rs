@@ -16,7 +16,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_json, events_of_type, json_of, put, setup_catalog, sink_for, slot,
+    events_json, events_of_type, ids_of, json_of, put, setup_catalog, sink_for, slot,
 };
 use crate::rules::fixtures::papaya::{
     body, curve, curve_now, curve_quickdraw, field, register_papaya_fixtures, snare, token,
@@ -129,10 +129,6 @@ fn full_board(state: &mut GameState) -> Vec<Vec<CardInstance>> {
             cards
         })
         .collect()
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn sorted(mut ids: Vec<String>) -> Vec<String> {

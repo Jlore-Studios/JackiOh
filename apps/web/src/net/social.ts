@@ -10,8 +10,10 @@
 // token: each reads the tab's session (`net/session.ts`) and renews it once on a 401 (R194,
 // `callWithRenewal`). No session, or a session that has ended, is the 401 a signed-out request gets.
 
-import { apiRequest, type RequestOptions } from "./api.ts";
+import { apiRequest, type RequestOptions, type SendOptions } from "./api.ts";
 import { withSession } from "./gate.ts";
+import { cachedRead, rememberRead, updateCachedRead } from "./readCache.ts";
+import { readSession } from "./session.ts";
 
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
 export type PlayerRef = { profileId: string; username: string };
@@ -52,15 +54,32 @@ const part = encodeURIComponent;
 
 // Friends and requests (B43–B45)
 
-export function getFriends(): Promise<{
+/** R2125000: the friends list's path, the key of its kept answer (`net/readCache.ts`). */
+export const FRIENDS_PATH = "/api/friends";
+
+export type FriendsList = {
   friends: Friend[];
   incoming: FriendRequest[];
   outgoing: FriendRequest[];
   blocked: PlayerRef[];
-}> {
-  return social<{ friends: Friend[]; incoming: FriendRequest[]; outgoing: FriendRequest[]; blocked: PlayerRef[] }>(
-    "/api/friends",
-  );
+};
+
+/** R2125000: the friends list this tab last held for the signed-in account, or undefined. */
+export function cachedFriends(): FriendsList | undefined {
+  const session = readSession();
+  return session === null ? undefined : cachedRead<FriendsList>(session.accessToken, FRIENDS_PATH);
+}
+
+/**
+ * The friends list, kept for the next visit (R2125000) unless `keep` is false: the watch and the
+ * replay share read it too, and neither is a menu that opens on its last answer.
+ */
+export function getFriends({ keep = true }: { keep?: boolean } = {}): Promise<FriendsList> {
+  return withSession(async (token) => {
+    const answer = await apiRequest<FriendsList>(FRIENDS_PATH, { token });
+    if (keep) rememberRead(token, FRIENDS_PATH, answer);
+    return answer;
+  });
 }
 
 /** By exact `name#tag`. 404 `not_found` for an unknown name and a blocked pair alike (B43). */
@@ -69,7 +88,21 @@ export function sendFriendRequest(username: string): Promise<{ requestId: string
 }
 
 export function acceptFriendRequest(requestId: string): Promise<{ friend: Friend }> {
-  return social<{ friend: Friend }>(`/api/friends/requests/${part(requestId)}/accept`, { method: "POST" });
+  return withSession(async (token) => {
+    const answer = await apiRequest<{ friend: Friend }>(`/api/friends/requests/${part(requestId)}/accept`, {
+      method: "POST",
+      token,
+    });
+    // R2125000: the next visit shows what this answer left.
+    updateCachedRead<FriendsList>(token, FRIENDS_PATH, (before) => ({
+      ...before,
+      friends: before.friends.some((friend) => friend.profileId === answer.friend.profileId)
+        ? before.friends.map((friend) => (friend.profileId === answer.friend.profileId ? answer.friend : friend))
+        : [...before.friends, answer.friend],
+      incoming: before.incoming.filter((request) => request.requestId !== requestId),
+    }));
+    return answer;
+  });
 }
 
 export async function declineFriendRequest(requestId: string): Promise<void> {
@@ -81,8 +114,15 @@ export async function cancelFriendRequest(requestId: string): Promise<void> {
   await social<null>(`/api/friends/requests/${part(requestId)}`, { method: "DELETE" });
 }
 
-export async function removeFriend(profileId: string): Promise<void> {
-  await social<null>(`/api/friends/${part(profileId)}`, { method: "DELETE" });
+export async function removeFriend(profileId: string, options: SendOptions = {}): Promise<void> {
+  await withSession(async (token) => {
+    await apiRequest<null>(`/api/friends/${part(profileId)}`, { method: "DELETE", ...options, token });
+    // R2125000: the next visit shows what this answer left.
+    updateCachedRead<FriendsList>(token, FRIENDS_PATH, (before) => ({
+      ...before,
+      friends: before.friends.filter((friend) => friend.profileId !== profileId),
+    }));
+  });
 }
 
 // Blocks (B46)

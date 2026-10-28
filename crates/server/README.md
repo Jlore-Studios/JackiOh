@@ -206,7 +206,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
-| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
+| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
@@ -225,6 +225,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
 | `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
+| `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match: either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, 422 `loadout_invalid` on a custom card, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
 | `GET` | `/readyz` | none | readiness, render.yaml's `healthCheckPath`: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
@@ -412,6 +413,13 @@ outlive the purge; a record folded before 0063 counts in `record_totals` alone, 
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
+A Created card (R943: a token, a generated or copied card, a transform's result, The Coin) is no deck
+card: a record lists each seat's Created cards apart, those it made and used and those it made and never
+used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones split by face) ride in the
+card's `card_totals` row beside the deck's, empty ones left out of its `stats`, so no migration and no
+back-fill: a record written before them adds none. `stats-cards` prints them as a second table after
+the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/cards` answers them as
+`created` (R2089000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -932,6 +940,20 @@ turn count, R1256000's sums with the count of records that carry them), written 
 `stats_totals_add` under 0041's advisory locks. Its checks pin the source, mode and pilots as
 `record_totals`' do, and a total of at least one game. RLS is on with no policy and no grant, as the
 other totals: the server alone reads it.
+
+Migration 0064 only adds `season_ranks_season_ladder_idx` on `season_ranks (season_id, ladder)`, for
+`ranked_standings_subset` (#2022): the read of `own_rank`, `match_ranks` and `ladder_tiers`, which
+takes a season's rows for the profiles shown plus every row from `ladder::jlorious_floor()` up, bound
+from the ladder code so the index is not partial. `tests/sql/01_schema_invariants.sql` CHECK 21 plans
+it with sequential scans off, and fails when the Mythic range is filtered rather than read through
+the index.
+
+Migration 0065 ships the Stinkyscape set (#1884) and only widens the `cards` tag check again, as 0043
+did with Potion: it admits the four family tags the set's foundation added, Drone Core, Weapon, War
+Doctrine and Swarm (R1857000), so `seed-catalog` can write the set's 175 cards, its Dormant Starship
+and its 52 tokens the day `SHIPPED_SETS` lists it (R1420). No row is rewritten; the seed writes each
+card's tags as the catalog holds them, and 0016's grant hands every active account the cards the new
+catalog version adds (R481).
 
 ## Tests
 

@@ -1,14 +1,19 @@
 // R915010, #920: the card creator as a player uses it: building a card with the blocks, seeing its
 // script in the code view, saving it to the account, the checks' and the server's errors shown where
-// they belong, and a card written in code kept in code.
+// they belong, and a card written in code kept in code. R2119000: deleting a card is undone, not asked.
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CustomCard } from "@jackioh/shared";
 
-import { ApiRequestError } from "../net/api.ts";
+import { manualClock } from "../game/deckbuilder/testkit.ts";
+import { ApiRequestError, type SendOptions } from "../net/api.ts";
 import type { CustomCardInput } from "../net/customCards.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
+import { UNDO_WINDOW_MS } from "../undo/hold.ts";
+import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import type { ScriptProblem } from "../wasm/index.ts";
 import type { BuilderModel } from "./builder.ts";
 import { Creator, type CreatorApi } from "./Creator.tsx";
@@ -48,7 +53,7 @@ function fakeServer(start: CustomCard[] = [], problems: (source: string) => Scri
       cards = cards.map((old) => (old.id === id ? card : old));
       return Promise.resolve({ card });
     }),
-    remove: vi.fn((_token: string, id: string) => {
+    remove: vi.fn((_token: string, id: string, _options?: SendOptions) => {
       const had = cards.some((card) => card.id === id);
       cards = cards.filter((card) => card.id !== id);
       return Promise.resolve({ deleted: had });
@@ -141,6 +146,17 @@ describe("R915010 the creator builds a card with blocks and saves it to the acco
     await waitFor(() => expect(onTry).toHaveBeenCalledWith(server.cards()[0]?.id));
   });
 
+  it("#2115 the list waits as a rows skeleton, and the count takes its place when the read answers", async () => {
+    render(<Creator token={TOKEN} api={fakeServer().api} onTry={vi.fn()} />);
+
+    expectSkeleton(screen.getByText("Loading your cards…"), "rows");
+    expect(screen.queryByText("0 of 50 cards")).toBeNull();
+
+    expect(await screen.findByText("0 of 50 cards")).toBeTruthy();
+    expect(screen.queryByText("Loading your cards…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+  });
+
   it("R915010 a card saved on one device is listed on another, and opens in the builder there", async () => {
     const server = fakeServer();
     const first = render(<Creator token={TOKEN} api={server.api} onTry={vi.fn()} />);
@@ -230,7 +246,8 @@ describe("R915010 a card written in code stays in code", () => {
       source: "return Card {\n  cry = function(c, n)\n    c:draw(1)\n  end,\n}\n",
     };
     const server = fakeServer([card]);
-    render(<Creator token={TOKEN} api={server.api} onTry={vi.fn()} />);
+    const clock = manualClock();
+    render(<Creator token={TOKEN} api={server.api} onTry={vi.fn()} undoTimer={clock} />);
     const [item] = await screen.findAllByTestId(creatorTestid.listItem);
     if (item === undefined) throw new Error("no card listed");
     fireEvent.click(item);
@@ -242,8 +259,99 @@ describe("R915010 a card written in code stays in code", () => {
     expect((screen.getByTestId(creatorTestid.save) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByTestId(creatorTestid.delete));
-    fireEvent.click(screen.getByTestId(creatorTestid.deleteConfirm));
+    await act(async () => {
+      await clock.advance(UNDO_WINDOW_MS);
+    });
     await waitFor(() => expect(server.cards()).toEqual([]));
+  });
+});
+
+describe("R2119000 deleting a custom card is undone, not asked", () => {
+  function codeCard(n: number, name: string): CustomCard {
+    return {
+      id: `custom-${String(n).padStart(32, "0")}`,
+      version: 1,
+      frame: { name, type: "Spell", cost: 1, rarity: "Rare", text: "Draw a card.", params: [] },
+      source: "return Card {\n  cry = function(c, n)\n    c:draw(1)\n  end,\n}\n",
+    };
+  }
+  const first = codeCard(1, "First card");
+  const second = codeCard(2, "Second card");
+
+  function listed(): string[] {
+    return screen.queryAllByTestId(creatorTestid.listItem).map((item) => item.getAttribute("data-card-id") ?? "");
+  }
+
+  /** Two saved cards, the first opened and deleted. */
+  async function deleteFirst(): Promise<{ server: ReturnType<typeof fakeServer>; tick: (ms: number) => Promise<void> }> {
+    const server = fakeServer([first, second]);
+    const clock = manualClock();
+    render(<Creator token={TOKEN} api={server.api} onTry={vi.fn()} undoTimer={clock} />);
+    await screen.findByText("2 of 50 cards");
+    const item = screen.getAllByTestId(creatorTestid.listItem).find((candidate) => candidate.getAttribute("data-card-id") === first.id);
+    if (item === undefined) throw new Error("the first card is not listed");
+    fireEvent.click(item);
+    fireEvent.click(screen.getByTestId(creatorTestid.delete));
+    return {
+      server,
+      tick: async (ms) => {
+        await act(async () => {
+          await clock.advance(ms);
+        });
+      },
+    };
+  }
+
+  it("R2119000 Delete takes the card off at once behind \"Card deleted · Undo\" and sends nothing", async () => {
+    const { server, tick } = await deleteFirst();
+    expect(listed()).toEqual([second.id]);
+    expect(screen.getByText("1 of 50 cards")).toBeTruthy();
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Card deleted · Undo");
+    await tick(UNDO_WINDOW_MS - 1);
+    expect(server.api.remove).not.toHaveBeenCalled();
+  });
+
+  it("R2119000 Undo puts the card back in its place, open in the editor, and sends nothing", async () => {
+    const { server, tick } = await deleteFirst();
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(listed()).toEqual([first.id, second.id]);
+    expect((screen.getByTestId(creatorTestid.name) as HTMLInputElement).value).toBe("First card");
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.api.remove).not.toHaveBeenCalled();
+    expect(server.cards()).toEqual([first, second]);
+  });
+
+  it("R2119000 the window's end sends the DELETE exactly once, as a plain request", async () => {
+    const { server, tick } = await deleteFirst();
+    await tick(UNDO_WINDOW_MS);
+    expect(server.api.remove).toHaveBeenCalledTimes(1);
+    const [call] = vi.mocked(server.api.remove).mock.calls;
+    expect(call?.[1]).toBe(first.id);
+    expect(call?.[2]?.keepalive).not.toBe(true);
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.api.remove).toHaveBeenCalledTimes(1);
+    expect(server.cards()).toEqual([second]);
+    expect(listed()).toEqual([second.id]);
+  });
+
+  it("R2119000 pagehide sends the DELETE at once, with keepalive", async () => {
+    const { server } = await deleteFirst();
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(server.api.remove).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(server.api.remove).mock.calls[0]).toEqual([TOKEN, first.id, { keepalive: true }]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+  });
+
+  it("R2119000 a refused DELETE puts the card back and shows the server's words", async () => {
+    const { server, tick } = await deleteFirst();
+    const message = "This account can't change its custom cards.";
+    vi.mocked(server.api.remove).mockRejectedValueOnce(new ApiRequestError(403, { code: "forbidden", message }));
+    await tick(UNDO_WINDOW_MS);
+    await waitFor(() => expect(listed()).toEqual([first.id, second.id]));
+    expect(screen.getByTestId(creatorTestid.saveError).textContent).toBe(message);
   });
 });
 

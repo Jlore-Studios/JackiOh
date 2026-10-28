@@ -36,6 +36,13 @@ export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGa
 /** Wall-clock safety cap for one worker decision (`AiOptions.shouldStop`). */
 export const PRACTICE_AI_CLOCK_MS = 1500;
 
+/**
+ * R2102000: wall-clock cap for the lethal hint's check, which every Easy snapshot of the human's turn
+ * waits for: a check still running past it gives no hint, so a board whose lines are slow to play
+ * out never holds a click's answer back for long.
+ */
+export const PRACTICE_LETHAL_HINT_CLOCK_MS = 300;
+
 /** localStorage key, read and written inside try/catch. */
 export const PRACTICE_SETUP_KEY = "jackioh.practice.setup";
 

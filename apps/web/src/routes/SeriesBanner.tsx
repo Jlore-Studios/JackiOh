@@ -25,7 +25,7 @@ export const seriesBannerTestid = {
 
 function wonWords(decks: readonly { won: boolean }[]): string {
   const won = decks.filter((deck) => deck.won).length;
-  return t("{won} of {total} decks have won", { won: String(won), total: String(decks.length) });
+  return t("{won} of {total} have won a game", { won: String(won), total: String(decks.length) });
 }
 
 type SeriesResult = NonNullable<SeriesView["result"]>;

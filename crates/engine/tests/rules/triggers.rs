@@ -17,30 +17,10 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
+    Bench, act, act_result, both, events_of_type, hand_ids, in_hand, new_game, put, round_trip, set_library,
+    slot,
 };
 use crate::rules::fixtures::scripts::double_edge;
-
-// The sink starts its rng at the state's cursor, as reduce does. `EngineSink` borrows the state, so
-// the event list and rng live here and each call borrows the state again.
-
-struct SinkFor {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> SinkFor {
-    SinkFor {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl SinkFor {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
 
 fn controlled_by(player: PlayerId) -> HookOptions {
     HookOptions {
@@ -326,14 +306,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
-}
-
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
@@ -443,9 +415,9 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
             .collect();
         assert_eq!(watched, vec![watcher().id, snap_trap().id]);
 
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine_sink = sink.on(&mut state);
+            let mut engine_sink = sink.sink(&mut state);
             let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
@@ -454,7 +426,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         }
         assert_eq!(events_of_type(&sink.events, GameEventType::Summoned).len(), 1);
 
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         assert_eq!(notes(&state), strings(&["trap", "trigger"]));
         // §5.1: the Trap is spent and public; the Field Spell that answered is untouched.
         assert!(
@@ -505,17 +477,17 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
             unspent_mana: 0,
         };
         assert!(is_trap_window_event(&turn_ended));
-        let mut immediate = sink_for(&state);
+        let mut immediate = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut immediate.on(&mut state), &turn_ended).fired,
+            fire_traps_for(&mut immediate.sink(&mut state), &turn_ended).fired,
             Vec::<String>::new()
         );
         assert!(notes(&state).is_empty());
 
         // At its scheduled point it fires on both sides, the ending player's traps first (R68).
-        let mut scheduled = sink_for(&state);
+        let mut scheduled = Bench::new(&state);
         assert_eq!(
-            run_trap_window(&mut scheduled.on(&mut state), &turn_ended)
+            run_trap_window(&mut scheduled.sink(&mut state), &turn_ended)
                 .fired
                 .len(),
             2
@@ -558,8 +530,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
 
         // The contrast first: a check taken between the two hits would have ended it as a p1 win.
         let cry = script_of(&state, &card.def_id).base.cry.clone();
-        let mut split = sink_for(&state);
-        let mut split_sink = split.on(&mut state);
+        let mut split = Bench::new(&state);
+        let mut split_sink = split.sink(&mut state);
         let mut split_ctx = make_context(&mut split_sink, Some(&card), controlled_by(PlayerId::P1));
         let cry_effects = match &cry {
             Some(run) => run(&mut split_ctx),
@@ -615,16 +587,16 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
             json!({}),
         );
 
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine_sink = sink.on(&mut state);
+            let mut engine_sink = sink.sink(&mut state);
             let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
                 &mut ctx,
             );
         }
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
 
         // The prompt belongs to the trap's owner, who is not the active player (§10.3, §10.6).
         assert_eq!(state.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
@@ -710,9 +682,9 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r1_cry_on_play_only_makes_summon_never_fire_cry_while_playing_the_same_card_from_hand_does() {
         let mut state = playing("r1-summon-vs-play");
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine_sink = sink.on(&mut state);
+            let mut engine_sink = sink.sink(&mut state);
             let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
@@ -723,7 +695,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         // A summon is not a play: no `cardPlayed`, no Cry (§6.3 Summon, R1).
         assert_eq!(events_of_type(&sink.events, GameEventType::CardPlayed).len(), 0);
         assert!(notes(&state).is_empty());
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         assert!(notes(&state).is_empty());
 
         let crier_id = hand_card(&mut state, &crier().id, PlayerId::P1).id;
@@ -744,13 +716,13 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r70_fires_the_cry_for_a_cast_too_a_cast_on_draw_and_a_call_to_chaos_cast_both_count_as_plays() {
         let mut state = playing("r70-casts");
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         // Cast on draw: the card never enters the hand and its script runs at once (§2.4, R70).
         set_library(&mut state, PlayerId::P1, &[draw_caster().id]);
         let before = state.counters.played;
         {
-            let mut engine_sink = sink.on(&mut state);
+            let mut engine_sink = sink.sink(&mut state);
             let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(&[effects::draw(json_as(json!({ "count": 1 })))], &mut ctx);
         }
@@ -768,7 +740,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
 
         // A Call to Chaos cast: free, counts as a play, fires the script (R70).
         let chaos = hand_card(&mut state, &chaos_spell().id, PlayerId::P1);
-        cast_card(&mut sink.on(&mut state), &chaos, CastOptions::default());
+        cast_card(&mut sink.sink(&mut state), &chaos, CastOptions::default());
         assert_eq!(notes(&state), strings(&["cry:onDraw", "cry:cast"]));
         assert_eq!(state.counters.played, before + 2);
         assert_eq!(cost_paid_of_plays(&sink.events), vec![0, 0]);

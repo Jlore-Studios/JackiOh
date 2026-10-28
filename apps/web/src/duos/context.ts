@@ -5,6 +5,19 @@
 
 import { createContext, type ReactNode } from "react";
 
+import type { DuosAgainStatus } from "../net/duos.ts";
+
+export type DuosPlayAgain = {
+  /** R2092000: the route's last status read, null before the first one lands. */
+  status: DuosAgainStatus | null;
+  /** R2092000: the offer request is in flight. */
+  offering: boolean;
+  /** R2092000: the last offer's refusal, in the server's words, null when none. */
+  refusal: string | null;
+  /** R2092000: send this seat's Play again offer. */
+  offer: () => void;
+};
+
 export type DuosChrome = {
   /** The way off the board, first on its rail. */
   back?: ReactNode;
@@ -16,8 +29,12 @@ export type DuosChrome = {
   teammate?: { connected: boolean; aiPlaying: boolean } | null;
   /** Where the result panel's "back" goes. */
   onLeave?: () => void;
+  /** #2116: the route `onLeave` goes to, so the button names it for a prefetch (R2116000); absent, none. */
+  leaveRoute?: string;
   /** #965: the result panel's "Watch the replay" (§13.9); absent, it offers none (/dev/duos has no server replay). */
   onWatchReplay?: () => void;
+  /** R2092000: the result panel's Play again; absent, it offers none. */
+  playAgain?: DuosPlayAgain;
 };
 
 export const DuosChromeContext = createContext<DuosChrome | null>(null);

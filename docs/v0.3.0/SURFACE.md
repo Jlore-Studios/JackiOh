@@ -56,8 +56,10 @@ crates/
     src/subsystems/<x>.rs  one per packages/engine/src/subsystems/<x>.ts (index.ts → mod.rs)
     src/validator.rs       ← packages/validator/src/index.ts
     src/testkit/           feature "testkit": scenario() (§8), invariants, glow
-    tests/rules.rs         the one integration-test binary for ported engine tests: `mod rules;`
-    tests/rules/mod.rs     `pub mod <x>;` per file below, `pub mod fixtures;`
+    tests/rules.rs         an integration-test binary for ported engine tests: `mod rules;` (a–o)
+    tests/rules_2.rs       the other (p–z), its `mod rules;` from rules/mod_2.rs (#2090)
+    tests/rules/mod.rs     `pub mod <x>;` per file below from a to o, `pub mod fixtures;`
+    tests/rules/mod_2.rs   the same from p on
     tests/rules/<x>.rs     one per ported packages/engine/test/<x>.test.ts
     tests/rules/fixtures/  ← packages/engine/test/fixtures/*.ts (test-only scripts and catalogs)
     tests/golden.rs        golden trace replay (§13)
@@ -114,7 +116,8 @@ Rules that follow from the tree:
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
   `tests/server.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its own binary
-  and its own link step, so 300 of them would cost minutes per `cargo test`.
+  and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
+  are two, `tests/rules.rs` and `tests/rules_2.rs`, which CI compiles side by side (#2090).
 - Data files are **copied** by part 1, not moved: the TypeScript engine must keep working on
   `staging` until part 23 has recorded the golden traces and Wave 3 has used them. Part 37 deletes
   the originals.
@@ -702,6 +705,7 @@ pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<S
 pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> TracedAiDeck;  // { deck, lean_forced }
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
+pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;   // R2102000: a sure win this turn by what `seat` sees
 pub fn random_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;   // §10.7's policy, via subsystems::choose_action
 pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;
 pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord;
@@ -734,6 +738,7 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
     // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
+#[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the Easy tier's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;
@@ -787,7 +792,7 @@ config alias them:
 | `@jackioh/validator` | `apps/web/src/wire/validator.ts` (types + WASM-backed functions) |
 | `@jackioh/cards/catalog.json`, `@jackioh/cards/flavour.json` | `crates/cards/catalog.json`, `crates/cards/flavour.json` |
 | `@jackioh/cards` | `apps/web/src/wire/cards.ts` (`CATALOG`, `CATALOG_VERSION`, `type CardFlavour`) |
-| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`, `AI_EMOTE`, `type AiEmote`, `type EmotePersona`, `createEmotePersona`, `pickPersona` re-exported from `../practice/personas.ts`) |
+| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `lethalHint` (R2102000), `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`, `AI_EMOTE`, `type AiEmote`, `type EmotePersona`, `createEmotePersona`, `pickPersona` re-exported from `../practice/personas.ts`) |
 | `../../server/src/config` (relative, 23 web and 10 e2e files) | replaced by `@jackioh/server-config` → `apps/web/src/wire/serverConfig.ts` (generated, §5.1); part 21 rewrites those import lines |
 
 The hand-kept helpers are the runtime values the web imports from `@jackioh/shared` today

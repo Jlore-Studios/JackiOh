@@ -11,12 +11,12 @@ import {
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
 } from "@jackioh/server-config";
+import { INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
 import { codeFieldTestid, inviteTestid } from "../auth/testids.ts";
 import { ApiRequestError, getCodeStatus, getMe, redeemCode } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import InviteRoute, {
   INVITE_CODE_INPUT,
-  INVITE_CODE_PLACEHOLDER,
   INVITE_ERROR,
   INVITE_NOT_NEEDED,
   INVITE_PAUSED,
@@ -171,7 +171,7 @@ describe("a pending account", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(done);
     });
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You\u2019re in");
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You're in");
     expect(window.location.pathname).toBe("/invite");
     expect(screen.queryByTestId(INVITE_SUBMIT)).toBeNull();
     expect(screen.queryByTestId(inviteTestid.whereFrom)).toBeNull();

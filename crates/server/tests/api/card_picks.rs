@@ -14,10 +14,12 @@ use std::sync::Arc;
 
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
+use jackioh_server::db::fake::OnCall;
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::fake;
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -89,6 +91,31 @@ fn refusal((status, body): (u16, Value)) -> String {
     assert_eq!(status, 400, "{body}");
     assert_eq!(body["error"]["code"], "bad_request", "{body}");
     body["error"]["message"].as_str().unwrap_or_default().to_owned()
+}
+
+/// Every store method the fake is asked to run from here on, by name, in order
+/// (`tests/api/friends.rs`'s).
+async fn record_store_calls(app: &App) -> Arc<std::sync::Mutex<Vec<String>>> {
+    let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = Arc::clone(&calls);
+    let hook: OnCall = Arc::new(move |method: &str| {
+        sink.lock().expect("the call log").push(method.to_string());
+        Ok(())
+    });
+    fake(app).lock().await.on_call = Some(hook);
+    calls
+}
+
+/// The economy's and the collection's methods among `calls`, in order: what a handler reads and
+/// writes of the account's holdings (resolving the caller reads only `profiles.`).
+fn economy_calls(calls: &std::sync::Mutex<Vec<String>>) -> Vec<String> {
+    calls
+        .lock()
+        .expect("the call log")
+        .iter()
+        .filter(|method| method.starts_with("economy.") || method.starts_with("collection."))
+        .cloned()
+        .collect()
 }
 
 #[tokio::test]
@@ -314,4 +341,44 @@ async fn r1834000_an_upload_is_checked_for_shape_before_anything_is_stored() {
         .collect();
     assert_eq!(upload(&app, TOKEN, Value::Array(many)).await.0, 400);
     assert_eq!(get(&app, Some(TOKEN)).await, (200, json!({ "cards": [] })));
+}
+
+#[tokio::test]
+async fn a_put_and_an_upload_each_take_the_accounts_economy_lock_before_they_read() {
+    let app = test_app().await;
+
+    let calls = record_store_calls(&app).await;
+    let (status, body) = put(&app, TOKEN, json!({ "cardId": CARD, "foil": "foil-rainbow" })).await;
+    fake(&app).lock().await.on_call = None;
+    assert_eq!(status, 200, "{body}");
+    let asked = economy_calls(&calls);
+    assert_eq!(
+        asked.first().map(String::as_str),
+        Some("economy.lock"),
+        "{asked:?}"
+    );
+    assert!(
+        asked.iter().any(|method| method == "economy.cardPicks.put"),
+        "{asked:?}"
+    );
+
+    let calls = record_store_calls(&app).await;
+    let (status, body) = upload(
+        &app,
+        TOKEN,
+        json!([{ "cardId": PLAIN_CARD, "border": "border-wood" }]),
+    )
+    .await;
+    fake(&app).lock().await.on_call = None;
+    assert_eq!(status, 200, "{body}");
+    let asked = economy_calls(&calls);
+    assert_eq!(
+        asked.first().map(String::as_str),
+        Some("economy.lock"),
+        "{asked:?}"
+    );
+    assert!(
+        asked.iter().any(|method| method == "economy.cardPicks.upload"),
+        "{asked:?}"
+    );
 }

@@ -4,8 +4,8 @@ import type { MarketSaleView } from "./MarketSaleView";
 
 /**
  * R1853000–R1853003, §10.8: the open Marketplace as the viewer reads it (`marketplace::marketplace_view`):
- * the lots offered to them and their own Resources' sale prices. Which buys and sales are offered stays
- * `legal_actions`' answer.
+ * the lots offered to them and the sale prices of their own Resources and hand sales (R1861000). Which
+ * buys and sales are offered stays `legal_actions`' answer.
  */
 export type MarketplaceView = { 
 /**

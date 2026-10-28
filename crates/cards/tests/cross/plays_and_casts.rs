@@ -10,6 +10,7 @@
 //!  - R210: the zone a play names is held while its Tribute is paid, and a tributed Reborn unit
 //!    comes back (§6.1, §6.3 "counts as a death").
 //!  - R217, R58, §10.3: a cast's draw continues its chain; the loop's cap bounds every trigger.
+//!  - R2067000: one action casts at most 60 cast-on-draw cards over all its chains.
 
 use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
@@ -367,6 +368,42 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
         assert!(casts > 0);
         assert!(casts as i32 <= CAST_ON_DRAW_CHAIN_CAP);
         assert_eq!(g.state().cast_chain, None);
+    }
+}
+
+const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
+
+mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
+    use super::*;
+
+    #[test]
+    fn r2067000_hinders_beside_malzahars_recycler_and_clone_machine_stop_at_the_actions_cap() {
+        register_all();
+        // Fuzz seed 9688: each Hinder cast is a play #33 answers with three more Hinders (R70), so the
+        // library never runs dry, and its discard is answered by #64's draw, a chain of its own (R217).
+        // Each chain cast 20 (R58), its 21st went to the hand, and the next chain's first cast discarded
+        // that one, which drew again.
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [VANILLA, VANILLA],
+                "backrow": [CLONE_MACHINE, RECYCLER],
+                "library": vec![HINDER; LIBRARY_CAP as usize],
+            },
+            "p2": { "hand": [VANILLA], "field": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+
+        // The Activate's cost discards both Vanillas, and #64 answers with two draws.
+        s.activate(RECYCLER, json!({}));
+        assert!(s.state().pending.is_none());
+        let casts = s
+            .last_events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER))
+            .count();
+        assert_eq!(casts as i32, CAST_ON_DRAW_ACTION_CAP);
+        assert_eq!(s.state().cast_chain, None);
+        // Past the cap, a Hinder drawn goes to the hand uncast.
+        assert!(s.hand(P1).iter().any(|card| card.def_id == HINDER));
     }
 }
 

@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
 import { getQuests, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -108,6 +109,24 @@ describe("QuestsList", () => {
 
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
   });
+
+  it("R2035000 with onArrived, the next falling due asks for one read instead of the reopen sentence", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    const onArrived = vi.fn();
+    const view = render(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
+
+    expect(screen.getByTestId(questsTestid.next)).toHaveTextContent("Next quest in 0:00:01");
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onArrived).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/reopen this page/)).toBeNull();
+
+    // The same due time arriving again asks nothing more: one read per due time.
+    view.rerender(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
+    expect(onArrived).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("QuestsPanel", () => {
@@ -137,6 +156,7 @@ describe("QuestsPanel", () => {
     render(<QuestsPanel token={TOKEN} />);
 
     expect(screen.getByTestId(questsTestid.loading)).toHaveTextContent("Loading your quests…");
+    expectSkeleton(screen.getByTestId(questsTestid.loading), "rows");
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
 
     await act(async () => {
@@ -144,6 +164,7 @@ describe("QuestsPanel", () => {
       await Promise.resolve();
     });
     expect(screen.queryByTestId(questsTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading your quests…")).toBeNull();
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
   });
 

@@ -82,7 +82,7 @@ mod tests {
         for event in &events[start + 1..] {
             match event {
                 GameEvent::Drawn { player: p, .. } if *p == player => break,
-                GameEvent::AddedToHand { player: p, instance_id, def_id } if *p == player => {
+                GameEvent::AddedToHand { player: p, instance_id, def_id, .. } if *p == player => {
                     out.push((instance_id.clone(), def_id.clone()));
                 }
                 _ => {}

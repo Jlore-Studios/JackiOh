@@ -10,8 +10,12 @@ import { CATALOG } from "@jackioh/cards";
 
 import type { CardDef } from "@jackioh/shared";
 
+import { CHINESE } from "../cards/chinese.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { TokenBarsResponse } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { collectionOf, tokenBars } from "./fixtures.ts";
 import { fittingCards, quantitiesOf, shopTestid as T, unownedCards, type RegistryCosmetic } from "./shop.ts";
@@ -20,6 +24,7 @@ import TokenPicker from "./TokenPicker.tsx";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  resetLocaleForTests();
 });
 
 const TOKEN = "token-1";
@@ -92,6 +97,52 @@ describe("#1309 the token picker", () => {
     expect(screen.queryByTestId(T.cardPick("core-001"))).toBeNull();
     expect(screen.queryByTestId(T.cardPick("core-004"))).toBeNull();
     expect(screen.queryByTestId(T.cardPick("core-051-1"))).toBeNull();
+  });
+
+  it("#2115 the picker waits as a panel skeleton, and the bars take its place when the reads answer", async () => {
+    tokenServer();
+    render(<TokenPicker token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.tokenLoading), "panel");
+    expect(screen.getByTestId(T.tokenLoading)).toHaveTextContent("Loading your tokens…");
+    expect(screen.queryByTestId(T.cardBar)).toBeNull();
+
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+    expect(screen.queryByTestId(T.tokenLoading)).toBeNull();
+    expect(screen.queryByText("Loading your tokens…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+  });
+
+  it("#2053 the card picker names each card in the reader's language", async () => {
+    tokenServer();
+    const { unmount } = render(<TokenPicker token={TOKEN} />);
+    const english = (await screen.findByTestId(T.cardPick("core-002"))).closest(".token-row");
+    expect(english).toHaveTextContent(CATALOG["core-002"]!.name);
+    unmount();
+
+    await setLocale("zh-CN");
+    render(<TokenPicker token={TOKEN} />);
+    const row = (await screen.findByTestId(T.cardPick("core-002"))).closest(".token-row");
+    expect(row).toHaveTextContent(CHINESE["core-002"]!.name);
+    expect(row).not.toHaveTextContent(CATALOG["core-002"]!.name);
+  });
+
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    tokenServer({ bars: { status: 500 } });
+    render(<TokenPicker token={TOKEN} />);
+    expect(await screen.findByTestId(T.tokenLoadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a refused redemption says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    tokenServer({ redeem: { status: 500 } });
+    render(<TokenPicker token={TOKEN} />);
+    await screen.findByTestId(T.cardPick("core-002"));
+
+    fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
+
+    expect(await screen.findByTestId(T.tokenError)).toHaveTextContent("服务器返回了 500");
   });
 
   it("#1658 both bars are FillBars at the server's points and size, the next step beside the cosmetic bar", async () => {

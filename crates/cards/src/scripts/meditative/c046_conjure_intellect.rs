@@ -123,6 +123,7 @@ mod tests {
                             player,
                             instance_id,
                             def_id,
+                            ..
                         } if *player == P1 => Some((instance_id.clone(), def_id.clone())),
                         _ => None,
                     })

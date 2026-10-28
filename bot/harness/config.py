@@ -130,7 +130,7 @@ _SHARED: dict[str, tuple[str, str]] = {
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
     "human required": ("e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"),
     "person merges": ("1d76db", "The bot builds it, but a person reviews and merges its pull request"),
-    "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
+    "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
     "priority:high": ("d73a4a", "The night bot picks this up first"),
@@ -275,6 +275,22 @@ class Gate:
     machine: bool = True
 
 
+#: The one side a `take` resolver takes: the version the merge brought in.
+RESOLVER_TAKES = ("main",)
+
+
+@dataclass(frozen=True)
+class Resolver:
+    """A file whose merge conflict the harness resolves itself, with no model (`resolve.py`):
+    `take` the version `main` brought in, or `run` a command that rewrites the file from the
+    merged tree. One of the two, never both. From `resolvers` in `.harness/config.json`."""
+
+    path: str
+    take: str = ""
+    run: str = ""
+    timeout_minutes: int = 10
+
+
 @dataclass(frozen=True)
 class EasyRule:
     """The limits of `difficulty:easy` (`harness/easy.py`), from `easy` in `.harness/config.json`:
@@ -344,6 +360,8 @@ class Config:
     gates: tuple[Gate, ...]
     #: The subscriptions, from `.harness/providers.json`.
     pool: Pool
+    #: The conflicted files the harness resolves itself when it merges `main` (`resolve.py`).
+    resolvers: tuple[Resolver, ...] = ()
     #: Self checks a self-checking builder gets before its change goes to review anyway.
     max_self_check_rounds: int = 3
     #: What `difficulty:easy` allows (`harness/easy.py`).
@@ -425,7 +443,8 @@ _REQUIRED = (
 _ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
 #: Keys `.harness/config.json` may leave out, with their defaults. `identity` is read once, when
 #: the process starts (`identity.py`); `parse` only checks it.
-_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}, "identity": None, "controller": False}
+_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}, "identity": None, "controller": False,
+             "resolvers": []}
 
 
 def _easy(raw: Any) -> EasyRule:
@@ -453,6 +472,47 @@ def _gate(raw: Any, where: str) -> Gate:
                     machine=bool(raw.get("machine", True)))
     except (KeyError, TypeError, ValueError) as exc:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
+
+
+def _resolvers(raw: Any) -> tuple[Resolver, ...]:
+    """`resolvers`: each names one file by its plain repository path, and either `take` (`main`)
+    or `run` (a command, with an optional whole `timeout_minutes`); a path at most once, and one
+    `run` resolver at most, since each command builds the merged tree, which another's conflict
+    markers would break."""
+    if not isinstance(raw, list):
+        raise ConfigError("resolvers: expected a list")
+    out: list[Resolver] = []
+    for i, entry in enumerate(raw):
+        where = f"resolvers[{i}]"
+        if not isinstance(entry, Mapping):
+            raise ConfigError(f"{where}: expected an object")
+        unknown = sorted(set(entry) - {"path", "take", "run", "timeout_minutes"})
+        if unknown:
+            raise ConfigError(f"{where}: unknown keys {', '.join(unknown)}")
+        values = {k: entry.get(k, "") for k in ("path", "take", "run")}
+        if any(not isinstance(v, str) for v in values.values()):
+            raise ConfigError(f"{where}: `path`, `take` and `run` are strings")
+        path, take, run = (values[k].strip() for k in ("path", "take", "run"))
+        parts = path.split("/")
+        if (not path or any(c in path for c in "*?[\\") or path.startswith("/")
+                or any(part in ("", ".", "..") for part in parts)):
+            raise ConfigError(f"{where}: `path` must name one file by its plain repository path, "
+                              "with no glob")
+        if bool(take) == bool(run):
+            raise ConfigError(f"{where}: give exactly one of `take` and `run`")
+        if take and take not in RESOLVER_TAKES:
+            raise ConfigError(f"{where}: `take` is one of {', '.join(RESOLVER_TAKES)}")
+        if take and "timeout_minutes" in entry:
+            raise ConfigError(f"{where}: `timeout_minutes` is for a `run` resolver")
+        minutes = entry.get("timeout_minutes", 10)
+        if isinstance(minutes, bool) or not isinstance(minutes, int) or minutes < 1:
+            raise ConfigError(f"{where}: timeout_minutes must be a whole number of at least 1")
+        if any(r.path == path for r in out):
+            raise ConfigError(f"{where}: {path} has a resolver already")
+        if run and any(r.run for r in out):
+            raise ConfigError(f"{where}: one `run` resolver at most")
+        out.append(Resolver(path, take, run, minutes))
+    return tuple(out)
 
 
 def _priorities(raw: Any) -> dict[str, str]:
@@ -570,6 +630,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         install=_gate(raw["install"] | {"name": "install"}, "install"),
         gates=gates,
         pool=pool if pool is not None else providers_mod.load(root),
+        resolvers=_resolvers(raw.get("resolvers", _OPTIONAL["resolvers"])),
         max_self_check_rounds=self_checks,
         easy=_easy(raw.get("easy", _OPTIONAL["easy"])),
         controller=bool(raw.get("controller", _OPTIONAL["controller"])),

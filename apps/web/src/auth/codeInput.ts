@@ -95,7 +95,7 @@ export function codeProblemMessage(problem: CodeInputProblem, format: CodeFormat
   switch (problem.kind) {
     case "excluded": {
       const never = listInWords(excludedCharacters(format));
-      return t("Invite codes never use {never}, so “{character}” can’t be part of one. Check that character again.", {
+      return t("Invite codes never use {never}, so “{character}” can't be part of one. Check that character again.", {
         never,
         character: visibleCharacter(problem.character),
       });
@@ -105,14 +105,14 @@ export function codeProblemMessage(problem: CodeInputProblem, format: CodeFormat
       const keyboard = isNonLatinLetter(problem.character)
         ? ` ${t("Check that your keyboard is set to Latin letters.")}`
         : "";
-      const refused = t("“{character}” isn’t used in invite codes. They use {alphabet}.", {
+      const refused = t("“{character}” isn't used in invite codes. They use {alphabet}.", {
         character: visibleCharacter(problem.character),
         alphabet: alphabetInWords(format),
       });
       return `${refused}${keyboard}`;
     }
     case "tooLong":
-      return t("That’s longer than an invite code, which has {count} characters.", { count: String(format.length) });
+      return t("That's longer than an invite code, which has {count} characters.", { count: String(format.length) });
   }
 }
 

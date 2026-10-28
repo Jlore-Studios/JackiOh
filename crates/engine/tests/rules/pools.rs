@@ -507,3 +507,93 @@ mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
         );
     }
 }
+
+/// R1859005 (issue #1859, Stinkyscape #136 Magic Module): `dealsDamage` keeps only the cards the
+/// catalog marks so (R1748001), and `false` leaves them out.
+mod r1859005_a_deals_damage_pool {
+    use super::*;
+
+    #[test]
+    fn r1859005_a_deals_damage_pool_keeps_only_the_cards_marked_so() {
+        let mut all = defs();
+        all.push(card("core-024", "Core", "24", json!({ "dealsDamage": true })));
+        register_catalog(catalog_of(all));
+        assert_eq!(pool(json!({ "dealsDamage": true })), vec!["core-024"]);
+        let without = pool(json!({ "dealsDamage": false }));
+        assert!(!without.contains(&"core-024".to_string()));
+        assert_eq!(without.len(), pool(json!({})).len() - 1);
+        // It serialises under its own name.
+        assert_eq!(
+            as_json(&q(json!({ "dealsDamage": true }))),
+            json!({ "dealsDamage": true })
+        );
+    }
+}
+
+/// R1878000: `keywords` (Stinkyscape #124's "a random Starship Piece") is the cards that print every
+/// listed keyword on their base face.
+mod r1878000_the_keywords_filter_reads_the_printed_base_face {
+    use super::*;
+
+    fn keyword_defs() -> Vec<CardDef> {
+        let piece = json!({ "keywords": [{ "kind": "Starship Piece" }], "text": "Starship Piece" });
+        let both = json!({ "keywords": [{ "kind": "Starship Piece" }, { "kind": "Taunt" }], "text": "both" });
+        vec![
+            card(
+                "core-401",
+                "Core",
+                "401",
+                json!({ "base": piece, "radiant": piece }),
+            ),
+            card(
+                "core-402",
+                "Core",
+                "402",
+                json!({ "base": both, "radiant": both }),
+            ),
+            card("core-403", "Core", "403", json!({})),
+            // Only the Radiant face prints it, so the card does not.
+            card("core-404", "Core", "404", json!({ "radiant": piece })),
+            card(
+                "core-405",
+                "Core",
+                "405",
+                json!({ "tags": ["Token"], "rarity": "Token", "token": true, "base": piece, "radiant": piece }),
+            ),
+            card(
+                "boss-406",
+                "Boss",
+                "406",
+                json!({ "base": piece, "radiant": piece }),
+            ),
+        ]
+    }
+
+    #[test]
+    fn r1878000_keywords_keeps_the_cards_printing_every_listed_keyword_on_their_base_face() {
+        register_catalog(catalog_of(keyword_defs()));
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"] })),
+            vec!["core-401", "core-402"]
+        );
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece", "Taunt"] })),
+            vec!["core-402"]
+        );
+        // A token joins only a pool that takes tokens, and a held set only a pool that names it (R1420).
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"], "withTokens": true })),
+            vec!["core-401", "core-402", "core-405"]
+        );
+        assert_eq!(
+            pool(json!({ "keywords": ["Starship Piece"], "set": "Boss" })),
+            vec!["boss-406"]
+        );
+        // Unasked, the field filters nothing, and it serialises under its own name.
+        assert_eq!(pool(json!({})).len(), 4);
+        assert_eq!(
+            as_json(&q(json!({ "keywords": ["Starship Piece"] }))),
+            json!({ "keywords": ["Starship Piece"] })
+        );
+    }
+}

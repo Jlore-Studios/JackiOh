@@ -24,8 +24,10 @@ import {
 } from "../cards/cosmetics.ts";
 import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { openedPack, packsInfo } from "./fixtures.ts";
 import PackOpening, { PackScene, type PackSceneProps } from "./PackOpening.tsx";
@@ -65,6 +67,7 @@ afterEach(() => {
   setAudioEngineForTests(null);
   __resetSettingsForTests();
   resetFxSettingsForTests();
+  resetLocaleForTests();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   try {
@@ -707,6 +710,24 @@ describe("#1308 the card packs panel", () => {
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
   });
 
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    packsServer({ info: { status: 500 } });
+    render(<PackOpening token={TOKEN} />);
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a failed open says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    packsServer({ open: () => ({ status: 500 }) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("服务器返回了 500");
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+  });
+
   it("a tap and a swipe on one pack open it once", async () => {
     const server = packsServer();
     await panel();
@@ -803,6 +824,7 @@ describe("#1308 the card packs panel", () => {
     packsServer();
     render(<PackOpening token={TOKEN} />);
     expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your packs…");
+    expectSkeleton(screen.getByTestId(T.loading), "rows");
     await screen.findByTestId(T.held);
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });

@@ -8,8 +8,9 @@
 // from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
 // points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
 // The odds are not here: they are on `/purchases` (R1665000). A refused open or chase shows the
-// server's words verbatim with nothing changed on screen. A slot's new cosmetic is equipped from the
-// reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection stays.
+// server's words through `t()` (R711000) with nothing changed on screen. A slot's new cosmetic is
+// equipped from the reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection
+// stays.
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -17,6 +18,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
+import { cardNameOf } from "../collection/collection.ts";
 import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
@@ -27,6 +29,7 @@ import {
   getCollection,
   getCosmeticPacks,
   getOwnedCosmetics,
+  keptPaths,
   openCosmeticPack,
   type CollectionResponse,
   type CosmeticPacksResponse,
@@ -34,9 +37,11 @@ import {
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { COSMETIC_PACK } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   REGISTRY,
   chaseCandidates,
@@ -52,11 +57,6 @@ import "./shop.css";
 /** What a failed request says: the server's words, else the error's. */
 function wordsOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
-}
-
-/** A card's name from the catalog, else its id. */
-function cardName(cardId: string): string {
-  return CATALOG[cardId]?.name ?? cardId;
 }
 
 /**
@@ -76,9 +76,16 @@ export default function CosmeticPacks({
   onChanged?: () => void;
   registry?: readonly RegistryCosmetic[];
 }): ReactElement {
-  const [info, setInfo] = useState<CosmeticPacksResponse | null>(null);
-  const [collection, setCollection] = useState<CollectionResponse | null>(null);
-  const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<CosmeticPacksResponse | null>(
+    () => cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks) ?? null,
+  );
+  const [collection, setCollection] = useState<CollectionResponse | null>(
+    () => cachedRead<CollectionResponse>(token, keptPaths.collection) ?? null,
+  );
+  const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(
+    () => cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics) ?? null,
+  );
   const [opened, setOpened] = useState<OpenedCosmeticPackResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,8 +113,19 @@ export default function CosmeticPacks({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptInfo = cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks);
+          const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
+          const keptOwned = cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
+          if (keptInfo === undefined || keptCollection === undefined || keptOwned === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(keptInfo);
+            setCollection(keptCollection);
+            setOwned(keptOwned);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -171,7 +189,7 @@ export default function CosmeticPacks({
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.packsLoadError}>
-            {loadError}
+            {t(loadError)}
           </p>
           <div className="account-actions">
             <button
@@ -189,9 +207,7 @@ export default function CosmeticPacks({
       )}
       {info === null || collection === null || owned === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.packsLoading}>
-            {t("Loading your cosmetic packs…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading your cosmetic packs…")} testId={shopTestid.packsLoading} />
         ) : null
       ) : (
         <>
@@ -237,7 +253,7 @@ export default function CosmeticPacks({
                     {look === null ? null : <CosmeticLook id={look.id} cardId={look.cardId} />}
                     {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
                       <p className="pack-slot__card">
-                        {t("On {card}", { card: cardName(slot.grant.cardId) })}
+                        {t("On {card}", { card: cardNameOf(slot.grant.cardId) })}
                         {slot.grant.cardGranted ? ` · ${t("Its card was granted too")}` : null}
                       </p>
                     ) : null}
@@ -283,7 +299,7 @@ export default function CosmeticPacks({
       )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={shopTestid.packsError}>
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
@@ -391,7 +407,7 @@ function ShardBar({
                     >
                       {open.map((cardId) => (
                         <option key={cardId} value={cardId}>
-                          {cardName(cardId)}
+                          {cardNameOf(cardId)}
                         </option>
                       ))}
                     </select>

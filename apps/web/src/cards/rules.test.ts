@@ -188,6 +188,23 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // Scanning Probes (S20) explain them on their own faces.
     "Replace your board",
     "Scan for an Anomaly",
+    // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
+    "Units have keyword",
+    // R1870000, R1870001, R1870002, R1870004, R1870007: the engine's readings of Stinkyscape's Terminus
+    // texts (S22), which print them in plain words, not as terms.
+    "Win on play",
+    "Exile all, piles whole",
+    "Gain Echo",
+    "Units keyword next turn",
+    "Keyword for good",
+    // R1876000, R1876001: ZolarKeth's verbs, its own face's words ("It can't use its own Activate",
+    // "Activate your Universities"), no term of their own.
+    "Another card's Activate",
+    // R1849003, R1869002, R1863000: the M12 audit's rows for verbs §6.3 lacked (#2176), each printed in
+    // plain words on its Stinkyscape card.
+    "Reflect damage",
+    "May attack again",
+    "Watch first plays",
   ],
 };
 
@@ -824,11 +841,10 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
-    // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
-    // R1839000: and Dormant is a §6.1 status no card prints until Stinkyscape's cards ship.
-    // R1857000: the held Stinkyscape set's faces print both, so the list reads the sets that ship.
-    const unprinted: readonly GlossaryTermId[] = ["Frozen", "Dormant"];
+    // R1174000: Frozen was a §6.1 status no card printed (M+ #24 Bob, #1185, prints the verb, Freeze)
+    // until the Stinkyscape set shipped (#1884, R1857000), whose faces print it, so it left this list.
+    // R1839000: and Dormant likewise, the Stinkyscape set's faces printing both. No status is left unprinted.
+    const unprinted: readonly GlossaryTermId[] = [];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",

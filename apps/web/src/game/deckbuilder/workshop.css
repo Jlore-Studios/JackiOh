@@ -267,6 +267,43 @@
   background: var(--ws-amber);
 }
 
+/* #2096: a deck's row and its Duplicate, drawn as two sheets, side by side. */
+.ws-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+}
+
+.deckbuilder.app-shell .ws-row-duplicate {
+  position: relative;
+  width: 28px;
+  padding: 0;
+  border-color: var(--line);
+  border-radius: 8px;
+}
+
+.ws-row-duplicate::before,
+.ws-row-duplicate::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+}
+
+.ws-row-duplicate::before {
+  top: calc(50% - 8px);
+  left: calc(50% - 7px);
+}
+
+/* The front sheet hides the back one's corner. */
+.ws-row-duplicate::after {
+  top: calc(50% - 4px);
+  left: calc(50% - 3px);
+  background: inherit;
+}
+
 .ws-chip {
   padding: 1px 8px;
   border: 1px solid currentColor;
@@ -408,7 +445,8 @@
   display: inline-flex;
 }
 
-.ws-cosmetics-button {
+.ws-cosmetics-button,
+.ws-history-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -429,6 +467,12 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* #2099: the open deck's Undo and Redo, before the cosmetics button. */
+.ws-history {
+  display: inline-flex;
+  gap: 6px;
 }
 
 .ws-cosmetics-panel {
@@ -539,28 +583,6 @@
   color: var(--text);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 12px;
-}
-
-.ws-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--opponent) 60%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--opponent) 10%, var(--bg-raised));
-}
-
-.deckbuilder.app-shell .ws-confirm p {
-  margin: 0;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.ws-confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 /* --- the trio editor ----------------------------------------------------------------------------- */
@@ -920,6 +942,42 @@
 @media (max-width: 560px) {
   .workshop .db-header {
     column-gap: 10px;
+    row-gap: 2px;
+  }
+
+  /* #2099: an open deck's Undo, Redo and cosmetics buttons join Back and the gear on the first row,
+     and the title moves down to the save status's row, so the header keeps two rows and the pool's
+     first row stays on the first screen (BUILD M5-T1). Undo and Redo stay 44 px tall and 40 wide. */
+  .workshop .db-header .db-title {
+    order: 1;
+  }
+
+  .workshop .db-header .ws-sync {
+    order: 2;
+  }
+
+  .ws-history {
+    gap: 4px;
+  }
+
+  .deckbuilder.app-shell .ws-history-button,
+  .deckbuilder.app-shell .ws-cosmetics-button {
+    padding-inline: 0;
+  }
+
+  /* Past the touch-sizing block's 44 px width below; 40 still clears axe's 24 px target size. */
+  .deckbuilder.app-shell .db-header .ws-history-button {
+    min-width: 40px;
+  }
+
+  /* #2096: Practice, Copy code, Duplicate and Delete deck stay on one row in a 390 px phone's
+     sidebar: 344 px inside, or 329 px when the pool's scrollbar takes its 15 px. */
+  .ws-actions {
+    gap: 4px;
+  }
+
+  .deckbuilder.app-shell .ws-actions .ws-action {
+    padding-inline: 5px;
   }
 }
 
@@ -934,10 +992,16 @@
     min-height: 44px;
   }
 
-  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square. */
-  .deckbuilder.app-shell .ws-cosmetics-button {
+  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square, and Undo and Redo (#2099). */
+  .deckbuilder.app-shell .ws-cosmetics-button,
+  .deckbuilder.app-shell .ws-history-button {
     min-width: 44px;
     min-height: 44px;
+  }
+
+  /* #2096: a row's Duplicate takes a finger too. */
+  .deckbuilder.app-shell .ws-row-duplicate {
+    width: 44px;
   }
 }
 

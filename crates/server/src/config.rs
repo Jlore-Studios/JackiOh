@@ -493,6 +493,10 @@ pub const RANK_LOSS_PIPS: i32 = 1;
 pub const RANK_STREAK_LENGTH: i32 = 3;
 /// R606: the streak bonus, in pips, earned below Mythic Grape only.
 pub const RANK_STREAK_BONUS_PIPS: i32 = 1;
+/// R2101000: the ranked win streak (R606's `streak`) from which the profile and a ranked match's
+/// line show a flame with its count. Only the client reads it. Three, where R606's bonus starts,
+/// but apart from `RANK_STREAK_LENGTH` so each tunes alone.
+pub const RANK_STREAK_FLAME_LENGTH: i32 = 3;
 /// R606: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
 /// before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
 pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;
@@ -725,7 +729,7 @@ pub const DECK_CODE_VERSION: i32 = 2;
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -738,20 +742,24 @@ pub struct CatalogNumberSetOffsets {
     pub meditative: i32,
     #[serde(rename = "Meditative+")]
     pub meditative_plus: i32,
+    #[serde(rename = "Stinkyscape")]
+    pub stinkyscape: i32,
 }
 
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
 /// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n, Meditative+ 4000 + n — still written as LEB128. No set holds 1000 cards, so a number
-/// names one set and one card. Meditative's offset is the next thousand in catalog order (R1420),
-/// and so is Meditative+'s after it (v0.3.15, issue #1187, R1178000); neither moved another set's,
-/// so a code minted before a set shipped reads as it always did.
+/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n — still written as LEB128. No set holds
+/// 1000 cards, so a number names one set and one card. Meditative's offset is the next thousand in
+/// catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue #1187, R1178000) and
+/// Stinkyscape's after that (issue #1884, R1857000); none moved another set's, so a code minted
+/// before a set shipped reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
     classic_plus: 2000,
     meditative: 3000,
     meditative_plus: 4000,
+    stinkyscape: 5000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a

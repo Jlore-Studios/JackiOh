@@ -15,7 +15,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::config::RANDOM_KEYWORD_POOL;
+use crate::config::{RANDOM_KEYWORD_POOL, SELF_ECHO_GAIN_CAP};
 use crate::damage::DamageTarget;
 use crate::effects::card_scope::{CardScope, Readers, cards_in_card_scope};
 use crate::effects::radiant::RadiantTarget;
@@ -231,6 +231,52 @@ pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
             return;
         };
         grant_to(ctx, &mut instance, &args.keyword, true);
+    })
+}
+
+/// R1870002: the Echo repeats a resolving card has given itself in this play (`gain_echo`), in its
+/// `memory`, which R215's reset clears as it lands from the resolving zone.
+pub const ECHO_GAINED_KEY: &str = "echoGained";
+
+/// `gainEcho`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GainEchoArgs {
+    /// The repeats it gains: 1 for Stinkyscape #4.2 KY's Last Exam's "this gains Echo +1".
+    pub amount: i32,
+}
+
+/// R1870002 (Stinkyscape #4.2 KY's Last Exam, "this gains Echo +1"): the resolving card is owed
+/// `amount` more Echo repeats (§6.2 Echo, one more entry on `state.echoQueue` as Core #79 Twinspell's
+/// grant is), each a whole resolution of it again, read by step 6's loop after this one ends. A play
+/// gives itself at most `SELF_ECHO_GAIN_CAP` in all, counted under `ECHO_GAINED_KEY`. Nothing on a card
+/// that is not resolving: a Spell's own list that has put it back in a hand gains it nothing.
+pub fn gain_echo(args: GainEchoArgs) -> Effect {
+    Effect::new("gainEcho", move |ctx| {
+        let Some(card) = ctx.live_self().cloned() else {
+            return;
+        };
+        if card.zone.z() != ZoneName::Resolving {
+            return;
+        }
+        let gained = card
+            .memory
+            .get(ECHO_GAINED_KEY)
+            .and_then(serde_json::Value::as_i64)
+            .map_or(0, |gained| gained as i32);
+        let amount = args.amount.min(SELF_ECHO_GAIN_CAP - gained);
+        if amount <= 0 {
+            return;
+        }
+        let controller = ctx.controller;
+        crate::echo::add_echo_repeats(&mut ctx.sink, &card, controller, amount);
+        if let Some(live) = find_instance_mut(ctx.state, &card.id) {
+            live.memory.insert(
+                ECHO_GAINED_KEY.to_string(),
+                serde_json::Value::from(gained + amount),
+            );
+        }
     })
 }
 

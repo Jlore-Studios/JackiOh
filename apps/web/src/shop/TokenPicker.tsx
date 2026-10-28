@@ -6,15 +6,26 @@
 // THE SERVER DECIDES (CLAUDE.md rule 7). The bars, their sizes, the next step and the held
 // counts come from `GET /api/tokens`; the filter only chooses what to browse. A redemption sends
 // intent and renders the answer: success re-reads the bars (and the collection, so the unlocked
-// card leaves the list), refusal shows the server's words verbatim with nothing changed on screen.
+// card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
+// changed on screen.
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
-import { getCollection, getTokens, redeemCardToken, type CollectionResponse, type TokenBarsResponse } from "../net/api.ts";
+import {
+  getCollection,
+  getTokens,
+  keptPaths,
+  redeemCardToken,
+  type CollectionResponse,
+  type TokenBarsResponse,
+} from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, unownedCards } from "./shop.ts";
 import "./shop.css";
 
@@ -36,8 +47,13 @@ export default function TokenPicker({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [bars, setBars] = useState<TokenBarsResponse | null>(null);
-  const [collection, setCollection] = useState<CollectionResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [bars, setBars] = useState<TokenBarsResponse | null>(
+    () => cachedRead<TokenBarsResponse>(token, keptPaths.tokens) ?? null,
+  );
+  const [collection, setCollection] = useState<CollectionResponse | null>(
+    () => cachedRead<CollectionResponse>(token, keptPaths.collection) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -58,8 +74,17 @@ export default function TokenPicker({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
+          const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
+          if (keptBars === undefined || keptCollection === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setBars(keptBars);
+            setCollection(keptCollection);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -100,7 +125,7 @@ export default function TokenPicker({
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={shopTestid.tokenLoadError}>
-            {loadError}
+            {t(loadError)}
           </p>
           <div className="account-actions">
             <button
@@ -118,16 +143,14 @@ export default function TokenPicker({
       )}
       {bars === null || collection === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.tokenLoading}>
-            {t("Loading your tokens…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading your tokens…")} testId={shopTestid.tokenLoading} />
         ) : null
       ) : (
         <TokenBody bars={bars} collection={collection} busy={busy} onPickCard={pickCard} />
       )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={shopTestid.tokenError}>
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
@@ -176,7 +199,7 @@ function TokenBody({
       ) : (
         cards.map((card) => (
           <div key={card.id} className="token-row">
-            <span>{card.name}</span>
+            <span>{readerName(card)}</span>
             <div className="account-actions">
               <button
                 type="button"

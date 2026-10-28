@@ -1,5 +1,7 @@
 // `/collection`'s quests (SPEC §14.9, #1304; moved from `/account` by #1307): each quest the account
 // holds, its progress toward its target and what it pays, and how long until the next one arrives.
+// The landing's bookmark (R2035000) shares `useQuests` and `QuestsView`, so both screens show the
+// same rows from the same read.
 //
 // The server decides all of it (CLAUDE.md rule 7): `GET /api/quests` tops the account up first
 // (R1304000) and answers the held quests and when the next falls due, `null` while the account holds
@@ -7,12 +9,14 @@
 // (`auth/cooldown.ts`), so a background tab's frozen timers never put it wrong. A quest's title is the
 // pool's English, looked up as the server's sentences are.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import { getQuests, type QuestsResponse } from "../net/api.ts";
+import { getQuests, keptPaths, type QuestsResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 
 /** Unit conversions, not configuration. */
 const SECONDS_PER_MINUTE = 60;
@@ -43,11 +47,10 @@ export function countdownWords(seconds: number): string {
 }
 
 /** The sentence under the quests: the time until the next, or why none is coming; null for none. */
-function nextWords(quests: QuestsResponse, left: number): string | null {
+function nextWords(quests: QuestsResponse, left: number, rereads: boolean): string | null {
   if (quests.nextDueAt !== null) {
-    return left > 0
-      ? t("Next quest in {time}", { time: countdownWords(left) })
-      : t("A new quest has arrived: reopen this page to see it.");
+    if (left > 0) return t("Next quest in {time}", { time: countdownWords(left) });
+    return rereads ? null : t("A new quest has arrived: reopen this page to see it.");
   }
   return quests.quests.length >= QUEST_MAX_HELD
     ? t("You hold {max} quests: finish one to make room for the next.", { max: formatNumber(QUEST_MAX_HELD) })
@@ -55,10 +58,21 @@ function nextWords(quests: QuestsResponse, left: number): string | null {
 }
 
 /** The quests the account holds and the time until the next; nothing while none is held or due. */
-export function QuestsList({ quests }: { quests: QuestsResponse }): ReactElement | null {
+export function QuestsList({
+  quests,
+  onArrived,
+}: {
+  quests: QuestsResponse;
+  onArrived?: () => void;
+}): ReactElement | null {
   const left = useSecondsUntil(quests.nextDueAt);
+  const arrived = quests.nextDueAt !== null && left === 0;
+  // R2035000: a caller that can read again does, once per due time, instead of asking for a reopen.
+  useEffect(() => {
+    if (arrived && onArrived !== undefined) onArrived();
+  }, [arrived, quests.nextDueAt, onArrived]);
   if (quests.quests.length === 0 && quests.nextDueAt === null) return null;
-  const next = nextWords(quests, left);
+  const next = nextWords(quests, left, onArrived !== undefined);
   return (
     <div className="account-quests" data-testid={questsTestid.panel}>
       <h3 className="account-heading">{t("Quests")}</h3>
@@ -97,12 +111,18 @@ export function QuestsList({ quests }: { quests: QuestsResponse }): ReactElement
 }
 
 /**
- * The caller's quests, read on mount and again on Try again; a failed read says why in the
- * panel's place, so the screen around it still shows. The panel is loading until the quests
- * arrive, so loading never looks like having no quests.
+ * The caller's quests, read on mount and again on Try again. The landing's bookmark (R2035000)
+ * shares this, so `/collection` and the landing show the same rows from the same read. R2125000: it
+ * starts on the quests the last visit kept, and a read that fails behind them keeps them and says nothing.
  */
-export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
-  const [quests, setQuests] = useState<QuestsResponse | null>(null);
+export function useQuests(token: string): {
+  quests: QuestsResponse | null;
+  error: string | null;
+  reread: () => void;
+} {
+  const [quests, setQuests] = useState<QuestsResponse | null>(
+    () => cachedRead<QuestsResponse>(token, keptPaths.quests) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -113,13 +133,39 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
         if (!cancelled) setQuests(next);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (cancelled) return;
+        const kept = cachedRead<QuestsResponse>(token, keptPaths.quests);
+        if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
+        else setQuests(kept);
       });
     return () => {
       cancelled = true;
     };
   }, [token, attempt]);
 
+  const reread = useCallback((): void => {
+    setError(null);
+    setAttempt((before) => before + 1);
+  }, []);
+  return { quests, error, reread };
+}
+
+/**
+ * The quests read, the failure, or the wait for them: a failed read says why in the panel's
+ * place, so the screen around it still shows. The panel is loading until the quests arrive, so
+ * loading never looks like having no quests.
+ */
+export function QuestsView({
+  quests,
+  error,
+  onRetry,
+  onArrived,
+}: {
+  quests: QuestsResponse | null;
+  error: string | null;
+  onRetry: () => void;
+  onArrived?: () => void;
+}): ReactElement | null {
   if (error !== null) {
     return (
       <div className="account-quests" data-testid={questsTestid.panel}>
@@ -128,14 +174,7 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
           {t(error)}
         </p>
         <div className="row">
-          <button
-            type="button"
-            data-testid={questsTestid.retry}
-            onClick={() => {
-              setError(null);
-              setAttempt((before) => before + 1);
-            }}
-          >
+          <button type="button" data-testid={questsTestid.retry} onClick={onRetry}>
             {t("Try again")}
           </button>
         </div>
@@ -147,11 +186,14 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
     return (
       <div className="account-quests">
         <h3 className="account-heading">{t("Quests")}</h3>
-        <p className="notice" role="status" data-testid={questsTestid.loading}>
-          {t("Loading your quests…")}
-        </p>
+        <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );
   }
-  return <QuestsList quests={quests} />;
+  return <QuestsList quests={quests} onArrived={onArrived} />;
+}
+
+export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
+  const { quests, error, reread } = useQuests(token);
+  return <QuestsView quests={quests} error={error} onRetry={reread} />;
 }

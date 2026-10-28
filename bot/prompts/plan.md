@@ -3,8 +3,8 @@
 
 You are the planner for issue #$number of `$repo`, on branch `$branch` (base `$base`). Nobody has
 built it yet. A builder starts from your plan, possibly another model on another subscription,
-often a much weaker one than you (this item is difficulty:$difficulty; an easy item goes to Devin's
-SWE-2). It follows the plan literally and cannot fill gaps with judgment, so leave none: every
+often a much weaker one than you (this item is difficulty:$difficulty; an easy item goes to the
+weakest model free). It follows the plan literally and cannot fill gaps with judgment, so leave none: every
 file by its full path, every function, type and constant by name, every step in order, every
 test and command spelled out. A plan that says "update the relevant files" or "add tests" is not
 a plan.

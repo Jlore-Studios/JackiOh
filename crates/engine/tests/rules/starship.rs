@@ -9,6 +9,8 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::harness::types_of;
+
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::starship::*;
 
@@ -50,10 +52,6 @@ fn piece_defs(card: &CardInstance) -> Vec<String> {
         .into_iter()
         .map(|piece| piece.def_id)
         .collect()
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn count_of(events: &[GameEvent], kind: GameEventType) -> usize {
@@ -446,6 +444,57 @@ mod r1852001_equip_does_not_pass_the_keyword_on {
     }
 }
 
+/// R1878001: an Embiggened version's lent Starship Piece follows R1852001 through a Fuse: the card kept
+/// keeps its own lend, as a grant, and an ingredient's reaches no other card.
+mod r1878001_a_lent_piece_through_a_fuse {
+    use super::*;
+
+    #[test]
+    fn r1878001_a_lent_piece_equipped_onto_a_host_played_embiggened_leaves_it_no_piece() {
+        let mut s = board(
+            "p1",
+            json!([brute.id, lender.id, bolt.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(brute.id.as_str(), json!({ "zone": 1, "embiggen": true }));
+        let host = id_at(&s, P1, 1);
+        assert!(!keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        s.play(
+            lender.id.as_str(),
+            json!({ "zone": 1, "equip": true, "embiggen": true }),
+        );
+        assert_eq!(id_at(&s, P1, 1), host, "the host is the kept card");
+        assert!(
+            !keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece),
+            "the lend does not reach the host, though it too was played Embiggened"
+        );
+        bolt_at(&mut s, &host);
+        assert!(!building_a_ship(s.state(), P1), "it died as no piece");
+    }
+
+    #[test]
+    fn r1878001_a_card_that_lent_itself_the_piece_keeps_it_as_a_grant_when_a_card_is_equipped_onto_it() {
+        let mut s = board(
+            "p1",
+            json!([lender.id, clamp.id, bolt.id]),
+            json!([]),
+            json!([plain.id]),
+            json!([]),
+        );
+        s.play(lender.id.as_str(), json!({ "zone": 1, "embiggen": true }));
+        let host = id_at(&s, P1, 1);
+        assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        s.play(clamp.id.as_str(), json!({ "zone": 1, "equip": true }));
+        assert_eq!(id_at(&s, P1, 1), host, "the lender is the kept card");
+        assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
+        assert!(s.card(&host).granted_keywords.contains(&Keyword::StarshipPiece));
+        bolt_at(&mut s, &host);
+        assert_eq!(piece_defs(&ship_of(&s, P1)).len(), 1, "it died as a piece");
+    }
+}
+
 mod r1852002_a_stolen_piece {
     use super::*;
 
@@ -635,6 +684,43 @@ mod r1852003_the_launch {
     }
 
     #[test]
+    fn r1852003_a_piece_on_the_field_and_a_launched_starship_do_nothing_when_another_starship_launches() {
+        // Each side's booster dies into a Starship; p1 also has a live booster on the field.
+        let mut s = board(
+            "p1",
+            json!([bolt.id, booster.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+        );
+        let mine = id_at(&s, P1, 1);
+        bolt_at(&mut s, &mine);
+        s.play(booster.id.as_str(), json!({ "zone": 2 }));
+        let p2_health = health_of(&s, P2);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        assert_eq!(
+            health_of(&s, P2),
+            p2_health - LAUNCHED_DAMAGE,
+            "only the booster fused into the Starship answers its launch"
+        );
+        // p2 launches theirs: p1's live booster and p1's launched Starship answer nothing.
+        s.end_turn();
+        let theirs = id_at(&s, P2, 1);
+        bolt_at(&mut s, &theirs);
+        let p1_health = health_of(&s, P1);
+        let p2_health = health_of(&s, P2);
+        let ship = ship_of(&s, P2);
+        launch(&mut s, &ship.id);
+        assert_eq!(health_of(&s, P1), p1_health - LAUNCHED_DAMAGE);
+        assert_eq!(
+            health_of(&s, P2),
+            p2_health,
+            "no card of p1's answered p2's launch"
+        );
+    }
+
+    #[test]
     fn r1852003_a_trap_reveals_when_either_player_launches_a_starship() {
         let mut s = built_ship_with(json!([]), None, json!([{ "def": countdown.id, "lane": 1 }]));
         let ship = ship_of(&s, P1);
@@ -724,6 +810,42 @@ mod r1852003_the_launch {
                 .iter()
                 .all(|event| event["instanceId"] == json!(ship.id))
         );
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r1852003_a_launch_names_its_pieces_after_the_starship_died_and_its_piece_went_back_to_a_library() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id, bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        let launched_at = s.state().applied.len() - 1;
+        bolt_at(&mut s, &ship.id);
+        assert_eq!(s.card(&ship.id).zone.z(), ZoneName::Graveyard);
+        assert!(
+            s.card(&ship.id).starship.is_none(),
+            "R78 takes the memory off with the card"
+        );
+        out_of_the_graveyard(&mut s, &piece, ZoneName::Library);
+        // The log keeps the last NONCE_HISTORY actions (`reduce::remember_nonce`): once the fusion has
+        // left it, only the launch names the piece's definition.
+        s.state_mut().applied.drain(..launched_at);
+        let launched: Vec<Value> = starship_events(&s, P2)
+            .into_iter()
+            .filter(|event| event["type"] == json!("starshipLaunched"))
+            .collect();
+        assert_eq!(launched.len(), 1, "{launched:?}");
+        assert_eq!(launched[0]["pieces"], json!([booster.id]));
         assert_eq!(
             create_invariant_monitor(s.state()).hidden(s.state()),
             Vec::<String>::new()

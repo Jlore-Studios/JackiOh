@@ -9,7 +9,7 @@
 use jackioh_engine::testkit::*;
 
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{act, act_logged, events_of_type, in_hand, json_of, put, slot};
+use super::fixtures::harness::{act, act_logged, events_of_type, ids_of, in_hand, json_of, put, slot};
 use super::fixtures::prompt_harness::{
     answer_keys, board, expect_replays, hand_card, open_as, replayable, round_trip,
 };
@@ -76,10 +76,6 @@ fn index_of(list: &[String], id: &str) -> i64 {
     list.iter()
         .position(|entry| entry == id)
         .map_or(-1, |at| at as i64)
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn def_ids_of(cards: &[CardInstance]) -> Vec<String> {

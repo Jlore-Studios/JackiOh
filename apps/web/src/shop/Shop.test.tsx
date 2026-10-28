@@ -15,15 +15,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
+import { CHINESE } from "../cards/chinese.ts";
 import { DEFAULT_CARD_COSMETICS, readCardPicks, readCosmetics, resetCosmeticsForTests, writeCosmetics } from "../cards/cosmetics.ts";
 import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
+import { clearReadCache } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import CosmeticPacks from "./CosmeticPacks.tsx";
 import Shop from "./Shop.tsx";
@@ -65,6 +71,7 @@ afterEach(() => {
   vi.useRealTimers();
   __resetSettingsForTests();
   resetFxSettingsForTests();
+  resetLocaleForTests();
   window.localStorage.clear();
 });
 
@@ -170,6 +177,20 @@ describe("#1309 the Jlore shop", () => {
     expect(screen.queryByTestId(T.error)).toBeNull();
   });
 
+  it("#2115 the shop waits as a rows skeleton, and the wallet takes its place when the reads answer", async () => {
+    shopServer();
+    render(<Shop token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.loading), "rows");
+    expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your shop…");
+    expect(screen.queryByTestId(T.wallet)).toBeNull();
+
+    expect(await screen.findByTestId(T.wallet)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.loading)).toBeNull();
+    expect(screen.queryByText("Loading your shop…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+  });
+
   it("a server refusal shows its reason and changes nothing on screen", async () => {
     const server = shopServer({
       wallet: { status: 200, body: { jlore: 250 } },
@@ -190,6 +211,38 @@ describe("#1309 the Jlore shop", () => {
     expect(announceWallet, "nor to tell the pills").not.toHaveBeenCalled();
     expect(screen.queryByTestId(T.fly("Core")), "no pack flew").toBeNull();
     expect(screen.getByTestId(T.packObject("Core")), "the press is let go").toHaveAttribute("data-state", "idle");
+  });
+
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    shopServer({ wallet: { status: 500 } });
+    render(<Shop token={TOKEN} />);
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a refused buy says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } }, buy: { status: 500 } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a server sentence the dictionary lacks stays English for a reader of Chinese", async () => {
+    await setLocale("zh-CN");
+    shopServer({
+      wallet: { status: 200, body: { jlore: 250 } },
+      buy: refusal(409, "conflict", "not enough Jlore for a card pack"),
+    });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("not enough Jlore for a card pack");
   });
 
   it("a bought pack moves the wallet and the count from the answer, and tells the page", async () => {
@@ -291,6 +344,44 @@ describe("#1309 the Jlore shop", () => {
     expect(server.to("GET", "/api/packs")).toHaveLength(2);
   });
 
+  it("R2125000 the next visit shows the wallet a buy left at once, and keeps it when the read behind it fails", async () => {
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(await screen.findByText("150 Jlore")).toBeInTheDocument();
+    cleanup();
+
+    shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
+    render(<Shop token={TOKEN} />);
+
+    expect(text(T.wallet)).toBe("150 Jlore");
+    expect(screen.queryByTestId(T.loading)).toBeNull();
+    expect(text(T.held("Core"))).toContain("Core pack: 3 unopened");
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(screen.queryByTestId(T.retry)).toBeNull();
+    expect(text(T.wallet)).toBe("150 Jlore");
+  });
+
+  it("R2125000 another account's visit finds nothing kept and says why when its read fails", async () => {
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    cleanup();
+
+    shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
+    render(<Shop token="token-other" />);
+
+    expect(screen.getByTestId(T.loading)).toBeInTheDocument();
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the wallet is not reachable");
+  });
+
   it("a failed read says why", async () => {
     shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
     render(<Shop token={TOKEN} />);
@@ -356,6 +447,8 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.queryByTestId(T.shardEmpty)).toBeNull();
     cleanup();
+    // R2125000: the second visit is a first one, not a revisit that opens on the kept 19 / 20.
+    clearReadCache();
 
     // Full, with every Legendary and Mythic already owned (a registry whose chases are all
     // starters, as the shipped one's were before R1833000): the empty sentence, and still no choice.
@@ -391,6 +484,20 @@ describe("#1309 the cosmetic packs", () => {
     expect(await screen.findByText("No unopened packs.")).toBeInTheDocument();
     expect(screen.queryByTestId(T.cosmeticPackObject)).toBeNull();
     expect(screen.queryByTestId(T.open)).toBeNull();
+  });
+
+  it("#2115 the cosmetic packs wait as a panel skeleton, and the unopened count takes its place when the reads answer", async () => {
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+
+    expectSkeleton(screen.getByTestId(T.packsLoading), "panel");
+    expect(screen.getByTestId(T.packsLoading)).toHaveTextContent("Loading your cosmetic packs…");
+    expect(screen.queryByTestId(T.unopened)).toBeNull();
+
+    expect(await screen.findByTestId(T.unopened)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.packsLoading)).toBeNull();
+    expect(screen.queryByText("Loading your cosmetic packs…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
 
   it("R1953000 an opened cosmetic pack pins both token bars at the top, its spent slot's points flying in before they fill", async () => {
@@ -573,6 +680,39 @@ describe("#1309 the cosmetic packs", () => {
     await screen.findByTestId(T.reveal);
 
     expect(screen.getByTestId(T.equipLink)).toHaveAttribute("href", "/collection?section=cosmetics");
+  });
+
+  it("#2053 a failed read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer({ packs: { status: 500 } });
+    render(<CosmeticPacks token={TOKEN} />);
+    expect(await screen.findByTestId(T.packsLoadError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 a refused open says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer({ open: { status: 500 } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+
+    fireEvent.click(screen.getByTestId(T.open));
+
+    expect(await screen.findByTestId(T.packsError)).toHaveTextContent("服务器返回了 500");
+  });
+
+  it("#2053 an opened pack names the card its cosmetic went on in the reader's language", async () => {
+    await setLocale("zh-CN");
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    // Only the card line: the slot's outcome line holds the cosmetic's name, which stays English.
+    const card = screen.getByTestId(T.slot(0)).querySelector(".pack-slot__card");
+    expect(card).toHaveTextContent(`用于${CHINESE["core-008"]!.name}`);
+    expect(card).not.toHaveTextContent(CATALOG["core-008"]!.name);
   });
 
   it("a refused open shows its reason and changes nothing on screen", async () => {

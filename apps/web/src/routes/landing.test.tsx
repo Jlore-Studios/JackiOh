@@ -75,6 +75,7 @@ function serve(answer: MeAnswer): void {
           }),
         );
       }
+      if (url.endsWith("/api/quests")) return Promise.resolve(jsonResponse(200, { quests: [], nextDueAt: null }));
       return Promise.resolve(
         jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }),
       );

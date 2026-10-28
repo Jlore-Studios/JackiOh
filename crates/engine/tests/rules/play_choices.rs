@@ -16,7 +16,7 @@ use std::collections::BTreeSet;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
-use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot, spread};
+use crate::rules::fixtures::harness::{act_result, both, hand_ids, in_hand, new_game, put, slot, spread};
 
 // Fixtures
 
@@ -208,14 +208,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
 }
 
 // Harness
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
-}
 
 /// Past the mulligans, in p1's main phase, with this file's fixtures registered and 4 mana.
 fn playing(seed: &str) -> GameState {

@@ -49,12 +49,13 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -800,7 +801,7 @@ function SignedOutPlay(): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <p>{t("Online play is invite-only for now: you'll need an invite code after signing up.")}</p>
           <a
             className="button-primary play-cta"
             href={paths.login}
@@ -948,6 +949,23 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   const trioSelect = useRef<HTMLSelectElement>(null);
   const joinSubmit = useRef<HTMLButtonElement>(null);
   const focusPending = useRef(link !== null && rejoined === null);
+  // R2094000: a chat Join on a room link pressed on this very screen arrives as a new query without
+  // remounting, so it is adopted here as the opened link is above, unless the lobby is queued or found.
+  const search = useSearch();
+  // Counts adopted links, so the focus below waits for the mode they chose to render.
+  const [adopted, setAdopted] = useState(0);
+  useEffect(() => {
+    const next = readRoomLink();
+    if (next === null) return;
+    forgetRoomLink();
+    setJoinCode(next.code);
+    if (waiting || found) return;
+    const named = next.mode ?? mode;
+    setMode(named);
+    setStatus({ kind: "roomLink", mode: named });
+    focusPending.current = true;
+    setAdopted((count) => count + 1);
+  }, [search]);
   useEffect(() => {
     if (!focusPending.current) return;
     if (mode !== "random" && lobby.kind === "loading") return;
@@ -955,7 +973,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     if (mode === "bo1") deckSelect.current?.focus();
     else if (mode === "bo3") trioSelect.current?.focus();
     else joinSubmit.current?.focus();
-  }, [lobby.kind, mode]);
+  }, [lobby.kind, mode, adopted]);
 
   function run(work: () => Promise<void>): void {
     if (busy) return;
@@ -1174,9 +1192,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
             </h2>
 
             {lobby.kind === "loading" && mode !== "random" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading your decks…")}
-              </p>
+              <Skeleton variant="panel" label={t("Loading your decks…")} />
             ) : null}
             {lobby.kind === "failed" && mode !== "random" ? (
               <>

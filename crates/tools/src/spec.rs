@@ -1,6 +1,6 @@
-//! `cargo jackioh spec check` and `cargo jackioh spec index`: the spec graph's structural checks
-//! (SURFACE §15, part 28). They replace `packages/engine/test/rulings.test.ts`'s index and
-//! `packages/engine/scripts/rulings-coverage.ts`.
+//! `cargo jackioh spec check`, `spec index` and `spec fold`: the spec graph's structural checks
+//! (SURFACE §15, part 28), and the two files every ruling's branch once wrote. They replace
+//! `packages/engine/test/rulings.test.ts`'s index and `packages/engine/scripts/rulings-coverage.ts`.
 //!
 //! `spec/` is the specification as notes: one per section (`spec/NN-<slug>.md`, its `## N.` and
 //! `### N.M` headings the section ids) and one per ruling (`spec/rulings/R<nnnn>.md`), whose front
@@ -16,7 +16,7 @@
 //! ---
 //! ```
 //!
-//! `check` holds seven rules:
+//! `check` holds eight rules:
 //!
 //! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
 //! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id, a
@@ -31,16 +31,27 @@
 //!    `apps/web/src/` and `e2e/` (comments included, recursively), has a note;
 //! 4. every `[[…]]` link in `spec/` resolves: `[[R113]]` to a ruling note, `[[§10.3]]` to a section
 //!    heading, anything else to a note's file name. Links inside code are not links;
-//! 5. every ruling note's `title` and `cards` are present and not empty;
-//! 6. `spec/INDEX.md` is what `index` writes from the notes as they stand (line endings aside), so
-//!    a note added or changed without `index` run again fails (#669);
+//! 5. every ruling note's `title` and `cards` are present and not empty, and every ruling (`R113`),
+//!    section (`§10.3`) and card (`#10`, `C+ #12.1`, its set read as `cards_refs` says) its `cards`
+//!    names exists (#2047);
+//! 6. every file in `spec/pending/` is `<n>.md`, `n` the issue or pull request whose §11 paragraph
+//!    it holds, and holds text, so `fold` can place it. A branch writes its paragraph there and
+//!    never `spec/11-rulings.md`'s end or `spec/INDEX.md`, the two files every ruling's branch
+//!    conflicted on (`reviews/2026-10-22-issue-682-subscriptions.md`, finding 3). This rule used to
+//!    hold the index to the notes on every branch (#669); the daily fold keeps it now;
 //! 7. no file the third rule reads holds an unresolved-ruling marker (`UNRESOLVED_MARKERS`, in any
 //!    case, where a word starts): once a ruling exists, a comment still saying it is to be written
-//!    invites a second decision of the same point (#1243).
+//!    invites a second decision of the same point (#1243);
+//! 8. every ruling marker in the notes of §2 to §10 (`MARKED_SECTIONS`), a `(ruling)` or a
+//!    `Ruling:` in any case and its emphasis read through, links a ruling (`[[R<n>]]`) between it
+//!    and the end of its sentence (REVIEW A2.3, #2048): a marker no link follows names no note a
+//!    reader can open.
 //!
-//! It reads ids, file names, headings and test names, never the wording but rule 7's markers (#133): a reworded sentence
-//! fails nothing, though a reworded `title` changes the index (rule 6). `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
-//! files that prove it, one line each.
+//! It reads ids, file names, headings, test names and the references in `cards`, never the wording but rule 7's and rule 8's markers (#133): a reworded sentence
+//! fails nothing. `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
+//! files that prove it, one line each. `fold` appends the pending paragraphs to
+//! `spec/11-rulings.md` in number order, deletes them and runs `index`; `spec-fold.yml` runs it on
+//! `main` daily and opens the result as a pull request that merges itself.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -64,10 +75,12 @@ pub struct Args {
 
 #[derive(clap::Subcommand)]
 pub enum SpecCommand {
-    /// The seven checks (SURFACE §15, #1243): ids and file names, proofs, citations, links, titles and cards, the index, unresolved-ruling markers.
+    /// The eight checks (SURFACE §15, #1243, #2048): ids and file names, proofs, citations, links, titles and cards, the pending paragraphs' names, unresolved-ruling markers, ruling markers without a link.
     Check,
     /// Rewrite `spec/INDEX.md` from the ruling notes.
     Index,
+    /// Append `spec/pending/<n>.md` to `spec/11-rulings.md` in number order, delete them and rewrite `spec/INDEX.md` (spec-fold.yml, daily).
+    Fold,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -75,6 +88,7 @@ pub fn run(args: Args) -> Result<()> {
     match args.command {
         SpecCommand::Check => check(&root),
         SpecCommand::Index => index(&root),
+        SpecCommand::Fold => fold(&root),
     }
 }
 
@@ -113,7 +127,39 @@ const SKIPPED_TS_MODIFIERS: &[&str] = &["skip", "todo", "fixme", "only"];
 /// Written with `concat!`, because this file is itself in what `check` reads.
 const UNRESOLVED_MARKERS: &[&str] = &[concat!("proposed", " ruling"), concat!("no r-row", " yet")];
 
-const INDEX_HEADER: &str = "# Rulings index\n\nGenerated by `cargo jackioh spec index` from the notes in `rulings/`: edit a note, never this file, then run the command again.\n\n| id | title | note | proven in |\n| --- | --- | --- | --- |\n";
+/// The catalog rule 5 finds a note's cards in, relative to the root.
+const CATALOG_PATH: &str = "crates/cards/catalog.json";
+
+/// The set names a card in a note's `cards` may carry before its `#` (`C+ #12.1`, `Meditative #40`),
+/// each with the catalog `set` it names (#2047).
+const SET_PREFIXES: &[(&str, &str)] = &[
+    ("Core", "Core"),
+    ("C", "Classic"),
+    ("Classic", "Classic"),
+    ("C+", "Classic+"),
+    ("Classic+", "Classic+"),
+    ("M", "Meditative"),
+    ("Meditative", "Meditative"),
+    ("M+", "Meditative+"),
+    ("Meditative+", "Meditative+"),
+    ("S", "Stinkyscape"),
+    ("Stinkyscape", "Stinkyscape"),
+];
+
+/// The set of a card in `cards` that neither a set name nor a card before it places: Core's cards
+/// are written `#<n>` (`spec/README.md`, Note format).
+const DEFAULT_SET: &str = "Core";
+
+/// The word that makes the `#<n>` after it in `cards` an issue's number, not a card: `issue #781`.
+const ISSUE_WORD: &str = "issue";
+
+/// The sections whose ruling markers rule 8 holds to a link (REVIEW A2.3): §2 to §10.
+const MARKED_SECTIONS: std::ops::RangeInclusive<u32> = 2..=10;
+
+const INDEX_HEADER: &str = "# Rulings index\n\nGenerated by `cargo jackioh spec index` from the notes in `rulings/`, and rewritten on `main` every day by `spec fold` (`.github/workflows/spec-fold.yml`), so a ruling merged since is in `rulings/` and not here yet: edit a note, never this file.\n\n| id | title | note | proven in |\n| --- | --- | --- | --- |\n";
+
+/// The note `fold` appends the pending paragraphs to, in `spec/`.
+const RULINGS_NOTE: &str = "11-rulings.md";
 
 /* ------------------------------------------------------------------------------------- notes */
 
@@ -250,6 +296,123 @@ fn unfilled_fields(note: &RulingNote) -> Vec<String> {
         .collect()
 }
 
+/// One reference a note's `cards` makes, as rule 5 resolves it (#2047).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CardsRef {
+    /// `R113`.
+    Ruling(u64),
+    /// `§10.3`, or `§8` for a top-level section.
+    Section(String),
+    /// `C+ #12.1`: the catalog `set` the card is in and its `index` there.
+    Card { set: &'static str, index: String },
+}
+
+/// The rulings (`R<n>` as a word, as `citations` reads code), sections (`§<n>`, `§<n>.<m>`) and
+/// cards (`#<n>`, `#<n>.<k>`) a note's `cards` names, in that order. A card's set is the
+/// `SET_PREFIXES` name written right before its `#` (`C+ #12.1`), else that of the card before it in
+/// the same `cards` (`C+ #12.1–#12.8`), else `DEFAULT_SET`; an `ISSUE_WORD` before the `#` makes it
+/// an issue's number, no card. The rest is prose and names nothing (`B47`, `CLAUDE.md rule 4`).
+fn cards_refs(cards: &str) -> Vec<CardsRef> {
+    let mut refs: Vec<CardsRef> = citations(cards)
+        .into_iter()
+        .map(|(_, number)| CardsRef::Ruling(number))
+        .collect();
+    for (at, sign) in cards.match_indices('§') {
+        let id: String = cards[at + sign.len()..]
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '.')
+            .collect();
+        let id = id.trim_end_matches('.');
+        if !id.is_empty() {
+            refs.push(CardsRef::Section(id.to_string()));
+        }
+    }
+    let mut set = DEFAULT_SET;
+    for (at, _) in cards.match_indices('#') {
+        if at > 0 && is_word_byte(cards.as_bytes()[at - 1]) {
+            continue;
+        }
+        let rest = &cards[at + 1..];
+        let whole = rest.bytes().take_while(u8::is_ascii_digit).count();
+        if whole == 0 {
+            continue;
+        }
+        let part = rest[whole..]
+            .strip_prefix('.')
+            .map_or(0, |after| after.bytes().take_while(u8::is_ascii_digit).count());
+        let index = if part == 0 {
+            &rest[..whole]
+        } else {
+            &rest[..whole + 1 + part]
+        };
+        let before = cards[..at].strip_suffix(' ').unwrap_or("");
+        let word_start = before
+            .char_indices()
+            .rev()
+            .find(|(_, c)| !(c.is_ascii_alphanumeric() || *c == '+'))
+            .map_or(0, |(i, c)| i + c.len_utf8());
+        let word = &before[word_start..];
+        if word == ISSUE_WORD {
+            continue;
+        }
+        if let Some(&(_, named)) = SET_PREFIXES.iter().find(|(prefix, _)| *prefix == word) {
+            set = named;
+        }
+        refs.push(CardsRef::Card {
+            set,
+            index: index.to_string(),
+        });
+    }
+    refs
+}
+
+/// Each set's card `index`es in a catalog's text (`catalog.json`: `"51.1"`, `"T-AI-1"`), tokens
+/// included, for rule 5's card references.
+fn catalog_indices(text: &str) -> Result<BTreeMap<String, BTreeSet<String>>> {
+    let catalog: serde_json::Value = serde_json::from_str(text).context("parsing the catalog")?;
+    let Some(cards) = catalog.as_object() else {
+        bail!("the catalog is not a JSON object keyed by card id");
+    };
+    let mut indices: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for card in cards.values() {
+        if let (Some(set), Some(index)) = (card["set"].as_str(), card["index"].as_str()) {
+            indices
+                .entry(set.to_string())
+                .or_default()
+                .insert(index.to_string());
+        }
+    }
+    Ok(indices)
+}
+
+/// Rule 5's findings for one note's `cards`: each ruling it names with no note (`ids`), each
+/// section with no heading (`sections`) and each card no set of the catalog holds (`catalog`, as
+/// `catalog_indices` reads it) (#2047).
+fn unresolved_cards_refs(
+    note: &RulingNote,
+    ids: &BTreeMap<u64, String>,
+    sections: &BTreeSet<String>,
+    catalog: &BTreeMap<String, BTreeSet<String>>,
+) -> Vec<String> {
+    let path = &note.path;
+    cards_refs(note.cards.as_deref().unwrap_or(""))
+        .into_iter()
+        .filter_map(|reference| match reference {
+            CardsRef::Ruling(number) => (!ids.contains_key(&number)).then(|| {
+                format!("{path}: `cards` names R{number}, which has no note in spec/rulings/")
+            }),
+            CardsRef::Section(id) => (!sections.contains(&id))
+                .then(|| format!("{path}: `cards` names §{id}, which no heading in spec/ defines")),
+            CardsRef::Card { set, index } => (!catalog
+                .get(set)
+                .is_some_and(|indices| indices.contains(&index)))
+            .then(|| {
+                format!("{path}: `cards` names {set} #{index}, which is no card in {CATALOG_PATH} (an issue is written `issue #<n>`)")
+            }),
+        })
+        .collect()
+}
+
 /// Every ruling note under `spec/rulings/`, in file-name order.
 fn read_notes(root: &Path) -> Result<Vec<RulingNote>> {
     let dir = root.join("spec").join("rulings");
@@ -337,6 +500,75 @@ fn unresolved_markers(path: &str, text: &str) -> Vec<String> {
             if starts_a_word {
                 found.push(format!(
                     "{path}:{}: `{marker}` says a ruling is still to be written: cite its note in spec/rulings/, or write one (CLAUDE.md rule 3)",
+                    index + 1
+                ));
+            }
+        }
+    }
+    found
+}
+
+/// Whether `path` (relative to the root) is the note of one of `MARKED_SECTIONS`:
+/// `spec/02-core-systems.md` to `spec/10-engine-guide.md`.
+fn is_marked_section(path: &str) -> bool {
+    path.strip_prefix("spec/")
+        .and_then(|name| name.split_once('-'))
+        .and_then(|(number, _)| number.parse::<u32>().ok())
+        .is_some_and(|number| MARKED_SECTIONS.contains(&number))
+}
+
+/// Whether the word `ruling` at `at..end` of a lowercased line is a ruling marker: one that opens a
+/// parenthesis (`(ruling)`, `(Ruling, Hearthstone convention)`) or is followed by a colon, directly
+/// (`Ruling:`) or after a parenthesis (`Ruling (rotation topology):`, `Ruling ([[R58]]):`). Prose
+/// (`a ruling or a section`, `rulings`) is not one.
+fn is_ruling_marker(lower: &str, at: usize, end: usize) -> bool {
+    let bytes = lower.as_bytes();
+    if (at > 0 && is_word_byte(bytes[at - 1])) || bytes.get(end).is_some_and(|b| is_word_byte(*b)) {
+        return false;
+    }
+    let rest = &lower[end..];
+    let colon_after_parenthesis = rest
+        .strip_prefix(" (")
+        .and_then(|inner| inner.find(')').map(|close| &inner[close + 1..]))
+        .is_some_and(|after| after.starts_with(':'));
+    (at > 0 && bytes[at - 1] == b'(') || rest.starts_with(':') || colon_after_parenthesis
+}
+
+/// Rule 8's findings for one note of §2–§10 (REVIEW A2.3): each ruling marker (`is_ruling_marker`,
+/// emphasis such as `**Ruling:**` read through) whose sentence links no ruling between the marker
+/// and its end: the first `. `, a table cell's closing ` |` or the line's end. Code is not read,
+/// as `wiki_links` reads none; rule 4 holds each `[[R<n>]]` to its note.
+fn unlinked_markers(path: &str, text: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut fenced = false;
+    for (index, line) in text.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        let prose = without_code_spans(line).replace('*', "");
+        let lower = prose.to_ascii_lowercase();
+        for (at, word) in lower.match_indices("ruling") {
+            let end = at + word.len();
+            if !is_ruling_marker(&lower, at, end) {
+                continue;
+            }
+            let rest = &prose[end..];
+            let sentence = [". ", " |"]
+                .iter()
+                .filter_map(|stop| rest.find(stop))
+                .min()
+                .map_or(rest, |stop| &rest[..stop]);
+            let linked = wiki_links(sentence)
+                .iter()
+                .any(|(_, _, target)| ruling_number(target).is_some());
+            if !linked {
+                found.push(format!(
+                    "{path}:{}: a ruling marker whose sentence links no ruling: add the `[[R<n>]]` of the note that decides it (REVIEW A2.3)",
                     index + 1
                 ));
             }
@@ -1137,14 +1369,23 @@ fn check(root: &Path) -> Result<()> {
         }
     }
 
-    // 5. Every note fills in its `title` and `cards`.
+    // 5. Every note fills in its `title` and `cards`, and every ruling, section and card its
+    // `cards` names exists (#2047).
     problems.extend(notes.iter().flat_map(unfilled_fields));
+    let catalog_path = root.join(CATALOG_PATH);
+    let catalog =
+        fs::read_to_string(&catalog_path).with_context(|| format!("reading {}", catalog_path.display()))?;
+    let catalog = catalog_indices(&catalog).with_context(|| CATALOG_PATH.to_string())?;
+    for note in &notes {
+        problems.extend(unresolved_cards_refs(note, &ids, &sections, &catalog));
+    }
 
-    // 6. spec/INDEX.md is what `index` writes from the notes. A note with no ruling id has no row
-    // to render, and rule 1 has named it already.
-    if let Ok(rendered) = render_index(&notes) {
-        let committed = fs::read_to_string(root.join("spec").join("INDEX.md")).ok();
-        problems.extend(index_problem(committed.as_deref(), &rendered));
+    // 6. Every pending §11 paragraph is named for its issue and holds text.
+    problems.extend(pending_problems(root, &read_pending(root)?));
+
+    // 8. Every ruling marker in §2–§10 links its ruling in its sentence.
+    for (path, text) in texts.iter().filter(|(path, _)| is_marked_section(path)) {
+        problems.extend(unlinked_markers(path, text));
     }
 
     for problem in &problems {
@@ -1189,21 +1430,6 @@ fn render_index(notes: &[RulingNote]) -> Result<String> {
     Ok(out)
 }
 
-/// Rule 6's finding: `None` when `spec/INDEX.md` as it stands (`committed`, `None` when the file is
-/// missing) is what `index` writes, `rendered`. Line endings aside: a checkout that turned them
-/// into `\r\n` is not stale, as `front_matter` reads such a note.
-fn index_problem(committed: Option<&str>, rendered: &str) -> Option<String> {
-    match committed {
-        Some(text) if text.replace("\r\n", "\n") == rendered => None,
-        Some(_) => Some(
-            "spec/INDEX.md is stale: run `cargo jackioh spec index` to rewrite it from the notes".to_string(),
-        ),
-        None => Some(
-            "spec/INDEX.md is missing: run `cargo jackioh spec index` to write it from the notes".to_string(),
-        ),
-    }
-}
-
 fn index(root: &Path) -> Result<()> {
     let notes = read_notes(root)?;
     let out = render_index(&notes)?;
@@ -1211,6 +1437,97 @@ fn index(root: &Path) -> Result<()> {
     fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
     println!("spec index: wrote spec/INDEX.md ({} rulings)", notes.len());
     Ok(())
+}
+
+/* ------------------------------------------------------------------------------ the pending */
+
+/// Every file in `spec/pending/`, in name order: its path, the number its name gives (`2198.md` is
+/// 2198, anything else `None`) and its text. No directory is no paragraph.
+fn read_pending(root: &Path) -> Result<Vec<(PathBuf, Option<u64>, String)>> {
+    let mut files = Vec::new();
+    walk(&root.join("spec").join("pending"), &mut files);
+    files
+        .into_iter()
+        .map(|file| {
+            let text = fs::read_to_string(&file).with_context(|| format!("reading {}", file.display()))?;
+            let number = file
+                .file_name()
+                .and_then(|name| name.to_str())
+                .and_then(|name| name.strip_suffix(".md"))
+                .filter(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+                .and_then(|digits| digits.parse().ok());
+            Ok((file, number, text))
+        })
+        .collect()
+}
+
+/// Rule 6's findings: a pending file `fold` could not place (its name gives no number) or that
+/// holds nothing.
+fn pending_problems(root: &Path, pending: &[(PathBuf, Option<u64>, String)]) -> Vec<String> {
+    pending
+        .iter()
+        .filter_map(|(path, number, text)| {
+            let name = relative(root, path);
+            if number.is_none() {
+                Some(format!(
+                    "{name}: a pending paragraph is `spec/pending/<n>.md`, n the number of its issue or pull request"
+                ))
+            } else if text.trim().is_empty() {
+                Some(format!("{name}: a pending paragraph is empty"))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// `rulings` with each paragraph appended as its own, a blank line before it, and one newline at
+/// the end.
+fn folded<'a>(rulings: &str, paragraphs: impl IntoIterator<Item = &'a str>) -> String {
+    let mut out = rulings.trim_end().to_string();
+    for paragraph in paragraphs {
+        out.push_str("\n\n");
+        out.push_str(paragraph.trim());
+    }
+    out.push('\n');
+    out
+}
+
+fn fold(root: &Path) -> Result<()> {
+    let mut pending = Vec::new();
+    for (path, number, text) in read_pending(root)? {
+        let number = number.with_context(|| {
+            format!(
+                "{}: not `<n>.md`, so it has no place (`spec check` rule 6)",
+                relative(root, &path)
+            )
+        })?;
+        pending.push((number, path, text));
+    }
+    pending.sort_by_key(|(number, _, _)| *number);
+    if !pending.is_empty() {
+        let path = root.join("spec").join(RULINGS_NOTE);
+        let rulings = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        let out = folded(&rulings, pending.iter().map(|(_, _, text)| text.as_str()));
+        fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
+        for (_, file, _) in &pending {
+            fs::remove_file(file).with_context(|| format!("removing {}", file.display()))?;
+        }
+    }
+    let numbers: Vec<String> = pending
+        .iter()
+        .map(|(number, _, _)| format!("#{number}"))
+        .collect();
+    println!(
+        "spec fold: {} pending paragraph(s) into spec/{RULINGS_NOTE}{}",
+        pending.len(),
+        if numbers.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", numbers.join(", "))
+        }
+    );
+    index(root)
 }
 
 #[cfg(test)]
@@ -1264,24 +1581,193 @@ mod tests {
     }
 
     #[test]
-    fn flags_a_missing_or_stale_index() {
-        let note = |text: &str| parse_note("spec/rulings/R0195.md".into(), "R0195".into(), text).unwrap();
-        let rendered = render_index(&[note(NOTE)]).unwrap();
-        assert_eq!(index_problem(Some(rendered.as_str()), &rendered), None);
+    fn reads_the_rulings_sections_and_cards_a_notes_cards_names() {
+        let card = |set: &'static str, index: &str| CardsRef::Card {
+            set,
+            index: index.to_string(),
+        };
+        assert_eq!(
+            cards_refs(
+                "§10.8, §9, §2.6., R113–R195; #10, #25r, C+ #12.1–C+ #12.8, #13, Meditative #40 Feng Shui, #41; Core #98, issue #781 (issue #1836), B47, CLAUDE.md rule 4, S20, XR5, C#7"
+            ),
+            vec![
+                CardsRef::Ruling(113),
+                CardsRef::Ruling(195),
+                CardsRef::Section("10.8".to_string()),
+                CardsRef::Section("9".to_string()),
+                CardsRef::Section("2.6".to_string()),
+                card("Core", "10"),
+                card("Core", "25"),
+                card("Classic+", "12.1"),
+                card("Classic+", "12.8"),
+                card("Classic+", "13"),
+                card("Meditative", "40"),
+                card("Meditative", "41"),
+                card("Core", "98"),
+            ]
+        );
+    }
 
-        let crlf = rendered.replace('\n', "\r\n");
-        assert_eq!(index_problem(Some(crlf.as_str()), &rendered), None);
+    #[test]
+    fn flags_a_ruling_section_or_card_that_cards_names_and_nothing_holds() {
+        let path = "spec/rulings/R0195.md";
+        let note = |cards: &str| {
+            parse_note(
+                path.into(),
+                "R0195".into(),
+                &format!("---\nid: R195\ntitle: Glow\ncards: \"{cards}\"\nproven_in: []\n---\n"),
+            )
+            .unwrap()
+        };
+        let ids = BTreeMap::from([(113, "spec/rulings/R0113.md".to_string())]);
+        let sections = BTreeSet::from(["10.3".to_string()]);
+        let catalog = catalog_indices(
+            r#"{"core-010": {"set": "Core", "index": "10"}, "meditativeplus-001-1": {"set": "Meditative+", "index": "1.1"}}"#,
+        )
+        .unwrap();
+        assert!(
+            unresolved_cards_refs(
+                &note("R113, §10.3, #10, Meditative+ #1.1, issue #781"),
+                &ids,
+                &sections,
+                &catalog
+            )
+            .is_empty()
+        );
+        assert_eq!(
+            unresolved_cards_refs(
+                &note("R113, R195, §10.3, §10.99, #10, #11, M+ #1.1, #1.2"),
+                &ids,
+                &sections,
+                &catalog
+            ),
+            vec![
+                format!("{path}: `cards` names R195, which has no note in spec/rulings/"),
+                format!("{path}: `cards` names §10.99, which no heading in spec/ defines"),
+                format!(
+                    "{path}: `cards` names Core #11, which is no card in crates/cards/catalog.json (an issue is written `issue #<n>`)"
+                ),
+                format!(
+                    "{path}: `cards` names Meditative+ #1.2, which is no card in crates/cards/catalog.json (an issue is written `issue #<n>`)"
+                ),
+            ]
+        );
+    }
 
-        let retitled = render_index(&[note(&NOTE.replace("glows yellow", "glows gold"))]).unwrap();
-        let stale = index_problem(Some(rendered.as_str()), &retitled).unwrap();
-        assert!(stale.contains("spec/INDEX.md is stale"));
-        assert!(stale.contains("run `cargo jackioh spec index`"));
+    #[test]
+    fn reads_each_sets_card_indices_from_the_catalog() {
+        assert_eq!(
+            catalog_indices(r#"{"core-051-1": {"set": "Core", "index": "51.1"}, "core-t-coin": {"set": "Core", "index": "T-coin"}, "classicplus-t-ai-01": {"set": "Classic+", "index": "T-AI-1"}}"#).unwrap(),
+            BTreeMap::from([
+                (
+                    "Classic+".to_string(),
+                    BTreeSet::from(["T-AI-1".to_string()])
+                ),
+                (
+                    "Core".to_string(),
+                    BTreeSet::from(["51.1".to_string(), "T-coin".to_string()])
+                ),
+            ])
+        );
+        assert!(catalog_indices("[]").is_err());
+        assert!(catalog_indices("{").is_err());
+    }
 
-        assert!(index_problem(Some(INDEX_HEADER), &rendered).is_some());
+    #[test]
+    fn folds_the_pending_paragraphs_in_number_order_and_rewrites_the_index() {
+        let root = std::env::temp_dir().join(format!("jackioh-spec-fold-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
+        fs::create_dir_all(root.join("spec").join("pending")).unwrap();
+        fs::write(root.join("spec").join("rulings").join("R0195.md"), NOTE).unwrap();
+        fs::write(
+            root.join("spec").join(RULINGS_NOTE),
+            "## 11. Rulings\n\n**[[R195]] is old.**\n",
+        )
+        .unwrap();
+        fs::write(root.join("spec").join("INDEX.md"), "stale").unwrap();
+        fs::write(
+            root.join("spec").join("pending").join("2198.md"),
+            "**[[R195]] is later.**\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("spec").join("pending").join("31.md"),
+            "\n**[[R195]] is earlier.**\n\n",
+        )
+        .unwrap();
 
-        let missing = index_problem(None, &rendered).unwrap();
-        assert!(missing.contains("spec/INDEX.md is missing"));
-        assert!(missing.contains("run `cargo jackioh spec index`"));
+        fold(&root).unwrap();
+        assert_eq!(
+            fs::read_to_string(root.join("spec").join(RULINGS_NOTE)).unwrap(),
+            "## 11. Rulings\n\n**[[R195]] is old.**\n\n**[[R195]] is earlier.**\n\n**[[R195]] is later.**\n"
+        );
+        assert!(read_pending(&root).unwrap().is_empty());
+        let note = parse_note("spec/rulings/R0195.md".into(), "R0195".into(), NOTE).unwrap();
+        assert_eq!(
+            fs::read_to_string(root.join("spec").join("INDEX.md")).unwrap(),
+            render_index(&[note]).unwrap()
+        );
+
+        // Nothing pending changes nothing but the index.
+        fold(&root).unwrap();
+        assert!(
+            fs::read_to_string(root.join("spec").join(RULINGS_NOTE))
+                .unwrap()
+                .ends_with("later.**\n")
+        );
+
+        // A name with no number has no place: `fold` refuses it and leaves every file as it was.
+        fs::write(root.join("spec").join("pending").join("temp-spec-2198.md"), "x").unwrap();
+        assert!(fold(&root).is_err());
+        assert_eq!(read_pending(&root).unwrap().len(), 1);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn check_holds_the_pending_paragraphs_to_their_names_and_never_the_index_to_the_notes() {
+        let root = std::env::temp_dir().join(format!("jackioh-spec-pending-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
+        fs::create_dir_all(root.join("spec").join("pending")).unwrap();
+        fs::create_dir_all(root.join("crates").join("cards")).unwrap();
+        fs::write(root.join(CATALOG_PATH), "{}").unwrap();
+        fs::write(
+            root.join("crates").join("fatigue.rs"),
+            "#[test]\nfn r3_fatigue() {}\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("spec").join("rulings").join("R0003.md"),
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        // No index at all and a paragraph pending: a branch writes neither file every branch shares.
+        fs::write(
+            root.join("spec").join("pending").join("2198.md"),
+            "**[[R3]] is new.**\n",
+        )
+        .unwrap();
+        let clean = check(&root);
+
+        fs::write(root.join("spec").join("pending").join("2199.md"), " \n").unwrap();
+        fs::write(
+            root.join("spec").join("pending").join("temp-spec-2200.md"),
+            "**[[R3]]**\n",
+        )
+        .unwrap();
+        let named = check(&root);
+        let problems = pending_problems(&root, &read_pending(&root).unwrap());
+        let _ = fs::remove_dir_all(&root);
+        assert!(clean.is_ok(), "{clean:?}");
+        assert_eq!(named.unwrap_err().to_string(), "spec check: 2 problem(s)");
+        assert_eq!(
+            problems,
+            vec![
+                "spec/pending/2199.md: a pending paragraph is empty".to_string(),
+                "spec/pending/temp-spec-2200.md: a pending paragraph is `spec/pending/<n>.md`, n the number of its issue or pull request".to_string(),
+            ]
+        );
     }
 
     #[test]
@@ -1359,6 +1845,90 @@ mod tests {
             "// Not in SPEC, and no R-row: wording only.\n// R159: only the positive answer is remembered.\n/// Proposed R82 excludes the play.\n//! the checks a proposed name passes\n// un{proposed}, pia{unwritten}\n"
         );
         assert!(unresolved_markers(path, &prose).is_empty());
+    }
+
+    #[test]
+    fn refuses_a_ruling_marker_whose_sentence_links_no_ruling() {
+        let path = "spec/02-core-systems.md";
+        let text = [
+            "**Ruling:** the Nth empty draw deals N damage. It is reported ([[R3]]).",
+            "| Hand | Cap 10 (ruling) | [[R4]] |",
+            "5. Player 1 draws on turn 1 (**Ruling**, Hearthstone convention).",
+            "**Ruling (rotation topology):** a ring.",
+            "**Ruling:** attacks are not lane-restricted ([[R5]]). Lanes matter for adjacency.",
+            "| Hand | Cap 10 (ruling, [[R4]]) |",
+            "**Ruling ([[R58]]):** one draw casts at most one.",
+            "**Ruling (rotation topology, [[R14]]):** a ring.",
+            "A ruling or a section written before the rename, and the rulings of §11.",
+            "`(ruling)` is code, and a link before a marker ([[R3]]) is not its link (ruling).",
+            "```text",
+            "**Ruling:** inside a fence.",
+            "```",
+        ]
+        .join("\n");
+        let found = unlinked_markers(path, &text);
+        let lines: Vec<&str> = found.iter().map(|f| f.split(':').nth(1).unwrap_or("")).collect();
+        assert_eq!(lines, vec!["1", "2", "3", "4", "10"]);
+        assert!(found[0].starts_with(&format!(
+            "{path}:1: a ruling marker whose sentence links no ruling"
+        )));
+    }
+
+    #[test]
+    fn holds_only_the_notes_of_sections_two_to_ten_to_their_markers() {
+        for path in [
+            "spec/02-core-systems.md",
+            "spec/08-catalog.md",
+            "spec/10-engine-guide.md",
+        ] {
+            assert!(is_marked_section(path), "{path}");
+        }
+        for path in [
+            "spec/01-overview.md",
+            "spec/11-rulings.md",
+            "spec/13-duos.md",
+            "spec/README.md",
+            "spec/INDEX.md",
+            "spec/rulings/R0003.md",
+        ] {
+            assert!(!is_marked_section(path), "{path}");
+        }
+    }
+
+    #[test]
+    fn check_fails_on_an_unlinked_ruling_marker_until_it_links_its_ruling() {
+        let root = std::env::temp_dir().join(format!("jackioh-spec-markers-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
+        fs::create_dir_all(root.join("crates").join("cards")).unwrap();
+        fs::write(root.join(CATALOG_PATH), "{}").unwrap();
+        fs::write(
+            root.join("crates").join("fatigue.rs"),
+            "#[test]\nfn r3_fatigue() {}\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("spec").join("rulings").join("R0003.md"),
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        index(&root).unwrap();
+        let section = root.join("spec").join("02-core-systems.md");
+        fs::write(
+            &section,
+            "## 2. Core systems\n\n**Ruling:** the Nth empty draw deals N damage.\n",
+        )
+        .unwrap();
+        let unlinked = check(&root);
+        fs::write(
+            &section,
+            "## 2. Core systems\n\n**Ruling:** the Nth empty draw deals N damage ([[R3]]).\n",
+        )
+        .unwrap();
+        let linked = check(&root);
+        let _ = fs::remove_dir_all(&root);
+        assert_eq!(unlinked.unwrap_err().to_string(), "spec check: 1 problem(s)");
+        assert!(linked.is_ok(), "{linked:?}");
     }
 
     #[test]

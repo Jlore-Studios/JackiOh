@@ -16,14 +16,23 @@
     under Settings -> Actions -> Runners and a dispatch starts at once;
   - a label with a `home` (a night box subscription's, its login's volume) is served only once
     login.ps1 has made that volume.
+  An `ownSlot` label (jackioh-selfplay-local-gather, gather.yml) is outside maxJobs: it gets one
+  runner of its own while a job is queued for it, whatever the other labels' runners hold, and
+  keeps no standby. An entry's own `containerCpus` and `containerMemory` size its containers in
+  place of the global ones. A `priority` entry's runner (gather's, #2134) comes before the others'
+  in the Docker VM: it takes the CPU ahead of them while both want it, and under the VM's memory
+  pressure the kernel kills their job processes first (Start-Runner). The throttle below still
+  holds every runner alike, so each gives way to the owner's own programs.
   An idle runner no label wants any more is retired after a minute. When it is not calm, every
   idle runner is retired at once, and a runner in the middle of a job is throttled to
   throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
 
-  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, whether it is
-  calm, and each runner container with the CPUs it uses and whether it is throttled, as pc.json
-  in a secret gist of the signed-in account. The status issue's runners section reads it
-  (bot/harness/dashboard.py), so it says what the PC and its gather job are doing. The gist is
+  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, with and without
+  its runners, the size of its memory, whether it is calm, and each runner container with the
+  CPUs it uses, whether it is throttled and, while it plays games, how many of how many
+  (Get-Progress), as pc.json in a secret gist of the signed-in account.
+  The status issue's runners section and learn lane read it (bot/harness/dashboard.py), so it
+  says how loaded the PC is and what it and its gather job are doing. The gist is
   made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
   JACKIOH_PC_GIST, which bot-status.yml hands the status loop. A heartbeat that fails is logged
   and tried again at the next beat: it never holds a runner up.
@@ -38,6 +47,7 @@ $ErrorActionPreference = 'Continue'
 $cfg = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 $repo = $cfg.repo
 $logical = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+$memTotalGB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB
 $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $logFile = Join-Path $logDir 'supervisor.log'
@@ -119,6 +129,19 @@ function To-GB([string]$text) {
 # The serve entry of a label.
 function Entry([string]$label) { @($cfg.serve | Where-Object { $_.label -eq $label })[0] }
 
+# Whether a label's runner has a slot of its own, outside maxJobs (its entry's `ownSlot`).
+function Own([string]$label) { [bool](Entry $label).ownSlot }
+
+# A label's container size: its entry's containerCpus and containerMemory, else the global ones.
+function Cpus-Of([string]$label) {
+  $entry = Entry $label
+  if ($entry -and $null -ne $entry.containerCpus) { $entry.containerCpus } else { $cfg.containerCpus }
+}
+function Memory-Of([string]$label) {
+  $entry = Entry $label
+  if ($entry -and $entry.containerMemory) { $entry.containerMemory } else { $cfg.containerMemory }
+}
+
 # The labels this PC may serve now: every entry without a home, and those whose home volume exists.
 function Servable {
   $volumes = @((Run 'docker' @('volume', 'ls', '--format', '{{.Name}}')).Out -split "`n" | ForEach-Object { $_.Trim() })
@@ -150,7 +173,7 @@ function Get-Runners {
 }
 
 # This PC's load without its runner containers and its yielding ones: CPU % of all logical CPUs,
-# memory used in GB.
+# memory used in GB; and the whole PC's, with them, for the heartbeat.
 function Get-Sample($runners) {
   $cpu = $null
   # CPU time, as `docker stats` measures the runners' share, so the two subtract like for like.
@@ -187,6 +210,8 @@ function Get-Sample($runners) {
   [pscustomobject]@{
     Cpu = [math]::Max(0, [math]::Min(100, $cpu) - $oursCpu)
     Mem = [math]::Max(0, $memGB - $oursMem)
+    CpuAll = [math]::Min(100, $cpu)
+    MemAll = $memGB
   }
 }
 
@@ -215,10 +240,11 @@ function Get-QueuedLabels([string[]]$servable) {
   $labels
 }
 
-# A short name for a label's runners: `selfplay` for jackioh-selfplay-local, the subscription for
-# night-vm-<sub>.
+# A short name for a label's runners: `selfplay` for jackioh-selfplay-local, `gather` for
+# jackioh-selfplay-local-gather, the subscription for night-vm-<sub>.
 function Short([string]$label) {
   if ($label -eq 'jackioh-selfplay-local') { return 'selfplay' }
+  if ($label -eq 'jackioh-selfplay-local-gather') { return 'gather' }
   $label -replace '^night-vm-', ''
 }
 
@@ -231,16 +257,29 @@ function Start-Runner([string]$label, [string]$why) {
   # The single-use config goes in through a file, not the command line.
   $envFile = Join-Path $env:TEMP "$name.env"
   Set-Content -Path $envFile -Value "JIT_CONFIG=$($jit.encoded_jit_config)" -Encoding ascii -NoNewline
-  $cpus = [math]::Max(1, [math]::Floor($cfg.containerCpus))
+  $containerCpus = Cpus-Of $label
+  $memory = Memory-Of $label
+  $cpus = [math]::Max(1, [math]::Floor($containerCpus))
   $argv = @('run', '-d', '--rm', '--name', $name,
     '--label', 'jackioh.pc-runner=1', '--label', "jackioh.label=$label", '--label', "jackioh.runner-id=$($jit.runner.id)",
-    '--cpus', "$($cfg.containerCpus)", '--memory', $cfg.containerMemory, '--memory-swap', $cfg.containerMemory,
+    '--cpus', "$containerCpus", '--memory', $memory, '--memory-swap', $memory,
     '--pids-limit', '8192', '--security-opt', 'no-new-privileges',
     '-e', "CARGO_BUILD_JOBS=$cpus", '-e', "RAYON_NUM_THREADS=$cpus", '--env-file', $envFile)
   if ($entry.home) { $argv += @('-v', "$($entry.home):/home/runner") }
   # Codex sandboxes its commands with bubblewrap, which needs the user namespaces Docker's default
   # seccomp profile refuses.
   if ($entry.seccompUnconfined) { $argv += @('--security-opt', 'seccomp=unconfined') }
+  # A priority runner's cgroup weighs about five times another's (Docker 29 makes --cpu-shares 8192
+  # cpu.weight 532, against the default 100), so while both want the VM's 8 CPUs it gets its own 6
+  # first and the other the rest; alone, either has all of its --cpus. The runner
+  # writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
+  # actions/runner's ProcessInvoker). The kernel kills the process with the highest score, its share
+  # of the VM's memory in thousandths plus that value: 1000 for the rest puts any training step
+  # above a priority step's 200 (at most 200 plus its own 6 GB's share), so when the VM runs out of
+  # memory a training step goes first; the owner's own containers (0) score below either at the
+  # same size. Gather takes the global size: its build of jackioh-server outgrew 3 GB (#2134).
+  if ($entry.priority) { $argv += @('--cpu-shares', '8192', '-e', 'PIPELINE_JOB_OOMSCOREADJ=200') }
+  else { $argv += @('-e', 'PIPELINE_JOB_OOMSCOREADJ=1000') }
   $r = Run 'docker' ($argv + @($cfg.image))
   Remove-Item -Force $envFile -ErrorAction SilentlyContinue
   if ($r.Code -ne 0) {
@@ -263,7 +302,7 @@ function Stop-IdleRunner($runner, [string]$why) {
 
 function Set-Throttle($runner, [bool]$on) {
   if ([bool]$throttled[$runner.Id] -eq $on) { return }
-  $cpus = if ($on) { $cfg.throttledCpus } else { $cfg.containerCpus }
+  $cpus = if ($on) { $cfg.throttledCpus } else { Cpus-Of $runner.Label }
   if ((Run 'docker' @('update', '--cpus', "$cpus", $runner.Id)).Code -eq 0) {
     $throttled[$runner.Id] = $on
     Log ("{0} {1} to {2} CPUs" -f ($(if ($on) { 'throttled' } else { 'restored' })), $runner.Name, $cpus)
@@ -290,6 +329,28 @@ function Write-Body([string]$path, $body) {
   [System.IO.File]::WriteAllText($path, ($body | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding $false))
 }
 
+# How far a busy runner's games have got, for the status issue's top chart: the `jackioh selfplay`
+# (a learn shard's) or `jackioh stats` (gather's) it runs, its --games, --from and --patch, and the
+# games its --out holds so far. Each writes one line a game as it finishes, a shard into a file of
+# its range in the folder --out names, gather into the file itself. $null while it plays none (a
+# build, the retrain, the gate). The path goes to sh as an argument, never as script.
+function Get-Progress($runner) {
+  $p = Run 'docker' @('exec', $runner.Id, 'pgrep', '-a', '-x', 'jackioh') 20
+  if ($p.Code -ne 0 -or -not $p.Out) { return $null }
+  $argv = @((@($p.Out -split "`n")[0]).Trim() -split '\s+')
+  if ($argv.Count -lt 3 -or $argv[2] -notin 'selfplay', 'stats') { return $null }
+  $opt = @{}
+  for ($i = 3; $i -lt $argv.Count - 1; $i++) { if ($argv[$i] -like '--*') { $opt[$argv[$i]] = $argv[$i + 1] } }
+  $games = 0; $done = 0; $from = 0
+  if (-not $opt['--out'] -or -not [int]::TryParse("$($opt['--games'])", [ref]$games)) { return $null }
+  $c = Run 'docker' @('exec', $runner.Id, 'sh', '-c', 'cat $1 $1/*.jsonl 2>/dev/null | wc -l', 'sh', $opt['--out']) 20
+  if ($c.Code -ne 0 -or -not [int]::TryParse((@($c.Out -split "`n")[0]).Trim(), [ref]$done)) { return $null }
+  $progress = [ordered]@{ kind = $argv[2]; games = $games; done = $done }
+  if ([int]::TryParse("$($opt['--from'])", [ref]$from)) { $progress.from = $from }
+  if ($opt['--patch']) { $progress.patch = $opt['--patch'] }
+  $progress
+}
+
 # The heartbeat (see the top): pc.json in the gist pc-gist.txt names, made, and named to the
 # repository as JACKIOH_PC_GIST, the first time.
 function Send-Heartbeat($sample, [bool]$calm, $runners) {
@@ -308,12 +369,16 @@ function Send-Heartbeat($sample, [bool]$calm, $runners) {
     calm = $calm
     cpu = [math]::Round($sample.Cpu, 1)
     memGB = [math]::Round($sample.Mem, 1)
+    cpuAll = [math]::Round($sample.CpuAll, 1)
+    memAllGB = [math]::Round($sample.MemAll, 1)
+    memTotalGB = [math]::Round($memTotalGB, 1)
     logical = $logical
     runners = @($runners | ForEach-Object {
-      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id] }
+      $progress = if ($_.Busy) { try { Get-Progress $_ } catch { $null } } else { $null }
+      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id]; progress = $progress }
     })
   }
-  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 4 -Compress) } }
+  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 5 -Compress) } }
   $bodyFile = Join-Path $env:TEMP 'jackioh-pc-heartbeat.json'
   $id = if (Test-Path $gistFile) { (Get-Content $gistFile -Raw).Trim() } else { '' }
   if ($id) {
@@ -331,19 +396,25 @@ function Send-Heartbeat($sample, [bool]$calm, $runners) {
   else { Log "heartbeat gist $($made.id) made, but not named to $repo ($(@($v.Out -split "`n")[0])): set the variable JACKIOH_PC_GIST to it" }
 }
 
-# The labels wanted now, at most `room` of them: one per queued job, then each standby label not
-# already among them.
+# The labels wanted now: of the shared ones (not `ownSlot`) at most `room`, one per queued job,
+# then each standby label not already among them; and each ownSlot label with a job queued, once.
 function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
   $want = New-Object System.Collections.ArrayList
-  foreach ($label in $queuedLabels) { if ($want.Count -lt $room) { [void]$want.Add($label) } }
-  foreach ($entry in @($cfg.serve | Where-Object { $_.standby -and $_.label -in $servable })) {
-    if ($want.Count -lt $room -and $entry.label -notin $want) { [void]$want.Add($entry.label) }
+  $shared = 0
+  foreach ($label in $queuedLabels) {
+    if (Own $label) { if ($label -notin $want) { [void]$want.Add($label) } }
+    elseif ($shared -lt $room) { [void]$want.Add($label); $shared++ }
+  }
+  foreach ($entry in @($cfg.serve | Where-Object { $_.standby -and -not $_.ownSlot -and $_.label -in $servable })) {
+    if ($shared -lt $room -and $entry.label -notin $want) { [void]$want.Add($entry.label); $shared++ }
   }
   , $want
 }
 
-Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; at most {4} job(s); no GPU" -f `
-  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow)
+$ownLabels = @($cfg.serve | Where-Object { $_.ownSlot } | ForEach-Object { $_.label })
+$ownWords = if ($ownLabels.Count) { ", and one more each for $($ownLabels -join ', ')" } else { '' }
+Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; at most {4} job(s){6}; no GPU" -f `
+  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow, $ownWords)
 $wasState = $null
 while ($true) {
   $d = Run 'docker' @('info', '--format', '{{.ServerVersion}}') 30
@@ -380,16 +451,27 @@ while ($true) {
     try { Send-Heartbeat $sample $calm $runners } catch { Log "heartbeat failed: $_" }
   }
 
-  $room = [int]$cfg.maxJobs - $busy.Count
-  if (-not $calm -or $room -le 0) {
-    $why = if (-not $calm) { 'the PC is busy' } else { 'no room for another job' }
-    foreach ($r in $idle) { Stop-IdleRunner $r $why }
+  if (-not $calm) {
+    foreach ($r in $idle) { Stop-IdleRunner $r 'the PC is busy' }
     continue
   }
+  # maxJobs holds the shared labels' runners alone; an ownSlot label's is outside it.
+  $shared = @($runners | Where-Object { -not (Own $_.Label) })
+  $room = [int]$cfg.maxJobs - @($shared | Where-Object Busy).Count
+  if ($room -le 0) {
+    foreach ($r in @($idle | Where-Object { -not (Own $_.Label) })) { Stop-IdleRunner $r 'no room for another job' }
+    $idle = @($idle | Where-Object { Own $_.Label })
+    if (-not $ownLabels.Count) { continue }
+  }
 
+  # With no room, only the ownSlot labels' workflows are read, and once a minute, not every 20 s: the
+  # learn lane holds the shared slot nearly all day, and each read costs `gh` calls on the owner's
+  # rate limit.
   $servable = @(Servable)
-  if (((Get-Date) - $lastQueueCheck).TotalSeconds -ge 20) {
-    try { $queued = @(Get-QueuedLabels $servable) } catch { Log "queue check failed: $_"; $queued = @() }
+  $asked = if ($room -gt 0) { $servable } else { @($servable | Where-Object { Own $_ }) }
+  $every = if ($room -gt 0) { 20 } else { 60 }
+  if (((Get-Date) - $lastQueueCheck).TotalSeconds -ge $every) {
+    try { $queued = @(Get-QueuedLabels $asked) } catch { Log "queue check failed: $_"; $queued = @() }
     $lastQueueCheck = Get-Date
   }
   $want = Wanted $queued $servable $room
@@ -406,9 +488,13 @@ while ($true) {
     if (-not $unwanted[$r.Id]) { $unwanted[$r.Id] = Get-Date }
     elseif (((Get-Date) - $unwanted[$r.Id]).TotalMinutes -ge $retireGraceMinutes) { Stop-IdleRunner $r 'nothing wants it' }
   }
-  # Idle runners count against maxJobs too, so two jobs landing at once never run past it.
-  if ($quiet -and $missing.Count -and ($busy.Count + $idle.Count) -lt [int]$cfg.maxJobs -and (Get-Date) -ge $nextStart) {
-    $label = $missing[0]
+  # Idle runners count against maxJobs too, so two jobs landing at once never run past it; an
+  # ownSlot label gets a runner only while it has none, busy or idle.
+  $held = @($runners | ForEach-Object { $_.Label })
+  $startable = @($missing | Where-Object {
+      if (Own $_) { $_ -notin $held } else { $shared.Count -lt [int]$cfg.maxJobs } })
+  if ($quiet -and $startable.Count -and (Get-Date) -ge $nextStart) {
+    $label = $startable[0]
     $why = if ($label -in $queued) { "a queued $label job" } else { "standby for $label" }
     try { Start-Runner $label $why } catch { Log "start failed: $_" }
     $nextStart = (Get-Date).AddSeconds($startCooldownSeconds)
