@@ -5402,11 +5402,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "40668053255",
+      "run_id": "pending:5c578914-1793181867",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-28T09:55:31Z",
+      "started_at": "2026-10-28T10:05:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -5918,7 +5918,7 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T09:55:31Z",
+    "at": "2026-10-28T10:05:01Z",
     "url": "",
     "what": "revise #2168 on muse"
   },
