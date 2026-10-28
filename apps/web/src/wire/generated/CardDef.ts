@@ -90,4 +90,11 @@ ingredients?: Array<FusedIngredient>,
  * skipped when absent, so a game that never crafts one serialises, hashes and replays as
  * before (D14: no golden trace moves).
  */
-craft?: CraftRecipe, base: CardFace, radiant: CardFace, };
+craft?: CraftRecipe, 
+/**
+ * R2195000: the Core card this Training Grounds snapshot copies (#41–#60, "core-002" for #41),
+ * so a deck holds one of the two, never both (§2.6 L3), and their shared name names one card
+ * (R2195001). Absent on every other card, a fused or crafted definition included, so a state
+ * that never holds a snapshot serialises, hashes and replays as before (TG4 D11).
+ */
+snapshotOf?: string, base: CardFace, radiant: CardFace, };

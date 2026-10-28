@@ -117,6 +117,9 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "meditative-008 radiant",
     "meditative-057 base",
     "meditative-057 radiant",
+    // R2195003: Core #23's snapshot, TG #49.
+    "traininggrounds-049 base",
+    "traininggrounds-049 radiant",
 ];
 
 // ---------------------------------------------------------------------------------------------

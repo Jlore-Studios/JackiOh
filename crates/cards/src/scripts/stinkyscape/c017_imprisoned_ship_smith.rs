@@ -3,8 +3,8 @@
 //!   Base:    "Dormant for 2 turns. When this awakens, summon a Fiery Waraxe."
 //!   Radiant: "Dormant for 2 turns. When this awakens, summon a Radiant Fiery Waraxe."
 //! Engine: Dormant (R1839000), `StaticFlags.slumber { turns: 2 }`, counted at the start of its
-//! controller's turns and awake at the start of the second, before the start-of-turn triggers, not
-//! summoning sick (R1839001). `when_this_awakens` (R1839002): a fresh M #66 Fiery Waraxe into the
+//! controller's turns and awake at the start of the second, before the start-of-turn triggers,
+//! summoning sick for that turn (R1839001, R2259000). `when_this_awakens` (R1839002): a fresh M #66 Fiery Waraxe into the
 //! leftmost open backrow zone (R64), no Cry (R1); a full backrow summons nothing. It enters on its
 //! controller's turn, so it animates as it enters (§6.1 "Animated on your turn"): an entry, so
 //! summoning sick (R1062), its Rush letting it attack a Unit that turn. Radiant: a Radiant Waraxe.
@@ -169,7 +169,7 @@ mod tests {
         }
 
         #[test]
-        fn r1839001_awakens_at_the_start_of_its_controllers_second_turn_before_the_turns_triggers_not_sick() {
+        fn r1839001_r2259000_awakens_at_the_start_of_its_controllers_second_turn_before_the_turns_triggers_sick() {
             let mut s = played(false, json!([FARM]));
             let smith = s.card(ID).id.clone();
             s.end_turn().end_turn();
@@ -184,6 +184,9 @@ mod tests {
                 |event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == RUSH_TOKEN),
             );
             assert!(woke.is_some() && woke < farm_token);
+            // Summoning sick the turn it awakens (R2259000); it attacks on its controller's next turn.
+            s.expect_refused(|s| s.attack(&smith, "hero"));
+            s.end_turn().end_turn();
             s.attack(&smith, "hero");
             s.expect_health(P2, HERO_HEALTH - 2);
         }

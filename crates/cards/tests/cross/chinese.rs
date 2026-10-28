@@ -381,14 +381,25 @@ mod r1303_the_chinese_tables {
         assert_eq!(problems, Vec::<String>::new());
     }
 
+    /// R1303, R2195001: no two cards share a Chinese name, but a Training Grounds snapshot and the
+    /// Core card it copies, which share their English name too.
     #[test]
     fn r1303_names_are_unique() {
-        let mut seen: IndexMap<String, Vec<String>> = IndexMap::new();
+        let mut seen: IndexMap<String, IndexSet<String>> = IndexMap::new();
         for (id, entry) in table() {
-            seen.entry(text(&entry, "name").to_string()).or_default().push(id);
+            // R2195001: a snapshot is named under its Core card's id.
+            let named = CATALOG.get(id.as_str()).and_then(|card| card.snapshot_of.clone());
+            seen.entry(text(&entry, "name").to_string())
+                .or_default()
+                .insert(named.unwrap_or(id));
         }
-        let shared: Vec<(String, Vec<String>)> = seen.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
-        assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
+        let shared: Vec<(String, IndexSet<String>)> =
+            seen.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
+        assert_eq!(shared, Vec::<(String, IndexSet<String>)>::new());
+        assert_eq!(
+            text(&table()["traininggrounds-041"], "name"),
+            text(&table()["core-002"], "name")
+        );
     }
 
     #[test]

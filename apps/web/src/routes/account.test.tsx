@@ -355,6 +355,44 @@ describe("the account screen", () => {
       cleanup();
     }
   });
+
+  it("R2255000 shows this season's ranked record under its label, beside the rank and apart from the all-time record", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ record: { games: 24, wins: 14, losses: 9, draws: 1 } }));
+    render(<AccountRoute token={TOKEN} />);
+
+    const season = await screen.findByTestId(accountTestid.seasonRecord);
+    expect(season).toHaveTextContent("This season (ranked): 14–9–1");
+    expect(screen.getByTestId(accountTestid.rank).nextElementSibling).toBe(season);
+    expect(screen.getByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
+  });
+
+  it("R2255000 leaves the season line out while the season has no games, the all-time record unchanged", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ record: { games: 0, wins: 0, losses: 0, draws: 0 } }));
+    render(<AccountRoute token={TOKEN} />);
+
+    await screen.findByTestId(accountTestid.rank);
+    expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
+    expect(screen.queryByText(/This season \(ranked\)/)).toBeNull();
+    expect(screen.getByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
+    expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
+  });
+
+  it("R2255000 a failed ranked read shows what it showed before: the Rank heading alone and the record as it was", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockRejectedValue(new Error("the ladder is down"));
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
+    expect(getOwnRank).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "Rank" })).toBeInTheDocument();
+    expect(screen.queryByTestId(accountTestid.rank)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.badges)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
+    expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
 
 // R1435: the username, from the gate's read of the account, with its change field or its cooldown.

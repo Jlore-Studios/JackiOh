@@ -272,6 +272,19 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
     }
 }
 
+/// R174, R2199007: the field's departures so far, a mark a card keeps to ask later, through
+/// `left_field_since_mark`, whether a card has left the field since (Training Grounds #31 Level Up!'s
+/// per-Unit counts: a Unit that left and came back is a new arrival).
+pub fn field_exit_mark(state: &GameState) -> u32 {
+    crate::stays::exit_mark(state)
+}
+
+/// R174: whether `instance_id` has left the field since `mark` (`field_exit_mark`), a Reborn body back
+/// under the same id included.
+pub fn left_field_since_mark(state: &GameState, mark: u32, instance_id: &str) -> bool {
+    crate::stays::left_field_after(state, mark, instance_id)
+}
+
 /// What the card running a script remembers under `key` (§10.1: #22 Carnivorous Cube's meal), read
 /// the way `effects/memory::remember` wrote it. On a fused card each ingredient remembers apart (R102),
 /// so an ingredient reads its own and nothing else — two Cubes crafted into one card copy two meals —

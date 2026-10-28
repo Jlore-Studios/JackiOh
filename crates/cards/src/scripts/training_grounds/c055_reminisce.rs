@@ -1,0 +1,380 @@
+//! SPEC §8.11 Training Grounds #55 Reminisce, the snapshot of Core #72 Reminisce (`core-072`),
+//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
+//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//!
+//! #72 Reminisce (SPEC §8.3): "Discover a card from your GY; it costs 1 less; exile this", radiant
+//! "It costs 0" — the radiant cell restates only the cost clause, so the Discover and the self-exile
+//! are kept and only the discount changes (§8 Conventions).
+//!
+//! R50: the Discover's options come from the ACTUAL graveyard (`discover_from_graveyard`), so spell
+//! tokens there are eligible; a pool-based `discover_from_catalog` would exclude them.
+//!
+//! Two steps (§10.6): the cry opens the Discover and parks "exile this"; the answer runs `resume.chosen`
+//! first, then the parked exile. An empty graveyard opens nothing (§6.3: the card still resolves), so
+//! `exile` runs straight through. The resume step never reads `ctx.self`: its instance may be gone.
+//!
+//! Cost (R65): "1 less" is `costMod -1` (travels with the card, R78); "costs 0" is a `costOverride` of 0
+//! (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick (§6.3 "Creates OR
+//! MOVES"), so a card picked into a full hand is burned.
+
+use jackioh_engine::effects::{add_to_hand, discover_from_graveyard, exile, set_cost_mod, set_cost_override};
+use jackioh_engine::prelude::*;
+
+pub const ID: &str = "traininggrounds-055";
+
+/// The name the prompt's continuation is filed under, in `resume` and in `step` (§10.6).
+const STEP_CHOSEN: &str = "chosen";
+
+/// `price` is the whole of the radiant text: −1 on the base face, a flat 0 on it.
+fn reminisce(price: impl Fn(&EffectContext<'_>) -> Effect + Send + Sync + 'static) -> Script {
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                discover_from_graveyard(json_as(json!({
+                    "step": STEP_CHOSEN,
+                    "prompt": "Discover a card from your graveyard",
+                }))),
+                // Parked while the prompt is open; runs straight through on an empty graveyard.
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        resume: IndexMap::from([(
+            // The answered selection arrives in `ctx.targets`, which `{ of: "chosen" }` reads (§10.6).
+            STEP_CHOSEN,
+            hook(move |ctx| vec![add_to_hand(json_as(json!({ "instance": { "of": "chosen" } }))), price(ctx)]),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        // R4: the price is the card's in the hand it reached, so a pick a full hand burns keeps its cost.
+        // "It costs (1) less" and "It costs (0)" are the declared numbers `discount` and `setCost` (R386).
+        base: reminisce(|ctx| {
+            let amount = -param(ctx, "discount");
+            set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": amount, "inHandOnly": true })))
+        }),
+        radiant: reminisce(|ctx| {
+            let cost = param(ctx, "setCost");
+            set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": cost, "inHandOnly": true })))
+        }),
+    }
+}
+
+// #72 Reminisce — SPEC §8.3, BUILD M4-T4: "Discover from the GY including spell tokens (R50);
+// chosen card −1 (radiant 0); exiled; empty GY → nothing".
+// Each test asserts both halves (where the pick went and its cost, and that Reminisce was exiled);
+// one covers each path of the Cry's list: prompt opened (tail parked), graveyard empty (tail ran).
+// core-013 Jlockeed Shredder-10 (printed cost 3) is the Discover subject in the cost tests.
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::*;
+    use crate::def_ids;
+
+    const P1: PlayerId = PlayerId::P1;
+
+    /// `scenario(opts)` with the shipped cards registered first.
+    fn setup(opts: Value) -> Scenario {
+        crate::register_all();
+        scenario(opts)
+    }
+
+    use crate::js;
+
+    /// Every `costChanged` event.
+    fn costs_changed(s: &Scenario) -> Vec<Value> {
+        s.events().iter().map(js).filter(|event| event["type"] == "costChanged").collect()
+    }
+
+    /// The open prompt, as JSON (`null` when none).
+    fn pending(s: &Scenario) -> Value {
+        js(&s.state().pending)
+    }
+
+    /// R386: a Reminisce of the given face, with one Mana Well (printed 3) in the graveyard to take back.
+    fn tuned(radiant: bool, key: &str, upgrade: bool) -> CardInstance {
+        let mut s = setup(json!({
+            "seed": "core-072-tuned",
+            "p1": {
+                "hand": [{ "def": "traininggrounds-055", "radiant": radiant }, "core-005"],
+                "graveyard": ["core-006"],
+                "library": ["core-035"],
+            },
+            "p2": { "hand": ["core-005"] },
+        }));
+        if upgrade {
+            crate::upgrade_number(&mut s, "traininggrounds-055", key);
+        } else {
+            crate::degrade_number(&mut s, "traininggrounds-055", key);
+        }
+        let well = s.pile(P1, "graveyard")[0].clone();
+        s.play("traininggrounds-055", json!({}));
+        s.answer(json!(well.id));
+        s.card(&well.id).clone()
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_pick_cost_2_less_and_a_radiant_degrade_makes_it_cost_1() {
+        assert_eq!(tuned(false, "discount", true).cost_mod, -2);
+        assert_eq!(tuned(true, "setCost", false).cost_override, Some(1));
+        let s = setup(json!({ "p1": { "hand": ["traininggrounds-055"] } }));
+        assert!(!crate::can_degrade_number(&s, "traininggrounds-055", "discount"));
+        assert!(!crate::can_upgrade_number(&s, "traininggrounds-055", "setCost"));
+    }
+
+    mod reminisce_base {
+        use super::*;
+
+        #[test]
+        fn r50_discovers_from_the_actual_graveyard_so_a_spell_token_there_is_an_eligible_option() {
+            let mut s = setup(json!({
+                "seed": "core-072-r50",
+                "p1": {
+                    "hand": ["traininggrounds-055"],
+                    // core-051-1 is KY's Empty Notebook, a spell token (§7). A pool-based Discover would
+                    // exclude it; R50 says this one does not, because it discovers "a card in your GY".
+                    "graveyard": ["core-051-1", "core-005", "core-023"],
+                    "library": ["core-035"],
+                },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let graveyard = s.pile(P1, "graveyard");
+            let token = graveyard[0].clone();
+            assert_eq!(token.def_id, "core-051-1");
+
+            s.play("traininggrounds-055", json!({}));
+
+            let pending = pending(&s);
+            assert!(!pending.is_null());
+            assert_eq!(pending["kind"], "discover");
+            assert_eq!(pending["playerId"], "p1");
+            // Drawn without replacement from a graveyard of exactly three: all three, each once.
+            let options = pending["options"].as_array().cloned().unwrap_or_default();
+            assert_eq!(options.len(), 3);
+            let offered: Vec<Value> = options
+                .iter()
+                .map(|option| {
+                    if option["selection"]["pick"] == "instance" {
+                        option["selection"]["instanceId"].clone()
+                    } else {
+                        Value::Null
+                    }
+                })
+                .collect();
+            assert!(offered.contains(&json!(token.id)));
+            let distinct: IndexSet<String> = offered.iter().map(|id| id.to_string()).collect();
+            assert_eq!(distinct.len(), 3);
+
+            s.answer(json!(token.id));
+
+            s.expect_in_zone(&token, "hand");
+            assert!(def_ids(&s.hand(P1)).contains(&"core-051-1".to_string()));
+        }
+
+        #[test]
+        fn the_chosen_card_moves_gy_hand_and_costs_1_less_and_reminisce_is_exiled() {
+            let mut s = setup(json!({
+                "seed": "core-072-base-cost",
+                "p1": { "hand": ["traininggrounds-055"], "graveyard": ["core-013"], "library": ["core-035"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let spell = s.hand(P1)[0].clone();
+            let picked = s.pile(P1, "graveyard")[0].clone();
+            assert_eq!(spell.def_id, "traininggrounds-055");
+            assert_eq!(picked.def_id, "core-013");
+
+            s.play("traininggrounds-055", json!({})).answer(json!(picked.id));
+
+            // GY → hand (§8.3 Engine cell).
+            s.expect_in_zone(&picked, "hand");
+            // R65: printed 3 plus a costMod of −1 is 2, and the mod travels with the card (R78).
+            assert_eq!(s.card(&picked).cost_mod, -1);
+            assert_eq!(s.card(&picked).cost_override, None);
+            assert_eq!(
+                costs_changed(&s).last().cloned(),
+                Some(json!({ "type": "costChanged", "instanceId": picked.id, "cost": 2 }))
+            );
+            // "Exile this" — not the graveyard every other Spell goes to (§10.5 step 7).
+            s.expect_in_zone(&spell, "exile");
+        }
+
+        #[test]
+        fn s10_6_the_sequence_spanning_the_prompt_resumes_in_order_pick_to_hand_cost_changed_then_the_parked_exile() {
+            let mut s = setup(json!({
+                "seed": "core-072-resume-order",
+                "p1": { "hand": ["traininggrounds-055"], "graveyard": ["core-013"], "library": ["core-035"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let picked = s.pile(P1, "graveyard")[0].clone();
+
+            s.play("traininggrounds-055", json!({}));
+            // The prompt paused the Cry's list: "exile this" has NOT happened yet. (A Spell mid-resolution
+            // sits in the `resolving` zone, which `ZoneName` does not name, so this reads the exile pile.)
+            assert!(s.state().pending.is_some());
+            assert_eq!(s.pile(P1, "exile").len(), 0);
+
+            s.answer(json!(picked.id));
+
+            s.expect_events(json!([
+                "cardPlayed",
+                "promptOpened",
+                "promptAnswered",
+                "addedToHand",
+                "costChanged",
+                "exiled"
+            ]));
+        }
+
+        #[test]
+        fn an_empty_graveyard_opens_no_prompt_and_does_nothing_and_the_spell_is_still_exiled() {
+            let mut s = setup(json!({
+                "seed": "core-072-empty-gy",
+                "p1": { "hand": ["traininggrounds-055", "core-005"], "graveyard": [], "library": ["core-035"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let spell = s.hand(P1)[0].clone();
+
+            s.play("traininggrounds-055", json!({}));
+
+            // §6.3: an effect with nothing to offer fizzles and the card still resolves.
+            assert!(s.state().pending.is_none());
+            // The resume step never ran, so nothing reached the hand; only core-005 is left there.
+            assert_eq!(def_ids(&s.hand(P1)), ["core-005"]);
+            // The parked tail was never parked: it ran straight through in the same pass.
+            s.expect_in_zone(&spell, "exile").expect_events(json!(["cardPlayed", "exiled"]));
+        }
+
+        #[test]
+        fn r4_a_card_the_discover_picks_into_a_full_hand_is_burned_to_the_graveyard() {
+            // Eleven cards in hand, so playing Reminisce leaves exactly HAND_CAP (10) behind it.
+            let mut s = setup(json!({
+                "seed": "core-072-hand-cap",
+                "p1": {
+                    "hand": [
+                        "traininggrounds-055",
+                        "core-005",
+                        "core-023",
+                        "core-031",
+                        "core-035",
+                        "core-036",
+                        "core-013",
+                        "core-019",
+                        "core-043",
+                        "core-054",
+                        "core-066",
+                    ],
+                    "graveyard": ["core-002"],
+                    "library": ["core-088"],
+                },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let picked = s.pile(P1, "graveyard")[0].clone();
+            assert_eq!(s.hand(P1).len(), 11);
+
+            s.play("traininggrounds-055", json!({})).answer(json!(picked.id));
+
+            assert_eq!(s.hand(P1).len(), 10);
+            s.expect_events(json!(["burned"]));
+            // Burned means back to the graveyard it came from, not the hand.
+            s.expect_in_zone(&picked, "graveyard");
+        }
+    }
+
+    mod reminisce_radiant {
+        use super::*;
+
+        #[test]
+        fn radiant_the_chosen_card_costs_0_not_one_less() {
+            let mut s = setup(json!({
+                "seed": "core-072-radiant-cost",
+                "p1": {
+                    "hand": [{ "def": "traininggrounds-055", "radiant": true }],
+                    "graveyard": ["core-013"],
+                    "library": ["core-035"],
+                },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let spell = s.hand(P1)[0].clone();
+            let picked = s.pile(P1, "graveyard")[0].clone();
+            assert!(spell.radiant);
+
+            s.play("traininggrounds-055", json!({})).answer(json!(picked.id));
+
+            s.expect_in_zone(&picked, "hand");
+            // R65/R77: "it costs 0" is a costOverride, the same reading Craft a Card's 0-cost card gets.
+            assert_eq!(s.card(&picked).cost_override, Some(0));
+            assert_eq!(s.card(&picked).cost_mod, 0);
+            assert_eq!(
+                costs_changed(&s).last().cloned(),
+                Some(json!({ "type": "costChanged", "instanceId": picked.id, "cost": 0 }))
+            );
+            s.expect_in_zone(&spell, "exile");
+        }
+
+        #[test]
+        fn radiant_keeps_the_discover_r50s_token_eligibility_and_the_self_exile_s8_conventions() {
+            let mut s = setup(json!({
+                "seed": "core-072-radiant-r50",
+                "p1": {
+                    "hand": [{ "def": "traininggrounds-055", "radiant": true }],
+                    "graveyard": ["core-051-1"],
+                    "library": ["core-035"],
+                },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let spell = s.hand(P1)[0].clone();
+            let token = s.pile(P1, "graveyard")[0].clone();
+
+            s.play("traininggrounds-055", json!({}));
+            assert_eq!(pending(&s)["kind"], "discover");
+            assert_eq!(pending(&s)["options"].as_array().map(Vec::len), Some(1));
+
+            s.answer(json!(token.id));
+
+            s.expect_in_zone(&token, "hand");
+            assert_eq!(s.card(&token).cost_override, Some(0));
+            s.expect_in_zone(&spell, "exile");
+        }
+
+        #[test]
+        fn radiant_on_an_empty_graveyard_also_does_nothing_but_still_exiles_the_spell() {
+            let mut s = setup(json!({
+                "seed": "core-072-radiant-empty",
+                "p1": {
+                    "hand": [{ "def": "traininggrounds-055", "radiant": true }, "core-005"],
+                    "graveyard": [],
+                    "library": ["core-035"]
+                },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let spell = s.hand(P1)[0].clone();
+
+            s.play("traininggrounds-055", json!({}));
+
+            assert!(s.state().pending.is_none());
+            s.expect_in_zone(&spell, "exile");
+            assert_eq!(def_ids(&s.hand(P1)), ["core-005"]);
+        }
+    }
+
+    /// R2195003: the snapshot plays exactly as core-072, on both faces: the Discover from the graveyard, its price, and the exile.
+    #[test]
+    fn r2195003_plays_exactly_as_core_072() {
+        for radiant in [false, true] {
+            crate::expect_plays_as(
+                "core-072",
+                super::ID,
+                |id| json!({ "seed": "reminisce-plays-as", "p1": { "hand": [{ "def": id, "radiant": radiant }], "graveyard": ["core-006", "core-008"] } }),
+                |s, id| {
+                    let well = s.pile(PlayerId::P1, "graveyard")[0].clone();
+                    s.play(id, json!({}));
+                    s.answer(json!(well.id));
+                },
+            );
+        }
+    }
+}
