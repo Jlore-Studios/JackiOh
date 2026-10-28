@@ -82,7 +82,7 @@ const UNSCALED: Record<string, number> = {
   "emotes/portrait.css": 3,
   "fx/fx.css": 8,
   "game/deckbuilder/deckbuilder.css": 19,
-  "game/deckbuilder/workshop.css": 29,
+  "game/deckbuilder/workshop.css": 28,
   "i18n/language.css": 1,
   "packs/pack-object.css": 1,
   "packs/packs.css": 4,
