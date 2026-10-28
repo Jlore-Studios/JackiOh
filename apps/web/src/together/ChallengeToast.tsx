@@ -313,6 +313,7 @@ export function ChallengeToast(): ReactElement {
                   <button
                     type="button"
                     data-testid={challengeToastTestid.lobby}
+                    data-route={roomLinkPath(challenge.roomCode, challenge.mode)}
                     disabled={busy}
                     onClick={() => {
                       openInLobby(challenge);
