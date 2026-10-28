@@ -5768,15 +5768,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/duos/DuosBoard.test.tsx",
+            "apps/web/src/duos/DuosBoard.tsx"
+          ],
+          "from": "4a22b75959cccb46ec5c601bedf5e9d008edd696",
+          "main": "17d45db8cd6d75d6f48086e4e862cad7a5f04467"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40628495125",
+            "run": "40643393287",
             "tier": "strong"
           }
         ],
-        "sha": "4a22b75959cccb46ec5c601bedf5e9d008edd696",
+        "sha": "ede64c3bb52b80b792d031bac1f74b2bebc3e7c1",
         "tiers": {
           "claude": "strong"
         }
