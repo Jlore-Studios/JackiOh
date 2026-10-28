@@ -6119,6 +6119,8 @@
       }
     },
     "2163": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-10-28T02:56:46Z",
         "by": "`claude` (strong)",
@@ -6129,10 +6131,16 @@
       "feedback_since": "2026-10-28T01:17:53Z",
       "issue": 2100,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-10-28T02:57:47Z",
+      "run_id": "pending:8ca9d7d1-1793158121",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-28T03:29:04Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -6301,9 +6309,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T03:28:29Z",
+    "at": "2026-10-28T03:29:04Z",
     "url": "",
-    "what": "review #2168 on claude-7"
+    "what": "revise #2163 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-28T03:12:00Z",
