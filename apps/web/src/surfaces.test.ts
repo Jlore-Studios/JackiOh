@@ -1,7 +1,7 @@
 // #2109: the board's corners, stacking and neutral shadows come from one named surface scale,
 // surfaces.css, and no stylesheet gains a radius, a shadow or a layer of its own unless this file
 // says so. Gradients stay only where they mean something: card faces (src/cards/), the main
-// button (--primary-face*), the table (game/table.css) and the named texture keeps below.
+// button (--primary-face*), the table (game/table.css and board.css's playmat, `.field`) and the named texture keeps below.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -57,6 +57,19 @@ const GRADIENT_KEEP = [
   /\/\s*(\d+px\s+100%|100%\s+\d+px)\s+no-repeat/, // R514's cell-pick crosshair bars
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
 ];
+
+/** The playmat and its marks. The default table (the tavern) is `.field` in board.css, not table.css,
+ * and each playmat's tap marks and sand cracks are its own cosmetic (SandSurface's TAP_FAMILY): the
+ * issue keeps the table's gradients, so these rules keep their shapes, gradients and shadows. */
+const TABLE_RULE = /^\.(field|sand-mark(--\w+)?|tap-mark--\w+)$/;
+
+/** `css` without the table's rules (a rule whose every selector is one of TABLE_RULE's). */
+function withoutTable(css: string): string {
+  return css.replace(/([^{}]+)\{[^{}]*\}/g, (rule, selector: string) => {
+    const parts = selector.split(",").map((part) => part.trim());
+    return parts.every((part) => TABLE_RULE.test(part)) ? "" : rule;
+  });
+}
 
 /** A box-shadow layer that is a glow or a selection ring rather than a neutral shadow. */
 const GLOW =
@@ -203,7 +216,7 @@ describe("#2109 no one-off surfaces", () => {
   it("#2109 the board's stylesheets state no radius, shadow, layer or background gradient of their own", () => {
     expect(BOARD_SHEETS.length).toBeGreaterThan(20);
     const found = BOARD_SHEETS.flatMap((sheet) =>
-      [...offSurface(codeOf(sheet)), ...offShadow(codeOf(sheet))].map((declaration) => `${sheet}: ${declaration}`),
+      [...offSurface(withoutTable(codeOf(sheet))), ...offShadow(withoutTable(codeOf(sheet)))].map((declaration) => `${sheet}: ${declaration}`),
     );
     expect(found, "name a radius, a shadow and a layer (surfaces.css) instead").toEqual([]);
     for (const sheet of BOARD_SHEETS) {
