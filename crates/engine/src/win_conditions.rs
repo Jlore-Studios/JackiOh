@@ -48,12 +48,6 @@ pub fn board_totals(state: &GameState, player: PlayerId) -> (i32, i32) {
     (attack, health)
 }
 
-/// R848, R850: whether this player holds a win — their `win_game` flag, any kept `AltWin` modifier
-/// that is met, or (R1843002) their flight.
-pub fn holds_win(state: &GameState, player: PlayerId) -> bool {
-    claim_of(state, player).is_some()
-}
-
 /// What a held win is, in the order a player's own claims are read (R1843002): an effect's win, then
 /// a met alternative condition, then a flight.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

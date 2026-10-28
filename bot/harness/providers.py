@@ -84,7 +84,6 @@ SECRETS: tuple[str, ...] = (
 #: a row waits longer (the last wait repeats), so a dead login stops costing a run every hour; the
 #: streak ends when a run on the provider gets a model call through (`clear_infra`).
 INFRA_BACKOFFS = (timedelta(minutes=50), timedelta(hours=2), timedelta(hours=8))
-INFRA_BACKOFF = INFRA_BACKOFFS[0]
 #: After this many failures in a row, `deliver` opens an issue asking a person to fix it.
 INFRA_ASK_AFTER = 3
 

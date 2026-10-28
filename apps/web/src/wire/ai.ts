@@ -33,20 +33,10 @@ import type { ActionBody, PlayerId, SetName } from "./index.ts";
 
 export {
   AI_EMOTE,
-  AI_PERSONAS,
-  EMOTE_REPLY_KEYS,
-  EMOTE_TRIGGERS,
   createEmotePersona,
   pickPersona,
-  replyKeyOf,
-  rollForReply,
-  rollForTrigger,
   type AiEmote,
   type EmotePersona,
-  type EmoteReplyKey,
-  type EmoteTrigger,
-  type PersonaName,
-  type PersonaSpec,
 } from "../practice/personas.ts";
 
 // ---------------------------------------------------------------------------------------------

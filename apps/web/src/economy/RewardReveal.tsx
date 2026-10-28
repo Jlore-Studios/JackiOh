@@ -18,8 +18,6 @@ import { REVEAL_FLY_MS, REVEAL_STAGGER_MS, stingOf, strongestSting, type RevealI
 import { useReducedMotion } from "./FillBar.tsx";
 import "./economy.css";
 
-export type { RevealItem } from "./bars.ts";
-
 export type RewardRevealProps = {
   items: readonly RevealItem[];
   testid?: string;
