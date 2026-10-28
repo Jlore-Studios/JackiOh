@@ -17,28 +17,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::copied_text::{CT, with_copied_text};
 use crate::rules::fixtures::harness::{
-    act_ok, act_result, events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip,
+    Bench, act_ok, act_result, events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip,
     set_library, slot,
 };
-
-/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
@@ -368,9 +349,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         let mut state = game("ct-fused-home", 4);
         let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
         let dummy = hand(&mut state, P1, &CT.dummy.id, false);
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let fused = fuse(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             FuseArgs {
                 ingredients: vec![dummy],
                 into: Some(x_bolt),
@@ -432,9 +413,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         )
         .state;
         let echo = new_instance(&mut state, &CT.echo.id, P1, Zone::Hand { player: P1 });
-        let mut sink = Sink::for_state(&state);
-        cast_card(&mut sink.on(&mut state), &echo, CastOptions::default());
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        let mut sink = Bench::new(&state);
+        cast_card(&mut sink.sink(&mut state), &echo, CastOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         state.rng_cursor = sink.rng.cursor();
         let pending = state.pending.clone();
         assert_eq!(json_of(&pending)["kind"], json!("number"));
@@ -664,9 +645,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     fn r399_a_cast_copier_copies_the_spell_that_is_last_as_the_cast_begins_r70() {
         let mut state = play_spell(game("ct-cast", 9), &CT.ping.id, true, P1);
         let echo = new_instance(&mut state, &CT.echo.id, P1, Zone::Hand { player: P1 });
-        let mut sink = Sink::for_state(&state);
-        cast_card(&mut sink.on(&mut state), &echo, CastOptions::default());
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        let mut sink = Bench::new(&state);
+        cast_card(&mut sink.sink(&mut state), &echo, CastOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         assert_eq!(hero_hits(&sink.events, P2), vec![3]);
         assert_eq!(
             json_of(last_spell_played(&state)),
@@ -678,9 +659,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     fn r547_a_copier_drawn_while_the_last_spell_casts_on_draw_is_cast_and_the_draw_repeats() {
         let mut state = game("ct-draw-cast", 9);
         let first = new_instance(&mut state, &CT.draw_cast.id, P1, Zone::Hand { player: P1 });
-        let mut sink = Sink::for_state(&state);
-        cast_card(&mut sink.on(&mut state), &first, CastOptions::default());
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        let mut sink = Bench::new(&state);
+        cast_card(&mut sink.sink(&mut state), &first, CastOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
         assert_eq!(
             json_of(last_spell_played(&state)),
             json!({ "defId": CT.draw_cast.id, "radiant": false })
@@ -688,9 +669,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         let library = set_library(&mut state, P1, &[CT.echo.id.clone(), CT.ping.id.clone()]);
         let echo = library.first().cloned().expect("the copier on top");
         let next = library.get(1).cloned().expect("the ping beneath");
-        let mut drawing = Sink::for_state(&state);
-        draw(&mut drawing.on(&mut state), P1, 1);
-        settle(&mut drawing.on(&mut state), SettleOptions::default());
+        let mut drawing = Bench::new(&state);
+        draw(&mut drawing.sink(&mut state), P1, 1);
+        settle(&mut drawing.sink(&mut state), SettleOptions::default());
         assert_eq!(hero_hits(&drawing.events, P2), vec![1]);
         assert!(ids(&state.players.p1.graveyard).contains(&echo.id));
         assert!(ids(&state.players.p1.hand).contains(&next.id));
@@ -701,9 +682,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         let mut state = play_spell(game("ct-draw-plain", 9), &CT.ping.id, false, P1);
         let library = set_library(&mut state, P1, &[CT.echo.id.clone(), CT.ping.id.clone()]);
         let echo = library.first().cloned().expect("the copier on top");
-        let mut drawing = Sink::for_state(&state);
-        draw(&mut drawing.on(&mut state), P1, 1);
-        settle(&mut drawing.on(&mut state), SettleOptions::default());
+        let mut drawing = Bench::new(&state);
+        draw(&mut drawing.sink(&mut state), P1, 1);
+        settle(&mut drawing.sink(&mut state), SettleOptions::default());
         assert!(ids(&state.players.p1.hand).contains(&echo.id));
         assert_eq!(hero_hits(&drawing.events, P2), Vec::<i64>::new());
     }

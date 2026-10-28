@@ -20,7 +20,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::{armoured, indestructible, plain, shielded};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, ids_of, in_hand, new_game, put, slot};
 
 // Fixture cards: one tagged body per scope filter the eight call sites use.
 
@@ -231,10 +231,6 @@ fn stolen_onto(state: &mut GameState, def_id: &str, owner: PlayerId, at: ZoneSlo
         panic!("could not place the stolen fixture");
     }
     card
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn sorted(mut ids: Vec<String>) -> Vec<String> {

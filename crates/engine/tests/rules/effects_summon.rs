@@ -10,7 +10,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    both, events_of_type, in_hand, json_of, live, new_game, put, set_library, slot, spread,
+    both, events_of_type, ids_of, in_hand, json_of, live, new_game, put, set_library, slot, spread,
 };
 
 // ---------------------------------------------------------------------------
@@ -202,10 +202,6 @@ fn summoned_def_ids(events: &[GameEvent]) -> Vec<String> {
             _ => None,
         })
         .collect()
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn def_ids_of(cards: &[CardInstance]) -> Vec<String> {
