@@ -634,28 +634,6 @@
   font-size: 12px;
 }
 
-.ws-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--opponent) 60%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--opponent) 10%, var(--bg-raised));
-}
-
-.deckbuilder.app-shell .ws-confirm p {
-  margin: 0;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.ws-confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 /* --- the trio editor ----------------------------------------------------------------------------- */
 
 .ws-trio,

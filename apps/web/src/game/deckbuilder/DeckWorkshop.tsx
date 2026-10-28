@@ -3,6 +3,10 @@
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
 // the local store and supplied API (R256).
 // #2096: Duplicate, on each deck's row and in its editor, makes a new deck with its cards, portrait and picks under copyName's name, and opens it.
+// R2119000: Delete deck and Delete trio ask nothing. The item leaves the list at once (the store's `hide`)
+// behind "Deck deleted · Undo" or "Trio deleted · Undo", and its DELETE waits for the undo window
+// (`undo/hold.ts`). Undo puts it back, open, its trio slots filled again; anything that needs it gone
+// first (a new deck, a duplicate, an import) sends the held DELETE at once.
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -17,6 +21,8 @@ import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
+import { useUndoHold } from "../../undo/hold.ts";
+import { UndoToast } from "../../undo/UndoToast.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
 import DeckPatchBadge, { useNewestChanges } from "./DeckPatchBadge.tsx";
@@ -99,7 +105,7 @@ export type DeckWorkshopProps = {
   api: DeckSyncApi;
   /** Optional initial item; phones otherwise start at the list. */
   initialOpen?: WorkshopOpen;
-  /** Test seams for mirror storage, clock, and ID minting. */
+  /** Test seams for mirror storage, clock (the undo window's too, R2119000), and ID minting. */
   storage?: StorageLike | null;
   clock?: SyncClock;
   newId?: () => string;
@@ -412,11 +418,12 @@ function neighbourOf<T extends { id: string }>(items: readonly T[], id: string):
 /**
  * #1991: where the open deck's "Practice with this deck" goes, or null for none. `saved:<n>` names the
  * deck by its place in the server's list, oldest first, which the store's list is only while nothing
- * waits on the server: no deck unsynced (R256) and no deletion pending, both of which keep the status
- * off `saved`. Practice offers only a complete deck (§9.9).
+ * waits on the server: no deck unsynced (R256), no deletion pending, both of which keep the status
+ * off `saved`, and no deck's deletion held (R2119000), a deck the server still lists. Practice offers
+ * only a complete deck (§9.9).
  */
 function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | null {
-  if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved") return null;
+  if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved" || snapshot.held?.kind === "deck") return null;
   if (snapshot.decks.some((other) => snapshot.unsynced.has(other.id))) return null;
   return practiceDeckPath(snapshot.decks.findIndex((other) => other.id === deck.id) + 1);
 }
@@ -438,6 +445,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     }),
   );
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  // R2119000: before the store's start and stop, so leaving the screen sends a held DELETE first.
+  const { held, hold, undo: undoDeletion, sendNow } = useUndoHold(props.clock);
 
   // Start and stop persistence with the screen.
   useEffect(() => {
@@ -505,18 +514,22 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   };
 
   const newDeck = (): void => {
+    // R2119000: the held deck still counts against the cap until its DELETE has gone.
+    sendNow();
     const id = store.createDeck({ name: nextName((number) => t("Deck {number}", { number }), decks.map((deck) => deck.name)) });
     if (id !== null) openItem({ kind: "deck", id });
   };
 
   // #2096: trios name decks by id (R252), so every trio naming the original still does.
   const duplicateDeck = (source: DeckItem): void => {
+    sendNow();
     const name = copyName(deckLabel(source, limits.nameLength), decks.map((deck) => deckLabel(deck, limits.nameLength)), limits.nameLength);
     const id = store.createDeck({ ...pickedDeckCosmetics(source), name, cards: source.cards, portrait: source.portrait });
     if (id !== null) openItem({ kind: "deck", id });
   };
 
   const newTrio = (): void => {
+    sendNow();
     const id = store.createTrio({ name: nextName((number) => t("Trio {number}", { number }), trios.map((trio) => trio.name)) });
     if (id !== null) openItem({ kind: "trio", id });
   };
@@ -602,8 +615,21 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           editDeck(openDeck.id, { cards });
         }}
         onDelete={() => {
-          const next = neighbourOf(decks, openDeck.id);
-          store.deleteDeck(openDeck.id);
+          const id = openDeck.id;
+          const next = neighbourOf(decks, id);
+          // R2119000: `hold` first, since it sends any deletion held before this one.
+          hold({
+            words: () => t("Deck deleted"),
+            send: (keepalive) => {
+              store.deleteDeck(id);
+              void store.flush({ keepalive });
+            },
+            restore: () => {
+              store.unhide();
+              setOpen({ kind: "deck", id });
+            },
+          });
+          store.hide("deck", id);
           setOpen(next === null ? null : { kind: "deck", id: next.id });
           setView("list");
         }}
@@ -633,7 +659,19 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           store.updateTrio(openTrio.id, { deckIds });
         }}
         onDelete={() => {
-          store.deleteTrio(openTrio.id);
+          const id = openTrio.id;
+          hold({
+            words: () => t("Trio deleted"),
+            send: (keepalive) => {
+              store.deleteTrio(id);
+              void store.flush({ keepalive });
+            },
+            restore: () => {
+              store.unhide();
+              setOpen({ kind: "trio", id });
+            },
+          });
+          store.hide("trio", id);
           setOpen(null);
           setView("list");
         }}
@@ -651,6 +689,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         atCap={decks.length >= limits.decks}
         deckLimit={limits.decks}
         onImport={(name, cards) => {
+          sendNow();
           const id = store.createDeck({ name, cards });
           if (id !== null) openItem({ kind: "deck", id });
         }}
@@ -668,7 +707,10 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         collection={collection}
         saved={{ decks: decks.length, trios: trios.length }}
         limits={limits}
-        onImport={(init) => store.importTrio(init)}
+        onImport={(init) => {
+          sendNow();
+          return store.importTrio(init);
+        }}
         onImported={(trioId) => {
           openItem({ kind: "trio", id: trioId });
         }}
@@ -760,6 +802,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           {main}
         </main>
       </div>
+      <UndoToast held={held} onUndo={undoDeletion} />
     </div>
   );
 }

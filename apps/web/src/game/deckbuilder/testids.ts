@@ -107,9 +107,8 @@ export const DECK_SAVE_ERROR = "deck-save-error";
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
+/** R2119000: deletes the deck at once, behind the undo toast (`undo/UndoToast.tsx`). */
 export const DECK_DELETE = "deck-delete";
-export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
-export const DECK_DELETE_CANCEL = "deck-delete-cancel";
 
 /**
  * #2096: Duplicate in the open deck's actions, and the reason it gives when off at the deck limit.
@@ -212,9 +211,8 @@ export function trioCardId(slot: number, cardId: string): string {
   return `trio-card-${String(slot)}-${cardId}`;
 }
 
+/** R2119000: as `DECK_DELETE`, for the trio. */
 export const TRIO_DELETE = "trio-delete";
-export const TRIO_DELETE_CONFIRM = "trio-delete-confirm";
-export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
 
 /** R339: "Copy trio code", and the read-only field the code is shown in once copied. */
 export const TRIO_COPY_CODE = "trio-copy-code";
