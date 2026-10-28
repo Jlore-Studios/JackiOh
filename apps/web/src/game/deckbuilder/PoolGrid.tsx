@@ -33,8 +33,25 @@
 // foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
 // the collection does not say is unowned, and in a read-only grid the cards `own` names, behind the
 // ownership it carries (the signed-in Almanac's). Every other card draws the defaults.
+//
+// #2266: the Almanac draws about 700 cards, so each card is memoized (`PoolCard`) and gets the grid's
+// own handlers, which never change and call the screen's latest. A filter, a sort, an ownership
+// change, an opened detail or a card the deck takes re-renders only the cards it changes. A pool
+// that grows (the first render, a cleared search) keeps the cards it drew until a background render
+// (`useDeferredValue`), which yields to input, has drawn the rest. The first render draws
+// POOL_FIRST_CARDS at once.
 
-import { useContext, useMemo, type DragEvent, type ReactElement, type ReactNode } from "react";
+import {
+  memo,
+  useContext,
+  useDeferredValue,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type DragEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -48,6 +65,12 @@ import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
 import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
+
+/**
+ * How many of the pool's cards a grid's first render draws (#2266): more than any screen shows at
+ * once. The rest follow in a render that yields to the pointer and the keyboard.
+ */
+export const POOL_FIRST_CARDS = 48;
 
 /** Where a pool card already is: in the open deck, in a compared deck, or nowhere that matters. */
 export type PoolPlace = "deck" | Holder | null;
@@ -131,6 +154,9 @@ type PoolItemProps = {
   fresh: boolean;
   onInspect: (cardId: string) => void;
 };
+
+/** The grid's handlers, the same functions on every render, each calling the screen's latest. */
+type PoolHandlers = Pick<PoolItemDeck, "onAdd" | "onDragStart" | "onDragEnd"> & { onInspect: (cardId: string) => void };
 
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
@@ -260,37 +286,95 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
   );
 }
 
+/**
+ * Whether a pool card would draw the same: `itemDeck` builds its deck share anew on each render, so
+ * that is compared field by field (#2266).
+ */
+function samePoolItem(before: PoolItemProps, after: PoolItemProps): boolean {
+  if (
+    before.cardId !== after.cardId ||
+    before.def !== after.def ||
+    before.fresh !== after.fresh ||
+    before.onInspect !== after.onInspect
+  ) {
+    return false;
+  }
+  const was = before.deck;
+  const is = after.deck;
+  if (was === null || is === null) return was === is;
+  return (
+    was.deckName === is.deckName &&
+    was.place === is.place &&
+    was.owned === is.owned &&
+    was.refused === is.refused &&
+    was.onAdd === is.onAdd &&
+    was.onDragStart === is.onDragStart &&
+    was.onDragEnd === is.onDragEnd
+  );
+}
+
+/** A filter, sort, ownership or deck change re-renders only the cards it changes (#2266). */
+const PoolCard = memo(PoolItem, samePoolItem);
+
 /** One card's share of the deck editor's props, or null for a read-only grid. */
-function itemDeck(props: PoolGridProps, cardId: string): PoolItemDeck | null {
+function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers): PoolItemDeck | null {
   if (props.onAdd === undefined) return null;
-  const { deckName, collection, inDeck, holders, refusedCardId, onAdd, onDragStart, onDragEnd } = props;
+  const { deckName, collection, inDeck, holders, refusedCardId } = props;
   return {
     deckName,
     place: inDeck.has(cardId) ? "deck" : (holders.get(cardId) ?? null),
     owned: collection === null ? null : (collection[cardId] ?? 0) > 0,
     refused: refusedCardId === cardId,
-    onAdd,
-    onDragStart,
-    onDragEnd,
+    onAdd: handlers.onAdd,
+    onDragStart: handlers.onDragStart,
+    onDragEnd: handlers.onDragEnd,
   };
 }
 
 export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET, own } = props;
+  const { ids, catalog, ribbon = NEW_RIBBON_SET, own } = props;
+
+  // The screen's handlers change more often than its cards do (DeckEditor's `add` with every card
+  // the deck takes), so the cards get these, which never change and call the latest.
+  const latest = useRef(props);
+  useLayoutEffect(() => {
+    latest.current = props;
+  });
+  const handlers = useMemo<PoolHandlers>(
+    () => ({
+      onInspect: (cardId) => {
+        latest.current.onInspect(cardId);
+      },
+      onAdd: (cardId) => {
+        latest.current.onAdd?.(cardId);
+      },
+      onDragStart: (cardId, event) => {
+        latest.current.onDragStart?.(cardId, event);
+      },
+      onDragEnd: () => {
+        latest.current.onDragEnd?.();
+      },
+    }),
+    [],
+  );
+  // A pool that grows keeps what it drew until the background render has drawn the rest; one that
+  // shrinks or reorders is drawn at once (a plain deferred list made a narrowing search slower).
+  const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
+  const shown = ids.length > deferred.length ? deferred : ids;
 
   return (
     <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
-      {ids.map((cardId) => {
+      {shown.map((cardId) => {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;
         return (
           <AsOwnCopy key={cardId} own={own} cardId={cardId}>
-            <PoolItem
+            <PoolCard
               cardId={cardId}
               def={def}
-              deck={itemDeck(props, cardId)}
+              deck={itemDeck(props, cardId, handlers)}
               fresh={ribbon !== null && def.set === ribbon}
-              onInspect={onInspect}
+              onInspect={handlers.onInspect}
             />
           </AsOwnCopy>
         );
