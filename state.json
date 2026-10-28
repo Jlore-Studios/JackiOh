@@ -6924,14 +6924,10 @@
     "what": "revise #2085 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-28T07:47:34Z",
+    "at": "2026-10-28T07:59:22Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2085 on muse (run 40646432464): approved",
-      "delivered build #2115 on claude-3 (run 40643478855): approved",
-      "started revise #2207 on muse (run 40652761712)",
-      "started revise #2085 on claude-3 (run 40652851554)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #2057 on claude-5 (run 40646338581): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7637,7 +7633,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T07:47:34Z",
+  "loop_tick": "2026-10-28T07:59:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
