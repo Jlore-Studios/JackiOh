@@ -6052,6 +6052,13 @@
     "2214": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T12:59:18Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "design-across-crates line: the miss spans crates/ai, crates/server, crates/tools, spec and docs, so cross-crate design holds and it is hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
