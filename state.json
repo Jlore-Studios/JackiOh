@@ -5420,12 +5420,35 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/patches/CardHistory.test.tsx",
+            "apps/web/src/patches/CardHistory.tsx",
+            "apps/web/src/patches/PatchNotes.tsx",
+            "apps/web/src/routes/stats.test.tsx",
+            "apps/web/src/routes/stats.tsx",
+            "apps/web/src/stats/CardStatsBlock.test.tsx"
+          ],
+          "from": "06b34f848ed46fa4e7fe4d2a771f780f95e79e98",
+          "main": "e4eaa55cfb5511d892f07f5b88f3959f98be8ef4"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "06b34f848ed46fa4e7fe4d2a771f780f95e79e98",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40669286010",
+            "tier": "medium"
+          }
+        ],
+        "sha": "63213b45360c68e9f6a0b914553bb95cee3afd88",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2177": {
