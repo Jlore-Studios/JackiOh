@@ -3549,6 +3549,1774 @@
     "meditativeplus-026-cast": {
       "hash": "a630491c2dbd3df5",
       "bytes": 12989
+    },
+    "stinkyscape-001-cast": {
+      "hash": "a649a25df9da0a8d",
+      "bytes": 15392
+    },
+    "stinkyscape-002-cast": {
+      "hash": "16fee778369528e0",
+      "bytes": 13826
+    },
+    "stinkyscape-003-cast": {
+      "hash": "916a486e4b2e49d0",
+      "bytes": 14449
+    },
+    "stinkyscape-004-1-cast": {
+      "hash": "fd3e07b568c3b50e",
+      "bytes": 12170
+    },
+    "stinkyscape-004-2-cast": {
+      "hash": "5176b3549b0cd8fd",
+      "bytes": 15941
+    },
+    "stinkyscape-004-3-cast": {
+      "hash": "73bd8a9fd14a6884",
+      "bytes": 12810
+    },
+    "stinkyscape-004-4-cast": {
+      "hash": "765f92abf3bfd6f4",
+      "bytes": 10296
+    },
+    "stinkyscape-004-5-cast": {
+      "hash": "7bc0e9447d2b9aea",
+      "bytes": 14801
+    },
+    "stinkyscape-004-6-cast": {
+      "hash": "f5c8db7116cb208f",
+      "bytes": 13736
+    },
+    "stinkyscape-004-cast": {
+      "hash": "3e5b4200fa654e9b",
+      "bytes": 14500
+    },
+    "stinkyscape-005-cast": {
+      "hash": "497428ce35915c4f",
+      "bytes": 16189
+    },
+    "stinkyscape-006-attack": {
+      "hash": "6296e9e50d0e6b85",
+      "bytes": 6424
+    },
+    "stinkyscape-006-death": {
+      "hash": "5326e77664bfe4f4",
+      "bytes": 6341
+    },
+    "stinkyscape-006-play": {
+      "hash": "566a36b104d853ce",
+      "bytes": 9870
+    },
+    "stinkyscape-007-cast": {
+      "hash": "ad4d1a9f35a0710c",
+      "bytes": 9891
+    },
+    "stinkyscape-008-1-cast": {
+      "hash": "e7279c79102dc5d0",
+      "bytes": 14250
+    },
+    "stinkyscape-008-cast": {
+      "hash": "fb8173ac990337c3",
+      "bytes": 9947
+    },
+    "stinkyscape-009-cast": {
+      "hash": "3314812456fe1c78",
+      "bytes": 10904
+    },
+    "stinkyscape-010-1-cast": {
+      "hash": "7c8a2f1205ed3e20",
+      "bytes": 8104
+    },
+    "stinkyscape-010-2-cast": {
+      "hash": "a40d0ac1a0dae2d5",
+      "bytes": 10331
+    },
+    "stinkyscape-010-3-cast": {
+      "hash": "1eb3bcb55937275d",
+      "bytes": 10050
+    },
+    "stinkyscape-010-cast": {
+      "hash": "bc4a4ff7bcfd4c41",
+      "bytes": 11141
+    },
+    "stinkyscape-011-1-cast": {
+      "hash": "1b97288241bc743b",
+      "bytes": 4576
+    },
+    "stinkyscape-011-2-cast": {
+      "hash": "a3969083dd02ad16",
+      "bytes": 4383
+    },
+    "stinkyscape-011-3-cast": {
+      "hash": "1a301c51f6c8fd15",
+      "bytes": 8063
+    },
+    "stinkyscape-011-cast": {
+      "hash": "64c243e8b23f0134",
+      "bytes": 14769
+    },
+    "stinkyscape-012-1-cast": {
+      "hash": "76f809da3a69bb40",
+      "bytes": 5861
+    },
+    "stinkyscape-012-2-cast": {
+      "hash": "4eb54529d6b3d3dd",
+      "bytes": 5624
+    },
+    "stinkyscape-012-3-cast": {
+      "hash": "314ac24e774dcc83",
+      "bytes": 9327
+    },
+    "stinkyscape-012-cast": {
+      "hash": "4061b220b02ba3d9",
+      "bytes": 12298
+    },
+    "stinkyscape-013-cast": {
+      "hash": "91859d3b832d477b",
+      "bytes": 9904
+    },
+    "stinkyscape-014-attack": {
+      "hash": "fc38707fcfd47e4b",
+      "bytes": 10542
+    },
+    "stinkyscape-014-death": {
+      "hash": "24e67e1985a4ddea",
+      "bytes": 11642
+    },
+    "stinkyscape-014-play": {
+      "hash": "d036693f35c5217f",
+      "bytes": 18009
+    },
+    "stinkyscape-015-attack": {
+      "hash": "4b2121a358057708",
+      "bytes": 7075
+    },
+    "stinkyscape-015-death": {
+      "hash": "2dad3ae9787c7af9",
+      "bytes": 9801
+    },
+    "stinkyscape-015-play": {
+      "hash": "aa935a8fd02d5658",
+      "bytes": 8193
+    },
+    "stinkyscape-016-cast": {
+      "hash": "c2acd17d5773fd83",
+      "bytes": 9699
+    },
+    "stinkyscape-017-attack": {
+      "hash": "6a5ba2cbb12e5de9",
+      "bytes": 4158
+    },
+    "stinkyscape-017-death": {
+      "hash": "06c3c860dce14029",
+      "bytes": 6313
+    },
+    "stinkyscape-017-play": {
+      "hash": "07f18bfcd3067ec5",
+      "bytes": 7624
+    },
+    "stinkyscape-018-1-cast": {
+      "hash": "e5b8596f8354ddb2",
+      "bytes": 13076
+    },
+    "stinkyscape-018-2-cast": {
+      "hash": "00545f5db307102a",
+      "bytes": 11557
+    },
+    "stinkyscape-018-3-cast": {
+      "hash": "9d523485d781f7af",
+      "bytes": 12746
+    },
+    "stinkyscape-018-cast": {
+      "hash": "c2e2d45c8f9161ec",
+      "bytes": 13870
+    },
+    "stinkyscape-019-attack": {
+      "hash": "6a9b7941442056f0",
+      "bytes": 3619
+    },
+    "stinkyscape-019-death": {
+      "hash": "4b1d59526c0a6927",
+      "bytes": 5131
+    },
+    "stinkyscape-019-play": {
+      "hash": "c243cfeea6387417",
+      "bytes": 11302
+    },
+    "stinkyscape-020-attack": {
+      "hash": "c32b1410795e9a3c",
+      "bytes": 6264
+    },
+    "stinkyscape-020-death": {
+      "hash": "14a910ff08000b8d",
+      "bytes": 9801
+    },
+    "stinkyscape-020-play": {
+      "hash": "6996b31db4bae1f9",
+      "bytes": 9030
+    },
+    "stinkyscape-021-cast": {
+      "hash": "2de04ff356d735cf",
+      "bytes": 6950
+    },
+    "stinkyscape-022-cast": {
+      "hash": "70679a807fdb0c51",
+      "bytes": 12037
+    },
+    "stinkyscape-023-cast": {
+      "hash": "535359516068a5b6",
+      "bytes": 11068
+    },
+    "stinkyscape-024-cast": {
+      "hash": "f96f64f3d9bc658c",
+      "bytes": 10988
+    },
+    "stinkyscape-025-cast": {
+      "hash": "00626e0dab319dc3",
+      "bytes": 14924
+    },
+    "stinkyscape-026-attack": {
+      "hash": "bf41a7fc0a5c7b05",
+      "bytes": 6212
+    },
+    "stinkyscape-026-death": {
+      "hash": "e47a249ff176bc91",
+      "bytes": 8134
+    },
+    "stinkyscape-026-play": {
+      "hash": "214b45633b92a32e",
+      "bytes": 12975
+    },
+    "stinkyscape-027-cast": {
+      "hash": "4ac37a984aeb109f",
+      "bytes": 11262
+    },
+    "stinkyscape-028-cast": {
+      "hash": "6650353487ff460b",
+      "bytes": 13202
+    },
+    "stinkyscape-029-cast": {
+      "hash": "478378e1b5b862ab",
+      "bytes": 13206
+    },
+    "stinkyscape-030-cast": {
+      "hash": "d7ba1080995ef95d",
+      "bytes": 16280
+    },
+    "stinkyscape-031-cast": {
+      "hash": "7463617719447e7e",
+      "bytes": 11842
+    },
+    "stinkyscape-032-cast": {
+      "hash": "468c36e50ab99383",
+      "bytes": 13646
+    },
+    "stinkyscape-033-cast": {
+      "hash": "c7540f3679e2a9eb",
+      "bytes": 10580
+    },
+    "stinkyscape-034-cast": {
+      "hash": "c35e4c535aaf42f9",
+      "bytes": 11513
+    },
+    "stinkyscape-035-cast": {
+      "hash": "c44781792c7c0227",
+      "bytes": 12901
+    },
+    "stinkyscape-036-cast": {
+      "hash": "b7d6d43b0bbefe6a",
+      "bytes": 15374
+    },
+    "stinkyscape-037-attack": {
+      "hash": "f93561b649b935b0",
+      "bytes": 7212
+    },
+    "stinkyscape-037-death": {
+      "hash": "cab914d1c8a3fb74",
+      "bytes": 11177
+    },
+    "stinkyscape-037-play": {
+      "hash": "d0ab726ad6eee68f",
+      "bytes": 11048
+    },
+    "stinkyscape-038-attack": {
+      "hash": "213458ec5b681921",
+      "bytes": 8549
+    },
+    "stinkyscape-038-death": {
+      "hash": "a01c56ff736c8d07",
+      "bytes": 8700
+    },
+    "stinkyscape-038-play": {
+      "hash": "5daa4f46be9a1b0c",
+      "bytes": 10718
+    },
+    "stinkyscape-039-cast": {
+      "hash": "f3849a899b8f9b3d",
+      "bytes": 9778
+    },
+    "stinkyscape-040-attack": {
+      "hash": "34ea389b3f21a772",
+      "bytes": 5373
+    },
+    "stinkyscape-040-death": {
+      "hash": "501759439deb0b6d",
+      "bytes": 5520
+    },
+    "stinkyscape-040-play": {
+      "hash": "e37f7b818112d7ac",
+      "bytes": 6542
+    },
+    "stinkyscape-041-cast": {
+      "hash": "a0eb0d905344bdcf",
+      "bytes": 9664
+    },
+    "stinkyscape-042-attack": {
+      "hash": "1102599cc5b89cc7",
+      "bytes": 8756
+    },
+    "stinkyscape-042-death": {
+      "hash": "72f8e9480497c6ad",
+      "bytes": 14046
+    },
+    "stinkyscape-042-play": {
+      "hash": "d6d9ae473c525c35",
+      "bytes": 15232
+    },
+    "stinkyscape-043-attack": {
+      "hash": "59dff841450fb7fa",
+      "bytes": 4414
+    },
+    "stinkyscape-043-death": {
+      "hash": "6ad81315e70843e9",
+      "bytes": 5307
+    },
+    "stinkyscape-043-play": {
+      "hash": "188d7a5e09247ac1",
+      "bytes": 6152
+    },
+    "stinkyscape-044-cast": {
+      "hash": "86406dc4cc778111",
+      "bytes": 8235
+    },
+    "stinkyscape-045-attack": {
+      "hash": "38bc7e0a6a776eba",
+      "bytes": 9499
+    },
+    "stinkyscape-045-death": {
+      "hash": "9a907f412893c617",
+      "bytes": 12380
+    },
+    "stinkyscape-045-play": {
+      "hash": "0db99b63316339d8",
+      "bytes": 15382
+    },
+    "stinkyscape-046-cast": {
+      "hash": "1970546980f9abbf",
+      "bytes": 12528
+    },
+    "stinkyscape-047-cast": {
+      "hash": "ccf21ac30d84e4e4",
+      "bytes": 12344
+    },
+    "stinkyscape-048-attack": {
+      "hash": "7463ce9d786dc46a",
+      "bytes": 6233
+    },
+    "stinkyscape-048-death": {
+      "hash": "616e74be995067bf",
+      "bytes": 7748
+    },
+    "stinkyscape-048-play": {
+      "hash": "b8eb166802045268",
+      "bytes": 12341
+    },
+    "stinkyscape-049-attack": {
+      "hash": "ddbeee57bb2ad4f8",
+      "bytes": 8500
+    },
+    "stinkyscape-049-death": {
+      "hash": "0ed571c50b4d00a9",
+      "bytes": 6083
+    },
+    "stinkyscape-049-play": {
+      "hash": "7326e1b8edf67c9c",
+      "bytes": 12257
+    },
+    "stinkyscape-050-attack": {
+      "hash": "545043428b657654",
+      "bytes": 8237
+    },
+    "stinkyscape-050-death": {
+      "hash": "8a4eb50e21ebba43",
+      "bytes": 8866
+    },
+    "stinkyscape-050-play": {
+      "hash": "9dd0a27e42d6864a",
+      "bytes": 10717
+    },
+    "stinkyscape-051-attack": {
+      "hash": "53b9eaff9ac77e97",
+      "bytes": 8185
+    },
+    "stinkyscape-051-death": {
+      "hash": "c6c0ffb6641fa4e3",
+      "bytes": 7673
+    },
+    "stinkyscape-051-play": {
+      "hash": "3cba7a1606d50692",
+      "bytes": 11016
+    },
+    "stinkyscape-052-attack": {
+      "hash": "723d62e8f4038409",
+      "bytes": 7905
+    },
+    "stinkyscape-052-death": {
+      "hash": "830cae0fe3dcf02f",
+      "bytes": 7602
+    },
+    "stinkyscape-052-play": {
+      "hash": "407ef89f999438ed",
+      "bytes": 8945
+    },
+    "stinkyscape-053-attack": {
+      "hash": "66ff60b7fe47b7df",
+      "bytes": 8163
+    },
+    "stinkyscape-053-death": {
+      "hash": "4eb818e595352978",
+      "bytes": 8960
+    },
+    "stinkyscape-053-play": {
+      "hash": "1ab136f625789793",
+      "bytes": 9941
+    },
+    "stinkyscape-054-attack": {
+      "hash": "df1f2ed7b503bd3d",
+      "bytes": 7884
+    },
+    "stinkyscape-054-death": {
+      "hash": "eab2eb730ea12b7c",
+      "bytes": 8417
+    },
+    "stinkyscape-054-play": {
+      "hash": "ae73da14906743cd",
+      "bytes": 8793
+    },
+    "stinkyscape-055-attack": {
+      "hash": "54d5ea5c69da5b5f",
+      "bytes": 8771
+    },
+    "stinkyscape-055-death": {
+      "hash": "d4fcdc38873052d7",
+      "bytes": 8176
+    },
+    "stinkyscape-055-play": {
+      "hash": "28de69e7882ae9ac",
+      "bytes": 9290
+    },
+    "stinkyscape-056-attack": {
+      "hash": "82555f2451b05fad",
+      "bytes": 9781
+    },
+    "stinkyscape-056-death": {
+      "hash": "694489f97215cd40",
+      "bytes": 7687
+    },
+    "stinkyscape-056-play": {
+      "hash": "c69dc52ceaef5383",
+      "bytes": 10345
+    },
+    "stinkyscape-057-attack": {
+      "hash": "825f198f7db80b10",
+      "bytes": 8513
+    },
+    "stinkyscape-057-death": {
+      "hash": "033a458c0f500a65",
+      "bytes": 8024
+    },
+    "stinkyscape-057-play": {
+      "hash": "ed9aae1cec165564",
+      "bytes": 9813
+    },
+    "stinkyscape-058-attack": {
+      "hash": "02238e8c94846370",
+      "bytes": 7566
+    },
+    "stinkyscape-058-death": {
+      "hash": "6451e91ddd4b8f01",
+      "bytes": 8235
+    },
+    "stinkyscape-058-play": {
+      "hash": "f880146e352114d1",
+      "bytes": 9296
+    },
+    "stinkyscape-059-attack": {
+      "hash": "eb3faf07a146b36e",
+      "bytes": 8278
+    },
+    "stinkyscape-059-death": {
+      "hash": "4a354b467c7844ac",
+      "bytes": 8213
+    },
+    "stinkyscape-059-play": {
+      "hash": "c1c8664038e193c9",
+      "bytes": 10325
+    },
+    "stinkyscape-060-attack": {
+      "hash": "24db43949b5f7f72",
+      "bytes": 7306
+    },
+    "stinkyscape-060-death": {
+      "hash": "0adbd08a3865a410",
+      "bytes": 10170
+    },
+    "stinkyscape-060-play": {
+      "hash": "4cbe434d6b9286ea",
+      "bytes": 10104
+    },
+    "stinkyscape-061-attack": {
+      "hash": "89dc462ea4583e47",
+      "bytes": 8493
+    },
+    "stinkyscape-061-death": {
+      "hash": "98aa98fa39d02927",
+      "bytes": 9715
+    },
+    "stinkyscape-061-play": {
+      "hash": "2991e8eb1fc67a5d",
+      "bytes": 12500
+    },
+    "stinkyscape-062-attack": {
+      "hash": "1429f2d0af9df3ff",
+      "bytes": 5982
+    },
+    "stinkyscape-062-death": {
+      "hash": "5f785b084431babb",
+      "bytes": 9132
+    },
+    "stinkyscape-062-play": {
+      "hash": "071ad87ca36b35cb",
+      "bytes": 11981
+    },
+    "stinkyscape-063-attack": {
+      "hash": "46ddec17b39643d7",
+      "bytes": 7398
+    },
+    "stinkyscape-063-death": {
+      "hash": "a2cc86c8c5243319",
+      "bytes": 6996
+    },
+    "stinkyscape-063-play": {
+      "hash": "100ac7cbeca935a7",
+      "bytes": 11581
+    },
+    "stinkyscape-064-attack": {
+      "hash": "18349e67ac14e593",
+      "bytes": 7269
+    },
+    "stinkyscape-064-death": {
+      "hash": "bb1c38e373c18cb4",
+      "bytes": 9187
+    },
+    "stinkyscape-064-play": {
+      "hash": "9a080f55413b350c",
+      "bytes": 11553
+    },
+    "stinkyscape-065-attack": {
+      "hash": "d69d5b8707176423",
+      "bytes": 8173
+    },
+    "stinkyscape-065-death": {
+      "hash": "8642baa2b04c5d8b",
+      "bytes": 8135
+    },
+    "stinkyscape-065-play": {
+      "hash": "b5cd834ed8097963",
+      "bytes": 12212
+    },
+    "stinkyscape-066-attack": {
+      "hash": "0a4a5bc3253532ac",
+      "bytes": 8007
+    },
+    "stinkyscape-066-death": {
+      "hash": "86cbcc6d98b4bb91",
+      "bytes": 8619
+    },
+    "stinkyscape-066-play": {
+      "hash": "4fd9bc322a65846f",
+      "bytes": 13925
+    },
+    "stinkyscape-067-attack": {
+      "hash": "adbfb26f4e23c677",
+      "bytes": 6751
+    },
+    "stinkyscape-067-death": {
+      "hash": "4147abd4bd9928d3",
+      "bytes": 8334
+    },
+    "stinkyscape-067-play": {
+      "hash": "0d52494531e2a8cd",
+      "bytes": 12786
+    },
+    "stinkyscape-068-attack": {
+      "hash": "e9a33f77c157124d",
+      "bytes": 8447
+    },
+    "stinkyscape-068-death": {
+      "hash": "e1b121ea2729ed2a",
+      "bytes": 7811
+    },
+    "stinkyscape-068-play": {
+      "hash": "1d8af3120a232db1",
+      "bytes": 12080
+    },
+    "stinkyscape-069-attack": {
+      "hash": "794985ec33b70f1d",
+      "bytes": 4146
+    },
+    "stinkyscape-069-death": {
+      "hash": "d15c49cb5277adc8",
+      "bytes": 4264
+    },
+    "stinkyscape-069-play": {
+      "hash": "deff7d78bf8aa2da",
+      "bytes": 9455
+    },
+    "stinkyscape-070-attack": {
+      "hash": "0bd458909583516f",
+      "bytes": 3639
+    },
+    "stinkyscape-070-death": {
+      "hash": "20e8cb420e229208",
+      "bytes": 4896
+    },
+    "stinkyscape-070-play": {
+      "hash": "d306c260616dcd27",
+      "bytes": 7727
+    },
+    "stinkyscape-071-attack": {
+      "hash": "c59310d0af67559d",
+      "bytes": 3073
+    },
+    "stinkyscape-071-death": {
+      "hash": "fba1ed46c1a7922f",
+      "bytes": 9741
+    },
+    "stinkyscape-071-play": {
+      "hash": "b622751517f3ea64",
+      "bytes": 10724
+    },
+    "stinkyscape-072-attack": {
+      "hash": "d4eb699049d07fcb",
+      "bytes": 3696
+    },
+    "stinkyscape-072-death": {
+      "hash": "534c6c026b87d87d",
+      "bytes": 5355
+    },
+    "stinkyscape-072-play": {
+      "hash": "1c5a822984365e32",
+      "bytes": 6336
+    },
+    "stinkyscape-073-attack": {
+      "hash": "c2f6d767cb514a56",
+      "bytes": 5164
+    },
+    "stinkyscape-073-death": {
+      "hash": "89ccea83e7f7faf9",
+      "bytes": 8599
+    },
+    "stinkyscape-073-play": {
+      "hash": "6b37156fac7fb0c2",
+      "bytes": 11805
+    },
+    "stinkyscape-074-attack": {
+      "hash": "40a3134397e9334d",
+      "bytes": 4200
+    },
+    "stinkyscape-074-death": {
+      "hash": "6d3b3019d17c8614",
+      "bytes": 7746
+    },
+    "stinkyscape-074-play": {
+      "hash": "bab7c21e97eff2e3",
+      "bytes": 11028
+    },
+    "stinkyscape-075-attack": {
+      "hash": "0f055285808a9850",
+      "bytes": 5620
+    },
+    "stinkyscape-075-death": {
+      "hash": "50cb65421e732075",
+      "bytes": 3601
+    },
+    "stinkyscape-075-play": {
+      "hash": "744cfc678f904999",
+      "bytes": 7486
+    },
+    "stinkyscape-076-attack": {
+      "hash": "c325af86573f6e4f",
+      "bytes": 2974
+    },
+    "stinkyscape-076-death": {
+      "hash": "f9b1a494a3fce737",
+      "bytes": 7391
+    },
+    "stinkyscape-076-play": {
+      "hash": "08f4d27592981501",
+      "bytes": 6569
+    },
+    "stinkyscape-077-attack": {
+      "hash": "5bd7515fc12a7a1c",
+      "bytes": 6443
+    },
+    "stinkyscape-077-death": {
+      "hash": "ba83364d3b0c1991",
+      "bytes": 5854
+    },
+    "stinkyscape-077-play": {
+      "hash": "1040277c851952fe",
+      "bytes": 6460
+    },
+    "stinkyscape-078-attack": {
+      "hash": "a2480a30e260dcee",
+      "bytes": 4385
+    },
+    "stinkyscape-078-death": {
+      "hash": "a36487fd8d0d5b6d",
+      "bytes": 4338
+    },
+    "stinkyscape-078-play": {
+      "hash": "007eba0cf69bf336",
+      "bytes": 11561
+    },
+    "stinkyscape-079-attack": {
+      "hash": "09415747aa8a47ee",
+      "bytes": 3174
+    },
+    "stinkyscape-079-death": {
+      "hash": "9675bbdc14a5481f",
+      "bytes": 5845
+    },
+    "stinkyscape-079-play": {
+      "hash": "78ffe3e8b8d92da6",
+      "bytes": 11213
+    },
+    "stinkyscape-080-attack": {
+      "hash": "f651b7f41db7c39f",
+      "bytes": 4183
+    },
+    "stinkyscape-080-death": {
+      "hash": "b3bb1f68e65a2e54",
+      "bytes": 5617
+    },
+    "stinkyscape-080-play": {
+      "hash": "6ac1aa3b1589a701",
+      "bytes": 10933
+    },
+    "stinkyscape-081-attack": {
+      "hash": "b354f5614d3b3405",
+      "bytes": 7767
+    },
+    "stinkyscape-081-death": {
+      "hash": "68720abec15c0463",
+      "bytes": 8696
+    },
+    "stinkyscape-081-play": {
+      "hash": "fcfda770d5eada84",
+      "bytes": 13879
+    },
+    "stinkyscape-082-attack": {
+      "hash": "15303a336b6ca91a",
+      "bytes": 8121
+    },
+    "stinkyscape-082-death": {
+      "hash": "a52d173fd56f04c2",
+      "bytes": 10836
+    },
+    "stinkyscape-082-play": {
+      "hash": "c5c2ec20983c6d78",
+      "bytes": 14819
+    },
+    "stinkyscape-083-attack": {
+      "hash": "65148ec010b6a26b",
+      "bytes": 8343
+    },
+    "stinkyscape-083-death": {
+      "hash": "d1477f83c0571636",
+      "bytes": 8200
+    },
+    "stinkyscape-083-play": {
+      "hash": "7b7a6adc162b0004",
+      "bytes": 12891
+    },
+    "stinkyscape-084-1-cast": {
+      "hash": "d8eb90f10a7f7543",
+      "bytes": 14269
+    },
+    "stinkyscape-084-cast": {
+      "hash": "9aed8b941cafdd1b",
+      "bytes": 12480
+    },
+    "stinkyscape-085-attack": {
+      "hash": "4b10d1aba2be7065",
+      "bytes": 4434
+    },
+    "stinkyscape-085-death": {
+      "hash": "4107f1c26099d188",
+      "bytes": 4415
+    },
+    "stinkyscape-085-play": {
+      "hash": "0e1bbddf4f8aabab",
+      "bytes": 11267
+    },
+    "stinkyscape-086-attack": {
+      "hash": "d3a8739d5ef9e2c8",
+      "bytes": 5505
+    },
+    "stinkyscape-086-death": {
+      "hash": "21502546b0e46ed8",
+      "bytes": 6438
+    },
+    "stinkyscape-086-play": {
+      "hash": "f81be1df014932df",
+      "bytes": 11928
+    },
+    "stinkyscape-087-attack": {
+      "hash": "5ba00884bb4a5338",
+      "bytes": 6005
+    },
+    "stinkyscape-087-death": {
+      "hash": "3015f778da619990",
+      "bytes": 10634
+    },
+    "stinkyscape-087-play": {
+      "hash": "843e6e8d6cd3f38f",
+      "bytes": 11565
+    },
+    "stinkyscape-088-attack": {
+      "hash": "12609d2113f459d9",
+      "bytes": 6736
+    },
+    "stinkyscape-088-death": {
+      "hash": "882b5339454a56a1",
+      "bytes": 9118
+    },
+    "stinkyscape-088-play": {
+      "hash": "42bbb9c237971bda",
+      "bytes": 12863
+    },
+    "stinkyscape-089-cast": {
+      "hash": "ec1929ea88dbf04e",
+      "bytes": 9341
+    },
+    "stinkyscape-090-attack": {
+      "hash": "0830b6e7177c4016",
+      "bytes": 8469
+    },
+    "stinkyscape-090-death": {
+      "hash": "2305766d40528465",
+      "bytes": 7532
+    },
+    "stinkyscape-090-play": {
+      "hash": "5eee08c592266266",
+      "bytes": 9805
+    },
+    "stinkyscape-091-attack": {
+      "hash": "f56912294e31ab57",
+      "bytes": 2878
+    },
+    "stinkyscape-091-death": {
+      "hash": "3a242a0df90cfca9",
+      "bytes": 2878
+    },
+    "stinkyscape-091-play": {
+      "hash": "7479f5e2ab90d843",
+      "bytes": 3646
+    },
+    "stinkyscape-092-attack": {
+      "hash": "4ae292fc598a65e2",
+      "bytes": 3554
+    },
+    "stinkyscape-092-death": {
+      "hash": "704d36af04370a46",
+      "bytes": 3554
+    },
+    "stinkyscape-092-play": {
+      "hash": "aa9c271bfe234a58",
+      "bytes": 4181
+    },
+    "stinkyscape-093-attack": {
+      "hash": "184bc523406bb07d",
+      "bytes": 5435
+    },
+    "stinkyscape-093-death": {
+      "hash": "3b560530eda68d62",
+      "bytes": 4683
+    },
+    "stinkyscape-093-play": {
+      "hash": "36527ffe9bd12efe",
+      "bytes": 12250
+    },
+    "stinkyscape-094-attack": {
+      "hash": "683e12a06a92e40a",
+      "bytes": 5655
+    },
+    "stinkyscape-094-death": {
+      "hash": "d8df8044c1aea8f1",
+      "bytes": 7448
+    },
+    "stinkyscape-094-play": {
+      "hash": "c53ac199fc25211e",
+      "bytes": 6346
+    },
+    "stinkyscape-095-cast": {
+      "hash": "bedbce35132d7ad7",
+      "bytes": 9370
+    },
+    "stinkyscape-096-attack": {
+      "hash": "c7e6b77657bcdac2",
+      "bytes": 4192
+    },
+    "stinkyscape-096-death": {
+      "hash": "335540f59ba8bd8c",
+      "bytes": 9562
+    },
+    "stinkyscape-096-play": {
+      "hash": "d6f00b4a10967042",
+      "bytes": 12128
+    },
+    "stinkyscape-097-cast": {
+      "hash": "76c92c44efb530d4",
+      "bytes": 13010
+    },
+    "stinkyscape-098-attack": {
+      "hash": "6f0b54c70ba8209f",
+      "bytes": 9796
+    },
+    "stinkyscape-098-death": {
+      "hash": "5ddb93f4c6ecb669",
+      "bytes": 10246
+    },
+    "stinkyscape-098-play": {
+      "hash": "23e9467f0569c100",
+      "bytes": 12410
+    },
+    "stinkyscape-099-cast": {
+      "hash": "a7e2b1b3ff0beea3",
+      "bytes": 10229
+    },
+    "stinkyscape-100-attack": {
+      "hash": "00894360c0cd676b",
+      "bytes": 8305
+    },
+    "stinkyscape-100-death": {
+      "hash": "c8cf7c2edeac3955",
+      "bytes": 9876
+    },
+    "stinkyscape-100-play": {
+      "hash": "3b44c654e437cd59",
+      "bytes": 13201
+    },
+    "stinkyscape-101-attack": {
+      "hash": "b08fbf3279a323f6",
+      "bytes": 7518
+    },
+    "stinkyscape-101-death": {
+      "hash": "60dd5b080dff67c6",
+      "bytes": 7761
+    },
+    "stinkyscape-101-play": {
+      "hash": "7df3f7a30262db1d",
+      "bytes": 13716
+    },
+    "stinkyscape-102-cast": {
+      "hash": "2c0972557fa0c657",
+      "bytes": 11408
+    },
+    "stinkyscape-103-attack": {
+      "hash": "189207740d153faf",
+      "bytes": 12565
+    },
+    "stinkyscape-103-death": {
+      "hash": "255c776596f0b634",
+      "bytes": 11032
+    },
+    "stinkyscape-103-play": {
+      "hash": "dd4de8562851e6bb",
+      "bytes": 16077
+    },
+    "stinkyscape-104-attack": {
+      "hash": "fc38c616abb8b602",
+      "bytes": 7374
+    },
+    "stinkyscape-104-death": {
+      "hash": "12fabf3514bef51e",
+      "bytes": 7072
+    },
+    "stinkyscape-104-play": {
+      "hash": "bcd67fd583301108",
+      "bytes": 8798
+    },
+    "stinkyscape-105-attack": {
+      "hash": "a7698afc421e85c1",
+      "bytes": 6777
+    },
+    "stinkyscape-105-death": {
+      "hash": "0acd980284b29207",
+      "bytes": 8947
+    },
+    "stinkyscape-105-play": {
+      "hash": "afcc4accde27b2c9",
+      "bytes": 13137
+    },
+    "stinkyscape-106-attack": {
+      "hash": "4106d7184d6390e6",
+      "bytes": 8677
+    },
+    "stinkyscape-106-death": {
+      "hash": "4d9363d1afe40043",
+      "bytes": 8249
+    },
+    "stinkyscape-106-play": {
+      "hash": "efd5972a10666044",
+      "bytes": 11208
+    },
+    "stinkyscape-107-attack": {
+      "hash": "5fae4dee1e6c422d",
+      "bytes": 7697
+    },
+    "stinkyscape-107-death": {
+      "hash": "067927405a866156",
+      "bytes": 7682
+    },
+    "stinkyscape-107-play": {
+      "hash": "08e700ed3be6b2ac",
+      "bytes": 12244
+    },
+    "stinkyscape-108-attack": {
+      "hash": "05ae3daeff85dd22",
+      "bytes": 3946
+    },
+    "stinkyscape-108-death": {
+      "hash": "6d170c453baaa79f",
+      "bytes": 4488
+    },
+    "stinkyscape-108-play": {
+      "hash": "c26dfcf98c5c85f9",
+      "bytes": 10578
+    },
+    "stinkyscape-109-attack": {
+      "hash": "6d06e0dfc3ed02de",
+      "bytes": 6119
+    },
+    "stinkyscape-109-death": {
+      "hash": "a51819da13e10271",
+      "bytes": 7180
+    },
+    "stinkyscape-109-play": {
+      "hash": "be43b794e5aac846",
+      "bytes": 8835
+    },
+    "stinkyscape-110-attack": {
+      "hash": "17edaa73ec3bf06a",
+      "bytes": 5882
+    },
+    "stinkyscape-110-death": {
+      "hash": "c8f0c4e770c7901b",
+      "bytes": 7175
+    },
+    "stinkyscape-110-play": {
+      "hash": "b6a4b3772bfeab47",
+      "bytes": 7611
+    },
+    "stinkyscape-111-attack": {
+      "hash": "e44ca812ebbe4792",
+      "bytes": 8627
+    },
+    "stinkyscape-111-death": {
+      "hash": "48ff476f831ac7c5",
+      "bytes": 9739
+    },
+    "stinkyscape-111-play": {
+      "hash": "432ce4b86abf4581",
+      "bytes": 12807
+    },
+    "stinkyscape-112-1-cast": {
+      "hash": "9aa91fc6c9d665ce",
+      "bytes": 9546
+    },
+    "stinkyscape-112-cast": {
+      "hash": "35c06cba1e0d3fe6",
+      "bytes": 12081
+    },
+    "stinkyscape-113-attack": {
+      "hash": "44202d1cad0d119a",
+      "bytes": 6401
+    },
+    "stinkyscape-113-death": {
+      "hash": "3dd44ec10e0008e5",
+      "bytes": 8930
+    },
+    "stinkyscape-113-play": {
+      "hash": "116068794b8b47f0",
+      "bytes": 12872
+    },
+    "stinkyscape-114-attack": {
+      "hash": "20c9b50c9ef2fdc3",
+      "bytes": 9591
+    },
+    "stinkyscape-114-death": {
+      "hash": "a822c164ae66fc22",
+      "bytes": 10951
+    },
+    "stinkyscape-114-play": {
+      "hash": "2458ebe3396cca6e",
+      "bytes": 15111
+    },
+    "stinkyscape-115-attack": {
+      "hash": "cb5a1efdb9c4d6cb",
+      "bytes": 6975
+    },
+    "stinkyscape-115-death": {
+      "hash": "4d1cf1b2597bbf4d",
+      "bytes": 7580
+    },
+    "stinkyscape-115-play": {
+      "hash": "c315d8d4a60f0c56",
+      "bytes": 11738
+    },
+    "stinkyscape-116-cast": {
+      "hash": "0947241543ab3028",
+      "bytes": 11294
+    },
+    "stinkyscape-117-cast": {
+      "hash": "a1feeec3d3ea9611",
+      "bytes": 10466
+    },
+    "stinkyscape-118-cast": {
+      "hash": "70d5018a5b53c52c",
+      "bytes": 12852
+    },
+    "stinkyscape-119-cast": {
+      "hash": "244588b1d9b87fa1",
+      "bytes": 13366
+    },
+    "stinkyscape-120-cast": {
+      "hash": "5a828c30e8da6a7f",
+      "bytes": 13382
+    },
+    "stinkyscape-121-cast": {
+      "hash": "632b1818d5a3dc54",
+      "bytes": 12024
+    },
+    "stinkyscape-122-attack": {
+      "hash": "9b55da680e66c43f",
+      "bytes": 4090
+    },
+    "stinkyscape-122-death": {
+      "hash": "30c6c66a57fe6aaf",
+      "bytes": 3923
+    },
+    "stinkyscape-122-play": {
+      "hash": "be28a873e4b4e874",
+      "bytes": 10279
+    },
+    "stinkyscape-123-attack": {
+      "hash": "a07b743d3720d27c",
+      "bytes": 7475
+    },
+    "stinkyscape-123-death": {
+      "hash": "a3d644339554be8b",
+      "bytes": 10803
+    },
+    "stinkyscape-123-play": {
+      "hash": "8df573b5e25b2900",
+      "bytes": 12488
+    },
+    "stinkyscape-124-cast": {
+      "hash": "e450416b868f48e4",
+      "bytes": 12979
+    },
+    "stinkyscape-125-cast": {
+      "hash": "4ca9aadc71d82f95",
+      "bytes": 8214
+    },
+    "stinkyscape-126-cast": {
+      "hash": "85843ab3a85e2748",
+      "bytes": 14781
+    },
+    "stinkyscape-127-attack": {
+      "hash": "e12c9ff971a9dee1",
+      "bytes": 5429
+    },
+    "stinkyscape-127-death": {
+      "hash": "038c492ac0ef9329",
+      "bytes": 4000
+    },
+    "stinkyscape-127-play": {
+      "hash": "d14adf55d4e691a5",
+      "bytes": 5957
+    },
+    "stinkyscape-128-attack": {
+      "hash": "e9861f15feff1ba0",
+      "bytes": 2687
+    },
+    "stinkyscape-128-death": {
+      "hash": "81a2f498732e9031",
+      "bytes": 4352
+    },
+    "stinkyscape-128-play": {
+      "hash": "b5ce29db73be769c",
+      "bytes": 5262
+    },
+    "stinkyscape-129-attack": {
+      "hash": "0f016a66306d575c",
+      "bytes": 4305
+    },
+    "stinkyscape-129-death": {
+      "hash": "88bf141bb5d62606",
+      "bytes": 3896
+    },
+    "stinkyscape-129-play": {
+      "hash": "dea54bd31cfb6bd2",
+      "bytes": 5417
+    },
+    "stinkyscape-130-cast": {
+      "hash": "899311c29ac27563",
+      "bytes": 13204
+    },
+    "stinkyscape-131-cast": {
+      "hash": "3ff5711803a773c0",
+      "bytes": 13751
+    },
+    "stinkyscape-132-attack": {
+      "hash": "4491bce054c34104",
+      "bytes": 5176
+    },
+    "stinkyscape-132-death": {
+      "hash": "59965b883906cd4e",
+      "bytes": 9707
+    },
+    "stinkyscape-132-play": {
+      "hash": "f70e25a766ae20b0",
+      "bytes": 5973
+    },
+    "stinkyscape-133-attack": {
+      "hash": "ecfb56b321227ac4",
+      "bytes": 6590
+    },
+    "stinkyscape-133-death": {
+      "hash": "832136dfc3494723",
+      "bytes": 8239
+    },
+    "stinkyscape-133-play": {
+      "hash": "2152713f0d43d7eb",
+      "bytes": 12243
+    },
+    "stinkyscape-134-attack": {
+      "hash": "b8382eae557d746e",
+      "bytes": 3913
+    },
+    "stinkyscape-134-death": {
+      "hash": "eab329b57d2da2c3",
+      "bytes": 4202
+    },
+    "stinkyscape-134-play": {
+      "hash": "0190a4e07774b88d",
+      "bytes": 6582
+    },
+    "stinkyscape-135-1-attack": {
+      "hash": "b375ae0713bfe068",
+      "bytes": 3765
+    },
+    "stinkyscape-135-1-death": {
+      "hash": "986f0440e2f5b514",
+      "bytes": 3840
+    },
+    "stinkyscape-135-1-play": {
+      "hash": "56e3d5409e97022b",
+      "bytes": 13033
+    },
+    "stinkyscape-135-cast": {
+      "hash": "4bd5172c953af68f",
+      "bytes": 8251
+    },
+    "stinkyscape-136-attack": {
+      "hash": "14e40da23ddd30ce",
+      "bytes": 4591
+    },
+    "stinkyscape-136-death": {
+      "hash": "e004b8dd59a8717f",
+      "bytes": 5709
+    },
+    "stinkyscape-136-play": {
+      "hash": "bd8b495df8da4f9e",
+      "bytes": 6677
+    },
+    "stinkyscape-137-1-cast": {
+      "hash": "8e31e2438f28ad3c",
+      "bytes": 11133
+    },
+    "stinkyscape-137-2-cast": {
+      "hash": "b7606daedfe9dcca",
+      "bytes": 11123
+    },
+    "stinkyscape-137-3-cast": {
+      "hash": "5b918cfc9a367472",
+      "bytes": 13123
+    },
+    "stinkyscape-137-4-cast": {
+      "hash": "2665cf9dfd54d9cc",
+      "bytes": 8066
+    },
+    "stinkyscape-137-attack": {
+      "hash": "999a9262c963df18",
+      "bytes": 4467
+    },
+    "stinkyscape-137-death": {
+      "hash": "5ba3c7b7a6c8c158",
+      "bytes": 4744
+    },
+    "stinkyscape-137-play": {
+      "hash": "23cb336480f6a5f9",
+      "bytes": 7539
+    },
+    "stinkyscape-138-cast": {
+      "hash": "aa19b3664595040c",
+      "bytes": 9197
+    },
+    "stinkyscape-139-cast": {
+      "hash": "511a007ed9778e8c",
+      "bytes": 10419
+    },
+    "stinkyscape-140-attack": {
+      "hash": "398b3fed5255358a",
+      "bytes": 7885
+    },
+    "stinkyscape-140-death": {
+      "hash": "134b364350eeb2b0",
+      "bytes": 8915
+    },
+    "stinkyscape-140-play": {
+      "hash": "2c478136c376266b",
+      "bytes": 11206
+    },
+    "stinkyscape-141-attack": {
+      "hash": "06d16239773a87ca",
+      "bytes": 2686
+    },
+    "stinkyscape-141-death": {
+      "hash": "0873797881eb1b7c",
+      "bytes": 4102
+    },
+    "stinkyscape-141-play": {
+      "hash": "a3a480c9c9385cfe",
+      "bytes": 8930
+    },
+    "stinkyscape-142-attack": {
+      "hash": "45e5f9a31c293ec0",
+      "bytes": 4384
+    },
+    "stinkyscape-142-death": {
+      "hash": "d273a4ad60e2222a",
+      "bytes": 7517
+    },
+    "stinkyscape-142-play": {
+      "hash": "07c191ed90e595e2",
+      "bytes": 10147
+    },
+    "stinkyscape-143-attack": {
+      "hash": "bcfdda77cfcc2d96",
+      "bytes": 3737
+    },
+    "stinkyscape-143-death": {
+      "hash": "7eaa57f74d163530",
+      "bytes": 4303
+    },
+    "stinkyscape-143-play": {
+      "hash": "6988c9d55c7f7336",
+      "bytes": 10903
+    },
+    "stinkyscape-144-cast": {
+      "hash": "2e1e61af48cf22b7",
+      "bytes": 12328
+    },
+    "stinkyscape-145-cast": {
+      "hash": "114e4711bfd177d8",
+      "bytes": 9294
+    },
+    "stinkyscape-146-cast": {
+      "hash": "dd191bd57ce74333",
+      "bytes": 9853
+    },
+    "stinkyscape-147-1-attack": {
+      "hash": "8626a6b07f8f2b92",
+      "bytes": 7430
+    },
+    "stinkyscape-147-1-death": {
+      "hash": "a0936323ec38bcc8",
+      "bytes": 5859
+    },
+    "stinkyscape-147-1-play": {
+      "hash": "cb52fd59be763670",
+      "bytes": 9941
+    },
+    "stinkyscape-147-2-cast": {
+      "hash": "09367fabf90a68b2",
+      "bytes": 13984
+    },
+    "stinkyscape-147-attack": {
+      "hash": "55628c85c02e3653",
+      "bytes": 5697
+    },
+    "stinkyscape-147-death": {
+      "hash": "9b632bb50377eb43",
+      "bytes": 7986
+    },
+    "stinkyscape-147-play": {
+      "hash": "cae87e6aa7f3ccfd",
+      "bytes": 9617
+    },
+    "stinkyscape-148-1-cast": {
+      "hash": "6ad5b42583a941d5",
+      "bytes": 14763
+    },
+    "stinkyscape-148-cast": {
+      "hash": "fd7a9a595b4ac55c",
+      "bytes": 9755
+    },
+    "stinkyscape-149-cast": {
+      "hash": "f8321e08ae1c6fab",
+      "bytes": 9696
+    },
+    "stinkyscape-150-1-attack": {
+      "hash": "1b3fb8f3c2810613",
+      "bytes": 9360
+    },
+    "stinkyscape-150-1-death": {
+      "hash": "ae1c08b0415597ee",
+      "bytes": 10201
+    },
+    "stinkyscape-150-1-play": {
+      "hash": "c04c0dfba88edf7d",
+      "bytes": 18409
+    },
+    "stinkyscape-150-cast": {
+      "hash": "1a45d2ccf380450d",
+      "bytes": 11261
+    },
+    "stinkyscape-151-cast": {
+      "hash": "93789286ddc470a1",
+      "bytes": 13890
+    },
+    "stinkyscape-152-cast": {
+      "hash": "69e4fa8c03b27a66",
+      "bytes": 10287
+    },
+    "stinkyscape-153-cast": {
+      "hash": "f8bcc917b3c95ad5",
+      "bytes": 9778
+    },
+    "stinkyscape-154-cast": {
+      "hash": "61d06099616c02e2",
+      "bytes": 7942
+    },
+    "stinkyscape-155-cast": {
+      "hash": "5c3ed4ab38185f21",
+      "bytes": 14451
+    },
+    "stinkyscape-156-cast": {
+      "hash": "e71c5a7902bd579e",
+      "bytes": 6305
+    },
+    "stinkyscape-157-cast": {
+      "hash": "72e58e8977a95865",
+      "bytes": 14030
+    },
+    "stinkyscape-158-cast": {
+      "hash": "793e22bfe6bd22c7",
+      "bytes": 14783
+    },
+    "stinkyscape-159-cast": {
+      "hash": "128a1aba9812b5c5",
+      "bytes": 6324
+    },
+    "stinkyscape-160-cast": {
+      "hash": "066f3a669c356d04",
+      "bytes": 10701
+    },
+    "stinkyscape-161-cast": {
+      "hash": "1853c191719da3ea",
+      "bytes": 11956
+    },
+    "stinkyscape-162-cast": {
+      "hash": "ca362ef6027d65de",
+      "bytes": 13290
+    },
+    "stinkyscape-163-cast": {
+      "hash": "5150c221462ae29a",
+      "bytes": 14624
+    },
+    "stinkyscape-164-cast": {
+      "hash": "c38799ccc2011d22",
+      "bytes": 14208
+    },
+    "stinkyscape-165-cast": {
+      "hash": "9f9384ace7ad2ce9",
+      "bytes": 13860
+    },
+    "stinkyscape-166-cast": {
+      "hash": "2ac0cbffac65f00f",
+      "bytes": 12695
+    },
+    "stinkyscape-167-cast": {
+      "hash": "32944e49731c45d6",
+      "bytes": 10506
+    },
+    "stinkyscape-168-cast": {
+      "hash": "5bd993d96a7690be",
+      "bytes": 14435
+    },
+    "stinkyscape-169-attack": {
+      "hash": "589420fe2598fe4b",
+      "bytes": 7171
+    },
+    "stinkyscape-169-death": {
+      "hash": "6916109dbebca58c",
+      "bytes": 9047
+    },
+    "stinkyscape-169-play": {
+      "hash": "57c7c184288ce2f0",
+      "bytes": 12118
+    },
+    "stinkyscape-170-attack": {
+      "hash": "9f31144135ced61e",
+      "bytes": 7604
+    },
+    "stinkyscape-170-death": {
+      "hash": "79a1bb7ea35719e9",
+      "bytes": 12243
+    },
+    "stinkyscape-170-play": {
+      "hash": "5026175457b98a9a",
+      "bytes": 16395
+    },
+    "stinkyscape-171-attack": {
+      "hash": "1257bec2d7a3b9be",
+      "bytes": 2860
+    },
+    "stinkyscape-171-death": {
+      "hash": "e8ba686fe0cd1a2a",
+      "bytes": 5418
+    },
+    "stinkyscape-171-play": {
+      "hash": "5ec071cb4cb32f4f",
+      "bytes": 10051
+    },
+    "stinkyscape-172-attack": {
+      "hash": "d996f59878fd817d",
+      "bytes": 3132
+    },
+    "stinkyscape-172-death": {
+      "hash": "47650cf35d45db67",
+      "bytes": 6918
+    },
+    "stinkyscape-172-play": {
+      "hash": "7c0ed9936bcae321",
+      "bytes": 10139
+    },
+    "stinkyscape-173-attack": {
+      "hash": "2ae9a6f2034da1d6",
+      "bytes": 3996
+    },
+    "stinkyscape-173-death": {
+      "hash": "731eae952bbc68fc",
+      "bytes": 8750
+    },
+    "stinkyscape-173-play": {
+      "hash": "29626bdc38b8fe32",
+      "bytes": 16621
+    },
+    "stinkyscape-174-cast": {
+      "hash": "8e1399dab2d9aafb",
+      "bytes": 12292
+    },
+    "stinkyscape-175-attack": {
+      "hash": "1e05339a42f3fadd",
+      "bytes": 7189
+    },
+    "stinkyscape-175-death": {
+      "hash": "364bab536105bc4f",
+      "bytes": 8360
+    },
+    "stinkyscape-175-play": {
+      "hash": "41c6bd8e8580ad60",
+      "bytes": 10675
+    },
+    "stinkyscape-t-ai-01-attack": {
+      "hash": "92be48d0adec8895",
+      "bytes": 4148
+    },
+    "stinkyscape-t-ai-01-death": {
+      "hash": "05a04ac9d164d556",
+      "bytes": 5470
+    },
+    "stinkyscape-t-ai-01-play": {
+      "hash": "3c16e861398f5ab0",
+      "bytes": 15566
+    },
+    "stinkyscape-t-ai-02-cast": {
+      "hash": "cbf6a0672d9bdf3d",
+      "bytes": 11954
+    },
+    "stinkyscape-t-ai-03-cast": {
+      "hash": "255cbf9cfcad342c",
+      "bytes": 8402
+    },
+    "stinkyscape-t-ai-04-cast": {
+      "hash": "a46546a8a51f1e9b",
+      "bytes": 5136
+    },
+    "stinkyscape-t-ai-05-cast": {
+      "hash": "fed796ee3cd8e205",
+      "bytes": 11166
+    },
+    "stinkyscape-t-ai-06-cast": {
+      "hash": "ae024c9e3b51ceeb",
+      "bytes": 11225
+    },
+    "stinkyscape-t-ai-07-attack": {
+      "hash": "f6401c91be7e3bdf",
+      "bytes": 4370
+    },
+    "stinkyscape-t-ai-07-death": {
+      "hash": "0cb41b7c2e2797c1",
+      "bytes": 4606
+    },
+    "stinkyscape-t-ai-07-play": {
+      "hash": "fd0b4a6a4919b4da",
+      "bytes": 7416
+    },
+    "stinkyscape-t-ai-08-cast": {
+      "hash": "60fe14a6e57388f3",
+      "bytes": 11921
+    },
+    "stinkyscape-t-ai-09-cast": {
+      "hash": "62c78823f1682d66",
+      "bytes": 8953
+    },
+    "stinkyscape-t-ai-10-attack": {
+      "hash": "b88d9400542bba81",
+      "bytes": 5524
+    },
+    "stinkyscape-t-ai-10-death": {
+      "hash": "59a3f8d4b848818e",
+      "bytes": 6642
+    },
+    "stinkyscape-t-ai-10-play": {
+      "hash": "2547428e1caf2582",
+      "bytes": 8107
+    },
+    "stinkyscape-t-anomaly-found-cast": {
+      "hash": "e86d293781126dbc",
+      "bytes": 17989
+    },
+    "stinkyscape-t-axnit-cast": {
+      "hash": "fd87deff317af07e",
+      "bytes": 9832
+    },
+    "stinkyscape-t-dormant-starship-attack": {
+      "hash": "5203691e299f0f3c",
+      "bytes": 3270
+    },
+    "stinkyscape-t-dormant-starship-death": {
+      "hash": "650d14c115585b62",
+      "bytes": 5247
+    },
+    "stinkyscape-t-dormant-starship-play": {
+      "hash": "70ccd5ef0d0c2728",
+      "bytes": 10577
+    },
+    "stinkyscape-t-drone-corvette-attack": {
+      "hash": "13e352deb7940c01",
+      "bytes": 5853
+    },
+    "stinkyscape-t-drone-corvette-death": {
+      "hash": "102dfa284c0bcdcf",
+      "bytes": 9172
+    },
+    "stinkyscape-t-drone-corvette-play": {
+      "hash": "af4f013a4d0f6572",
+      "bytes": 10248
+    },
+    "stinkyscape-t-drone-interceptor-attack": {
+      "hash": "b354f5614d3b3405",
+      "bytes": 7767
+    },
+    "stinkyscape-t-drone-interceptor-death": {
+      "hash": "9231e0e83737449a",
+      "bytes": 8536
+    },
+    "stinkyscape-t-drone-interceptor-play": {
+      "hash": "d04b1ecad2fa4706",
+      "bytes": 10073
+    },
+    "stinkyscape-t-gellium-cast": {
+      "hash": "967ed48517e660e8",
+      "bytes": 11246
+    },
+    "stinkyscape-t-korrelite-cast": {
+      "hash": "1b1c73b92e8e7ecb",
+      "bytes": 11643
+    },
+    "stinkyscape-t-meltdown-layer-attack": {
+      "hash": "ce60107588976cd4",
+      "bytes": 3383
+    },
+    "stinkyscape-t-meltdown-layer-death": {
+      "hash": "8f1b19ef19ebbc85",
+      "bytes": 5464
+    },
+    "stinkyscape-t-meltdown-layer-play": {
+      "hash": "2a1eae4d16c3d0d3",
+      "bytes": 11168
+    },
+    "stinkyscape-t-narcor-cast": {
+      "hash": "6aada8071933aa75",
+      "bytes": 14151
+    },
+    "stinkyscape-t-propagation-layer-attack": {
+      "hash": "5471f3bda2df2467",
+      "bytes": 3176
+    },
+    "stinkyscape-t-propagation-layer-death": {
+      "hash": "e4ba0b68e9aea13d",
+      "bytes": 10366
+    },
+    "stinkyscape-t-propagation-layer-play": {
+      "hash": "38a1eb4674b7cd54",
+      "bytes": 13625
+    },
+    "stinkyscape-t-red-narcor-cast": {
+      "hash": "9066cbc6cafa0e8b",
+      "bytes": 13372
+    },
+    "stinkyscape-t-reknite-cast": {
+      "hash": "f00d4745321c6ca2",
+      "bytes": 13011
+    },
+    "stinkyscape-t-shield-layer-attack": {
+      "hash": "0d36fc98a60249e3",
+      "bytes": 4469
+    },
+    "stinkyscape-t-shield-layer-death": {
+      "hash": "111291865e48d227",
+      "bytes": 12186
+    },
+    "stinkyscape-t-shield-layer-play": {
+      "hash": "623fc1cc00d0d9aa",
+      "bytes": 11591
     }
   }
 }
