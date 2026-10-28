@@ -53,7 +53,7 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     events
 }
 
-/// p1's unit zones, each pile's definitions bottom first.
+/// p1's unit zones, each pile's definitions top first, as the state holds a pile (§3.2).
 fn piles(state: &GameState) -> Vec<Vec<String>> {
     state
         .players
@@ -86,9 +86,9 @@ fn r1842000_the_battleship_entry_summons_its_three_layers_as_one_pile_the_shield
     assert_eq!(
         piles,
         vec![vec![
-            MELTDOWN.to_string(),
+            SHIELD.to_string(),
             PROPAGATION.to_string(),
-            SHIELD.to_string()
+            MELTDOWN.to_string()
         ]]
     );
 }
@@ -102,13 +102,13 @@ fn r1882007_the_interceptors_entry_tops_every_unit_zone_a_unit_standing_in_one_i
     assert_eq!(piles.len(), UNIT_ZONES as usize);
     for (lane, pile) in piles.iter().enumerate() {
         assert_eq!(
-            pile.last().map(String::as_str),
+            pile.first().map(String::as_str),
             Some(INTERCEPTOR),
             "lane {}",
             lane + 1
         );
     }
-    assert_eq!(piles[1], vec![CORVETTE.to_string(), INTERCEPTOR.to_string()]);
+    assert_eq!(piles[1], vec![INTERCEPTOR.to_string(), CORVETTE.to_string()]);
 }
 
 #[test]
