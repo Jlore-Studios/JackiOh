@@ -82,6 +82,12 @@ type Read<T> =
   | { kind: "ready"; value: T }
   | ({ kind: "error"; retry: () => void } & ReadFailure);
 
+/** A panel's first state for `token`: its kept answer, or loading. */
+function startOf<T>(kept: (token: string) => T | undefined, token: string): Read<T> {
+  const value = kept(token);
+  return value === undefined ? { kind: "loading" } : { kind: "ready", value };
+}
+
 /**
  * One panel's read, when it mounts and each time Try again asks for it again. R2125000: a panel with
  * a kept answer starts on it, and a read that fails behind an answer keeps it and says nothing.
@@ -91,39 +97,41 @@ function useRead<T>(
   load: (token: string) => Promise<T>,
   kept: (token: string) => T | undefined,
 ): Read<T> {
-  const [read, setRead] = useState<Read<T>>(() => {
-    const value = kept(token);
-    return value === undefined ? { kind: "loading" } : { kind: "ready", value };
-  });
+  // The read is held with the token it belongs to: after an account switch the other account's
+  // answer is never drawn, and a failed read keeps only what this account's own cache holds.
+  const [held, setHeld] = useState<{ token: string; read: Read<T> }>(() => ({ token, read: startOf(kept, token) }));
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     load(token)
       .then((value) => {
-        if (!cancelled) setRead({ kind: "ready", value });
+        if (!cancelled) setHeld({ token, read: { kind: "ready", value } });
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
-        setRead((previous) =>
-          previous.kind === "ready"
-            ? previous
-            : {
-                kind: "error",
-                ...readFailureOf(cause),
-                retry: () => {
-                  setRead({ kind: "loading" });
-                  setAttempt((before) => before + 1);
-                },
+        setHeld((previous) => {
+          const current = previous.token === token ? previous.read : startOf(kept, token);
+          if (current.kind === "ready") return { token, read: current };
+          return {
+            token,
+            read: {
+              kind: "error",
+              ...readFailureOf(cause),
+              retry: () => {
+                setHeld({ token, read: { kind: "loading" } });
+                setAttempt((before) => before + 1);
               },
-        );
+            },
+          };
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [token, load, attempt]);
+  }, [token, load, kept, attempt]);
 
-  return read;
+  return held.token === token ? held.read : startOf(kept, token);
 }
 
 /** A titled panel: its loading message, its error or its answer. */

@@ -445,4 +445,22 @@ describe("R2125000 the Cards section opens on what the last visit kept", () => {
     expect(screen.queryByTestId(T.jlore)).toBeNull();
     expect(screen.getByTestId(questsTestid.loading)).toBeInTheDocument();
   });
+
+  it("R2125000 an account switch behind a failing read never keeps the other account's answer", async () => {
+    keepWallet();
+    pendAll();
+    const { rerender } = render(<CollectionRoute token={TOKEN} />);
+    expect(screen.getByTestId(T.jlore)).toHaveTextContent("37 Jlore");
+
+    vi.mocked(getWallet).mockRejectedValue(new Error("the wallet is unavailable"));
+    rerender(<CollectionRoute token="token-other" />);
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(screen.queryByTestId(T.jlore)).toBeNull();
+    expect(screen.getByTestId(T.error("wallet"))).toBeInTheDocument();
+  });
 });
