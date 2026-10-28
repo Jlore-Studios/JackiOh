@@ -44,6 +44,8 @@ export const MARK_PALETTES = {
   orange: { rim: "#ff9a3d", core: "#fff1de", glow: "#d1570a", preset: "ember" },
   // Allure's (`ALLURE_MARK_COLOR`), pink: Jade Beauty's and K-Pop Fanatic's (R963, R1045000).
   pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
+  // #2270: Brittle's last count (`BRITTLE_LAST_COLOR`), Allure's aura in gray; no mark is drawn in it.
+  gray: { rim: "#b8bec8", core: "#f0f2f5", glow: "#5f6672", preset: "smoke" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
@@ -78,6 +80,9 @@ export const DUO_MARK = "duo";
 
 /** The engine's `DUO_MARK_COLOR` (`effects/delay.rs`): Allure's aura, recoloured for Radiance. */
 export const DUO_MARK_COLOR: MarkColor = "gold";
+
+/** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recoloured gray. */
+export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
