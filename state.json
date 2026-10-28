@@ -4216,7 +4216,7 @@
         "tier": "strong",
         "why": "the endless-loop fix is an engine rule in crates/engine/src/draw.rs with a new ruling (R2067000), beside web and e2e work across three apps"
       },
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-10-28T04:55:54Z",
         "family": "claude",
@@ -4234,7 +4234,9 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
+      "pr": 2218,
       "provider": "claude-4",
+      "question": "",
       "round_tier": "strong",
       "run_id": "40636949725",
       "runs_on": "ubuntu-latest",
@@ -4245,7 +4247,7 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2071": {
       "action": "review",
