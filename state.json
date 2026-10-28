@@ -6841,6 +6841,8 @@
       }
     },
     "2239": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-10-28T15:36:16Z",
         "by": "`claude` (strong)",
@@ -6851,10 +6853,16 @@
       "feedback_since": "2026-10-28T13:11:13Z",
       "issue": 2210,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-28T15:36:44Z",
+      "run_id": "pending:ba9f3617-1793201800",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-28T15:37:03Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -6877,9 +6885,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T15:22:37Z",
+    "at": "2026-10-28T15:37:03Z",
     "url": "",
-    "what": "plan #2109 on muse"
+    "what": "revise #2239 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T15:21:48Z",
