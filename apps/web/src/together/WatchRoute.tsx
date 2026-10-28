@@ -232,7 +232,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
   useLocale();
   const { view, loadouts, connection, reconnect } = useWatch(matchId, friendId);
   const lookup = useCatalogLookup();
-  const [friends] = usePolled(getFriends, null);
+  const [friends] = usePolled(() => getFriends({ keep: false }), null);
   const name = friends.kind === "ready" ? friends.value.friends.find((friend) => friend.profileId === friendId)?.username : undefined;
   const seconds = String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND));
   // #1570: the reopens ran out on a game still running (a finished game's socket closes as "closed" too).

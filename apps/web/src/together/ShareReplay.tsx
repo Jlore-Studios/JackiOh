@@ -37,7 +37,7 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   useEffect(() => {
     if (!open || friends !== null) return;
     let cancelled = false;
-    Promise.all([attempt(getFriends), attempt(() => getReplayShares(matchId))]).then(
+    Promise.all([attempt(() => getFriends({ keep: false })), attempt(() => getReplayShares(matchId))]).then(
       ([answer, shares]) => {
         if (cancelled) return;
         setShared(new Set(shares.friendIds));

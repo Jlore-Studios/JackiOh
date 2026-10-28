@@ -34,14 +34,17 @@ import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
+  cardStatsPath,
   getCardDrillDown,
   getCardStats,
   getPublicPlayers,
   type CardDrillDownResponse,
+  type CardStatsOptions,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
@@ -193,6 +196,17 @@ function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" || col === "cost" || col === "rarity" || col === "keyword" ? "asc" : "desc";
 }
 
+/** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
+function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: string, mode: string): CardStatsOptions {
+  return {
+    patch: patch ? patch : undefined,
+    set: set ? set : undefined,
+    rarity: rarity ? rarity : undefined,
+    cost: cost ? Number(cost) : undefined,
+    mode: mode ? mode : undefined,
+  };
+}
+
 export default function StatsRoute(): ReactElement {
   const locale = useLocale();
   // Read initial state from URL search params
@@ -238,10 +252,16 @@ export default function StatsRoute(): ReactElement {
     personal: true,
   });
 
-  // Card stats response
-  const [cardStatsLoading, setCardStatsLoading] = useState(true);
+  // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  const [cardStatsKept] = useState(() =>
+    cachedRead<PublicStatsCardsResponse>(
+      null,
+      cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode)),
+    ),
+  );
+  const [cardStatsLoading, setCardStatsLoading] = useState(cardStatsKept === undefined);
   const [cardStatsError, setCardStatsError] = useState(false);
-  const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(null);
+  const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(cardStatsKept ?? null);
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
 
@@ -303,18 +323,19 @@ export default function StatsRoute(): ReactElement {
   // Fetch card stats
   const fetchCardStats = useCallback(
     () => {
-      setCardStatsLoading(true);
+      const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
+      // R2125000: a table kept for these filters draws at once; only a first visit to them waits behind a skeleton.
+      const kept = cachedRead<PublicStatsCardsResponse>(null, cardStatsPath(options));
+      if (kept === undefined) {
+        setCardStatsLoading(true);
+      } else {
+        setCardStatsData(kept);
+        setCardStatsLoading(false);
+      }
       setCardStatsError(false);
       const controller = new AbortController();
 
-      getCardStats({
-        patch: patch ? patch : undefined,
-        set: setFilter ? setFilter : undefined,
-        rarity: rarityFilter ? rarityFilter : undefined,
-        cost: costFilter ? Number(costFilter) : undefined,
-        mode: mode ? mode : undefined,
-        signal: controller.signal,
-      })
+      getCardStats({ ...options, signal: controller.signal })
         .then((res) => {
           if (controller.signal.aborted) return;
           setCardStatsData(res);
@@ -322,6 +343,8 @@ export default function StatsRoute(): ReactElement {
         })
         .catch(() => {
           if (controller.signal.aborted) return;
+          // A read that fails behind a kept table leaves it and says nothing.
+          if (kept !== undefined) return;
           setCardStatsError(true);
           setCardStatsLoading(false);
         });

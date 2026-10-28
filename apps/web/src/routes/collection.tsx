@@ -29,12 +29,17 @@ import {
   getPacks,
   getTracks,
   getWallet,
+  keptPaths,
+  type CollectionResponse,
   type CosmeticPacksResponse,
+  type OwnedCosmeticsResponse,
   type PacksResponse,
+  type TracksResponse,
   type WalletResponse,
 } from "../net/api.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths, useSearch } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import QuestsPanel from "./QuestsPanel.tsx";
@@ -55,14 +60,41 @@ async function readWallet(token: string): Promise<WalletRead> {
   return { wallet, packs, cosmeticPacks };
 }
 
+/** R2125000: what the last visit read, for a panel to start from; undefined on a first visit. */
+const keptCollection = (token: string): CollectionResponse | undefined =>
+  cachedRead<CollectionResponse>(token, keptPaths.collection);
+const keptTracks = (token: string): TracksResponse | undefined => cachedRead<TracksResponse>(token, keptPaths.tracks);
+const keptOwned = (token: string): OwnedCosmeticsResponse | undefined =>
+  cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
+
+/** The wallet panel starts from its three answers or from none: half a panel is not one. */
+function keptWallet(token: string): WalletRead | undefined {
+  const wallet = cachedRead<WalletResponse>(token, keptPaths.wallet);
+  const packs = cachedRead<PacksResponse>(token, keptPaths.packs);
+  const cosmeticPacks = cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks);
+  return wallet === undefined || packs === undefined || cosmeticPacks === undefined
+    ? undefined
+    : { wallet, packs, cosmeticPacks };
+}
+
 type Read<T> =
   | { kind: "loading" }
   | { kind: "ready"; value: T }
   | ({ kind: "error"; retry: () => void } & ReadFailure);
 
-/** One panel's read, when it mounts and each time Try again asks for it again. */
-function useRead<T>(token: string, load: (token: string) => Promise<T>): Read<T> {
-  const [read, setRead] = useState<Read<T>>({ kind: "loading" });
+/**
+ * One panel's read, when it mounts and each time Try again asks for it again. R2125000: a panel with
+ * a kept answer starts on it, and a read that fails behind an answer keeps it and says nothing.
+ */
+function useRead<T>(
+  token: string,
+  load: (token: string) => Promise<T>,
+  kept: (token: string) => T | undefined,
+): Read<T> {
+  const [read, setRead] = useState<Read<T>>(() => {
+    const value = kept(token);
+    return value === undefined ? { kind: "loading" } : { kind: "ready", value };
+  });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -73,14 +105,18 @@ function useRead<T>(token: string, load: (token: string) => Promise<T>): Read<T>
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
-        setRead({
-          kind: "error",
-          ...readFailureOf(cause),
-          retry: () => {
-            setRead({ kind: "loading" });
-            setAttempt((before) => before + 1);
-          },
-        });
+        setRead((previous) =>
+          previous.kind === "ready"
+            ? previous
+            : {
+                kind: "error",
+                ...readFailureOf(cause),
+                retry: () => {
+                  setRead({ kind: "loading" });
+                  setAttempt((before) => before + 1);
+                },
+              },
+        );
       });
     return () => {
       cancelled = true;
@@ -195,9 +231,9 @@ function Hub(): ReactElement {
 
 /** The owned cards, the wallet, the set tracks and the quests. */
 function CardsSection({ token }: { token: string }): ReactElement {
-  const cards = useRead(token, getCollection);
-  const wallet = useRead(token, readWallet);
-  const tracks = useRead(token, getTracks);
+  const cards = useRead(token, getCollection, keptCollection);
+  const wallet = useRead(token, readWallet, keptWallet);
+  const tracks = useRead(token, getTracks, keptTracks);
 
   return (
     <>
@@ -225,7 +261,7 @@ function CardsSection({ token }: { token: string }): ReactElement {
  * wears its kind's default, and a locked tile offers a held cosmetic token in place.
  */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
-  const owned = useRead(token, getOwnedCosmetics);
+  const owned = useRead(token, getOwnedCosmetics, keptOwned);
 
   return (
     <>
