@@ -894,6 +894,8 @@ export const DUOS_CONCEDE_STATUS = "duos-concede-status";
 export const DUOS_RESULT = "duos-result";
 export const DUOS_RESULT_REPLAY = "duos-result-replay";
 export const DUOS_RESULT_JLORE = "duos-result-jlore";
+export const DUOS_RESULT_AGAIN = "duos-result-again";
+export const DUOS_RESULT_AGAIN_STATUS = "duos-result-again-status";
 export const DUOS_REPLAY = "duos-replay";
 export const DUOS_LIFE_STRIP = "duos-life-strip";
 
