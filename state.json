@@ -6090,6 +6090,13 @@
     "2212": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T13:40:42Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Cypress spec changes and two-app scope fail the easy rule's lines 2 and 7, so it is medium even though the blocker cleared at base"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
