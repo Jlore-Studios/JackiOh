@@ -52,21 +52,21 @@ export function readCoopDeck(): string | null {
   }
 }
 
-/** R2094000: remember the deck a co-op room was made or joined with; null clears it. */
-export function writeCoopDeck(id: string | null): void {
+/** R2094000: remember the pick a co-op room was made or joined with, a random deal included. */
+export function writeCoopDeck(id: string): void {
   try {
-    if (id === null) window.localStorage.removeItem(COOP_DECK_KEY);
-    else window.localStorage.setItem(COOP_DECK_KEY, id);
+    window.localStorage.setItem(COOP_DECK_KEY, id);
   } catch {
     // Remembering the pick is a convenience; a refusal costs nothing.
   }
 }
 
 /**
- * R2094000: the deck a join starts on: the last co-op pick when still saved,
- * else the first saved deck, else none (a random deal).
+ * R2094000: the deck a join starts on: the last co-op pick when still saved (a random deal
+ * stays one), else the first saved deck, else none (a random deal).
  */
 export function defaultCoopDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
+  if (remembered === RANDOM) return null;
   return decks.find((deck) => deck.id === remembered) ?? decks[0] ?? null;
 }
 
@@ -270,7 +270,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     const pickedDeck = deck;
     run(async () => {
       const made = await createDuosRoom({ difficulty, ...choice() });
-      writeCoopDeck(pickedDeck === RANDOM ? null : pickedDeck);
+      writeCoopDeck(pickedDeck);
       storeRoom(made.code);
       setRoom(made.code);
     });
@@ -313,7 +313,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     const pickedDeck = deck;
     run(async () => {
       const joined = await joinDuosRoom(code, choice());
-      writeCoopDeck(pickedDeck === RANDOM ? null : pickedDeck);
+      writeCoopDeck(pickedDeck);
       navigate(paths.duos(joined.matchId));
     });
   };
@@ -369,7 +369,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
             onChange={(event) => {
               touchedDeck.current = true;
               setDeck(event.target.value);
-              writeCoopDeck(event.target.value === RANDOM ? null : event.target.value);
+              writeCoopDeck(event.target.value);
             }}
           >
             <option value={RANDOM}>{t("Random deck")}</option>

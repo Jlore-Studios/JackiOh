@@ -684,10 +684,34 @@ describe("R2094000 a co-op link fills the join form", () => {
     expect(await created(server)).toEqual({ difficulty: "easy", random: true });
   });
 
+  it("R2094000 a Random pick is a pick: it is remembered, and the next join starts on it", async () => {
+    const server = serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-aggro");
+    }, SLOW);
+    fireEvent.change(screen.getByTestId("coop-deck"), { target: { value: "random" } });
+    expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("random");
+    expect(server.to("POST", "/api/duos/rooms")).toHaveLength(0);
+    cleanup();
+    window.sessionStorage.clear();
+
+    // A later visit keeps the Random deal although a deck is saved.
+    at("/together");
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    await flush();
+    expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
+  });
+
   it("R2094000 defaultCoopDeck prefers the remembered deck, then the first saved deck, then none", () => {
     const decks = DECKS.decks;
     expect(defaultCoopDeck(decks, decks[0]?.id ?? null)?.id).toBe("d-aggro");
     expect(defaultCoopDeck(decks, "gone")?.id).toBe("d-aggro");
+    expect(defaultCoopDeck(decks, "random")).toBeNull();
     expect(defaultCoopDeck([], null)).toBeNull();
   });
 
