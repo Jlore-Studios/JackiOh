@@ -643,8 +643,10 @@
     display: none;
   }
 
-  .duos-both {
-    display: block;
+  /* `.duos-both` stays a flex row, so the one board drawn keeps a definite height (the board is a
+     size container, which an auto-height block parent would collapse). */
+  .duos-board[data-both="true"][data-showing="teammate"] .duos-board-teammate {
+    flex: 1 1 0;
   }
 
   .duos-rail__row {

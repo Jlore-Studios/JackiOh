@@ -40,6 +40,11 @@ describe("R2095000 both boards styles", () => {
     expect(narrow).toMatch(
       /\.duos-board\[data-both="true"\]\[data-showing="teammate"\] \.duos-board-own\s*\{\s*display:\s*none;/,
     );
-    expect(narrow).toMatch(/\.duos-both\s*\{\s*display:\s*block;/);
+    // `.duos-both` stays a flex row (a block parent has no definite height, so the size-container
+    // board would collapse) and the teammate wrapper, shown alone, takes the row's room.
+    expect(narrow).not.toMatch(/\.duos-both\s*\{\s*display:\s*block;/);
+    expect(narrow).toMatch(
+      /\.duos-board\[data-both="true"\]\[data-showing="teammate"\] \.duos-board-teammate\s*\{\s*flex:\s*1 1 0;/,
+    );
   });
 });
