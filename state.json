@@ -5697,7 +5697,7 @@
       "queued_at": "2026-10-28T13:11:41Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:251a85ea-1793193633",
+      "run_id": "40695611276",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
