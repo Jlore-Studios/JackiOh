@@ -243,7 +243,10 @@ fn trial(base: &GameState, player: PlayerId, body: &ActionBody) -> Option<Outcom
         return None;
     }
     let won = winner == Some(Winner::from(player));
-    let lethal = !won && effective_life(&copy, enemy) <= projected_board_damage(&copy, player);
+    // R2201000: no lethal against a seat that cannot lose.
+    let lethal = !won
+        && crate::state::can_lose(&copy, enemy)
+        && effective_life(&copy, enemy) <= projected_board_damage(&copy, player);
     let clears = enemy_units_before > 0 && crate::zones::active_units_of(&copy, enemy).is_empty();
     let heals = health_before < SCORER_LOW_HEALTH && copy.players[player].hero.health > health_before;
     let gain = if won {
