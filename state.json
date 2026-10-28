@@ -6050,10 +6050,8 @@
       ]
     },
     "2214": {
-      "action": "build",
-      "asks": [
-        "c:6469217205"
-      ],
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-28T12:59:18Z",
         "difficulty": "hard",
@@ -6079,15 +6077,17 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-5",
       "queued_at": "2026-10-28T12:44:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40690937349",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-10-28T12:48:49Z",
+      "run_id": "pending:f9ade83f-1793192413",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-28T13:00:31Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6469217205"
+      ]
     },
     "2215": {
       "action": "plan",
@@ -6404,9 +6404,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T12:48:49Z",
+    "at": "2026-10-28T13:00:31Z",
     "url": "",
-    "what": "build #2214 on muse"
+    "what": "plan #2214 on claude-5"
   },
   "last_sweep": {
     "at": "2026-10-28T12:45:38Z",
