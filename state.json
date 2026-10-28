@@ -6277,6 +6277,9 @@
     "2168": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "a2a18a9390a9d8d55de0e454f6757b2f0ddcfc04": 1
+      },
       "cleared": {
         "at": "2026-10-28T03:44:31Z",
         "by": "`muse` (medium), `claude` (strong)",
