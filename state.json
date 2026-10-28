@@ -6425,15 +6425,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/highlights.css"
+          ],
+          "from": "b8068a177ee07e3f25c9943ec3b5e753688f582b",
+          "main": "3776f0cd990b046624f087adc06904c45039c750"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40620967266",
+            "run": "40633570909",
             "tier": "strong"
           }
         ],
-        "sha": "b8068a177ee07e3f25c9943ec3b5e753688f582b",
+        "sha": "85d424a923653938a942564f76bf0f7b47b5c038",
         "tiers": {
           "claude": "strong"
         }
