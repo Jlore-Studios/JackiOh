@@ -201,7 +201,6 @@ mod tests {
             let attacker = s.unit_at(P1, 1);
             s.attack(&attacker, "hero");
             assert!(fired(&s));
-            s.expect_in_zone(ID, "graveyard");
             assert_eq!(
                 summoned_defs(&s),
                 [WARP_DISRUPTOR, WARP_DISRUPTOR, PHALANX, PHALANX].map(String::from)
@@ -215,6 +214,8 @@ mod tests {
                 vec![(PHALANX.to_string(), false), (PHALANX.to_string(), false)]
             );
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
+            // Spent once its summons and their Crys have resolved.
+            s.expect_in_zone(ID, "graveyard");
             // R1875002: the attack goes on to its declared target, with the two Disruptors' +2 each.
             s.expect_health(P2, HERO_HEALTH - (4 + 2 + 2));
         }
