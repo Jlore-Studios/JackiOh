@@ -41,6 +41,7 @@ use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::catalog::pair_key;
 use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{
     CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
@@ -694,11 +695,14 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         );
     }
 
+    // R2195000: a deck holds a Core card or its Training Grounds snapshot, so an included card keeps
+    // the other of its pair out.
+    let included_pairs: IndexSet<&str> = include_defs.iter().map(|def| pair_key(def)).collect();
     let pool: Vec<&CardDef> = every
         .iter()
         .copied()
         .filter(|def| {
-            !banned.contains(&def.id) && !include_ids.contains(&def.id) && !gated.contains(&def.set)
+            !banned.contains(&def.id) && !included_pairs.contains(pair_key(def)) && !gated.contains(&def.set)
         })
         .collect();
     if ((include_defs.len() + pool.len()) as i32) < size {
@@ -841,7 +845,8 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         };
         deck.push(chosen);
         tally.count(chosen);
-        remaining.retain(|def| def.id != chosen.id);
+        // R2195000: the card dealt, and the other of its pair if it has one.
+        remaining.retain(|def| pair_key(def) != pair_key(chosen));
     }
 
     TracedAiDeck {
