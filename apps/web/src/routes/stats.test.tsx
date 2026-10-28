@@ -1661,7 +1661,7 @@ describe("R2089000 the Created cards", () => {
       "Not used",
       "Used Radiant",
       "Used normal",
-      "Created Δ",
+      "Used vs not used",
     ]);
     const row = within(table).getByText("Rush Token").closest("tr")!;
     expect(row).toHaveAttribute("data-card-id", "core-t-rush");
