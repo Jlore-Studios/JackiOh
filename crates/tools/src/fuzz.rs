@@ -2845,7 +2845,12 @@ pub(crate) mod tests {
             let held = |id: &String| !set_ships(CATALOG[id.as_str()].set);
             let legal_held: Vec<&String> = CATALOG
                 .iter()
-                .filter(|(id, def)| !set_ships(def.set) && !def.is_token() && !made_by_a_rule(def) && !EXCLUDED_IDS.contains(id.as_str()))
+                .filter(|(id, def)| {
+                    !set_ships(def.set)
+                        && !def.is_token()
+                        && !made_by_a_rule(def)
+                        && !EXCLUDED_IDS.contains(id.as_str())
+                })
                 .map(|(id, _)| id)
                 .collect();
             assert!(!legal_held.is_empty(), "a held set to preview");
