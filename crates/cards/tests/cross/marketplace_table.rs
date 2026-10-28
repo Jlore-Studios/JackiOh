@@ -11,11 +11,13 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::testkit::scenario;
 use jackioh_engine::{
-    KeywordKind, PlayerId, Rng, SetName, Tag, find_def, has_keyword, registered_catalog, roll_offers,
+    DORMANT_STARSHIP_DEF_ID, KeywordKind, PlayerId, Rng, SetName, Tag, find_def, has_keyword, made_by_a_rule,
+    registered_catalog, roll_offers,
 };
 use serde_json::json;
 
-/// The ids a lot's pool holds in the registered catalog, as `marketplace::pool_ids` reads it.
+/// The ids a lot's pool holds in the registered catalog, as `marketplace::pool_ids` reads it: a set
+/// lot's no token and no card only a rule makes (R1857001).
 fn pool(pool: MarketPool) -> Vec<String> {
     match pool {
         MarketPool::Resources => registered_catalog()
@@ -26,12 +28,14 @@ fn pool(pool: MarketPool) -> Vec<String> {
         MarketPool::Ids(ids) => ids.iter().map(|id| (*id).to_string()).collect(),
         MarketPool::Set(set) => registered_catalog()
             .values()
-            .filter(|def| def.set == set && !def.token)
+            .filter(|def| def.set == set && !def.token && !made_by_a_rule(def))
             .map(|def| def.id.clone())
             .collect(),
         MarketPool::SetKeyword(set, keyword) => registered_catalog()
             .values()
-            .filter(|def| def.set == set && !def.token && has_keyword(&def.base.keywords, keyword))
+            .filter(|def| {
+                def.set == set && !def.token && !made_by_a_rule(def) && has_keyword(&def.base.keywords, keyword)
+            })
             .map(|def| def.id.clone())
             .collect(),
     }
@@ -163,4 +167,29 @@ fn r1881006_the_stocks_are_st3s() {
             card,
         ]
     );
+}
+
+#[test]
+fn r1857001_the_marketplace_never_offers_the_dormant_starship() {
+    register_all();
+    // It is a Stinkyscape card and no token, so only R1857001's rule keeps it out of the set lots.
+    let starship = card_def(DORMANT_STARSHIP_DEF_ID);
+    assert_eq!(starship.set, SetName::Stinkyscape);
+    assert!(!starship.token);
+    for lot in MARKETPLACE_TABLE {
+        assert!(
+            !pool(lot.pool).iter().any(|id| id == DORMANT_STARSHIP_DEF_ID),
+            "{:?} holds no Dormant Starship",
+            lot.pool
+        );
+    }
+    let s = scenario(json!({ "seed": "r1857001-market" }));
+    for seed in 0..200 {
+        let mut rng = Rng::new(&format!("r1857001-market-{seed}"), 0);
+        let offers = roll_offers(s.state(), &mut rng, MARKETPLACE_TABLE);
+        assert!(
+            offers.iter().all(|offer| offer.def_id != DORMANT_STARSHIP_DEF_ID),
+            "seed {seed} offers the Dormant Starship"
+        );
+    }
 }
