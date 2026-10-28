@@ -6494,15 +6494,12 @@
     "what": "build #2067 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-28T05:00:17Z",
+    "at": "2026-10-28T05:13:17Z",
     "notes": [
-      "delivered build #2118 on muse (run 40627253604): blocked",
-      "delivered build #2093 on muse (run 40624015031): approved",
-      "delivered build #2067 on claude-4 (run 40603484357): interrupted",
-      "started review #2180 on claude-4 (run 40635849913)",
-      "started build #2121 on muse (run 40635928611)",
-      "started build #2122 on muse (run 40636004240)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 64h 53m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 71h 53m"
+      "delivered review #2180 on claude-4 (run 40635849913): reviewed",
+      "started build #2067 on claude-4 (run 40636949725)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 64h 43m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 71h 43m",
+      "#2181: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7208,7 +7205,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T05:00:17Z",
+  "loop_tick": "2026-10-28T05:13:17Z",
   "machine_disk": {
     "issue": null,
     "reading": {
