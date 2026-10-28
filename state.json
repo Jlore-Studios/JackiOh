@@ -12413,6 +12413,12 @@
         "number": 2046,
         "title": "Patch: the launch collection grant skips banned cards, as the rules and the fake store already read it",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-28T12:38:46Z",
+        "number": 2209,
+        "title": "Patch: Conquest with three dealt decks, so a player who owns fewer than 75 cards can play it",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
