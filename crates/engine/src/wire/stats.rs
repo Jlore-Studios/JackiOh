@@ -95,9 +95,9 @@ pub const GAME_OVER_REASONS: &[GameOverReason] = &[
 pub struct SeatSummary {
     /// The decklist the seat played.
     pub deck: Vec<String>,
-    /// Its hand once both mulligans had resolved, as the first turn began: the cards it kept, its
-    /// replacements and, for the seat going second, The Coin (§2.1). Empty when the game ended before
-    /// a turn began.
+    /// Its hand once both mulligans had resolved, as the first turn began: the cards it kept and its
+    /// replacements (§2.1). Empty when the game ended before a turn began. R2089000: dealt cards
+    /// alone, so The Coin and every other Created card (R943) are left out, as in `drawn` and `played`.
     pub opening: Vec<String>,
     /// Every card it drew into its hand after that, in order. A card burned or cast on its draw never reached the hand.
     pub drawn: Vec<String>,
@@ -135,6 +135,37 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub radiant_upgrades: Option<i32>,
+    /// R2089000: the Created cards this seat made that were used, each instance once, at its first use
+    /// by either seat: played from a hand, cast or put onto a field. Absent when there were none, and
+    /// from every record written before the change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created_used: Option<Vec<CreatedUse>>,
+    /// R2089000: the Created cards this seat made that were never used, by catalog id, one per
+    /// instance: the baseline of `created_used`. Absent when there were none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created_unused: Option<Vec<String>>,
+    /// R2089000: the Created cards this seat played from its hand, whoever made them, every play, as
+    /// `played` keeps the dealt ones; the quests count them with `played` (§14.9). Absent when none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created_played: Option<Vec<CreatedUse>>,
+}
+
+/// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
+/// Radiant then (R1147000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedUse {
+    pub card: String,
+    pub turn: i32,
+    pub radiant: bool,
 }
 
 /// R376: a finished game, read off its replay by the engine's `summarize_game`.
@@ -328,6 +359,13 @@ pub struct Tally {
     pub draws: i32,
 }
 
+impl Tally {
+    /// No games: a breakdown nothing counted.
+    pub fn is_empty(&self) -> bool {
+        self.games == 0
+    }
+}
+
 string_union! {
     /// R377's breakdowns, each over the decks that held the card:
     ///  - `inDeck`: every one of them;
@@ -373,6 +411,61 @@ pub struct CardStats {
     /// R1147000: played, never Radiant.
     #[serde(default)]
     pub played_normal: Tally,
+    /// R2089000: a seat made a Created copy of the card and used one. The four Created tallies are
+    /// kept beside the deck's, under the same key, and read apart from them (`card_stats_of`'s
+    /// `created`); each is absent while empty, so a deck row reads and is stored as before.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub created_played: Tally,
+    /// R2089000: a seat made Created copies of the card and used none.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub created_not_played: Tally,
+    /// R2089000: of `created_played`, a copy was Radiant at its first use.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub created_played_radiant: Tally,
+    /// R2089000: of `created_played`, none was.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub created_played_normal: Tally,
+}
+
+/// R2089000: a Created card's figures, by its catalog id: over the seats that made a Created copy of
+/// it, each seat once per game however many copies it made. `createdPlayed` against its baseline,
+/// `createdNotPlayed`, makes the Created played delta (`created_played_delta`), and the used are split
+/// by the face at first use as R1147000 splits a deck's plays.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedStats {
+    pub card: String,
+    pub created_played: Tally,
+    pub created_not_played: Tally,
+    pub created_played_radiant: Tally,
+    pub created_played_normal: Tally,
+}
+
+impl CreatedStats {
+    /// The Created figures a card's totals hold.
+    pub fn of(stats: &CardStats) -> CreatedStats {
+        CreatedStats {
+            card: stats.card.clone(),
+            created_played: stats.created_played,
+            created_not_played: stats.created_not_played,
+            created_played_radiant: stats.created_played_radiant,
+            created_played_normal: stats.created_played_normal,
+        }
+    }
+
+    /// The seats it counts: every one that made a copy, used or not.
+    pub fn games(&self) -> i32 {
+        self.created_played.games + self.created_not_played.games
+    }
 }
 
 /// `stats[breakdown]`.
@@ -408,6 +501,10 @@ pub struct CardStatsReport {
     pub decks: i32,
     /// One entry per card some counted deck held, by catalog id.
     pub cards: Vec<CardStats>,
+    /// R2089000: one entry per card some counted seat made a Created copy of, by catalog id, apart
+    /// from `cards`. Absent from a report written before it.
+    #[serde(default)]
+    pub created: Vec<CreatedStats>,
 }
 
 fn empty_tally() -> Tally {
@@ -429,6 +526,10 @@ fn empty_stats(card: &str) -> CardStats {
         drawn_not_played: empty_tally(),
         played_radiant: empty_tally(),
         played_normal: empty_tally(),
+        created_played: empty_tally(),
+        created_not_played: empty_tally(),
+        created_played_radiant: empty_tally(),
+        created_played_normal: empty_tally(),
     }
 }
 
@@ -460,8 +561,10 @@ fn count(tally: &mut Tally, outcome: Outcome) {
 }
 
 /// R377: every card's breakdowns over the records the filter reads. A card is counted by its catalog
-/// id for the decks that held it, so a copy of it made in play counts as the card for those decks and
-/// a card no counted deck held has no entry. `cards` lists the ids in catalog-id order.
+/// id for the decks that held it, and a card no counted deck held has no entry. `cards` lists the ids
+/// in catalog-id order. R2089000: a Created copy of a card is no dealt card, so it counts in `created`,
+/// for the seat that made it, and never as the deck's card (a record written before the change still
+/// counts the copies its seat played as the deck's).
 ///
 /// R1044000: the records are folded into totals and the report read off them, as the server reads
 /// the totals it keeps, so the two cannot count differently.
@@ -744,6 +847,18 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.drawn_not_played, &other.drawn_not_played);
     add_tally(&mut into.played_radiant, &other.played_radiant);
     add_tally(&mut into.played_normal, &other.played_normal);
+    add_tally(&mut into.created_played, &other.created_played);
+    add_tally(&mut into.created_not_played, &other.created_not_played);
+    add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
+    add_tally(&mut into.created_played_normal, &other.created_played_normal);
+}
+
+/// R2089000: one Created card's figures added into another's.
+pub fn add_created(into: &mut CreatedStats, other: &CreatedStats) {
+    add_tally(&mut into.created_played, &other.created_played);
+    add_tally(&mut into.created_not_played, &other.created_not_played);
+    add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
+    add_tally(&mut into.created_played_normal, &other.created_played_normal);
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -813,9 +928,31 @@ impl StatsTotals {
                 pilot,
             };
             let deck: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
+            // R2089000: the Created cards the seat made, each once: used (Radiant at a first use, or
+            // not), and made but never used. A record written before them has neither.
+            let used: IndexSet<&str> = summary
+                .created_used
+                .iter()
+                .flatten()
+                .map(|used| used.card.as_str())
+                .collect();
+            let used_radiant: IndexSet<&str> = summary
+                .created_used
+                .iter()
+                .flatten()
+                .filter(|used| used.radiant)
+                .map(|used| used.card.as_str())
+                .collect();
+            let unused: IndexSet<&str> = summary
+                .created_unused
+                .iter()
+                .flatten()
+                .map(String::as_str)
+                .filter(|card| !used.contains(card))
+                .collect();
             // A seat with no cards adds no key, as the store keeps no row for it.
             let mut none = IndexMap::new();
-            let cards = if deck.is_empty() {
+            let cards = if deck.is_empty() && used.is_empty() && unused.is_empty() {
                 &mut none
             } else {
                 self.cards.entry(key).or_default()
@@ -902,6 +1039,29 @@ impl StatsTotals {
                         }
                     }
                 }
+            }
+
+            for &card in &used {
+                let stats = &mut cards
+                    .entry(card.to_string())
+                    .or_insert_with(|| CardTotal::new(card))
+                    .stats;
+                count(&mut stats.created_played, outcome);
+                count(
+                    if used_radiant.contains(card) {
+                        &mut stats.created_played_radiant
+                    } else {
+                        &mut stats.created_played_normal
+                    },
+                    outcome,
+                );
+            }
+            for &card in &unused {
+                let stats = &mut cards
+                    .entry(card.to_string())
+                    .or_insert_with(|| CardTotal::new(card))
+                    .stats;
+                count(&mut stats.created_not_played, outcome);
             }
 
             // R1454, R750000: the lists people took into live Best-of-1 games.
@@ -1058,7 +1218,8 @@ fn pilot_counts(filter: PilotFilter, pilot: Pilot) -> bool {
 
 /// R377, R1044000: every card's breakdowns over the totals the filter reads, as `card_stats` counts
 /// the records folded into them: the games are the records with a seat the filter counts, the decks
-/// those seats, and `cards` the cards some counted deck held, in catalog-id order.
+/// those seats, `cards` the cards some counted deck held, and (R2089000) `created` the cards some
+/// counted seat made a Created copy of, each in catalog-id order.
 pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStatsReport {
     let sources = sources_of(filter.source);
     let wanted = |patch: &str, source: GameSource, mode: GameMode| {
@@ -1093,14 +1254,32 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
             }
         }
     }
-    let mut cards: Vec<CardStats> = by_card.into_values().collect();
+    // R2089000: the Created figures apart from the deck's, and a deck row without them. A card no
+    // counted deck held has no deck row.
+    let mut cards: Vec<CardStats> = Vec::new();
+    let mut created: Vec<CreatedStats> = Vec::new();
+    for mut stats in by_card.into_values() {
+        let made = CreatedStats::of(&stats);
+        if made.games() > 0 {
+            created.push(made);
+        }
+        if stats.in_deck.games > 0 {
+            stats.created_played = Tally::default();
+            stats.created_not_played = Tally::default();
+            stats.created_played_radiant = Tally::default();
+            stats.created_played_normal = Tally::default();
+            cards.push(stats);
+        }
+    }
     // A stable sort by id (SURFACE §4.4.1; ids are ASCII, so `str::cmp` is JS's `<`).
     cards.sort_by(|a, b| a.card.cmp(&b.card));
+    created.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
         filter: filter.clone(),
         games: i32::try_from(games).unwrap_or(i32::MAX),
         decks: i32::try_from(decks).unwrap_or(i32::MAX),
         cards,
+        created,
     }
 }
 
@@ -1187,6 +1366,13 @@ pub fn win_rate(tally: &Tally) -> Option<f64> {
 pub fn played_delta(stats: &CardStats) -> Option<f64> {
     let played = win_rate(&stats.played)?;
     let baseline = win_rate(&stats.drawn_not_played)?;
+    Some(played - baseline)
+}
+
+/// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
+pub fn created_played_delta(stats: &CreatedStats) -> Option<f64> {
+    let played = win_rate(&stats.created_played)?;
+    let baseline = win_rate(&stats.created_not_played)?;
     Some(played - baseline)
 }
 
@@ -1563,6 +1749,10 @@ fn pad_start(text: &str, width: usize) -> String {
 /// beside it, and the played delta. `name_of` turns an id into the name shown after it (TS's
 /// default, `() => undefined`, is `|_| None`).
 pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Option<String>) -> String {
+    let named = |card: &str| match name_of(card) {
+        None => card.to_string(),
+        Some(name) => format!("{card} {name}"),
+    };
     let mut header: Vec<String> = vec!["Card".to_string()];
     header.extend(
         BREAKDOWNS
@@ -1574,11 +1764,7 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
         .cards
         .iter()
         .map(|stats| {
-            let name = name_of(&stats.card);
-            let mut row = vec![match name {
-                None => stats.card.clone(),
-                Some(name) => format!("{} {}", stats.card, name),
-            }];
+            let mut row = vec![named(&stats.card)];
             row.extend(
                 BREAKDOWNS
                     .iter()
@@ -1588,6 +1774,58 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
             row
         })
         .collect();
+
+    let mut lines: Vec<String> = vec![
+        format!("Card win rates: {}.", describe_filter(&report.filter)),
+        format!("{} games, {} decks.", report.games, report.decks),
+        "Each cell is the win rate of the decks that held the card, with those games in brackets. A game counts once for".to_string(),
+        "each deck that held the card, and a draw is a game not won. Played Δ is the played win rate minus the drawn-but-".to_string(),
+        "not-played win rate, in points: drawn means the card reached the hand, in the opening hand or by a later draw.".to_string(),
+        "Played Radiant counts the decks that played the card Radiant at least once, Played normal the other played ones.".to_string(),
+        String::new(),
+    ];
+    lines.extend(table(&header, &rows));
+    // R2089000: the Created cards' own table, after the deck's, only when some seat made one.
+    if !report.created.is_empty() {
+        let header: Vec<String> = [
+            "Card",
+            "Created, used",
+            "Created, not used",
+            "Used Radiant",
+            "Used normal",
+            "Created Δ",
+        ]
+        .map(str::to_string)
+        .to_vec();
+        let rows: Vec<Vec<String>> = report
+            .created
+            .iter()
+            .map(|stats| {
+                vec![
+                    named(&stats.card),
+                    format_tally(&stats.created_played),
+                    format_tally(&stats.created_not_played),
+                    format_tally(&stats.created_played_radiant),
+                    format_tally(&stats.created_played_normal),
+                    format_delta(created_played_delta(stats)),
+                ]
+            })
+            .collect();
+        lines.extend([
+            String::new(),
+            "Created cards: every card made after the decks were built, tokens and The Coin among them. Each cell is the win".to_string(),
+            "rate of the seats that made a Created copy of the card and used one, or made copies and used none, with those".to_string(),
+            "games in brackets; a seat counts once a game however many it made. Created Δ is the used rate minus the other.".to_string(),
+            String::new(),
+        ]);
+        lines.extend(table(&header, &rows));
+    }
+    lines.join("\n")
+}
+
+/// A plain-text table: the first column padded on the right, the rest on the left, each as wide as
+/// its widest cell, two spaces between.
+fn table(header: &[String], rows: &[Vec<String>]) -> Vec<String> {
     let widths: Vec<usize> = header
         .iter()
         .enumerate()
@@ -1614,19 +1852,9 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
             .trim_end()
             .to_string()
     };
-
-    let mut lines: Vec<String> = vec![
-        format!("Card win rates: {}.", describe_filter(&report.filter)),
-        format!("{} games, {} decks.", report.games, report.decks),
-        "Each cell is the win rate of the decks that held the card, with those games in brackets. A game counts once for".to_string(),
-        "each deck that held the card, and a draw is a game not won. Played Δ is the played win rate minus the drawn-but-".to_string(),
-        "not-played win rate, in points: drawn means the card reached the hand, in the opening hand or by a later draw.".to_string(),
-        "Played Radiant counts the decks that played the card Radiant at least once, Played normal the other played ones.".to_string(),
-        String::new(),
-        line(&header),
-    ];
-    lines.extend(rows.iter().map(|row| line(row)));
-    lines.join("\n")
+    std::iter::once(line(header))
+        .chain(rows.iter().map(|row| line(row)))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -1704,6 +1932,48 @@ fn text(value: Option<&Value>, at: &str) -> Result<String, EngineError> {
     }
 }
 
+/// R2089000: a list of a Created card's uses: absent reads as `None`; each entry must name a card, a
+/// turn of 1 or more and its face.
+fn created_uses(value: Option<&Value>, at: &str) -> Result<Option<Vec<CreatedUse>>, EngineError> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let Some(items) = value.as_array() else {
+        return Err(EngineError::new(format!(
+            "{at} is not a list of Created cards' uses"
+        )));
+    };
+    let mut uses: Vec<CreatedUse> = Vec::with_capacity(items.len());
+    for (idx, item) in items.iter().enumerate() {
+        let entry = is_record(Some(item));
+        let card = entry
+            .and_then(|entry| entry.get("card"))
+            .and_then(Value::as_str)
+            .filter(|card| !card.is_empty());
+        let turn = entry
+            .and_then(|entry| entry.get("turn"))
+            .and_then(whole_number)
+            .filter(|turn| *turn >= 1)
+            .and_then(|turn| i32::try_from(turn).ok());
+        let radiant = entry
+            .and_then(|entry| entry.get("radiant"))
+            .and_then(Value::as_bool);
+        match (card, turn, radiant) {
+            (Some(card), Some(turn), Some(radiant)) => uses.push(CreatedUse {
+                card: card.to_string(),
+                turn,
+                radiant,
+            }),
+            _ => {
+                return Err(EngineError::new(format!(
+                    "{at}[{idx}] is not a Created card's use"
+                )));
+            }
+        }
+    }
+    Ok(Some(uses))
+}
+
 fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineError> {
     let Some(record) = is_record(value) else {
         return Err(EngineError::new(format!("{at} is not a seat summary")));
@@ -1721,6 +1991,12 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         traps_fired: seat_count(record.get("trapsFired"), &format!("{at}.trapsFired"))?,
         position_switches: seat_count(record.get("positionSwitches"), &format!("{at}.positionSwitches"))?,
         radiant_upgrades: seat_count(record.get("radiantUpgrades"), &format!("{at}.radiantUpgrades"))?,
+        created_used: created_uses(record.get("createdUsed"), &format!("{at}.createdUsed"))?,
+        created_unused: match record.get("createdUnused") {
+            None => None,
+            Some(value) => Some(ids(Some(value), &format!("{at}.createdUnused"))?),
+        },
+        created_played: created_uses(record.get("createdPlayed"), &format!("{at}.createdPlayed"))?,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -1869,6 +2145,9 @@ mod tests {
             traps_fired: None,
             position_switches: None,
             radiant_upgrades: None,
+            created_used: None,
+            created_unused: None,
+            created_played: None,
         }
     }
 
@@ -2071,6 +2350,10 @@ mod tests {
                 drawn_not_played: tally(5, 2, 1),
                 played_radiant: tally(0, 0, 0),
                 played_normal: tally(0, 0, 0),
+                created_played: tally(0, 0, 0),
+                created_not_played: tally(0, 0, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(0, 0, 0),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -2411,6 +2694,7 @@ mod tests {
                 games,
                 decks,
                 cards,
+                created: Vec::new(),
             }
         }
 
@@ -2583,6 +2867,9 @@ mod tests {
                 traps_fired: None,
                 position_switches: None,
                 radiant_upgrades: None,
+                created_used: None,
+                created_unused: None,
+                created_played: None,
             }
         }
 
@@ -2823,6 +3110,140 @@ mod tests {
                     .iter()
                     .filter(|record| record.patch == "v1" && record.source == GameSource::Live)
                     .count() as i64
+            );
+        }
+
+        /// R2089000: the Created table as the records themselves give it: each counted seat once for
+        /// each card it made, in `createdPlayed` when it used one, split by whether any was Radiant at
+        /// its first use, else in `createdNotPlayed`.
+        fn reference_created(records: &[GameRecord], filter: &CardStatsFilter) -> Vec<CreatedStats> {
+            let mut by_card: IndexMap<String, CreatedStats> = IndexMap::new();
+            for record in records {
+                if !record_matches(record, filter) {
+                    continue;
+                }
+                for seat in seats_counted(record, filter.pilot) {
+                    let summary = &record.game.seats[seat];
+                    let outcome = outcome_for(&record.game, seat);
+                    let uses = summary.created_used.clone().unwrap_or_default();
+                    let unused = summary.created_unused.clone().unwrap_or_default();
+                    let mut made: Vec<&str> = uses
+                        .iter()
+                        .map(|used| used.card.as_str())
+                        .chain(unused.iter().map(String::as_str))
+                        .collect();
+                    made.sort_unstable();
+                    made.dedup();
+                    for card in made {
+                        let stats = by_card.entry(card.to_string()).or_insert_with(|| CreatedStats {
+                            card: card.to_string(),
+                            created_played: Tally::default(),
+                            created_not_played: Tally::default(),
+                            created_played_radiant: Tally::default(),
+                            created_played_normal: Tally::default(),
+                        });
+                        let of_card: Vec<&CreatedUse> =
+                            uses.iter().filter(|used| used.card == card).collect();
+                        if of_card.is_empty() {
+                            count(&mut stats.created_not_played, outcome);
+                            continue;
+                        }
+                        count(&mut stats.created_played, outcome);
+                        count(
+                            if of_card.iter().any(|used| used.radiant) {
+                                &mut stats.created_played_radiant
+                            } else {
+                                &mut stats.created_played_normal
+                            },
+                            outcome,
+                        );
+                    }
+                }
+            }
+            let mut created: Vec<CreatedStats> = by_card.into_values().collect();
+            created.sort_by(|a, b| a.card.cmp(&b.card));
+            created
+        }
+
+        /// The records with Created lists drawn for two seats in three, the rest left as records
+        /// written before them. `a` is a deck card too, and `t`, `u` and `v` are no deck's.
+        fn with_created(records: &[GameRecord]) -> Vec<GameRecord> {
+            const MADE: &[&str] = &["a", "t", "u", "v"];
+            let mut draws = Draws(0x2089_0000_2089);
+            let mut out = records.to_vec();
+            for record in &mut out {
+                for seat in PLAYER_IDS {
+                    if draws.below(3) == 0 {
+                        continue;
+                    }
+                    let mut used: Vec<CreatedUse> = Vec::new();
+                    for _ in 0..draws.below(4) {
+                        used.push(CreatedUse {
+                            card: draws.pick(MADE).to_string(),
+                            turn: 1 + i32::try_from(draws.below(9)).unwrap_or(0),
+                            radiant: draws.below(3) == 0,
+                        });
+                    }
+                    let unused: Vec<String> = (0..draws.below(3))
+                        .map(|_| draws.pick(MADE).to_string())
+                        .collect();
+                    let summary = &mut record.game.seats[seat];
+                    summary.created_used = (!used.is_empty()).then_some(used);
+                    summary.created_unused = (!unused.is_empty()).then_some(unused);
+                }
+            }
+            out
+        }
+
+        #[test]
+        fn r2089000_totals_give_the_created_table_the_records_gave_and_the_deck_table_they_gave_before() {
+            let plain = records();
+            let records = with_created(&plain);
+            let totals = folded(&records);
+            let mut in_order = StatsTotals::default();
+            for record in &records {
+                in_order.fold(record, true);
+            }
+            assert_eq!(totals, in_order, "folded in any order or in pieces");
+            let mut rows = 0;
+            for source in SOURCE_FILTERS {
+                for mode in [None, Some(GameMode::Bo1), Some(GameMode::Random)] {
+                    for patch in [None, Some("v1"), Some("v2")] {
+                        for pilot in PILOT_FILTERS {
+                            let filter = CardStatsFilter {
+                                source: *source,
+                                mode,
+                                patch: patch.map(str::to_string),
+                                pilot: *pilot,
+                            };
+                            let report = card_stats_of(&totals, &filter);
+                            assert_eq!(report.created, reference_created(&records, &filter), "{filter:?}");
+                            // The deck table is the one the same records gave without their lists.
+                            let dealt = reference_card_stats(&plain, &filter);
+                            assert_eq!(
+                                (report.games, report.decks, &report.cards),
+                                (dealt.games, dealt.decks, &dealt.cards),
+                                "{filter:?}"
+                            );
+                            assert_eq!(card_stats(&records, &filter), report, "{filter:?}");
+                            rows += report.created.len();
+                        }
+                    }
+                }
+            }
+            assert!(rows > 0, "the filters read some Created cards");
+            // A selection keeps them as it keeps the deck's.
+            let filter = CardStatsFilter {
+                source: SourceFilter::Live,
+                mode: Some(GameMode::Bo1),
+                patch: Some("v1".to_string()),
+                pilot: PilotFilter::Unified,
+            };
+            let selected = in_order.select(&[GameSource::Live], Some(GameMode::Bo1), Some("v1"), false);
+            assert!(!card_stats_of(&selected, &filter).created.is_empty());
+            assert_eq!(
+                card_stats_of(&selected, &filter),
+                card_stats_of(&in_order, &filter)
             );
         }
 
@@ -3201,6 +3622,214 @@ mod tests {
                     "{key}"
                 );
             }
+        }
+    }
+
+    /// R2089000: the Created cards' figures, kept apart from the deck table.
+    mod r2089000_created_cards {
+        use super::*;
+
+        fn used(card: &str, turn: i32, radiant: bool) -> CreatedUse {
+            CreatedUse {
+                card: card.to_string(),
+                turn,
+                radiant,
+            }
+        }
+
+        /// p1 (who wins) used two Created `t`s, one Radiant at its first use, and a Created `a`, a card
+        /// its deck holds too, and made a `t` and a `u` it never used; p2 made a `u` it never used.
+        fn made() -> GameRecord {
+            let mut p1 = seat(&["a", "b"], &["a"], &[], &["a"]);
+            p1.played_radiant = Some(vec![false]);
+            p1.created_used = Some(vec![used("t", 2, false), used("t", 3, true), used("a", 4, false)]);
+            p1.created_unused = Some(list(&["t", "u"]));
+            p1.created_played = Some(vec![used("a", 4, false)]);
+            let mut p2 = seat(&["b"], &[], &["b"], &[]);
+            p2.created_unused = Some(list(&["u"]));
+            GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 9, p1, p2),
+                ..record()
+            }
+        }
+
+        /// The record as one written before the lists.
+        fn without_lists(mut record: GameRecord) -> GameRecord {
+            for seat in PLAYER_IDS {
+                let summary = &mut record.game.seats[seat];
+                summary.created_used = None;
+                summary.created_unused = None;
+                summary.created_played = None;
+            }
+            record
+        }
+
+        fn created_of<'a>(report: &'a CardStatsReport, card: &str) -> &'a CreatedStats {
+            report
+                .created
+                .iter()
+                .find(|stats| stats.card == card)
+                .unwrap_or_else(|| panic!("no Created entry for {card}"))
+        }
+
+        #[test]
+        fn r2089000_counts_each_created_card_once_per_seat_game_apart_from_the_deck_table() {
+            let report = card_stats(&[made()], &live());
+            let ids: Vec<&str> = report.created.iter().map(|stats| stats.card.as_str()).collect();
+            assert_eq!(ids, ["a", "t", "u"]);
+
+            // p1 used a `t`, so it counts once among the used however many it made, and as Radiant
+            // since one was at its first use; the `t` it never used puts it in no baseline.
+            let t = created_of(&report, "t");
+            assert_eq!(t.created_played, tally(1, 1, 0));
+            assert_eq!(t.created_played_radiant, tally(1, 1, 0));
+            assert_eq!(t.created_played_normal, tally(0, 0, 0));
+            assert_eq!(t.created_not_played, tally(0, 0, 0));
+            assert_eq!(created_played_delta(t), None);
+            let a = created_of(&report, "a");
+            assert_eq!(a.created_played, tally(1, 1, 0));
+            assert_eq!(a.created_played_normal, tally(1, 1, 0));
+            // Both seats made a `u` and used none: two games, p1's won.
+            let u = created_of(&report, "u");
+            assert_eq!(u.created_not_played, tally(2, 1, 0));
+            assert_eq!(u.created_played, tally(0, 0, 0));
+            assert_eq!(u.games(), 2);
+
+            // No deck held `t` or `u`, so neither has a deck row, and `a`'s is its dealt copies' alone,
+            // written as a deck row was before the Created figures.
+            let ids: Vec<&str> = report.cards.iter().map(|stats| stats.card.as_str()).collect();
+            assert_eq!(ids, ["a", "b"]);
+            let deck_a = stats_of(&report, "a");
+            assert_eq!(deck_a.played, tally(1, 1, 0));
+            assert_eq!(deck_a.played_normal, tally(1, 1, 0));
+            assert_eq!(deck_a.created_played, tally(0, 0, 0));
+            let json = serde_json::to_value(deck_a).unwrap();
+            assert!(
+                json.as_object()
+                    .unwrap()
+                    .keys()
+                    .all(|key| !key.starts_with("created"))
+            );
+            assert_eq!((report.games, report.decks), (1, 2));
+
+            // The delta is R377's over the used and the never-used seats.
+            let mut both = u.clone();
+            both.created_played = tally(4, 3, 0);
+            assert_eq!(created_played_delta(&both), Some(0.75 - 0.5));
+        }
+
+        #[test]
+        fn r2089000_a_record_without_the_lists_folds_as_before() {
+            let plain = without_lists(made());
+            let report = card_stats(std::slice::from_ref(&plain), &live());
+            assert!(report.created.is_empty());
+            assert_eq!(report.cards, card_stats(&[made()], &live()).cards);
+            let mut totals = StatsTotals::default();
+            totals.fold(&plain, true);
+            assert!(
+                totals
+                    .cards
+                    .values()
+                    .flat_map(|cards| cards.keys())
+                    .all(|card| card == "a" || card == "b"),
+                "no row for a card no deck held"
+            );
+            // A seat with no deck and no Created card still adds no key.
+            let mut empty = StatsTotals::default();
+            empty.fold(
+                &GameRecord {
+                    game: game(
+                        Winner::P1,
+                        GameOverReason::Concede,
+                        1,
+                        SeatSummary::default(),
+                        SeatSummary::default(),
+                    ),
+                    ..record()
+                },
+                true,
+            );
+            assert!(empty.cards.is_empty());
+        }
+
+        #[test]
+        fn r2089000_parse_reads_the_lists_and_refuses_a_malformed_use() {
+            let written = made();
+            let json = serde_json::to_value(&written).unwrap();
+            let p1 = &json["game"]["seats"]["p1"];
+            assert_eq!(
+                p1["createdUsed"][1],
+                json!({ "card": "t", "turn": 3, "radiant": true })
+            );
+            assert_eq!(p1["createdUnused"], json!(["t", "u"]));
+            assert_eq!(
+                p1["createdPlayed"],
+                json!([{ "card": "a", "turn": 4, "radiant": false }])
+            );
+            assert!(
+                json["game"]["seats"]["p2"].get("createdUsed").is_none(),
+                "an absent list is not written"
+            );
+            assert_eq!(parse_game_record(&json).unwrap(), written);
+            assert_eq!(
+                parse_game_record(&serde_json::to_value(without_lists(made())).unwrap()).unwrap(),
+                without_lists(made())
+            );
+
+            let refusal = |key: &str, list: Value| {
+                let mut bad = json.clone();
+                bad["game"]["seats"]["p1"][key] = list;
+                parse_game_record(&bad).unwrap_err().message
+            };
+            for bad in [
+                json!([{ "card": "t", "turn": 0, "radiant": false }]),
+                json!([{ "card": "t", "turn": 2 }]),
+                json!([{ "card": "", "turn": 2, "radiant": false }]),
+                json!(["t"]),
+            ] {
+                assert!(
+                    refusal("createdUsed", bad.clone())
+                        .contains("game.seats.p1.createdUsed[0] is not a Created card's use"),
+                    "{bad}"
+                );
+            }
+            assert!(
+                refusal("createdPlayed", json!("a"))
+                    .contains("game.seats.p1.createdPlayed is not a list of Created cards' uses")
+            );
+            assert!(refusal("createdUnused", json!("t")).contains("game.seats.p1.createdUnused"));
+        }
+
+        #[test]
+        fn r2089000_format_card_stats_prints_the_created_table_after_the_deck_table() {
+            let names: IndexMap<&str, &str> = [("t", "Token")].into_iter().collect();
+            let name_of = |card: &str| names.get(card).map(|name| name.to_string());
+            let report = card_stats(&[made()], &live());
+            let text = format_card_stats(&report, name_of);
+            // The deck's table is what it was without them, and the Created one follows it.
+            let plain = format_card_stats(&card_stats(&[without_lists(made())], &live()), name_of);
+            assert!(text.starts_with(&format!("{plain}\n\nCreated cards: ")));
+            let lines: Vec<&str> = text[plain.len()..].split('\n').collect();
+            let heading = lines.iter().position(|line| line.starts_with("Card ")).unwrap();
+            assert_eq!(
+                split_wide(lines[heading]),
+                [
+                    "Card",
+                    "Created, used",
+                    "Created, not used",
+                    "Used Radiant",
+                    "Used normal",
+                    "Created Δ"
+                ]
+            );
+            let token = lines.iter().find(|line| line.starts_with("t Token")).unwrap();
+            assert_eq!(
+                split_wide(token)[1..],
+                ["100.0% (1)", "— (0)", "100.0% (1)", "— (0)", "—"]
+            );
+            let u = lines.iter().find(|line| line.starts_with("u ")).unwrap();
+            assert_eq!(split_wide(u)[1..], ["— (0)", "50.0% (2)", "— (0)", "— (0)", "—"]);
+            assert_eq!(lines.len(), heading + 4, "a row for each of a, t and u");
         }
     }
 
