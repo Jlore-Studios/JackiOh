@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  GLOSSARY,
   INSPECT_CLOSE,
   INSPECT_LIST_BACK,
   INSPECT_LIST_CARD,
@@ -20,6 +21,7 @@ import {
   INSPECT_LIST_SHEET,
   closeInspect,
 } from "../cards/index.ts";
+import { must } from "../test/stubServer.ts";
 import { HOVER_DELAY_MS, LIST_PREVIEW_MAX, LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { card, fullBoardView } from "../test/fixtures.ts";
@@ -289,5 +291,29 @@ describe("R313 your own library, without its order", () => {
     cleanup();
     renderBoard(fullBoardView());
     expect(screen.getByTestId("library-you")).not.toHaveAttribute("data-browsable");
+  });
+});
+
+describe("R2098000 a pile dialog's opened face shows its terms' rules", () => {
+  it("R2098000 a face opened in a pile's dialog makes its terms tab stops that show their rule, and Escape closes the rule first", () => {
+    renderBoard();
+    const pile = screen.getByTestId("graveyard-you");
+    pile.focus();
+    fireEvent.click(pile);
+    const cards = within(screen.getByTestId(INSPECT_LIST_SHEET)).getAllByTestId(INSPECT_LIST_CARD);
+    fireEvent.click(must(cards[1], "the pile's second card (core-003)"));
+    const detail = screen.getByTestId(INSPECT_LIST_DETAIL);
+    const term = must(
+      detail.querySelector<HTMLElement>('.cf-term[data-term="Taunt"]'),
+      "the opened face's Taunt term",
+    );
+    expect(term).toHaveAttribute("tabindex", "0");
+    act(() => term.focus());
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent(GLOSSARY.Taunt.rule);
+    expect(term).toHaveAttribute("aria-describedby", tooltip.id);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(screen.getByTestId(INSPECT_LIST_SHEET)).toBeInTheDocument();
   });
 });

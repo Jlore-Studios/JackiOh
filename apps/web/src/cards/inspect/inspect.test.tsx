@@ -11,7 +11,6 @@ import type { CardDef, PlayerView, UnitView } from "@jackioh/shared";
 import Board from "../../game/Board.tsx";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { testid, type ClickTarget, type Highlight } from "../../game/contract.ts";
-import { patchTestid } from "../../patches/testids.ts";
 import { fullBoardView } from "../../test/fixtures.ts";
 import { must } from "../../test/stubServer.ts";
 import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
@@ -24,6 +23,7 @@ import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE,
+  INSPECT_FACE_BASE,
   INSPECT_FACE_DOWN,
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
@@ -1090,8 +1090,8 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
-    // R388: the History section's control is the detail's first, before the caller's actions.
-    const first = screen.getByTestId(patchTestid.historyToggle);
+    // R2098000: the base face's Cry term is now the detail's first control, before History (R388) and the caller's actions.
+    const first = must(screen.getByTestId(INSPECT_FACE_BASE).querySelector<HTMLElement>('.cf-term[data-term="Cry"]'), "the base face's Cry");
     expect(close).toHaveFocus();
 
     expect(tabFrom(close)).toBe(false);
@@ -1123,9 +1123,10 @@ describe("Tab stays inside a modal overlay (B25)", () => {
   });
 
   it("B25 the touch sheet traps Tab too: Close is its only control, so Tab keeps it", () => {
+    // R2098000: a term would be a control here; Mr. Vanilla prints none, so Close is the only one.
     render(
       <Scene>
-        <Trigger id="a" subject={subjectOf("b25-trap-sheet", "core-043")} />
+        <Trigger id="a" subject={subjectOf("b25-trap-sheet", "core-008")} />
       </Scene>,
     );
     longPress(screen.getByTestId("a"));

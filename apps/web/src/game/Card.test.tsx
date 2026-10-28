@@ -16,12 +16,15 @@ import { KEYWORD_KINDS, type BackrowView, type CardView, type PlayerView, type U
 import {
   CARD_SETTINGS_DEFAULTS,
   CardBack,
+  GLOSSARY,
   INSPECT_HOVER,
   INSPECT_SHEET,
   KEYWORD_MARK,
+  TERM_TOOLTIP_TESTID,
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
+import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
@@ -939,5 +942,43 @@ describe("R1046 the owner's face-down play wears its reveal timing", () => {
     expect(screen.getByTestId(testid.revealAt("set1"))).toHaveTextContent("Start of your next turn");
     // The badge is the owner's alone: backs and every other card show none.
     expect(container.querySelectorAll(".reveal-at-badge")).toHaveLength(1);
+  });
+});
+
+describe("R2098000 a hand card's term shows its rule on hover and on a long press, and a tap on it still reports the card", () => {
+  it("R2098000 hovering, tapping and holding a hand card's Cry term", () => {
+    vi.useFakeTimers();
+    const view = fullBoardView();
+    const bigot = must(handOf(view)[0], "a hand card");
+    const onClick = vi.fn<(target: ClickTarget) => void>();
+    renderBoard(view, { highlight: highlightOf([testid.handCard(bigot.instanceId)]), onClick });
+    const term = inside(handRoot(bigot.instanceId), '.cf-term[data-term="Cry"]');
+    expect(term).toHaveAttribute("data-tip", "pointer");
+    expect(term).not.toHaveAttribute("tabindex");
+
+    // Hover shows the glossary line; leaving hides it.
+    fireEvent.pointerEnter(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TERM_HOVER_DELAY_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(`${GLOSSARY.Cry.label} ${GLOSSARY.Cry.rule}`);
+    fireEvent.pointerLeave(term, { pointerType: "mouse" });
+    expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
+
+    // A tap on the term still reports the card.
+    fireEvent.click(term);
+    expect(onClick).toHaveBeenLastCalledWith({ on: "hand", instanceId: bigot.instanceId });
+
+    // A held touch shows the rule and opens no sheet; the lift's click goes nowhere.
+    fireEvent.pointerDown(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(screen.getByRole("tooltip")).toHaveTextContent(GLOSSARY.Cry.rule);
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+    fireEvent.pointerUp(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.click(term);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

@@ -95,7 +95,7 @@ line on a tie. So the placements the beam tries reach the reply, which prices a 
 neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
-the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
@@ -157,23 +157,24 @@ never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrit
 and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
 oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
 A card takes the row of the latest report that lists it, in either table (R1186000), and none when the
-latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative and Meditative+ rows,
+latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative, Meditative+ and Stinkyscape rows,
 less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those and the cleared).
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
-set held to its own half (R1186000): no sweep, lane or person adds a card of an
+set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
+`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
 (every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
 runners, `.github/workflows/sweep.yml`. `cargo jackioh sweep --due <base>` names the cards: the bans and
-the watched Meditative and Meditative+ cards when the AI changed, every non-token card of a set that
+the watched Meditative, Meditative+ and Stinkyscape cards when the AI changed, every non-token card of a set that
 ships now and did not. Its report goes under `training/history/`, `--write` reads it last, and a
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
-promotion may ban a card of those two sets again when the new AI is slow with it, within each set's
-half; a record `--write` refuses opens an issue for a person instead.
+promotion may ban a card of those three sets again when the new AI is slow with it, within each
+set's ceiling; a record `--write` refuses opens an issue for a person instead.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
 when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that

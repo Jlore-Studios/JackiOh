@@ -798,10 +798,7 @@ mod tests {
         assert!(!fragment.title.is_empty() && !fragment.sources.is_empty() && !fragment.notes.is_empty());
 
         // `patches ship` reads its tier as `tier_of` does: no catalog change, its plays as claims.
-        let side = Side {
-            catalog: Catalog::new(),
-            sets: Vec::new(),
-        };
+        let side = Side::of_catalog(Catalog::new(), Vec::new());
         let checked = Checked {
             scripts: fragment.plays.iter().map(|id| classify::family(id)).collect(),
             ..Checked::default()

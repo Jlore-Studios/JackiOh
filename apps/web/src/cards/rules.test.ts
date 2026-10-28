@@ -200,6 +200,11 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1876000, R1876001: ZolarKeth's verbs, its own face's words ("It can't use its own Activate",
     // "Activate your Universities"), no term of their own.
     "Another card's Activate",
+    // R1849003, R1869002, R1863000: the M12 audit's rows for verbs §6.3 lacked (#2176), each printed in
+    // plain words on its Stinkyscape card.
+    "Reflect damage",
+    "May attack again",
+    "Watch first plays",
   ],
 };
 

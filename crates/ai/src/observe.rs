@@ -692,7 +692,14 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             if let Some(copy) = subsystems::copied_text_of(&next, card) {
                 referenced.insert(copy.def_id);
             }
+            // R1850000: a copier Unit runs the text of the Unit it copied, a fused one's included.
+            referenced.insert(subsystems::text_def_of(card).0.to_string());
         }
+    }
+    // R1850003, R1865000: a card held beneath another is read by both seats while it waits, and comes
+    // back to the field or the exile by the definition it keeps.
+    for held in next.held.iter().flatten() {
+        referenced.insert(held.card.def_id.clone());
     }
     // R451, R185: the play records are public history, and the engine reads a definition by the id
     // they keep: a copier's text is the last Spell's (R399), wherever the card that was played went
