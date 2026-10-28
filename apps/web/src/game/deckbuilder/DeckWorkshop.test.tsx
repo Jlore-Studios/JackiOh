@@ -39,6 +39,8 @@ import {
   DECK_COPY_CODE,
   DECK_COSMETICS_BUTTON,
   DECK_COUNT,
+  DECK_DUPLICATE,
+  DECK_DUPLICATE_REASON,
   DECK_DELETE,
   DECK_DELETE_CANCEL,
   DECK_DELETE_CONFIRM,
@@ -82,6 +84,7 @@ import {
   addPoolId,
   deckCardId,
   deckCompareChipId,
+  deckDuplicateId,
   deckHistoryRestoreId,
   deckRowId,
   loadoutErrorId,
@@ -1026,5 +1029,97 @@ describe("the deck's history (R2100000)", () => {
     fireEvent.click(screen.getByTestId(DECK_HISTORY_BUTTON));
     expect(await within(screen.getByTestId(DECK_HISTORY_PANEL)).findAllByTestId(DECK_HISTORY_ROW)).toHaveLength(3);
     expect(server.calls.filter((call) => call.op === "getDeckVersions")).toHaveLength(2);
+  });
+});
+
+describe("duplicating a deck (#2096)", () => {
+  it("#2096 Duplicate in the editor makes a deck with the same cards, portrait and picks, opens it and saves it", async () => {
+    const { server, tick } = mount({
+      decks: [
+        {
+          ...savedDeck("a", "Aggro", ONE, 1),
+          portrait: "gary",
+          tableCosmetic: "table-felt",
+          fieldCosmetic: "field-rain",
+          cardBackCosmetic: "card-back-lacquer",
+        },
+      ],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    expect(screen.getByTestId(DECK_DUPLICATE)).toBeEnabled();
+    expect(screen.queryByTestId(DECK_DUPLICATE_REASON)).toBeNull();
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy)");
+    expect(screen.getByTestId(deckRowId("new-1"))).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId(deckRowId("new-1"))).toHaveAttribute("data-count", String(DECK_SIZE));
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("new-1")).toMatchObject({
+      name: "Aggro (copy)",
+      cards: [...ONE],
+      portrait: "gary",
+      tableCosmetic: "table-felt",
+      fieldCosmetic: "field-rain",
+      cardBackCosmetic: "card-back-lacquer",
+    });
+  });
+
+  it("#2096 a row's Duplicate copies that deck, not the open one, and opens the copy from the list", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", ONE.slice(0, 3), 1), savedDeck("b", "Brawl", TWO.slice(0, 5), 2)],
+    });
+    expect(screen.getByTestId(WORKSHOP)).toHaveAttribute("data-view", "list");
+    expect(screen.getByRole("button", { name: "Duplicate Brawl" })).toBe(screen.getByTestId(deckDuplicateId("b")));
+    fireEvent.click(screen.getByTestId(deckDuplicateId("b")));
+    expect(screen.getByTestId(WORKSHOP)).toHaveAttribute("data-view", "editor");
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Brawl (copy)");
+    expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", "5");
+  });
+
+  it("#2096 the copy's name takes (copy 2), then (copy 3), while each is taken", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", [], 1), savedDeck("b", "Aggro (copy)", [], 2)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(deckDuplicateId("a")));
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy 2)");
+    fireEvent.click(screen.getByTestId(deckDuplicateId("a")));
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Aggro (copy 3)");
+    expect(screen.getByTestId(DECK_CAP)).toHaveTextContent(`4/${String(MAX_SAVED_DECKS)}`);
+  });
+
+  it("#2096 the original and the trio slots naming it are unchanged", async () => {
+    const { server, tick } = mount({
+      decks: [savedDeck("a", "Aggro", ONE, 1), savedDeck("b", "Brawl", TWO, 2)],
+      trios: [savedTrio("t", "Ladder", ["a", "b", null], 3)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["putDeck new-1"]);
+    expect(server.decks.get("a")).toMatchObject({ name: "Aggro", cards: [...ONE] });
+    expect(server.trios.get("t")?.deckIds).toEqual(["a", "b", null]);
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.getByTestId(trioSlotId(1))).toHaveValue("a");
+    expect(screen.getByTestId(trioSlotId(2))).toHaveValue("b");
+    expect(screen.getByTestId(trioSlotId(3))).toHaveValue("");
+  });
+
+  it("#2096 at the deck limit Duplicate is off in the list and the editor, and says why", () => {
+    const decks = Array.from({ length: MAX_SAVED_DECKS }, (_unused, index) => savedDeck(`d${String(index)}`, `Deck ${String(index)}`, [], index));
+    mount({ decks, initialOpen: { kind: "deck", id: "d0" } });
+    expect(screen.getByTestId(DECK_DUPLICATE)).toBeDisabled();
+    expect(screen.getByTestId(DECK_DUPLICATE_REASON)).toHaveTextContent(
+      `You have ${String(MAX_SAVED_DECKS)} decks, the most you can keep. Delete one to duplicate this.`,
+    );
+    expect(screen.getByTestId(DECK_DUPLICATE)).toHaveAttribute("aria-describedby", screen.getByTestId(DECK_DUPLICATE_REASON).id);
+    const rowDuplicate = screen.getByTestId(deckDuplicateId("d0"));
+    expect(rowDuplicate).toBeDisabled();
+    expect(rowDuplicate).toHaveAttribute("aria-describedby", screen.getByTestId(DECK_CAP_REASON).id);
+    fireEvent.click(screen.getByTestId(DECK_DUPLICATE));
+    fireEvent.click(rowDuplicate);
+    expect(screen.getByTestId(DECK_CAP)).toHaveTextContent(`${String(MAX_SAVED_DECKS)}/${String(MAX_SAVED_DECKS)}`);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "d0");
   });
 });

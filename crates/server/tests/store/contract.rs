@@ -2431,6 +2431,17 @@ mod deck_versions {
         );
         assert_eq!(
             q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
+            vec![restored.clone(), merged.clone()]
+        );
+
+        // Unless the newest already holds its name and cards.
+        let again = deck_version(&deck, json!({ "savedAt": edited_at + 2 }));
+        assert_eq!(
+            lit(&q!(harness, t => t.deck_versions_keep(&again, None, KEPT))),
+            "unchanged"
+        );
+        assert_eq!(
+            q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
             vec![restored, merged]
         );
     }

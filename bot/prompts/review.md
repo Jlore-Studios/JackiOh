@@ -54,8 +54,9 @@ $diff
    survives a serde round trip, replay or determinism broken, hidden information leaking through
    `view_for`, the client enforcing a rule.
 3. **The spec and CLAUDE.md.** Rules implemented from memory instead of from the spec; a new
-   ruling without its note in `spec/rulings/`, its `r<n>`/`R<n>` test and its line in
-   `spec/INDEX.md`; engine, cards or ai made impure; a number that is not a named constant; a
+   ruling without its note in `spec/rulings/`, its `r<n>`/`R<n>` test and its §11 paragraph in
+   `spec/pending/<issue>.md` (a branch that writes the end of `spec/11-rulings.md` or `spec/INDEX.md`
+   instead brings back the conflicts the daily fold removed); engine, cards or ai made impure; a number that is not a named constant; a
    card without its tests; the per-crate contracts in the READMEs broken.
 4. **Tests.** New behaviour tested in the repository's style, and each test would fail without
    the change. Run the tests that matter and read what they assert.

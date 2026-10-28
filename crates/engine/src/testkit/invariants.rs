@@ -101,6 +101,9 @@
 //!      died face-up (R1852000), so they read off a Starship the seat reads.
 //!      A seat's own Created card names the card that generated it (`createdBy`, R1956001), which is
 //!      read off that card as Echo's `copies` is.
+//!      Stinkyscape's S04 found another, fuzz seed 8 and the Duos smoke wave's seed 1: a card sold from a
+//!      hand at the Marketplace (S #89 Spice, R1861000) ceases to exist and is no token, yet its public
+//!      `marketSold` named it to both seats as it went (R1853003), so a sold id reads, as R11's tokens do.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
 //!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
 //!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
@@ -307,6 +310,9 @@ struct Lineage {
     /// pass (B20) takes a hand card out of its duel with no event, so one in no pile was passed. A unit
     /// token bounced or stolen off the field or out of the resolving zone reached no hand (R11).
     in_hand: IndexMap<String, PlayerId>,
+    /// R1853003, R1861000: each id a `marketSold` names. A sale is public and the card ceases to exist
+    /// as it goes, so it read to both seats then, a hand card's as much as a tray Resource's.
+    sold: IndexSet<String>,
 }
 
 /// The card an event's id field names. R127: a Cry run out of a graveyard runs with no card, and the
@@ -323,6 +329,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut gone_as: IndexMap<String, String> = IndexMap::new();
     let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
     let mut ceased: IndexSet<String> = IndexSet::new();
+    let mut sold: IndexSet<String> = IndexSet::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = card_id(id) else {
@@ -458,6 +465,10 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             | GameEvent::EnteredGraveyard { instance_id, .. } => {
                 in_hand.shift_remove(instance_id);
             }
+            GameEvent::MarketSold { instance_id, .. } => {
+                in_hand.shift_remove(instance_id);
+                sold.insert(instance_id.clone());
+            }
             GameEvent::Transformed {
                 instance_id,
                 new_instance_id,
@@ -506,6 +517,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
         ties,
         gone_as,
         in_hand,
+        sold,
     }
 }
 
@@ -525,8 +537,9 @@ struct Standing {
 
 /// Whether this viewer reads the card an id names, judged by where the card is now: a card the state
 /// holds reads unless the hidden set has it, and a vanished one by its successor. A vanished card with
-/// none reads when a full library refused it before it existed and it copies nothing (R316), and
-/// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
+/// none reads when a full library refused it before it existed and it copies nothing (R316) or when a
+/// public sale took it (R1853003, R1861000), and otherwise only when every definition the log pairs
+/// with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
 /// Glitch's reset or boards (R676, R678), and stays as hidden as it was. In a duel, one the log last
 /// shows in a hand, a token's included, was passed out of it (B20) and reads to that hand's player
@@ -565,6 +578,13 @@ fn standing_of(
                 return Some(Standing {
                     reads: true,
                     where_: "no pile (it was never created)".to_string(),
+                });
+            }
+            // R1853003, R1861000: a card sold at the Marketplace was named to both seats as it went.
+            if lineage.sold.contains(id) {
+                return Some(Standing {
+                    reads: true,
+                    where_: "no pile (it was sold, publicly)".to_string(),
                 });
             }
             let defs = lineage.ties.get(id)?;
