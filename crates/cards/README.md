@@ -35,7 +35,7 @@ crates/cards
 │   ├── classic_plus/   one Classic+ card or token per file
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
 │   ├── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
-│   └── stinkyscape/    one Stinkyscape card or token per file (held until #1884, R1857000)
+│   └── stinkyscape/    one Stinkyscape card or token per file (shipped by #1884, R1857000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -285,7 +285,7 @@ cargo test -p jackioh-cards --lib -- scripts::classic::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::classic_plus::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::meditative::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::meditative_plus::  # the Meditative+ cards (Core's shard runs them too, its skips not naming them)
-cargo test -p jackioh-cards --lib -- scripts::stinkyscape::  # the held Stinkyscape cards (Core's shard runs them too)
+cargo test -p jackioh-cards --lib -- scripts::stinkyscape::  # the Stinkyscape cards (Core's shard runs them too)
 cargo test -p jackioh-cards --test cards        # the cross-card tests only
 cargo clippy -p jackioh-cards --all-targets -- -D warnings
 ```

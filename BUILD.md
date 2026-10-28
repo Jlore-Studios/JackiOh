@@ -67,7 +67,7 @@ jackioh/
       tests/golden.rs, golden/ the golden traces recorded from the TypeScript engine before it was deleted
       tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
     cards/                     jackioh-cards
-      catalog.json             396 cards + 86 tokens over Core, Classic, Classic+, Meditative and Meditative+ (schema in M4-T1, M9-T1)
+      catalog.json             572 cards + 138 tokens over Core, Classic, Classic+, Meditative, Meditative+ and Stinkyscape (schema in M4-T1, M9-T1)
       flavour.json             flavour lines and artist credits (R660)
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388); pending/ fragments (R646)
       build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
