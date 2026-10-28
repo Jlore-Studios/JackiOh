@@ -126,6 +126,21 @@ mod tests {
             s.expect_health(PlayerId::P1, 32);
             assert_eq!(heals(&s), vec![2]);
         }
+
+        #[test]
+        fn heal_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "health": 20, "field": [CAPSULE], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let heal = crate::upgrade_number(&mut s, CAPSULE, "heal");
+            s.end_turn();
+
+            s.expect_health(PlayerId::P1, 20 + heal);
+            assert_eq!(heals(&s), vec![heal]);
+        }
     }
 
     mod radiant {
