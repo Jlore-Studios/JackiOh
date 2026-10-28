@@ -190,6 +190,7 @@ fn resolved_for(instance: &CardInstance, permanent: bool, cost_paid: i32) -> Gam
         arrived_during: None,
         exits_from: None,
         answer: None,
+        on_draw: None,
     }
 }
 
