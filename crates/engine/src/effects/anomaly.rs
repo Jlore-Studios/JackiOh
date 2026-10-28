@@ -7,7 +7,9 @@
 //!   entry Radiant or in Defense Position as it says and carrying its riders in its memory (R1855000,
 //!   R1855002), and once the whole board is laid each laid Unit's Cry fires, its caster's choices drawn
 //!   at random (R1855001, the designer's answer). Not `swap_board`, the name #87's exchange of the
-//!   two sides' boards already has (`effects::swap`, R88, R171).
+//!   two sides' boards already has (`effects::swap`, R88, R171). A Flying Unit named in the backrow
+//!   stands there (R1879001), and an entry may be laid on top of one laid before it in its zone, a
+//!   layered pile such as the Drone Battleship (R1879002).
 //! - `scan_for_anomaly` — the Scanning Probes' roll: a Radiant find, a plain one or a miss, each miss
 //!   raising that player's later chances (R1855003).
 
@@ -15,6 +17,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::catalog::def_of;
 use crate::combat::{SwitchPositionOptions, switch_position};
 use crate::config::{
     ANOMALY_PLAIN_CHANCE, ANOMALY_PLAIN_STEP, ANOMALY_RADIANT_CHANCE, ANOMALY_RADIANT_STEP,
@@ -27,11 +30,11 @@ use crate::query::{luck_of, lucky_on};
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectPart};
 use crate::state::{CardInstance, GameState, find_instance_mut};
-use crate::wire::{GameEvent, PLAYER_IDS, Position, Row, TargetAim};
-use crate::zones::exile_to_pile;
+use crate::wire::{CardType, GameEvent, KeywordKind, PLAYER_IDS, Position, Row, TargetAim};
+use crate::zones::{ZoneSlot, card_at, exile_to_pile};
 
 use super::add_to_hand::{AddToHandArgs, add_to_hand};
-use super::summon::{SummonPlacement, row_of, summon_fresh};
+use super::summon::{SummonPlacement, row_of, summon_fresh, summon_fresh_standing};
 use super::targets::{BoardScope, ScopeSide, cards_in_scope_aimed};
 
 /// One card of a preset board: its definition, the zone it is laid in, and how it lies there.
@@ -40,7 +43,8 @@ use super::targets::{BoardScope, ScopeSide, cards_in_scope_aimed};
 #[serde(rename_all = "camelCase")]
 pub struct PresetCard {
     pub def_id: String,
-    /// The card's own row (§5.1): an entry in the other row lays nothing.
+    /// The card's own row (§5.1): an entry in the other row lays nothing, but a Unit with Flying named
+    /// in the backrow stands there (R1081000, R1879001).
     pub row: Row,
     pub lane: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -53,6 +57,11 @@ pub struct PresetCard {
     /// `effects::tray::RESOURCE_POOL_KEY` is one).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R1879002: laid on top of the Unit an earlier entry of this replacement laid in its unit zone, a
+    /// layered pile's later card (R1842000); in an empty zone it is laid as any entry, and on a card
+    /// the replacement did not lay (a Dormant one, say) nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack: Option<bool>,
 }
 
 /// `replaceBoard`'s argument: the preset, laid in list order.
@@ -124,28 +133,49 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
             let source_id = source_id.clone();
             Effect::new("replaceBoardLay", move |at| {
                 let radiant = entry.radiant == Some(true);
-                if row_of(card_type_of_face(at.state, &entry.def_id, radiant)) != Some(entry.row) {
+                let card_type = card_type_of_face(at.state, &entry.def_id, radiant);
+                let is_unit = card_type == CardType::Unit;
+                // R1879001: a Flying Unit named in the backrow stands there, as a Flying play may.
+                let stands =
+                    entry.row == Row::Backrow && is_unit && prints_flying(at.state, &entry.def_id, radiant);
+                if row_of(card_type) != Some(entry.row) && !stands {
                     return;
                 }
+                let slot = ZoneSlot {
+                    player,
+                    row: entry.row,
+                    lane: entry.lane,
+                };
+                // R1879002: on top only of a card this replacement laid, which still bears its mark.
+                let stack = entry.stack == Some(true)
+                    && entry.row == Row::Units
+                    && card_at(at.state, slot)
+                        .is_some_and(|top| top.memory.contains_key(PRESET_CRY_OWED_KEY));
                 let placement = SummonPlacement {
                     lane: Some(entry.lane),
+                    stack: stack.then_some(true),
                     radiant: entry.radiant,
                     source_id: source_id.clone(),
                     ..SummonPlacement::default()
                 };
                 // R1855000: a summon (R1), into the named zone or nowhere (R47, R64, R688).
-                let Some(card) = summon_fresh(at, &entry.def_id, player, &placement) else {
+                let laid = if stands {
+                    summon_fresh_standing(at, &entry.def_id, player, &placement)
+                } else {
+                    summon_fresh(at, &entry.def_id, player, &placement)
+                };
+                let Some(card) = laid else {
                     return;
                 };
                 if let Some(live) = find_instance_mut(at.state, &card.id) {
                     for (key, value) in entry.memory.iter().flatten() {
                         live.memory.insert(key.clone(), value.clone());
                     }
-                    if entry.row == Row::Units {
+                    if is_unit {
                         live.memory.insert(PRESET_CRY_OWED_KEY.to_string(), json!(index));
                     }
                 }
-                if entry.row == Row::Units && entry.position == Some(Position::Def) {
+                if is_unit && entry.position == Some(Position::Def) {
                     let _ = switch_position(
                         at,
                         &card,
@@ -157,37 +187,41 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
                 }
             })
         }));
-        effects.extend(
-            args.board
-                .iter()
-                .enumerate()
-                .filter(|(_, entry)| entry.row == Row::Units)
-                .map(|(index, _)| {
-                    Effect::new("replaceBoardCry", move |at| {
-                        // R1855001: the card this entry laid, wherever it acts now; one that has left
-                        // the field lost its mark with the rest of its memory (R78, R174).
-                        let mark = json!(index);
-                        let Some(id) = permanents_on_field(at.state, player)
-                            .into_iter()
-                            .find(|card| card.memory.get(PRESET_CRY_OWED_KEY) == Some(&mark))
-                            .map(|card| card.id.clone())
-                        else {
-                            return;
-                        };
-                        let Some(card) = find_instance_mut(at.state, &id).map(|card| {
-                            card.memory.shift_remove(PRESET_CRY_OWED_KEY);
-                            card.clone()
-                        }) else {
-                            return;
-                        };
-                        // R1855001: a triggered Cry (R467) whose caster's every choice is random
-                        // (R452's), before a pause and after one.
-                        trigger_random_cry_of(&mut at.sink, &card, player);
-                    })
-                }),
-        );
+        // One per entry: only an entry that laid a Unit left a mark to find (R1879001).
+        effects.extend(args.board.iter().enumerate().map(|(index, _)| {
+            Effect::new("replaceBoardCry", move |at| {
+                // R1855001: the card this entry laid, wherever it acts now; one that has left
+                // the field lost its mark with the rest of its memory (R78, R174).
+                let mark = json!(index);
+                let Some(id) = permanents_on_field(at.state, player)
+                    .into_iter()
+                    .find(|card| card.memory.get(PRESET_CRY_OWED_KEY) == Some(&mark))
+                    .map(|card| card.id.clone())
+                else {
+                    return;
+                };
+                let Some(card) = find_instance_mut(at.state, &id).map(|card| {
+                    card.memory.shift_remove(PRESET_CRY_OWED_KEY);
+                    card.clone()
+                }) else {
+                    return;
+                };
+                // R1855001: a triggered Cry (R467) whose caster's every choice is random
+                // (R452's), before a pause and after one.
+                trigger_random_cry_of(&mut at.sink, &card, player);
+            })
+        }));
         EffectPart { effects, memo: None }
     })
+}
+
+/// R1879001: whether a face of `def_id` prints Flying, the keyword a Unit stands in the backrow by.
+fn prints_flying(state: &GameState, def_id: &str, radiant: bool) -> bool {
+    let def = def_of(Some(state), def_id);
+    let face = if radiant { &def.radiant } else { &def.base };
+    face.keywords
+        .iter()
+        .any(|keyword| keyword.kind() == KeywordKind::Flying)
 }
 
 /// R1855003: what a scan finds, worst first, so a Lucky roll keeps the greatest.
