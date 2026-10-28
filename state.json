@@ -6516,6 +6516,13 @@
     "2181": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T06:03:15Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 7 fails: no unit test covers e2e/scripts/shard-specs.mjs, so the e2e smoke run in CI is the only proof. The half of the fix that brings jobs under 5 minutes is a ci.yml matrix change only a person can make."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
