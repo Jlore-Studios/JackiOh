@@ -6,14 +6,16 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Position, Row,
-    Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
-    canonical, card_at, carried_at, effective_cost, find_instance, has_keyword, is_locked,
-    lane_multiplier_for, legal_actions, pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, GameState, KeywordKind, PlayerId,
+    Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
+    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
+    find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces, row_size, slot_of,
+    subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
 use crate::config::AI_SEARCH;
+use crate::evaluate::{can_swing, deft_in_defense};
 use crate::reply::trade_value;
 
 /// Canonical JSON of an action body (keys sorted), for equality across determinizations. TS's
@@ -852,7 +854,8 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
 }
 
 /// #1759: whether `action` switches a unit in Attack Position to Defense, a stand-down, when a unit of the
-/// opponent's would kill it and survive in a fight (`kills_and_survives`): a unit that cannot win its next fight.
+/// opponent's that could attack it on its next turn (`could_attack_next_turn`, R2021000) would kill it and
+/// survive the fight (`kills_and_survives`): a unit that cannot win its next fight.
 pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
     let ActionBody::SwitchPosition { instance_id } = action else {
         return false;
@@ -860,10 +863,27 @@ pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
     let Some(unit) = find_instance(state, instance_id) else {
         return false;
     };
-    unit_view(state, unit).position == Position::Atk
-        && active_units_of(state, unit.controller.opponent())
-            .into_iter()
-            .any(|enemy| kills_and_survives(state, enemy, unit))
+    if unit_view(state, unit).position != Position::Atk {
+        return false;
+    }
+    let target = AttackTarget::Unit {
+        instance: unit.clone(),
+    };
+    active_units_of(state, unit.controller.opponent())
+        .into_iter()
+        .any(|enemy| could_attack_next_turn(state, enemy, &target) && kills_and_survives(state, enemy, unit))
+}
+
+/// R2021000: whether `enemy` could attack `target` on its controller's next turn. It is in Attack
+/// Position, or in Defense Position with Deft, which switches and still attacks in one turn (R49); it
+/// may swing at all (`can_swing`: no "Can't attack", no E35 bar, not Frozen through that turn,
+/// R1174000); and no attack restriction bars it from `target` (`attack_restriction`: a Dormant card,
+/// R1839000, or a Flying unit in Attack Position that only a Flying or Ranged unit may attack, R783002).
+fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &AttackTarget) -> bool {
+    let view = unit_view(state, enemy);
+    (view.position == Position::Atk || deft_in_defense(&view))
+        && can_swing(state, enemy, &view)
+        && attack_restriction(state, enemy, target).is_ok()
 }
 
 #[cfg(test)]
