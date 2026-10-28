@@ -517,6 +517,15 @@ fn why_ability_unusable(
         return Err("an ability is activated in the main phase".into());
     }
 
+    // R1876000: a card whose own Activate is refused (Stinkyscape #26 ZolarKeth's University).
+    if card
+        .memory
+        .get(crate::effects::activations::OWN_ACTIVATE_REFUSED_KEY)
+        == Some(&Value::Bool(true))
+    {
+        return Err("that card can't use its own Activate".into());
+    }
+
     let allowed = uses_allowed(card, decl);
     if ability_uses_this_turn(state, card, &decl.id) >= allowed {
         return Err(if allowed == 1 {
