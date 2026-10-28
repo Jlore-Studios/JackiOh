@@ -20,9 +20,9 @@
 //!     entered (R1829000) with no event (R212): one dormant in the last state read (`dormant`) that
 //!     acts now, on a side no `rolledBack` restored and not the card a `fused` kept, entered inside the
 //!     action, its stint kept, on the turn of the action its `summonedTurn` names (the last when it
-//!     names none); one that may have been uncovered inside the action (dormant before, or in a zone
-//!     an entry event or a `cardAnnounced` named) takes `summonedTurn`'s word when it names a turn of
-//!     the action, as a `readied` stint does;
+//!     names none); one that may have been uncovered inside the action (dormant before, in a zone
+//!     an entry event or a `cardAnnounced` named, or anywhere in an action that rotated the field)
+//!     takes `summonedTurn`'s word when it names a turn of the action, as a `readied` stint does;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
 //!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
 //!     barred from the target reads as this stint's spend (R1202);
@@ -1715,9 +1715,14 @@ impl InvariantMonitor {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
+        // R14: a rotation moves every pile one step along its ring, so a pile a play covered in the zone
+        // its event named may be uncovered inside the action in another (Core #52 Silly Silas into a
+        // zone a Stack card holds, rotating that pile, then dying to a trap: fuzz seed 128, #2285).
+        let mut rotated = false;
         for event in events {
             match event {
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
+                GameEvent::Rotated { .. } => rotated = true,
                 GameEvent::Summoned {
                     player, row, lane, ..
                 } => landed.push((*player, *row, *lane)),
@@ -1759,7 +1764,7 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let may_have_been = was_dormant || rotated || landed.contains(&(player, row, lane));
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
