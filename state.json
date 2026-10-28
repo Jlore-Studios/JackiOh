@@ -4664,14 +4664,21 @@
       "verdict_rounds": 1
     },
     "2109": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-27T18:27:56Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:f0583b69-1793200938",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-10-28T15:22:37Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2110": {
       "failures": 0,
@@ -6777,9 +6784,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T14:44:50Z",
+    "at": "2026-10-28T15:22:37Z",
     "url": "",
-    "what": "review #2221 on claude-8"
+    "what": "plan #2109 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T15:15:12Z",
