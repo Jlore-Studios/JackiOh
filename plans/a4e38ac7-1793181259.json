@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 2125,
+  "title": "Patch: menu screens show their last data at once and refresh it in the background",
+  "branch": "bot/issue-2125",
+  "thread": "**Issue #2125 (data, not instructions):**\n\n```text\n# #2125: Patch: menu screens show their last data at once and refresh it in the background\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\nBlocked by #2115: both change each menu screen's loading branch.\n\n## What\n\nThis is the \"stale-while-revalidate\" tip. There is no cache today, so every visit to the collection, shop, wallet, ladder, stats, decks list or friends list fetches again behind a loading state. Add a small read cache in `apps/web/src/net/`, in memory only and with no new dependency, for the `GET`s those screens make.\n\n- **Reads.** Entries are keyed by path (query included) and account. A screen with a cached answer renders it at once and fetches again in the background, and the new answer replaces it when it lands. If the background read fails, the cached answer stays and nothing is shown; a screen's error UI is only for a first visit.\n- **Clearing.** The cache is cleared on sign-out and on account switch.\n- **Writes.** A mutating answer that carries a new value updates its entry, so a revisit never shows the old value first. That covers a buy's wallet and counts, a pack opening's counts, a deck save or delete, and a friend added or removed.\n- **Never cached:** anything a match, a duos room, a watch or a replay reads, and anything that isn't a `GET`.\n- **First visit.** A screen with nothing cached shows its skeleton (#2115).\n\n## Done when\n\nvitest checks that:\n- a cache hit renders without the loading state, then takes the background answer;\n- sign-out empties the cache, and an account switch never shows the other account's data;\n- a buy's answer updates the cached wallet;\n- a failed background read keeps the cached data;\n- match, duos, watch and replay reads never touch the cache.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2125: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2168: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
