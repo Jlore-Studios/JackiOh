@@ -50,18 +50,17 @@
    one names the same button more specifically. The ring is still the first box-shadow layer. */
 .board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]) {
   border-color: var(--pal-green-200);
-  background: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
+  background: var(--pal-green-500);
   color: var(--pal-brass-950);
   text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 30%, transparent);
   box-shadow:
     0 0 0 2px var(--glow-ready),
     0 0 14px 3px color-mix(in srgb, var(--glow-ready) 55%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent),
-    0 2px 0 var(--pal-green-900);
+    var(--shadow-inset-top);
 }
 
 .board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]):hover {
-  background: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
+  background: var(--pal-green-500);
 }
 
 /* An empty slot is mostly background, so a ready zone also takes a faint tint, and its slot mark

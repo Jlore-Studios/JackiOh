@@ -80,7 +80,7 @@
 .clock-line[data-urgency="last10"] {
   padding: 2px 10px 2px 4px;
   border: 1px solid var(--clock-urgent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--clock-urgent-deep);
   color: var(--clock-urgent-ink);
   font-size: var(--type-lg-em);
@@ -215,15 +215,13 @@
 .clock-fuse {
   position: fixed;
   inset: 0;
-  z-index: 37;
+  z-index: var(--z-clock);
   pointer-events: none;
 }
 
 .clock-fuse-edge {
   position: absolute;
-  background:
-    repeating-linear-gradient(var(--fuse-angle, 90deg), color-mix(in srgb, var(--pal-wood-600) 55%, transparent) 0 5px, transparent 5px 9px),
-    linear-gradient(var(--fuse-angle, 90deg), var(--clock-ember), var(--clock-ember-hot));
+  background: var(--clock-ember);
   box-shadow: 0 0 8px color-mix(in srgb, var(--pal-orange-400) 75%, transparent);
   transition: transform 200ms linear;
   will-change: transform;
@@ -276,8 +274,8 @@
   width: 12px;
   height: 12px;
   margin: -4px 0 0 -4px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--pal-white) 0 22%, var(--clock-ember-hot) 38%, var(--clock-ember) 60%, transparent 72%);
+  border-radius: var(--radius-round);
+  background: var(--clock-ember-hot);
   box-shadow: 0 0 12px 4px color-mix(in srgb, var(--pal-orange-400) 70%, transparent);
   transition:
     left 200ms linear,
@@ -293,7 +291,7 @@
   left: 50%;
   width: 3px;
   height: 3px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--clock-ember-hot);
   box-shadow:
     6px -4px 0 0 var(--clock-ember),
@@ -355,7 +353,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(130% 110% at 50% 100%, color-mix(in srgb, var(--pal-red-500) 60%, transparent), color-mix(in srgb, var(--pal-red-500) 18%, transparent) 45%, transparent 75%);
+  background: color-mix(in srgb, var(--pal-red-500) 18%, transparent);
   opacity: 0.2;
   pointer-events: none;
   will-change: opacity;

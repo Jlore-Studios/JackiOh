@@ -97,7 +97,7 @@
 
 .craft-block {
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--pal-white) 4%, transparent);
   color: inherit;
   font: inherit;
@@ -155,7 +155,7 @@
   min-height: 140px;
   padding: 10px;
   border: 1px dashed var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .craft-empty {
@@ -167,7 +167,7 @@
 
 .craft-hat {
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-white) 3%, transparent);
   padding: 8px;
   display: flex;
@@ -264,7 +264,7 @@
   box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--pal-wood-900);
   color: var(--pal-slate-100);
   font-family: var(--font-mono);
@@ -302,10 +302,10 @@
 
 .craft-ghost {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-drag);
   transform: translate(-50%, -130%);
   border: 1px solid currentcolor;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: Canvas;
   padding: 4px 8px;
   pointer-events: none;

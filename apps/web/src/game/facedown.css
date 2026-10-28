@@ -33,7 +33,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: var(--z-raised);
   border-radius: inherit;
   background:
     repeating-linear-gradient(135deg, color-mix(in srgb, var(--pal-wood-900) 42%, transparent) 0 5px, color-mix(in srgb, var(--pal-wood-900) 10%, transparent) 5px 10px),
@@ -68,7 +68,7 @@
    that reads at a glance; the tooltip and the hidden text still say it in full. */
 .unrevealed-tag {
   position: absolute;
-  z-index: 4;
+  z-index: var(--z-hover);
   right: 4%;
   bottom: 4%;
   left: 4%;
@@ -78,7 +78,7 @@
   gap: 3px;
   padding: 1px 4px;
   border: 1px solid color-mix(in srgb, var(--pal-slate-100) 90%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 92%, transparent);
   color: var(--pal-slate-100);
   font-size: clamp(var(--type-3xs), 11cqw, var(--type-sm));
@@ -117,7 +117,7 @@
     aspect-ratio: 1;
     padding: 0;
     border-width: 2px;
-    border-radius: 50%;
+    border-radius: var(--radius-round);
   }
 
   .unrevealed-tag > .cf-icon {

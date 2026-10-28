@@ -4,7 +4,7 @@
 .opponent-aim {
   position: fixed;
   inset: 0;
-  z-index: 59;
+  z-index: var(--z-aim);
   overflow: visible;
   pointer-events: none;
 }

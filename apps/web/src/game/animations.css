@@ -66,7 +66,7 @@
 [data-animating="cardPlayed"] {
   animation-name: jk-card-played;
   animation-duration: calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  z-index: 40;
+  z-index: var(--z-modal);
 }
 
 /* --- summoned: card scales in at the zone (250 ms) -------------------------------------- */
@@ -158,10 +158,8 @@
   translate: -50% -50%;
   box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--jk-land) 60%, var(--pal-white));
-  border-radius: var(--radius, 7px);
-  background:
-    radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--pal-white) 55%, transparent), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--jk-land) 55%, var(--pal-slate-800)), var(--pal-slate-900));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--jk-land) 55%, var(--pal-slate-800));
   box-shadow:
     0 0 16px 3px color-mix(in srgb, var(--jk-land) 70%, transparent),
     inset 0 0 10px color-mix(in srgb, var(--pal-white) 30%, transparent);
@@ -234,7 +232,7 @@
 [data-animating="attackDeclared"] {
   animation-name: jk-lunge;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  z-index: 30;
+  z-index: var(--z-veil);
 }
 
 /* --- attackCancelled: attacker snaps back (350 ms) -------------------------------------- */
@@ -491,18 +489,9 @@
   right: 0;
   top: 0;
   height: 200%;
-  z-index: 3;
+  z-index: var(--z-overlay);
   pointer-events: none;
-  background: linear-gradient(
-    to top,
-    var(--bg-sunken) 0%,
-    var(--bg-sunken) 36%,
-    var(--pal-wood-800) 40%,
-    var(--pal-red-500) 43%,
-    color-mix(in srgb, var(--radiant) 80%, var(--pal-white)) 45%,
-    color-mix(in srgb, var(--pal-orange-400) 40%, transparent) 47%,
-    transparent 50%
-  );
+  background: color-mix(in srgb, var(--pal-orange-400) 40%, transparent);
   animation-name: jk-burn-climb;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
@@ -586,7 +575,7 @@
 [data-animating="bounced"] {
   animation-name: jk-bounce-to-hand;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  z-index: 35;
+  z-index: var(--z-banner);
 }
 
 /* --- The three overflows (R318): the board's own notices (OverflowNotices.tsx) ------------------ *
@@ -1208,7 +1197,7 @@
   animation-name: jk-cross-centre;
   animation-duration: calc(450ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 45;
+  z-index: var(--z-result);
 }
 
 /* With the effects layer on, a stand-in of the stolen card flies to its new zone (fx/stage.ts), so
@@ -1361,7 +1350,7 @@
 [data-animating="trapFired"] {
   animation-name: jk-trap-flip;
   animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  z-index: 50;
+  z-index: var(--z-spotlight);
 }
 
 /* A Field Trap stays on the board after it fires (§3.3), so it keeps the flip and drops the
@@ -1564,7 +1553,7 @@
   left: 50%;
   top: 50%;
   translate: -50% -50%;
-  z-index: 39;
+  z-index: var(--z-showcase);
   display: grid;
   justify-items: center;
   gap: 6px;
@@ -1573,13 +1562,9 @@
   max-width: calc(100vw - 32px);
   padding: 20px 28px 22px;
   border: 1px solid color-mix(in srgb, var(--selected) 45%, var(--line-bright));
-  border-radius: 14px;
-  background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--pal-gold-300) 10%, transparent), transparent 70%),
-    linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 8%, transparent),
-    0 18px 48px color-mix(in srgb, var(--pal-black) 70%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-inset-top), var(--shadow-3);
   text-align: center;
   animation-name: jk-result-overlay;
   animation-duration: calc(220ms * var(--anim-scale) * var(--anim-squeeze, 1));
@@ -1642,7 +1627,7 @@
 .result-overlay__reopen {
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 700;
 }
 
@@ -1679,7 +1664,7 @@
   align-items: center;
   gap: 12px;
   padding: 6px 8px 6px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 [data-form="chip"] > .result-overlay__word {
@@ -1724,8 +1709,8 @@
   pointer-events: none;
   position: fixed;
   inset: 0;
-  z-index: 39;
-  background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--pal-wood-950) 55%, transparent), color-mix(in srgb, var(--pal-wood-950) 82%, transparent));
+  z-index: var(--z-showcase);
+  background: color-mix(in srgb, var(--pal-wood-950) 55%, transparent);
   animation-name: jk-result-scrim;
   animation-duration: calc(220ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-fill-mode: both;

@@ -23,7 +23,7 @@
   left: 3px;
   width: 16px;
   transform: none;
-  z-index: 2;
+  z-index: var(--z-raised);
 }
 
 .zone-lock-shackle {

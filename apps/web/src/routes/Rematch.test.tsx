@@ -231,7 +231,7 @@ describe("RematchButtons in the result panel (#477)", () => {
       ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child { border-color: var(--primary-edge",
     );
     expect(animations).toMatch(
-      /\.result-overlay__actions > \.rematch button, \.result-overlay__reopen \{ min-height: 44px; padding: 8px 18px; border-radius: 10px; font-weight: 700; \}/,
+      /\.result-overlay__actions > \.rematch button, \.result-overlay__reopen \{ min-height: 44px; padding: 8px 18px; border-radius: var\(--radius-md\); font-weight: 700; \}/,
     );
     expect(reveal).toContain(
       ".result-overlay__actions > .rematch, .result-overlay__actions > .rematch > .rematch-buttons { display: contents; }",
