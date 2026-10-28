@@ -351,7 +351,8 @@ pub fn switch_position(
     Ok(())
 }
 
-/// R1174000: why a Frozen Unit may neither declare an attack nor switch its own position.
+/// R1174000: why a Frozen Unit may neither declare an attack nor switch its own position, nor (R2246000)
+/// use an Activate.
 pub const FROZEN_REFUSAL: &str = "that Unit is Frozen";
 
 /// §4.2 step 1: "choose an attacker that can attack", in the order the step lists — exertion

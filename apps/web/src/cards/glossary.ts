@@ -266,10 +266,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "An attack on it is legal only from the enemy unit zone of its own lane",
   ),
   Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
-  // R1174000: a status set by Freeze (§6.3).
+  // R1174000: a status set by Freeze (§6.3); R2246000: it stops an Activate too.
   Frozen: status(
     "Frozen",
-    "Can't attack or switch position until it thaws: it loses its next chance to do either, and thaws at the end of the turn it could have done it",
+    "Can't attack, switch position or use its Activate until it thaws: it loses its next chance to attack or switch, and thaws at the end of the turn it could have done it",
   ),
   // R1839000: Stinkyscape's status, which no effect reaches until it awakens.
   Dormant: status(

@@ -116,11 +116,11 @@ export function enchantmentWords(enchantment: Enchantment, radiant = false): str
 /** B5 E35, §6.1: what a Berserk unit's badge says. */
 export const BERSERK_WORDS = "Berserk: at the start and end of its controller's turn it attacks its own hero";
 
-/** R1174000, §6.1: what a Frozen unit's badge says. */
-export const FROZEN_WORDS = "Frozen: can't attack or switch position; it thaws at the end of the turn it could have acted in";
+/** R1174000, R2246000, §6.1: what a Frozen unit's badge says. */
+export const FROZEN_WORDS = "Frozen: can't attack, switch position or use its Activate; it thaws at the end of the turn it could have acted in";
 
-/** R1848000, §6.1: what the badge of a unit Frozen forever says. */
-export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack or switch position, and never thaws";
+/** R1848000, R2246000, §6.1: what the badge of a unit Frozen forever says. */
+export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack, switch position or use its Activate, and never thaws";
 
 /** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
 export const FROZEN_GLYPH = "\u2744\uFE0E";
