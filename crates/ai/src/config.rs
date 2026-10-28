@@ -26,10 +26,17 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
 pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
 pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
 
-/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
-/// decision, 1.0 follows the AI at every decision as it did before the knob.
+/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays the skill miss
+/// (`skill::skill_miss_action`, R2214000) at every decision, 1.0 follows the AI at every decision as it
+/// did before the knob.
 pub const AI_SKILL_MIN: f64 = 0.0;
 pub const AI_SKILL_MAX: f64 = 1.0;
+
+/// R2214000: the softmax temperature, in `evaluate`'s points (GREEDY_EVAL), over a skill miss's one-ply
+/// scores (`skill::skill_miss_action`): a move 4 points below the best is drawn e⁻¹ times as often. Of
+/// 3, 4, 6, 8 and 12 (#2214's plan, 840 turn starts), 4 is the highest that ends a turn with a card it
+/// can play under half as often as the random policy (0.038 to 0.096).
+pub const AI_SKILL_MISS_TEMPERATURE: f64 = 4.0;
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {

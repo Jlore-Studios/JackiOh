@@ -606,9 +606,9 @@ series still makes its picks.
   (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
-  no draw at full or zero skill); a decision the roll does not give to the AI is the random policy's
-  (`random_action`) with no search, whose draw-offer answer is still the bot's own roll's, and `r188_forbidden`
-  filters either.
+  no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
+  (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
+  draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
   `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
@@ -680,7 +680,7 @@ series still makes its picks.
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
-  `decide_styled` or the random policy, and no clock), fits each strength's Elo offset from the
+  `decide_styled` or the skill miss, and no clock), fits each strength's Elo offset from the
   strongest and prints the two config rows; it reads no database, and its anchor is the seed of
   record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
   seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
@@ -690,8 +690,8 @@ series still makes its picks.
 
 ### Skill to Elo (R747000)
 
-A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being a random
-legal action (`crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
+A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being the skill
+miss (R2214000; `crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
 Elo a bot at that skill is expected to hold: `SKILL_ELO_TABLE` read by straight lines between its
 rows, clamped to its ends, with the full-skill reference at `SKILL_ELO_ANCHOR` (1832 since generation 13's
 calibration, `docs/bot-calibration.md`, and 1200, the strongest bot's old seed, before it: high, so that a
@@ -707,18 +707,19 @@ prior: a bot's live Glicko-2 rating (R610) is the calibration that goes on.
 | 0.75 | 1080 | −123 | 66 of 200 (−123) | not run |
 | 1 (the reference) | 1200 | 0 | | |
 
-This table is R747000's measurement, held at 1200. Since generation 13 the rows of `SKILL_ELO_TABLE` are
-R748000's calibration of the strengths instead, 1216, 1383, 1536, 1692 and 1832 (`docs/bot-calibration.md`,
-Results). Its gaps to the reference agree with this table's to within 21 Elo, and the anchor moved by the
-promotions of generations 10 to 13.
+This table is R747000's measurement, held at 1200, of the miss as it was then, a uniform random move.
+Since generation 13 the rows of `SKILL_ELO_TABLE` are R748000's calibration of the strengths instead, and
+with the skill miss since R2214000 they are 1517, 1576, 1666, 1716 and 1832 (`docs/bot-calibration.md`,
+Results). Generation 13's calibration, with the uniform miss, agreed with this table's gaps to the
+reference to within 21 Elo, and the anchor moved by the promotions of generations 10 to 13.
 
 The games are `cargo jackioh arena` between this build's AI at each skill and the reference, and
 between each skill and the random policy, in a release build, on seeds a run's own name gives
 (`elo-747/…`), with the seats alternating. "Against the reference" is the wins of the skill's side;
 the figures in brackets are the Elo gap those games give and, against random, the gap to the
-reference after adding the random policy's. The 0 row is the random policy exactly (skill 0 plays
-`random_action` and nothing else), so its row is the reference's games against `random`: 779 wins of
-800 for the reference. The reference against 0.0 is not run again, and 0.75 against random, which
+reference after adding the random policy's. Before R2214000 the 0 row was the random policy exactly
+(skill 0 played `random_action` and nothing else), so its row is the reference's games against `random`:
+779 wins of 800 for the reference. The reference against 0.0 is not run again, and 0.75 against random, which
 the AI wins nearly always, resolves nothing, so it is not run. A cross-check ladder of adjacent
 skills, 100 games each, agrees with the table to within its noise: 0.5 beat 0.25 73–27 (+173, the
 table's +160), 0.75 beat 0.5 73–27 (+173, the table's +180), the reference beat 0.75 74–26 (+182,
@@ -730,7 +731,8 @@ the table's +120).
    `cargo jackioh arena --a self --b random --games 200 --seed "elo-<run>/random-vs-ref"`, four
    times with the seeds `…/random-vs-ref`, `…-b`, `…-c` and `…-d` (the shut-out needs the games);
    then for each skill
-   `S` in 0.25, 0.5 and 0.75, `--a self --a-skill S --b self --games 200 --seed "elo-<run>/sS-vs-ref"`
+   `S` in 0, 0.25, 0.5 and 0.75, `--a self --a-skill S --b self --games 200 --seed "elo-<run>/sS-vs-ref"`
+   (skill 0 is the skill miss since R2214000, no longer the random policy)
    (the duel lines and the tally are on stderr, with no `--out`), and for 0.25 and 0.5,
    `--a self --a-skill S --b random --games 200 --seed "elo-<run>/sS-vs-random"`.
 2. Score each run from the measured side: `p = (wins + draws / 2) / games`, held inside `[1 / 2N,

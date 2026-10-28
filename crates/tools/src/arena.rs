@@ -8,8 +8,9 @@
 //!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
 //!
 //! Either agent may be skilled (R747000, `--a-skill`/`--b-skill`): at skill `s` an AI decision follows
-//! the agent with chance `s` and is a random legal action otherwise, rolled on the seat's own stream, so
-//! the skill-to-Elo curve is measured with the arena's own games. `random` has no skill to set.
+//! the agent with chance `s` and is the skill miss otherwise (R2214000, `jackioh_ai::skill_miss_action`),
+//! rolled and drawn on the seat's own stream, so the skill-to-Elo curve is measured with the arena's
+//! own games. `random` has no skill to set.
 //!
 //! Game `n`'s seed is `<base>:<n>`; agent `a` sits p1 on odd games. A paired series (`--paired`,
 //! R850000) plays each deal twice with the seats swapped: deal `d`'s seed is `<base>:<d>`, game `2d −
@@ -46,7 +47,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, anyhow, bail};
 use jackioh_ai::{
     AI_GATE_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, AiDeckOptions, Decision, DecisionReason, RejectedAction,
-    SearchBudget, SimPanic, build_ai_deck, plays_best, random_action, redact,
+    SearchBudget, SimPanic, build_ai_deck, plays_best, random_action, redact, skill_miss_action,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
@@ -150,8 +151,8 @@ pub struct Args {
     /// else stdout.
     #[arg(long)]
     pub out: Option<PathBuf>,
-    /// R747000: agent a's skill in [0, 1], the chance each decision follows its AI, the rest a random
-    /// legal action. 1 plays the AI as it is. Not for `random`.
+    /// R747000: agent a's skill in [0, 1], the chance each decision follows its AI, the rest the skill
+    /// miss (R2214000). 1 plays the AI as it is. Not for `random`.
     #[arg(long, default_value_t = AI_SKILL_MAX)]
     pub a_skill: f64,
     /// R747000: agent b's skill, as `--a-skill`.
@@ -671,7 +672,7 @@ struct Choice {
 }
 
 impl Choice {
-    /// An answer that is only its action: the random policy's.
+    /// An answer that is only its action: the random policy's, or a skill miss's (R2214000).
     fn plain(action: Option<ActionBody>) -> Choice {
         Choice {
             action,
@@ -707,9 +708,10 @@ fn told_of(answer: &Value) -> (bool, usize) {
 
 /// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what it
 /// threw. `self` decides on `redact(state, seat)`; `random` plays on the referee's state. R747000: a
-/// skilled agent's decision that the seat's roll does not give to the AI is the random policy's, on
-/// the referee's state as `random`'s is, drawn on the same stream; a `bin:` agent is asked only when
-/// the roll keeps it, so the protocol is the same.
+/// skilled agent's decision that the seat's roll does not give to the AI is the skill miss's
+/// (R2214000), handed the referee's state as `random` is (it reads only its legal list there, and
+/// scores what the seat sees), drawn on the same stream; a `bin:` agent is asked only when the roll
+/// keeps it, so the protocol is the same.
 fn choose_for(
     live: &mut Live,
     skill: f64,
@@ -720,7 +722,7 @@ fn choose_for(
     budget: SearchBudget,
 ) -> Result<Choice, String> {
     if !matches!(live, Live::Random) && !plays_best(skill, rng) {
-        return catch_unwind(AssertUnwindSafe(|| random_action(state, seat, rng)))
+        return catch_unwind(AssertUnwindSafe(|| skill_miss_action(state, seat, rng)))
             .map(Choice::plain)
             .map_err(|panic| agent::panic_message(&*panic));
     }
@@ -1665,21 +1667,25 @@ mod tests {
     }
 
     #[test]
-    fn r747000_a_zero_skill_agent_plays_as_random_does() {
+    fn r2214000_a_zero_skill_agent_plays_the_miss_and_replays() {
         jackioh_cards::register_all();
         let zero = entrant_at(&AgentSpec::SelfAi, 0.0).unwrap();
         let random = entrant(&AgentSpec::Random).unwrap();
         // The same shadow ban, so the same decks: only who decides differs.
-        let skilled = setups(&zero, &random, 2, false, |n| format!("r747000-zero:{n}")).unwrap();
-        let plain = setups(&random, &random, 2, false, |n| format!("r747000-zero:{n}")).unwrap();
-        let skilled = play_games(&skilled).unwrap();
+        let skilled = setups(&zero, &random, 2, false, |n| format!("r2214000-zero:{n}")).unwrap();
+        let plain = setups(&random, &random, 2, false, |n| format!("r2214000-zero:{n}")).unwrap();
+        let first = play_games(&skilled).unwrap();
+        let second = play_games(&skilled).unwrap();
         let plain = play_games(&plain).unwrap();
-        for (skilled, plain) in skilled.iter().zip(&plain) {
-            assert_eq!(skilled.game.decks, plain.game.decks);
-            assert_eq!(skilled.log, plain.log, "game {}", skilled.game.n);
-            assert_eq!(skilled.hash, plain.hash, "game {}", skilled.game.n);
-            assert!(skilled.result.is_some());
-            assert_eq!(skilled.thrown, Vec::<String>::new());
+        for ((first, second), plain) in first.iter().zip(&second).zip(&plain) {
+            // The miss draws on the seat's own stream, so the game reproduces and its log replays.
+            assert_eq!(first.log, second.log, "game {}", first.game.n);
+            assert!(replays(first).unwrap(), "game {}", first.game.n);
+            assert!(first.result.is_some());
+            assert_eq!(first.thrown, Vec::<String>::new());
+            // A miss is not the random policy's move.
+            assert_eq!(first.game.decks, plain.game.decks);
+            assert_ne!(first.log, plain.log, "game {}", first.game.n);
         }
     }
 

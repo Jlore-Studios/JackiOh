@@ -30,7 +30,7 @@ all, on every core the machine has. Each game is two strengths with All Random d
 lower strength of the pair in the first seat in the odd games and the second in the even ones; each
 seat plays as a ladder bot's seat does (`bots::seat`): the skill's roll first, on the seat's own
 stream, then `decide_styled` at its strength on its node budget when the AI has the decision and the
-random policy's move (`random_action`) when it does not, with no wall clock. A game is a function
+skill miss (`skill_miss_action`, R2214000) when it does not, with no wall clock. A game is a function
 of its seed (`bot-calibration:gen<generation>:<a>v<b>:<n>`, `--seed` changes it), so the same command
 on the same commit plays the same games on any number of threads. A game that reaches no result in
 `BOT_CALIBRATION_MAX_ACTIONS` moves, or in which one turn takes more than
@@ -142,6 +142,110 @@ to the new AI's strength.
   and `bot-calibrate-live` replaces the anchor as soon as people have played the reference.
 
 ## Results
+
+### The skill miss (issue #2214)
+
+Run on 2026-10-28 on `main` at `eba63924d` (generation 13) with R2214000's skill miss in place of the
+random policy, from the repo root, as
+
+```sh
+cargo build --release -p jackioh-server
+target/release/jackioh-server bot-calibrate
+```
+
+(the same command as `cargo run --release -p jackioh-server -- bot-calibrate`; 100 games per pair, the
+default), on 4 threads, in about 50 minutes. No promotion has landed since generation 13, so the anchor
+is the seed of record, 1832. The report is the command's output, unedited but for its heading, one level
+down.
+
+#### Ladder bot calibration (R748000)
+
+Generation 13, seed `bot-calibration:gen13`, 100 games per pair, anchor 1832.0 (the seed of record 1832.0, no promotion since generation 13).
+
+Wins, draws and losses are the lower strength's.
+
+| Pair | Wins | Draws | Losses | Unfinished |
+| --- | ---: | ---: | ---: | ---: |
+| 0 v 1 | 43 | 0 | 56 | 1 |
+| 0 v 2 | 28 | 0 | 72 | 0 |
+| 0 v 3 | 24 | 0 | 75 | 1 |
+| 0 v 4 | 13 | 0 | 87 | 0 |
+| 1 v 2 | 37 | 0 | 61 | 2 |
+| 1 v 3 | 35 | 0 | 65 | 0 |
+| 1 v 4 | 15 | 0 | 82 | 3 |
+| 2 v 3 | 41 | 0 | 57 | 2 |
+| 2 v 4 | 26 | 0 | 70 | 4 |
+| 3 v 4 | 37 | 0 | 61 | 2 |
+
+| Strength | Offset | ± | Seed |
+| --- | ---: | ---: | ---: |
+| 0 | -314.8 | 19.9 | 1517.0 |
+| 1 | -255.6 | 19.0 | 1576.0 |
+| 2 | -166.4 | 18.5 | 1666.0 |
+| 3 | -115.6 | 18.7 | 1716.0 |
+| 4 (reference) | +0.0 | 0.0 | 1832.0 |
+
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, 1832.0];
+pub const BOT_CALIBRATION_GENERATION: i64 = 13;
+
+#### Reading it
+
+| Pair | Gap | ± of the gap | Gap in its ±'s | ± from the printed ±'s alone | Gap in those |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0 v 1 | 59.2 | 24.1 | 2.46 | 27.5 | 2.15 |
+| 1 v 2 | 89.2 | 23.5 | 3.79 | 26.5 | 3.36 |
+| 2 v 3 | 50.8 | 23.3 | 2.18 | 26.3 | 1.93 |
+| 3 v 4 | 115.6 | 24.8 | 4.66 | 18.7 | 6.18 |
+
+- **Every neighbouring pair stands apart.** Each gap is more than twice its standard error. The
+  error of a gap is the error of a difference of two offsets, which the fit's information matrix
+  gives with the reference held at 0: the same Bradley-Terry fit, read off the tallies above. The
+  printed ±'s are each offset's own information alone and leave out how two offsets move together
+  through the games they share; added in squares, as if the two were independent, they put 2 v 3 at
+  1.93 of them. Either way 2 v 3 is the closest pair, and its head-to-head (41 wins of 98 finished
+  games for strength 2, -57 Elo) agrees with the fit. A `--games=300` run would cut every error by
+  about √3.
+- **The spread shrank, from 616.6 to 314.8.** A one-ply reading of the board plays far better than a
+  uniform move: the weakest strength won 13 games of 100 against the reference, where it won 1 at
+  generation 13, and the gaps between neighbours are 51 to 116 Elo where they were 141 to 168.
+  #2214 asked for the strengths to stay at least as far apart as they were. No temperature does that
+  and keeps a miss a beginner's move: the issue's plan measured the miss's mistakes at temperatures of
+  3, 4, 6, 8 and 12 and its strength up to 16, and at 6 it already ends a turn with a card it could
+  play about half as often as the random policy (0.049 against 0.096), while even at 16 the weakest
+  strength won 6 of 100 against the reference. A wider
+  spread needs a miss weaker than one-ply play.
+- **The rows went in.** The printed row is over `BOT_SEED_RATINGS` and the same readings over
+  `SKILL_ELO_TABLE`, so `r747000_strength_seed_ratings_match_skill_curve` holds them equal; the anchor
+  and `BOT_CALIBRATION_GENERATION` are unchanged. Strength 0 now seeds at 1517, not 1216, which is 517
+  above a new player's `RATING_START`; the fallback still gives a player below every bot the closest
+  one (R1453). Only new bots take the seeds: a bot already in the pool keeps its rating and its own
+  games move it (R610).
+- **Unfinished games.** 15 of 1000 were unfinished, against 1 at generation 13. They fall mostly in the
+  pairs with the reference (9 of the 15), one of whose seats never misses, rather than in strength 0's
+  pairs (2), one of whose seats misses every decision. Stinkyscape's release (#2178) has shipped since
+  generation 13's run.
+- **The arena agrees on the order.** `cargo jackioh arena --a self --a-skill S --b self --games 100
+  --seed "elo-2214/sS-vs-ref"`, in a release build, for each weaker skill, scored by step 2 of
+  `crates/server/README.md`'s "Skill to Elo", reads:
+
+  | Skill | Wins of 100 against the reference | Gap | ± | Calibration's offset |
+  | --- | ---: | ---: | ---: | ---: |
+  | 0 | 9 | -401.9 | 60.7 | -314.8 |
+  | 0.25 | 26 | -181.7 | 39.6 | -255.6 |
+  | 0.5 | 30 | -147.2 | 37.9 | -166.4 |
+  | 0.75 | 38 | -85.0 | 35.8 | -115.6 |
+
+  Each skill reads above the one before, and each reading is within two of its combined errors of the
+  calibration's offset; the arena's reference is the AI at the arena's budget and the calibration
+  plays the strengths' own budgets, so the two need not agree further. 100 games read to about ±70
+  Elo (95%) near an even match and more for a lopsided one, so 0.25's reading 74 above the calibration
+  is inside the noise. The rows pasted are the calibration's.
+- **The miss's mistakes.** Over the turn starts of 20 seeded random games
+  (`r2214000_a_strength_zero_miss_makes_far_fewer_beginners_mistakes_than_random`,
+  `crates/server/tests/bots/seat.rs`), the random policy ended the turn while a card could be played
+  0.094 of the time (95 of 1008 picks) and the miss 0.019 (19), and made an attack the greedy baseline
+  scores below standing still 0.066 of the time (20 of 302) and the miss 0.010 (3).
 
 ### Generation 13 (issue #1680)
 

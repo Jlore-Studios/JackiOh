@@ -1,5 +1,5 @@
 //! R747000 (SPEC §9.12, R1452): the skill knob on a seat. At skill 1.0 a seat decides exactly as it
-//! did before the knob and takes no extra draw, at 0.0 it plays §10.7's random policy under the same
+//! did before the knob and takes no extra draw, at 0.0 it plays the skill miss (R2214000) on the same
 //! stream, in between each decision rolls the seat's own seeded stream, and every run reproduces.
 
 use jackioh_ai::{
@@ -66,31 +66,34 @@ fn r747000_full_skill_matches_unskilled() {
 }
 
 #[test]
-fn r747000_zero_skill_equals_random_controller() {
+fn r2214000_zero_skill_plays_the_miss_not_the_random_policy() {
     let skilled = config(
-        "r747000-zero",
+        "r2214000-zero",
         seat(Some(AI_SKILL_MIN)),
         seat(Some(AI_SKILL_MIN)),
-        None,
+        Some(SHORT_GAME),
     );
     let random = config(
-        "r747000-zero",
+        "r2214000-zero",
         SeatController::Random,
         SeatController::Random,
-        None,
+        Some(SHORT_GAME),
     );
     let at_zero = play_match(&skilled, &mut MatchHooks::default());
+    let again = play_match(&skilled, &mut MatchHooks::default());
     let plain = play_match(&random, &mut MatchHooks::default());
 
-    assert!(plain.result.is_some());
-    assert_eq!(at_zero.log, plain.log);
-    assert_eq!(at_zero.hash, plain.hash);
-    assert_eq!(at_zero.result, plain.result);
-    // No search ran: the AI was never asked to decide.
+    // The miss draws only on the seat's own stream, so the game replays.
+    assert_eq!(again.log, at_zero.log);
+    assert_eq!(again.hash, at_zero.hash);
+    // No search ran, and every miss was a legal move: the AI was never asked to decide.
     assert_eq!(at_zero.decisions, 0);
     assert_eq!(at_zero.nodes, 0);
+    assert_eq!(at_zero.fallbacks, 0);
     assert!(at_zero.rejected.is_empty());
     assert!(at_zero.thrown.is_empty());
+    // A miss is not §10.7's uniform draw.
+    assert_ne!(at_zero.log, plain.log);
 }
 
 #[test]

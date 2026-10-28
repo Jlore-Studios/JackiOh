@@ -11,13 +11,13 @@
 //! Each game is a function of its seed: its decks, its engine rng and each seat's AI stream are all
 //! drawn from it, and the AI's search is held to a node budget with no clock, so the tallies are the
 //! same whatever the thread count. A game is the ladder bot's own decision (`decide_styled` at its
-//! strength, its skill's roll included (R747000)) and nothing of its manner: no think time, no
-//! concession, no idle turn.
+//! strength, its skill's roll and its skill miss included (R747000, R2214000)) and nothing of its
+//! manner: no think time, no concession, no idle turn.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use jackioh_ai::{AiOptions, AiStyle, decide_styled, plays_best, random_action};
+use jackioh_ai::{AiOptions, AiStyle, decide_styled, plays_best, skill_miss_action};
 use jackioh_engine::wire::PerPlayer;
 use jackioh_engine::{Action, PlayerId, Rng, Winner, seat_played_by, seat_to_act};
 
@@ -116,7 +116,8 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
         let home = seat_played_by(&state, seat);
         let strength = strengths[home];
         // R747000: the skill's roll comes first, on the seat's own stream, as the bot seat's does;
-        // a full skill takes no draw. No seat offers a draw here (R188), so none is left to answer.
+        // a full skill takes no draw, and a miss is the skill miss (R2214000). No seat offers a draw
+        // here (R188), so none is left to answer.
         let mut rng = streams[home].clone();
         let chosen = if plays_best(strength.skill, &mut rng) {
             let mut options = AiOptions {
@@ -132,7 +133,7 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
             rng = options.rng;
             decision.map(|decision| decision.action)
         } else {
-            random_action(&state, seat, &mut rng)
+            skill_miss_action(&state, seat, &mut rng)
         };
         streams[home] = rng;
         let body = chosen

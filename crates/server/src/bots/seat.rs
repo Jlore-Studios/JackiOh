@@ -1,12 +1,13 @@
 //! The bot seat (SPEC §9.12, R1452, R639000, R747000): what the match actor runs when a ladder bot owes
 //! the match a move. The bot decides on the AI's `decide_styled` at its strength (its budget and
 //! style, on the spec's resources), off the blocking pool so the actor's runtime never waits on a
-//! search, except that at each decision its strength's skill may hand the move to the random policy
-//! instead (R747000: skill is the chance a decision follows the AI, rolled on the bot's own AI
-//! stream), then waits out a human-paced think time before the move is sent: the delay drawn from the
-//! think-time fits (R1442's `THINK_TIME_FITS`, or the hand-set priors until a fit lands), longer on a
-//! board with more to do and on a turn that wins (R639000), times the bot's speed, less the time the
-//! decision took, inside its acting clock (R79). A targeted play or attack carries the aim a person's
+//! search, except that at each decision its strength's skill may hand the move to the skill miss
+//! instead (R747000, R2214000: skill is the chance a decision follows the AI, rolled on the bot's own
+//! AI stream; a miss is a beginner's move, `skill_miss_action`), then waits out a human-paced think
+//! time before the move is sent: the delay drawn from the think-time fits (R1442's `THINK_TIME_FITS`,
+//! or the hand-set priors until a fit lands), longer on a board with more to do and on a turn that
+//! wins (R639000), times the bot's speed, less the time the decision took, inside its acting clock
+//! (R79). A targeted play or attack carries the aim a person's
 //! client would show (`bots::aim`), which the actor relays a beat before the move (R738).
 //!
 //! The random streams are the server's own, seeded from the match seed and the seat by the actor
@@ -22,7 +23,7 @@
 use std::time::Duration;
 
 use jackioh_ai::{
-    AiOptions, AiStyle, DecisionReason, decide_styled, plays_best, random_action, unanswered_draw_offer,
+    AiOptions, AiStyle, DecisionReason, decide_styled, plays_best, skill_miss_action, unanswered_draw_offer,
 };
 use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
@@ -189,15 +190,15 @@ pub async fn play(job: BotJob) -> BotMove {
                     options.rng.cursor(),
                 )
             } else if unanswered_draw_offer(&state, seat) {
-                // The random policy never answers an offer (§10.7), so the bot declines as the AI does
-                // and the roll below turns that into its own answer (R639000); no draw is taken.
+                // The miss declines an offer as the AI does (R188), with no draw, and the roll below turns
+                // that into the bot's own answer (R639000).
                 (
                     Some(ActionBody::AnswerDraw { accept: false }),
                     false,
                     ai_rng.cursor(),
                 )
             } else {
-                let action = random_action(&state, seat, &mut ai_rng);
+                let action = skill_miss_action(&state, seat, &mut ai_rng);
                 (action, false, ai_rng.cursor())
             };
             let body = chosen

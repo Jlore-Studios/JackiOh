@@ -230,9 +230,11 @@ its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summe
 names the seed, the seat and the first message (`Decision::first_sim_panic`, native only).
 
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
-`[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
-§10.7's policy). `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one
-plays as it did before the knob; `AI_SKILL_MIN` is the random policy exactly, with no search. In
+`[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
+R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
+true state's candidates, read on one determinization of what the seat sees. `None` is `AI_SKILL_MAX`:
+full skill, which takes no draw, so a seat without one plays as it did before the knob; `AI_SKILL_MIN`
+is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
 (`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
 knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The

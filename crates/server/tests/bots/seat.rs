@@ -8,13 +8,22 @@
 //! start and answers a draw offer by the bot's own roll, reading where it stands through a
 //! determinized world (a face-down enemy card included) centred on the even board.
 //!
-//! R747000: the strength's skill is the chance each decision follows the AI, the rest a random legal
-//! action rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before
-//! the knob, and the table's seed ratings are what the skill-to-Elo curve gives their skills.
+//! R747000: the strength's skill is the chance each decision follows the AI, the rest the skill miss
+//! rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before the
+//! knob, and the table's seed ratings are what the skill-to-Elo curve gives their skills.
+//!
+//! R2214000: a miss is a beginner's move, not a uniform one: at strength 0 it is always legal, drawn
+//! on the bot's own stream so the same job plays the same, and over seeded turn starts it ends a turn
+//! with a card it could play, or makes an attack the greedy baseline scores below standing still, far
+//! less often than §10.7's random policy.
 //!
 //! `jackioh_server::bots::seat`, on the real cards.
 
-use jackioh_ai::{AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, decide_styled, plays_best, random_action};
+use jackioh_ai::{
+    AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, DeterminizeOptions, GREEDY_EVAL, NextSwing,
+    candidate_set, decide_styled, determinize, evaluate, one_ply_scores, plays_best, random_action, redact,
+    skill_miss_action,
+};
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{
     Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
@@ -669,14 +678,14 @@ async fn r747000_bot_seat_applies_strength_skill() {
     let state = opened_at("seed-skill", 1);
     let bot = state.active;
 
-    // Skill 0.0 plays what the random policy plays on the bot's own stream, with no search and no
-    // roll drawn.
+    // Skill 0.0 plays the skill miss (R2214000) on the bot's own stream, with no search and no roll
+    // drawn.
     let seed = "skill-zero";
     let mut stream = ai_stream(seed, bot);
-    let random = random_action(&state, bot, &mut stream);
+    let missed = skill_miss_action(&state, bot, &mut stream);
     let played = play(job_at(&state, bot, seed, false, AI_SKILL_MIN)).await;
-    assert!(random.is_some(), "PREMISE: the policy has a move");
-    assert_eq!(played.body, random);
+    assert!(missed.is_some(), "PREMISE: the miss has a move");
+    assert_eq!(played.body, missed);
     assert_eq!(played.ai_cursor, stream.cursor());
 
     // Skill 1.0 decides exactly as the search does, on a stream no roll was drawn from, and the same
@@ -691,7 +700,7 @@ async fn r747000_bot_seat_applies_strength_skill() {
     assert_eq!(second, first);
 
     // In between, one roll of the stream says which: a decision it keeps from the AI searches on
-    // the stream after the roll, one it does not is the policy's on that stream.
+    // the stream after the roll, one it does not is the miss's on that stream.
     for keeps in [false, true] {
         let seed = seed_where("skill-roll", |seed| {
             plays_best(0.5, &mut ai_stream(seed, bot)) == keeps
@@ -702,7 +711,7 @@ async fn r747000_bot_seat_applies_strength_skill() {
         let (expected, cursor) = if keeps {
             ai_move(&state, bot, stream)
         } else {
-            let action = random_action(&state, bot, &mut stream);
+            let action = skill_miss_action(&state, bot, &mut stream);
             (action, stream.cursor())
         };
         let played = play(job_at(&state, bot, &seed, false, 0.5)).await;
@@ -725,8 +734,8 @@ async fn r747000_a_random_bot_still_answers_a_draw_offer_by_its_own_roll() {
     );
     assert!(offered.error.is_none(), "{:?}", offered.error);
     let state = offered.state;
-    // The random policy never answers an offer, so the seat declines as the search does and the
-    // bot's roll turns it into its answer (R639000), whatever the skill.
+    // The skill miss declines an offer as the search does (R2214000), and the bot's roll turns it into
+    // its answer (R639000), whatever the skill.
     for accept in [true, false] {
         let seed = seed_where("skill-draw", |seed| {
             let standing = standing(&state, bot, seed, bot);
@@ -736,6 +745,114 @@ async fn r747000_a_random_bot_still_answers_a_draw_offer_by_its_own_roll() {
         assert_eq!(played.body, Some(ActionBody::AnswerDraw { accept }), "{seed}");
         assert_eq!(played.ai_cursor, 0, "no search and no draw ran");
     }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2214000_a_strength_zero_miss_is_legal_and_replays() {
+    let skill = BOT_STRENGTHS[0].skill;
+    assert_eq!(
+        skill, AI_SKILL_MIN,
+        "PREMISE: the weakest strength misses every decision"
+    );
+    let starts: Vec<GameState> = (0..3)
+        .flat_map(|game| random_turn_starts(&format!("r2214000-legal-{game}")))
+        .collect();
+    assert!(starts.len() >= 20, "PREMISE: {} turn starts", starts.len());
+    for (at, state) in starts.iter().enumerate() {
+        let seat = state.active;
+        let seed = format!("r2214000-legal-{at}");
+        let played = play(job_at(state, seat, &seed, false, skill)).await;
+        // The bot's move is the miss on its own stream, from cursor 0: no roll and no search.
+        let mut stream = ai_stream(&seed, seat);
+        assert_eq!(
+            skill_miss_action(state, seat, &mut stream),
+            played.body,
+            "turn start {at}"
+        );
+        assert_eq!(stream.cursor(), played.ai_cursor, "turn start {at}");
+        let body = played.body.clone().expect("a miss at a turn start");
+        assert!(
+            legal_actions(Pinned::default(), state, seat).contains(&body),
+            "turn start {at}: {body:?} is legal"
+        );
+        assert_eq!(
+            play(job_at(state, seat, &seed, false, skill)).await,
+            played,
+            "turn start {at}"
+        );
+    }
+}
+
+#[test]
+fn r2214000_a_strength_zero_miss_makes_far_fewer_beginners_mistakes_than_random() {
+    const GAMES: usize = 20;
+    const DRAWS: usize = 2;
+    // Per picker, random then miss: a turn ended while a card could be played, and an attack the greedy
+    // baseline scores below standing still.
+    let (mut idle, mut idle_of) = ([0usize; 2], 0usize);
+    let (mut bad_attacks, mut bad_of) = ([0usize; 2], 0usize);
+    for game in 0..GAMES {
+        for (at, state) in random_turn_starts(&format!("r2214000-rates-{game}"))
+            .iter()
+            .enumerate()
+        {
+            let seat = state.active;
+            let position = format!("r2214000-rates-{game}-{at}");
+            let has_play = legal_actions(Pinned::default(), state, seat)
+                .iter()
+                .any(|body| matches!(body, ActionBody::Play { .. }));
+            let candidates = candidate_set(state, seat);
+            let det = determinize(
+                &redact(state, seat),
+                seat,
+                &mut Rng::new(&format!("{position}:det"), 0),
+                DeterminizeOptions {
+                    match_shown_cost: Some(false),
+                },
+            );
+            let standing = evaluate(&det, seat, NextSwing::Enemy, &GREEDY_EVAL);
+            let bad: Vec<&ActionBody> = candidates
+                .iter()
+                .zip(one_ply_scores(&det, seat, &candidates))
+                .filter(|(body, score)| matches!(body, ActionBody::Attack { .. }) && *score < standing)
+                .map(|(body, _)| body)
+                .collect();
+            if has_play {
+                idle_of += DRAWS;
+            }
+            if !bad.is_empty() {
+                bad_of += DRAWS;
+            }
+            for draw in 0..DRAWS {
+                let picks = [
+                    random_action(state, seat, &mut Rng::new(&format!("{position}:{draw}"), 0)),
+                    skill_miss_action(state, seat, &mut Rng::new(&format!("{position}:{draw}"), 0)),
+                ];
+                for (picker, pick) in picks.iter().enumerate() {
+                    if has_play && *pick == Some(ActionBody::EndTurn) {
+                        idle[picker] += 1;
+                    }
+                    if pick.as_ref().is_some_and(|pick| bad.contains(&pick)) {
+                        bad_attacks[picker] += 1;
+                    }
+                }
+            }
+        }
+    }
+    assert!(idle_of >= 500, "PREMISE: {idle_of} picks with a card to play");
+    assert!(bad_of >= 150, "PREMISE: {bad_of} picks with a bad attack to make");
+    let rate = |count: usize, of: usize| count as f64 / of as f64;
+    let (idle_random, idle_miss) = (rate(idle[0], idle_of), rate(idle[1], idle_of));
+    let (bad_random, bad_miss) = (rate(bad_attacks[0], bad_of), rate(bad_attacks[1], bad_of));
+    let report = format!(
+        "ended the turn with a card to play: random {idle_random:.3}, miss {idle_miss:.3} ({} and {} of \
+         {idle_of}); attacked below standing still: random {bad_random:.3}, miss {bad_miss:.3} ({} and {} of \
+         {bad_of})",
+        idle[0], idle[1], bad_attacks[0], bad_attacks[1]
+    );
+    println!("{report}");
+    assert!(idle_miss * 2.0 < idle_random, "{report}");
+    assert!(bad_miss * 2.0 < bad_random, "{report}");
 }
 
 #[test]
