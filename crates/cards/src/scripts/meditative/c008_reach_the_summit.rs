@@ -4,7 +4,7 @@
 //!   Radiant: the same with "Costs (Ascent level - 1), never less than (0)." and 3 of each.
 //!
 //! The Ascent level is R429's play count on the instance: `counts_plays` counts each play at §10.5
-//! step 4 (casts included, countered plays never), and the count rides the card through every zone.
+//! step 4 (casts included but not a cast on draw, R2179002; countered plays never), and the count rides the card through every zone.
 //! While it resolves the play is already counted, so the level is the count less one; anywhere else
 //! the level is the count. A copy starts at 0 (R57 resets the count), an Echo repeat is no play and
 //! resolves the same level again, and making the card Radiant keeps the level (R840). Each play
@@ -157,7 +157,7 @@ pub fn script() -> CardScripts {
 
 // Meditative #8 Reach the Summit — SPEC §8.8 row 8, BUILD M10 row M 8: Quickdraw; played at level 0
 // it heals 2 and climbs; each play resolves only its own level's line and raises the level by one,
-// counted per instance (casts included, countered plays not); it costs (level); at the end of the
+// counted per instance (casts included but not on draw, R2179002; countered plays not); it costs (level); at the end of the
 // turn it returns to hand from the graveyard only on the turn it was played, a full hand burning it;
 // level 1 prompts over any Unit or hero (random under a random cast); 2 draws 2; 3 discards 2 random
 // enemy cards; 4 exiles 2 different random enemy permanents, face-down ones included; 5 adds 2 random

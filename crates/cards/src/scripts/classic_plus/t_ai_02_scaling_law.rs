@@ -3,7 +3,7 @@
 //!   Radiant: "Has +2/+2 for each AI generated card you've played this game."
 //!
 //! A §10.4 layer-2 `setStat` over its controller's per-game count of AI-tagged plays (B5 E4,
-//! `played_this_game_with_tag`): casts count (R70), itself once played (step 4 counts a play before its
+//! `played_this_game_with_tag`): casts count (R70), a cast on draw not (R2179002), itself once played (step 4 counts a play before its
 //! stats are read), a fused card carrying the tag once; the count outlives the cards. AI cards declare
 //! no numbers (B8), so the per-card bonus is this file's.
 
@@ -36,7 +36,7 @@ pub fn script() -> CardScripts {
 
 // T-AI-2 Scaling Law — SPEC §8.7 row T-AI-2, BUILD M9 row T-AI-2: a 2/2 with +1/+1 for each AI generated
 // card its controller has played this game — a layer-2 set-stat over the per-game count of AI-tagged
-// plays (casts included, R70; the opponent's don't count; the count outlives the cards) — counting
+// plays (casts included, R70, but not a cast on draw, R2179002; the opponent's don't count; the count outlives the cards) — counting
 // itself once played, so 3/3 as the game's first; an AI Slop fusion counts once; radiant 4/4 with
 // +2/+2 for each.
 #[cfg(test)]

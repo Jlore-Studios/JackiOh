@@ -3,7 +3,7 @@
 //!   Radiant: "Rush, Trample, Divine Shield / (the same)"
 //!
 //! A `cost` hook (Core #100's pattern, R55) reading the per-game count of Fruit-tagged plays
-//! (`playedThisGameWithTag`, B5 E4: casts count, R70; a Grape is a Fruit; never reset), floored at 0.
+//! (`playedThisGameWithTag`, B5 E4: casts count, R70, a cast on draw not, R2179002; a Grape is a Fruit; never reset), floored at 0.
 //! R584: the discount is a price for a play, so it holds where a play takes the card from — its
 //! player's hand, or a graveyard a permission lets them play it from (E11) — and counts that player's
 //! Fruits; anywhere else (a deck, a graveyard, the field, a pool) it costs its printed (5) (R65). It
