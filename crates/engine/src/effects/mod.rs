@@ -7,6 +7,7 @@
 //! Collisions: TS kept every exported name distinct across this directory, so the globs below are
 //! unambiguous as long as the ports keep the TS names (SURFACE §4.2).
 
+pub mod activations;
 pub mod add_to_hand;
 pub mod after_check;
 pub mod animate;
@@ -86,6 +87,7 @@ pub mod turn_hooks;
 pub mod turns;
 pub mod win;
 
+pub use activations::*;
 pub use add_to_hand::*;
 pub use after_check::*;
 pub use animate::*;

@@ -5,7 +5,8 @@
 //! card reaches the Marketplace yet, so the engine never imports `crates/cards` for this; the Resources
 //! are `fixtures/resources.rs`'.
 //!
-//! Ids are prefixed `fx-mkt-` and indexed from 18530, so they collide with no other fixture file's.
+//! Ids are prefixed `fx-mkt-` and indexed from 18530, so they collide with no other fixture file's; the
+//! hand-sale card (R1861000), kept apart from the table's cards, is 18610.
 
 use std::sync::LazyLock;
 
@@ -84,3 +85,32 @@ pub static MARKET_TABLE: &[MarketLot] = &[
         stock_max: 2,
     },
 ];
+
+/// R1861000: a (1) Spell whose faces sell from the hand (`handSale`), as Stinkyscape #89 Spice does.
+/// Kept out of `MARKET_DEFS`, so the table's tests quote the Resources alone.
+pub const HAND_SALE: &str = "fx-mkt-hand-sale";
+
+pub static HAND_SALE_DEF: LazyLock<CardDef> = LazyLock::new(|| {
+    spell_def(
+        18610,
+        json!({ "id": HAND_SALE, "name": "Fixture Hand Sale", "set": "Core", "cost": 1 }),
+    )
+});
+
+/// `HAND_SALE`'s script: the flag on both faces and nothing else.
+pub static HAND_SALE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
+    let face = || Script {
+        static_flags: Some(StaticFlags {
+            hand_sale: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    IndexMap::from([(
+        HAND_SALE.to_string(),
+        CardScripts {
+            base: face(),
+            radiant: face(),
+        },
+    )])
+});

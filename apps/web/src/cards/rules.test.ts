@@ -197,6 +197,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Gain Echo",
     "Units keyword next turn",
     "Keyword for good",
+    // R1876000, R1876001: ZolarKeth's verbs, its own face's words ("It can't use its own Activate",
+    // "Activate your Universities"), no term of their own.
+    "Another card's Activate",
   ],
 };
 

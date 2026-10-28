@@ -29,7 +29,8 @@
 
   Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, with and without
   its runners, the size of its memory, whether it is calm, and each runner container with the
-  CPUs it uses and whether it is throttled, as pc.json in a secret gist of the signed-in account.
+  CPUs it uses, whether it is throttled and, while it plays games, how many of how many
+  (Get-Progress), as pc.json in a secret gist of the signed-in account.
   The status issue's runners section and learn lane read it (bot/harness/dashboard.py), so it
   says how loaded the PC is and what it and its gather job are doing. The gist is
   made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
@@ -268,8 +269,9 @@ function Start-Runner([string]$label, [string]$why) {
   # Codex sandboxes its commands with bubblewrap, which needs the user namespaces Docker's default
   # seccomp profile refuses.
   if ($entry.seccompUnconfined) { $argv += @('--security-opt', 'seccomp=unconfined') }
-  # A priority runner's cgroup weighs eight times another's, so while both want the VM's CPUs it
-  # gets its own first and the other the rest; alone, either has all of its --cpus. The runner
+  # A priority runner's cgroup weighs about five times another's (Docker 29 makes --cpu-shares 8192
+  # cpu.weight 532, against the default 100), so while both want the VM's 8 CPUs it gets its own 6
+  # first and the other the rest; alone, either has all of its --cpus. The runner
   # writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
   # actions/runner's ProcessInvoker). The kernel kills the process with the highest score, its share
   # of the VM's memory in thousandths plus that value: 1000 for the rest puts any training step
@@ -327,6 +329,28 @@ function Write-Body([string]$path, $body) {
   [System.IO.File]::WriteAllText($path, ($body | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding $false))
 }
 
+# How far a busy runner's games have got, for the status issue's top lines: the `jackioh selfplay`
+# (a learn shard's) or `jackioh stats` (gather's) it runs, its --games, --from and --patch, and the
+# games its --out holds so far. Each writes one line a game as it finishes, a shard into a file of
+# its range in the folder --out names, gather into the file itself. $null while it plays none (a
+# build, the retrain, the gate). The path goes to sh as an argument, never as script.
+function Get-Progress($runner) {
+  $p = Run 'docker' @('exec', $runner.Id, 'pgrep', '-a', '-x', 'jackioh') 20
+  if ($p.Code -ne 0 -or -not $p.Out) { return $null }
+  $argv = @((@($p.Out -split "`n")[0]).Trim() -split '\s+')
+  if ($argv.Count -lt 3 -or $argv[2] -notin 'selfplay', 'stats') { return $null }
+  $opt = @{}
+  for ($i = 3; $i -lt $argv.Count - 1; $i++) { if ($argv[$i] -like '--*') { $opt[$argv[$i]] = $argv[$i + 1] } }
+  $games = 0; $done = 0; $from = 0
+  if (-not $opt['--out'] -or -not [int]::TryParse("$($opt['--games'])", [ref]$games)) { return $null }
+  $c = Run 'docker' @('exec', $runner.Id, 'sh', '-c', 'cat $1 $1/*.jsonl 2>/dev/null | wc -l', 'sh', $opt['--out']) 20
+  if ($c.Code -ne 0 -or -not [int]::TryParse((@($c.Out -split "`n")[0]).Trim(), [ref]$done)) { return $null }
+  $progress = [ordered]@{ kind = $argv[2]; games = $games; done = $done }
+  if ([int]::TryParse("$($opt['--from'])", [ref]$from)) { $progress.from = $from }
+  if ($opt['--patch']) { $progress.patch = $opt['--patch'] }
+  $progress
+}
+
 # The heartbeat (see the top): pc.json in the gist pc-gist.txt names, made, and named to the
 # repository as JACKIOH_PC_GIST, the first time.
 function Send-Heartbeat($sample, [bool]$calm, $runners) {
@@ -350,10 +374,11 @@ function Send-Heartbeat($sample, [bool]$calm, $runners) {
     memTotalGB = [math]::Round($memTotalGB, 1)
     logical = $logical
     runners = @($runners | ForEach-Object {
-      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id] }
+      $progress = if ($_.Busy) { try { Get-Progress $_ } catch { $null } } else { $null }
+      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id]; progress = $progress }
     })
   }
-  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 4 -Compress) } }
+  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 5 -Compress) } }
   $bodyFile = Join-Path $env:TEMP 'jackioh-pc-heartbeat.json'
   $id = if (Test-Path $gistFile) { (Get-Content $gistFile -Raw).Trim() } else { '' }
   if ($id) {
