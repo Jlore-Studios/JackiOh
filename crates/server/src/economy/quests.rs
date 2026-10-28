@@ -202,7 +202,9 @@ pub struct GameTally {
 
 /// One seat's tally: its plays from `seat` (none when the game could not be read), looked up in
 /// `defs`, and `attacks`, the caller's count of the seat's logged attacks. A played id `defs` does
-/// not hold (a fused or crafted definition, R179, R882) counts as no card.
+/// not hold (a fused or crafted definition, R179, R882) counts as no card. R2089000: a Created card
+/// the seat played from its hand is a play as a dealt one is, so its `createdPlayed` counts after
+/// `played`, and a Created card it only summoned or cast counts no more than before.
 pub fn tally_seat(seat: Option<&SeatSummary>, attacks: i64, defs: &CardDefs) -> GameTally {
     let Some(seat) = seat else {
         return GameTally {
@@ -211,18 +213,25 @@ pub fn tally_seat(seat: Option<&SeatSummary>, attacks: i64, defs: &CardDefs) -> 
         };
     };
     let radiant = seat.played_radiant.as_deref().unwrap_or_default();
+    let card = |id: &str, radiant: bool| {
+        let def = defs.get(id)?;
+        Some(PlayedCard {
+            card_type: def.type_,
+            set: def.set,
+            radiant,
+        })
+    };
     let played = seat
         .played
         .iter()
         .enumerate()
-        .filter_map(|(at, id)| {
-            let def = defs.get(id)?;
-            Some(PlayedCard {
-                card_type: def.type_,
-                set: def.set,
-                radiant: radiant.get(at).copied().unwrap_or(false),
-            })
-        })
+        .filter_map(|(at, id)| card(id, radiant.get(at).copied().unwrap_or(false)))
+        .chain(
+            seat.created_played
+                .iter()
+                .flatten()
+                .filter_map(|play| card(&play.card, play.radiant)),
+        )
         .collect();
     GameTally {
         played,
@@ -469,7 +478,7 @@ pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::wire::SHIPPED_SETS;
+    use jackioh_engine::wire::{CreatedUse, SHIPPED_SETS};
 
     const T: i64 = 1_000_000;
 
@@ -739,6 +748,47 @@ mod tests {
                 attacks: 3,
                 ..GameTally::default()
             }
+        );
+    }
+
+    #[test]
+    fn r2089000_created_plays_from_hand_still_count_for_the_quests() {
+        let defs = &*jackioh_cards::CATALOG;
+        let (unit, spell) = (
+            defs.values()
+                .find(|def| def.type_ == CardType::Unit && !def.is_token())
+                .expect("a Unit"),
+            defs.values()
+                .find(|def| def.type_ == CardType::Spell && !def.is_token())
+                .expect("a Spell"),
+        );
+        let used = |card: &str, radiant: bool| CreatedUse {
+            card: card.to_owned(),
+            turn: 3,
+            radiant,
+        };
+        // A Created Unit played from the hand, and a token the seat only summoned, which is used but
+        // no play.
+        let seat = SeatSummary {
+            played: vec![spell.id.clone()],
+            created_played: Some(vec![used(&unit.id, true)]),
+            created_used: Some(vec![used(&unit.id, true), used("core-t-rush", false)]),
+            ..SeatSummary::default()
+        };
+        assert_eq!(
+            tally_seat(Some(&seat), 0, defs).played,
+            vec![
+                PlayedCard {
+                    card_type: CardType::Spell,
+                    set: spell.set,
+                    radiant: false
+                },
+                PlayedCard {
+                    card_type: CardType::Unit,
+                    set: unit.set,
+                    radiant: true
+                },
+            ]
         );
     }
 }
