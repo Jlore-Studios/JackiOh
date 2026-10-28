@@ -30,7 +30,7 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
+(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
@@ -400,7 +400,9 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
-                         this site's room link draws a Join button that navigates in-app (R2094000)
+                         this site's room link draws a Join button that navigates in-app (R2094000);
+                         a send shows at once, sends go one at a time, a failed one offers Retry and
+                         Discard (R2120000)
 net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
                          (/together?coop=…): built for the share sheet or the clipboard, read once off
                          the address bar into this tab, through a sign-in, for the lobby or the co-op panel
@@ -427,7 +429,7 @@ duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one
                          go to /duos/:matchId once the guest joins
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
-                         teammate strip and the ping wheel
+                         Both boards toggle (R2095000), the teammate strip and the ping wheel
 duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
                          DuosBoard's `replay` mode (nothing live) with the replay toolbar (`replay/ReplayToolbar.tsx`)
 duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): the seat's views as one
@@ -444,6 +446,14 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
+- the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
+  (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
+  `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
+  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
+  screen while both boards show, and below 600px the toggle hides and the board falls back to one
+  with the portal flipping: the rail rides whichever board the portal names, so the one drawn
+  always carries it;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
@@ -464,8 +474,8 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
 `friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
-`duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
-`duos-ping-<kind>` and `duos-ping-marker`.
+`duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
+`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>` and `duos-ping-marker`.
 
 ## Practice
 
