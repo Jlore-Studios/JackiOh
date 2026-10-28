@@ -26,7 +26,7 @@
   border-radius: 999px;
   background: linear-gradient(180deg, var(--pal-brass-800), var(--pal-brass-950));
   color: var(--pal-gold-200);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
   line-height: 1;
   cursor: var(--cursor-glove-point, pointer);
@@ -117,7 +117,7 @@
     min-width: 18px;
     height: 16px;
     padding: 0 3px 0 1px;
-    font-size: 9px;
+    font-size: var(--type-3xs);
   }
 
   .board .activate-glyph {

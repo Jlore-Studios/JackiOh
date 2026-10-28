@@ -163,7 +163,7 @@
 .hero-seat {
   color: color-mix(in srgb, var(--text) 78%, transparent);
   text-transform: uppercase;
-  font-size: 0.78em;
+  font-size: var(--type-2xs-em);
   font-weight: 650;
   letter-spacing: 0.08em;
 }
@@ -180,7 +180,7 @@
   padding: 0 5px;
   border-radius: 999px;
   color: var(--pal-white);
-  font-size: 1.08em;
+  font-size: var(--type-lg-em);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 70%, transparent);
@@ -211,7 +211,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.85em;
+  font-size: var(--type-xs-em);
   padding: 3px 8px;
   border-radius: 999px;
 }
@@ -247,7 +247,7 @@
   border: 1px solid var(--line-bright);
   border-radius: 999px;
   color: var(--text);
-  font-size: 0.82em;
+  font-size: var(--type-xs-em);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -284,7 +284,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--mana) 14%, var(--bg-sunken));
   color: var(--text-dim);
-  font-size: 0.78em;
+  font-size: var(--type-2xs-em);
 }
 
 /* ------------------------------------------------------------------------- mana and piles --- */
@@ -332,7 +332,7 @@
   align-items: center;
   gap: 6px;
   color: var(--pal-parchment);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -392,7 +392,7 @@
 
 .pile-label {
   color: var(--text-dim);
-  font-size: 0.74em;
+  font-size: var(--type-2xs-em);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -548,7 +548,7 @@
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--pal-white) 2%, transparent);
   color: var(--text-dim);
-  font-size: 0.72em;
+  font-size: var(--type-3xs-em);
   font-weight: 650;
   letter-spacing: 0.08em;
   text-align: center;
@@ -1019,7 +1019,7 @@
     inset 0 1px 0 color-mix(in srgb, var(--pal-white) 7%, transparent),
     0 2px 6px color-mix(in srgb, var(--pal-black) 45%, transparent);
   overflow: hidden;
-  font-size: 0.85em;
+  font-size: var(--type-xs-em);
   transition:
     transform calc(250ms * var(--anim-scale)) ease,
     box-shadow calc(150ms * var(--anim-scale)) ease;
@@ -1110,7 +1110,7 @@
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, var(--pal-sky-400), var(--pal-blue-700) 60%, var(--pal-blue-900));
   color: var(--pal-white);
-  font-size: 0.8em;
+  font-size: var(--type-2xs-em);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1152,7 +1152,7 @@
 .card-type,
 .card-text {
   color: var(--text-dim);
-  font-size: 0.82em;
+  font-size: var(--type-xs-em);
   line-height: 1.15;
   overflow: hidden;
 }
@@ -1162,7 +1162,7 @@
 .card-type {
   flex: 0 0 auto;
   color: color-mix(in srgb, var(--pal-violet-300) 70%, var(--text-dim));
-  font-size: 0.74em;
+  font-size: var(--type-2xs-em);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1221,7 +1221,7 @@
   padding: 0 4px;
   border-radius: 999px;
   color: var(--pal-white);
-  font-size: 1.05em;
+  font-size: inherit;
   line-height: 1.4;
   text-align: center;
   text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 75%, transparent);
@@ -1248,7 +1248,7 @@
   left: 50%;
   translate: -50% 0;
   color: var(--text-dim);
-  font-size: 0.66em;
+  font-size: var(--type-3xs-em);
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -1261,7 +1261,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  font-size: 0.64em;
+  font-size: var(--type-3xs-em);
   line-height: 1.15;
 }
 
@@ -1292,7 +1292,7 @@
   height: 14px;
   border-radius: 50%;
   color: var(--pal-white);
-  font-size: 0.68em;
+  font-size: var(--type-3xs-em);
   font-weight: 700;
 }
 
@@ -1322,7 +1322,7 @@
   border-radius: 999px;
   background: var(--bg-raised);
   color: var(--text);
-  font-size: 0.85em;
+  font-size: var(--type-xs-em);
   font-weight: 800;
   line-height: 1.3;
 }
@@ -1343,7 +1343,7 @@
   padding: 0 3px;
   border-radius: 3px;
   background: var(--bg-raised);
-  font-size: 0.68em;
+  font-size: var(--type-3xs-em);
   font-weight: 700;
 }
 
@@ -1416,7 +1416,7 @@
   background: radial-gradient(circle at 40% 35%, var(--pal-slate-700), var(--pal-slate-900));
   box-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
   color: var(--pal-slate-100);
-  font-size: 10px;
+  font-size: var(--type-2xs);
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
@@ -1476,7 +1476,7 @@
   inset-inline-start: 50%;
   top: 30%;
   translate: -50% 0;
-  font-size: 1.5em;
+  font-size: var(--type-2xl-em);
   font-weight: 800;
   text-shadow: 0 1px 2px var(--pal-black);
   pointer-events: none;
@@ -1489,7 +1489,7 @@
 /* Damage feel is data-driven in game/damageFeel.ts. The number stays readable at the old size for
    normal hits, then grows and holds more heavily as the public event's amount crosses a tier. */
 .game[data-impact-tier] .damage-pop {
-  font-size: calc(1.5em * var(--impact-number-scale));
+  font-size: calc(var(--type-2xl-em) * var(--impact-number-scale));
 }
 
 .game[data-impact-tier="giga"] .damage-pop {
@@ -1660,7 +1660,7 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--opponent) 16%, var(--pal-wood-800));
   color: var(--text);
-  font-size: 0.82em;
+  font-size: var(--type-xs-em);
   font-weight: 650;
   text-align: center;
 }
@@ -1676,7 +1676,7 @@
   border-radius: 8px;
   background: var(--bg-sunken);
   color: var(--text);
-  font-size: 0.82em;
+  font-size: var(--type-xs-em);
   font-weight: 650;
   text-align: center;
 }
@@ -1698,7 +1698,7 @@
   border-radius: 8px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--pal-white) 5%, transparent), transparent), var(--bg-sunken);
   color: var(--text-dim);
-  font-size: 0.72em;
+  font-size: var(--type-3xs-em);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1712,7 +1712,7 @@
   border-radius: 8px;
   background: var(--bg-sunken);
   color: var(--text-dim);
-  font-size: 0.72em;
+  font-size: var(--type-3xs-em);
   font-style: italic;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1826,7 +1826,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
   color: var(--pal-gold-200);
-  font-size: 0.7em;
+  font-size: var(--type-3xs-em);
   font-weight: 750;
 }
 
@@ -1837,7 +1837,7 @@
   gap: 3px;
   max-width: calc(100% - 12px);
   color: var(--pal-gold-200);
-  font-size: 0.62em;
+  font-size: var(--type-3xs-em);
 }
 
 .turn-mechanism > .clock .clock-side-label {
@@ -1868,14 +1868,14 @@
 
   .turn-plate-number {
     color: var(--text-dim);
-    font-size: 0.74em;
+    font-size: var(--type-2xs-em);
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
 
   .turn-plate-whose {
-    font-size: 1.05em;
+    font-size: inherit;
     font-weight: 750;
   }
 
@@ -1912,7 +1912,7 @@
   border-radius: 999px;
   background: var(--bg-sunken);
   color: var(--text);
-  font-size: 0.8em;
+  font-size: var(--type-2xs-em);
   font-weight: 750;
   letter-spacing: 0.1em;
   text-align: center;
@@ -1952,7 +1952,7 @@
   border-radius: var(--seat-radius);
   background: color-mix(in srgb, var(--pal-black) 28%, transparent);
   color: var(--text-dim);
-  font-size: 0.86em;
+  font-size: var(--type-xs-em);
   list-style: decimal;
 }
 
@@ -2070,7 +2070,7 @@
   .board .control-bar .control-end-turn {
     flex: 1 1 100%;
     min-height: 58px;
-    font-size: 1.2em;
+    font-size: var(--type-xl-em);
     border-radius: 14px;
   }
 
@@ -2090,7 +2090,7 @@
   .board {
     --card-w: calc(var(--card-h) * 0.72);
     --gap: 4px;
-    font-size: 0.92em;
+    font-size: var(--type-sm-em);
     padding: 6px;
   }
 
@@ -2099,7 +2099,7 @@
   }
 
   .card {
-    font-size: 0.8em;
+    font-size: var(--type-2xs-em);
   }
 
   .pile-label {
@@ -2231,14 +2231,14 @@
   .seat .hero-luck {
     min-width: 32px;
     height: 32px;
-    font-size: 1.2em;
+    font-size: var(--type-xl-em);
   }
 
   /* Your hand's cards are drawn 1.3 to 1.5 times the field's here, so their type comes up to
      match: at the field's size the rules text was 9px in a card with room to spare. */
   .hand-you .card-hand {
     padding: 5px;
-    font-size: 0.94em;
+    font-size: var(--type-sm-em);
   }
 }
 
@@ -2313,7 +2313,7 @@
     gap: 6px;
     padding: 6px max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
       max(6px, env(safe-area-inset-left));
-    font-size: 0.92em;
+    font-size: var(--type-sm-em);
     border-radius: 12px;
   }
 
@@ -2339,7 +2339,7 @@
     border-color: var(--line-bright);
     background: var(--bg-raised);
     color: var(--text);
-    font-size: 0.95em;
+    font-size: var(--type-sm-em);
     box-shadow: 0 14px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
     /* It opens at its newest line (Log.tsx), so the older ones fade under the top edge rather than
        being cut in half by it. */
@@ -2399,7 +2399,7 @@
   }
 
   .card {
-    font-size: 0.78em;
+    font-size: var(--type-2xs-em);
     padding: 3px 4px;
   }
 
@@ -2420,7 +2420,7 @@
   .stat {
     min-width: 15px;
     padding: 0 3px;
-    font-size: 0.98em;
+    font-size: inherit;
   }
 
   .zone .card-unit .counter,
@@ -2433,7 +2433,7 @@
   }
 
   .board .zone > .switch-button > .switch-glyph {
-    font-size: 9px;
+    font-size: var(--type-3xs);
   }
 
   .field {
@@ -2472,7 +2472,7 @@
 
   .match-ranks {
     flex: 1 1 0;
-    font-size: 0.85em;
+    font-size: var(--type-xs-em);
     line-height: 1.2;
   }
 
@@ -2868,7 +2868,7 @@
   .zone .stat {
     min-width: 13px;
     padding: 0 2px;
-    font-size: 0.86em;
+    font-size: var(--type-xs-em);
     letter-spacing: -0.02em;
   }
 
@@ -2976,7 +2976,7 @@
   .app-shell--wide:has(> .game) > .match-bar {
     flex-wrap: nowrap;
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: var(--type-sm);
   }
 
   .app-shell--wide:has(> .game) > .match-bar > span:first-child {
