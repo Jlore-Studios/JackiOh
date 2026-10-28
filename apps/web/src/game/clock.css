@@ -41,7 +41,7 @@
 
 .clock-side-label,
 .clock-grace-label {
-  font-size: 0.78em;
+  font-size: var(--type-2xs-em);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -82,13 +82,13 @@
   border-radius: 999px;
   background: var(--clock-urgent-deep);
   color: var(--clock-urgent-ink);
-  font-size: 1.12em;
+  font-size: var(--type-lg-em);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent), 0 0 12px color-mix(in srgb, var(--pal-red-500) 45%, transparent);
 }
 
 .clock-line[data-urgency="last10"] {
   border-width: 2px;
-  font-size: 1.26em;
+  font-size: var(--type-xl-em);
 }
 
 .clock-line[data-urgency="final"] .clock-side-label,
@@ -155,7 +155,7 @@
   border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
   background: color-mix(in srgb, var(--opponent) 22%, var(--bg-raised));
   box-shadow: none;
-  font-size: 1em;
+  font-size: inherit;
 }
 
 .clock[data-clock-side="opponent"] .clock-gauge-fill {
@@ -401,7 +401,7 @@
 
   .clock-line[data-urgency="final"],
   .clock-line[data-urgency="last10"] {
-    font-size: 1.05em;
+    font-size: inherit;
   }
 }
 

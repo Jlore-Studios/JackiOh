@@ -84,4 +84,6 @@
   --font-display: "Alegreya", "Alegreya Fallback", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   /* The text face, likewise. */
   --font-text: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* The code face: the system's own monospace, which no file is shipped for. */
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 }

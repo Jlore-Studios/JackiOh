@@ -1,5 +1,6 @@
 @import "./fonts.css";
 @import "./palette.css";
+@import "./typescale.css";
 
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
@@ -107,7 +108,9 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.35 var(--font-text);
+  font-family: var(--font-text);
+  font-size: var(--type-md);
+  line-height: 1.35;
   overflow-x: hidden;
 }
 
@@ -159,7 +162,7 @@ button:disabled {
 .app-shell.one-screen .one-screen__stack > * { flex-shrink: 0; }
 
 .app-shell h1 {
-  font-size: 16px;
+  font-size: var(--type-xl);
   margin: 0;
 }
 
@@ -192,7 +195,7 @@ button:disabled {
   gap: 18px;
   max-width: 960px;
   margin: 0 auto;
-  font-size: 15px;
+  font-size: var(--type-lg);
 }
 
 /* A match fills the viewport; it must not be squeezed into the reading column above. */
@@ -200,11 +203,11 @@ button:disabled {
   max-width: 100%;
   padding: 12px;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .app-shell h1 {
-  font-size: 30px;
+  font-size: var(--type-4xl);
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0;
@@ -212,7 +215,7 @@ button:disabled {
 }
 
 .app-shell h2 {
-  font-size: 19px;
+  font-size: var(--type-2xl);
   line-height: 1.25;
   margin: 0;
   font-weight: 600;
@@ -296,7 +299,7 @@ button:disabled {
   background: var(--bg-sunken);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.92em;
+  font-size: var(--type-sm-em);
 }
 
 /* --- controls ------------------------------------------------------------------------------ */
@@ -418,13 +421,13 @@ button:disabled {
 }
 
 .form-card h2 {
-  font-size: 19px;
+  font-size: var(--type-2xl);
   margin: 0;
 }
 
 .form-card label {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   margin-top: 7px;
 }
 
@@ -525,7 +528,7 @@ button:disabled {
  * columns that must align, which these tiles are not.
  */
 .stat-value {
-  font-size: 22px;
+  font-size: var(--type-3xl);
   font-weight: 600;
   line-height: 1.15;
   color: var(--text);
@@ -533,13 +536,13 @@ button:disabled {
 
 /* Sentence case, no trailing colon. */
 .stat-label {
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--text-dim);
 }
 
 .account-email {
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-xl);
   word-break: break-all;
 }
 
@@ -587,7 +590,7 @@ button:disabled {
   }
 
   .app-shell h1 {
-    font-size: 24px;
+    font-size: var(--type-3xl);
   }
 
   .panel--auth {
