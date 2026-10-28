@@ -60,6 +60,7 @@ pub mod staged_quests;
 pub mod starscape;
 pub mod starship;
 pub mod stinkyscape_verbs;
+pub mod terminus;
 pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;

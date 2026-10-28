@@ -1197,3 +1197,37 @@ pub fn chosen_tuning_number(ctx: &EffectContext<'_>) -> Option<ChosenTuningNumbe
         which,
     })
 }
+
+/// `gainKeywordForGood`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GainKeywordForGoodArgs {
+    /// The keyword the card keeps: Lucky 1 for Stinkyscape #154 Dice of Doom.
+    pub keyword: Keyword,
+}
+
+/// R1870007 (Stinkyscape #154 Dice of Doom, "this also gains Lucky +1 for good"): the card running the
+/// script keeps `keyword` in every zone, written into its `tuning` as an Upgrade's keyword is (R386), so
+/// neither leaving the field (R78) nor reaching a graveyard (R215) takes it. A numbered Armor or Lucky
+/// adds to what it has, every gain stacking (`tuning::tuned_keywords`); any other kind it already has is
+/// not had twice. Reported as a grant (`keywordGranted`).
+pub fn gain_keyword_for_good(args: GainKeywordForGoodArgs) -> Effect {
+    Effect::new("gainKeywordForGood", move |ctx| {
+        let Some(card_id) = ctx.live_self().map(|card| card.id.clone()) else {
+            return;
+        };
+        let Some(card) = find_instance_mut(ctx.state, &card_id) else {
+            return;
+        };
+        let tuning = tuning_of(card);
+        let mut added = tuning.add_keywords.clone().unwrap_or_default();
+        added.push(args.keyword.clone());
+        tuning.add_keywords = Some(added);
+        ctx.events.push(GameEvent::KeywordGranted {
+            instance_id: card_id,
+            keyword: args.keyword.clone(),
+            lost: None,
+        });
+    })
+}
