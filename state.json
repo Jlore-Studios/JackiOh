@@ -6594,15 +6594,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/net/api.ts"
+          ],
+          "from": "da1fb57168ebfcac0cb8a15d043ba26af15f7b59",
+          "main": "8784ff73dedd6fa0e73510ee6d8ae7914b5028a3"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40628555258",
+            "run": "40650814173",
             "tier": "strong"
           }
         ],
-        "sha": "da1fb57168ebfcac0cb8a15d043ba26af15f7b59",
+        "sha": "03e93c9a52c4da2f822ad913b607e526f1b87700",
         "tiers": {
           "claude": "strong"
         }
