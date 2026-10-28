@@ -18,7 +18,8 @@ the foundation (#2194)
 > Every card was read against the engine on `main` at `9be40af` (2026-10-28), before Stinkyscape's release (#2178)
 > merged, and re-checked when the foundation merged the release (`f5c99a2`): Stinkyscape now ships, so the one held set
 > is Training Grounds, and no card's reading moved. File and line references are as of `9be40af` unless the
-> foundation's own change moved them; a part re-checks its own before it builds.
+> foundation's own change moved them; a part re-checks its own before it builds. The set shipped with its release
+> (#2204, [[R2204000]]); where this brief says "while the set is held", it describes the build before then.
 
 ## Contents
 

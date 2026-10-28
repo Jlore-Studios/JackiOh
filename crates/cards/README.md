@@ -1,12 +1,13 @@
 # `jackioh-cards`
 
-710 catalog entries in the six shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+771 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187) and
-Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000), 572
-cards and 138 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496
-built it, Meditative+ while issue #1173 did (R1178000), and Stinkyscape while issue #1836 did, is in no
-pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
+spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187),
+Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
+Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 632 cards and 139 tokens
+in all. A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
+while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
+#2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
 (R1420), counts toward none of the totals above, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
@@ -35,7 +36,8 @@ crates/cards
 │   ├── classic_plus/   one Classic+ card or token per file
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
 │   ├── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
-│   └── stinkyscape/    one Stinkyscape card or token per file (shipped by #1884, R1857000)
+│   ├── stinkyscape/    one Stinkyscape card or token per file (shipped by #1884, R1857000)
+│   └── training_grounds/ one Training Grounds card or token per file (shipped by #2204, R2194000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```

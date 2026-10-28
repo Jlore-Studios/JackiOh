@@ -166,7 +166,7 @@ mod tests {
         // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
         // it is the sixth cast, after Stinkyscape's two.
         #[test]
-        fn r1870006_casts_the_training_grounds_edition_last() {
+        fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
             assert!(set_ships(SetName::TrainingGrounds));
             let s = played(&plain_seed("big-crunch-training-grounds", false), false);
             let plays = chaos_plays(&s);
