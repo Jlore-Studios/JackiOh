@@ -7298,7 +7298,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "muse",
-      "run_id": "pending:e53e8b53-1793211092",
+      "run_id": "40742847509",
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-28T18:11:52Z",
       "stop_requested": false,
