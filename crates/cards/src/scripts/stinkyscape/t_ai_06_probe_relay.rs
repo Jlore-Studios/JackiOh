@@ -1,5 +1,5 @@
 //! S T-AI-6 Probe Relay (SPEC §7, §8.10 row T-AI-6; §2.4, R65, R482): (1) Spell, AI, Token (no printed
-//! rarity), an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! rarity), an AI generated token of the Stinkyscape set (R1857000), built by S21.
 //!   Base:    "Add 2 Scanning Probe Mk1s to your hand. They cost (0)."
 //!   Radiant: "Add 2 Scanning Probe Mk2s to your hand. They cost (0)."
 //! Engine: two `add_to_hand`s of S #166 Scanning Probe Mk1 (Radiant: S #167 Scanning Probe Mk2), named, so

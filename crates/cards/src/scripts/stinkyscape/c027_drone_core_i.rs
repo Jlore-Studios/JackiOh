@@ -1,5 +1,5 @@
-//! S #27 Drone Core I (SPEC §8.10 row 27): (0) Spell, Drone Core, Common, a card of the held Stinkyscape
-//! set (R1420).
+//! S #27 Drone Core I (SPEC §8.10 row 27): (0) Spell, Drone Core, Common, a card of the Stinkyscape
+//! set (R1857000).
 //!   Base:    "Discard a random card. Summon a Drone Interceptor."
 //!   Radiant: "Discard a random card. Summon a Radiant Drone Interceptor."
 //! Engine: a random discard of its caster's hand (R682), nothing with an empty hand, then a summon of the

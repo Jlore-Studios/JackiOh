@@ -1,6 +1,6 @@
 //! S #144 Prepare For Liftoff (SPEC §8.10 row 144; R1, R17, R64, R1838000, R1852000, R1852002,
-//! R1852006, R1859012): (1) Trap, Common, Tradable, Flashback, a card of the held Stinkyscape set
-//! (R1420).
+//! R1852006, R1859012): (1) Trap, Common, Tradable, Flashback, a card of the Stinkyscape set
+//! (R1857000).
 //!
 //! Base:    "Tradable, Flashback\nReveals when one of your Starship Pieces dies: Your Starship launch
 //!          costs (0)."

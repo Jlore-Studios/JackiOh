@@ -1,4 +1,4 @@
-//! Stinkyscape #86 Prototype-X2 (SPEC §8.10 row 86). Unit 8/8 → 16/16, cost 4, Mythic; held (R1420).
+//! Stinkyscape #86 Prototype-X2 (SPEC §8.10 row 86). Unit 8/8 → 16/16, cost 4, Mythic.
 //!   Base:    "Tribute 5, Starship Piece
 //!            Float reduces Tribute requirement by 1.
 //!            Cry: Discover 3 Epic Weapons and Equip them into this."

@@ -1,4 +1,4 @@
-//! S #152 Sanctum (SPEC §8.10 row 152): (4) Field Spell, Legendary, of the held Stinkyscape set (R1420).
+//! S #152 Sanctum (SPEC §8.10 row 152): (4) Field Spell, Legendary, of the Stinkyscape set (R1857000).
 //!   Base:    "Indestructible / Aura: Every card in your deck and graveyard has Flashback."
 //!   Radiant: "Indestructible / Cry: Gain {mana} mana. / Aura: Every card in your deck and graveyard has
 //!            Flashback."

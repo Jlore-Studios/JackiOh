@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 170 Medium Asteroid, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 170 Medium Asteroid, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape
 //!            Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute
 //!            this." (0/6; 2, 3)

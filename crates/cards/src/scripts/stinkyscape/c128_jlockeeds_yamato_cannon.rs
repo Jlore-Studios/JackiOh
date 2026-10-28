@@ -1,5 +1,5 @@
 //! Stinkyscape #128 Jlockeed's Yamato Cannon (SPEC §8.10 row 128). (2, Embiggened 3) Unit, Jlockeed, Rare;
-//! 4/1 → 8/2; held (R1420).
+//! 4/1 → 8/2.
 //!   Both faces: "Ranged, Cleave / Embiggened (3): Starship Piece."
 //!
 //! Ranged (R783000) and Cleave (§6.1, R63) are printed keywords the engine plays: it takes no strike back

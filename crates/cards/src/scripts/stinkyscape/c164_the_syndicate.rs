@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 164 The Syndicate, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 164 The Syndicate, a card of the Stinkyscape set (R1857000).
 //!   (2) Field Spell, Epic.
 //!   Base:    "Tradable / Aura: Cards in your hand have Tradable. / Whenever you Trade a card, the card
 //!            you put into your deck has a {exileChance}% chance to be exiled and a {radiantChance}%

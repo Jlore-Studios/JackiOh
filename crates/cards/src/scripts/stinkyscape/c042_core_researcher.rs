@@ -1,12 +1,12 @@
-//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 4/5 → 8/10, a card of the held
-//! Stinkyscape set (R1420).
+//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 4/5 → 8/10, a card of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your
 //!            hand." — cards 1
 //!   Radiant: the same words — cards 2
 //! Engine: Cry (R1), so a summon (a Recruit, a Reborn) adds nothing. It picks from S #41's Drone Core pool
 //!   (the non-token cards tagged Drone Core, R380), one draw of the match rng per card (R60), each added
 //!   Radiant on both faces (§5.2); a full hand burns it (§2.4). The count is the declared `cards`, a Cry
-//!   number (R386, R1748000). The pool names no set, so while the set is held it reaches no card (R1420).
+//!   number (R386, R1748000). The pool names no set, so it reaches them since the set shipped (R1857000).
 
 use jackioh_engine::prelude::*;
 
@@ -73,7 +73,6 @@ mod tests {
 
     #[test]
     fn r1_played_adds_a_radiant_drone_core() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played(false);
         let added = cores(&s);
         assert_eq!(added.len(), 1, "{added:?}");
@@ -82,7 +81,6 @@ mod tests {
 
     #[test]
     fn r1_recruited_it_adds_nothing() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": CALL_TO_ARMS, "radiant": true }, FILLER],
@@ -97,7 +95,6 @@ mod tests {
 
     #[test]
     fn cards_reads_through_param() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "p1": { "hand": [RESEARCHER, FILLER], "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
@@ -109,7 +106,6 @@ mod tests {
 
     #[test]
     fn radiant_8_10_adds_two_radiant_ones() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played(true);
         let researcher = s.unit(P1, 1).expect("the Researcher");
         let stats = s.stats(researcher.id.as_str());

@@ -1,5 +1,5 @@
-//! S #35 Drone Core IX (SPEC §8.10 row 35): (6) Spell, Drone Core, Legendary, a card of the held
-//! Stinkyscape set (R1420).
+//! S #35 Drone Core IX (SPEC §8.10 row 35): (6) Spell, Drone Core, Legendary, a card of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}." — corvettes 3
 //!   Radiant: "Float reduces cost.\nSummon {corvettes|Radiant Drone Corvette|Radiant Drone Corvettes}."
 //!            — corvettes 3

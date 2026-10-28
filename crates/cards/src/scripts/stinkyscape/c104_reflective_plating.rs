@@ -1,5 +1,5 @@
-//! S #104 Reflective Plating (SPEC §8.10 row 104): (2) Unit, Rare, 0/6 → 0/12, of the held
-//! Stinkyscape set (R1420).
+//! S #104 Reflective Plating (SPEC §8.10 row 104): (2) Unit, Rare, 0/6 → 0/12, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Starship Piece, Equip / Any damage this takes is dealt to the enemy hero."
 //!   Radiant: "Starship Piece, Equip / Any damage this takes is dealt to the enemy hero and the
 //!            attacker."

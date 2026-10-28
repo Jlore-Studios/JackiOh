@@ -1,5 +1,5 @@
-//! S #37 Kwzka (SPEC §8.10 row 37): (3) Unit, Human, Acclaimed, Legendary, 6/9 → 12/18, of the held
-//! Stinkyscape set (R1420).
+//! S #37 Kwzka (SPEC §8.10 row 37): (3) Unit, Human, Acclaimed, Legendary, 6/9 → 12/18, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Aura: Each enemy Unit played that costs less than this is Allured. / Death: Remove every
 //!            Allure on the field."
 //!   Radiant: "Divine Shield / Aura: …" the same text.

@@ -1,4 +1,4 @@
-//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 4/4 → 8/8, cost 4, Epic; held (R1420).
+//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 4/4 → 8/8, cost 4, Epic.
 //!   Base:    "Starship Piece, Armor 3
 //!            Cry: Discover 2 Rare Weapons and Equip them into this."
 //!   Radiant: "Starship Piece, Armor 6

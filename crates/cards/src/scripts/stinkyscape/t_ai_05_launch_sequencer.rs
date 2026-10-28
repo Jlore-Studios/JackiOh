@@ -1,5 +1,5 @@
 //! S T-AI-5 Launch Sequencer (SPEC §7, §8.10 row T-AI-5; §2.4, R482, R1852006, R1881003): (1) Spell, AI,
-//! Token (no printed rarity), an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! Token (no printed rarity), an AI generated token of the Stinkyscape set (R1857000), built by S21.
 //!   Base:    "Your Starship launch costs (1). Draw 1."
 //!   Radiant: "Your Starship launch costs (0). Draw 2."
 //! Engine: `starship_launch_costs` (R1852006): its caster's next launch by the Activate costs (1) in place

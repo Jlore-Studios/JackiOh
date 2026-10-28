@@ -1,5 +1,5 @@
-//! S #44 Great Replacement Theory (SPEC §8.10 row 44): (1) Spell, Quickdraw, Mythic, a card of the held
-//! Stinkyscape set (R1420). Its name is the designer's satire, kept.
+//! S #44 Great Replacement Theory (SPEC §8.10 row 44): (1) Spell, Quickdraw, Mythic, a card of the
+//! Stinkyscape set (R1857000). Its name is the designer's satire, kept.
 //!   Base:    "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier
 //!            of Drone Core, add the next tier to your hand."
 //!   Radiant: "Add a Radiant Drone Core I to your hand. For the rest of the game, the first time you play
@@ -150,7 +150,6 @@ mod tests {
 
     #[test]
     fn r640_quickdraw_deals_it_in_the_opening_hand() {
-        let _preview = preview_sets(&[SetName::Stinkyscape]);
         crate::register_all();
         let scripts = script();
         assert_eq!(scripts.base.flags().quickdraw, Some(true));

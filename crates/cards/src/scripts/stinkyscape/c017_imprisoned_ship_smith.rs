@@ -1,5 +1,5 @@
-//! S #17 Imprisoned Ship Smith (SPEC §8.10 row 17): (1) Unit, Human, Common, 2/2 → 4/4, of the held
-//! Stinkyscape set (R1420).
+//! S #17 Imprisoned Ship Smith (SPEC §8.10 row 17): (1) Unit, Human, Common, 2/2 → 4/4, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Dormant for 2 turns. When this awakens, summon a Fiery Waraxe."
 //!   Radiant: "Dormant for 2 turns. When this awakens, summon a Radiant Fiery Waraxe."
 //! Engine: Dormant (R1839000), `StaticFlags.slumber { turns: 2 }`, counted at the start of its

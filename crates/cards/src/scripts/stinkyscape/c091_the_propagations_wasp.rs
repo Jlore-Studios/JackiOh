@@ -1,5 +1,5 @@
-//! S #91 The Propagation's Wasp (SPEC §8.10 row 91): (1) Unit, Swarm, Common, 3/3 → 6/6, of the held
-//! Stinkyscape set (R1420).
+//! S #91 The Propagation's Wasp (SPEC §8.10 row 91): (1) Unit, Swarm, Common, 3/3 → 6/6, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //!   Radiant: "After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //! Engine: `after_attack` (R1849001): once the state check closing each of its combats has run, declared

@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 155 Comet Crash, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 155 Comet Crash, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Crater, Brittle 1\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape
 //!            Resources}." (3)
 //!   Radiant: "Crater, Brittle 1\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random

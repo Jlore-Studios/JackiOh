@@ -1,5 +1,5 @@
 //! S #148.1 Edge of the Universe (SPEC §7 row 148.1, §8.10 row S 148.1; §6.3 Escape the Universe, R850,
-//! R1843002–R1843004): (0) Spell, Wincon, a token (printed Mythic) of the held Stinkyscape set (R1420),
+//! R1843002–R1843004): (0) Spell, Wincon, a token (printed Mythic) of the Stinkyscape set (R1857000),
 //! S #148 Alteran Reach's at the edge of its starscape map (R1847001).
 //!   Base:    "Escape the Universe: you win the game, and it is a draw for your opponent."
 //!   Radiant: "Escape the Universe: you win the game, and you choose whether it is a draw or a loss for

@@ -1,5 +1,5 @@
-//! S #105 Disintegrex (SPEC §8.10 row 105): (2) Unit, Epic, 6/3 → 12/6, of the held Stinkyscape set
-//! (R1420).
+//! S #105 Disintegrex (SPEC §8.10 row 105): (2) Unit, Epic, 6/3 → 12/6, of the Stinkyscape set
+//! (R1857000).
 //!   Base:    "Starship Piece / Aura: Anything that would be destroyed is exiled instead."
 //!   Radiant: "Starship Piece / Aura: Any enemy permanent that would be destroyed is exiled instead."
 //! Engine: Starship Piece (R1852000) is a catalog keyword. `StaticFlags.destroyed_exiled` (R1849002):

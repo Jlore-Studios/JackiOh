@@ -1,4 +1,4 @@
-//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 8/8 → 16/16, cost 4, Embiggened (5), Epic; held (R1420).
+//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 8/8 → 16/16, cost 4, Embiggened (5), Epic.
 //!   Base:    "Starship Piece, Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
 //!            Embiggened (5): The Miners offered are Radiant."

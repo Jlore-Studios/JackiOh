@@ -1,5 +1,5 @@
-//! S #19 Imprisoned Cosmality (SPEC §8.10 row 19): (2) Unit, Common, 10/6 → 20/12, of the held
-//! Stinkyscape set (R1420).
+//! S #19 Imprisoned Cosmality (SPEC §8.10 row 19): (2) Unit, Common, 10/6 → 20/12, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Pierce / Dormant for 2 turns. When this awakens, deal {damage} damage randomly split
 //!            among all enemies." ({damage} 10)
 //!   Radiant: the same text, {damage} 20.

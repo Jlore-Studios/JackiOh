@@ -1,5 +1,5 @@
-//! S #32 Drone Core VI (SPEC §8.10 row 32): (4) Spell, Drone Core, Epic, a card of the held Stinkyscape
-//! set (R1420).
+//! S #32 Drone Core VI (SPEC §8.10 row 32): (4) Spell, Drone Core, Epic, a card of the Stinkyscape
+//! set (R1857000).
 //!   Base:    "Summon {interceptors|Drone Interceptor|Drone Interceptors}." — interceptors 5
 //!   Radiant: "Summon {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}." — interceptors 5
 //! Engine: as S #29, one summon per Interceptor, each into the caster's leftmost open unit zone in turn

@@ -1,5 +1,5 @@
-//! S #114 Arctic Citadel (SPEC §8.10 row 114): (4) Unit, Human, Epic, 4/4 → 8/8, of the held Stinkyscape
-//! set (R1420).
+//! S #114 Arctic Citadel (SPEC §8.10 row 114): (4) Unit, Human, Epic, 4/4 → 8/8, of the Stinkyscape
+//! set (R1857000).
 //!   Base:    "Cry: Fuse every card in your exile into this."
 //!   Radiant: "Cry: Fuse every card in both exiles into this."
 //! Engine: Cry (R1): `fuse_cards` (R77, R102): every card in its controller's exile pile, oldest first,

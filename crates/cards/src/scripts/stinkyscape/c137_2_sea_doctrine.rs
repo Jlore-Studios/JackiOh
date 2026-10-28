@@ -1,5 +1,5 @@
 //! S #137.2 Sea Doctrine (SPEC §8.10 row 137.2; R49, R1852005, R1859007, R1859009): (4) Spell, War
-//! Doctrine, Token (printed Legendary), a token of the held Stinkyscape set (R1420), which #137
+//! Doctrine, Token (printed Legendary), a token of the Stinkyscape set (R1857000), which #137
 //! Firststrike Capability Discovers and casts.
 //!
 //! Base and Radiant: "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your

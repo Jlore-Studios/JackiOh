@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-gellium Gellium, a Resource token of the held Stinkyscape set (R1420).
+//! SPEC §7 Stinkyscape T-gellium Gellium, a Resource token of the Stinkyscape set (R1857000).
 //!   Base:    "Heal your hero {heal}." (4)
 //!   Radiant: the same (8).
 //!

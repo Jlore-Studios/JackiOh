@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 96 Ocean Tsunami, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 96 Ocean Tsunami, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Cry: Discard your hand. Fill your Resource tray with random Stinkyscape Resources." (6/6)
 //!   Radiant: "Cry: Discard your hand. Fill your Resource tray with random Radiant Stinkyscape
 //!            Resources." (12/12)

@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 175 Frost Module, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 175 Frost Module, a card of the Stinkyscape set (R1857000).
 //! (1) Unit, Common, 2/1 → 4/2: Starship Piece, Equip.
 //! "Activate: Freeze an enemy Unit." / Radiant: "Activate 2: Freeze an enemy Unit." (R1860009).
 //!
@@ -65,10 +65,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell.
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     mod base {
         use super::*;
 
@@ -92,7 +88,6 @@ mod tests {
         #[test]
         fn r1860009_activate_freezes_a_chosen_enemy_unit() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [FROST], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -108,7 +103,6 @@ mod tests {
         #[test]
         fn r1860009_no_hero_may_be_chosen_once_a_turn() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [FROST], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -126,7 +120,6 @@ mod tests {
         #[test]
         fn r1086_equipped_onto_a_unit_the_host_takes_the_activate() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [VANILLA, FROST, FILLER], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -148,7 +141,6 @@ mod tests {
         #[test]
         fn r1860009_radiant_activate_twice_a_turn() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [{ "def": FROST, "radiant": true }], "library": filler(4) },
                 "p2": {

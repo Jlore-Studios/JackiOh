@@ -1,5 +1,5 @@
 //! S #115 Scornboi (SPEC §8.10 row 115): (4) Unit, Human, Acclaimed, Legendary, 12/9 → 24/18, of the
-//! held Stinkyscape set (R1420).
+//! Stinkyscape set (R1857000).
 //!   Base:    "Tribute 3 / Aura: Every Unit that is neither Human, a Starship Piece nor a Starship is
 //!            exiled."
 //!   Radiant: "Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a

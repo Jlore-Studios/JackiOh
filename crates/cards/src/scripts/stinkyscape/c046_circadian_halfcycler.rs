@@ -1,5 +1,5 @@
-//! S #46 Circadian Halfcycler (SPEC §8.10 row 46): (2) Field Spell, Epic, a card of the held Stinkyscape
-//! set (R1420).
+//! S #46 Circadian Halfcycler (SPEC §8.10 row 46): (2) Field Spell, Epic, a card of the Stinkyscape
+//! set (R1857000).
 //!   Base:    "Aura: The AI plays the first 3 actions of each of your turns.
 //!             End of turn: Summon a Drone Interceptor."
 //!   Radiant: "Aura: The AI plays the first 3 actions of each of your turns.

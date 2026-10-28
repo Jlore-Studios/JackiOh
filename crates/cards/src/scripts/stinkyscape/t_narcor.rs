@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-narcor Narcor, a Resource token of the held Stinkyscape set (R1420).
+//! SPEC §7 Stinkyscape T-narcor Narcor, a Resource token of the Stinkyscape set (R1857000).
 //!   Base:    "Add a random Rare card to your hand."
 //!   Radiant: "Add a random Radiant Rare card to your hand."
 //!

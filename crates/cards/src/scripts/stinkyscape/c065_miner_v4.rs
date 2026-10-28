@@ -1,4 +1,4 @@
-//! Stinkyscape #65 Miner v4 (SPEC §8.10 row 65). Unit 0/6 → 0/12, cost 3, Epic; held (R1420).
+//! Stinkyscape #65 Miner v4 (SPEC §8.10 row 65). Unit 0/6 → 0/12, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 3: Gain a random Stinkyscape Resource."
 //!   Radiant: "Starship Piece, Equip

@@ -1,4 +1,4 @@
-//! Stinkyscape #78 Ozark (SPEC §8.10 row 78). Unit 4/4 → 8/8, cost 3, Epic; held (R1420).
+//! Stinkyscape #78 Ozark (SPEC §8.10 row 78). Unit 4/4 → 8/8, cost 3, Epic.
 //!   Base:    "Starship Piece
 //!            Cry: Equip a random Miner into this."
 //!   Radiant: "Starship Piece

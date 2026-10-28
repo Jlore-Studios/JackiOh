@@ -1,4 +1,4 @@
-//! S #157 The Gauntlet (SPEC §8.10 row 157): (1) Field Spell, Epic, of the held Stinkyscape set (R1420).
+//! S #157 The Gauntlet (SPEC §8.10 row 157): (1) Field Spell, Epic, of the Stinkyscape set (R1857000).
 //!   Base:    "Brittle 3 / The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can
 //!            attack only each other, and no other Unit can attack them."
 //!   Radiant: the same, and "Activate: Choose one: give this +{brittleGain} Brittle, or Tribute this."

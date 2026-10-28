@@ -1,5 +1,5 @@
 //! SPEC §7 Stinkyscape 112.1 Paycheck (§8.10 row 112.1; §2.4, §6.1 Lucky, §6.3 Mana; R81, R1438,
-//! R1840005). (0) Spell, a token (printed Legendary) of the held Stinkyscape set (R1420), S #112 Job
+//! R1840005). (0) Spell, a token (printed Legendary) of the Stinkyscape set (R1857000), S #112 Job
 //! Application's Stage 3 reward.
 //!   Base:    "Choose one: Gain {mana} mana, draw {draw|card|cards} and gain {credits} Credits; or go all
 //!            in on red, with an 18/39 chance to gain twice as much." (mana 2, draw 1, credits 20)

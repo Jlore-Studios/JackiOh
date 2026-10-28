@@ -1,4 +1,4 @@
-//! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 10/10 → 20/20, cost 4, Legendary; held (R1420).
+//! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 10/10 → 20/20, cost 4, Legendary.
 //!   Base:    "Tribute 2, Starship Piece, Flying
 //!            Cry: Discover 2 Radiant Miners and Equip them into this."
 //!   Radiant: "Tribute 2, Starship Piece, Flying

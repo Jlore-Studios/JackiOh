@@ -1,5 +1,5 @@
 //! S #23 Warp Disruptor (SPEC §8.10 row 23; R1849006, R1849007, R1875003): (1) Field Spell, Rare, of the
-//! held Stinkyscape set (R1420).
+//! Stinkyscape set (R1857000).
 //!   Base:    "Stack, Brittle 3 / Aura: Units can't be in Defense Position and have +{attack} Attack. /
 //!            After your opponent summons a Unit, a random Unit of yours attacks it."
 //!   Radiant: the same, and "Your Units have First Strike."

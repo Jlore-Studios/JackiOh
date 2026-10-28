@@ -1,5 +1,4 @@
-//! Stinkyscape #124 Jlockeed's Shipbuilding Grant (SPEC §8.10 row 124). (2) Spell, Jlockeed, Common; held
-//! (R1420).
+//! Stinkyscape #124 Jlockeed's Shipbuilding Grant (SPEC §8.10 row 124). (2) Spell, Jlockeed, Common.
 //!   Base:    "Add {cards|random Starship Piece|random Starship Pieces} to your hand." — cards 3
 //!   Radiant: "Add {cards|random Radiant Starship Piece|random Radiant Starship Pieces} to your hand." — 3
 //!

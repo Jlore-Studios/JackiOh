@@ -1,5 +1,5 @@
-//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/9 → 4/18, of the held
-//! Stinkyscape set (R1420).
+//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/9 → 4/18, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Choose one:
 //!            summon a random Starship Piece, or Activate your Universities."
 //!   Radiant: "Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Summon a

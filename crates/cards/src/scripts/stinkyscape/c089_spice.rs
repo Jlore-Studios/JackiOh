@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 89 Spice, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 89 Spice, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Stinkyscape
 //!            card."
 //!   Radiant: "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Radiant

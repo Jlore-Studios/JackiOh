@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the Stinkyscape set (R1857000).
 //! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Equip, Divine Shield.
 //! "Whenever this survives an attack, it gains +{buff}/+{buff}." — buff 3, Radiant 6 (R1860000).
 //!
@@ -74,10 +74,6 @@ mod tests {
     const CLEAVER: &str = "classic-073"; // Nurse Cleaver 3/6, Rush, Cleave, Lifesteal.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     /// The `buffed` events on `id`, in order.
     fn buffed_on(s: &Scenario, id: &str) -> usize {
         s.events()
@@ -105,7 +101,6 @@ mod tests {
         #[test]
         fn r1860000_survives_an_attack_it_made_gains_3_3() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [AMPLIFIER, ANCHOR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -125,7 +120,6 @@ mod tests {
         #[test]
         fn r1860000_survives_one_made_on_it_its_divine_shield_taking_the_hit_gains_3_3() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
@@ -141,7 +135,6 @@ mod tests {
         #[test]
         fn r1860000_dies_in_the_combat_nothing() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
@@ -175,7 +168,6 @@ mod tests {
         #[test]
         fn r1860000_a_cleave_splash_it_survives_is_no_attack_on_it() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "seed": "amplifier-cleave",
                 "active": "p2",
@@ -198,7 +190,6 @@ mod tests {
         #[test]
         fn r1852001_equipped_onto_a_unit_the_host_gains_the_text_and_divine_shield_and_stays_no_piece() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [VANILLA, AMPLIFIER, ANCHOR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR] },
@@ -223,7 +214,6 @@ mod tests {
         #[test]
         fn buff_reads_through_param() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -241,7 +231,6 @@ mod tests {
         #[test]
         fn r1860000_radiant_survives_an_attack_it_made_gains_6_6() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": AMPLIFIER, "radiant": true }, ANCHOR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -259,7 +248,6 @@ mod tests {
         #[test]
         fn r1860000_radiant_dies_in_the_combat_nothing() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [{ "def": AMPLIFIER, "radiant": true }], "library": filler(4) },
                 "p2": {

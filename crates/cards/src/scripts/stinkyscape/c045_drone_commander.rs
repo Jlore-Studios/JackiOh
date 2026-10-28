@@ -1,5 +1,5 @@
-//! S #45 Drone Commander (SPEC §8.10 row 45): (4) Unit, Human, Epic, 8/12 → 16/24, a card of the held
-//! Stinkyscape set (R1420).
+//! S #45 Drone Commander (SPEC §8.10 row 45): (4) Unit, Human, Epic, 8/12 → 16/24, a card of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Cry: Add {cards|random Drone Core card|random Drone Core cards} to your hand. Each costs
 //!            ({discount}) less." — cards 6, discount 1
 //!   Radiant: "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand.
@@ -8,7 +8,7 @@
 //!   non-token cards tagged Drone Core, R380), one draw of the match rng per card (R60), each with a
 //!   `costMod` of minus `discount` (R65), kept until a graveyard or exile (R766); a full hand burns the
 //!   overflow (§2.4). `cards` and `discount` are declared Cry numbers (R386, R1748000). The pool names no
-//!   set, so while the set is held it reaches no card (R1420). Radiant: added Radiant.
+//!   set, so it reaches them since the set shipped (R1857000). Radiant: added Radiant.
 
 use jackioh_engine::prelude::*;
 
@@ -81,7 +81,6 @@ mod tests {
 
     #[test]
     fn r65_played_adds_six_each_costing_one_less() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 1);
         s.play(COMMANDER, json!({}));
         assert_eq!(cores(&s), vec![(false, -1); 6]);
@@ -90,7 +89,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_the_rest() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 6);
         s.play(COMMANDER, json!({}));
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
@@ -100,7 +98,6 @@ mod tests {
 
     #[test]
     fn cards_and_discount_read_through_param() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 1);
         set_param(s.card_mut(COMMANDER), "cards", 2);
         set_param(s.card_mut(COMMANDER), "discount", 3);
@@ -119,7 +116,6 @@ mod tests {
 
     #[test]
     fn radiant_16_24_adds_radiant_ones() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(true, 1);
         s.play(COMMANDER, json!({}));
         let commander = s.unit(P1, 1).expect("the Commander");

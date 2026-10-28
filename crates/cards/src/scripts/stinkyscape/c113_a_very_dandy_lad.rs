@@ -1,5 +1,5 @@
-//! S #113 A Very Dandy Lad (SPEC §8.10 row 113): (4) Unit, Human, Epic, 9/15 → 18/30, of the held
-//! Stinkyscape set (R1420).
+//! S #113 A Very Dandy Lad (SPEC §8.10 row 113): (4) Unit, Human, Epic, 9/15 → 18/30, of the
+//! Stinkyscape set (R1857000).
 //!   Base:    "Tribute 2 / Aura: All permanents that cost (2) or less are exiled."
 //!   Radiant: "Tribute 2 / Aura: All enemy permanents that cost (2) or less are exiled."
 //! Engine: Tribute 2 is its play's cost, §6.3's `staticFlags.tribute` (R101), on both faces. The aura is

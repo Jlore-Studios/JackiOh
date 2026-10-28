@@ -1,5 +1,5 @@
 //! S T-AI-1 Escort Protocol (SPEC §7, §8.10 row T-AI-1; R1, R64, R482): (1) Unit, AI, Token (no printed
-//! rarity), 1/3 → 2/6, Flying, an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! rarity), 1/3 → 2/6, Flying, an AI generated token of the Stinkyscape set (R1857000), built by S21.
 //!   Base:    "Flying\nCry: Summon a Drone Interceptor."
 //!   Radiant: "Flying\nCry: Summon a Radiant Drone Interceptor."
 //! Engine: Flying is catalog data. Cry (R1): a summon of the Drone Interceptor into its controller's

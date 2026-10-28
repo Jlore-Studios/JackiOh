@@ -67,7 +67,6 @@ mod tests {
 
             #[test]
             fn adds_three_spells_never_field_spells_or_itself() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 for n in 0..8 {
                     let mut s = holding(&format!("spell-basket-{n}"), false, 1);
                     s.play(ID, json!({}));

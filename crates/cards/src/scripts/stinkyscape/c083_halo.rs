@@ -1,4 +1,4 @@
-//! Stinkyscape #83 Halo (SPEC §8.10 row 83). Unit 2/2 → 4/4, cost 4, Epic; held (R1420).
+//! Stinkyscape #83 Halo (SPEC §8.10 row 83). Unit 2/2 → 4/4, cost 4, Epic.
 //!   Base:    "Starship Piece
 //!            Cry: Discover 3 Rare Weapons and Equip them into this."
 //!   Radiant: "Starship Piece

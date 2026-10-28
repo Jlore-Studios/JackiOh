@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 75 Badger, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 75 Badger, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource." (2/3)
 //!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!

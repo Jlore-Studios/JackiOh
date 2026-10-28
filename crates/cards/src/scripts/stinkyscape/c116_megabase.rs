@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 116 Megabase, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 116 Megabase, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Animated, Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in
 //!            Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath:
 //!            Both players gain 100 Credits." (0/20)
@@ -227,7 +227,6 @@ mod tests {
         assert!(crate::card_def(ID).tags.contains(&Tag::Quickdraw));
 
         // Dealt: every opening hand holds it, wherever the shuffle put it.
-        let _guard = preview_sets(&[SetName::Stinkyscape]);
         let rest = [
             "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
             "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-016", "core-017",

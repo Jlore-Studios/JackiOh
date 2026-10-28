@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 165 The Trade Union, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 165 The Trade Union, a card of the Stinkyscape set (R1857000).
 //!   (1) Field Spell, Rare.
 //!   Base:    "Tradable / Aura: Cards in your hand have Tradable."
 //!   Radiant: "Tradable / Aura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards}

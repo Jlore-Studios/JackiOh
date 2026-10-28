@@ -1,5 +1,5 @@
 //! S T-AI-8 Drone Uplink (SPEC §7, §8.10 row T-AI-8; R62, R64, R78, R482, R1852000, R1881005): (2) Field
-//! Spell, AI, Token (no printed rarity), an AI generated token of the held Stinkyscape set (R1420), built
+//! Spell, AI, Token (no printed rarity), an AI generated token of the Stinkyscape set (R1857000), built
 //! by S21.
 //!   Base:    "End of turn: Summon a Drone Interceptor. It gains Starship Piece."
 //!   Radiant: "End of turn: Summon a Radiant Drone Interceptor. It gains Starship Piece."

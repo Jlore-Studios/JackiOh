@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 84 Power Cell, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 84 Power Cell, a card of the Stinkyscape set (R1857000).
 //!   Base:    "Shuffle {scraps} Metal Scraps into your deck." (4)
 //!   Radiant: the same (8).
 //!

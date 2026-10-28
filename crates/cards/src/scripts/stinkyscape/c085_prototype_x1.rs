@@ -1,4 +1,4 @@
-//! Stinkyscape #85 Prototype-X1 (SPEC §8.10 row 85). Unit 6/6 → 12/12, cost 4, Legendary; held (R1420).
+//! Stinkyscape #85 Prototype-X1 (SPEC §8.10 row 85). Unit 6/6 → 12/12, cost 4, Legendary.
 //!   Base:    "Tribute 2, Starship Piece
 //!            Cry: Discover 2 Epic Weapons and Equip them into this."
 //!   Radiant: "Tribute 2, Starship Piece

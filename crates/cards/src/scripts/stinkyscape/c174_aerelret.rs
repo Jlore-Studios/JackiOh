@@ -1,5 +1,5 @@
-//! S #174 Aerelret (SPEC §8.10 row 174; R1849009, R1875002): (4) Trap, Epic, of the held Stinkyscape set
-//! (R1420).
+//! S #174 Aerelret (SPEC §8.10 row 174; R1849009, R1875002): (4) Trap, Epic, of the Stinkyscape set
+//! (R1857000).
 //!   Base:    "{chance}% chance to reveal when an enemy Unit attacks: Summon a Warp Disruptor, then
 //!            {paragons|Paragon Mk1|Paragon Mk1s}. The attack goes on."
 //!   Radiant: the same, every summon Radiant.
