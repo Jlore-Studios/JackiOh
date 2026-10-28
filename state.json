@@ -7121,7 +7121,9 @@
     },
     "2257": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6475930623"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -7145,9 +7147,7 @@
       "started_at": "2026-10-28T17:32:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6475930623"
-      ]
+      "taken_asks": []
     },
     "2262": {
       "action": "review",
