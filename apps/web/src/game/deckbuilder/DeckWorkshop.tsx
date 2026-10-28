@@ -19,7 +19,9 @@ import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
-import DeckHistory from "./DeckHistory.tsx";
+// R2100000: the kept versions' popover, under another name than #2099's undo history (history.ts).
+import DeckHistoryPopover from "./DeckHistory.tsx";
+import { emptyHistory, historyKey, inTextField, recorded, redone, sealed, undone, type DeckHistory, type DeckPatch } from "./history.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import ImportPanel from "./ImportPanel.tsx";
@@ -44,6 +46,8 @@ import {
   DECK_LIST,
   DECK_NEW,
   DECK_PRACTICE_ONLY,
+  DECK_REDO,
+  DECK_UNDO,
   SYNC_STATUS,
   TRIO_CAP,
   TRIO_CAP_REASON,
@@ -62,6 +66,10 @@ import { copyName, deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, t
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
+
+/** #2099: Undo's arrow and Redo's, its mirror (24 px, stroked). */
+const UNDO_PATH = "M9 4 4 9l5 5M4 9h10.5a5.5 5.5 0 0 1 0 11H11";
+const REDO_PATH = "M15 4l5 5-5 5M20 9H9.5a5.5 5.5 0 0 0 0 11H13";
 
 /** Whether changing halves must also move focus. */
 function halvesTakeTurns(): boolean {
@@ -478,6 +486,11 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const openDeck = open?.kind === "deck" ? (decks.find((deck) => deck.id === open.id) ?? null) : null;
   const openTrio = open?.kind === "trio" ? (trios.find((trio) => trio.id === open.id) ?? null) : null;
 
+  // #2099: the open deck's history (history.ts), reset while rendering whenever the open deck changes.
+  const openDeckId = openDeck?.id ?? null;
+  const [history, setHistory] = useState<DeckHistory>(() => emptyHistory(openDeckId));
+  if (history.deckId !== openDeckId) setHistory(emptyHistory(openDeckId));
+
   const openItem = (next: WorkshopOpen): void => {
     setOpen(next);
     setView(next === null ? "list" : "editor");
@@ -505,7 +518,51 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const backToList = (): void => {
     setView("list");
     setMoveFocus("list");
+    // #2099: closing the editor ends its history.
+    setHistory((current) => emptyHistory(current.deckId));
   };
+
+  /** #2099: an edit of deck `id`, one step of the history; `naming` folds a rename's keys into one. */
+  const editDeck = (id: string, patch: DeckPatch, naming = false): void => {
+    // Read fresh, not from this render, so two edits in one tick each hold what they overwrote.
+    const deck = store.getSnapshot().decks.find((candidate) => candidate.id === id);
+    if (deck === undefined) return;
+    setHistory((current) => recorded(current, deck, patch, naming));
+    store.updateDeck(id, patch);
+  };
+
+  const undo = (): void => {
+    const step = undone(history);
+    if (openDeck === null || step === null) return;
+    setHistory(step.history);
+    store.updateDeck(openDeck.id, step.patch);
+  };
+
+  const redo = (): void => {
+    const step = redone(history);
+    if (openDeck === null || step === null) return;
+    setHistory(step.history);
+    store.updateDeck(openDeck.id, step.patch);
+  };
+
+  // #2099: the keys, outside text fields; a ref, as ReplayPlayer's arrows, holds this render's history.
+  const historyKeys = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  historyKeys.current = (event) => {
+    const asked = historyKey(event);
+    if (asked === null || openDeck === null || event.defaultPrevented || inTextField(event.target)) return;
+    event.preventDefault();
+    if (asked === "undo") undo();
+    else redo();
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent): void => {
+      historyKeys.current(event);
+    };
+    window.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  }, []);
 
   let main: ReactElement;
   if (openDeck !== null) {
@@ -526,13 +583,16 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         sort={sort}
         onSort={setSort}
         onRename={(name) => {
-          store.updateDeck(openDeck.id, { name });
+          editDeck(openDeck.id, { name }, true);
+        }}
+        onRenameDone={() => {
+          setHistory(sealed);
         }}
         onPortrait={(portrait) => {
-          store.updateDeck(openDeck.id, { portrait });
+          editDeck(openDeck.id, { portrait });
         }}
         onCards={(cards) => {
-          store.updateDeck(openDeck.id, { cards });
+          editDeck(openDeck.id, { cards });
         }}
         onDelete={() => {
           const next = neighbourOf(decks, openDeck.id);
@@ -548,7 +608,17 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         }}
         onBack={backToList}
         // R2100000: mounted with the editor, which is keyed by the deck, so one deck's list never shows under another.
-        history={<DeckHistory deckId={openDeck.id} store={store} catalog={catalog} />}
+        history={
+          <DeckHistoryPopover
+            deckId={openDeck.id}
+            store={store}
+            catalog={catalog}
+            onRestored={() => {
+              // R2100000, #2099: Undo's steps were taken on the deck the restore replaced, so they end, as on closing the editor.
+              setHistory((current) => (current.deckId === openDeck.id ? emptyHistory(current.deckId) : current));
+            }}
+          />
+        }
       />
     );
   } else if (openTrio !== null) {
@@ -632,10 +702,46 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         <BackLink to={paths.collection} />
         <h1 className="db-title">{t("Decks")}</h1>
         {openDeck === null ? null : (
+          <div className="ws-history">
+            <button
+              type="button"
+              className="ws-history-button"
+              data-testid={DECK_UNDO}
+              aria-label={t("Undo")}
+              title={t("Undo")}
+              aria-keyshortcuts="Control+Z Meta+Z"
+              disabled={history.past.length === 0}
+              onClick={undo}
+            >
+              <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d={UNDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="ws-history-button"
+              data-testid={DECK_REDO}
+              aria-label={t("Redo")}
+              title={t("Redo")}
+              aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+              disabled={history.future.length === 0}
+              onClick={redo}
+            >
+              <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d={REDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        )}
+        {openDeck === null ? null : (
           <DeckCosmeticsPicker
             deck={openDeck}
             onCosmetic={(kind, id) => {
-              store.updateDeck(openDeck.id, deckCosmeticPatch(kind, id));
+              editDeck(openDeck.id, deckCosmeticPatch(kind, id));
             }}
           />
         )}

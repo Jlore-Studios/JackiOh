@@ -3,8 +3,9 @@
 // it). The top bar has no room left for it on a phone's first screen (BUILD M5-T1). Each open reads
 // the list again, newest first: each version's name and date, and the cards in and out since the
 // version kept before it. Every version but the newest offers Restore, which the server keeps as a
-// new version, so the one it replaced stays listed. The server decides what a version is and whether
-// a restore stands (CLAUDE.md rule 7); this shows its list and its refusal.
+// new version, so the one it replaced stays listed, and ends the workshop's Undo and Redo of the deck
+// (#2099), whose steps were taken on the deck it replaced. The server decides what a version is and
+// whether a restore stands (CLAUDE.md rule 7); this shows its list and its refusal.
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -51,18 +52,18 @@ function HistoryRow({
 }): ReactElement {
   const headId = useId();
   return (
-    <li className="ws-history-row" data-testid={DECK_HISTORY_ROW} data-version={version.id}>
-      <div className="ws-history-head" id={headId}>
-        <span className="ws-history-name">{version.name}</span>
-        <span className="ws-history-date">{formatDateTime(version.savedAt, { dateStyle: "medium", timeStyle: "short" })}</span>
+    <li className="ws-versions-row" data-testid={DECK_HISTORY_ROW} data-version={version.id}>
+      <div className="ws-versions-head" id={headId}>
+        <span className="ws-versions-name">{version.name}</span>
+        <span className="ws-versions-date">{formatDateTime(version.savedAt, { dateStyle: "medium", timeStyle: "short" })}</span>
       </div>
-      <ul className="ws-history-change">
+      <ul className="ws-versions-change">
         {changeLines(versionChange(version, older), catalog).map((line) => (
           <li key={line}>{line}</li>
         ))}
       </ul>
       {latest ? (
-        <span className="ws-history-latest">{t("Latest save")}</span>
+        <span className="ws-versions-latest">{t("Latest save")}</span>
       ) : (
         <button
           type="button"
@@ -86,11 +87,14 @@ export default function DeckHistory({
   deckId,
   store,
   catalog,
+  onRestored,
 }: {
   deckId: string;
   /** The workshop's store, which reads the list and asks for a restore (sync.ts). */
   store: Pick<DeckStore, "deckVersions" | "restoreDeckVersion">;
   catalog: CatalogSnapshot;
+  /** A restore stood: the workshop ends the deck's Undo and Redo (#2099). */
+  onRestored: () => void;
 }): ReactElement {
   useLocale();
   const [open, setOpen] = useState(false);
@@ -144,8 +148,12 @@ export default function DeckHistory({
     void store
       .restoreDeckVersion(deckId, versionId)
       .then((result) => {
-        if (result.ok) setListing({ kind: "ready", versions: result.versions });
-        else setRefusal(result.message);
+        if (result.ok) {
+          setListing({ kind: "ready", versions: result.versions });
+          onRestored();
+        } else {
+          setRefusal(result.message);
+        }
       })
       .finally(() => {
         setRestoring(null);
@@ -153,7 +161,7 @@ export default function DeckHistory({
   };
 
   return (
-    <div className="ws-cosmetics ws-history" ref={root}>
+    <div className="ws-cosmetics ws-versions" ref={root}>
       <button
         ref={buttonRef}
         type="button"
@@ -175,7 +183,7 @@ export default function DeckHistory({
         </span>
       </button>
       {open ? (
-        <div className="ws-cosmetics-panel ws-history-panel" role="dialog" aria-label={t("Deck history")} data-testid={DECK_HISTORY_PANEL}>
+        <div className="ws-cosmetics-panel ws-versions-panel" role="dialog" aria-label={t("Deck history")} data-testid={DECK_HISTORY_PANEL}>
           {listing.kind === "loading" ? (
             <p className="ws-hint" role="status">
               {t("Loading…")}
@@ -195,7 +203,7 @@ export default function DeckHistory({
             <p className="ws-hint">{t("No versions kept yet. Each save keeps one.")}</p>
           ) : null}
           {listing.kind === "ready" && listing.versions.length > 0 ? (
-            <ol className="ws-history-list">
+            <ol className="ws-versions-list">
               {listing.versions.map((version, at) => (
                 <HistoryRow
                   key={version.id}

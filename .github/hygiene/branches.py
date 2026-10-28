@@ -4,9 +4,9 @@ a person ticks (.github/workflows/hygiene.yml, code-audit.yml, hygiene-delete.ym
 
   survey                             every branch, its pull requests and what its bot name points at
   report SURVEY                      the stale branches as checkboxes, for a person to tick
-  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue, or the
-                                     `code` audit, for Squishy, unless that kind's last one is
-                                     still open
+  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue for Squishy,
+                                     or the `code` audit for the night bot, unless that kind's last
+                                     one is still open
   delete ISSUE                       delete the branches ticked in that issue, after surveying again
 
 A branch is safe to delete when nothing live uses it and deleting it loses nothing that cannot come
@@ -45,6 +45,9 @@ KINDS = {"files": f"{TITLE}, dead files and archives", "instructions": f"{TITLE}
 #: A ticked checkbox in the branch section, its branch the first code span; a struck one no longer matches.
 TICKED = re.compile(r"^\s*- \[[xX]\] `([^`]+)`", re.M)
 LABELS = ("architecture", "difficulty:hard", "squishy:build", "person merges")
+#: Each kind's labels: the weekly two queue for Squishy, the code audit for the night bot (`bot:build`).
+KIND_LABELS = {"files": LABELS, "instructions": LABELS,
+               "code": ("architecture", "difficulty:hard", "bot:build", "person merges")}
 #: The issue body's limit is 65,536 characters; the report gives way first.
 REPORT_LIMIT = 30_000
 
@@ -244,9 +247,9 @@ def open_issue(repo: str, kind: str, template: str, report: str, guidance: str, 
             .replace("<!-- guidance -->", guidance.strip() or "_The guidance step gave nothing this week._"))
     title = f"{prefix}, {today}"
     if dry_run:
-        return f"(dry run) would open {title!r}, labelled {', '.join(LABELS)}:\n\n{body}"
+        return f"(dry run) would open {title!r}, labelled {', '.join(KIND_LABELS[kind])}:\n\n{body}"
     args = ["issue", "create", "--repo", repo, "--title", title, "--body", body]
-    for label in LABELS:
+    for label in KIND_LABELS[kind]:
         args += ["--label", label]
     return f"opened {gh(*args).strip()}"
 

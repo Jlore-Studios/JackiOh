@@ -445,7 +445,8 @@
   display: inline-flex;
 }
 
-.ws-cosmetics-button {
+.ws-cosmetics-button,
+.ws-history-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -466,6 +467,12 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* #2099: the open deck's Undo and Redo, before the cosmetics button. */
+.ws-history {
+  display: inline-flex;
+  gap: 6px;
 }
 
 .ws-cosmetics-panel {
@@ -506,13 +513,13 @@
   }
 }
 
-.ws-cosmetics.ws-history {
+.ws-cosmetics.ws-versions {
   position: static;
   flex: none;
   margin-left: auto;
 }
 
-.ws-cosmetics-panel.ws-history-panel {
+.ws-cosmetics-panel.ws-versions-panel {
   left: 0;
   width: auto;
   min-width: 0;
@@ -522,14 +529,14 @@
   overscroll-behavior: contain;
 }
 
-.ws-history-list,
-.ws-history-change {
+.ws-versions-list,
+.ws-versions-change {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ws-history-row {
+.ws-versions-row {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -538,12 +545,12 @@
   border-top: 1px solid var(--line);
 }
 
-.ws-history-row:first-child {
+.ws-versions-row:first-child {
   padding-top: 0;
   border-top: none;
 }
 
-.ws-history-head {
+.ws-versions-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -552,18 +559,18 @@
   width: 100%;
 }
 
-.ws-history-name {
+.ws-versions-name {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.ws-history-date,
-.ws-history-latest {
+.ws-versions-date,
+.ws-versions-latest {
   color: var(--text-dim);
   font-size: 12.5px;
 }
 
-.ws-history-change {
+.ws-versions-change {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -1063,9 +1070,10 @@
     min-height: 44px;
   }
 
-  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square; the
-     history button, in the editor's head, is the same button (R2100000). */
-  .deckbuilder.app-shell .ws-cosmetics-button {
+  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square, and Undo and Redo (#2099); the
+     deck's History button, in the editor's head, is the cosmetics button too (R2100000). */
+  .deckbuilder.app-shell .ws-cosmetics-button,
+  .deckbuilder.app-shell .ws-history-button {
     min-width: 44px;
     min-height: 44px;
   }

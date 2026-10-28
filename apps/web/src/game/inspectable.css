@@ -10,7 +10,7 @@
 
 .pile--browsable:hover {
   border-color: var(--line-bright);
-  background: rgb(255 255 255 / 6%);
+  background: color-mix(in srgb, var(--pal-white) 6%, transparent);
 }
 
 .pile--browsable:focus-visible {
@@ -53,7 +53,7 @@
 
 .log .log-card:hover:not(:disabled) {
   border-color: transparent;
-  background: rgb(255 255 255 / 7%);
+  background: color-mix(in srgb, var(--pal-white) 7%, transparent);
   color: var(--text);
 }
 

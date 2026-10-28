@@ -1210,10 +1210,10 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
   return apiRequest<LeaderboardResponse>("/api/leaderboard", { token });
 }
 
-/** `GET /api/matches/:id/ranks`: both seats' ranks for the match screen (R604, R612). */
+/** `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000). */
 export type MatchRanksResponse = {
   ranked: boolean;
-  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; you: boolean }>;
+  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean }>;
 };
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {

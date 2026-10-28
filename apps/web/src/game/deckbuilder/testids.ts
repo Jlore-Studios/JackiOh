@@ -141,6 +141,10 @@ export function deckHistoryRestoreId(versionId: string): string {
   return `deck-history-restore-${versionId}`;
 }
 
+/** #2099: the open deck's Undo and Redo, in the top bar; each is off with nothing to move. */
+export const DECK_UNDO = "deck-undo";
+export const DECK_REDO = "deck-redo";
+
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }

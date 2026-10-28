@@ -102,6 +102,8 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
+  /** #2099: the name field lost the focus, so the rename under way is one undo step. */
+  onRenameDone: () => void;
   /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
@@ -132,7 +134,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
-  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack, history } = props;
+  const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack, history } = props;
 
   useLocale();
   const label = deckLabel(deck, limits.nameLength);
@@ -387,6 +389,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           onBlur={() => {
             // D1, gently: the field settles on the name the save sends ("Untitled deck" for none).
             if (deck.name !== label) onRename(label);
+            onRenameDone();
           }}
         />
       </label>
