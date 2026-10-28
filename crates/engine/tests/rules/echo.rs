@@ -28,7 +28,9 @@ use jackioh_engine::effects::{chosen_options, damage, discover_from_catalog};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, act_result, both, events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    Bench, act, act_result, both, events_of_type, in_hand, new_game, put, slot,
+};
 
 // ---------------------------------------------------------------------------
 // Fixtures.
@@ -315,26 +317,6 @@ fn echo_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
 /// below asserts the field is on a fresh state, which is where the gap shows.
 fn echo_queue(state: &GameState) -> Vec<EchoItem> {
     state.echo_queue.clone()
-}
-
-/// TS `sinkFor(state)`: a sink's events and rng (from the state's cursor), lent with the state to one
-/// engine call at a time.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 /// An Echo the engine owes, granted the way #79 grants one, so each test starts from one line.

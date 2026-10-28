@@ -864,6 +864,20 @@ fn readable_where_taken(event: &GameEvent, viewer: PlayerId) -> bool {
     *zone == ZoneName::Hand && *from == viewer
 }
 
+/// R1852003, R1852005: a launch names the pieces its Starship held, the public memory of a public
+/// launch, whatever has become of each piece's card since (a piece shuffled back into a library, a
+/// Starship that died and lost its memory, R78). The definitions the engine's own event named are
+/// taken out of the view's copy of it, so only what `view_for` may have added is scanned.
+fn drop_launched_pieces(shown: &mut Value, launched: &[String]) {
+    if let Some(Value::Array(pieces)) = shown.get_mut("pieces") {
+        pieces.retain(|piece| {
+            !piece
+                .as_str()
+                .is_some_and(|def| launched.iter().any(|named| named == def))
+        });
+    }
+}
+
 /// Every string and object inside `value`, with the path it was found at. Values only, never keys.
 fn walk(
     value: &Value,
@@ -948,27 +962,26 @@ pub fn hidden_information_violations(
         .flat_map(|entry| entry.events.iter())
         .collect();
     let offset = raw.len() as isize - view.events.len() as isize;
-    let events: Vec<&GameEvent> = view
-        .events
-        .iter()
-        .enumerate()
-        .filter(|(at, _)| {
-            let source = usize::try_from(offset + *at as isize)
-                .ok()
-                .and_then(|index| raw.get(index).copied());
-            !source.is_some_and(|source| readable_where_taken(source, viewer))
-        })
-        .map(|(_, event)| event)
-        .collect();
+    let mut events: Vec<Value> = Vec::new();
+    for (at, event) in view.events.iter().enumerate() {
+        let source = usize::try_from(offset + at as isize)
+            .ok()
+            .and_then(|index| raw.get(index).copied());
+        if source.is_some_and(|source| readable_where_taken(source, viewer)) {
+            continue;
+        }
+        let mut shown = serde_json::to_value(event).expect("a GameEvent serialises");
+        if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
+            drop_launched_pieces(&mut shown, pieces);
+        }
+        events.push(shown);
+    }
     // `defs` (R243) is left out: a definition is copied only for an id the rest of the view names, and
     // its body names its ingredients and its `refs` (R279), the text of cards the viewer reads.
     let mut scanned = serde_json::to_value(view).expect("a PlayerView serialises");
     if let Some(object) = scanned.as_object_mut() {
         object.remove("defs");
-        object.insert(
-            "events".to_string(),
-            serde_json::to_value(&events).expect("GameEvents serialise"),
-        );
+        object.insert("events".to_string(), Value::Array(events));
     }
 
     let mut named: IndexMap<String, String> = IndexMap::new();

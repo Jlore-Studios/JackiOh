@@ -9,7 +9,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, plain, stacker};
-use crate::rules::fixtures::harness::sink_for;
+use crate::rules::fixtures::harness::{sink_for, types_of};
 use crate::rules::fixtures::mplus_b07::{
     RAISE_BY, SET_TO, banner, camp, ghoul, harmony, kidnapper, party, plain_spell, register_b07_fixtures,
     snatch, spark, stoic, summit, xerox,
@@ -58,10 +58,6 @@ fn numbers_changed(events: &[GameEvent]) -> Vec<(String, String, i32)> {
             _ => None,
         })
         .collect()
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone {

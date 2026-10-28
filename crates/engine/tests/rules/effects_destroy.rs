@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::indestructible;
-use crate::rules::fixtures::harness::{both, events_of_type, live, live_mut, new_game, put, slot};
+use crate::rules::fixtures::harness::{Bench, both, events_of_type, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -141,55 +141,40 @@ struct RunOptions {
     self_: Option<CardInstance>,
 }
 
-/// A sink plus `apply`, so one test can run an effect and then the state check on the same events.
-/// The state is lent to each call, so the test reads it in between.
-struct Runner {
-    events: Vec<GameEvent>,
-    rng: Rng,
+/// `effect` run on the bench's sink, so one test can run an effect and then the state check
+/// (`check`) on the same events. The state is lent to each call, so the test reads it in between.
+fn apply(
+    runner: &mut Bench,
+    state: &mut GameState,
+    effect: Effect,
+    target: Option<&CardInstance>,
+    options: RunOptions,
+) {
+    let targets: Vec<Selection> = match target {
+        None => vec![],
+        Some(target) => vec![Selection::Instance {
+            instance_id: target.id.clone(),
+        }],
+    };
+    {
+        let mut sink = runner.sink(state);
+        let mut ctx = make_context(
+            &mut sink,
+            options.self_.as_ref(),
+            HookOptions {
+                controller: Some(options.controller.unwrap_or(PlayerId::P1)),
+                targets: Some(targets),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+    state.rng_cursor = runner.rng.cursor();
 }
 
-/// A sink whose rng starts at the state's cursor, as reduce does.
-fn runner(state: &GameState) -> Runner {
-    Runner {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Runner {
-    fn apply(
-        &mut self,
-        state: &mut GameState,
-        effect: Effect,
-        target: Option<&CardInstance>,
-        options: RunOptions,
-    ) {
-        let targets: Vec<Selection> = match target {
-            None => vec![],
-            Some(target) => vec![Selection::Instance {
-                instance_id: target.id.clone(),
-            }],
-        };
-        {
-            let mut sink = EngineSink::new(state, &mut self.events, &mut self.rng);
-            let mut ctx = make_context(
-                &mut sink,
-                options.self_.as_ref(),
-                HookOptions {
-                    controller: Some(options.controller.unwrap_or(PlayerId::P1)),
-                    targets: Some(targets),
-                    ..Default::default()
-                },
-            );
-            (effect.apply)(&mut ctx);
-        }
-        state.rng_cursor = self.rng.cursor();
-    }
-
-    fn check(&mut self, state: &mut GameState) {
-        let mut sink = EngineSink::new(state, &mut self.events, &mut self.rng);
-        state_check(&mut sink);
-    }
+fn check(runner: &mut Bench, state: &mut GameState) {
+    let mut sink = runner.sink(state);
+    state_check(&mut sink);
 }
 
 fn chosen() -> Value {
@@ -229,9 +214,10 @@ mod destroy_m3_t1 {
             slot(PlayerId::P1, Row::Units, 2),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&victim),
@@ -245,7 +231,7 @@ mod destroy_m3_t1 {
         );
         assert_eq!(run.events, Vec::<GameEvent>::new());
 
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 2)), None);
         assert_eq!(
@@ -274,21 +260,23 @@ mod destroy_m3_t1 {
         let mut state = default_game();
         let first = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let second = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&first),
             RunOptions::default(),
         );
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&second),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(
             pluck(
@@ -311,15 +299,16 @@ mod destroy_m3_t1 {
             json!({}),
         );
         live_mut(&mut state, &warded.id).position = Some(Position::Def);
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&warded),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(
             id_at(&state, slot(PlayerId::P1, Row::Units, 1)),
@@ -339,15 +328,16 @@ mod destroy_m3_t1 {
             slot(PlayerId::P1, Row::Backrow, 3),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&card),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Backrow, 3)), None);
         assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
@@ -369,15 +359,16 @@ mod destroy_m3_t1 {
             Default::default()
         ));
         let theirs = live(&state, &theirs.id).clone();
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&theirs),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(
             ids(&state.players[PlayerId::P2].graveyard),
@@ -395,15 +386,16 @@ mod destroy_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&token),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 1)), None);
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
@@ -420,15 +412,16 @@ mod destroy_m3_t1 {
             Zone::Hand { player: PlayerId::P1 },
         );
         state.players[PlayerId::P1].hand.push(card.clone());
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             destroy(json_as(json!({ "target": chosen() }))),
             Some(&card),
             RunOptions::default(),
         );
-        run.check(&mut state);
+        check(&mut run, &mut state);
 
         assert_eq!(live(&state, &card.id).marked_destroyed, None);
         assert_eq!(ids(&state.players[PlayerId::P1].hand), vec![card.id.clone()]);
@@ -444,9 +437,10 @@ mod sacrifice_m3_t1 {
     fn moves_your_own_unit_from_the_field_to_the_graveyard_at_once_with_no_state_check() {
         let mut state = default_game();
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&victim),
@@ -483,9 +477,10 @@ mod sacrifice_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&victim),
@@ -509,9 +504,10 @@ mod sacrifice_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&warded),
@@ -539,9 +535,10 @@ mod sacrifice_m3_t1 {
             .memory
             .insert("meal".to_string(), json!(7));
         let victim = live(&state, &victim.id).clone();
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&victim),
@@ -562,9 +559,10 @@ mod sacrifice_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&token),
@@ -588,9 +586,10 @@ mod sacrifice_m3_t1 {
     fn refuses_an_enemy_unit_unless_a_tribute_allows_it_55() {
         let mut state = default_game();
         let theirs = put(&mut state, "fx-4", slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&theirs),
@@ -607,7 +606,8 @@ mod sacrifice_m3_t1 {
         assert_eq!(run.events, Vec::<GameEvent>::new());
 
         let theirs = live(&state, &theirs.id).clone();
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen(), "allowEnemy": true }))),
             Some(&theirs),
@@ -640,9 +640,10 @@ mod sacrifice_m3_t1 {
             Default::default()
         ));
         let theirs = live(&state, &theirs.id).clone();
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&theirs),
@@ -669,9 +670,10 @@ mod sacrifice_m3_t1 {
             Zone::Hand { player: PlayerId::P1 },
         );
         state.players[PlayerId::P1].hand.push(card.clone());
-        let mut run = runner(&state);
+        let mut run = Bench::new(&state);
 
-        run.apply(
+        apply(
+            &mut run,
             &mut state,
             sacrifice(json_as(json!({ "target": chosen() }))),
             Some(&card),

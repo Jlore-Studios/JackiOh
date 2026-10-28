@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{blink, flush, playing, spatula, tesla, watcher};
 use crate::rules::fixtures::harness::{
-    act, act_result, events_of_type, in_hand, live_mut, matches_object, put, slot,
+    Bench, act, act_result, events_of_type, in_hand, live_mut, matches_object, put, slot,
 };
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
@@ -25,45 +25,24 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     }
 }
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call (`on`), so a test reads the state in
-/// between as TS read its live objects.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
+/// `effect.apply(makeContext(sink, null, { controller }))`.
+fn apply(bench: &mut Bench, state: &mut GameState, effect: Effect, controller: PlayerId) {
+    let mut sink = bench.sink(state);
+    let mut ctx = make_context(
+        &mut sink,
+        None,
+        HookOptions {
+            controller: Some(controller),
+            ..Default::default()
+        },
+    );
+    (effect.apply)(&mut ctx);
 }
 
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-
-    /// `effect.apply(makeContext(sink, null, { controller }))`.
-    fn apply(&mut self, state: &mut GameState, effect: Effect, controller: PlayerId) {
-        let mut sink = self.on(state);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-
-    /// `flickerCard(sink, card)`, the card as it stands in the state now.
-    fn flicker_card(&mut self, state: &mut GameState, id: &str) -> bool {
-        let card = by_id(state, id).clone();
-        flicker_card(&mut self.on(state), &card)
-    }
+/// `flickerCard(sink, card)`, the card as it stands in the state now.
+fn flicker_by_id(bench: &mut Bench, state: &mut GameState, id: &str) -> bool {
+    let card = by_id(state, id).clone();
+    flicker_card(&mut bench.sink(state), &card)
 }
 
 /// `cardAt(state, ref)?.id`.
@@ -125,9 +104,9 @@ mod b5_e22_flicker {
                 attacks: None,
             };
         }
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let mark = exit_mark(&state);
-        assert!(sink.flicker_card(&mut state, &unit.id));
+        assert!(flicker_by_id(&mut sink, &mut state, &unit.id));
 
         assert_eq!(
             id_at(&state, slot(PlayerId::P1, Row::Units, 3)),
@@ -181,8 +160,8 @@ mod b5_e22_flicker {
             Default::default(),
         );
         live_mut(&mut state, &token.id).damage = 1;
-        let mut sink = sink_for(&state);
-        assert!(sink.flicker_card(&mut state, &token.id));
+        let mut sink = Bench::new(&state);
+        assert!(flicker_by_id(&mut sink, &mut state, &token.id));
         assert_eq!(
             id_at(&state, slot(PlayerId::P1, Row::Units, 2)),
             Some(token.id.clone())
@@ -216,8 +195,9 @@ mod b5_e22_flicker {
             slot(PlayerId::P1, Row::Units, 2),
             Default::default(),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))),
             PlayerId::P1,
@@ -228,7 +208,7 @@ mod b5_e22_flicker {
             "R1185002: Set Stats replaces the token's current layer-1 stats"
         );
         live_mut(&mut state, &token.id).damage = 1;
-        assert!(sink.flicker_card(&mut state, &token.id));
+        assert!(flicker_by_id(&mut sink, &mut state, &token.id));
         let flickered = by_id(&state, &token.id);
         assert_eq!(
             flickered.stats_override,
@@ -267,8 +247,9 @@ mod b5_e22_flicker {
             json!({}),
         );
         live_mut(&mut state, &target.id).stats_override = Some(AttackHealth { attack: 4, health: 4 });
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))),
             PlayerId::P1,
@@ -276,7 +257,7 @@ mod b5_e22_flicker {
         let target = by_id(&state, &target.id).clone();
         let food = by_id(&state, &food.id).clone();
         let fused = fuse(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             json_as::<FuseArgs>(json!({
                 "ingredients": [target, food],
                 "target": target,
@@ -287,7 +268,7 @@ mod b5_e22_flicker {
         let view = jackioh_engine::layers::unit_view(&state, by_id(&state, &fused.id));
         assert_eq!((view.attack, view.health), (6, 6));
 
-        assert!(sink.flicker_card(&mut state, &fused.id));
+        assert!(flicker_by_id(&mut sink, &mut state, &fused.id));
         let flickered = by_id(&state, &fused.id);
         assert_eq!(
             flickered.stats_override, None,
@@ -312,8 +293,9 @@ mod b5_e22_flicker {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             flicker(json_as(
                 json!({ "target": { "of": "instance", "instanceId": unit.id } }),
@@ -321,7 +303,7 @@ mod b5_e22_flicker {
             PlayerId::P1,
         );
         // Offer the flicker's events to the traps, as the resolution loop does.
-        settle(&mut sink.on(&mut state), Default::default());
+        settle(&mut sink.sink(&mut state), Default::default());
         assert_eq!(
             pluck(
                 &events_of_type(&sink.events, GameEventType::Summoned),
@@ -348,9 +330,9 @@ mod b5_e22_flicker {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         schedule_delayed(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             PlayerId::P1,
             DelayedAt {
                 phase: Phase::Start,
@@ -368,7 +350,7 @@ mod b5_e22_flicker {
             None,
         );
         assert_eq!(state.delayed.len(), 1);
-        sink.flicker_card(&mut state, &unit.id);
+        flicker_by_id(&mut sink, &mut state, &unit.id);
         assert_eq!(state.delayed, Vec::<DelayedEffect>::new());
     }
 
@@ -381,8 +363,9 @@ mod b5_e22_flicker {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             steal(json_as(
                 json!({ "target": { "of": "instance", "instanceId": unit.id } }),
@@ -390,7 +373,7 @@ mod b5_e22_flicker {
             PlayerId::P1,
         );
         let at = by_id(&state, &unit.id).zone.clone();
-        sink.flicker_card(&mut state, &unit.id);
+        flicker_by_id(&mut sink, &mut state, &unit.id);
         assert_eq!(by_id(&state, &unit.id).zone, at);
         assert_eq!(by_id(&state, &unit.id).controller, PlayerId::P1);
         assert_eq!(by_id(&state, &unit.id).owner, PlayerId::P2);
@@ -424,8 +407,9 @@ mod b5_e22_flicker {
             slot(PlayerId::P2, Row::Units, 3),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply(
+        let mut sink = Bench::new(&state);
+        apply(
+            &mut sink,
             &mut state,
             flicker(json_as(json!({ "scope": { "side": "enemy" } }))),
             PlayerId::P1,
@@ -438,7 +422,7 @@ mod b5_e22_flicker {
             vec![json!(top.id), json!(other.id)]
         );
         assert!(is_buried(&state, by_id(&state, &low.id)));
-        assert!(!sink.flicker_card(&mut state, &low.id));
+        assert!(!flicker_by_id(&mut sink, &mut state, &low.id));
         let lane_one: Option<Vec<String>> = state.players[PlayerId::P2].units[0]
             .as_ref()
             .map(|pile| pile.iter().map(|card| card.id.clone()).collect());
@@ -456,8 +440,8 @@ mod b5_e22_flicker {
             json!({}),
         );
         let old_id = trap.id.clone();
-        let mut sink = sink_for(&state);
-        sink.flicker_card(&mut state, &trap.id);
+        let mut sink = Bench::new(&state);
+        flicker_by_id(&mut sink, &mut state, &trap.id);
         // TS's live object took the fresh id; here the card is the one now in its zone.
         let trap = card_at(&state, slot(PlayerId::P2, Row::Backrow, 2))
             .cloned()
@@ -504,10 +488,10 @@ mod b5_e22_flicker {
             slot(PlayerId::P1, Row::Backrow, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        animate_card(&mut sink.on(&mut state), &card, Default::default());
+        let mut sink = Bench::new(&state);
+        animate_card(&mut sink.sink(&mut state), &card, Default::default());
         assert!(home_of(&state, &card.id).is_some());
-        sink.flicker_card(&mut state, &card.id);
+        flicker_by_id(&mut sink, &mut state, &card.id);
         assert_eq!(
             id_at(&state, slot(PlayerId::P1, Row::Units, 1)),
             Some(card.id.clone())
