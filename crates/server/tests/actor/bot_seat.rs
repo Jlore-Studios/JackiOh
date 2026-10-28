@@ -500,7 +500,18 @@ async fn r1452_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace()
         ("p2", "disconnectExpired"),
         "{log:?}"
     );
-    let result = q!(app, results_get_by_match(MATCH_ID)).expect("the result");
+    // R1437: the snapshot's result is set before the actor's queue writes the row, so the row is
+    // waited for as the result was.
+    let mut written = None;
+    for _ in 0..WAIT_STEPS {
+        actor.idle().await;
+        written = q!(app, results_get_by_match(MATCH_ID));
+        if written.is_some() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    let result = written.expect("the result");
     assert_eq!(result.winner_profile_id.as_deref(), Some(BOT));
     // The result let the bot go, free for the next ticket.
     let bots = q!(app, bots_list());
