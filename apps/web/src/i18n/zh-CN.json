@@ -1791,6 +1791,7 @@
   "{card} awakened": "{card}已苏醒",
   "Frozen forever: can't attack or switch position, and never thaws": "永久冻结：无法攻击或切换表示形式，且永不解冻",
   "{card} fused into {whose} Dormant Starship ({n} pieces)": "{card}融合进了{whose}休眠星舰（{n}个部件）",
+  "{card} fused into {whose} Dormant Starship ({n} piece)": "{card}融合进了{whose}休眠星舰（{n}个部件）",
   "{whose} Starship launched as {name}": "{whose}星舰以{name}之名发射",
   "Starship: launched with {n} Starship Pieces fused into it": "星舰：已发射，融合了{n}个星舰部件",
   "Dormant Starship: {n} Starship Pieces fused into it; its Activate launches it": "休眠星舰：融合了{n}个星舰部件；其激活将其发射",
@@ -3444,5 +3445,11 @@
   "{share}% of games reach fatigue": "{share}% 的对局进入疲劳",
   "{fired} of {set} set traps fired": "设置的 {set} 张陷阱中有 {fired} 张触发",
   "Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.": "统计了本版本 {total} 局中的 {games} 局：开始记录这些数据之前的对局不计在内。",
+  "Created cards": "创造的卡牌",
+  "Cards made during the game: tokens, generated cards, copies and The Coin. Used is the win rate of the seats that made a Created copy of the card and used one, Not used of those that made copies and used none; each needs {minSample} games.": "对局中生成的卡牌：衍生物、生成的卡牌、复制品和幸运币。已使用是生成过该卡牌的创造复制品并使用了其中一张的玩家的胜率，未使用是生成过复制品但一张都没有使用的玩家的胜率；每项均需 {minSample} 局。",
+  "Not used": "未使用",
+  "Used Radiant": "已使用（光辉）",
+  "Used normal": "已使用（普通）",
+  "Created Δ": "创造 Δ",
   "{count} ranked wins in a row": "排位赛{count}连胜"
 }

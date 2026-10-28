@@ -56,6 +56,7 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
             }
             crate::generators::record_generator(ctx, &card);
             shuffle_into_library(ctx, &mut card, false, None);
+            crate::generators::credit_creator(ctx, &card.id);
             at += 1;
         }
     })
