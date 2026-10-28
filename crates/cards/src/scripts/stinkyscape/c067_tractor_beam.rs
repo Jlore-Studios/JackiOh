@@ -65,12 +65,12 @@ mod tests {
         let mut s = beam("beam-turns", false);
         s.end_turn();
         assert!(
-            s.pile(P1, "tray").is_empty(),
+            crate::resources_in_hand(&s, P1).is_empty(),
             "the opponent's start of turn gains nothing"
         );
-        assert!(s.pile(P2, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
         s.end_turn();
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 1, "its own start of turn gains one");
         assert!(card_def(&tray[0].def_id).resource.is_some());
         assert!(!tray[0].radiant);
@@ -88,7 +88,7 @@ mod tests {
         for seed in (0..40).map(|n| format!("beam-roll-{n}")) {
             let mut s = beam(&seed, false);
             s.start_turn();
-            let gained = def_ids(&s.pile(P1, "tray"));
+            let gained = def_ids(&crate::resources_in_hand(&s, P1));
             assert_eq!(gained.len(), 1, "{seed}");
             if !seen.contains(&gained[0]) {
                 seen.push(gained[0].clone());
@@ -114,7 +114,7 @@ mod tests {
             "Equip does not pass Starship Piece on (R1852001)"
         );
         s.start_turn();
-        assert_eq!(s.pile(P1, "tray").len(), 1, "the host gains at its start of turn");
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), 1, "the host gains at its start of turn");
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
     fn radiant_radiant_resources() {
         let mut s = beam("beam-radiant", true);
         s.start_turn();
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 1);
         assert!(tray[0].radiant);
     }

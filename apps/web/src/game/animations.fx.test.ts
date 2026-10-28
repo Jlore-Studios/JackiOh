@@ -179,10 +179,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
-  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
-  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
-  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
-  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
   // Issue #1853 (the Marketplace, R1853003).
   marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
@@ -329,10 +326,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   awakened: "brand",
   // Issue #1838 (R1838001): a Trade sends a card back from the hand into the deck.
   traded: "shuffle",
-  // Issue #1840 (R1840000–R1840005): the tray, a sale and the Credits badge animate with no effect.
-  resourceGained: null,
-  resourceSold: null,
-  resourceDiscarded: null,
+  // Issue #1840 (R1840005): the Credits badge animates with no effect.
   marketCreditsChanged: null,
   // Issue #1853 (R1853003): a purchase and a sale glint the hand's edge with no effect.
   marketBought: null,
@@ -477,9 +471,6 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   traded: ["jk-shuffle-in", 300, "library-<side>"],
-  resourceGained: ["jk-hand-edge", 250, "hand-<side>"],
-  resourceSold: ["jk-hand-full", 700, "hand-<side>"],
-  resourceDiscarded: ["jk-hand-edge", 250, "hand-<side>"],
   marketCreditsChanged: ["jk-badge-tick", 200, "hero-<side>"],
   marketBought: ["jk-hand-edge", 250, "hand-<side>"],
   marketSold: ["jk-hand-edge", 250, "hand-<side>"],

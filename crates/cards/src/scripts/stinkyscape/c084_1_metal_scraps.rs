@@ -63,7 +63,7 @@ mod tests {
     fn r58_drawn_it_is_cast_gains_and_draws_again() {
         let mut s = scraps_on_top(false);
         s.start_turn();
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 1, "one Resource gained");
         assert!(card_def(&tray[0].def_id).resource.is_some());
         assert!(!tray[0].radiant);
@@ -88,7 +88,7 @@ mod tests {
     fn radiant_a_radiant_resource() {
         let mut s = scraps_on_top(true);
         s.start_turn();
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 1);
         assert!(tray[0].radiant);
     }

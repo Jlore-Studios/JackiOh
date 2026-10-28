@@ -117,7 +117,7 @@ mod tests {
         mined(&mut s);
         s.expect_health(P1, 30 - SELF_DAMAGE);
         s.expect_in_zone(ID, "graveyard");
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), RESOURCES);
         assert!(tray.iter().all(|card| !card.radiant));
     }
@@ -126,7 +126,7 @@ mod tests {
     fn destroyed_in_combat_or_by_twisting_nether_it_pays() {
         let mut s = node(false);
         s.play(NETHER, json!({}));
-        assert_eq!(s.pile(P1, "tray").len(), RESOURCES, "Twisting Nether");
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "Twisting Nether");
 
         let mut s = scenario(json!({
             "active": "p2",
@@ -137,8 +137,8 @@ mod tests {
         let node = s.unit_at(P1, 1);
         s.attack(&attacker, &node);
         s.expect_in_zone(&node, "graveyard");
-        assert_eq!(s.pile(P1, "tray").len(), RESOURCES, "in combat");
-        assert!(s.pile(P2, "tray").is_empty());
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "in combat");
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         set_param(s.card_mut(ID), "selfDamage", 1);
         mined(&mut s);
         s.expect_health(P1, 29);
-        assert_eq!(s.pile(P1, "tray").len(), 3);
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), 3);
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
         mined(&mut s);
         s.expect_health(P1, 30);
         s.expect_in_zone(ID, "graveyard");
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), RESOURCES);
         assert!(tray.iter().all(|card| card.radiant));
     }

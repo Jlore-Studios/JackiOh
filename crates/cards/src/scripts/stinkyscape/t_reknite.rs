@@ -2,8 +2,8 @@
 //!   Base:    "Your hero has +{armor} Armor until the start of your next turn." (1)
 //!   Radiant: the same (2).
 //!
-//! A Resource (R1840000): gained into its owner's tray, played from there at (0) (R1840003) or sold at
-//! the Marketplace (R1853003). Its resolution is M+ #12 Living Armor Potion's Armor: Core #98 Armor
+//! A Resource (R1840000): gained into its owner's hand, played from there at (0) for its Credits
+//! (R2250000, R2250001). Its resolution is M+ #12 Living Armor Potion's Armor: Core #98 Armor
 //! Up's `heroArmor` player modifier (R757), gone at the start of its caster's next turn, so it lasts
 //! through the opponent's turn. The number is the declared `armor`, read as it resolves (R386).
 
@@ -36,7 +36,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-reknite — SPEC §7, BUILD M12 row S T-reknite: "played from the tray at (0), its caster's hero has
+// S T-reknite — SPEC §7, BUILD M12 row S T-reknite: "played from the hand at (0), its caster's hero has
 // +1 Armor through the opponent's turn, gone at their next start of turn; armor reads through
 // `param()`; radiant +2".
 #[cfg(test)]
@@ -45,21 +45,21 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{play_from_tray, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
 
     fn tray(radiant: bool) -> Scenario {
         scenario(json!({
-            "p1": { "tray": [{ "def": ID, "radiant": radiant }], "hand": [FILLER], "library": [FILLER, FILLER] },
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
         }))
     }
 
     fn played(radiant: bool) -> Scenario {
         let mut s = tray(radiant);
-        play_from_tray(&mut s, P1, ID, Value::Null);
+        play_resource(&mut s, P1, ID, Value::Null);
         s
     }
 
@@ -81,9 +81,9 @@ mod tests {
     #[test]
     fn armor_reads_through_param() {
         let mut s = tray(false);
-        let id = s.pile(P1, "tray")[0].id.clone();
+        let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "armor", 3);
-        play_from_tray(&mut s, P1, ID, Value::Null);
+        play_resource(&mut s, P1, ID, Value::Null);
         assert_eq!(armor(&s), 3);
     }
 

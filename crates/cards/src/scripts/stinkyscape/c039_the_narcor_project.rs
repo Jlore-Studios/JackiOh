@@ -6,10 +6,10 @@
 //!            Brittle by 1.\nDeath: If Brittle destroyed this, …, gain two Red Narcors …"
 //!
 //! Brittle 4 is the printed keyword, the engine's (§6.1, R385, R638). End of turn (R62): `gain_resources`
-//! of one Narcor (S #T-narcor, a one-id pool, R1840002) into its controller's tray, never a hand
-//! (R1840000); a ninth is sold at once (R1840001). Activate (§6.2, R384), offered only while the tray
-//! holds a Narcor (a `canActivate` read of the tray, `tray_holds`): `discard_resource` of the oldest
-//! one (R1840004), which ceases to exist, then `lower_brittle` of 1 on this card, which crumbles it at
+//! of one Narcor (S #T-narcor, a one-id pool, R1840002) into its controller's hand, a full hand burning
+//! it (R2250000). Activate (§6.2, R384), offered only while the hand holds a Narcor (a `canActivate`
+//! read of the hand, `hand_holds`): `discard_resource` of the one longest there, a hand discard that
+//! pays its Credits (R2250000, R2250001), then `lower_brittle` of 1 on this card, which crumbles it at
 //! once when it leaves the count at 0 (R1861001), a Brittle death like the tick's. Death: when Brittle
 //! destroyed it (`brittle_spent` on the Death snapshot, R1861001), a rest-of-game player effect on its
 //! controller, C+ #52's `forRestOfGame` with `atEnd` (R1861002): at the end of each of their turns, the
@@ -58,7 +58,7 @@ fn discard_narcor(radiant: bool) -> ActivationDecl {
         cost: None,
         targets: vec![],
         modes: vec![],
-        can_activate: Some(condition_hook(move |c| tray_holds(c.state, c.controller, takes))),
+        can_activate: Some(condition_hook(move |c| hand_holds(c.state, c.controller, takes))),
         has: None,
         run: hook(move |_ctx| {
             vec![
@@ -135,7 +135,7 @@ mod tests {
     }
 
     fn tray(s: &Scenario) -> Vec<String> {
-        def_ids(&s.pile(P1, "tray"))
+        def_ids(&crate::resources_in_hand(&s, P1))
     }
 
     fn brittle(s: &Scenario) -> Option<i32> {
@@ -180,7 +180,7 @@ mod tests {
         );
         s.end_turn();
         assert_eq!(tray(&s), vec![NARCOR], "the opponent's end of turn gains nothing");
-        assert!(s.pile(P2, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
         s.expect_refused(activate);
 
         let mut s = project(false, json!([NARCOR, REKNITE, NARCOR]));
-        let oldest = s.pile(P1, "tray")[0].id.clone();
+        let oldest = crate::resources_in_hand(&s, P1)[0].id.clone();
         assert_eq!(offered(&s), 1);
         activate(&mut s);
         assert_eq!(tray(&s), vec![REKNITE, NARCOR], "the oldest Narcor is gone");
@@ -267,7 +267,7 @@ mod tests {
         let mut s = project(true, json!([]));
         s.end_turn();
         assert_eq!(tray(&s), vec![RED_NARCOR]);
-        assert!(!s.pile(P1, "tray")[0].radiant, "a Red Narcor, not a Radiant one");
+        assert!(!crate::resources_in_hand(&s, P1)[0].radiant, "a Red Narcor, not a Radiant one");
 
         let mut s = project(true, json!([RED_NARCOR]));
         assert_eq!(offered(&s), 1, "a Red Narcor pays the Radiant Activate");

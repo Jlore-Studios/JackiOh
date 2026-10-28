@@ -81,7 +81,7 @@ mod tests {
         s.expect_health(P1, 28).expect_health(P2, 28);
         s.expect_stats(&own, json!({ "health": 7 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 2);
         assert!(tray.iter().all(|card| !card.radiant));
         s.expect_in_zone(ID, "graveyard");
@@ -95,7 +95,7 @@ mod tests {
         set_param(s.card_mut(ID), "resources", 1);
         s.start_turn();
         s.expect_health(P1, 27).expect_health(P2, 27);
-        assert_eq!(s.pile(P1, "tray").len(), 1);
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), 1);
     }
 
     #[test]
@@ -142,7 +142,7 @@ mod tests {
         s.expect_health(P1, 30).expect_health(P2, 28);
         s.expect_stats(&own, json!({ "health": 9 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert_eq!(tray.len(), 2);
         assert!(tray.iter().all(|card| card.radiant));
     }

@@ -6,7 +6,7 @@
 //!            Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones,
 //!            on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then
 //!            launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the
-//!            game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random
+//!            game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
@@ -75,7 +75,7 @@ pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
     },
     subsystems::ChaosEffectDef {
         name: "market",
-        label: "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle",
+        label: "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn",
         build: subsystems::scape_market,
     },
     // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R452).

@@ -1125,8 +1125,9 @@ pub struct DrawCount {
     pub count: i32,
 }
 
-/// R1853000–R1853005: Stinkyscape's Marketplace (`marketplace.rs`), one for both players: the offering
-/// rolled `rolled_turn` and the quotes the tray's Resources sell for this turn.
+/// R1853000–R1853005, R2250002: Stinkyscape's Marketplace (`marketplace.rs`), one for both players:
+/// each player's offers, rolled at the start of their turn, the lots effects added, and the quotes the
+/// Resources and the cards that sell from the hand fetch this turn.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1135,9 +1136,8 @@ pub struct DrawCount {
 )]
 #[serde(rename_all = "camelCase")]
 pub struct Marketplace {
-    /// R1853001: the turn the offering was last rolled (`GameState.turn`).
-    pub rolled_turn: i32,
-    /// The lots on offer, rolled lots in table order then the lots effects added, by their index.
+    /// The lots on offer, by their index: each player's rolled offers and the lots effects added, in
+    /// the order they were made.
     pub offers: Vec<MarketOffer>,
     /// R1853002: what each of the catalog's Resources sells for this turn. Absent while the catalog
     /// holds none.
@@ -1146,8 +1146,8 @@ pub struct Marketplace {
     pub quotes: Vec<ResourceQuote>,
 }
 
-/// R1853001, R1853005: one lot at the Marketplace: a card of `def_id`, at `price` Credits this turn
-/// (`base` before it moved), `stock` of it for each player this cycle and the copies each has bought.
+/// R1853005, R2250002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base` before
+/// it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1165,11 +1165,17 @@ pub struct MarketOffer {
     pub price: i32,
     pub stock: i32,
     pub bought: PerPlayer<i32>,
-    /// R1853005: the one player a lot an effect added is offered to; absent on a rolled lot, which is
-    /// both players'.
+    /// R2250002, R1853005: the one player the lot is offered to: the player it was rolled for, or the
+    /// player an effect added it for. Absent on no lot since #2250.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub owner: Option<PlayerId>,
+    /// R1853005: a lot an effect added for the rest of the game, at a price that never moves, renewed
+    /// at its owner's turn start; absent on a rolled offer, which the owner's next turn start replaces.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub fixed: Option<bool>,
 }
 
 /// R1853002: what a Resource of `def_id` sells for at the Marketplace this turn, on each face.
@@ -1412,14 +1418,9 @@ pub struct PlayerState {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub answer_chain: Option<AnswerChain>,
     // ---- Stinkyscape player fields (#1840, `resources`) ----
-    /// R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
-    /// at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
-    /// `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub resource_tray: Option<Vec<CardInstance>>,
-    /// R1840005: this player's Credits, public, gained by selling Resources and spent at the
-    /// Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+    /// R1840005: this player's Credits, public, gained by playing or discarding Resources (R2250001) and
+    /// by selling cards, and spent at the Marketplace (`resources::add_market_credits`). Named apart
+    /// from Jlarna's credit line (R1223).
     /// Absent until first gained, so a game without Credits hashes as it did before this field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -2071,7 +2072,6 @@ pub fn create_player_state() -> PlayerState {
         trades: None,
         trades_per_turn: None,
         death_watch_casts: None,
-        resource_tray: None,
         market_credits: None,
         votes: None,
         fled: None,
@@ -2714,8 +2714,6 @@ fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
         // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
         .chain(side.backrow_piles.iter().flatten().flatten())
         .chain(side.carried.iter().flatten().flatten())
-        // R1840000: a Resource in the tray is a card the state holds, as a hand card is.
-        .chain(side.resource_tray.iter().flatten())
         // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
         // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
         .chain(side.resolving.iter())
@@ -2731,7 +2729,6 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.backrow.iter_mut().flatten())
         .chain(side.backrow_piles.iter_mut().flatten().flatten())
         .chain(side.carried.iter_mut().flatten().flatten())
-        .chain(side.resource_tray.iter_mut().flatten())
         .chain(side.resolving.iter_mut())
 }
 

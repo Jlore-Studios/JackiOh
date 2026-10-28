@@ -8,8 +8,8 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1872000: the Activate, once a turn (R384), with an extra turn cooldown (R1841000), gains one Resource rolled over every Resource the
-//! catalog holds (R1840002) into the tray of the controller of the Unit it is on, never the hand
-//! (R1840000), a ninth sold at once (R1840001); the Radiant face's Resource is Radiant.
+//! catalog holds (R1840002) into the hand of the controller of the Unit it is on, a full hand burning
+//! it (R2250000); the Radiant face's Resource is Radiant.
 
 use jackioh_engine::effects::{GainResourcesArgs, gain_resources};
 use jackioh_engine::prelude::*;
@@ -57,8 +57,8 @@ pub fn script() -> CardScripts {
 }
 
 // Stinkyscape #62 Miner v1 — SPEC §8.10 row 62, BUILD M12 row S 62: "its Activate puts one Resource into its
-// controller's tray, never the hand (R1840000), by the rarity roll that replays (R1840002); a ninth in the
-// tray is sold at once (R1840001); once a turn, a second use refused; refused on its user's next turn, usable
+// controller's hand (R2250000), by the rarity roll that replays (R1840002); into a full hand it burns
+// (R1840001's sale gone, R2250000); once a turn, a second use refused; refused on its user's next turn, usable
 // the turn after (R1841000); equipped onto a Unit, the host takes the Activate; radiant 0/2 and a Radiant
 // Resource".
 #[cfg(test)]
@@ -81,39 +81,41 @@ mod tests {
         json!({ "ability": "mine" })
     }
 
-    fn tray(s: &Scenario) -> Vec<CardInstance> {
-        resource_tray_of(s.state(), P1)
+    /// The Resources in p1's hand (R2250000).
+    fn mined(s: &Scenario) -> Vec<CardInstance> {
+        resources_in_hand_of(s.state(), P1)
     }
 
     #[test]
-    fn r1872000_its_activate_gains_one_random_resource_into_the_tray_never_the_hand() {
+    fn r1872000_r2250000_its_activate_gains_one_random_resource_into_the_hand() {
         let mut s = mining(false, "s062");
         let hand = s.hand(P1).len();
         s.activate(ID, dig());
-        let tray = tray(&s);
+        let tray = mined(&s);
         assert_eq!(tray.len(), 1);
         assert!(crate::card_def(&tray[0].def_id).resource.is_some(), "{}", tray[0].def_id);
         assert!(!tray[0].radiant);
-        assert_eq!(s.hand(P1).len(), hand);
+        assert_eq!(s.hand(P1).len(), hand + 1, "it takes a hand slot");
         // R1840002: the roll replays from the seed.
         let mut again = mining(false, "s062");
         again.activate(ID, dig());
-        assert_eq!(resource_tray_of(again.state(), P1)[0].def_id, tray[0].def_id);
+        assert_eq!(resources_in_hand_of(again.state(), P1)[0].def_id, tray[0].def_id);
     }
 
     #[test]
-    fn r1840001_a_ninth_resource_is_sold_at_once() {
+    fn r1840001_r2250000_into_a_full_hand_the_resource_burns() {
+        let full = vec![REKNITE; HAND_CAP as usize];
         let mut s = weapon_board(
             "s062-full",
-            json!({ "field": [ID], "tray": [REKNITE, REKNITE, REKNITE, REKNITE, REKNITE, REKNITE, REKNITE, REKNITE] }),
+            json!({ "field": [ID], "hand": full }),
             json!({}),
         );
         s.activate(ID, dig());
-        assert_eq!(tray(&s).len(), 8);
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         assert!(
             s.last_events()
                 .iter()
-                .any(|event| event.event_type() == GameEventType::ResourceSold)
+                .any(|event| event.event_type() == GameEventType::Burned)
         );
     }
 
@@ -126,7 +128,7 @@ mod tests {
         s.expect_refused_with(|s| s.activate(ID, dig()), "cooling down");
         next_turn_of(&mut s, P1);
         s.activate(ID, dig());
-        assert_eq!(tray(&s).len(), 2);
+        assert_eq!(mined(&s).len(), 2);
     }
 
     #[test]
@@ -140,14 +142,14 @@ mod tests {
         s.play(ID, json!({ "zone": 1, "equip": true }));
         assert_eq!(s.unit_at(P1, 1).id, host);
         s.activate(host.as_str(), dig());
-        assert_eq!(tray(&s).len(), 1);
+        assert_eq!(mined(&s).len(), 1);
     }
 
     #[test]
     fn radiant_the_resource_is_radiant() {
         let mut s = mining(true, "s062-radiant");
         s.activate(ID, dig());
-        let tray = tray(&s);
+        let tray = mined(&s);
         assert_eq!(tray.len(), 1);
         assert!(tray[0].radiant);
     }

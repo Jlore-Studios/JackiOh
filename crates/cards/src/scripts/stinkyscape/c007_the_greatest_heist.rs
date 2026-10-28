@@ -364,7 +364,7 @@ mod tests {
     /// What Stage 2's reward found: (Anomaly Found!s added to the hand, Resources gained), each with its face.
     fn found(s: &Scenario) -> (Vec<bool>, Vec<bool>) {
         let anomalies = s.hand(P1).into_iter().filter(|card| card.def_id == ANOMALY_FOUND).map(|card| card.radiant).collect();
-        let resources = resource_tray_of(s.state(), P1).into_iter().map(|card| card.radiant).collect();
+        let resources = resources_in_hand_of(s.state(), P1).into_iter().map(|card| card.radiant).collect();
         (anomalies, resources)
     }
 

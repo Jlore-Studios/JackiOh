@@ -1,11 +1,12 @@
-//! Stinkyscape's Resources (#1840, R1840000–R1840006): the verbs a card composes over the Resource
-//! tray and Credits, each a front for `crate::resources`' rule.
+//! Stinkyscape's Resources (#1840, R1840000–R1840006; #2250, R2250000, R2250001): the verbs a card
+//! composes over Resources and Credits, each a front for `crate::resources`' rule. The file keeps the
+//! name of the Resource tray these verbs once filled; a Resource is a hand card since #2250.
 //!
 //! - `gain_resources` — "Gain N random Resources", from the catalog's Resources or a pool the card
-//!   names, Radiant on a Radiant gain (R1840002); "Fill your hand with Resources" fills the tray up to
-//!   `RESOURCE_TRAY_CAP` (`fill`, R1840004). A gain into a full tray is a sale (R1840001).
-//! - `discard_resource` — "Discard a Narcor": the oldest tray Resource of those definitions ceases to
-//!   exist (R1840004). No hand rule reaches the tray, so a hand discard never takes one.
+//!   names, Radiant on a Radiant gain (R1840002), each added to the gainer's hand, a full hand burning
+//!   it (R2250000); "Fill your hand with Resources" gains as many as the hand has room for (`fill`).
+//! - `discard_resource` — "Discard a Narcor": the oldest Resource of those definitions in the hand is
+//!   discarded, a hand discard like any other, which pays its Credits (R2250000, R2250001).
 //! - `gain_market_credits` — "Gain N Credits" (R1840005).
 //! - `add_market_lot` — "add a lot to the Marketplace for the rest of the game", Call to Chaos (Scape
 //!   Edition)'s "a Call to Chaos at 20": one card of a pool offered to its caster alone at a fixed
@@ -16,22 +17,19 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::RESOURCE_TRAY_CAP;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::marketplace::add_fixed_market_lot;
-use crate::resources::{add_market_credits, gain_resource, roll_resource};
+use crate::resources::{add_market_credits, gain_resource, is_resource_card, roll_resource};
 use crate::script::Effect;
-use crate::wire::GameEvent;
-use crate::zones::cease_to_exist;
 
 /// R1855002: the memory key a card's rider names its own Resource pool under (a list of definition
 /// ids), which its own gains come from in place of the pool its text names (`effects::replace_board`'s
 /// preset entries carry it).
 pub const RESOURCE_POOL_KEY: &str = "resourcePool";
 
-/// `gainResources`' argument: how many Resources, whose tray (default the controller's own), whether
+/// `gainResources`' argument: how many Resources, whose hand (default the controller's own), whether
 /// they are Radiant, the pool they come from (default every Resource), and `fill` for "fill your hand
-/// with Resources", which gains as many as the tray has room for and reads no `count`.
+/// with Resources", which gains as many as the hand has room for and reads no `count`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -48,18 +46,15 @@ pub struct GainResourcesArgs {
     pub fill: Option<bool>,
 }
 
-/// R1840000–R1840002, R1840004: gain random Resources one at a time, each rolled as it is gained, so a
-/// gain past the cap is sold (R1840001) and the next is rolled all the same. A pool that holds no
+/// R1840002, R2250000: gain random Resources one at a time, each rolled as it is gained and added to the
+/// hand, so a gain into a full hand burns (R4) and the next is rolled all the same. A pool that holds no
 /// Resource gains nothing and draws nothing.
 pub fn gain_resources(args: GainResourcesArgs) -> Effect {
     Effect::new("gainResources", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = if args.fill == Some(true) {
-            let held = ctx.sink.state.players[player]
-                .resource_tray
-                .as_ref()
-                .map_or(0, Vec::len) as i32;
-            RESOURCE_TRAY_CAP - held
+            let held = ctx.sink.state.players[player].hand.len() as i32;
+            crate::query::hand_cap_of(ctx.sink.state, player) - held
         } else {
             args.count
         };
@@ -81,7 +76,7 @@ pub fn gain_resources(args: GainResourcesArgs) -> Effect {
     })
 }
 
-/// `discardResource`'s argument: the definitions it may take (any Resource when empty) and whose tray
+/// `discardResource`'s argument: the definitions it may take (any Resource when empty) and whose hand
 /// (default the controller's own).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -93,27 +88,25 @@ pub struct DiscardResourceArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R1840004: "Discard a Narcor" — the oldest Resource in the tray of one of `def_ids` (any, with none
-/// named) ceases to exist, with the public `resourceDiscarded`. No prompt: an empty tray, or one with
-/// no match, discards nothing.
+/// R1840004, R2250000: "Discard a Narcor" — the Resource longest in the hand of one of `def_ids` (any,
+/// with none named) is discarded, a hand discard like any other (`discarded`), which pays its Credits
+/// (R2250001). No prompt: a hand with no match discards nothing.
 pub fn discard_resource(args: DiscardResourceArgs) -> Effect {
     Effect::new("discardResource", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let Some(mut card) = ctx.sink.state.players[player]
-            .resource_tray
+        let state = &*ctx.sink.state;
+        let Some(card) = state.players[player]
+            .hand
             .iter()
-            .flatten()
-            .find(|card| args.def_ids.is_empty() || args.def_ids.contains(&card.def_id))
+            .find(|card| {
+                is_resource_card(state, card)
+                    && (args.def_ids.is_empty() || args.def_ids.contains(&card.def_id))
+            })
             .cloned()
         else {
             return;
         };
-        cease_to_exist(ctx.sink.state, &mut card);
-        ctx.sink.events.push(GameEvent::ResourceDiscarded {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-        });
+        crate::effects::move_::discard_from_hand(&mut ctx.sink, &card);
     })
 }
 

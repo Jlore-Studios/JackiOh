@@ -67,7 +67,7 @@ mod tests {
     }
 
     fn gained(s: &Scenario) -> Vec<CardInstance> {
-        let tray = s.pile(P1, "tray");
+        let tray = crate::resources_in_hand(&s, P1);
         assert!(tray.iter().all(|card| card_def(&card.def_id).resource.is_some()));
         tray
     }
@@ -139,7 +139,7 @@ mod tests {
         let defender = s.unit_at(P1, 1);
         s.attack(&attacker, &defender);
         assert!(gained(&s).is_empty());
-        assert!(s.pile(P2, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]

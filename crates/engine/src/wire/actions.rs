@@ -273,8 +273,8 @@ pub enum ActionBody {
     MarketBuy {
         offer: i32,
     },
-    /// R1853003: sell a Resource from the sender's Resource tray at the Marketplace, for its quote this
-    /// turn (`marketplace.rs`).
+    /// R1853003, R1861000: sell a card that sells from the sender's hand at the Marketplace, for its
+    /// quote this turn (`marketplace.rs`).
     MarketSell {
         instance_id: String,
     },

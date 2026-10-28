@@ -216,12 +216,9 @@ export const GAME_EVENT_TYPES = [
   "awakened",
   // Issue #1838's Trade (R1838001).
   "traded",
-  // Issue #1840's Resources and Credits (R1840000, R1840001, R1840004, R1840005).
-  "resourceGained",
-  "resourceSold",
-  "resourceDiscarded",
+  // Issue #1840's Credits (R1840005); its Resources are hand cards since #2250 (R2250000).
   "marketCreditsChanged",
-  // Issue #1853's Marketplace: a card bought, a Resource sold (R1853003).
+  // Issue #1853's Marketplace: a card bought, a card sold from the hand (R1853003, R1861000).
   "marketBought",
   "marketSold",
   // Stinkyscape's Starship: a piece fused into its owner's Dormant Starship, and a Starship launched

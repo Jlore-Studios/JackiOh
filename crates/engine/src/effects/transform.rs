@@ -134,8 +134,7 @@ fn replace_off_field(
         ZoneName::Library => OffFieldZone::Library,
         ZoneName::Graveyard => OffFieldZone::Graveyard,
         ZoneName::Exile => OffFieldZone::Exile,
-        // R1840000: the tray holds Resources alone, so no card is replaced into it.
-        ZoneName::Field | ZoneName::Resolving | ZoneName::Gone | ZoneName::Tray => return None,
+        ZoneName::Field | ZoneName::Resolving | ZoneName::Gone => return None,
     };
     // R11: a unit-token card cannot sit in a graveyard or exile, so a replacement that would cease
     // to exist on arrival is refused instead of thinning the zone.
@@ -301,8 +300,7 @@ fn replace_card(
 fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
         Zone::Library { .. } => PLAYER_IDS.to_vec(),
-        // R1840000: a Resource tray is read as a hand is.
-        Zone::Hand { player } | Zone::Tray { player } => vec![opponent_of(player)],
+        Zone::Hand { player } => vec![opponent_of(player)],
         Zone::Field {
             row: Row::Backrow, ..
         } if card.face_up != Some(true) => {

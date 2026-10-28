@@ -75,7 +75,7 @@ mod tests {
         let mut seen: IndexSet<String> = IndexSet::new();
         for i in 0..40 {
             let s = cast(false, &format!("mining-{i}"), json!([]));
-            let tray = resource_tray_of(s.state(), P1);
+            let tray = resources_in_hand_of(s.state(), P1);
             assert_eq!(tray.len(), 1, "one Resource, in the tray");
             assert!(POOL.contains(&tray[0].def_id.as_str()), "{}", tray[0].def_id);
             assert!(!tray[0].radiant);
@@ -88,14 +88,14 @@ mod tests {
     fn r1840001_a_full_tray_sells_the_gain_at_once() {
         let full = json!(vec!["stinkyscape-t-reknite"; RESOURCE_TRAY_CAP as usize]);
         let s = cast(false, "mining-full", full);
-        assert_eq!(resource_tray_of(s.state(), P1).len(), RESOURCE_TRAY_CAP as usize);
+        assert_eq!(resources_in_hand_of(s.state(), P1).len(), RESOURCE_TRAY_CAP as usize);
         assert!(market_credits_of(s.state(), P1) > 0, "the ninth sold for Credits");
     }
 
     #[test]
     fn radiant_a_radiant_resource() {
         let s = cast(true, "mining-radiant", json!([]));
-        let tray = resource_tray_of(s.state(), P1);
+        let tray = resources_in_hand_of(s.state(), P1);
         assert_eq!(tray.len(), 1);
         assert!(tray[0].radiant);
         assert!(POOL.contains(&tray[0].def_id.as_str()));
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn r1840000_the_opponent_sees_only_that_one_was_gained() {
         let s = cast(false, "mining-hidden", json!([]));
-        let gained = resource_tray_of(s.state(), P1)[0].clone();
+        let gained = resources_in_hand_of(s.state(), P1)[0].clone();
         assert_eq!(
             s.view(P2).opponent.resource_tray,
             Some(HandView::Count { count: 1 })
