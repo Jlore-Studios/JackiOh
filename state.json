@@ -5354,10 +5354,13 @@
     "2163": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "18d77a44d551813b6570ddaa357add5111756257": 1,
         "30d4ea83f19fce06030887291e9175d6d62c6fd2": 1
       },
+      "ci_run_id": 40696757115,
+      "ci_sha": "30d4ea83f19fce06030887291e9175d6d62c6fd2",
       "cleared": {
         "at": "2026-10-28T13:28:36Z",
         "by": "`claude` (strong)",
@@ -5375,12 +5378,13 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-28T12:13:43Z",
+      "queued_at": "2026-10-28T13:39:56Z",
+      "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "40686252586",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-28T12:14:52Z",
       "stop_requested": false,
       "taken_asks": [],
