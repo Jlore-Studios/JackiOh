@@ -35,6 +35,7 @@ export type { RolledPower } from "./inPlay.ts";
 
 export {
   ASCENT_LABEL,
+  LONG_FACES,
   MORE,
   SHORT_FORMS,
   SUMMIT_DEF_ID,

@@ -457,8 +457,8 @@ What this buys, in the order it will be needed:
    recorded actions; the fuzz gate folds every seeded game back and compares.
 3. **Dispute resolution and balance telemetry.** ARCHITECTURE-CCG §2.2. A finished match's log is
    purged after `MATCH_ACTION_RETENTION_DAYS` (migration 0013), so card win rates are not derived
-   from it later: once a match's result is in, the server folds the log one more time through the
-   engine's `summarize_game` and keeps what the card statistics need as a `game_records` row
+   from it later: as a match's result is written the server folds the log once through the
+   engine's `summarize_game`, a fold its quests read too, and once the result is in keeps what the card statistics need as a `game_records` row
    (SPEC §9.11, R376). The fold is the instrumentation; nothing is added to the state or the log.
 4. **Replays for free.** A player's replay of their own game, and a friend's replay of one shared with
    them (SPEC §9.5), are folds of the kept log, sent as one seat's views.
@@ -813,9 +813,10 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 480
-   (396 cards + 86 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
-   issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 710
+   (572 cards + 138 tokens over Core, Classic, Classic+, Meditative, Meditative+ and Stinkyscape: patch
+   v0.2.0, Glitch, issue #170, the Meditative set, issue #553, the Meditative+ set, issue #1187, and the
+   Stinkyscape set, issue #1884) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its

@@ -16,6 +16,7 @@ import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
 import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts";
+import { EmptyState } from "../../empty/EmptyState.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
@@ -724,11 +725,14 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   } else {
     main = (
       <div className="ws-empty" data-testid={WORKSHOP_EMPTY}>
-        <p>
-          {decks.length === 0
-            ? t("Make your first deck, or import a code someone shared.")
-            : t("Pick a deck or a trio from the list to work on it.")}
-        </p>
+        {decks.length === 0 ? (
+          <EmptyState
+            text={t("Make your first deck, or import a code someone shared.")}
+            action={{ label: t("Make a deck"), onPress: newDeck }}
+          />
+        ) : (
+          <EmptyState text={t("Pick a deck or a trio from the list to work on it.")} />
+        )}
       </div>
     );
   }

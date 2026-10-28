@@ -14,6 +14,7 @@ import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, ty
 import { baseView } from "../test/fixtures.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
@@ -90,14 +91,6 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "POST" && path === "/api/presence") return { status: 204 };
     return undefined;
-  });
-}
-
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
   });
 }
 
@@ -178,7 +171,7 @@ describe("#1831 who sees the button", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve(world({ incoming: [challenge("ch-1", ANN)] }));
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
       expect(server.to("GET", "/api/challenges")).toHaveLength(0);
     },
@@ -194,7 +187,7 @@ describe("#1831 who sees the button", () => {
         call.path === "/api/challenges" ? refusal(403, "forbidden", "Your account is not active yet.") : undefined,
       );
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
       expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
     },
@@ -208,7 +201,7 @@ describe("#1831 who sees the button", () => {
       signIn("tok-down");
       serve(world(), (call) => (call.path === "/api/challenges" ? refusal(500, "internal", "boom") : undefined));
       shell();
-      await settle(10_000);
+      await settle({ advance: 10_000 });
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
     },
     TEST_MS,
