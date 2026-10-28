@@ -16,7 +16,7 @@ use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{
     banner, doom, eater, flush, leak, lockdown, notes_of, playing, unlocker,
 };
-use crate::rules::fixtures::harness::{act_result, events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{Bench, act_result, events_of_type, in_hand, put, slot};
 
 /// What TS's `play` returns: the state after the play, its events, and the played card's id.
 struct Played {
@@ -66,38 +66,18 @@ fn locked_zones(state: &GameState) -> Vec<String> {
     zones
 }
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call (`on`).
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-
-    /// `effect.apply(makeContext(sink, self, { controller: "p1" }))`.
-    fn apply_as_p1(&mut self, state: &mut GameState, effect: Effect, self_: Option<&CardInstance>) {
-        let mut engine = self.on(state);
-        let mut ctx = make_context(
-            &mut engine,
-            self_,
-            HookOptions {
-                controller: Some(PlayerId::P1),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
+/// `effect.apply(makeContext(sink, self, { controller: "p1" }))`.
+fn apply_as_p1(bench: &mut Bench, state: &mut GameState, effect: Effect, self_: Option<&CardInstance>) {
+    let mut engine = bench.sink(state);
+    let mut ctx = make_context(
+        &mut engine,
+        self_,
+        HookOptions {
+            controller: Some(PlayerId::P1),
+            ..Default::default()
+        },
+    );
+    (effect.apply)(&mut ctx);
 }
 
 /// `cardAt(state, ref)?.id`.
@@ -159,8 +139,8 @@ mod b5_e20_lock_a_lane {
     #[test]
     fn a_numbered_lane_and_a_scope_narrowed_to_one_row() {
         let mut state = playing("lock-lane-number");
-        let mut sink = sink_for(&state);
-        let mut engine = sink.on(&mut state);
+        let mut sink = Bench::new(&state);
+        let mut engine = sink.sink(&mut state);
         let mut ctx = make_context(
             &mut engine,
             None,
@@ -216,11 +196,12 @@ mod b5_e20_lock_the_zone_a_permanent_was_just_played_into {
     #[test]
     fn reads_a_summoned_event_s_zone_and_locks_nothing_for_a_card_already_gone_from_where_it_landed() {
         let mut state = playing("lock-played-events");
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let summoned: GameEvent = json_as(json!({
             "type": "summoned", "player": "p2", "instanceId": "c999", "defId": plain.id, "row": "backrow", "lane": 2,
         }));
-        sink.apply_as_p1(
+        apply_as_p1(
+            &mut sink,
             &mut state,
             lock_played_zone(json_as(json!({ "event": summoned }))),
             None,
@@ -229,7 +210,8 @@ mod b5_e20_lock_the_zone_a_permanent_was_just_played_into {
         let gone: GameEvent = json_as(json!({
             "type": "cardPlayed", "player": "p1", "instanceId": "c998", "defId": plain.id, "costPaid": 1,
         }));
-        sink.apply_as_p1(
+        apply_as_p1(
+            &mut sink,
             &mut state,
             lock_played_zone(json_as(json!({ "event": gone }))),
             None,
@@ -271,9 +253,10 @@ mod b5_e20_lock_a_random_zone {
             state.players[PlayerId::P2].locks.units[lane - 1] = true;
             state.players[PlayerId::P2].locks.backrow[lane - 1] = true;
         }
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let cursor = sink.rng.cursor();
-        sink.apply_as_p1(
+        apply_as_p1(
+            &mut sink,
             &mut state,
             lock_random_zone(json_as(json!({ "side": "enemy" }))),
             None,
@@ -297,8 +280,9 @@ mod b5_e20_lock_a_random_zone {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );
-        let mut sink = sink_for(&state);
-        sink.apply_as_p1(
+        let mut sink = Bench::new(&state);
+        apply_as_p1(
+            &mut sink,
             &mut state,
             lock_random_zone(json_as(json!({ "side": "enemy" }))),
             None,
@@ -349,8 +333,8 @@ mod b5_e20_lock_the_firing_trap_s_own_zone {
         );
         state.players[PlayerId::P1].backrow[0] = None;
         card.zone = Zone::Graveyard { player: PlayerId::P1 };
-        let mut sink = sink_for(&state);
-        sink.apply_as_p1(&mut state, lock_own_zone(), Some(&card));
+        let mut sink = Bench::new(&state);
+        apply_as_p1(&mut sink, &mut state, lock_own_zone(), Some(&card));
         assert_eq!(locked_zones(&state), Vec::<String>::new());
     }
 }
@@ -396,9 +380,9 @@ mod b5_e20_unlock {
     #[test]
     fn the_single_unlock_opens_one_zone_an_open_zone_is_left_as_it_is_with_no_event() {
         let mut state = playing("unlock-one");
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine = sink.on(&mut state);
+            let mut engine = sink.sink(&mut state);
             let mut ctx = make_context(
                 &mut engine,
                 None,
@@ -431,9 +415,9 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
         state.players[PlayerId::P1].locks.units[1] = true;
         state.players[PlayerId::P2].locks.backrow[4] = true;
         state.players[PlayerId::P2].locks.units[3] = true;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let cursor = sink.rng.cursor();
-        sink.apply_as_p1(&mut state, unlock_random_zone(json_as(scope)), None);
+        apply_as_p1(&mut sink, &mut state, unlock_random_zone(json_as(scope)), None);
         let draws = sink.rng.cursor() - cursor;
         (locked_zones(&state), sink.events, draws)
     }
@@ -473,9 +457,10 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
     fn r900_r129_opens_nothing_and_draws_nothing_when_no_zone_of_the_scope_is_locked() {
         let mut state = playing("unlock-random-none");
         state.players[PlayerId::P1].locks.units[1] = true;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let cursor = sink.rng.cursor();
-        sink.apply_as_p1(
+        apply_as_p1(
+            &mut sink,
             &mut state,
             unlock_random_zone(json_as(json!({ "side": "enemy" }))),
             None,
@@ -505,8 +490,13 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
             json!({}),
         );
         state.players[PlayerId::P2].locks.units[0] = true;
-        let mut sink = sink_for(&state);
-        sink.apply_as_p1(&mut state, unlock_random_zone(json_as(json!({}))), None);
+        let mut sink = Bench::new(&state);
+        apply_as_p1(
+            &mut sink,
+            &mut state,
+            unlock_random_zone(json_as(json!({}))),
+            None,
+        );
         assert_eq!(locked_zones(&state), Vec::<String>::new());
         assert_eq!(
             id_at(&state, slot(PlayerId::P2, Row::Units, 1)),

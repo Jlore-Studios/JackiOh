@@ -4,10 +4,12 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
-//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce and the action, card and
-//! effect helpers from here rather than a copy (#1777, #1997; crates/tools/tests/acceptance.rs refuses
-//! a copy and a local `static NONCE`).
+//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce, the action, card and
+//! effect helpers, the sink bench (`Bench`), `sink_for`, `ids_of`, `types_of` and `hand_ids` from here
+//! rather than a copy (#1777, #1997, #2024; crates/tools/tests/acceptance.rs refuses a copy, a local
+//! `static NONCE` and a local struct of just `events` and `rng`).
 
+use std::borrow::Borrow;
 use std::cell::Cell;
 
 use jackioh_engine::testkit::*;
@@ -37,11 +39,39 @@ pub fn new_game(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameSt
 }
 
 /// A sink whose rng starts at the state's cursor, as reduce does. Its event list starts empty, and
-/// it and the rng are leaked, so the sink borrows only the state.
+/// it and the rng are leaked, so the sink borrows only the state. A test that reads the events back
+/// takes a `Bench`.
 pub fn sink_for(state: &mut GameState) -> EngineSink<'_> {
     let rng: &mut Rng = Box::leak(Box::new(Rng::new(&state.seed, state.rng_cursor)));
     let events: &mut Vec<GameEvent> = Box::leak(Box::default());
     EngineSink::new(state, events, rng)
+}
+
+/// TS `sinkFor(state, events)`'s events and rng: the rng from the state's seed and cursor, as reduce
+/// starts one, and no events yet. The state stays the test's, lent with the bench to one engine call
+/// at a time (`sink`, `run`), so the test reads the state and the events between calls.
+pub struct Bench {
+    pub events: Vec<GameEvent>,
+    pub rng: Rng,
+}
+
+impl Bench {
+    pub fn new(state: &GameState) -> Bench {
+        Bench {
+            events: Vec::new(),
+            rng: Rng::new(&state.seed, state.rng_cursor),
+        }
+    }
+
+    /// A sink over `state` that appends to the bench's events and draws from its rng.
+    pub fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
+        EngineSink::new(state, &mut self.events, &mut self.rng)
+    }
+
+    /// `call` on a sink over `state`; what it returns comes back.
+    pub fn run<T>(&mut self, state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
+        call(&mut self.sink(state))
+    }
 }
 
 pub fn slot(player: PlayerId, row: Row, lane: i32) -> ZoneSlot {
@@ -112,6 +142,21 @@ pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEve
 /// names); `kind` is a `GameEventType` or its string, as `events_of_type` takes.
 pub fn events_json(events: &[GameEvent], kind: impl ToString) -> Vec<Value> {
     events_of_type(events, kind).into_iter().map(json_of).collect()
+}
+
+/// The cards' ids, in order; `cards` holds the cards or references to them.
+pub fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
+    cards.iter().map(|card| card.borrow().id.clone()).collect()
+}
+
+/// The events' types, in order.
+pub fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
+    events.iter().map(GameEvent::event_type).collect()
+}
+
+/// The ids of the cards in the player's hand, in order.
+pub fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
+    ids_of(&state.players[player].hand)
 }
 
 /// TS `both(script)`: the same script on the base and the Radiant face.

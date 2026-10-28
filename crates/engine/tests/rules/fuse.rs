@@ -22,7 +22,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{
-    both, events_of_type, in_hand, json_of, live, live_mut, matches_object, new_game, put, slot,
+    Bench, both, events_of_type, in_hand, json_of, live, live_mut, matches_object, new_game, put, slot,
 };
 
 // Fixtures.
@@ -304,35 +304,15 @@ fn keyword_kinds(keywords: &[Keyword]) -> Vec<String> {
     kinds
 }
 
-/// A sink whose rng starts at the state's cursor, as reduce does. The events and the rng are kept
-/// beside the state, so the test can change the state between calls.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 /// `fuse(sink, args)`, `args` holding its instances as the state holds them now.
-fn fuse_in(state: &mut GameState, sink: &mut Sink, args: Value) -> Option<CardInstance> {
+fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
-    fuse(&mut sink.on(state), args)
+    fuse(&mut sink.sink(state), args)
 }
 
 /// `fuse(sinkFor(state), args)`.
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
-    let mut sink = Sink::for_state(state);
+    let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
 }
 
@@ -495,7 +475,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_concatenates_the_base_scripts_so_both_ingredients_cry_and_death_lists_run() {
         let mut state = game("fuse-scripts");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // Cry 1, Death 3
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Cry 2, Death 4
 
@@ -513,7 +493,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
 
         let card = live(&state, &result.id);
         run_hook(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             &card,
             HookName::Cry,
             HookOptions::default(),
@@ -522,7 +502,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
 
         let card = live(&state, &result.id);
         run_hook(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             &card,
             HookName::Death,
             HookOptions::default(),
@@ -533,7 +513,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_concatenates_the_radiant_scripts_separately_so_a_radiant_fusion_runs_the_radiant_texts() {
         let mut state = game("fuse-radiant-scripts");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let target = put_radiant(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // radiant Cry 10
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // radiant Cry 20
 
@@ -550,7 +530,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         // The running face is the radiant one (§5.2), and it is the radiant texts that were fused.
         let card = live(&state, &result.id);
         run_hook(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             &card,
             HookName::Cry,
             HookOptions::default(),
@@ -561,7 +541,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         live_mut(&mut state, &result.id).radiant = false;
         let card = live(&state, &result.id);
         run_hook(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             &card,
             HookName::Cry,
             HookOptions::default(),
@@ -882,7 +862,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Death: 4 to the enemy hero
 
         let before = state.counters.destroyed;
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let result = must(
             fuse_in(
                 &mut state,
@@ -924,7 +904,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         // #85r's loop is the card's (M4); the engine promises each fusion its own transient
         // definition and kept instance, not one fusion of everything at once.
         let mut state = game("fuse-one-at-a-time");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let first = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
         let second = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 2), json!({}));
         let played = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 1), json!({}));
@@ -971,7 +951,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     fn r77_a_fused_trap_has_every_ingredients_trigger_condition_and_runs_only_the_script_whose_condition_was_met()
      {
         let mut state = game("fuse-trap-conditions");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let target = put(
             &mut state,
             &trap_played().id,
@@ -1000,14 +980,14 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         assert_eq!(ids.len(), 2);
 
         // Only the script whose condition was met runs: the `cardPlayed` half hits for 1, not for 3.
-        fire_traps_for(&mut sink.on(&mut state), &played_by_p2());
+        fire_traps_for(&mut sink.sink(&mut state), &played_by_p2());
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
     }
 
     #[test]
     fn r77_a_fused_trap_is_consumed_unless_it_is_a_field_trap() {
         let mut consumed = game("fuse-trap-consumed");
-        let mut consumed_sink = Sink::for_state(&consumed);
+        let mut consumed_sink = Bench::new(&consumed);
         let plain_target = put(
             &mut consumed,
             &trap_played().id,
@@ -1028,7 +1008,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             json!("Trap")
         );
 
-        fire_traps_for(&mut consumed_sink.on(&mut consumed), &played_by_p2());
+        fire_traps_for(&mut consumed_sink.sink(&mut consumed), &played_by_p2());
         assert!(card_at(&consumed, slot(P1, Row::Backrow, 1)).is_none());
         assert_eq!(
             consumed
@@ -1043,7 +1023,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
 
         // A Field Trap target keeps the type, so the fused trap stays and can fire again (§5.1).
         let mut stays = game("fuse-field-trap-stays");
-        let mut stays_sink = Sink::for_state(&stays);
+        let mut stays_sink = Bench::new(&stays);
         let field_target = put(
             &mut stays,
             &field_trap_played().id,
@@ -1065,8 +1045,8 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         );
 
         let played = played_by_p2();
-        fire_traps_for(&mut stays_sink.on(&mut stays), &played);
-        fire_traps_for(&mut stays_sink.on(&mut stays), &played);
+        fire_traps_for(&mut stays_sink.sink(&mut stays), &played);
+        fire_traps_for(&mut stays_sink.sink(&mut stays), &played);
         assert_eq!(
             card_at(&stays, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
             Some(field_result.id.clone())
@@ -1079,7 +1059,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     fn r77_craft_a_card_fuses_two_or_three_cards_with_no_target_giving_a_fresh_non_radiant_hand_card_with_cost_override_0()
      {
         let mut state = game("fuse-craft");
-        let mut sink = Sink::for_state(&state);
+        let mut sink = Bench::new(&state);
         let a = first_in_hand(&mut state, &spell_a().id, "a Spell");
         let b = first_in_hand(&mut state, &spell_b().id, "another Spell");
         live_mut(&mut state, &a.id).radiant = true; // a Radiant ingredient still crafts a non-Radiant result

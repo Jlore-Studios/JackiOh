@@ -10,7 +10,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    events_json, in_hand, matches_object, new_game, next_nonce, put, slot,
+    Bench, events_json, in_hand, matches_object, new_game, next_nonce, put, slot,
 };
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
@@ -92,31 +92,10 @@ fn pending_id(state: &GameState) -> String {
         .unwrap_or_default()
 }
 
-/// A sink whose rng starts at the state's cursor, as reduce does, lent with the
-/// state to one engine call at a time. Nothing writes the cursor back.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Sink {
-    fn for_state(state: &GameState) -> Sink {
-        Sink {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn with<T>(&mut self, state: &mut GameState, run: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
-        let mut sink = EngineSink::new(state, &mut self.events, &mut self.rng);
-        run(&mut sink)
-    }
-}
-
 /// Cast the card, then settle.
 fn cast_and_settle(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
-    let mut sink = Sink::for_state(state);
-    sink.with(state, |s| {
+    let mut sink = Bench::new(state);
+    sink.run(state, |s| {
         resolve::cast_card(s, card, CastOptions::default());
         triggers::settle(s, SettleOptions::default());
     });

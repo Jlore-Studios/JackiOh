@@ -3,7 +3,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{new_game, setup_catalog};
+use crate::rules::fixtures::harness::{hand_ids, new_game, setup_catalog};
 use crate::rules::fixtures::scripts::{HERO_POWERS, going_long, heroic_power, hinder};
 
 fn started(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
@@ -12,10 +12,6 @@ fn started(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
 
 fn mulligan(keep: Vec<String>, player: PlayerId, nonce: &str) -> Action {
     json_as(json!({ "type": "mulligan", "keep": keep, "playerId": player, "nonce": nonce }))
-}
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player].hand.iter().map(|c| c.id.clone()).collect()
 }
 
 fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {

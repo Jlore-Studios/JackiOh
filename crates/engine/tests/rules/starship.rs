@@ -9,6 +9,8 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::harness::types_of;
+
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::starship::*;
 
@@ -50,10 +52,6 @@ fn piece_defs(card: &CardInstance) -> Vec<String> {
         .into_iter()
         .map(|piece| piece.def_id)
         .collect()
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn count_of(events: &[GameEvent], kind: GameEventType) -> usize {
