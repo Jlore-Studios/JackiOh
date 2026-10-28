@@ -8,12 +8,13 @@
 //! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
 //! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
 //! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
-//! the Meditative+ set's Potion (R1178000) from 0043, and #1837's Terminus, Quest, Otherworldly,
-//! Other-Origins and Jelly Bean (R1837000) from 0058. The seed runs in one transaction, so one
+//! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
+//! Other-Origins and Jelly Bean (R1837000) from 0058, and the Stinkyscape set's Drone Core, Weapon,
+//! War Doctrine and Swarm (R1857000) from 0065. The seed runs in one transaction, so one
 //! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
-//! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set and the
-//! Meditative+ set (R1420).
+//! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
+//! Meditative+ set and the Stinkyscape set (R1420).
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +29,7 @@ const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalo
 /// R1178000: a tag that only a held set's cards carry waits for that set's release migration
 /// (Meditative+'s Potion, #1187's 0043): until the set ships the latest check need not admit it, and
 /// only the entries of that set may carry it. Once the set ships the check must admit it like any tag.
-/// R1857000: the held Stinkyscape set's four wait for its release (#1884) the same way.
+/// R1857000: the Stinkyscape set's four waited for its release (#1884, 0065) the same way.
 const AWAITING_RELEASE: &[(Tag, SetName)] = &[
     (Tag::Potion, SetName::MeditativePlus),
     (Tag::DroneCore, SetName::Stinkyscape),
@@ -212,7 +213,8 @@ mod read_catalog_ {
             .into_iter()
             .collect();
         // R1420: the sets that ship, in catalog order: Core, Classic and Classic+, Meditative from
-        // the patch that ships it, and Meditative+ from the patch that ships it (R1178000).
+        // the patch that ships it, Meditative+ from the patch that ships it (R1178000), and
+        // Stinkyscape from its release (#1884, R1857000).
         assert_eq!(
             sets,
             SHIPPED_SETS
@@ -291,8 +293,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql",
-            "0058 re-adds the check with #1837's five tags (R1837000)"
+            file, "0065_stinkyscape_set.sql",
+            "0065 re-adds the check with the Stinkyscape set's four tags (R1857000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -340,18 +342,16 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     }
 
     /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
-    /// Meditative+ set (R1178000), and 0058, which admits #1837's five tags (R1837000). The check
-    /// admits exactly the tags the engine names, in its order, Wincon, Potion and the five among
-    /// them, so every entry of every set the catalog holds seeds the day its set ships, the
-    /// Meditative and Meditative+ sets' included.
+    /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), and 0065, which
+    /// ships the Stinkyscape set (R1857000). The check admits exactly the tags the engine names, in
+    /// its order, Wincon, Potion, the five and the four among them, so every entry of every set the
+    /// catalog holds seeds the day its set ships, the Meditative, Meditative+ and Stinkyscape sets'
+    /// included.
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(
-            file,
-            "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql"
-        );
+        assert_eq!(file, "0065_stinkyscape_set.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -360,11 +360,16 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Otherworldly",
             "Other-Origins",
             "Jelly Bean",
+            "Drone Core",
+            "Weapon",
+            "War Doctrine",
+            "Swarm",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
         // R1178000: but for a tag that waits for its held set's release. Potion waited for 0043,
-        // which lands with the gate that ships Meditative+, so none waits once the set ships.
+        // which lands with the gate that ships Meditative+, and the Stinkyscape set's four for 0065
+        // (R1857000), so none waits once its set ships.
         assert_eq!(
             tags,
             Tag::ALL
@@ -401,10 +406,11 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
         // The sets' other columns: their types and rarities are ones 0002's checks admit, and no
         // check names a set.
-        for entry in raw
-            .values()
-            .filter(|entry| entry["set"] == json!("Meditative") || entry["set"] == json!("Meditative+"))
-        {
+        for entry in raw.values().filter(|entry| {
+            ["Meditative", "Meditative+", "Stinkyscape"]
+                .iter()
+                .any(|set| entry["set"] == json!(set))
+        }) {
             assert!(
                 ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"]
                     .contains(&entry["type"].as_str().unwrap_or_default()),
@@ -440,6 +446,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
     /// (docs/meditative-plus-set.md, SPEC §8.9).
     fn meditative_plus(n: usize) -> usize {
         if set_ships(SetName::MeditativePlus) { n } else { 0 }
+    }
+
+    /// R1857000: `n` once the Stinkyscape set ships, and nothing before. The counts are its census
+    /// (docs/stinkyscape-set.md ST12, SPEC §8.10).
+    fn stinkyscape(n: usize) -> usize {
+        if set_ships(SetName::Stinkyscape) { n } else { 0 }
     }
 
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
@@ -540,6 +552,19 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::MeditativePlus) {
             expected.push("meditativeplus-004");
         }
+        // R1857000: the Stinkyscape set's seven, #124 to #130, Jlockeed's space program, once it
+        // ships.
+        if set_ships(SetName::Stinkyscape) {
+            expected.extend([
+                "stinkyscape-124",
+                "stinkyscape-125",
+                "stinkyscape-126",
+                "stinkyscape-127",
+                "stinkyscape-128",
+                "stinkyscape-129",
+                "stinkyscape-130",
+            ]);
+        }
         assert_eq!(jlockeed, expected);
         let tagged = |tag: &str| {
             entries
@@ -555,22 +580,26 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         for tag in ["Book", "Pancake", "AI", "Plague"] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
-        // Classic+ #7 The House is the 18th since #1704, and #39 Book Worm the 19th since #1828.
-        assert_eq!(tagged("Plague"), 19 + meditative(2));
+        // Classic+ #7 The House is the 18th since #1704, and #39 Book Worm the 19th since #1828;
+        // the Stinkyscape set adds #40 Poison Capsule.
+        assert_eq!(tagged("Plague"), 19 + meditative(2) + stinkyscape(1));
         // v0.3.10 (#967) made Meditative #49 YileGPT a Catalyst and its #49.1 a Prime, beside #45
         // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone. Meditative+ adds a
-        // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed.
-        for (tag, theirs, plus) in [("Catalyst", 3, 1), ("Prime", 3, 1), ("Acclaimed", 2, 0)] {
+        // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed; the
+        // Stinkyscape set #147 IN33DH3, a Catalyst, its #147.1 IN33DH3 Prime, and nine Acclaimed.
+        for (tag, theirs, plus, stinky) in [("Catalyst", 3, 1, 1), ("Prime", 3, 1, 1), ("Acclaimed", 2, 0, 9)]
+        {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                2 + meditative(theirs) + meditative_plus(plus),
+                2 + meditative(theirs) + meditative_plus(plus) + stinkyscape(stinky),
                 "{tag}"
             );
         }
-        // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20 alone.
+        // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20, and the
+        // Stinkyscape set's #148 Alteran Reach and #148.1 Edge of the Universe.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
-        assert_eq!(tagged("Wincon"), meditative(2));
+        assert_eq!(tagged("Wincon"), meditative(2) + stinkyscape(2));
         // R1178000: Potion, the tag 0043 admits, is on the Meditative+ set's #11, #12 and #13, the
         // Living Potions, alone (a potion #16 or #16.1 crafts is a transient definition made in play,
         // R882, and no catalog entry).
@@ -578,16 +607,30 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         assert_eq!(tagged("Potion"), meditative_plus(3));
         // R1837000: the five tags 0058 admits, on Core #100 (Terminus), Classic #90 (Quest),
         // Classic+ #32 (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly
-        // Bean).
-        for (tag, count) in [
-            ("Terminus", 1),
-            ("Quest", 1),
-            ("Otherworldly", 1),
-            ("Other-Origins", 3),
-            ("Jelly Bean", 4),
+        // Bean); and, once it ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), its two
+        // Quests (#7 The Greatest Heist and #112 Job Application), its three Otherworldlies (#10 to
+        // #12) and their nine spells (Other-Origins).
+        for (tag, count, stinky) in [
+            ("Terminus", 1, 6),
+            ("Quest", 1, 2),
+            ("Otherworldly", 1, 3),
+            ("Other-Origins", 3, 9),
+            ("Jelly Bean", 4, 0),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), count, "{tag}");
+            assert_eq!(tagged(tag), count + stinkyscape(stinky), "{tag}");
+        }
+        // R1857000: the four tags 0065 admits, the Stinkyscape set's alone: #27 to #36 (Drone
+        // Core), #50 to #61 and #140 to #143 (Weapon), #137.1 to #137.4 (War Doctrine) and #91 and
+        // #92 (Swarm).
+        for (tag, count) in [
+            ("Drone Core", 10),
+            ("Weapon", 16),
+            ("War Doctrine", 4),
+            ("Swarm", 2),
+        ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
         }
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
         let by_id: IndexMap<&str, &Vec<String>> = entries
