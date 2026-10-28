@@ -12179,14 +12179,18 @@
         {
           "at": "2026-10-28T06:32:16Z",
           "minutes": 152.9
+        },
+        {
+          "at": "2026-10-28T06:45:25Z",
+          "minutes": 72.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-28T06:39:00Z",
-          "utilization": 0.31
+          "utilization": 0.32
         },
-        "observed_at": "2026-10-28T06:32:16Z",
+        "observed_at": "2026-10-28T06:45:25Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.18
