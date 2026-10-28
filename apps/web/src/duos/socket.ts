@@ -44,6 +44,7 @@ import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { readSession } from "../net/session.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
+import { isRecord } from "../wire/json.ts";
 import { DUOS_PINGS_KEPT } from "./config.ts";
 import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
 
@@ -92,9 +93,6 @@ export type DuosServerFrame =
   | ({ type: "clock" } & DuosClockFrame)
   | { type: "teammate"; connected: boolean; aiPlaying: boolean }
   | { type: "ping"; from: DuosSeat; ping: PingKind; target: PingTarget };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isTimeOrNull = (value: unknown): value is number | null => value === null || typeof value === "number";
 

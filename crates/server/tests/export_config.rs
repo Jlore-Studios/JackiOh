@@ -16,7 +16,8 @@
 //! `MIN_ACCOUNT_AGE_YEARS`, `BIRTH_YEAR_EARLIEST` and `TERMS_VERSION` for the age screen, the terms
 //! box and the legal pages (R757000, R757001), and `REPLAY_LIST_PAGE` and
 //! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768), and
-//! `CUSTOM_CARDS_PER_ACCOUNT` for the card creator (R915008).
+//! `CUSTOM_CARDS_PER_ACCOUNT` for the card creator (R915008), and `RANK_STREAK_FLAME_LENGTH` for the
+//! win-streak flame (R2101000).
 
 use serde_json::{Value, json};
 
@@ -142,6 +143,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PLAYER_STATS_BYTES_MAX", json!(c::PLAYER_STATS_BYTES_MAX)),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
+        ("RANK_STREAK_FLAME_LENGTH", json!(c::RANK_STREAK_FLAME_LENGTH)),
         (
             "RATING_WINDOW_FULL_AFTER_SECONDS",
             json!(c::RATING_WINDOW_FULL_AFTER_SECONDS),
@@ -352,9 +354,9 @@ fn every_name_is_listed_once() {
         // COSMETIC_PACK_RATES), its ECONOMY_LIVE switch (R1313000), the pack roll's one (#1301, less
         // #1339's two rates), the cosmetic pack's one (#1306, less #1339's guaranteed rates), the
         // going live's starter cards (R1310000), #1339's tiered roll's six (R1339000), #1661's
-        // global cosmetic roll's two (R1661001) and the Daily runs tab's refresh (R1935000).
+        // global cosmetic roll's two (R1661001), the Daily runs tab's refresh (R1935000) and the win-streak flame's threshold (R2101000).
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1,
+        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -370,7 +372,7 @@ fn every_name_is_listed_once() {
          (#1306), STARTER_CARDS (R1310000), and #1339's TIER_WEIGHT_TOTAL, CARD_TIER_WEIGHTS, \
          COSMETIC_TIER_WEIGHTS, PACK_FLOORED_SLOT, PACK_FLOOR_RARITY and COSMETIC_PACK_FLOOR_RARITY \
          (R1339000), #1661's GLOBAL_COSMETIC_ROLL_WEIGHT and GLOBAL_COSMETIC_FLOOR_RARITY \
-         (R1661001), and CI_RUNS_CACHE_TTL_SECONDS (R1935000)"
+         (R1661001), CI_RUNS_CACHE_TTL_SECONDS (R1935000) and RANK_STREAK_FLAME_LENGTH (R2101000)"
     );
 }
 

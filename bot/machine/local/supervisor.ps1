@@ -329,7 +329,7 @@ function Write-Body([string]$path, $body) {
   [System.IO.File]::WriteAllText($path, ($body | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding $false))
 }
 
-# How far a busy runner's games have got, for the status issue's top lines: the `jackioh selfplay`
+# How far a busy runner's games have got, for the status issue's top chart: the `jackioh selfplay`
 # (a learn shard's) or `jackioh stats` (gather's) it runs, its --games, --from and --patch, and the
 # games its --out holds so far. Each writes one line a game as it finishes, a shard into a file of
 # its range in the folder --out names, gather into the file itself. $null while it plays none (a

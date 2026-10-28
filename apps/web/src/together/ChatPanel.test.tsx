@@ -502,3 +502,59 @@ describe("B58 chat from the Friends panel", () => {
     expect(server.to("GET", "/api/friends")).toHaveLength(0);
   });
 });
+
+describe("R2094000 a room link in chat draws Join", () => {
+  const origin = window.location.origin;
+
+  async function openWith(body: string): Promise<void> {
+    serve([message("msg-1", ANN.profileId, body, 1)]);
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(1);
+    }, SLOW);
+  }
+
+  it("R2094000 a message with this origin's co-op link shows Join, and Join navigates in-app to that path", async () => {
+    window.history.replaceState(null, "", "/together");
+    await openWith(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`);
+    const join = await screen.findByTestId("chat-join", undefined, SLOW);
+    expect(join).toHaveTextContent("Join");
+    fireEvent.click(join);
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("?coop=ABC234");
+  });
+
+  it("R2094000 a message with this origin's /play?room= link shows Join and navigates to it", async () => {
+    window.history.replaceState(null, "", "/together");
+    await openWith(`A room for you: ${origin}/play?room=ABC234&mode=bo1`);
+    const join = await screen.findByTestId("chat-join", undefined, SLOW);
+    fireEvent.click(join);
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.search).toBe("?room=ABC234&mode=bo1");
+  });
+
+  it("R2094000 a message with another origin's link, a malformed link, or no link shows no Join", async () => {
+    for (const body of [
+      "join here: https://evil.test/together?coop=ABC234",
+      `join here: ${origin}/together?coop=abc123`,
+      `join here: ${origin}/play?room=abc123&mode=bo1`,
+      "good luck, have fun",
+    ]) {
+      cleanup();
+      window.history.replaceState(null, "", "/together");
+      await openWith(body);
+      expect(screen.queryByTestId("chat-join")).toBeNull();
+    }
+  });
+
+  it("R2094000 the message text renders unchanged, with no anchor or other markup made from it", async () => {
+    const body = `Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`;
+    await openWith(body);
+    const row = screen.getByTestId("chat-message");
+    const text = row.querySelector(".chat-message__body");
+    expect(text?.textContent).toBe(body);
+    expect(row.querySelector("a")).toBeNull();
+    expect(row.innerHTML).not.toContain("<a");
+    expect(screen.getByTestId("chat-join")).toBeInTheDocument();
+  });
+});

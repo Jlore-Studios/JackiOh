@@ -15,7 +15,7 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   overflow: visible;
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%));
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--pal-black) 70%, transparent));
 }
 
 .zone:has(> .card) > .zone-lock {
@@ -28,20 +28,20 @@
 
 .zone-lock-shackle {
   fill: none;
-  stroke: #cbd2dc;
+  stroke: var(--pal-blue-200);
   stroke-width: 2.4;
   stroke-linecap: round;
 }
 
 .zone-lock-body {
   fill: var(--locked);
-  stroke: #cbd2dc;
+  stroke: var(--pal-blue-200);
   stroke-width: 1.2;
 }
 
 .zone-lock-keyhole {
-  fill: #1c110a;
-  stroke: #1c110a;
+  fill: var(--pal-wood-900);
+  stroke: var(--pal-wood-900);
   stroke-width: 1.6;
   stroke-linecap: round;
 }

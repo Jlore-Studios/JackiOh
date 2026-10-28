@@ -1251,7 +1251,7 @@
   "Joining the co-op match…": "正在加入合作对局…",
   "{reason}. Head back to Play together.": "{reason}。请返回一起玩。",
   "Your co-op room closed before anyone joined.": "在有人加入之前，你的合作房间已关闭。",
-  "Join my co-op game against the AI: the room code is {code}.": "来和我一起合作对抗 AI 吧：房间号是 {code}。",
+  "Join my co-op game against the AI here: {link} (room code {code}).": "来和我一起合作对抗 AI 吧，从这里加入：{link} （房间号 {code}）。",
   "Invite sent to {name}.": "已向 {name} 发送邀请。",
   "Duos co-op": "双人合作",
   "Back to your co-op game": "回到你的合作对局",
@@ -3444,5 +3444,6 @@
   "Median {turns} turns": "回合数中位数 {turns}",
   "{share}% of games reach fatigue": "{share}% 的对局进入疲劳",
   "{fired} of {set} set traps fired": "设置的 {set} 张陷阱中有 {fired} 张触发",
-  "Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.": "统计了本版本 {total} 局中的 {games} 局：开始记录这些数据之前的对局不计在内。"
+  "Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.": "统计了本版本 {total} 局中的 {games} 局：开始记录这些数据之前的对局不计在内。",
+  "{count} ranked wins in a row": "排位赛{count}连胜"
 }

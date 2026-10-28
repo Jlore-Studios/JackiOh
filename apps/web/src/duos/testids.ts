@@ -28,6 +28,7 @@ export const duosTestid = {
   coopCancel: "coop-cancel",
   coopInviteFriend: "coop-invite-friend",
   coopInvite: "coop-invite",
+  coopLink: "duos-coop-link",
   coopStatus: "coop-status",
   coopError: "coop-error",
   coopRejoin: "coop-rejoin",

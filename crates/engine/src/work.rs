@@ -643,6 +643,10 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
         return Some(crate::subsystems::eternal_step());
     }
+    // R1882004: Stinkyscape #150's death watcher, the same.
+    if resume.hook == crate::subsystems::CHAOS_DEATH_WATCH_HOOK {
+        return Some(crate::subsystems::death_watch_step());
+    }
     // R1845002: a trade offer's steps are the engine's own, whatever card made it, as it comes due and
     // as each of its two prompts is answered.
     if resume.hook == crate::effects::trade::TRADE_OFFER_HOOK {

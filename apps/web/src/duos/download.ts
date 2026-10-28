@@ -10,7 +10,8 @@
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 
 import { REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
-import { NOT_A_REPLAY, OTHER_PATCH, TOO_BIG, UNSUPPORTED, isRecord } from "../replay/download.ts";
+import { NOT_A_REPLAY, OTHER_PATCH, TOO_BIG, UNSUPPORTED } from "../replay/download.ts";
+import { isRecord } from "../wire/json.ts";
 import { ReplayFailure } from "../replay/source.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
