@@ -14,6 +14,8 @@ import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
+import { navigate } from "../net/navigate.ts";
+import { findRoomLinkInText } from "../net/roomLink.ts";
 import { getChat, reportMessage, sendChat, type ChatMessage, type PlayerRef } from "../net/social.ts";
 import { attempt, messageOf } from "./session.ts";
 import { chatTestid } from "./testids.ts";
@@ -207,6 +209,8 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
         {loaded && readFailure === null && messages.length === 0 ? <li className="chat-panel__empty">{t("No messages yet. Say hello!")}</li> : null}
         {messages.map((message) => {
           const yours = message.from !== friendId;
+          // R2094000: the button is built from the parsed link, never from message markup.
+          const link = findRoomLinkInText(message.body, window.location.origin);
           return (
             <li
               key={message.id}
@@ -216,6 +220,17 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
               data-from={yours ? "you" : "friend"}
             >
               <p className="chat-message__body">{message.body}</p>
+              {link === null ? null : (
+                <button
+                  type="button"
+                  data-testid={chatTestid.join}
+                  onClick={() => {
+                    navigate(link.path);
+                  }}
+                >
+                  {t("Join")}
+                </button>
+              )}
               <p className="chat-message__meta">
                 <time dateTime={message.createdAt}>{sentAt(message.createdAt)}</time>
                 {yours ? null : reported.has(message.id) ? (

@@ -895,10 +895,13 @@ pub struct SeatRank {
     pub profile_id: String,
     pub username: String,
     pub rank: VisibleRank,
+    /// R2101000: the seat's ranked win streak off its season row (R606), as `GET /api/ranked` sends
+    /// the caller's; 0 for a seat with no row.
+    pub streak: i64,
     pub you: bool,
 }
 
-/// `GET /api/matches/:matchId/ranks`: both seats' ranks for the match screen (R612).
+/// `GET /api/matches/:matchId/ranks`: both seats' ranks and win streaks for the match screen (R612, R2101000).
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchRanksBody {
@@ -937,6 +940,11 @@ pub async fn match_ranks(
         profile_id: profile_id.to_string(),
         username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
+        streak: standings
+            .iter()
+            .find(|standing| standing.rank.profile_id == profile_id)
+            .map(|standing| standing.rank.streak as i64)
+            .unwrap_or(0),
         you: profile_id == viewer_id,
     };
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.

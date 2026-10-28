@@ -5,10 +5,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  COOP_LINK_STORAGE_KEY,
   ROOM_LINK_SHARE_TITLE,
   ROOM_LINK_STORAGE_KEY,
+  adoptCoopLink,
   adoptRoomLink,
+  coopLinkOf,
+  coopLinkPath,
+  coopLinkUrl,
+  findRoomLinkInText,
+  forgetCoopLink,
   forgetRoomLink,
+  readCoopLink,
   readRoomLink,
   roomLinkOf,
   roomLinkPath,
@@ -158,5 +166,146 @@ describe("R767 sending the link", () => {
 
     Reflect.deleteProperty(navigator, "share");
     await expect(sendRoomLink(LINK)).rejects.toThrow("denied");
+  });
+});
+
+describe("R2094000 the co-op room link", () => {
+  it("R2094000 coopLinkPath builds /together?coop=<code>, and coopLinkOf reads it back R191-style", () => {
+    expect(coopLinkPath("ABC234")).toBe("/together?coop=ABC234");
+    expect(coopLinkUrl("ABC234")).toBe(`${window.location.origin}/together?coop=ABC234`);
+    expect(coopLinkOf(coopLinkPath("QRSTUV").slice("/together".length))).toBe("QRSTUV");
+  });
+
+  it("R2094000 coopLinkOf reads a code as R191 does and refuses one that is no room code", () => {
+    expect(coopLinkOf("?coop=%20ab-c2%2034%20")).toBe("ABC234");
+    // R104's alphabet has no 1, and a co-op code is exactly six characters.
+    expect(coopLinkOf("?coop=abc123")).toBeNull();
+    expect(coopLinkOf("?coop=abc23")).toBeNull();
+    expect(coopLinkOf("?coop=abc2345")).toBeNull();
+    expect(coopLinkOf("?coop=")).toBeNull();
+    expect(coopLinkOf("?room=abc234")).toBeNull();
+    expect(coopLinkOf("")).toBeNull();
+  });
+
+  it("R2094000 adoptCoopLink acts only on /together, strips coop, keeps other params, stores the valid code", () => {
+    visit("/together?coop=abc234&x=1#top");
+    expect(adoptCoopLink()).toBe(true);
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("?x=1");
+    expect(window.location.hash).toBe("#top");
+    expect(readCoopLink()).toBe("ABC234");
+    // Reading removes nothing, so React StrictMode's second call gets the same answer.
+    expect(readCoopLink()).toBe("ABC234");
+    forgetCoopLink();
+    expect(readCoopLink()).toBeNull();
+    expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
+
+    // `coop` on another path is some other page's: nothing is read, nothing is taken out.
+    visit("/decks?coop=abc234");
+    expect(adoptCoopLink()).toBe(false);
+    expect(window.location.search).toBe("?coop=abc234");
+    expect(readCoopLink()).toBeNull();
+
+    // A code that is no room code is stripped all the same, and nothing is stored.
+    visit("/together?coop=abc123");
+    expect(adoptCoopLink()).toBe(false);
+    expect(window.location.search).toBe("");
+    expect(readCoopLink()).toBeNull();
+    expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
+  });
+
+  it("R2094000 readCoopLink takes in the address bar's link when nothing adopted it yet", () => {
+    visit("/together?coop=abc234");
+    expect(readCoopLink()).toBe("ABC234");
+    expect(window.location.search).toBe("");
+  });
+
+  it("R2094000 readCoopLink re-reads a stored code and refuses a planted bad code or bad JSON", () => {
+    const plant = (value: string): void => {
+      window.sessionStorage.setItem(COOP_LINK_STORAGE_KEY, value);
+    };
+    plant(JSON.stringify({ code: "abc123" }));
+    expect(readCoopLink()).toBeNull();
+    plant(JSON.stringify({ code: 234567 }));
+    expect(readCoopLink()).toBeNull();
+    plant(JSON.stringify("ABC234"));
+    expect(readCoopLink()).toBeNull();
+    plant("null");
+    expect(readCoopLink()).toBeNull();
+    plant("{not json");
+    expect(readCoopLink()).toBeNull();
+    // A good code is read back, upper-cased as the Join button sends it.
+    plant(JSON.stringify({ code: "abc234" }));
+    expect(readCoopLink()).toBe("ABC234");
+  });
+
+  it("R2094000 blocked storage is no link and no crash", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    visit("/together?coop=abc234");
+    expect(adoptCoopLink()).toBe(true);
+    expect(window.location.search).toBe("");
+    expect(readCoopLink()).toBeNull();
+    expect(() => {
+      forgetCoopLink();
+    }).not.toThrow();
+  });
+});
+
+describe("R2094000 a room link in chat text", () => {
+  const origin = window.location.origin;
+
+  it("R2094000 findRoomLinkInText accepts this origin's /play?room= and /together?coop= links and refuses another origin, a malformed code, or no link", () => {
+    // Full URLs and bare paths both count; the code is canonicalized.
+    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc234`, origin)).toEqual({
+      path: "/together?coop=ABC234",
+    });
+    expect(findRoomLinkInText("join here: /together?coop=ABC234", origin)).toEqual({ path: "/together?coop=ABC234" });
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234&mode=bo1`, origin)).toEqual({
+      path: "/play?room=ABC234&mode=bo1",
+    });
+    // A 1v1 link with no usable mode still joins: the code fills in, the mode stays the last choice.
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234`, origin)).toEqual({ path: "/play?room=ABC234" });
+    // The invite's own sentence carries the link beside trailing punctuation.
+    expect(findRoomLinkInText(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`, origin)).toEqual({
+      path: "/together?coop=ABC234",
+    });
+
+    // A link to any other origin draws no button.
+    expect(findRoomLinkInText("join here: https://evil.test/together?coop=ABC234", origin)).toBeNull();
+    expect(findRoomLinkInText("join here: https://evil.test/play?room=ABC234&mode=bo1", origin)).toBeNull();
+    // A malformed code draws no button.
+    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc123`, origin)).toBeNull();
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc123&mode=bo1`, origin)).toBeNull();
+    // A link on the wrong path draws no button.
+    expect(findRoomLinkInText(`join here: ${origin}/play?coop=ABC234`, origin)).toBeNull();
+    expect(findRoomLinkInText(`join here: ${origin}/together?room=ABC234&mode=bo1`, origin)).toBeNull();
+    // No link draws no button.
+    expect(findRoomLinkInText("good luck, have fun", origin)).toBeNull();
+    expect(findRoomLinkInText("", origin)).toBeNull();
+  });
+
+  it("R2094000 findRoomLinkInText reads only the first valid link", () => {
+    expect(findRoomLinkInText(`nope https://evil.test/together?coop=ABC234 then ${origin}/together?coop=QRSTUV`, origin)).toEqual({
+      path: "/together?coop=QRSTUV",
+    });
+  });
+});
+
+describe("R2094000 sending the co-op link", () => {
+  const LINK = `${window.location.origin}/together?coop=ABC234`;
+
+  it("R2094000 sendRoomLink writes the co-op link to the clipboard where there is no share sheet", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await expect(sendRoomLink(LINK)).resolves.toBe("copied");
+    expect(writeText).toHaveBeenCalledWith(LINK);
   });
 });

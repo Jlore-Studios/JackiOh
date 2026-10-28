@@ -16,7 +16,7 @@
   border: 1px solid color-mix(in srgb, var(--selected) 55%, var(--line-bright));
   border-radius: 14px;
   background: color-mix(in srgb, var(--selected) 12%, var(--bg-raised));
-  box-shadow: 0 8px 24px rgb(0 0 0 / 55%);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--text);
   font-size: 13px;
   font-weight: 650;
@@ -67,7 +67,7 @@
   border-color: var(--primary-edge);
   background: var(--primary-face);
   color: var(--primary-ink);
-  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
 }
 
 .draw-offer__actions > .draw-offer__accept:not(:disabled):hover {
@@ -147,7 +147,7 @@
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   overflow-y: auto;
-  background: rgb(7 9 14 / 70%);
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
   animation: concede-fade-in calc(160ms * var(--anim-scale, 1)) ease-out both;
 }
 
@@ -164,8 +164,8 @@
   border-radius: 16px;
   background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 40%),
-    0 24px 64px -16px rgb(0 0 0 / 90%);
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 40%, transparent),
+    0 24px 64px -16px color-mix(in srgb, var(--pal-black) 90%, transparent);
   color: var(--text);
   text-align: center;
 }
@@ -204,7 +204,7 @@
   border-color: var(--primary-edge);
   background: var(--primary-face);
   color: var(--primary-ink);
-  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
 }
 
 .concede-dialog__actions > .concede-dialog__stay:hover {

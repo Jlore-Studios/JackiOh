@@ -37,8 +37,6 @@ import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
 
-export { INVITE_CODE_GROUPS, INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
-
 export const INVITE_CODE_INPUT = inviteTestid.input;
 export const INVITE_SUBMIT = inviteTestid.submit;
 export const INVITE_ERROR = inviteTestid.error;
