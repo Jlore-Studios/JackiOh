@@ -8,7 +8,7 @@
 //! as it enters, any way it enters, and the Lock outlasts it (R1850006, R688); Brittle 1 crumbles it at
 //! its controller's first start of turn two or more turns after it arrived (§6.1, R385, R638). Death, a
 //! backrow card's (§6.2), on any destroy, Brittle's included: `gain_resources` of `resources` random
-//! Resources into its controller's tray (R1840000). Radiant: Radiant Resources. The number is the
+//! Resources into its controller's hand (R1840000). Radiant: Radiant Resources. The number is the
 //! declared `resources` (R386).
 
 use jackioh_engine::effects::gain_resources;
@@ -91,9 +91,9 @@ mod tests {
             "Brittle 1 crumbles it at its controller's next start of turn"
         );
         s.expect_in_zone(ID, "graveyard");
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 3);
-        assert!(tray.iter().all(|card| !card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 3);
+        assert!(in_hand.iter().all(|card| !card.radiant));
         assert!(is_locked(s.state(), zone(2)), "the Lock outlasts it");
     }
 
@@ -127,8 +127,8 @@ mod tests {
         assert!(is_locked(s.state(), zone(1)));
         s.end_turn();
         s.end_turn();
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 3);
-        assert!(tray.iter().all(|card| card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 3);
+        assert!(in_hand.iter().all(|card| card.radiant));
     }
 }

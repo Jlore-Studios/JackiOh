@@ -50,7 +50,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
 
-    fn tray(radiant: bool) -> Scenario {
+    fn in_hand(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -58,7 +58,7 @@ mod tests {
     }
 
     fn played(radiant: bool) -> Scenario {
-        let mut s = tray(radiant);
+        let mut s = in_hand(radiant);
         play_resource(&mut s, P1, ID, Value::Null);
         s
     }
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn armor_reads_through_param() {
-        let mut s = tray(false);
+        let mut s = in_hand(false);
         let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "armor", 3);
         play_resource(&mut s, P1, ID, Value::Null);

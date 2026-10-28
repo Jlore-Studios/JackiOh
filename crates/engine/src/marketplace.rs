@@ -140,7 +140,12 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
 /// the offers, as it was of the whole offering), then one card of it drawn uniformly among those not
 /// offered yet, so the offers differ; then whether it is Radiant (`MARKETPLACE_RADIANT_CHANCE`), then
 /// its price moved from its base (R1853002). One copy each, `player`'s alone.
-pub fn roll_offers(state: &GameState, rng: &mut Rng, table: &[MarketLot], player: PlayerId) -> Vec<MarketOffer> {
+pub fn roll_offers(
+    state: &GameState,
+    rng: &mut Rng,
+    table: &[MarketLot],
+    player: PlayerId,
+) -> Vec<MarketOffer> {
     let mut lots: Vec<(i32, Vec<String>)> = table
         .iter()
         .filter(|lot| lot.count > 0)
@@ -289,6 +294,17 @@ pub fn sell_quote(state: &GameState, card: &CardInstance) -> Option<i32> {
     Some(if card.radiant { quote.radiant } else { quote.base })
 }
 
+/// R2250002: the lots offered to `player` (their rolled offers and the lots an effect added for them),
+/// in the Marketplace's order, each with its place there. A buy names a lot by its position in this
+/// list (`marketBuy { offer }`), so another player's lots, hidden from `player`, never move the index.
+pub fn offered_to(market: &Marketplace, player: PlayerId) -> impl Iterator<Item = (usize, &MarketOffer)> {
+    market
+        .offers
+        .iter()
+        .enumerate()
+        .filter(move |(_, offer)| offer.owner.is_none_or(|owner| owner == player))
+}
+
 /// R1853005, R2250002: the copies of a lot `player` may still buy: none of a lot that is another
 /// player's, else its stock less what they have bought of it.
 pub fn market_left(offer: &MarketOffer, player: PlayerId) -> i32 {
@@ -307,16 +323,16 @@ fn open_for_deals(state: &GameState, player: PlayerId) -> Result<&Marketplace, E
         .ok_or_else(|| EngineError::new("the Marketplace is not open"))
 }
 
-/// R1853003: why `player` may not buy the lot at index `offer` now, or `Ok`. The one rule:
-/// `legal_actions`, the reducer and the view all ask it. In order: a live game in their own main phase
-/// with no prompt open, an open Marketplace, a lot at that index offered to them, a copy of it left to
-/// them, the Credits for its price, and room for the card in their hand (`hand_cap_of`).
+/// R1853003: why `player` may not buy the lot at index `offer` of those offered to them (`offered_to`)
+/// now, or `Ok`. The one rule: `legal_actions`, the reducer and the view all ask it. In order: a live
+/// game in their own main phase with no prompt open, an open Marketplace, a lot at that index offered
+/// to them, a copy of it left to them, the Credits for its price, and room for the card in their hand
+/// (`hand_cap_of`).
 pub fn why_market_buy_refused(state: &GameState, player: PlayerId, offer: i32) -> Result<(), EngineError> {
     let market = open_for_deals(state, player)?;
-    let Some(lot) = usize::try_from(offer)
+    let Some((_, lot)) = usize::try_from(offer)
         .ok()
-        .and_then(|at| market.offers.get(at))
-        .filter(|lot| lot.owner.is_none_or(|owner| owner == player))
+        .and_then(|at| offered_to(market, player).nth(at))
     else {
         return Err(EngineError::new(format!("no offer {offer} at the Marketplace")));
     };
@@ -366,14 +382,11 @@ pub fn why_market_sell_refused(
 /// card arrives in their hand (`addedToHand`). No mana is paid and nothing is played.
 pub fn apply_market_buy(sink: &mut EngineSink<'_>, player: PlayerId, offer: i32) -> Result<(), EngineError> {
     why_market_buy_refused(sink.state, player, offer)?;
-    let at = offer as usize;
-    let Some(lot) = sink
-        .state
-        .marketplace
-        .as_ref()
-        .and_then(|market| market.offers.get(at))
-        .cloned()
-    else {
+    let Some((at, lot)) = sink.state.marketplace.as_ref().and_then(|market| {
+        offered_to(market, player)
+            .nth(offer as usize)
+            .map(|(at, lot)| (at, lot.clone()))
+    }) else {
         return Err(EngineError::new(format!("no offer {offer} at the Marketplace")));
     };
     let mut card = new_instance(&mut *sink.state, &lot.def_id, player, Zone::Hand { player });
@@ -463,12 +476,9 @@ pub fn marketplace_view(state: &GameState, viewer: PlayerId) -> Option<Marketpla
         && state.phase == Phase::Main
         && state.pending.is_none()
         && state.active == viewer;
-    let offers = market
-        .offers
-        .iter()
+    let offers = offered_to(market, viewer)
         .enumerate()
-        .filter(|(_, offer)| offer.owner.is_none_or(|owner| owner == viewer))
-        .map(|(at, offer)| {
+        .map(|(at, (_, offer))| {
             let index = at as i32;
             let reason = if may_act {
                 why_market_buy_refused(state, viewer, index)

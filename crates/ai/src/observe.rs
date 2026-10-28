@@ -600,9 +600,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             card.counters.plague = plague;
         }
     }
-    // R1853003: what the opponent bought at the Marketplace this cycle is theirs alone (its view sends
-    // only the viewer's own stock), so the seat reads none of it.
+    // R1853003, R2250002: the opponent's lots and what they bought are theirs alone (the view sends the
+    // viewer only the lots offered to them, indexed among themselves), so the seat reads none of it.
     if let Some(market) = next.marketplace.as_mut() {
+        market.offers.retain(|offer| offer.owner != Some(opp));
         for offer in market.offers.iter_mut() {
             offer.bought[opp] = 0;
         }

@@ -5,7 +5,7 @@
 //! Starship Piece and Equip are printed keywords, the engine's: its death fuses a copy into its owner's
 //! Dormant Starship (R1852000), and played onto one of its controller's Units it fuses into that Unit,
 //! the host taking its Start of turn line and staying no piece (R1086, R1852001). Start of turn (R62):
-//! `gain_resources` of one random Resource into its controller's tray (R1840000, R1840002's roll), a
+//! `gain_resources` of one random Resource into its controller's hand (R1840000, R1840002's roll), a
 //! ninth sold at once (R1840001); the first gain opens the Marketplace (R1853000). Radiant: a Radiant
 //! Resource.
 
@@ -36,7 +36,7 @@ pub fn script() -> CardScripts {
 }
 
 // S 67 Tractor Beam — SPEC §8.10 row 67, BUILD M12 row S 67: "at its controller's start of turn gains
-// one random Resource into the tray (the rarity table over the seeds), none at the opponent's; equipped
+// one random Resource into the hand (the rarity table over the seeds), none at the opponent's; equipped
 // onto a Unit, that Unit gains it and is no piece; it dies and fuses into a Dormant Starship (R1852000);
 // radiant 0/4, Radiant Resources".
 #[cfg(test)]
@@ -70,16 +70,10 @@ mod tests {
         );
         assert!(crate::resources_in_hand(&s, P2).is_empty());
         s.end_turn();
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 1, "its own start of turn gains one");
-        assert!(card_def(&tray[0].def_id).resource.is_some());
-        assert!(!tray[0].radiant);
-        assert!(
-            s.hand(P1)
-                .iter()
-                .all(|card| card_def(&card.def_id).resource.is_none()),
-            "never the hand"
-        );
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1, "its own start of turn gains one");
+        assert!(card_def(&in_hand[0].def_id).resource.is_some());
+        assert!(!in_hand[0].radiant);
     }
 
     #[test]
@@ -144,8 +138,8 @@ mod tests {
     fn radiant_radiant_resources() {
         let mut s = beam("beam-radiant", true);
         s.start_turn();
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

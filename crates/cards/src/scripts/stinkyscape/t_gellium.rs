@@ -41,7 +41,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
 
-    fn tray(radiant: bool, health: i32) -> Scenario {
+    fn in_hand(radiant: bool, health: i32) -> Scenario {
         scenario(
             json!({ "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": health } }),
         )
@@ -49,17 +49,17 @@ mod tests {
 
     #[test]
     fn heals_past_30() {
-        let mut s = tray(false, 20);
+        let mut s = in_hand(false, 20);
         play_resource(&mut s, P1, ID, Value::Null);
         s.expect_health(P1, 24);
-        let mut s = tray(false, 30);
+        let mut s = in_hand(false, 30);
         play_resource(&mut s, P1, ID, Value::Null);
         s.expect_health(P1, 34);
     }
 
     #[test]
     fn heal_reads_through_param() {
-        let mut s = tray(false, 20);
+        let mut s = in_hand(false, 20);
         let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "heal", 6);
         play_resource(&mut s, P1, ID, Value::Null);
@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn radiant_heals_8() {
-        let mut s = tray(true, 20);
+        let mut s = in_hand(true, 20);
         play_resource(&mut s, P1, ID, Value::Null);
         s.expect_health(P1, 28);
     }

@@ -87,15 +87,15 @@ mod tests {
         let mut s = mining(false, "s063");
         let hand = s.hand(P1).len();
         s.activate(ID, dig());
-        let tray = mined(&s);
-        assert_eq!(tray.len(), 1);
-        assert!(crate::card_def(&tray[0].def_id).resource.is_some(), "{}", tray[0].def_id);
-        assert!(!tray[0].radiant);
+        let in_hand = mined(&s);
+        assert_eq!(in_hand.len(), 1);
+        assert!(crate::card_def(&in_hand[0].def_id).resource.is_some(), "{}", in_hand[0].def_id);
+        assert!(!in_hand[0].radiant);
         assert_eq!(s.hand(P1).len(), hand + 1, "it takes a hand slot");
         // R1840002: the roll replays from the seed.
         let mut again = mining(false, "s063");
         again.activate(ID, dig());
-        assert_eq!(resources_in_hand_of(again.state(), P1)[0].def_id, tray[0].def_id);
+        assert_eq!(resources_in_hand_of(again.state(), P1)[0].def_id, in_hand[0].def_id);
     }
 
     #[test]
@@ -146,8 +146,8 @@ mod tests {
     fn radiant_the_resource_is_radiant() {
         let mut s = mining(true, "s063-radiant");
         s.activate(ID, dig());
-        let tray = mined(&s);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = mined(&s);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

@@ -1034,12 +1034,13 @@ pub(crate) fn each_legal_action(
             })?;
         }
     }
-    // R1853003: a buy of each Marketplace lot, in offer order, then a sale of each hand card that sells
-    // from there (R1861000), in hand order, while
+    // R1853003: a buy of each Marketplace lot offered to the player, in offer order (R2250002), then a
+    // sale of each hand card that sells from there (R1861000), in hand order, while
     // `marketplace.rs`'s refusals pass them — the refusals the reducer gives and the view's `reason`
     // reads. A closed Marketplace lists neither.
     if let Some(market) = &state.marketplace {
-        for offer in 0..market.offers.len() as i32 {
+        let offered = crate::marketplace::offered_to(market, player).count() as i32;
+        for offer in 0..offered {
             if crate::marketplace::why_market_buy_refused(state, player, offer).is_ok() {
                 visit(ActionBody::MarketBuy { offer })?;
             }

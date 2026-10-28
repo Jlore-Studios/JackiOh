@@ -257,7 +257,7 @@ pub(crate) fn play_resource<'a>(
             face_down: None,
         },
         player,
-        "play from the tray",
+        "play the Resource",
     )
 }
 

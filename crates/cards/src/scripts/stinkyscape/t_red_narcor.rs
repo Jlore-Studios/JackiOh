@@ -49,7 +49,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
 
-    fn tray(seed: &str, radiant: bool) -> Scenario {
+    fn in_hand(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER] },
@@ -79,7 +79,7 @@ mod tests {
     fn legendary_or_mythic_at_2_less() {
         let mut rarities = Vec::new();
         for seed in (0..20).map(|n| format!("red-narcor-{n}")) {
-            let mut s = tray(&seed, false);
+            let mut s = in_hand(&seed, false);
             play_resource(&mut s, P1, ID, Value::Null);
             let card = added(&s);
             assert!(!card.radiant);
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn discount_reads_through_param() {
-        let mut s = tray("red-narcor-param", false);
+        let mut s = in_hand("red-narcor-param", false);
         let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "discount", 10);
         play_resource(&mut s, P1, ID, Value::Null);
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn radiant_at_0() {
         for seed in (0..5).map(|n| format!("red-narcor-radiant-{n}")) {
-            let mut s = tray(&seed, true);
+            let mut s = in_hand(&seed, true);
             play_resource(&mut s, P1, ID, Value::Null);
             let card = added(&s);
             assert!(card.radiant, "{seed}: a Radiant one");
@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn radiant_set_cost_reads_through_param() {
-        let mut s = tray("red-narcor-radiant-param", true);
+        let mut s = in_hand("red-narcor-radiant-param", true);
         let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "setCost", 1);
         play_resource(&mut s, P1, ID, Value::Null);

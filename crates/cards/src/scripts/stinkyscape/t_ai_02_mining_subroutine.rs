@@ -1,10 +1,10 @@
-//! S T-AI-2 Mining Subroutine (SPEC §7, §8.10 row T-AI-2; R482, R1840001, R1840002, R1881000): (0) Spell,
+//! S T-AI-2 Mining Subroutine (SPEC §7, §8.10 row T-AI-2; R482, R1840002, R1881000, R2250000): (0) Spell,
 //! AI, Token (no printed rarity), an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Gain a random Common or Rare Stinkyscape Resource."
 //!   Radiant: "Gain a random Radiant Common or Rare Stinkyscape Resource."
 //! Engine: `gain_resources` (R1840002) from a pool of the Common and Rare Resources named by id: the
 //!   rarity roll over the two rarities the pool holds (55 against 25), then one of the rolled rarity, into
-//!   the tray, never the hand; one past the tray's cap is sold at once (R1840001). It never gains Axnit,
+//!   the hand, which a full hand burns (R2250000). It never gains Axnit,
 //!   Narcor or Red Narcor, so a bought copy never pays for itself in Credits (R1881000). Radiant: a
 //!   Radiant Resource. Declares no numbers (R482).
 
@@ -45,8 +45,8 @@ pub fn script() -> CardScripts {
 }
 
 // S T-AI-2 Mining Subroutine — SPEC §8.10 row T-AI-2, BUILD M12 row S T-AI-2: "gains one random Resource
-// into its caster's tray, always Reknite, Korrelite or Gellium, never Axnit, Narcor or Red Narcor (R1881000);
-// a full tray sells it at once (R1840001); radiant a Radiant one".
+// into its caster's hand, always Reknite, Korrelite or Gellium, never Axnit, Narcor or Red Narcor (R1881000);
+// a full hand burns it (R2250000); radiant a Radiant one".
 #[cfg(test)]
 mod tests {
     use super::POOL;
@@ -60,10 +60,13 @@ mod tests {
     const MINING: &str = "stinkyscape-t-ai-02";
     const FILLER: &str = "core-005";
 
-    fn cast(radiant: bool, seed: &str, tray: Value) -> Scenario {
+    /// p1 casts the Subroutine from a hand of it, a filler and `more` cards.
+    fn cast(radiant: bool, seed: &str, more: Value) -> Scenario {
+        let mut hand = vec![json!({ "def": MINING, "radiant": radiant }), json!(FILLER)];
+        hand.extend(more.as_array().cloned().unwrap_or_default());
         let mut s = scenario(json!({
             "seed": seed,
-            "p1": { "hand": [{ "def": MINING, "radiant": radiant }, FILLER], "tray": tray, "library": filler(4) },
+            "p1": { "hand": hand, "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
         s.play(MINING, json!({}));
@@ -71,68 +74,66 @@ mod tests {
     }
 
     #[test]
-    fn r1881000_it_gains_one_common_or_rare_resource_into_the_tray() {
+    fn r1881000_it_gains_one_common_or_rare_resource_into_the_hand() {
         let mut seen: IndexSet<String> = IndexSet::new();
         for i in 0..40 {
             let s = cast(false, &format!("mining-{i}"), json!([]));
-            let tray = resources_in_hand_of(s.state(), P1);
-            assert_eq!(tray.len(), 1, "one Resource, in the tray");
-            assert!(POOL.contains(&tray[0].def_id.as_str()), "{}", tray[0].def_id);
-            assert!(!tray[0].radiant);
-            seen.insert(tray[0].def_id.clone());
+            let in_hand = resources_in_hand_of(s.state(), P1);
+            assert_eq!(in_hand.len(), 1, "one Resource, in the hand");
+            assert!(POOL.contains(&in_hand[0].def_id.as_str()), "{}", in_hand[0].def_id);
+            assert!(!in_hand[0].radiant);
+            seen.insert(in_hand[0].def_id.clone());
         }
         assert_eq!(seen.len(), POOL.len(), "each of the three over the seeds: {seen:?}");
     }
 
     #[test]
-    fn r1840001_a_full_tray_sells_the_gain_at_once() {
-        let full = json!(vec!["stinkyscape-t-reknite"; RESOURCE_TRAY_CAP as usize]);
-        let s = cast(false, "mining-full", full);
-        assert_eq!(resources_in_hand_of(s.state(), P1).len(), RESOURCE_TRAY_CAP as usize);
-        assert!(market_credits_of(s.state(), P1) > 0, "the ninth sold for Credits");
+    fn a_full_hand_burns_the_gain() {
+        // The filler and these fill the hand to its cap once the Subroutine has left it.
+        let more = json!(vec![FILLER; HAND_CAP as usize - 1]);
+        let s = cast(false, "mining-full", more);
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+        assert!(resources_in_hand_of(s.state(), P1).is_empty());
+        assert!(
+            s.last_events()
+                .iter()
+                .any(|event| event.event_type() == GameEventType::Burned)
+        );
     }
 
     #[test]
     fn radiant_a_radiant_resource() {
         let s = cast(true, "mining-radiant", json!([]));
-        let tray = resources_in_hand_of(s.state(), P1);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
-        assert!(POOL.contains(&tray[0].def_id.as_str()));
+        let in_hand = resources_in_hand_of(s.state(), P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
+        assert!(POOL.contains(&in_hand[0].def_id.as_str()));
     }
 
     #[test]
     fn r1840000_the_opponent_sees_only_that_one_was_gained() {
         let s = cast(false, "mining-hidden", json!([]));
         let gained = resources_in_hand_of(s.state(), P1)[0].clone();
-        assert_eq!(
-            s.view(P2).opponent.resource_tray,
-            Some(HandView::Count { count: 1 })
-        );
+        let count = s.hand(P1).len() as i32;
+        assert_eq!(s.view(P2).opponent.hand, HandView::Count { count });
         let gain_seen_by = |viewer: PlayerId| -> GameEvent {
             s.view(viewer)
                 .events
                 .into_iter()
-                .find(|event| event.event_type() == GameEventType::ResourceGained)
+                .find(|event| event.event_type() == GameEventType::AddedToHand)
                 .expect("the view carries the gain")
         };
-        assert_eq!(
+        assert!(matches!(
             gain_seen_by(P1),
-            GameEvent::ResourceGained {
-                player: P1,
-                instance_id: gained.id.clone(),
-                def_id: gained.def_id.clone(),
-                radiant: None,
-            }
-        );
-        assert_eq!(
-            gain_seen_by(P2),
-            GameEvent::ResourceGained {
-                player: P1,
-                instance_id: HIDDEN_ID.to_string(),
-                def_id: HIDDEN_ID.to_string(),
-                radiant: None,
-            },
+            GameEvent::AddedToHand { instance_id, def_id, .. }
+                if instance_id == gained.id && def_id == gained.def_id
+        ));
+        assert!(
+            matches!(
+                gain_seen_by(P2),
+                GameEvent::AddedToHand { instance_id, def_id, .. }
+                    if instance_id == HIDDEN_ID && def_id == HIDDEN_ID
+            ),
             "one was gained, not which"
         );
     }

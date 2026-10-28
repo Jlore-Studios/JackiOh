@@ -8,7 +8,7 @@
 //! its owner then drawing again (R58); setup never deals it (R635). Its cast is one `damage_all` hit on
 //! every Unit of both sides and then each hero, one state check after them all (R59), its caster's Spell
 //! Damage raising each (§4.4 step 0); then `gain_resources` of `resources` random Resources into the
-//! tray (R1840000). Radiant: the enemy Units and the enemy hero only, and Radiant Resources. The numbers
+//! hand, a full hand burning them (R2250000). Radiant: the enemy Units and the enemy hero only, and Radiant Resources. The numbers
 //! are the declared `damage` and `resources` (R386).
 
 use jackioh_engine::effects::{damage_all, gain_resources};
@@ -46,7 +46,7 @@ pub fn script() -> CardScripts {
 }
 
 // S 97 Asteroid Field — SPEC §8.10 row 97, BUILD M12 row S 97: "drawn, it is cast: 2 damage to each
-// hero and every Unit, its caster's included, then 2 random Resources into the tray, then a draw; never
+// hero and every Unit, its caster's included, then 2 random Resources into the hand, then a draw; never
 // dealt at setup (R635); damage and resources read through `param()`; radiant only the enemy hero and
 // Units are hit, and the Resources are Radiant".
 #[cfg(test)]
@@ -81,11 +81,15 @@ mod tests {
         s.expect_health(P1, 28).expect_health(P2, 28);
         s.expect_stats(&own, json!({ "health": 7 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 2);
-        assert!(tray.iter().all(|card| !card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 2);
+        assert!(in_hand.iter().all(|card| !card.radiant));
         s.expect_in_zone(ID, "graveyard");
-        assert_eq!(s.hand(P1).len(), 2, "the draw repeated (R58)");
+        assert_eq!(
+            s.hand(P1).len(),
+            4,
+            "the draw repeated (R58), beside the two Resources (R2250000)"
+        );
     }
 
     #[test]
@@ -119,7 +123,13 @@ mod tests {
             let begun = begin_game(&create_game(&options));
             assert!(begun.state.players.p1.hand.iter().all(|card| card.def_id != ID));
             assert!(
-                begun.state.players.p1.resource_tray.is_none(),
+                begun
+                    .state
+                    .players
+                    .p1
+                    .hand
+                    .iter()
+                    .all(|card| crate::card_def(&card.def_id).resource.is_none()),
                 "{n}: setup cast none"
             );
             assert!(
@@ -142,8 +152,8 @@ mod tests {
         s.expect_health(P1, 30).expect_health(P2, 28);
         s.expect_stats(&own, json!({ "health": 9 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 2);
-        assert!(tray.iter().all(|card| card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 2);
+        assert!(in_hand.iter().all(|card| card.radiant));
     }
 }

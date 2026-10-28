@@ -143,7 +143,7 @@ pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
 
 /// R2250000: whether this player's hand holds a card of one of these definitions ("if you have a
 /// Narcor", Stinkyscape #39's Activate).
-pub fn hand_holds(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
+pub fn hand_holds_any(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
     state.players[player]
         .hand
         .iter()

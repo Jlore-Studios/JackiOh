@@ -62,9 +62,9 @@ mod tests {
         s.play(ID, json!({}));
         let target = s.unit_at(P2, 1);
         s.attack(ID, &target);
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 1);
-        assert!(!tray[0].radiant);
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(!in_hand[0].radiant);
     }
 
     #[test]
@@ -81,8 +81,8 @@ mod tests {
         s.play(ID, json!({}));
         let target = s.unit_at(P2, 1);
         s.attack(ID, &target);
-        let tray = crate::resources_in_hand(&s, P1);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

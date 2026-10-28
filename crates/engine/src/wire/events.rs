@@ -1547,13 +1547,13 @@ mod tests {
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
-        // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
-        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
+        // (R1838001); its Credits' `marketCreditsChanged` (R1840005), the Resource tray's three
+        // events gone with it (R2250000); the
         // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 95);
+        assert_eq!(GAME_EVENT_TYPES.len(), 92);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

@@ -1613,14 +1613,14 @@ mod stinkyscape {
         assert_eq!(hits_on(&events, &s.card(MENACE).id).len(), times, "{def}");
     }
 
-    /// R1840000: a Miner gains its controller a Resource into their tray.
+    /// R1840000, R2250000: a Miner gains its controller a Resource into their hand.
     fn mines(def: &str, radiant: bool) {
         let mut s = armed(def, radiant);
-        let before = s.state().players.p1.resource_tray.as_ref().map_or(0, Vec::len);
+        let before = resources_in_hand_of(s.state(), PlayerId::P1).len();
         activate_listed(&mut s, def, any);
-        let tray = s.state().players.p1.resource_tray.clone().unwrap_or_default();
-        assert_eq!(tray.len(), before + 1, "{def}");
-        let gained = tray.last().expect("a Resource");
+        let held = resources_in_hand_of(s.state(), PlayerId::P1);
+        assert_eq!(held.len(), before + 1, "{def}");
+        let gained = held.last().expect("a Resource");
         assert!(
             jackioh_cards::CATALOG[&gained.def_id].resource.is_some(),
             "{}",
@@ -1923,8 +1923,9 @@ mod stinkyscape {
         s
     }
 
+    /// R2250000: the Resources in p1's hand.
     fn tray_len(s: &Scenario) -> usize {
-        s.state().players.p1.resource_tray.as_ref().map_or(0, Vec::len)
+        resources_in_hand_of(s.state(), PlayerId::P1).len()
     }
 
     both_faces!(s_n169_tiny_asteroid, |radiant: bool| {
