@@ -26,8 +26,8 @@
 # slow on purpose, and ci-duration.yml does not watch it.
 #
 # The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
-# `count` off: its retrain folds the positions itself) on the local runner, and its artifacts are that
-# run's.
+# `count` off: its retrain folds the positions itself; `ref`, the commit of main its plan read) on the
+# local runner, and its artifacts are that run's.
 name: selfplay
 
 on:
@@ -55,6 +55,12 @@ on:
         type: boolean
         required: false
         default: true
+      # The commit the build checks out: the learn lane's plan passes main as it found it. The
+      # run's own commit when empty.
+      ref:
+        type: string
+        required: false
+        default: ""
   workflow_dispatch:
     inputs:
       games:
@@ -140,6 +146,8 @@ jobs:
     timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 30 || 720 }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/setup
         with:
           node: "false"
