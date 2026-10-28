@@ -6634,19 +6634,30 @@
     "2189": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T03:31:37Z",
       "issue": 2117,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The pull request body has neither the `Part of #2036` line nor the `## Player note` line that issue #2117's ground rules and the plan's Done-when list both require; it says only `Closes #2117` and `_The builder wrote no description._`.",
+          "evidence": "The PR #2189 text quoted in the brief; bot/harness/deliver.py:2044-2045 builds the body as `Closes #N` plus the builder's report, and falls back to that placeholder when there is no report. docs/issues-and-patches.md:301-305 says a PR that ships no card data carries its player line under `## Player note`, and promote-production.yml:48 and :189-191 read it from the merged PR's body. Without it this visible change gets no line in the technical log.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-10-28T06:32:48Z",
+      "queued_at": "2026-10-28T06:45:01Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40644649851",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-28T06:34:06Z",
       "stop_requested": false,
       "taken_asks": [],
