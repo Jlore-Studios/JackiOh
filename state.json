@@ -6922,20 +6922,30 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/creator/Creator.test.tsx",
+            "apps/web/src/creator/Creator.tsx",
+            "apps/web/src/together/TogetherRoute.tsx"
+          ],
+          "from": "1e2258725651c18f7bb3badf66d47e23cfca4635",
+          "main": "d96667141f7bb150f55045e442f834869a5de756"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "40643478855",
-            "tier": "strong"
+            "family": "muse",
+            "run": "40652761712",
+            "tier": "medium"
           }
         ],
-        "sha": "1e2258725651c18f7bb3badf66d47e23cfca4635",
+        "sha": "d6391df05b57c919d2e2fc36d815e84892b9ef43",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
