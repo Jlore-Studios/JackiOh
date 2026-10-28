@@ -14,8 +14,16 @@ import { useEffect, useState, type ReactElement } from "react";
 import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
-import { getCollection, getTokens, redeemCardToken, type CollectionResponse, type TokenBarsResponse } from "../net/api.ts";
+import {
+  getCollection,
+  getTokens,
+  keptPaths,
+  redeemCardToken,
+  type CollectionResponse,
+  type TokenBarsResponse,
+} from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, unownedCards } from "./shop.ts";
@@ -39,8 +47,13 @@ export default function TokenPicker({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [bars, setBars] = useState<TokenBarsResponse | null>(null);
-  const [collection, setCollection] = useState<CollectionResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [bars, setBars] = useState<TokenBarsResponse | null>(
+    () => cachedRead<TokenBarsResponse>(token, keptPaths.tokens) ?? null,
+  );
+  const [collection, setCollection] = useState<CollectionResponse | null>(
+    () => cachedRead<CollectionResponse>(token, keptPaths.collection) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -61,8 +74,17 @@ export default function TokenPicker({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
+          const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
+          if (keptBars === undefined || keptCollection === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setBars(keptBars);
+            setCollection(keptCollection);
+            setLoadError(null);
+          }
         }
       },
     );

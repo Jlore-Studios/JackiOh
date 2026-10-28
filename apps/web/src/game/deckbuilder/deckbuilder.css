@@ -326,6 +326,7 @@
 
 .deckbuilder.app-shell .db-chip--rarity::before {
   content: "";
+  position: static;
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -505,7 +506,7 @@
 }
 
 /* The "+" that adds the card to the open deck in one tap. It is drawn 28 px round in the card's
-   top-right corner, and its ::before widens the hit area to 44 px (task 7's touch-target floor)
+   top-right corner, and its ::before widens the hit area to --hit-min (task 7's touch-target floor)
    without covering more of the face. */
 .deckbuilder.app-shell .db-add {
   position: absolute;
@@ -531,7 +532,7 @@
 .deckbuilder.app-shell .db-add::before {
   content: "";
   position: absolute;
-  inset: -8px;
+  inset: min(-8px, (100% - var(--hit-min)) / 2);
   border-radius: 50%;
 }
 
@@ -1281,13 +1282,22 @@
     padding-inline: 0;
   }
 
-  /* Eight crystals share one row, so at 390 px each is drawn 40 px wide. Its hit area reaches half
-     the group's 4 px gap on each side, as the card's "+" widens its own, which makes it the 44 px a
-     finger needs without pushing X onto a second row (integration QA). */
+  /* Eight crystals share one row, so at 390 px each is drawn about 38 px wide. Its hit area reaches
+     the middle of the group's 4 px gap (2 px past its 1 px border), as R2122000 splits a gap, and the
+     first and the last reach out to --hit-min where nothing is beside them, which keeps X on the
+     row (integration QA). */
   .deckbuilder.app-shell .db-filter-row--cost .db-chip::before {
     content: "";
     position: absolute;
-    inset: 0 -2px;
+    inset: 0 -3px;
+  }
+
+  .deckbuilder.app-shell .db-filter-row--cost .db-chip:first-of-type::before {
+    left: min(-3px, (100% - var(--hit-min)) / 2);
+  }
+
+  .deckbuilder.app-shell .db-filter-row--cost .db-chip:last-of-type::before {
+    right: min(-3px, (100% - var(--hit-min)) / 2);
   }
 }
 

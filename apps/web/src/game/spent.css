@@ -24,7 +24,7 @@
   background: color-mix(in srgb, var(--pal-wood-900) 82%, transparent);
   box-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
   color: var(--pal-slate-100);
-  font-size: clamp(9px, 0.95em, 13px);
+  font-size: clamp(var(--type-3xs), var(--type-sm-em), var(--type-md));
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.06em;

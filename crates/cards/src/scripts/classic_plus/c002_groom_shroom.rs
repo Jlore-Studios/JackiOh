@@ -104,7 +104,7 @@ mod tests {
     const STOCKPILE: &str = "core-005";
     /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,
     /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet). Re-pinned for
-    /// v0.3.5: the Meditative set joins the pool.
+    /// v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release (#1884) its #87 Siva 1.
     const FELINOR_UNITS: &[&str] = &[
         "core-012",
         "core-043",
@@ -119,6 +119,7 @@ mod tests {
         "meditative-093",
         "meditative-094",
         "meditative-102",
+        "stinkyscape-087",
     ];
 
     use crate::merged;

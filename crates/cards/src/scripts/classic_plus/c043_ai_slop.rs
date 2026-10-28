@@ -4,7 +4,7 @@
 //!   Radiant: the AI generated cards are Radiant.
 //!
 //! `fuseGenerated` is the whole fusion: independent picks from the AI generated cards whose printed
-//! cost (R65) is (1), six since issue #1828 (R1828001) (a pool the text names, so tokens reach it;
+//! cost (R65) is (1), six since issue #1828 (R1828001) and thirteen since the Stinkyscape set shipped (a pool the text names, so tokens reach it;
 //! repeats allowed, R60), fused with no target (R77, R102: the shared type, else the first's; a Token
 //! with the AI tag; its id names them, R179), into your hand at `costOverride` 0 (the hand cap burns
 //! it). Radiant picks go in on their Radiant face (R469). R582: tuned down to 1, "fuse 1 card" is no
@@ -85,9 +85,10 @@ mod tests {
 
     /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
     /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
-    /// tokens join the pool.
+    /// tokens join the pool; and for the Stinkyscape release (#1884): that set's T-AI-1 to T-AI-10.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
+        ids.extend((1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")));
         ids.extend(
             [
                 "meditativeplus-001-1",
@@ -100,14 +101,22 @@ mod tests {
         ids
     }
 
-    /// R1828001: the (1) Cost AI generated cards, the pool since issue #1828.
-    const ONE_COST: [&str; 6] = [
+    /// R1828001: the (1) Cost AI generated cards, the pool since issue #1828: six until the Stinkyscape
+    /// release (#1884), whose seven (1) Cost ones join it, in the query's index order.
+    const ONE_COST: [&str; 13] = [
         "classicplus-t-ai-01",
         "classicplus-t-ai-04",
         "classicplus-t-ai-07",
         "classicplus-t-ai-08",
         "classicplus-t-ai-09",
         "meditativeplus-001-3",
+        "stinkyscape-t-ai-01",
+        "stinkyscape-t-ai-10",
+        "stinkyscape-t-ai-03",
+        "stinkyscape-t-ai-04",
+        "stinkyscape-t-ai-05",
+        "stinkyscape-t-ai-06",
+        "stinkyscape-t-ai-09",
     ];
 
     /// Whether `id` is a card of the pool: an AI generated card of printed cost (1).
@@ -151,7 +160,7 @@ mod tests {
         }
 
         #[test]
-        fn r1828001_the_pool_is_the_six_1_cost_ai_generated_cards() {
+        fn r1828001_the_pool_is_the_thirteen_1_cost_ai_generated_cards() {
             crate::register_all();
             let pool: Vec<String> = crate::query::query(&json_as(super::super::ai_cards(Some(POOL_COST))))
                 .iter()

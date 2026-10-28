@@ -6,7 +6,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
-import type { CardView, PlayerView, SideView } from "@jackioh/shared";
+import type { CardView, PendingOption, PendingView, PlayerView, SideView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,7 +20,7 @@ import Game from "../game/Game.tsx";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { revealTestid } from "../game/reveal.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { opponentModifiers, yourModifiers } from "../test/fixtures.ts";
+import { opponentModifiers, pendingFor, waitingPending, yourModifiers } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import type { FakeReplaySource } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -337,10 +337,14 @@ function firstAnimatedStep(): number {
 }
 
 describe("the board a replay draws", () => {
-  it("the board offers no legal action, glow or prompt, and clicks change nothing", async () => {
+  it("the board offers no legal action or glow, any prompt only to look at, and clicks change nothing", async () => {
     await open();
     const quiet = (): void => {
-      expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+      // R2211000: a prompt is drawn on a replay, read-only; none of it can be answered.
+      expect(screen.queryByTestId("prompt-submit")).toBeNull();
+      for (const modal of screen.queryAllByTestId("prompt-modal")) {
+        expect(modal.hasAttribute("data-read-only") || modal.hasAttribute("data-prompt-waiting")).toBe(true);
+      }
       expect(document.querySelector("[data-glow]")).toBeNull();
       expect(document.querySelector('[data-legal="true"]')).toBeNull();
       expect(screen.getByTestId(testid.endTurn)).toBeDisabled();
@@ -356,6 +360,7 @@ describe("the board a replay draws", () => {
     );
     expect(mine, "the folded game has a step to play from").toBeGreaterThan(0);
     await jump(mine);
+    expect(screen.queryByTestId("prompt-scrim")).toBeNull();
     quiet();
 
     const board = screen.getByTestId("game");
@@ -475,6 +480,101 @@ function withModifiersAt(at: number): ReplayStep[] {
   }));
 }
 
+/** `steps` with `pending` at step `at`, as that step's view carries it. */
+function withPendingAt(at: number, pending: PendingView): ReplayStep[] {
+  return steps.map((step, index) => (index === at ? { ...step, view: { ...step.view, pending } } : step));
+}
+
+/** The first step after step 0 that is no prompt, no mulligan and no end: a plain turn's step. */
+function laterStep(): number {
+  const found = steps.findIndex(
+    (step, index) => index > 0 && step.view.pending === null && step.view.mulligan === undefined && step.view.result === null,
+  );
+  if (found < 0) throw new Error("no later step of the folded game is a plain one");
+  return found;
+}
+
+describe("R2211000 a replay shows the seat's own choices, read-only", () => {
+  const THREE: PendingOption[] = [
+    { key: "mode:core-043", label: "Flood", defId: "core-043" },
+    { key: "mode:core-055", label: "Archivist", defId: "core-055" },
+    { key: "mode:core-066", label: "Lava Golem", defId: "core-066" },
+  ];
+  const modal = (): HTMLElement => screen.getByTestId("prompt-modal");
+  const options = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']")];
+
+  it("R2211000 step 0's mulligan is drawn folded and read-only, and step, Play and jump work from it", async () => {
+    const opening = steps[0]?.view.pending;
+    if (opening === null || opening === undefined || !opening.forYou) throw new Error("the folded game does not open on the viewer's prompt");
+    await open();
+    expect(shownStep()).toBe(0);
+    expect(modal()).toHaveAttribute("data-prompt-kind", "mulligan");
+    expect(modal()).toHaveAttribute("data-read-only", "true");
+    expect(modal()).toHaveAttribute("data-collapsed", "true");
+    expect(options()).toEqual([]);
+
+    // Unfolded, every card is greyed and a click on it picks nothing.
+    fireEvent.click(screen.getByTestId("prompt-peek"));
+    expect(options()).toHaveLength(opening.options.length);
+    expect(options().length).toBeGreaterThan(0);
+    const pressed = options().map((option) => option.getAttribute("aria-pressed"));
+    for (const option of options()) {
+      expect(option).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(option);
+    }
+    await flush();
+    expect(options().map((option) => option.getAttribute("aria-pressed"))).toEqual(pressed);
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
+    expect(shownStep()).toBe(0);
+
+    // The toolbar is in reach and does what it does anywhere else.
+    await press(replayTestid.forwardStep);
+    expect(shownStep()).toBe(1);
+    await press(replayTestid.backStep);
+    expect(shownStep()).toBe(0);
+    expect(modal()).toHaveAttribute("data-collapsed", "true");
+
+    await jump(LAST);
+    expect(shownStep()).toBe(LAST);
+    await press(replayTestid.start);
+    expect(shownStep()).toBe(0);
+
+    await press(replayTestid.play);
+    await advance(REPLAY_PLAY_GAP_MS);
+    expect(shownStep()).toBe(1);
+  });
+
+  it("R2211000 the seat's own Discover mid-game shows the cards it offered, inert", async () => {
+    const at = laterStep();
+    await open(fakeReplaySource(withPendingAt(at, pendingFor("discover", THREE))));
+    await jump(at);
+    expect(shownStep()).toBe(at);
+    expect(modal()).toHaveAttribute("data-read-only", "true");
+    expect(modal()).toHaveAttribute("data-collapsed", "true");
+
+    fireEvent.click(screen.getByTestId("prompt-peek"));
+    expect(options()).toHaveLength(3);
+    for (const option of options()) {
+      expect(option).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(option);
+    }
+    await flush();
+    expect(shownStep()).toBe(at);
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
+    expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+  });
+
+  it("R2211000 a step where the other seat is choosing shows the waiting panel and no option", async () => {
+    const at = laterStep();
+    await open(fakeReplaySource(withPendingAt(at, waitingPending)));
+    await jump(at);
+    expect(modal()).toHaveAttribute("data-prompt-waiting", "waiting");
+    expect(modal()).toHaveTextContent("Your opponent is choosing…");
+    expect(options()).toEqual([]);
+    expect(screen.queryByTestId("prompt-peek")).toBeNull();
+  });
+});
+
 describe("R169 the modifier list in the replay", () => {
   it("R169 the rail's chip follows the step on the board and hides on a step with no modifier", async () => {
     await open(fakeReplaySource(withModifiersAt(1)));
@@ -527,8 +627,8 @@ describe("leaving, paging and failing", () => {
       expired: "This replay has expired.",
     });
 
-    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("error", "Couldn’t reach JackiOh.") }));
-    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("error", "Couldn't reach JackiOh.") }));
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     cleanup();
 
     // A page that fails later, reached with a jump: the board gives way to the reason.
@@ -566,13 +666,13 @@ describe("leaving, paging and failing", () => {
       total: healthy.total,
       calls: healthy.calls,
       page: (from, count) =>
-        down ? Promise.reject(new ReplayFailure("error", "Couldn’t reach JackiOh.")) : healthy.page(from, count),
+        down ? Promise.reject(new ReplayFailure("error", "Couldn't reach JackiOh.")) : healthy.page(from, count),
     };
     await open(flaky);
     down = true;
     await press(replayTestid.end);
 
-    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
 
     down = false;

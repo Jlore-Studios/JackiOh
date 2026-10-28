@@ -23,12 +23,14 @@ import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   buyChase,
   getCollection,
   getCosmeticPacks,
   getOwnedCosmetics,
+  keptPaths,
   openCosmeticPack,
   type CollectionResponse,
   type CosmeticPacksResponse,
@@ -36,6 +38,7 @@ import {
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { cachedRead } from "../net/readCache.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { COSMETIC_PACK } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
@@ -74,9 +77,16 @@ export default function CosmeticPacks({
   onChanged?: () => void;
   registry?: readonly RegistryCosmetic[];
 }): ReactElement {
-  const [info, setInfo] = useState<CosmeticPacksResponse | null>(null);
-  const [collection, setCollection] = useState<CollectionResponse | null>(null);
-  const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(null);
+  // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<CosmeticPacksResponse | null>(
+    () => cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks) ?? null,
+  );
+  const [collection, setCollection] = useState<CollectionResponse | null>(
+    () => cachedRead<CollectionResponse>(token, keptPaths.collection) ?? null,
+  );
+  const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(
+    () => cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics) ?? null,
+  );
   const [opened, setOpened] = useState<OpenedCosmeticPackResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +114,19 @@ export default function CosmeticPacks({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
+          const keptInfo = cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks);
+          const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
+          const keptOwned = cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
+          if (keptInfo === undefined || keptCollection === undefined || keptOwned === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(keptInfo);
+            setCollection(keptCollection);
+            setOwned(keptOwned);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -209,7 +230,7 @@ export default function CosmeticPacks({
               </div>
             </>
           ) : (
-            <p>{t("No unopened packs.")}</p>
+            <EmptyState text={t("No unopened packs.")} />
           )}
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>

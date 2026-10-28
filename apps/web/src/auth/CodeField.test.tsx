@@ -853,7 +853,7 @@ describe("the hint for a letter from another keyboard", () => {
 
   it("a symbol is told what codes use, with nothing about keyboards", () => {
     expect(codeProblemMessage({ kind: "foreign", character: "#" })).toBe(
-      "“#” isn’t used in invite codes. They use the letters A–Z except I and O, and the digits 2–9.",
+      "“#” isn't used in invite codes. They use the letters A–Z except I and O, and the digits 2–9.",
     );
   });
 });

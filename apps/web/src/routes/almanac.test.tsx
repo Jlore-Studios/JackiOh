@@ -84,7 +84,13 @@ afterEach(() => {
   document.head.querySelector('link[rel="canonical"]')?.remove();
 });
 
-describe("R630 the /almanac route", () => {
+/**
+ * The grid renders every shipped card and token, 710 since the Stinkyscape release (#1884), and a test
+ * that opens it and clicks through it takes up to about 8 s under jsdom, past vitest's 5 s default.
+ */
+const SLOW_GRID = { timeout: 30_000 } as const;
+
+describe("R630 the /almanac route", SLOW_GRID, () => {
   it("R630 is served at /almanac signed out, with no redirect and no call to the server", async () => {
     at(paths.almanac);
     render(<App />);
@@ -131,7 +137,7 @@ describe("R630 the /almanac route", () => {
   });
 });
 
-describe("R630 the almanac's browse pane", () => {
+describe("R630 the almanac's browse pane", SLOW_GRID, () => {
   it("R630 shows every catalog card, tokens included, cost ascending with no filter", () => {
     render(<AlmanacRoute />);
     const ids = shownIds();
@@ -327,7 +333,7 @@ describe("R630 the almanac's browse pane", () => {
   });
 });
 
-describe("R654 the almanac's card statistics block", () => {
+describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
   it("R654 R661 the almanac's detail view renders the compact statistics block, names no source, and links the full stats page", async () => {
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
@@ -390,7 +396,7 @@ describe("R654 the almanac's card statistics block", () => {
   });
 });
 
-describe("R1956000 the viewer's own cards in the Almanac", () => {
+describe("R1956000 the viewer's own cards in the Almanac", SLOW_GRID, () => {
   const OWNED = "core-002";
   const UNOWNED = "core-004";
   /** The frame a pool card's face wears, null for the default. */

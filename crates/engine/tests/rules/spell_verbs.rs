@@ -1164,7 +1164,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     }
 
     #[test]
-    fn r1868000_a_target_raised_past_it_after_the_pick_is_still_destroyed() {
+    fn r1868000_r1867005_a_target_raised_past_it_after_the_pick_is_still_destroyed() {
         let mut s = nono_board("r1868000-raised", json!([{ "def": riser.id, "lane": 1 }]));
         let risen = id_at(&s, P2, 1);
         s.play(nono_x.id.as_str(), json!({ "x": 1, "targets": pick::id(&risen) }));

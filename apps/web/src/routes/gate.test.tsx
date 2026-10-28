@@ -7,11 +7,12 @@
 // is sent to the screen §9.4 says the account may see.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { SKELETON_DELAY_MS } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
@@ -22,7 +23,7 @@ it("vitest runs in MODE=test, which is what main.tsx's mount guard keys on", () 
   expect(import.meta.env.MODE).toBe("test");
 });
 
-const { App, Gated, redirectFor, resetUsernamePromptForTests } = await import("../main.tsx");
+const { App, Gated, Loading, redirectFor, resetUsernamePromptForTests } = await import("../main.tsx");
 
 // ---------------------------------------------------------------------------------------------
 // the stubbed server
@@ -260,6 +261,32 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 });
 
+describe("R2108000 the shell's wait", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R2108000 a wait drawn as a skeleton keeps its panel hidden until SKELETON_DELAY_MS", () => {
+    vi.useFakeTimers();
+    render(<Loading what="Checking your account…" slow skeleton="panel" />);
+    const panel = screen.getByTestId("gate-loading").closest(".shell-panel");
+    expect(panel).toHaveAttribute("data-shown", "false");
+    act(() => {
+      vi.advanceTimersByTime(SKELETON_DELAY_MS - 1);
+    });
+    expect(panel).toHaveAttribute("data-shown", "false");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(panel).toHaveAttribute("data-shown", "true");
+  });
+
+  it("R2108000 a sentence that waits on nothing shows at once", () => {
+    render(<Loading what="Sign in to continue." />);
+    expect(screen.getByTestId("gate-loading").closest(".shell-panel")).toHaveAttribute("data-shown", "true");
+  });
+});
+
 // ---------------------------------------------------------------------------------------------
 // the username prompt (R1435)
 // ---------------------------------------------------------------------------------------------
@@ -274,7 +301,7 @@ describe("R1435 the username prompt at the gate", () => {
     render(<App />);
 
     const prompt = await screen.findByTestId("username-prompt", undefined, SLOW);
-    expect(prompt).toHaveTextContent("You’re Player#7 for now.");
+    expect(prompt).toHaveTextContent("You're Player#7 for now.");
     expect(screen.getByTestId("username-prompt-skip")).toBeInTheDocument();
     expect(pathname(), "the prompt stands in place, it does not move the browser").toBe("/decks");
   });

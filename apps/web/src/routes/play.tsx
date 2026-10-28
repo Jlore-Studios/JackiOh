@@ -45,6 +45,7 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { namesCustomCard } from "../creator/useCustomCards.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
@@ -524,14 +525,6 @@ function useLobbyWatch(
 
 // UI pieces
 
-function DecksLink({ children }: { children: string }): ReactElement {
-  return (
-    <a href={paths.decks} data-testid={playTestid.decksLink} onClick={followInApp(paths.decks)}>
-      {children}
-    </a>
-  );
-}
-
 function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | null {
   if (result === null) return null;
   if (result.ok) {
@@ -801,7 +794,7 @@ function SignedOutPlay(): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <p>{t("Online play is invite-only for now: you'll need an invite code after signing up.")}</p>
           <a
             className="button-primary play-cta"
             href={paths.login}
@@ -1071,9 +1064,6 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     });
   }
 
-  // Split around the link, so each sentence is one entry and English reads as it always did.
-  const [noDecksBefore = "", noDecksAfter = ""] = t("You have no saved decks yet. {link}.").split("{link}");
-  const [noTriosBefore = "", noTriosAfter = ""] = t("You have no saved trios yet. {link}.").split("{link}");
   const noChoice = choice === null;
   const locked = waiting || found;
   const queued = waiting && room === null && !found;
@@ -1209,11 +1199,10 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
 
             {data !== null && mode === "bo1" ? (
               data.decks.length === 0 ? (
-                <p className="lobby-note">
-                  {noDecksBefore}
-                  <DecksLink>{t("Build one in Decks")}</DecksLink>
-                  {noDecksAfter}
-                </p>
+                <EmptyState
+                  text={t("You have no saved decks yet.")}
+                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
+                />
               ) : (
                 <div className="play-pick">
                   <label htmlFor="play-deck">{t("Your deck")}</label>
@@ -1253,11 +1242,10 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
 
             {data !== null && mode === "bo3" ? (
               data.trios.length === 0 ? (
-                <p className="lobby-note">
-                  {noTriosBefore}
-                  <DecksLink>{t("Build one in Decks")}</DecksLink>
-                  {noTriosAfter}
-                </p>
+                <EmptyState
+                  text={t("You have no saved trios yet.")}
+                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
+                />
               ) : (
                 <div className="play-pick">
                   <label htmlFor="play-trio">{t("Your trio")}</label>

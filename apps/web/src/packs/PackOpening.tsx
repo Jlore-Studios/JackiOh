@@ -42,6 +42,7 @@ import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
@@ -51,7 +52,8 @@ import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
-import { getPacks, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { getPacks, keptPaths, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { useSetting } from "../settings/store.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
@@ -397,7 +399,10 @@ export default function PackOpening({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [info, setInfo] = useState<PacksResponse | null>(null);
+  // R2125000: a revisit starts on the packs the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<PacksResponse | null>(
+    () => cachedRead<PacksResponse>(token, keptPaths.packs) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scene, setScene] = useState<SceneState | null>(null);
   const [round, setRound] = useState(0);
@@ -422,8 +427,15 @@ export default function PackOpening({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept packs leaves them and says nothing; only a first visit says why.
+          const kept = cachedRead<PacksResponse>(token, keptPaths.packs);
+          if (kept === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(kept);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -527,9 +539,7 @@ export default function PackOpening({
 /** The unopened packs the account holds, each opened alone or, from two, all in a row. */
 function PacksHeld({ info, onOpen }: { info: PacksResponse; onOpen: (pack: string, count: number) => void }): ReactElement {
   if (info.unopened.length === 0) {
-    return (
-      <p data-testid={packTestid.none}>{t("No unopened packs.")}</p>
-    );
+    return <EmptyState text={t("No unopened packs.")} testId={packTestid.none} />;
   }
   return (
     <div data-testid={packTestid.held}>

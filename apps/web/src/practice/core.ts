@@ -8,7 +8,8 @@
 // both hands and both libraries live on this side of `handle`, and what crosses it is a
 // `PracticeSnapshot` — `viewFor(state, human)`, the human's `legalActions`, whether the AI owes an
 // action, and the engine's refusal of the human's last action. The worker stands where §9.1 puts
-// the server.
+// the server. Against the Easy AI it adds whether the human has a sure win this turn (R2102000),
+// which the Rust side asks of the human's own redaction, so the AI's hidden cards never steer it.
 //
 // Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
 // actions the engine accepted, so a refused action spends nothing and the log folds exactly
@@ -41,7 +42,9 @@
 // folded and checked (R1303002) before it pays. The log crosses only after the end, so it can no
 // longer help the human play, and the page already holds the seed, since it asked the server for it
 // (rule 7). Any other game, and a game still running, is refused. A game resumed after a reload
-// (R668) claims on the seed it began on, which its saved config carries (R1303001).
+// (R668) claims on the seed it began on, which its saved config carries (R1303001). R2208000: such a game
+// decides under PRACTICE_EARNING_AI_CLOCK_MS, and a decision that cap still cuts marks it (clockCut, kept
+// in its save), which the claim's answer carries beside the claim, never in it.
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import {
@@ -72,10 +75,16 @@ import {
   TUTORIAL_HUMAN,
   VERSIONS_SCHEME,
 } from "@jackioh/engine/config";
-import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
+import { AI_BUDGET, aiToAct, buildAiDeck, decide, lethalHint, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
+import {
+  PRACTICE_AI_CLOCK_MS,
+  PRACTICE_EARNING_AI_CLOCK_MS,
+  PRACTICE_LETHAL_HINT_CLOCK_MS,
+  PRACTICE_REPLAYS_CACHED,
+  PRACTICE_REPLAYS_KEPT,
+} from "./config.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
@@ -96,10 +105,10 @@ import type {
 
 export type PracticeCoreEnv = {
   /**
-   * The wall clock the AI's cap is measured on, in `Date.now()` terms (worker: `Date.now`), because
-   * that is the clock the WebAssembly side reads against the deadline. A clock that reads 0 is no
-   * clock: the tests' frozen `() => 0` never stops a search, so a decision is its budget's alone. It
-   * is also the time a finished game is kept at (R768).
+   * The wall clock the AI's cap is measured on, and the lethal hint's (R2102000), in `Date.now()`
+   * terms (worker: `Date.now`), because that is the clock the WebAssembly side reads against the
+   * deadline. A clock that reads 0 is no clock: the tests' frozen `() => 0` never stops a search, so a
+   * decision is its budget's alone. It is also the time a finished game is kept at (R768).
    */
   now: () => number;
   /** answer `debug` only when true */
@@ -148,6 +157,8 @@ type PracticeGame = {
   kept: boolean;
   /** R768000: the number and step count it was kept under, once kept. */
   keptAs?: Pick<PracticeReplaySummary, "game" | "steps">;
+  /** R2208000: this device's clock cut an AI decision of a game on a server seed. */
+  clockCut: boolean;
 };
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
@@ -286,6 +297,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     aiCount: 0,
     error: null,
     kept: false,
+    clockCut: false,
   };
 }
 
@@ -342,7 +354,23 @@ function apply(game: PracticeGame, body: ActionBody, human: boolean): string | n
   return null;
 }
 
-function snapshotOf(game: PracticeGame): PracticeSnapshot {
+/**
+ * R2102000: whether the snapshot carries the lethal hint: only in a free game against the Easy AI (a
+ * lesson's `difficulty` is a placeholder), asked for the human's seat of the human's own redaction,
+ * on the Rust side, under its own wall-clock cap as `decide` is under the AI's. A check that runs past
+ * it, or throws, gives no hint, and the game goes on.
+ */
+function lethalFor(game: PracticeGame, now: number): boolean {
+  if (game.config.difficulty !== "easy" || game.config.lesson !== undefined) return false;
+  try {
+    return lethalHint(game.state, humanSeatNow(game), now > 0 ? now + PRACTICE_LETHAL_HINT_CLOCK_MS : undefined);
+  } catch {
+    return false;
+  }
+}
+
+/** `now` is the env's clock when the snapshot is made (`PracticeCoreEnv.now`), which caps the lethal hint's check. */
+function snapshotOf(game: PracticeGame, now: number): PracticeSnapshot {
   // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
   const human = humanSeatNow(game);
   const result = game.state.result;
@@ -356,6 +384,7 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
     aiToAct: aiToAct(game.state, aiSeatNow(game)),
     error: game.error,
     ...(keepsBoard ? { lastBoard: lastBoardFor(game.state, human) } : {}),
+    ...(lethalFor(game, now) ? { lethal: true as const } : {}),
     ...(game.keptAs === undefined ? {} : { replay: { ...game.keptAs } }),
   };
 }
@@ -373,6 +402,7 @@ function saveOf(game: PracticeGame): PracticeSave | null {
     log: JSON.parse(JSON.stringify(game.log)) as Action[],
     aiCursor: game.rng.cursor,
     hash: hashState(game.state),
+    ...(game.clockCut ? { clockCut: true as const } : {}),
   };
 }
 
@@ -402,6 +432,7 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   }
   if (hashState(game.state) !== save.hash) throw new Error("the saved game does not fold to the state it was saved at");
   game.rng = createRng(`${save.config.seed}:ai`, save.aiCursor);
+  game.clockCut = save.clockCut === true;
   return game;
 }
 
@@ -473,11 +504,15 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     let chosen: ActionBody | null;
     try {
       const t0 = env.now();
+      // R2208000: a game on a server seed, whose claim is re-run with no clock (R1303002), gets the long cap.
+      const clock = active.config.earning === true ? PRACTICE_EARNING_AI_CLOCK_MS : PRACTICE_AI_CLOCK_MS;
       const decision = decide(active.state, seat, {
         rng: active.rng,
         budget,
-        ...(t0 > 0 ? { deadlineMs: t0 + PRACTICE_AI_CLOCK_MS } : {}),
+        ...(t0 > 0 ? { deadlineMs: t0 + clock } : {}),
       });
+      // R2208000: a decision that cap still cut marks the game, so a refused claim can say why.
+      if (active.config.earning === true && decision?.stats.stoppedBy === "clock") active.clockCut = true;
       chosen = decision?.action ?? null;
     } catch {
       // `decide` promises never to throw; if it does anyway, the fallback below still moves the game.
@@ -643,13 +678,13 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
 
   function started(id: number, active: PracticeGame): PracticeResponse {
     env.saves?.write(saveOf(active));
-    return { id, type: "started", snapshot: snapshotOf(active), defs: registeredCatalog(), aiSeat: active.aiSeat };
+    return { id, type: "started", snapshot: snapshotOf(active, env.now()), defs: registeredCatalog(), aiSeat: active.aiSeat };
   }
 
   function snapshotResponse(id: number, active: PracticeGame): PracticeResponse {
     env.saves?.write(saveOf(active));
     keepFinished(active);
-    return { id, type: "snapshot", snapshot: snapshotOf(active) };
+    return { id, type: "snapshot", snapshot: snapshotOf(active, env.now()) };
   }
 
   function handleUnsafe(request: PracticeRequest): PracticeResponse {
@@ -694,8 +729,15 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         if (!env.dev) return { id: request.id, type: "failed", message: "debug is available only in a development build" };
         return { id: request.id, type: "debug", debug: debugOf(current()) };
       }
-      case "claim":
-        return { id: request.id, type: "claim", claim: claimOf(current()) };
+      case "claim": {
+        const active = current();
+        return {
+          id: request.id,
+          type: "claim",
+          claim: claimOf(active),
+          ...(active.clockCut ? { clockCut: true as const } : {}),
+        };
+      }
     }
   }
 

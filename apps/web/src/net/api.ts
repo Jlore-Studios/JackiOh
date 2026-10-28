@@ -17,6 +17,7 @@ import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, Set
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
+import { rememberRead, updateCachedRead } from "./readCache.ts";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
 
@@ -80,7 +81,7 @@ export class ApiRequestError extends Error {
  * from a refusal, which has a code. Its message is a sentence for the player; the browser's own
  * wording ("Failed to fetch", Safari's "Load failed") says nothing to them and is kept aside.
  */
-export const API_UNREACHABLE_MESSAGE = "Couldn’t reach JackiOh. Check your connection, then try again.";
+export const API_UNREACHABLE_MESSAGE = "Couldn't reach JackiOh. Check your connection, then try again.";
 
 export class ApiUnreachableError extends Error {
   /** What the transport said, for a debugger; never shown. */
@@ -192,6 +193,32 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
   if (!response.ok) throw new ApiRequestError(response.status, errorBodyOf(parsed, response.status));
   return parsed as T;
+}
+
+/**
+ * R2125000: the menu reads whose last answer is kept (`net/readCache.ts`), each by its path. A screen
+ * starts from `cachedRead(token, keptPaths.x)`; the statistics table's path is `cardStatsPath`, the
+ * friends list's `FRIENDS_PATH` (`net/social.ts`). Nothing a match, a duos room, a watch or a replay
+ * reads is here.
+ */
+export const keptPaths = {
+  collection: "/api/collection",
+  cosmetics: "/api/cosmetics",
+  quests: "/api/quests",
+  packs: "/api/packs",
+  wallet: "/api/wallet",
+  tracks: "/api/tracks",
+  tokens: "/api/tokens",
+  cosmeticPacks: "/api/cosmetic-packs",
+  decks: "/api/decks",
+  leaderboard: "/api/leaderboard",
+} as const;
+
+/** R2125000: a `GET` whose answer is kept for the next visit. A refusal or a failed read keeps what was there. */
+async function keptGet<T>(path: string, token: string | null, signal?: AbortSignal): Promise<T> {
+  const answer = await apiRequest<T>(path, { token, signal });
+  rememberRead(token, path, answer);
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -468,14 +495,14 @@ export type CollectionEntry = { cardId: string; quantity: number };
 export type CollectionResponse = { catalogVersion: string; entries: CollectionEntry[] };
 
 export function getCollection(token: string): Promise<CollectionResponse> {
-  return apiRequest<CollectionResponse>("/api/collection", { token });
+  return keptGet<CollectionResponse>(keptPaths.collection, token);
 }
 
 /** R1313000: `GET /api/cosmetics`, the caller's own cosmetics, per card and on the account. */
 export type OwnedCosmeticsResponse = { cards: { cardId: string; cosmeticId: string }[]; account: string[] };
 
 export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse> {
-  return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
+  return keptGet<OwnedCosmeticsResponse>(keptPaths.cosmetics, token);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -528,10 +555,27 @@ export type QuestView = {
  * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
  * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
  */
-export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+export type QuestsResponse = {
+  quests: QuestView[];
+  nextDueAt: number | null;
+  /** R2210000: the replaces the account may still spend today; a server from before #2210 sends none, which reads as none left. */
+  replacesLeft?: number;
+};
 
 export function getQuests(token: string): Promise<QuestsResponse> {
-  return apiRequest<QuestsResponse>("/api/quests", { token });
+  return keptGet<QuestsResponse>(keptPaths.quests, token);
+}
+
+/** R2210000: `POST /api/quests/:questId/replace`, a held quest swapped for another; answers the quests as `GET /api/quests` does. */
+export async function replaceQuest(token: string, questId: string): Promise<QuestsResponse> {
+  const answer = await apiRequest<QuestsResponse>(`/api/quests/${encodeURIComponent(questId)}/replace`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.quests, answer);
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -612,11 +656,33 @@ export type OpenedPackResponse = {
 };
 
 export function getPacks(token: string): Promise<PacksResponse> {
-  return apiRequest<PacksResponse>("/api/packs", { token });
+  return keptGet<PacksResponse>(keptPaths.packs, token);
 }
 
-export function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
-  return apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+/** R2125000: `pack`'s count, set in place or appended, and the kinds that have none left dropped. */
+function withUnopened(unopened: PacksResponse["unopened"], pack: string, count: number): PacksResponse["unopened"] {
+  const next = unopened.some((entry) => entry.pack === pack)
+    ? unopened.map((entry) => (entry.pack === pack ? { pack, count } : entry))
+    : [...unopened, { pack, count }];
+  return next.filter((entry) => entry.count > 0);
+}
+
+/** R2125000: `item` in place of the entry with its id, or appended. */
+function withItem<T extends { id: string }>(list: T[], item: T): T[] {
+  return list.some((entry) => entry.id === item.id)
+    ? list.map((entry) => (entry.id === item.id ? item : entry))
+    : [...list, item];
+}
+
+export async function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
+  const answer = await apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<PacksResponse>(token, keptPaths.packs, (before) => ({
+    ...before,
+    pity: answer.pity,
+    unopened: withUnopened(before.unopened, answer.pack, answer.unopened),
+  }));
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -630,7 +696,7 @@ export function openPack(token: string, pack: string): Promise<OpenedPackRespons
 export type WalletResponse = { jlore: number };
 
 export function getWallet(token: string): Promise<WalletResponse> {
-  return apiRequest<WalletResponse>("/api/wallet", { token });
+  return keptGet<WalletResponse>(keptPaths.wallet, token);
 }
 
 /** What reaching a set-track level pays (`LevelReward`, `crates/server/src/economy/track_rewards.rs`). */
@@ -652,14 +718,21 @@ export type TrackView = {
 export type TracksResponse = { tracks: TrackView[] };
 
 export function getTracks(token: string): Promise<TracksResponse> {
-  return apiRequest<TracksResponse>("/api/tracks", { token });
+  return keptGet<TracksResponse>(keptPaths.tracks, token);
 }
 
 /** `POST /api/packs/buy` with `{ pack }`: the pack, the wallet after it and the packs of its kind held. */
 export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
 
-export function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
-  return apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+export async function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
+  const answer = await apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.wallet, { jlore: answer.jlore } satisfies WalletResponse);
+  updateCachedRead<PacksResponse>(token, keptPaths.packs, (before) => ({
+    ...before,
+    unopened: withUnopened(before.unopened, answer.pack, answer.unopened),
+  }));
+  return answer;
 }
 
 /** One token bar's points and size, as `GET /api/tokens` states them. */
@@ -681,12 +754,19 @@ export type TokenBarsResponse = {
 };
 
 export function getTokens(token: string): Promise<TokenBarsResponse> {
-  return apiRequest<TokenBarsResponse>("/api/tokens", { token });
+  return keptGet<TokenBarsResponse>(keptPaths.tokens, token);
 }
 
 /** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
-export function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
-  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", { method: "POST", token, body: { cardId } });
+export async function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
+  const answer = await apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", {
+    method: "POST",
+    token,
+    body: { cardId },
+  });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.tokens, answer);
+  return answer;
 }
 
 /** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
@@ -696,17 +776,20 @@ export type CosmeticTokenTier = "Rare" | "Epic";
  * `POST /api/tokens/redeem-cosmetic` with `{ token, cosmeticId, cardId? }`, answering the bars
  * and tokens after it. A per-card cosmetic names its card; an account one sends none.
  */
-export function redeemCosmeticToken(
+export async function redeemCosmeticToken(
   token: string,
   cosmeticToken: CosmeticTokenTier,
   cosmeticId: string,
   cardId?: string,
 ): Promise<TokenBarsResponse> {
-  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
+  const answer = await apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
     method: "POST",
     token,
     body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
   });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.tokens, answer);
+  return answer;
 }
 
 /**
@@ -720,7 +803,7 @@ export type CosmeticPacksResponse = {
 };
 
 export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
-  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs", { token });
+  return keptGet<CosmeticPacksResponse>(keptPaths.cosmeticPacks, token);
 }
 
 /** What one cosmetic pack slot granted (R1306000, R1306001): an unowned cosmetic, or bar points. */
@@ -752,20 +835,34 @@ export type OpenedCosmeticPackResponse = {
   bars: OpeningBarsAnswer;
 };
 
-export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
-  return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });
+export async function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
+  const answer = await apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", {
+    method: "POST",
+    token,
+    body: {},
+  });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks, (before) => ({
+    ...before,
+    shardBar: answer.shardBar,
+    unopened: answer.unopened,
+  }));
+  return answer;
 }
 
 /**
  * `POST /api/cosmetic-packs/chase` with `{ cosmeticId, cardId? }`, answering the bar and packs
  * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
  */
-export function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
-  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
+export async function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
+  const answer = await apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
     method: "POST",
     token,
     body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
   });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.cosmeticPacks, answer);
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -808,7 +905,7 @@ export type DecksResponse = {
 };
 
 export function getDecks(token: string): Promise<DecksResponse> {
-  return apiRequest<DecksResponse>("/api/decks", { token });
+  return keptGet<DecksResponse>(keptPaths.decks, token);
 }
 
 export type DeckInput = {
@@ -828,21 +925,38 @@ export type DeckInput = {
  * `details.limit` when the profile already has `limits.decks` decks, 409 `update_required` for a
  * stale catalog, 404 when the id is another profile's.
  */
-export function putDeck(token: string, id: string, input: DeckInput): Promise<{ deck: SavedDeck }> {
-  return apiRequest<{ deck: SavedDeck }>(`/api/decks/${encodeURIComponent(id)}`, {
+export async function putDeck(token: string, id: string, input: DeckInput): Promise<{ deck: SavedDeck }> {
+  const answer = await apiRequest<{ deck: SavedDeck }>(`/api/decks/${encodeURIComponent(id)}`, {
     method: "PUT",
     token,
     body: input,
   });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    decks: withItem(before.decks, answer.deck),
+  }));
+  return answer;
 }
 
 /** `DELETE /api/decks/:id`: idempotent; `deleted: false` when there was nothing to delete. */
-export function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
-  return apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
+export async function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
+  const answer = await apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
     ...options,
   });
+  // R2125000: the next visit shows what this answer left; a trio slot naming the deck empties (R252).
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    decks: before.decks.filter((deck) => deck.id !== id),
+    trios: before.trios.map((trio) =>
+      trio.deckIds.includes(id)
+        ? { ...trio, deckIds: trio.deckIds.map((slot) => (slot === id ? null : slot)) as TrioSlots }
+        : trio,
+    ),
+  }));
+  return answer;
 }
 
 export type TrioInput = { name: string; deckIds: TrioSlots };
@@ -852,12 +966,18 @@ export type TrioInput = { name: string; deckIds: TrioSlots };
  * `conflict` with `details.unknownDeck`, which a client syncing an offline draft answers by saving
  * the deck first.
  */
-export function putTrio(token: string, id: string, input: TrioInput): Promise<{ trio: SavedTrio }> {
-  return apiRequest<{ trio: SavedTrio }>(`/api/trios/${encodeURIComponent(id)}`, {
+export async function putTrio(token: string, id: string, input: TrioInput): Promise<{ trio: SavedTrio }> {
+  const answer = await apiRequest<{ trio: SavedTrio }>(`/api/trios/${encodeURIComponent(id)}`, {
     method: "PUT",
     token,
     body: input,
   });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    trios: withItem(before.trios, answer.trio),
+  }));
+  return answer;
 }
 
 /** One deck of an imported trio: its id (minted here, R256), name and cards. */
@@ -876,20 +996,36 @@ export type TrioImportInput = {
  * `details.decksShort` / `details.triosShort` when the caps would be passed (R340), 409
  * `update_required` for a stale catalog. Sending the same ids again is safe.
  */
-export function importTrio(token: string, input: TrioImportInput): Promise<{ decks: SavedDeck[]; trio: SavedTrio }> {
-  return apiRequest<{ decks: SavedDeck[]; trio: SavedTrio }>("/api/trios/import", {
+export async function importTrio(
+  token: string,
+  input: TrioImportInput,
+): Promise<{ decks: SavedDeck[]; trio: SavedTrio }> {
+  const answer = await apiRequest<{ decks: SavedDeck[]; trio: SavedTrio }>("/api/trios/import", {
     method: "POST",
     token,
     body: input,
   });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    decks: answer.decks.reduce((decks, deck) => withItem(decks, deck), before.decks),
+    trios: withItem(before.trios, answer.trio),
+  }));
+  return answer;
 }
 
-export function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
-  return apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
+export async function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
+  const answer = await apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
     method: "DELETE",
     token,
     ...options,
   });
+  // R2125000: the next visit shows what this answer left.
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    trios: before.trios.filter((trio) => trio.id !== id),
+  }));
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1189,7 +1325,7 @@ export type LeaderboardResponse = {
 };
 
 export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
-  return apiRequest<LeaderboardResponse>("/api/leaderboard", { token });
+  return keptGet<LeaderboardResponse>(keptPaths.leaderboard, token);
 }
 
 /** `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000). */
@@ -1453,7 +1589,8 @@ export type CardStatsOptions = {
   signal?: AbortSignal;
 };
 
-export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
+/** R2125000: the path of one filter's table, query included; its kept answer is a public one (`net/readCache.ts`). */
+export function cardStatsPath(options: CardStatsOptions = {}): string {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
   if (options.pilot) params.set("pilot", options.pilot);
@@ -1464,9 +1601,11 @@ export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStat
   if (options.card) params.set("card", options.card);
   if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
-  return apiRequest<PublicStatsCardsResponse>(`/api/stats/cards${query ? `?${query}` : ""}`, {
-    signal: options.signal,
-  });
+  return `/api/stats/cards${query ? `?${query}` : ""}`;
+}
+
+export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
+  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), null, options.signal);
 }
 
 export function getCardDrillDown(

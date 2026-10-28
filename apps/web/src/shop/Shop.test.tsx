@@ -25,9 +25,11 @@ import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
+import { clearReadCache } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import CosmeticPacks from "./CosmeticPacks.tsx";
@@ -343,6 +345,44 @@ describe("#1309 the Jlore shop", () => {
     expect(server.to("GET", "/api/packs")).toHaveLength(2);
   });
 
+  it("R2125000 the next visit shows the wallet a buy left at once, and keeps it when the read behind it fails", async () => {
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(await screen.findByText("150 Jlore")).toBeInTheDocument();
+    cleanup();
+
+    shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
+    render(<Shop token={TOKEN} />);
+
+    expect(text(T.wallet)).toBe("150 Jlore");
+    expect(screen.queryByTestId(T.loading)).toBeNull();
+    expect(text(T.held("Core"))).toContain("Core pack: 3 unopened");
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(screen.queryByTestId(T.retry)).toBeNull();
+    expect(text(T.wallet)).toBe("150 Jlore");
+  });
+
+  it("R2125000 another account's visit finds nothing kept and says why when its read fails", async () => {
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    cleanup();
+
+    shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
+    render(<Shop token="token-other" />);
+
+    expect(screen.getByTestId(T.loading)).toBeInTheDocument();
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the wallet is not reachable");
+  });
+
   it("a failed read says why", async () => {
     shopServer({ wallet: refusal(503, "unavailable", "the wallet is not reachable") });
     render(<Shop token={TOKEN} />);
@@ -408,6 +448,8 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.queryByTestId(T.shardEmpty)).toBeNull();
     cleanup();
+    // R2125000: the second visit is a first one, not a revisit that opens on the kept 19 / 20.
+    clearReadCache();
 
     // Full, with every Legendary and Mythic already owned (a registry whose chases are all
     // starters, as the shipped one's were before R1833000): the empty sentence, and still no choice.
@@ -440,7 +482,9 @@ describe("#1309 the cosmetic packs", () => {
 
     cosmeticServer({ packs: { status: 200, body: { ...cosmeticPacksInfo(), unopened: 0 } } });
     render(<CosmeticPacks token={TOKEN} />);
-    expect(await screen.findByText("No unopened packs.")).toBeInTheDocument();
+    const noPacks = await screen.findByText("No unopened packs.");
+    expect(noPacks).toBeInTheDocument();
+    expectEmptyState(noPacks);
     expect(screen.queryByTestId(T.cosmeticPackObject)).toBeNull();
     expect(screen.queryByTestId(T.open)).toBeNull();
   });

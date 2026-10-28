@@ -38,7 +38,7 @@ export function droppedLines(dropped: DroppedCards, catalog: CatalogSnapshot): s
   const lines: string[] = [];
   if (dropped.unknown.length > 0) {
     const numbers = dropped.unknown.map((number) => `#${String(number)}`).join(t(", "));
-    lines.push(t("Left out {cards} this version of JackiOh doesn’t know ({numbers}).", { cards: cardsWord(dropped.unknown.length), numbers }));
+    lines.push(t("Left out {cards} this version of JackiOh doesn't know ({numbers}).", { cards: cardsWord(dropped.unknown.length), numbers }));
   }
   if (dropped.tokens.length > 0) {
     lines.push(t("Left out {names}: a Token never goes in a deck.", { names: cardNames(dropped.tokens, catalog) }));
@@ -123,7 +123,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
               <strong>{decoded.name}</strong>
               {` · ${t("{count}/{size} cards", { count: decoded.cards.length, size: DECK_SIZE })}`}
             </p>
-            {decoded.nameFellBack ? <p>{t("The code’s name couldn’t be used, so the deck gets this one. You can rename it.")}</p> : null}
+            {decoded.nameFellBack ? <p>{t("The code's name couldn't be used, so the deck gets this one. You can rename it.")}</p> : null}
             <ul className="ws-import-notes">
               {droppedLines(decoded.dropped, catalog).map((line) => (
                 <li key={line} data-kind="dropped">
@@ -133,11 +133,11 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
               {decoded.unowned.length === 0 ? null : (
                 <li data-kind="unowned">
                   {decoded.unowned.length === 1
-                    ? t("{cards} you don’t own yet is kept: {names}. You’ll need it before this deck can queue.", {
+                    ? t("{cards} you don't own yet is kept: {names}. You'll need it before this deck can queue.", {
                         cards: cardsWord(decoded.unowned.length),
                         names: cardNames(decoded.unowned, catalog),
                       })
-                    : t("{cards} you don’t own yet are kept: {names}. You’ll need them before this deck can queue.", {
+                    : t("{cards} you don't own yet are kept: {names}. You'll need them before this deck can queue.", {
                         cards: cardsWord(decoded.unowned.length),
                         names: cardNames(decoded.unowned, catalog),
                       })}

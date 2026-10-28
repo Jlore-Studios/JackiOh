@@ -327,10 +327,10 @@ function randomId(): string {
 export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
 
 /** R341: why an import made nothing, when the server could not be asked. */
-export const IMPORT_OFFLINE_MESSAGE = "You’re offline, so nothing was imported. Try again once you’re back online.";
+export const IMPORT_OFFLINE_MESSAGE = "You're offline, so nothing was imported. Try again once you're back online.";
 /** R341: why an import made nothing, when earlier edits (a deletion made to make room) have not landed. */
 export const IMPORT_UNSAVED_MESSAGE =
-  "Your latest changes haven’t reached the server yet, so nothing was imported. Try again once they’re saved.";
+  "Your latest changes haven't reached the server yet, so nothing was imported. Try again once they're saved.";
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TIMEOUT = 408;

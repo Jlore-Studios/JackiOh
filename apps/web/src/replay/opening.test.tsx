@@ -158,7 +158,7 @@ describe("R768000 a result screen's way into a replay", () => {
   it("#1568 OpenedReplay offers Try again when the source could not be loaded, and plays once it can", async () => {
     const load = vi
       .fn<() => Promise<ReplaySource>>()
-      .mockRejectedValueOnce(new ReplayFailure("error", "Couldn’t reach JackiOh."))
+      .mockRejectedValueOnce(new ReplayFailure("error", "Couldn't reach JackiOh."))
       .mockResolvedValueOnce(fakeReplaySource(steps));
     render(
       <CatalogContext.Provider value={lookup}>
@@ -166,7 +166,7 @@ describe("R768000 a result screen's way into a replay", () => {
       </CatalogContext.Provider>,
     );
 
-    expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(replayTestid.retry));

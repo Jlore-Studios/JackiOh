@@ -5,13 +5,12 @@
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
+import { withCatalog } from "../../test/board.tsx";
 import { baseView, unit, withEvents } from "../../test/fixtures.ts";
-import { CatalogContext, lookupFromDefs } from "../catalog.ts";
 import Game from "../Game.tsx";
 import CardShowcase from "./CardShowcase.tsx";
 import {
@@ -22,7 +21,6 @@ import {
   showcaseTestid as T,
 } from "./constants.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const PANTHER = "core-032";
 const PANTHER_NAME = CATALOG[PANTHER]?.name ?? "";
 const SHEEPISH = "core-041";
@@ -34,10 +32,6 @@ const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 
 function played(player: "p1" | "p2", instanceId: string, defId: string): GameEvent {
   return { type: "cardPlayed", player, instanceId, defId, costPaid: 2 };
-}
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
 }
 
 /** The first view has no "since"; the second brings `events` after it. */

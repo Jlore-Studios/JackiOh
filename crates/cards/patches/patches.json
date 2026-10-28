@@ -14966,5 +14966,1379 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.5.0",
+    "date": "2026-10-28",
+    "title": "Stinkyscape, the release: the set ships",
+    "source": "Issue #1884, the last part of #1856 (tracker #1836)",
+    "notes": "The Stinkyscape set ships (R1420, R1857000): its 175 cards, the Dormant Starship and 52 tokens join every pool that names no set, the deck builder, the Almanac and random decks, while the AI's own random decks keep R1390's soft gate (AI_DECK_GATED_SETS) until issue #1885 measures the AI on the set. Its mechanics are the rulings of #1837 to #1855's phase 0 and of #1857 to #1883's parts. Core #95, Classic+ #73 and Meditative #95 link the two Stinkyscape editions their texts name (R279). Core #82 KY's Trial, which works across every set that ships (R831004), Discovers among six sets now, and every card of an earlier set whose pool names no set (Core #57's KY cards, the random Legendaries, Tribute cards and Calls to Chaos among them, R380) can now offer the set's cards; their texts do not change, and the set's major claims them, as classify's forced games of KY's Trial play as before against a build that holds the set back (R1884002). The voice set's budget is 16 MiB for the set's lines (R1884000).",
+    "player": {
+      "title": "Stinkyscape",
+      "new": [
+        "The Stinkyscape set: 176 cards and 52 tokens join the deck builder, the Almanac, random decks and every card pool that names no set.",
+        "Dormant cards, Starship Pieces that fuse into a Starship you launch, and an in-match economy of Resources, Credits and the Marketplace.",
+        "Anomalies that swap your board for another, Quests in stages, the starscape map and two new ways to end a game: voted out and fled.",
+        "Four new tags: Drone Core, Weapon, War Doctrine and Swarm."
+      ],
+      "balance": [],
+      "changes": [
+        "KY's Trial, and every card that picks from a pool of every set (Conjure KY, Call to Chaos and the like), can now offer Stinkyscape cards.",
+        "The computer opponent plays against every Stinkyscape card but deals itself none of them for now."
+      ],
+      "text": [
+        "Call to Chaos (Core Edition), (Classic+ Edition) and (Meditative Edition) link the two Stinkyscape Editions their text names."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "f5c99a227343fb373ef6efadef13467b9f12b379"
+    ],
+    "reconstructed": false,
+    "tier": "major",
+    "plays": [
+      "stinkyscape-001",
+      "stinkyscape-002",
+      "stinkyscape-003",
+      "stinkyscape-004",
+      "stinkyscape-005",
+      "stinkyscape-006",
+      "stinkyscape-007",
+      "stinkyscape-008",
+      "stinkyscape-009",
+      "stinkyscape-010",
+      "stinkyscape-011",
+      "stinkyscape-012",
+      "stinkyscape-013",
+      "stinkyscape-014",
+      "stinkyscape-015",
+      "stinkyscape-016",
+      "stinkyscape-017",
+      "stinkyscape-018",
+      "stinkyscape-019",
+      "stinkyscape-020",
+      "stinkyscape-021",
+      "stinkyscape-022",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-025",
+      "stinkyscape-026",
+      "stinkyscape-027",
+      "stinkyscape-028",
+      "stinkyscape-029",
+      "stinkyscape-030",
+      "stinkyscape-031",
+      "stinkyscape-032",
+      "stinkyscape-033",
+      "stinkyscape-034",
+      "stinkyscape-035",
+      "stinkyscape-036",
+      "stinkyscape-037",
+      "stinkyscape-038",
+      "stinkyscape-039",
+      "stinkyscape-040",
+      "stinkyscape-041",
+      "stinkyscape-042",
+      "stinkyscape-043",
+      "stinkyscape-044",
+      "stinkyscape-045",
+      "stinkyscape-046",
+      "stinkyscape-047",
+      "stinkyscape-048",
+      "stinkyscape-049",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-061",
+      "stinkyscape-062",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-066",
+      "stinkyscape-067",
+      "stinkyscape-068",
+      "stinkyscape-069",
+      "stinkyscape-070",
+      "stinkyscape-071",
+      "stinkyscape-072",
+      "stinkyscape-073",
+      "stinkyscape-074",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-077",
+      "stinkyscape-078",
+      "stinkyscape-079",
+      "stinkyscape-080",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-083",
+      "stinkyscape-084",
+      "stinkyscape-085",
+      "stinkyscape-086",
+      "stinkyscape-087",
+      "stinkyscape-088",
+      "stinkyscape-089",
+      "stinkyscape-090",
+      "stinkyscape-091",
+      "stinkyscape-092",
+      "stinkyscape-093",
+      "stinkyscape-094",
+      "stinkyscape-095",
+      "stinkyscape-096",
+      "stinkyscape-097",
+      "stinkyscape-098",
+      "stinkyscape-099",
+      "stinkyscape-100",
+      "stinkyscape-101",
+      "stinkyscape-102",
+      "stinkyscape-103",
+      "stinkyscape-104",
+      "stinkyscape-105",
+      "stinkyscape-106",
+      "stinkyscape-107",
+      "stinkyscape-108",
+      "stinkyscape-109",
+      "stinkyscape-110",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-113",
+      "stinkyscape-114",
+      "stinkyscape-115",
+      "stinkyscape-116",
+      "stinkyscape-117",
+      "stinkyscape-118",
+      "stinkyscape-119",
+      "stinkyscape-120",
+      "stinkyscape-121",
+      "stinkyscape-122",
+      "stinkyscape-123",
+      "stinkyscape-124",
+      "stinkyscape-125",
+      "stinkyscape-126",
+      "stinkyscape-127",
+      "stinkyscape-128",
+      "stinkyscape-129",
+      "stinkyscape-130",
+      "stinkyscape-131",
+      "stinkyscape-132",
+      "stinkyscape-133",
+      "stinkyscape-134",
+      "stinkyscape-135",
+      "stinkyscape-136",
+      "stinkyscape-137",
+      "stinkyscape-138",
+      "stinkyscape-139",
+      "stinkyscape-140",
+      "stinkyscape-141",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-144",
+      "stinkyscape-145",
+      "stinkyscape-146",
+      "stinkyscape-147",
+      "stinkyscape-148",
+      "stinkyscape-149",
+      "stinkyscape-150",
+      "stinkyscape-151",
+      "stinkyscape-152",
+      "stinkyscape-153",
+      "stinkyscape-154",
+      "stinkyscape-155",
+      "stinkyscape-156",
+      "stinkyscape-157",
+      "stinkyscape-158",
+      "stinkyscape-159",
+      "stinkyscape-160",
+      "stinkyscape-161",
+      "stinkyscape-162",
+      "stinkyscape-163",
+      "stinkyscape-164",
+      "stinkyscape-165",
+      "stinkyscape-166",
+      "stinkyscape-167",
+      "stinkyscape-168",
+      "stinkyscape-169",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-173",
+      "stinkyscape-174",
+      "stinkyscape-175",
+      "stinkyscape-t"
+    ],
+    "changes": [
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "classicplus-073",
+        "name": "Call to Chaos (Classic+ Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscape-001",
+        "name": "Freeze Ray",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-002",
+        "name": "Absolute Zero",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-003",
+        "name": "Meteor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004",
+        "name": "Olivian Expanse",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-1",
+        "name": "Farewell",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-2",
+        "name": "KY's Last Exam",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-3",
+        "name": "Event Horizon",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-4",
+        "name": "Last Word",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-5",
+        "name": "1v1 Final Destination",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-004-6",
+        "name": "The Big Crunch",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-005",
+        "name": "Masochism Unmasked",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-006",
+        "name": "Tylannt",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-007",
+        "name": "The Greatest Heist",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-008",
+        "name": "Conjure Rosemary Triscuit",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-008-1",
+        "name": "Rosemary Triscuit",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-009",
+        "name": "Ticketed",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-010",
+        "name": "Otherworldly Endurance",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-010-1",
+        "name": "Inner Fire",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-010-2",
+        "name": "Divine Spirit",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-010-3",
+        "name": "Power Word Shield",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-011",
+        "name": "Otherworldly Magic",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-011-1",
+        "name": "Frostbolt",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-011-2",
+        "name": "Arcane Missiles",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-011-3",
+        "name": "Flame Strike",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-012",
+        "name": "Otherworldly Nightmare",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-012-1",
+        "name": "Shadow Word Death",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-012-2",
+        "name": "Shadow Word Pain",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-012-3",
+        "name": "Psychic Scream",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-013",
+        "name": "Asphyxiants Cloud",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-014",
+        "name": "Arm of the Jempire",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-015",
+        "name": "Arg Arg Defender",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-016",
+        "name": "Rod of Ages",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-017",
+        "name": "Imprisoned Ship Smith",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-018",
+        "name": "Imitated Instrumentality",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-018-1",
+        "name": "MELCHIOR",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-018-2",
+        "name": "BALTHASAR",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-018-3",
+        "name": "CASPER",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-019",
+        "name": "Imprisoned Cosmality",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-020",
+        "name": "Tnack Trav",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-021",
+        "name": "Moonberry",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-022",
+        "name": "Gatinsir",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-023",
+        "name": "Warp Disruptor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-024",
+        "name": "Warp Disruptor II",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-025",
+        "name": "KY's Tricknology",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-027",
+        "name": "Drone Core I",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-028",
+        "name": "Drone Core II",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-029",
+        "name": "Drone Core III",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-030",
+        "name": "Drone Core IV",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-031",
+        "name": "Drone Core V",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-032",
+        "name": "Drone Core VI",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-033",
+        "name": "Drone Core VII",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-034",
+        "name": "Drone Core VIII",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-035",
+        "name": "Drone Core IX",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-036",
+        "name": "Drone Core X",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-037",
+        "name": "Kwzka",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-038",
+        "name": "Shield Amplifier",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-039",
+        "name": "The Narcor Project",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-040",
+        "name": "Poison Capsule",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-041",
+        "name": "Drone Sympathizer",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-042",
+        "name": "Core Researcher",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-043",
+        "name": "Healing Capsule",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-044",
+        "name": "Great Replacement Theory",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-045",
+        "name": "Drone Commander",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-046",
+        "name": "Circadian Halfcycler",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-047",
+        "name": "Circadian Fullcycler",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-048",
+        "name": "Ultralight Chassis",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-049",
+        "name": "Spacemine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-051",
+        "name": "Repeater v3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-052",
+        "name": "Cannon v3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-053",
+        "name": "Flak v3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-055",
+        "name": "Repeater v4",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-056",
+        "name": "Cannon v4",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-057",
+        "name": "Flak v4",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-059",
+        "name": "Repeater v5",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-060",
+        "name": "Cannon v5",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-061",
+        "name": "Flak v5",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-062",
+        "name": "Miner v1",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-063",
+        "name": "Miner v2",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-064",
+        "name": "Miner v3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-065",
+        "name": "Miner v4",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-066",
+        "name": "Miner v5",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-067",
+        "name": "Tractor Beam",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-068",
+        "name": "Startos",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-069",
+        "name": "Falcon",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-070",
+        "name": "Z'Zoth",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-071",
+        "name": "A'Zoth",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-072",
+        "name": "Paragon Mk1",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-073",
+        "name": "Paragon Mk2",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-074",
+        "name": "Paragon-X",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-075",
+        "name": "Badger",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-076",
+        "name": "Honey Badger",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-077",
+        "name": "Yuma",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-078",
+        "name": "Ozark",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-079",
+        "name": "Orca",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-080",
+        "name": "Galaxy",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-081",
+        "name": "Radix",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-082",
+        "name": "Phalanx",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-083",
+        "name": "Halo",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-084",
+        "name": "Power Cell",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-084-1",
+        "name": "Metal Scraps",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-085",
+        "name": "Prototype-X1",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-086",
+        "name": "Prototype-X2",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-087",
+        "name": "Siva 1",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-088",
+        "name": "Siva 2",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-089",
+        "name": "Spice",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-090",
+        "name": "After Burner",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-091",
+        "name": "The Propagation's Wasp",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-092",
+        "name": "The Propagation's Hornet",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-093",
+        "name": "Patcher Nanobots",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-094",
+        "name": "Tmack Trav",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-095",
+        "name": "Vanguard Coalition",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-096",
+        "name": "Ocean Tsunami",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-097",
+        "name": "Asteroid Field",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-098",
+        "name": "Hull Booster",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-099",
+        "name": "No-No Words",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-100",
+        "name": "AP Rounds",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-101",
+        "name": "Overdrive Module",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-102",
+        "name": "Book of Nono-Words",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-103",
+        "name": "Vxyl",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-104",
+        "name": "Reflective Plating",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-105",
+        "name": "Disintegrex",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-106",
+        "name": "Warpfield Amplifier",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-107",
+        "name": "RR-5000",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-108",
+        "name": "Trila 3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-109",
+        "name": "xxFreshJack",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-110",
+        "name": "iKwzki",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-111",
+        "name": "Shockwave447",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-112",
+        "name": "Job Application",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-112-1",
+        "name": "Paycheck",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-113",
+        "name": "A Very Dandy Lad",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-114",
+        "name": "Arctic Citadel",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-115",
+        "name": "Scornboi",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-116",
+        "name": "Megabase",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-117",
+        "name": "Core System",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-118",
+        "name": "Secure System",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-119",
+        "name": "Unsecure System",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-120",
+        "name": "Wild System",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-121",
+        "name": "System Schematic",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-122",
+        "name": "Vamp Rounds",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-123",
+        "name": "Gokugains",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-124",
+        "name": "Jlockeed's Shipbuilding Grant",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-125",
+        "name": "Jlockeed's Spacerace Propaganda",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-126",
+        "name": "Jlockeed's Permanent Procurement Lobbying",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-127",
+        "name": "Jlockeed's Siege Tank",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-128",
+        "name": "Jlockeed's Yamato Cannon",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-129",
+        "name": "Jlockeed's Missile Pod",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-130",
+        "name": "Jlockeed's Starship Retrofitting Program",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-131",
+        "name": "Spacerace Stimulus",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-132",
+        "name": "Defensive Crystal",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-133",
+        "name": "Ultra Capacitor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-134",
+        "name": "Felinor Containment Chamber",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-135",
+        "name": "Sacked",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-135-1",
+        "name": "Sack",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-136",
+        "name": "Magic Module",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-137",
+        "name": "Firststrike Capability",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-137-1",
+        "name": "Land Doctrine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-137-2",
+        "name": "Sea Doctrine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-137-3",
+        "name": "Air Doctrine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-137-4",
+        "name": "Space Doctrine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-138",
+        "name": "Pocket Peptides",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-139",
+        "name": "Wormhole",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-140",
+        "name": "Rush Token Launcher",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-141",
+        "name": "Fruit Launcher",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-142",
+        "name": "Jade Launcher",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-143",
+        "name": "Book Launcher",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-144",
+        "name": "Prepare For Liftoff",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-145",
+        "name": "Fortify Flesh",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-146",
+        "name": "Flash Freeze",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-147",
+        "name": "IN33DH3",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-147-1",
+        "name": "IN33DH3 Prime",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-147-2",
+        "name": "Wardrum Blob",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-148",
+        "name": "Alteran Reach",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-148-1",
+        "name": "Edge of the Universe",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-149",
+        "name": "Wildar",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-150",
+        "name": "Call to Chaos (Stinky Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-150-1",
+        "name": "Stinkyscape Golem",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-151",
+        "name": "Call to Chaos (Scape Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-152",
+        "name": "Sanctum",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-153",
+        "name": "Stimmycheck",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-154",
+        "name": "Dice of Doom",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-155",
+        "name": "Comet Crash",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-156",
+        "name": "Catalyst Comet",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-157",
+        "name": "The Gauntlet",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-158",
+        "name": "Stratos Swarm",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-159",
+        "name": "ETHICS",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-160",
+        "name": "Golden Accord",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-161",
+        "name": "Pegasus",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-162",
+        "name": "Star-jumper Core",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-163",
+        "name": "Swear Loyalities",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-164",
+        "name": "The Syndicate",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-165",
+        "name": "The Trade Union",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-166",
+        "name": "Scanning Probe Mk1",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-167",
+        "name": "Scanning Probe Mk2",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-168",
+        "name": "Drone Hanger",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-169",
+        "name": "Tiny Asteroid",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-170",
+        "name": "Medium Asteroid",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-171",
+        "name": "Large Asteroid",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-172",
+        "name": "Huge Asteroid",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-173",
+        "name": "Abandoned Spice Tower",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-174",
+        "name": "Aerelret",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-175",
+        "name": "Frost Module",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-dormant-starship",
+        "name": "Dormant Starship",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-drone-interceptor",
+        "name": "Drone Interceptor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-drone-corvette",
+        "name": "Drone Corvette",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-shield-layer",
+        "name": "Drone Battleship (Shield Layer)",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-propagation-layer",
+        "name": "Drone Battleship (Propagation Layer)",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-meltdown-layer",
+        "name": "Drone Battleship (Meltdown Layer)",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-reknite",
+        "name": "Reknite",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-korrelite",
+        "name": "Korrelite",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-gellium",
+        "name": "Gellium",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-axnit",
+        "name": "Axnit",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-narcor",
+        "name": "Narcor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-red-narcor",
+        "name": "Red Narcor",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-anomaly-found",
+        "name": "Anomaly Found!",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-01",
+        "name": "Escort Protocol",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-02",
+        "name": "Mining Subroutine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-03",
+        "name": "Route Optimizer",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-04",
+        "name": "Predictive Shield",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-05",
+        "name": "Launch Sequencer",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-06",
+        "name": "Probe Relay",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-07",
+        "name": "Combat Subroutine",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-08",
+        "name": "Drone Uplink",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-09",
+        "name": "Honeypot",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-ai-10",
+        "name": "Salvage Protocol",
+        "kind": "added"
+      }
+    ]
   }
 ]

@@ -77,14 +77,16 @@ use code_lines::{code_lines, without_comments};
 
 /// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
 /// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
-/// `stinkyscape` is the held Stinkyscape set's (issue #1836, R1857000).
-const SETS: [&str; 6] = [
+/// `stinkyscape` is the Stinkyscape set's (issue #1836, R1857000), and `training_grounds` the held
+/// Training Grounds set's (issue #2193, R2194000).
+const SETS: [&str; 7] = [
     "core",
     "classic",
     "classic_plus",
     "meditative",
     "meditative_plus",
     "stinkyscape",
+    "training_grounds",
 ];
 
 /// One card file: its set, its module name, its absolute path and its `ID`.

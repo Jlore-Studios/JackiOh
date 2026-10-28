@@ -171,16 +171,29 @@ export type GameProps = {
    */
   aim?: GameAim;
   /**
-   * #511: the board is a replay's, a view to look at: no prompt, drag, glow or R345 preference. The
-   * route passes no legal actions either, so no control is offered. Absent, off.
+   * #511: the board is a replay's, a view to look at: no drag, glow or R345 preference, and no prompt
+   * but `replayPrompt`'s read-only one. The route passes no legal actions either, so no control is
+   * offered. Absent, off.
    */
   replay?: boolean;
+  /**
+   * R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). Only the
+   * replay player sets it; a watched game and the Duos boards leave it off. Absent, off.
+   */
+  replayPrompt?: boolean;
   /**
    * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
    * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
    * Absent, off.
    */
   lesson?: boolean;
+  /**
+   * R2102000: the human has a sure win this turn by what they can see, the Easy practice tier's
+   * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
+   * Only the practice route sets it, and the board shows it once it shows the newest view, never on
+   * a replay or once the game is over. Absent, off.
+   */
+  lethalHint?: boolean;
   /**
    * R1838000: the board's own Trade bar over a Tradable hand card. The Duos board turns it off and
    * puts the Trade button in its card bar beside the pass control instead. Absent, on.
@@ -236,7 +249,9 @@ export default function Game({
   loadouts = null,
   aim,
   replay = false,
+  replayPrompt = false,
   lesson = false,
+  lethalHint = false,
   tradeBar = true,
   silent = false,
 }: GameProps): ReactElement {
@@ -499,6 +514,8 @@ export default function Game({
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
+  // R2102000: and so does the lethal hint, which is the newest view's too.
+  const lethalShown = lethalHint && !replay && shown === view && shown.result === null;
 
   const dispatch = useCallback(
     (body: ActionBody) => {
@@ -655,6 +672,7 @@ export default function Game({
       ref={attach}
       data-testid="game"
       data-replay={replay ? "true" : undefined}
+      data-lethal-hint={lethalShown ? "true" : undefined}
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
       data-impact-tier={impactTier}
@@ -711,6 +729,11 @@ export default function Game({
               </p>
             ) : null}
             {boardNotice}
+            {lethalShown ? (
+              <p className="lethal-hint" data-testid={testid.lethalHint} role="status">
+                {t("You have lethal")}
+              </p>
+            ) : null}
             {/* R915004: a custom card's script that failed, from the newest view; a replay's log says it. */}
             {replay ? null : <ScriptFailedNotice view={view} />}
             {/* `view` is newest for this notice: it changes no board position, and its actions use
@@ -736,7 +759,7 @@ export default function Game({
       {silent ? null : <CardShowcase view={view} queue={runner} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
-      {replay || promptOver(shown, burst, inFlight) ? null : (
+      {(replay && !replayPrompt) || promptOver(shown, burst, inFlight) ? null : (
         <Prompt
           view={shown}
           interaction={interaction}
@@ -745,6 +768,8 @@ export default function Game({
           onInteraction={setInteraction}
           animating={animating.get(animTestid.prompt)}
           lesson={lesson}
+          // R2211000: a replay's prompt is drawn as offered and sends nothing.
+          readOnly={replay}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
           // and must be answered, so it offers none: the button would do nothing (the mulligan, a
           // Discover, a trigger's choice).
