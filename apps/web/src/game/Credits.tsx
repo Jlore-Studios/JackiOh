@@ -18,10 +18,8 @@ export type CreditsProps = {
 export default function Credits({ side, credits }: CreditsProps): ReactElement | null {
   if (credits === undefined) return null;
   return (
-    <span className="resource-tray" data-testid={`credits-${side}`}>
-      <span className="market-credits" data-testid={`market-credits-${side}`} data-credits={credits} title={t("Credits")}>
-        {credits}
-      </span>
+    <span className="market-credits" data-testid={`market-credits-${side}`} data-credits={credits} title={t("Credits")}>
+      {credits}
     </span>
   );
 }

@@ -418,7 +418,6 @@ describe("Board", () => {
     const plain = fullBoardView();
     render(<Board view={plain} />);
     for (const side of ["you", "opponent"]) {
-      expect(screen.queryByTestId(`credits-${side}`)).toBeNull();
       expect(screen.queryByTestId(`market-credits-${side}`)).toBeNull();
     }
     cleanup();
