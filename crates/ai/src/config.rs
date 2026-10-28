@@ -829,7 +829,7 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the AI dealing itself none of it, though the AI answers every card of it a player brings, until
 /// fullsend 2's sweep (issue #1885) measures the AI on the set and empties the list again. Gating a
 /// set that ships before the AI is trained on it is listing it here.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Stinkyscape];
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a
