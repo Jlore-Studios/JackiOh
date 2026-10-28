@@ -1,17 +1,19 @@
 //! Daily quests (SPEC §14.9, #1304): their rhythm on the server's clock, what a finished game
-//! moves, the payout of one that completes, `GET /api/quests` and the dev tools.
+//! moves, the payout of one that completes, `GET /api/quests`, the replace of a held quest and the
+//! dev tools.
 //!
 //! The clock is injected: `top_up_quests` and the reward hook take the time they run at, so a test
 //! walks an account through days in milliseconds. Every count and payout is read through the
 //! constants (`QUEST_INTERVAL_HOURS`, `QUEST_MAX_HELD`, `QUEST_XP_PER_JLORE`) and the pool, so the
-//! tests hold whatever values #1333 sets. R1304000–R1304002's proving tests live here, beside
-//! `rewards.rs`'s ladder game.
+//! tests hold whatever values #1333 sets. R1304000–R1304002's and R2210000's proving tests live
+//! here, beside `rewards.rs`'s ladder game.
 //!
 //! Requests go through the whole app (`support::deps::test_app`, the E2E fixtures): the caller is
 //! `e2e-p1`, the other account `e2e-p2`. The dev tools' tests list `e2e-p1` as a dev account.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::wire::{CardType, SHIPPED_SETS};
@@ -22,18 +24,22 @@ use jackioh_engine::{
 use serde_json::{Value, json};
 
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{JLORE_GAMES_DAILY_CAP, QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
-use jackioh_server::economy::quests::{
-    GameTally, PlayedCard, QuestDef, QuestGoal, pool, progress_of, quest_def, quest_interval_ms, quest_xp,
-    tally_seat, top_up_quests,
+use jackioh_server::config::{
+    JLORE_GAMES_DAILY_CAP, QUEST_MAX_HELD, QUEST_REPLACES_PER_DAY, QUEST_XP_PER_JLORE,
 };
-use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
+use jackioh_server::db::fake::OnCall;
+use jackioh_server::db::store::StoreError;
+use jackioh_server::economy::quests::{
+    GameTally, PlayedCard, QuestDef, QuestGoal, ReplaceOutcome, pool, progress_of, quest_def,
+    quest_interval_ms, quest_xp, replace_quest, replaces_left, tally_seat, top_up_quests,
+};
+use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards, utc_day_bounds};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, JloreGrant, JloreReason, QuestChange, QuestGrant,
 };
 
 use crate::support::deps::{call, test_app as built_app};
-use crate::support::store::store;
+use crate::support::store::{fake, store};
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -41,6 +47,8 @@ const USER: &str = "e2e-p1";
 /// The other active account (`e2e-p2`).
 const OTHER_TOKEN: &str = "e2e-token-p2";
 const OTHER_USER: &str = "e2e-p2";
+/// The pending account (`e2e-pending`), which no `Active` route answers.
+const PENDING_TOKEN: &str = "e2e-token-pending";
 /// When each clock test's account first shows up.
 const T0: i64 = 1_800_000_000_000;
 
@@ -228,7 +236,10 @@ async fn r1304002_no_quest_arrives_while_the_economy_is_off() {
     set_due(&app, &p1, now_ms() - 10 * interval()).await;
     let (status, body) = get_quests(&app, TOKEN).await;
     assert_eq!(status, 200);
-    assert_eq!(body, json!({ "quests": [], "nextDueAt": null }));
+    assert_eq!(
+        body,
+        json!({ "quests": [], "nextDueAt": null, "replacesLeft": 0 })
+    );
     assert!(ledger_of(&app, &p1).await.quests.is_empty());
 }
 
@@ -256,11 +267,15 @@ async fn get_api_quests_answers_only_the_callers_own() {
                 "arrivedAt": T0,
             }],
             "nextDueAt": null,
+            "replacesLeft": 0,
         })
     );
     let (status, body) = get_quests(&app, OTHER_TOKEN).await;
     assert_eq!(status, 200);
-    assert_eq!(body, json!({ "quests": [], "nextDueAt": null }));
+    assert_eq!(
+        body,
+        json!({ "quests": [], "nextDueAt": null, "replacesLeft": 0 })
+    );
     let (status, _, _) = call(&app, "GET", "/api/quests", None, Value::Null).await;
     assert_eq!(status, 401);
 }
@@ -502,6 +517,281 @@ async fn dev_quest_tools_answer_an_account_the_dev_list_does_not_name_403() {
         assert_eq!(body["error"]["code"], json!("forbidden"), "{path}: {body}");
     }
     assert_eq!(ledger_of(&app, &p2).await, before, "nothing is written");
+}
+
+/// `POST /api/quests/:questId/replace`.
+async fn post_replace(app: &Arc<App>, token: Option<&str>, quest_id: &str) -> (u16, Value) {
+    let path = format!("/api/quests/{quest_id}/replace");
+    let (status, _, body) = call(app, "POST", &path, token, Value::Null).await;
+    (status, body)
+}
+
+/// `profile` holds nothing but what `ids` names, arrived a millisecond apart from `since` on, and
+/// its next quest falls due long after.
+async fn hold_only(app: &App, profile: &str, ids: &[&str], since: i64) {
+    set_due(app, profile, since + 1_000 * interval()).await;
+    for (at, id) in (since..).zip(ids) {
+        hold(app, profile, quest_def(id).expect("a pool entry"), 0, at).await;
+    }
+}
+
+/// How many of `profile`'s ledger rows are a quest's `removed` change for the reason `quest`.
+async fn replaced_rows(app: &App, profile: &str) -> usize {
+    ledger_of(app, profile)
+        .await
+        .quests
+        .iter()
+        .filter(|row| row.change == QuestChange::Removed && row.reason == EconomyReason::Quest)
+        .count()
+}
+
+#[tokio::test]
+async fn r2210000_a_replace_swaps_a_held_quest_in_one_go() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    let now = now_ms();
+    let due = now + 10 * interval();
+    set_due(&app, &p1, due).await;
+    let win_3 = quest_def("win-3").expect("the pool has win-3");
+    let traps = easiest(&QuestGoal::PlayTraps);
+    hold(&app, &p1, win_3, 1, now - 2).await;
+    hold(&app, &p1, traps, 0, now - 1).await;
+    let before = ledger_of(&app, &p1).await;
+
+    let (status, body) = get_quests(&app, TOKEN).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["replacesLeft"], json!(QUEST_REPLACES_PER_DAY));
+
+    let (status, body) = post_replace(&app, Some(TOKEN), "win-3").await;
+    assert_eq!(status, 200, "{body}");
+    let held = held_ids(&app, &p1).await;
+    assert_eq!(held.len(), 2, "{held:?}");
+    assert!(!held.contains(&"win-3".to_owned()), "the replaced quest left");
+    assert!(held.contains(&traps.id), "the other quest stayed");
+    let new = held.iter().find(|id| **id != traps.id).expect("a new quest");
+    assert_ne!(new, "win-3", "never the quest it replaced");
+    let answered: Vec<&str> = body["quests"]
+        .as_array()
+        .expect("the quests")
+        .iter()
+        .filter_map(|quest| quest["questId"].as_str())
+        .collect();
+    assert_eq!(answered, held.iter().map(String::as_str).collect::<Vec<_>>());
+    let fresh = &body["quests"][1];
+    assert_eq!(fresh["questId"], json!(new));
+    assert_eq!(fresh["progress"], json!(0), "a new quest starts at nothing");
+    assert_eq!(body["replacesLeft"], json!(QUEST_REPLACES_PER_DAY - 1));
+    assert_eq!(body["nextDueAt"], json!(due), "the arrival rhythm did not move");
+
+    // One transaction's two rows: the quest that left, then the one that took its slot.
+    let after = ledger_of(&app, &p1).await;
+    let rows = &after.quests[before.quests.len()..];
+    assert_eq!(
+        rows.iter()
+            .map(|row| (row.quest_id.as_str(), row.change))
+            .collect::<Vec<_>>(),
+        vec![
+            ("win-3", QuestChange::Removed),
+            (new.as_str(), QuestChange::Arrived)
+        ]
+    );
+    for row in rows {
+        assert_eq!(row.reason, EconomyReason::Quest);
+        assert!(!row.dev);
+    }
+    assert_eq!(rows[0].at, rows[1].at);
+    assert!(
+        rows[1]
+            .reference
+            .as_deref()
+            .is_some_and(|reference| reference.starts_with("seed:")),
+        "the draw's seed is logged: {rows:?}"
+    );
+    assert_eq!(store!(app, |t| t.economy_quests_get(&p1)).next_due_at, Some(due));
+}
+
+#[tokio::test]
+async fn r2210000_a_second_replace_the_same_utc_day_is_refused_and_the_next_day_allows_one() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    hold_only(&app, &p1, &["win-3"], T0).await;
+    let (day, next_day) = utc_day_bounds(T0);
+    let first = |app: &Arc<App>| {
+        let app = Arc::clone(app);
+        let p1 = p1.clone();
+        async move { held_ids(&app, &p1).await[0].clone() }
+    };
+
+    for _ in 0..QUEST_REPLACES_PER_DAY {
+        let id = first(&app).await;
+        let outcome = store!(app, |t| replace_quest(&mut t, &p1, &id, day));
+        assert!(matches!(outcome, ReplaceOutcome::Replaced(_)), "{outcome:?}");
+    }
+    let (ledger, held) = (ledger_of(&app, &p1).await, held_ids(&app, &p1).await);
+    let id = first(&app).await;
+    let late = next_day - 1;
+    assert_eq!(store!(app, |t| replaces_left(&mut t, &p1, late)), 0);
+    let outcome = store!(app, |t| replace_quest(&mut t, &p1, &id, late));
+    assert_eq!(outcome, ReplaceOutcome::Spent);
+    assert_eq!(ledger_of(&app, &p1).await, ledger, "a refusal writes nothing");
+    assert_eq!(held_ids(&app, &p1).await, held);
+
+    assert_eq!(
+        store!(app, |t| replaces_left(&mut t, &p1, next_day)),
+        QUEST_REPLACES_PER_DAY,
+        "the next UTC day starts afresh"
+    );
+    let outcome = store!(app, |t| replace_quest(&mut t, &p1, &id, next_day));
+    assert!(matches!(outcome, ReplaceOutcome::Replaced(_)), "{outcome:?}");
+}
+
+#[tokio::test]
+async fn r2210000_the_replacement_is_never_held_nor_the_one_replaced() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    set_due(&app, &p1, T0 + 1_000 * interval()).await;
+    // The account holds every entry but the last, so the draw has exactly one to give.
+    let (last, rest) = pool().split_last().expect("a pool");
+    for (at, def) in (T0..).zip(rest) {
+        hold(&app, &p1, def, 0, at).await;
+    }
+    let (day, next_day) = utc_day_bounds(T0);
+    let day_ms = next_day - day;
+    for (k, def) in (0..4).zip(rest) {
+        let now = day + k * day_ms;
+        let outcome = store!(app, |t| replace_quest(&mut t, &p1, &def.id, now));
+        let expected = if k == 0 {
+            last
+        } else {
+            &rest[usize::try_from(k - 1).expect("a count")]
+        };
+        assert_eq!(
+            outcome,
+            ReplaceOutcome::Replaced(expected),
+            "replacing {}",
+            def.id
+        );
+    }
+
+    // Hold the one entry left open: nothing is left to draw, and the refusal writes nothing.
+    let held = held_ids(&app, &p1).await;
+    let open = pool()
+        .iter()
+        .find(|quest| !held.contains(&quest.id))
+        .expect("one entry is open");
+    hold(&app, &p1, open, 0, T0 + 100).await;
+    let ledger = ledger_of(&app, &p1).await;
+    let now = day + 10 * day_ms;
+    let outcome = store!(app, |t| replace_quest(&mut t, &p1, &rest[10].id, now));
+    assert_eq!(outcome, ReplaceOutcome::NoneLeft);
+    assert_eq!(ledger_of(&app, &p1).await, ledger);
+}
+
+#[tokio::test]
+async fn r2210000_a_replace_is_refused_for_a_quest_not_held_a_guest_and_while_the_economy_is_off() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    hold_only(&app, &p1, &["win-3"], now_ms() - 1_000).await;
+    let before = ledger_of(&app, &p1).await;
+
+    let other = pool()
+        .iter()
+        .find(|quest| quest.id != "win-3")
+        .expect("another entry");
+    for id in [other.id.as_str(), "no-such-quest"] {
+        let (status, body) = post_replace(&app, Some(TOKEN), id).await;
+        assert_eq!(status, 404, "{id}: {body}");
+        assert_eq!(body["error"]["code"], json!("not_found"), "{id}: {body}");
+    }
+    assert_eq!(post_replace(&app, None, "win-3").await.0, 401);
+    assert_eq!(post_replace(&app, Some(PENDING_TOKEN), "win-3").await.0, 403);
+    assert_eq!(ledger_of(&app, &p1).await, before, "nothing is written");
+    let (_, body) = get_quests(&app, TOKEN).await;
+    assert_eq!(
+        body["replacesLeft"],
+        json!(QUEST_REPLACES_PER_DAY),
+        "no refusal spent one"
+    );
+
+    // The economy off (§14.12): no replace, and none is offered.
+    let off = economy_app(false).await;
+    let p1 = profile_id_of(&off, USER).await;
+    hold(&off, &p1, quest_def("win-3").expect("a pool entry"), 0, T0).await;
+    let before = ledger_of(&off, &p1).await;
+    let (status, body) = post_replace(&off, Some(TOKEN), "win-3").await;
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(body["error"]["code"], json!("conflict"), "{body}");
+    assert_eq!(ledger_of(&off, &p1).await, before);
+    let (_, body) = get_quests(&off, TOKEN).await;
+    assert_eq!(body["replacesLeft"], json!(0));
+}
+
+#[tokio::test]
+async fn r2210000_two_replaces_at_once_land_at_most_one() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    let held = [
+        "win-3",
+        easiest(&QuestGoal::PlayTraps).id.as_str(),
+        easiest(&QuestGoal::PlayUnits).id.as_str(),
+    ];
+    hold_only(&app, &p1, &held, now_ms() - 1_000).await;
+    // The day's other replaces go on the newest quest, so the first two stay held.
+    let others = usize::try_from(QUEST_REPLACES_PER_DAY - 1).unwrap_or(0);
+    for _ in 0..others {
+        let newest = held_ids(&app, &p1).await.pop().expect("a held quest");
+        let now = now_ms();
+        let outcome = store!(app, |t| replace_quest(&mut t, &p1, &newest, now));
+        assert!(matches!(outcome, ReplaceOutcome::Replaced(_)), "{outcome:?}");
+    }
+
+    let (a, b) = tokio::join!(
+        post_replace(&app, Some(TOKEN), held[0]),
+        post_replace(&app, Some(TOKEN), held[1])
+    );
+    let mut statuses = [a.0, b.0];
+    statuses.sort_unstable();
+    assert_eq!(statuses, [200, 409], "{a:?} {b:?}");
+    assert_eq!(
+        replaced_rows(&app, &p1).await,
+        usize::try_from(QUEST_REPLACES_PER_DAY).expect("a count")
+    );
+    assert_eq!(held_ids(&app, &p1).await.len(), 3);
+}
+
+#[tokio::test]
+async fn r2210000_a_replace_that_fails_midway_writes_nothing() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    hold_only(&app, &p1, &["win-3"], now_ms() - 1_000).await;
+    let (ledger, held) = (ledger_of(&app, &p1).await, held_ids(&app, &p1).await);
+
+    // The quest's `removed` row lands, then the replacement's `arrived` row fails.
+    let changes = Arc::new(AtomicUsize::new(0));
+    let counted = Arc::clone(&changes);
+    let hook: OnCall = Arc::new(move |method: &str| {
+        if method == "economy.quests.change" && counted.fetch_add(1, Ordering::SeqCst) == 1 {
+            return Err(StoreError::Other("injected".to_owned()));
+        }
+        Ok(())
+    });
+    fake(&app).lock().await.on_call = Some(hook);
+    let (status, body) = post_replace(&app, Some(TOKEN), "win-3").await;
+    fake(&app).lock().await.on_call = None;
+    assert_eq!(status, 500, "{body}");
+    assert_eq!(
+        changes.load(Ordering::SeqCst),
+        2,
+        "the second change is the one that failed"
+    );
+    assert_eq!(ledger_of(&app, &p1).await, ledger, "the removed row rolled back");
+    assert_eq!(held_ids(&app, &p1).await, held);
+    let (_, body) = get_quests(&app, TOKEN).await;
+    assert_eq!(
+        body["replacesLeft"],
+        json!(QUEST_REPLACES_PER_DAY),
+        "no replace was spent"
+    );
 }
 
 /// Real games, played by SPEC §10.7's policy over real decks as `crates/cards/tests/cross/

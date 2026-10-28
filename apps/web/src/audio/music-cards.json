@@ -164,6 +164,11 @@
     "stinkyscape-t-meltdown-layer": { "intro": "intro-stinkyscape-t-meltdown-layer" },
     "stinkyscape-t-narcor": { "intro": "intro-stinkyscape-t-narcor" },
     "stinkyscape-t-red-narcor": { "intro": "intro-stinkyscape-t-red-narcor" },
-    "stinkyscape-t-anomaly-found": { "intro": "intro-stinkyscape-t-anomaly-found" }
+    "stinkyscape-t-anomaly-found": { "intro": "intro-stinkyscape-t-anomaly-found" },
+    "traininggrounds-037": { "intro": "intro-traininggrounds-037" },
+    "traininggrounds-038": { "intro": "intro-traininggrounds-038" },
+    "traininggrounds-039": { "intro": "intro-traininggrounds-039" },
+    "traininggrounds-039-1": { "intro": "intro-traininggrounds-039-1" },
+    "traininggrounds-040": { "intro": "intro-traininggrounds-040" }
   }
 }

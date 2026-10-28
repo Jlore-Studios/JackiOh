@@ -1145,7 +1145,9 @@ mod app_append_match_action {
 
 mod concurrency {
     use super::*;
-    use jackioh_server::economy::quests::{quest_interval_ms, top_up_quests};
+    use jackioh_server::config::QUEST_REPLACES_PER_DAY;
+    use jackioh_server::economy::quests::{ReplaceOutcome, quest_interval_ms, replace_quest, top_up_quests};
+    use jackioh_server::economy::store::QuestGrant;
 
     async fn claim_room(db: &Db, code: &str, guest: &str, match_id: String, at: i64) -> bool {
         once!(db, Some(guest), |tx| tx.rooms_claim(code, guest, &match_id, at))
@@ -1166,6 +1168,91 @@ mod concurrency {
             .expect("quests.topUp")
             .held
             .len()
+    }
+
+    async fn replace(db: &Db, profile_id: &str, quest_id: &str, now: i64) -> ReplaceOutcome {
+        once!(db, Some(profile_id), |tx| replace_quest(
+            &mut tx, profile_id, quest_id, now
+        ))
+        .expect("quests.replace")
+    }
+
+    /// R2210000: two replaces of one account at once (the panel's Replace pressed on two held
+    /// quests in two tabs) land one: the replace locks the account's economy before it counts the
+    /// day's removed quests, so the second waits for the first and reads its `removed` row, and is
+    /// spent.
+    #[tokio::test]
+    async fn r2210000_two_simultaneous_replaces_land_at_most_one() {
+        let Some(ctx) = setup().await else { return };
+        let profile_id = ctx.active_profile().await;
+        let now = now_ms();
+        once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .economy_quests_set_next_due(
+                &profile_id,
+                Some(now + 1_000 * quest_interval_ms())
+            ))
+        .expect("economy.quests.setNextDue");
+        let held = ["win-3", "traps-3", "units-10"];
+        for (at, quest_id) in (now - 1_000..).zip(held) {
+            let arrived: QuestGrant = de(json!({
+                "profileId": profile_id, "questId": quest_id, "change": "arrived", "progress": 0,
+                "reason": "quest", "reference": null, "dev": false, "at": at,
+            }));
+            assert!(
+                once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+                    .economy_quests_change(&arrived))
+                .expect("economy.quests.change")
+            );
+        }
+        // The day's other replaces go on the newest quest, so the first two stay held.
+        let others = usize::try_from(QUEST_REPLACES_PER_DAY - 1).unwrap_or(0);
+        for _ in 0..others {
+            let newest = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+                .economy_quests_get(&profile_id))
+            .expect("economy.quests.get")
+            .held
+            .pop()
+            .expect("a held quest")
+            .quest_id;
+            let outcome = replace(&ctx.db, &profile_id, &newest, now).await;
+            assert!(matches!(outcome, ReplaceOutcome::Replaced(_)), "{outcome:?}");
+        }
+
+        let racing_pool = ctx.racing(2).await;
+        // Both connections open before the race: a replace that waited on a connect would start
+        // after the other had committed, and prove nothing.
+        let warm = (
+            racing_pool.acquire().await.expect("a racing connection"),
+            racing_pool.acquire().await.expect("a second racing connection"),
+        );
+        drop(warm);
+        let racing = Db::Pg(racing_pool.clone());
+        let outcomes = join_all(vec![
+            replace(&racing, &profile_id, held[0], now),
+            replace(&racing, &profile_id, held[1], now),
+        ])
+        .await;
+        racing_pool.close().await;
+        let landed = outcomes
+            .iter()
+            .filter(|outcome| matches!(outcome, ReplaceOutcome::Replaced(_)))
+            .count();
+        assert_eq!(landed, 1, "{outcomes:?}");
+        assert!(outcomes.contains(&ReplaceOutcome::Spent), "{outcomes:?}");
+        let ledger = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .economy_ledger_get(&profile_id))
+        .expect("economy.ledger.get");
+        let removed = ledger
+            .quests
+            .iter()
+            .filter(|row| row.change == jackioh_server::economy::store::QuestChange::Removed)
+            .count();
+        assert_eq!(removed, usize::try_from(QUEST_REPLACES_PER_DAY).expect("a count"));
+        let book = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .economy_quests_get(&profile_id))
+        .expect("economy.quests.get");
+        assert_eq!(book.held.len(), 3);
+        ctx.finish().await;
     }
 
     /// R1304000: two top-ups of one account at once (its quests read in two tabs, or read as a game
