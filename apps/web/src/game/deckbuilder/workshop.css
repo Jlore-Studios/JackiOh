@@ -361,7 +361,7 @@
   border-radius: 999px;
   background: var(--patch-mark-band);
   color: var(--patch-mark-ink);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 700;
   text-align: left;
 }
@@ -386,7 +386,7 @@
   display: block;
   margin-bottom: 4px;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 650;
 }
 
