@@ -143,7 +143,7 @@ class QueueTests(unittest.TestCase):
         legend = dashboard.difficulty_legend(self.ctx.cfg.pool)
         self.assertIn("🔴 **hard**: a strong model only (Opus)", legend)
         self.assertIn("a medium or strong model (muse, agy, gpt, Sonnet, then Opus)", legend)
-        self.assertIn("any model, the weak ones first (devin)", legend)
+        self.assertIn("any model, the weak ones first (lite)", legend)
 
 
 if __name__ == "__main__":

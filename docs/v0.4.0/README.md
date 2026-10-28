@@ -9,7 +9,9 @@ server, in the tools and in the browser. It says what was built, what each part 
 code does not explain, which cards stay in Rust and why, and what each part measured. It folds the
 notes each part left beside this file while the tree was built; they stay in git history.
 
-- **[PORTING.md](PORTING.md)** is how a card moves from Rust to Luau and how the move is proved.
+- **`PORTING.md`**, how a card moved from Rust to Luau and how the move was proved, was removed in
+  #2156 once v0.5.0 (#902) had brought every official card back to Rust (section 8). The sections
+  below that cite it are the record; `git show 32d123284:docs/v0.4.0/PORTING.md` prints it.
 - **[api-gaps.md](api-gaps.md)** is what the Luau API binds, what it does not, and the fifteen gaps
   part 28 fixed with their Luau forms.
 - **[perf.json](perf.json)** is the performance baseline at the branch point (section 5.5).

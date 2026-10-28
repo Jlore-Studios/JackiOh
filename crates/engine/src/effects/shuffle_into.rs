@@ -94,6 +94,7 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
                     crate::draw::put_into_library(ctx, &mut card, false, args.copy_of.as_deref(), end)
                 }
             };
+            crate::generators::credit_creator(ctx, &card.id);
             // R1106: an unseen card's record is cleared once it lies in the library.
             if args.unseen == Some(true)
                 && outcome == ShuffleInOutcome::Library
@@ -129,6 +130,7 @@ pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
             carry_from(&mut card, Some(&this));
             crate::generators::record_generator(ctx, &card);
             shuffle_into_library(ctx, &mut card, false, Some(this.id.as_str()));
+            crate::generators::credit_creator(ctx, &card.id);
         }
     })
 }

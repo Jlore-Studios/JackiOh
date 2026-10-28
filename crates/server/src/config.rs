@@ -493,6 +493,10 @@ pub const RANK_LOSS_PIPS: i32 = 1;
 pub const RANK_STREAK_LENGTH: i32 = 3;
 /// R606: the streak bonus, in pips, earned below Mythic Grape only.
 pub const RANK_STREAK_BONUS_PIPS: i32 = 1;
+/// R2101000: the ranked win streak (R606's `streak`) from which the profile and a ranked match's
+/// line show a flame with its count. Only the client reads it. Three, where R606's bonus starts,
+/// but apart from `RANK_STREAK_LENGTH` so each tunes alone.
+pub const RANK_STREAK_FLAME_LENGTH: i32 = 3;
 /// R606: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
 /// before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
 pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;

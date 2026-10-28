@@ -634,3 +634,14 @@ describe("#552 the log reads as English on the Meditative cards' events", () => 
     ).toEqual([`${chinese} gained +2/+2`, `${chinese} was buffed`, `${chinese} was destroyed`]);
   });
 });
+
+describe("the Starship's fuse line in the log", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const fused = (pieces: number): GameEvent => ({ type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces });
+
+  it("counts one piece as a piece and more as pieces", () => {
+    const line = keptLineFor(baseView(), lookup);
+    expect(line(fused(1))?.text).toMatch(/Dormant Starship \(1 piece\)$/);
+    expect(line(fused(3))?.text).toMatch(/Dormant Starship \(3 pieces\)$/);
+  });
+});

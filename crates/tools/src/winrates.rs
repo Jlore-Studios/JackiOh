@@ -408,6 +408,10 @@ mod tests {
                 wins: 0,
                 draws: 0,
             },
+            created_played: jackioh_engine::Tally::default(),
+            created_not_played: jackioh_engine::Tally::default(),
+            created_played_radiant: jackioh_engine::Tally::default(),
+            created_played_normal: jackioh_engine::Tally::default(),
         }
     }
 
@@ -422,6 +426,7 @@ mod tests {
             games: 1,
             decks: 2,
             cards,
+            created: Vec::new(),
         };
         serde_json::to_string(&report).unwrap_or_default()
     }
@@ -468,6 +473,9 @@ mod tests {
             traps_fired: None,
             position_switches: None,
             radiant_upgrades: None,
+            created_used: None,
+            created_unused: None,
+            created_played: None,
         };
         let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {
@@ -790,10 +798,7 @@ mod tests {
         assert!(!fragment.title.is_empty() && !fragment.sources.is_empty() && !fragment.notes.is_empty());
 
         // `patches ship` reads its tier as `tier_of` does: no catalog change, its plays as claims.
-        let side = Side {
-            catalog: Catalog::new(),
-            sets: Vec::new(),
-        };
+        let side = Side::of_catalog(Catalog::new(), Vec::new());
         let checked = Checked {
             scripts: fragment.plays.iter().map(|id| classify::family(id)).collect(),
             ..Checked::default()

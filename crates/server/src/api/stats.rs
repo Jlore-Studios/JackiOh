@@ -34,11 +34,12 @@ use tokio::sync::OnceCell;
 
 use jackioh_cards::patch_history;
 use jackioh_engine::wire::stats::{
-    CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, GameFigures, GameMode, GameSource,
-    PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally, TotalsKey,
-    WindowQuery, WindowRequest, WindowSource, WindowedGames, WindowedReport, add_stats, card_drills_of,
-    card_family, card_stats_of, card_window, collapse_gameless, patch_windows, played_delta, sources_of,
-    win_rate, windowed_card_stats, windowed_game_figures,
+    CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, GameFigures, GameMode,
+    GameSource, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally,
+    TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport,
+    add_created, add_stats, card_drills_of, card_family, card_stats_of, card_window, collapse_gameless,
+    created_played_delta, patch_windows, played_delta, sources_of, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -82,6 +83,62 @@ pub struct PublicCardStat {
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
     pub window: PublicCardWindow,
+}
+
+/// R2089000: a Created card's figures, apart from the deck table: the seats that made a Created copy
+/// of it, each once a game. `games` is every one of them, used or not.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicCreatedStat {
+    pub id: String,
+    pub name: String,
+    pub cost: i32,
+    pub rarity: String,
+    pub set: String,
+    pub games: i64,
+    pub created_played_games: i64,
+    pub created_played_win_rate: Option<f64>,
+    pub created_not_played_games: i64,
+    pub created_not_played_win_rate: Option<f64>,
+    pub created_played_radiant_games: i64,
+    pub created_played_radiant_win_rate: Option<f64>,
+    pub created_played_normal_games: i64,
+    pub created_played_normal_win_rate: Option<f64>,
+    /// R654: as the played delta, it waits for the sample floor on both its sides.
+    pub created_played_delta: Option<f64>,
+    pub has_enough_games: bool,
+    pub window: PublicCardWindow,
+}
+
+impl PublicCreatedStat {
+    fn of(def: &CardDef, row: &WindowedCreated) -> PublicCreatedStat {
+        let stats = &row.stats;
+        let (played_games, _) = tally_of(&stats.created_played);
+        let (not_played_games, _) = tally_of(&stats.created_not_played);
+        let games = played_games + not_played_games;
+        PublicCreatedStat {
+            id: stats.card.clone(),
+            name: def.name.clone(),
+            cost: numeric_cost(def),
+            rarity: def.rarity.as_str().to_string(),
+            set: def.set.as_str().to_string(),
+            games,
+            created_played_games: played_games,
+            created_played_win_rate: win_rate(&stats.created_played),
+            created_not_played_games: not_played_games,
+            created_not_played_win_rate: win_rate(&stats.created_not_played),
+            created_played_radiant_games: tally_of(&stats.created_played_radiant).0,
+            created_played_radiant_win_rate: win_rate(&stats.created_played_radiant),
+            created_played_normal_games: tally_of(&stats.created_played_normal).0,
+            created_played_normal_win_rate: win_rate(&stats.created_played_normal),
+            created_played_delta: (played_games >= CARD_STATS_MIN_SAMPLE
+                && not_played_games >= CARD_STATS_MIN_SAMPLE)
+                .then(|| created_played_delta(stats))
+                .flatten(),
+            has_enough_games: games >= CARD_STATS_MIN_SAMPLE,
+            window: PublicCardWindow::of(&row.window),
+        }
+    }
 }
 
 /// R1367000: a card's statistics window at the patch asked about.
@@ -293,6 +350,8 @@ pub struct PublicStatsCardsResponse {
     pub min_sample: i64,
     pub total_games: i64,
     pub cards: Vec<PublicCardStat>,
+    /// R2089000: the Created cards, tokens among them, apart from `cards` and filtered alike.
+    pub created: Vec<PublicCreatedStat>,
     pub summary: PublicStatsSummary,
     /// R1973002: every patch the page can show, newest first: the window the cards share, its
     /// versions oldest first (ask for its figures at the last), its games and its live games.
@@ -469,6 +528,7 @@ fn public_report(
         ));
     }
     let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
+    let mut by_created: IndexMap<String, CreatedStats> = IndexMap::new();
     let (mut games, mut decks) = (0, 0);
     for part in parts {
         games += part.games;
@@ -481,9 +541,20 @@ fn public_report(
                 Some(held) => add_stats(held, &stat),
             }
         }
+        // R2089000: the Created figures, summed the same way.
+        for stat in part.created {
+            match by_created.get_mut(&stat.card) {
+                None => {
+                    by_created.insert(stat.card.clone(), stat);
+                }
+                Some(held) => add_created(held, &stat),
+            }
+        }
     }
     let mut cards: Vec<CardStats> = by_card.into_values().collect();
     cards.sort_by(|a, b| a.card.cmp(&b.card));
+    let mut created: Vec<CreatedStats> = by_created.into_values().collect();
+    created.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
         filter: filter(
             source,
@@ -496,6 +567,7 @@ fn public_report(
         games,
         decks,
         cards,
+        created,
     }
 }
 
@@ -809,25 +881,21 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .filter(|value| !value.is_empty());
     let cost_param = req.query.get("cost").cloned();
     let card_param = query_trimmed(&req, "card");
-
-    let mut cards: Vec<PublicCardStat> = Vec::new();
-    for (id, def) in &app.catalog.defs {
-        if def.token {
-            continue; // Only non-token deckable cards
-        }
+    // The card, set, rarity and cost asked for, which both tables read.
+    let shown = |id: &str, def: &CardDef| {
         if card_param.as_ref().is_some_and(|card| id != card) {
-            continue;
+            return false;
         }
         // A set is its cards' `set` alone: `classic` begins every Classic+ id (`classicplus-…`).
         if let Some(set) = &set_param
             && def.set.as_str().to_lowercase() != *set
         {
-            continue;
+            return false;
         }
         if let Some(rarity) = &rarity_param
             && def.rarity.as_str().to_lowercase() != *rarity
         {
-            continue;
+            return false;
         }
         let cost = numeric_cost(def);
         if let Some(cost_text) = cost_param.as_deref().filter(|text| !text.is_empty())
@@ -836,12 +904,24 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         {
             if parsed_cost >= CARD_STATS_CURVE_TOP as f64 {
                 if (cost as f64) < CARD_STATS_CURVE_TOP as f64 {
-                    continue;
+                    return false;
                 }
             } else if cost as f64 != parsed_cost {
-                continue;
+                return false;
             }
         }
+        true
+    };
+
+    let mut cards: Vec<PublicCardStat> = Vec::new();
+    for (id, def) in &app.catalog.defs {
+        if def.token {
+            continue; // Only non-token deckable cards
+        }
+        if !shown(id, def) {
+            continue;
+        }
+        let cost = numeric_cost(def);
 
         let held = report.card(id);
         let stat = held.map(|card| &card.stats);
@@ -932,6 +1012,22 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let best_card = qualifying.first().map(|card| extreme(card));
     let worst_card = qualifying.last().map(|card| extreme(card));
 
+    // R2089000: every Created card the catalog holds, tokens among them, with enough games first.
+    let mut created: Vec<PublicCreatedStat> = report
+        .created
+        .iter()
+        .filter_map(|row| {
+            let def = app.catalog.defs.get(&row.stats.card)?;
+            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row))
+        })
+        .collect();
+    created.sort_by(|a, b| {
+        b.has_enough_games
+            .cmp(&a.has_enough_games)
+            .then_with(|| b.games.cmp(&a.games))
+            .then_with(|| locale_compare(&a.name, &b.name))
+    });
+
     let response = PublicStatsCardsResponse {
         patch: requested_patch.clone(),
         previous_patch,
@@ -949,6 +1045,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         min_sample: CARD_STATS_MIN_SAMPLE,
         total_games: report.games,
         cards,
+        created,
         patches: kept.patches.clone(),
         summary: PublicStatsSummary {
             total_games: report.games,

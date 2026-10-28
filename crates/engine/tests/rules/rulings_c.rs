@@ -3927,6 +3927,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             source_id: None,
             arrived_during: None,
             exits_from: None,
+            creator: None,
         });
 
         // This script summons nothing, so "the ones I just made" is empty and nobody is compelled.

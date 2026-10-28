@@ -162,6 +162,19 @@ pub static pod: LazyLock<CardDef> =
 pub static recall: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-recall", 18536, "Spell", 0, (0, 0), json!([]), json!([])));
 
+/// An embiggen card's two prices, (1) and Embiggened (2) (R1175000).
+fn embiggen(mut card: CardDef) -> CardDef {
+    card.cost = CardCost::Embiggen { base: 1, embiggen: 2 };
+    card
+}
+/// A 1/1 Unit, (1) or Embiggened (2): "Embiggened (2): Starship Piece and Equip." (#129 Missile Pod's
+/// lend, R1878001.)
+pub static lender: LazyLock<CardDef> =
+    LazyLock::new(|| embiggen(def("ss-lender", 18537, "Unit", 1, (1, 1), json!([]), json!([]))));
+/// A 2/2 Unit, (1) or Embiggened (2), that is no piece at either price.
+pub static brute: LazyLock<CardDef> =
+    LazyLock::new(|| embiggen(def("ss-brute", 18538, "Unit", 1, (2, 2), json!([]), json!([]))));
+
 /// What the booster's "When launched" deals the enemy hero.
 pub const LAUNCHED_DAMAGE: i32 = 2;
 /// What the gunner's Cry deals the Unit it picks.
@@ -226,6 +239,20 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (plate.id.clone(), both(Script::default())),
         (clamp.id.clone(), both(Script::default())),
         (pod.id.clone(), both(Script::default())),
+        (
+            lender.id.clone(),
+            both(Script {
+                conditional_keywords: Some(read_hook(|args| {
+                    if args.self_.embiggened == Some(true) {
+                        vec![Keyword::StarshipPiece, Keyword::Equip]
+                    } else {
+                        Vec::new()
+                    }
+                })),
+                ..Script::default()
+            }),
+        ),
+        (brute.id.clone(), both(Script::default())),
         (
             lander.id.clone(),
             both(Script {
@@ -329,6 +356,8 @@ pub static STARSHIP_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         countdown.clone(),
         pod.clone(),
         recall.clone(),
+        lender.clone(),
+        brute.clone(),
     ]
 });
 

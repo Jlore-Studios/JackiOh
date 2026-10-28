@@ -928,6 +928,21 @@ fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadLi
     }
 }
 
+/// R1878001: a fused card's texts lend no Starship Piece. R1852001 keeps the keyword only from the card a
+/// Fuse keeps, whose own lend became its grant as it was fused (`keep_instance`); an ingredient's would
+/// otherwise reach the card it was fused onto, read at that card's price (an Embiggened S #129 equipped
+/// onto a host played at its own Embiggened price).
+fn without_lent_piece(lend: Option<ReadListHook<Keyword>>) -> Option<ReadListHook<Keyword>> {
+    lend.map(|lend| {
+        read_hook(move |args| {
+            lend(args)
+                .into_iter()
+                .filter(|keyword| keyword.kind() != KeywordKind::StarshipPiece)
+                .collect()
+        })
+    })
+}
+
 /// R1045: a number read of `{ state, self, radiant }` that several ingredients give (`revealEcho`, and
 /// R1864004's `tradesPerTurn`): the largest of their answers, as several Radiant Paranoias add one Echo,
 /// not their sum.
@@ -1123,6 +1138,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
             Some(StaticFlags {
                 cast_on_draw: flags(|f| f.cast_on_draw),
                 quickdraw: flags(|f| f.quickdraw),
+                hand_sale: flags(|f| f.hand_sale),
                 infinite_reserves: flags(|f| f.infinite_reserves),
                 never_defense: flags(|f| f.never_defense),
                 echo: numbers(|f| f.echo),
@@ -1288,7 +1304,9 @@ fn combine_objects(records: &[Script]) -> Script {
         discard_guard: eager_read(records.iter().map(|s| s.discard_guard.clone()).collect()),
         replacements: concat(records.iter().map(|s| s.replacements.clone())),
         hero_guard: eager_read(records.iter().map(|s| s.hero_guard.clone()).collect()),
-        conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
+        conditional_keywords: without_lent_piece(eager_read(
+            records.iter().map(|s| s.conditional_keywords.clone()).collect(),
+        )),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
@@ -1985,16 +2003,25 @@ fn keep_instance(
 ) -> CardInstance {
     let attack: i32 = ingredients.iter().map(|card| card.buffs.attack).sum();
     let health: i32 = ingredients.iter().map(|card| card.buffs.health).sum();
-    let all_granted: Vec<Keyword> = ingredients
+    let mut all_granted: Vec<Keyword> = ingredients
         .iter()
         .flat_map(|card| card.granted_keywords.iter().cloned())
         .collect();
+    // R1878001: a Starship Piece the kept card's own text lent it (its Embiggened version's) becomes its
+    // grant, since the fused card's texts lend none (`without_lent_piece`).
+    let lent_itself = crate::layers::conditional_keywords_of(state, kept)
+        .iter()
+        .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece);
+    if lent_itself {
+        all_granted.push(Keyword::StarshipPiece);
+    }
     let mut granted = union_keywords(&all_granted);
     // R1852001: and keeps a granted Starship Piece only when the kept card had it granted itself.
-    if !kept
-        .granted_keywords
-        .iter()
-        .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+    if !lent_itself
+        && !kept
+            .granted_keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
     {
         granted.retain(|keyword| keyword.kind() != KeywordKind::StarshipPiece);
     }

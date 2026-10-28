@@ -44,3 +44,12 @@ export const LIST_PREVIEW_HEADER_PX = 26;
 
 /** R370: the height of the back a face-down backrow card's hover preview draws (FaceDown.tsx). */
 export const FACE_DOWN_PREVIEW_HEIGHT_PX = 220;
+
+/** Issue #2121 (R2121000): a sheet let go further down than this share of its height closes. */
+export const SHEET_DISMISS_DISTANCE = 0.25;
+/** A sheet let go moving down faster than this, in px per ms, closes however far it went. */
+export const SHEET_DISMISS_VELOCITY = 0.5;
+/** A touch on a sheet moving further than this is a drag, a scroll or nothing; until then, a tap. */
+export const SHEET_DRAG_SLOP_PX = 10;
+/** A lift this long after the last move is a finger that stopped, not a flick. */
+export const SHEET_FLICK_WINDOW_MS = 100;

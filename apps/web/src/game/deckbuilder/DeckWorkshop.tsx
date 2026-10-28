@@ -2,6 +2,11 @@
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
 // the local store and supplied API (R256).
+// #2096: Duplicate, on each deck's row and in its editor, makes a new deck with its cards, portrait and picks under copyName's name, and opens it.
+// R2119000: Delete deck and Delete trio ask nothing. The item leaves the list at once (the store's `hide`)
+// behind "Deck deleted · Undo" or "Trio deleted · Undo", and its DELETE waits for the undo window
+// (`undo/hold.ts`). Undo puts it back, open, its trio slots filled again; anything that needs it gone
+// first (a new deck, a duplicate, an import) sends the held DELETE at once.
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -10,13 +15,16 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
-import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
+import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import { useUndoHold } from "../../undo/hold.ts";
+import { UndoToast } from "../../undo/UndoToast.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
+import { emptyHistory, historyKey, inTextField, recorded, redone, sealed, undone, type DeckHistory, type DeckPatch } from "./history.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import ImportPanel from "./ImportPanel.tsx";
@@ -41,6 +49,8 @@ import {
   DECK_LIST,
   DECK_NEW,
   DECK_PRACTICE_ONLY,
+  DECK_REDO,
+  DECK_UNDO,
   SYNC_STATUS,
   TRIO_CAP,
   TRIO_CAP_REASON,
@@ -50,14 +60,19 @@ import {
   WORKSHOP,
   WORKSHOP_BACK,
   WORKSHOP_EMPTY,
+  deckDuplicateId,
   deckRowId,
   trioRowId,
 } from "./testids.ts";
 import TrioEditor from "./TrioEditor.tsx";
-import { deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
+import { copyName, deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
+
+/** #2099: Undo's arrow and Redo's, its mirror (24 px, stroked). */
+const UNDO_PATH = "M9 4 4 9l5 5M4 9h10.5a5.5 5.5 0 0 1 0 11H11";
+const REDO_PATH = "M15 4l5 5-5 5M20 9H9.5a5.5 5.5 0 0 0 0 11H13";
 
 /** Whether changing halves must also move focus. */
 function halvesTakeTurns(): boolean {
@@ -88,7 +103,7 @@ export type DeckWorkshopProps = {
   api: DeckSyncApi;
   /** Optional initial item; phones otherwise start at the list. */
   initialOpen?: WorkshopOpen;
-  /** Test seams for mirror storage, clock, and ID minting. */
+  /** Test seams for mirror storage, clock (the undo window's too, R2119000), and ID minting. */
   storage?: StorageLike | null;
   clock?: SyncClock;
   newId?: () => string;
@@ -125,11 +140,12 @@ type RailProps = {
   open: WorkshopOpen;
   onOpen: (next: WorkshopOpen) => void;
   onNewDeck: () => void;
+  onDuplicateDeck: (deck: DeckItem) => void;
   onNewTrio: () => void;
 };
 
 function Rail(props: RailProps): ReactElement {
-  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onNewTrio } = props;
+  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onDuplicateDeck, onNewTrio } = props;
   const { decks, trios, limits, unsynced } = snapshot;
   const decksAtCap = decks.length >= limits.decks;
   const triosAtCap = trios.length >= limits.trios;
@@ -187,8 +203,13 @@ function Rail(props: RailProps): ReactElement {
               nameLength={limits.nameLength}
               current={open?.kind === "deck" && open.id === deck.id}
               unsynced={unsynced.has(deck.id)}
+              atCap={decksAtCap}
+              reasonId={decksAtCap ? deckReason : undefined}
               onOpen={() => {
                 onOpen({ kind: "deck", id: deck.id });
+              }}
+              onDuplicate={() => {
+                onDuplicateDeck(deck);
               }}
             />
           ))}
@@ -266,10 +287,13 @@ type DeckRowProps = {
   nameLength: number;
   current: boolean;
   unsynced: boolean;
+  atCap: boolean;
+  reasonId: string | undefined;
   onOpen: () => void;
+  onDuplicate: () => void;
 };
 
-function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onOpen }: DeckRowProps): ReactElement {
+function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atCap, reasonId, onOpen, onDuplicate }: DeckRowProps): ReactElement {
   const verdict = deckVerdict(deck, catalog, collection, nameLength);
   const status = deckStatus(verdict, collection !== null);
   // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
@@ -282,7 +306,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
     status: practice ? t("{status}, practice only", { status: status.label }) : status.label,
   };
   return (
-    <li>
+    <li className="ws-list-item">
       <button
         type="button"
         className="ws-row"
@@ -315,6 +339,18 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
       </button>
+      {/* #2096: drawn as two sheets, in words for a reader and on hover: a worded button would wrap
+          every row of the 208 px rail. */}
+      <button
+        type="button"
+        className="ws-row-duplicate"
+        data-testid={deckDuplicateId(deck.id)}
+        aria-label={t("Duplicate {deck}", { deck: label })}
+        title={t("Duplicate {deck}", { deck: label })}
+        disabled={atCap}
+        aria-describedby={reasonId}
+        onClick={onDuplicate}
+      />
     </li>
   );
 }
@@ -374,11 +410,12 @@ function neighbourOf<T extends { id: string }>(items: readonly T[], id: string):
 /**
  * #1991: where the open deck's "Practice with this deck" goes, or null for none. `saved:<n>` names the
  * deck by its place in the server's list, oldest first, which the store's list is only while nothing
- * waits on the server: no deck unsynced (R256) and no deletion pending, both of which keep the status
- * off `saved`. Practice offers only a complete deck (§9.9).
+ * waits on the server: no deck unsynced (R256), no deletion pending, both of which keep the status
+ * off `saved`, and no deck's deletion held (R2119000), a deck the server still lists. Practice offers
+ * only a complete deck (§9.9).
  */
 function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | null {
-  if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved") return null;
+  if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved" || snapshot.held?.kind === "deck") return null;
   if (snapshot.decks.some((other) => snapshot.unsynced.has(other.id))) return null;
   return practiceDeckPath(snapshot.decks.findIndex((other) => other.id === deck.id) + 1);
 }
@@ -399,6 +436,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     }),
   );
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  // R2119000: before the store's start and stop, so leaving the screen sends a held DELETE first.
+  const { held, hold, undo: undoDeletion, sendNow } = useUndoHold(props.clock);
 
   // Start and stop persistence with the screen.
   useEffect(() => {
@@ -453,6 +492,11 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const openDeck = open?.kind === "deck" ? (decks.find((deck) => deck.id === open.id) ?? null) : null;
   const openTrio = open?.kind === "trio" ? (trios.find((trio) => trio.id === open.id) ?? null) : null;
 
+  // #2099: the open deck's history (history.ts), reset while rendering whenever the open deck changes.
+  const openDeckId = openDeck?.id ?? null;
+  const [history, setHistory] = useState<DeckHistory>(() => emptyHistory(openDeckId));
+  if (history.deckId !== openDeckId) setHistory(emptyHistory(openDeckId));
+
   const openItem = (next: WorkshopOpen): void => {
     setOpen(next);
     setView(next === null ? "list" : "editor");
@@ -461,11 +505,22 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   };
 
   const newDeck = (): void => {
+    // R2119000: the held deck still counts against the cap until its DELETE has gone.
+    sendNow();
     const id = store.createDeck({ name: nextName((number) => t("Deck {number}", { number }), decks.map((deck) => deck.name)) });
     if (id !== null) openItem({ kind: "deck", id });
   };
 
+  // #2096: trios name decks by id (R252), so every trio naming the original still does.
+  const duplicateDeck = (source: DeckItem): void => {
+    sendNow();
+    const name = copyName(deckLabel(source, limits.nameLength), decks.map((deck) => deckLabel(deck, limits.nameLength)), limits.nameLength);
+    const id = store.createDeck({ ...pickedDeckCosmetics(source), name, cards: source.cards, portrait: source.portrait });
+    if (id !== null) openItem({ kind: "deck", id });
+  };
+
   const newTrio = (): void => {
+    sendNow();
     const id = store.createTrio({ name: nextName((number) => t("Trio {number}", { number }), trios.map((trio) => trio.name)) });
     if (id !== null) openItem({ kind: "trio", id });
   };
@@ -473,7 +528,51 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const backToList = (): void => {
     setView("list");
     setMoveFocus("list");
+    // #2099: closing the editor ends its history.
+    setHistory((current) => emptyHistory(current.deckId));
   };
+
+  /** #2099: an edit of deck `id`, one step of the history; `naming` folds a rename's keys into one. */
+  const editDeck = (id: string, patch: DeckPatch, naming = false): void => {
+    // Read fresh, not from this render, so two edits in one tick each hold what they overwrote.
+    const deck = store.getSnapshot().decks.find((candidate) => candidate.id === id);
+    if (deck === undefined) return;
+    setHistory((current) => recorded(current, deck, patch, naming));
+    store.updateDeck(id, patch);
+  };
+
+  const undo = (): void => {
+    const step = undone(history);
+    if (openDeck === null || step === null) return;
+    setHistory(step.history);
+    store.updateDeck(openDeck.id, step.patch);
+  };
+
+  const redo = (): void => {
+    const step = redone(history);
+    if (openDeck === null || step === null) return;
+    setHistory(step.history);
+    store.updateDeck(openDeck.id, step.patch);
+  };
+
+  // #2099: the keys, outside text fields; a ref, as ReplayPlayer's arrows, holds this render's history.
+  const historyKeys = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  historyKeys.current = (event) => {
+    const asked = historyKey(event);
+    if (asked === null || openDeck === null || event.defaultPrevented || inTextField(event.target)) return;
+    event.preventDefault();
+    if (asked === "undo") undo();
+    else redo();
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent): void => {
+      historyKeys.current(event);
+    };
+    window.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  }, []);
 
   let main: ReactElement;
   if (openDeck !== null) {
@@ -494,19 +593,38 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         sort={sort}
         onSort={setSort}
         onRename={(name) => {
-          store.updateDeck(openDeck.id, { name });
+          editDeck(openDeck.id, { name }, true);
+        }}
+        onRenameDone={() => {
+          setHistory(sealed);
         }}
         onPortrait={(portrait) => {
-          store.updateDeck(openDeck.id, { portrait });
+          editDeck(openDeck.id, { portrait });
         }}
         onCards={(cards) => {
-          store.updateDeck(openDeck.id, { cards });
+          editDeck(openDeck.id, { cards });
         }}
         onDelete={() => {
-          const next = neighbourOf(decks, openDeck.id);
-          store.deleteDeck(openDeck.id);
+          const id = openDeck.id;
+          const next = neighbourOf(decks, id);
+          // R2119000: `hold` first, since it sends any deletion held before this one.
+          hold({
+            words: () => t("Deck deleted"),
+            send: (keepalive) => {
+              store.deleteDeck(id);
+              void store.flush({ keepalive });
+            },
+            restore: () => {
+              store.unhide();
+              setOpen({ kind: "deck", id });
+            },
+          });
+          store.hide("deck", id);
           setOpen(next === null ? null : { kind: "deck", id: next.id });
           setView("list");
+        }}
+        onDuplicate={() => {
+          duplicateDeck(openDeck);
         }}
         onSaveNow={() => {
           void store.flush();
@@ -531,7 +649,19 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           store.updateTrio(openTrio.id, { deckIds });
         }}
         onDelete={() => {
-          store.deleteTrio(openTrio.id);
+          const id = openTrio.id;
+          hold({
+            words: () => t("Trio deleted"),
+            send: (keepalive) => {
+              store.deleteTrio(id);
+              void store.flush({ keepalive });
+            },
+            restore: () => {
+              store.unhide();
+              setOpen({ kind: "trio", id });
+            },
+          });
+          store.hide("trio", id);
           setOpen(null);
           setView("list");
         }}
@@ -549,6 +679,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         atCap={decks.length >= limits.decks}
         deckLimit={limits.decks}
         onImport={(name, cards) => {
+          sendNow();
           const id = store.createDeck({ name, cards });
           if (id !== null) openItem({ kind: "deck", id });
         }}
@@ -566,7 +697,10 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         collection={collection}
         saved={{ decks: decks.length, trios: trios.length }}
         limits={limits}
-        onImport={(init) => store.importTrio(init)}
+        onImport={(init) => {
+          sendNow();
+          return store.importTrio(init);
+        }}
         onImported={(trioId) => {
           openItem({ kind: "trio", id: trioId });
         }}
@@ -595,10 +729,46 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         <BackLink to={paths.collection} />
         <h1 className="db-title">{t("Decks")}</h1>
         {openDeck === null ? null : (
+          <div className="ws-history">
+            <button
+              type="button"
+              className="ws-history-button"
+              data-testid={DECK_UNDO}
+              aria-label={t("Undo")}
+              title={t("Undo")}
+              aria-keyshortcuts="Control+Z Meta+Z"
+              disabled={history.past.length === 0}
+              onClick={undo}
+            >
+              <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d={UNDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="ws-history-button"
+              data-testid={DECK_REDO}
+              aria-label={t("Redo")}
+              title={t("Redo")}
+              aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+              disabled={history.future.length === 0}
+              onClick={redo}
+            >
+              <span className="ws-cosmetics-button__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d={REDO_PATH} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        )}
+        {openDeck === null ? null : (
           <DeckCosmeticsPicker
             deck={openDeck}
             onCosmetic={(kind, id) => {
-              store.updateDeck(openDeck.id, deckCosmeticPatch(kind, id));
+              editDeck(openDeck.id, deckCosmeticPatch(kind, id));
             }}
           />
         )}
@@ -614,12 +784,14 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           open={open}
           onOpen={openItem}
           onNewDeck={newDeck}
+          onDuplicateDeck={duplicateDeck}
           onNewTrio={newTrio}
         />
         <main ref={mainRef} className="ws-main">
           {main}
         </main>
       </div>
+      <UndoToast held={held} onUndo={undoDeletion} />
     </div>
   );
 }

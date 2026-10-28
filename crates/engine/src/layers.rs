@@ -129,8 +129,7 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 /// R1850000: a copier prints the keywords of the text it copied, on its own stats (`face_of`).
 pub fn printed_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
-    let def = def_of(Some(state), def_id);
-    let face = if radiant { &def.radiant } else { &def.base };
+    let face = crate::faces::running_face_of(state, def_id, radiant);
     match instance.armor_override {
         None => face.keywords.clone(),
         Some(n) => face
@@ -197,7 +196,8 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 /// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
 /// a Unit of theirs on the field, in a unit zone or standing in the backrow (R1081000) — never a
 /// Vanilla one, unlike an aura's grant (the War Doctrines' rows of §8.10), nor one Dormant or buried
-/// under a Stack pile, which no effect reaches (R13, R1839000).
+/// under a Stack pile, which no effect reaches (R13, R1839000). R1870004: only while the modifier is
+/// live, so Stinkyscape #4.4 Last Word's lends Charge on its holder's next turn alone.
 fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     if instance.vanilla
         || is_dormant(state, instance)
@@ -210,7 +210,9 @@ fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
         .mods
         .iter()
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsHaveKeyword { keyword } => Some(keyword.clone()),
+            ModifierKind::UnitsHaveKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+                Some(keyword.clone())
+            }
             _ => None,
         })
         .collect()
@@ -395,7 +397,7 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
 /// B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
 /// "while it has a Plague Counter"): the card's `conditionalKeywords` hook, read with its printed ones,
 /// so a Vanilla takes it (`scripts::script_of` runs no script for one). The hook reads instance data only.
-fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
+pub(crate) fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let script = crate::scripts::script_of(state, instance);
     match script.conditional_keywords.as_ref() {
         None => Vec::new(),

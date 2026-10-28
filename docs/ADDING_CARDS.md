@@ -54,7 +54,8 @@ Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) a
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
-  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
+  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
+  came early, with its look-and-sound part, issue #1883, R1883000, so its release owes none.)
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
   `tests/cross/catalog.rs`, R1857000). `docs/stinkyscape-set.md` says the rest (`docs/meditative-plus-set.md` MP3 and

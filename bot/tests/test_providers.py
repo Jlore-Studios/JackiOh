@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest import mock
 
 from harness import clock, identity, plan as plan_mod, providers
@@ -15,7 +15,8 @@ from harness.providers import Secrets
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import ALL_MACHINE, DAY, MACHINE, NIGHT, ROOT, make_config, make_ctx, test_pool
+from tests.support import (ALL_MACHINE, DAY, MACHINE, NIGHT, ROOT, WEAK, make_config, make_ctx,
+                           test_pool, with_weak)
 
 ALL = " ".join(providers.SECRETS)
 
@@ -53,11 +54,11 @@ class ParseTests(unittest.TestCase):
         pool = providers.load(ROOT)
         # The usage order: claude-3 (no caps), claude-7, claude-8 and claude-1 first, then
         # claude-4, claude-6 and claude-5 last of the Claude accounts (each under its caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
-        # planning and review, and Devin last. (The AI's training lanes run outside the
-        # harness: no subscription of theirs.)
+        # planning and review, last. (The AI's training lanes run outside the harness: no
+        # subscription of theirs.)
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-8", "claude-1",
                                          "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt",
-                                         "claude-2", "devin"))
+                                         "claude-2"))
         self.assertEqual((pool.max_parallel, pool.machine_parallel), (8, 6))
         self.assertTrue(pool.balance)  # the load balancer (`plan.balance`)
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
@@ -80,9 +81,10 @@ class ParseTests(unittest.TestCase):
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
             "gpt": [("gpt-5.6-sol", "medium", False)],
             "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
-            "devin": [("swe-2-max", "weak", True)],
         })
-        self.assertEqual([e.model for e in pool.tiers["weak"]], ["swe-2-max"])
+        # No committed subscription is weak since #2129: an easy item goes to the medium models
+        # first. The tests hold the weak tier's rules to one of their own (`support.WEAK`).
+        self.assertEqual(pool.tiers["weak"], ())
         self.assertEqual([e.model for e in pool.tiers["medium"]],
                          ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "gpt-5.6-sol",
                           "sonnet"])
@@ -127,7 +129,7 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["providers"]["gpt"].pop("tier"), "missing tier")
         broken(lambda r: r["providers"]["gpt"].update(tier="strong"), "tiers lists it under medium")
         broken(lambda r: r["providers"]["gpt"].update(model="gpt-9"), "does not list it")
-        broken(lambda r: r["tiers"]["weak"].append({"model": "opus"}), "more than one place")
+        broken(lambda r: r["tiers"]["medium"].append({"model": "opus"}), "more than one place")
         broken(lambda r: r["tiers"].update(huge=[]), "unknown tiers")
         broken(lambda r: r.pop("tiers"), "expected an object")
         broken(lambda r: r["providers"]["claude-2"].update(
@@ -166,8 +168,8 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["providers"]["muse"].update(runs_on="night-vm-gpt"), "share the runner")
         broken(lambda r: r["providers"]["claude-2"].update(runs_on="night-vm-gpt"),
                "share the runner")
-        broken(lambda r: r["providers"]["devin"].update(lanes=0), "at least 1")
-        broken(lambda r: r["providers"]["devin"].update(lanes="two"), "not a number")
+        broken(lambda r: r["providers"]["gpt"].update(lanes=0), "at least 1")
+        broken(lambda r: r["providers"]["gpt"].update(lanes="two"), "not a number")
         broken(lambda r: r.update(machine_parallel=-1), "machine_parallel")
         # The machine's slots are its own, apart from `max_parallel`: it may have more.
         self.assertEqual(providers.parse({**raw_providers(), "max_parallel": 2}).machine_parallel,
@@ -331,75 +333,77 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual((planned["provider"], planned["runs_on"]), ("agy", "night-vm-agy"))
         self.assertEqual(ctx_for(gh2).store.load()["items"]["3"]["provider"], "agy")
 
-    def test_devin_takes_easy_items_first_and_nothing_harder(self):
-        """Devin (SWE-2) logs in on the machine, works any hour with no caps, is weak and checks
-        its own builds. It is last in the usage order, but an easy item goes to it first while it
-        has a free lane (`easy_first`), planned by a free medium or strong model on its own run."""
-        pool = providers.load(ROOT)
-        devin = pool.get("devin")
-        self.assertEqual((devin.cli, devin.family, devin.login, devin.runs_on),
-                         ("devin", "cognition", "machine", "night-vm-devin"))
-        self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
-        self.assertEqual((devin.tier, devin.self_check, devin.easy_first), ("weak", True, True))
-        self.assertEqual(pool.priority[-1], "devin")
-        # Unplanned, Devin cannot take it: it builds only from a plan. By day no strong model is
-        # free (the Claude accounts keep to the night here), so Muse plans it in its own run and
-        # builds it.
+    def test_a_weak_subscription_takes_easy_items_first_and_nothing_harder(self):
+        """The tests' weak subscription (`support.WEAK`, as the weak seat was until #2129) logs in
+        on the machine, works any hour with no caps, is weak and checks its own builds. It is last
+        in the usage order, but an easy item goes to it first while it has a free lane
+        (`easy_first`), planned by a free medium or strong model on its own run."""
+        pool = make_config(machine=ALL_MACHINE).pool
+        lite = pool.get(WEAK)
+        self.assertEqual((lite.cli, lite.family, lite.login, lite.runs_on),
+                         ("codex", "lite", "machine", "night-vm-lite"))
+        self.assertEqual((lite.schedule.mode, lite.limits.mode), ("always", "none"))
+        self.assertEqual((lite.tier, lite.self_check, lite.easy_first), ("weak", True, True))
+        self.assertEqual(pool.priority[-1], WEAK)
+        # Unplanned, the weak one cannot take it: it builds only from a plan. By day no strong
+        # model is free (the Claude accounts keep to the night here), so Muse plans it in its own
+        # run and builds it.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
         self.assertEqual((planned["action"], planned["provider"]), ("build", "muse"))
         self.assertIn("#3 needs a plan", planned["housekeeping"])
-        # A medium item passes Devin by.
+        # A medium item passes the weak one by.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx_for(gh, at=DAY, machine=ALL_MACHINE))
         self.assertEqual((planned["action"], planned["provider"]), ("build", "muse"))
-        # With nothing else free, Devin builds an easy item another model already planned.
+        # With nothing else free, the weak one builds an easy item another model already planned.
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy"))
-        ctx = ctx_for(gh, at=DAY, machine=("devin",))
+        ctx = ctx_for(gh, at=DAY, machine=(WEAK,))
         self.assertEqual(plan_mod.make(ctx)["action"], "none")  # no planner is free
-        # A medium model's plan is enough for an easy item (#317 part 6), and Devin builds it.
+        # A medium model's plan is enough for an easy item (#317 part 6), and the weak one builds
+        # it.
         ctx.store.update(lambda s: state_item(s, 3).update(planned_at=clock.iso(DAY),
                                                             planned_tier="medium"))
         planned = plan_mod.make(ctx)
-        self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", WEAK))
         self.assertEqual(planned["seats"]["self_check"], True)
         self.assertIsNone(planned["seats"]["review"])  # weak reviews only in a review run
 
-    def test_devin_is_switched_off_from_november_2(self):
-        """`off_from`: from that day (Central time) Devin takes no new work, forced or not, and
-        the planner opens one issue asking a person what it should do now."""
-        pool = providers.load(ROOT)
-        devin = pool.get("devin")
-        self.assertEqual(str(devin.off_from), "2026-11-02")
-        self.assertIn("Windsurf", devin.off_reason)
+    def test_a_subscription_is_switched_off_from_its_off_from_day(self):
+        """`off_from`: from that day (Central time) a subscription takes no new work, forced or
+        not, and the planner opens one issue asking a person what it should do now."""
+        cfg = make_config(env=secrets(*providers.SECRETS), machine=ALL_MACHINE)
+        lite = dataclasses.replace(cfg.pool.get(WEAK), off_from=date(2026, 11, 2),
+                                   off_reason="Its plan runs out on 2026-11-02.")
+        cfg = dataclasses.replace(cfg, pool=dataclasses.replace(
+            cfg.pool, providers={**cfg.pool.providers, WEAK: lite}))
         everyone = Secrets.of(secrets(*providers.SECRETS))
         late_on_the_1st = datetime(2026, 11, 2, 5, 59, tzinfo=timezone.utc)  # 23:59 CST
-        self.assertIsNone(providers.availability(devin, {}, late_on_the_1st, "America/Chicago",
+        self.assertIsNone(providers.availability(lite, {}, late_on_the_1st, "America/Chicago",
                                                  everyone))
         on_the_2nd = datetime(2026, 11, 2, 6, 0, tzinfo=timezone.utc)
         for forced in (False, True):
             self.assertIn("switched off from 2026-11-02", providers.availability(
-                devin, {}, on_the_2nd, "America/Chicago", everyone, forced=forced))
+                lite, {}, on_the_2nd, "America/Chicago", everyone, forced=forced))
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
-        ctx = make_ctx(gh, at=on_the_2nd + timedelta(hours=12),
-                       cfg=make_config(env=secrets(*providers.SECRETS), machine=ALL_MACHINE))
+        ctx = make_ctx(gh, at=on_the_2nd + timedelta(hours=12), cfg=cfg)
         planned = plan_mod.make(ctx)
-        self.assertNotEqual(planned.get("provider"), "devin")
-        opened = [n for n, t in gh.threads.items() if "`devin` is switched off" in t["title"]]
+        self.assertNotEqual(planned.get("provider"), WEAK)
+        opened = [n for n, t in gh.threads.items() if f"`{WEAK}` is switched off" in t["title"]]
         self.assertEqual(len(opened), 1)
         body = gh.threads[opened[0]]["body"]
         self.assertIn("off_from: 2026-11-02", body)
-        self.assertIn("Windsurf", body)
+        self.assertIn("Its plan runs out", body)
         self.assertEqual(gh.label_names(opened[0]), {"night bot"})
         plan_mod.make(ctx)  # once only
         self.assertEqual(len([t for t in gh.threads.values()
-                              if "`devin` is switched off" in t["title"]]), 1)
-        raw = raw_providers()
-        raw["providers"]["devin"]["off_from"] = "mid-October"
+                              if f"`{WEAK}` is switched off" in t["title"]]), 1)
+        raw = with_weak(raw_providers())
+        raw["providers"][WEAK]["off_from"] = "mid-October"
         with self.assertRaises(ConfigError):
             providers.parse(raw)
 
@@ -870,18 +874,18 @@ class MatchingTests(unittest.TestCase):
         self.assertFalse(three.full(muse))
         self.assertTrue(three.with_run(6, "muse", "plan").full(muse))
 
-    def test_devin_can_fill_the_machine(self):
-        """`lanes: 6`: Devin takes more items while it holds some (six runners carry its
+    def test_a_six_lane_subscription_can_fill_the_machine(self):
+        """`lanes: 6`: the weak one takes more items while it holds some (six runners carry its
         label); a seventh waits on its lanes. The night box's limit of six counts every
-        subscription's runs, so with another one there Devin gets fewer."""
+        subscription's runs, so with another one there the weak one gets fewer."""
         gh = FakeGitHub()
         items = (3, 4, 5, 6, 7, 8, 9)
         for n in items:
-            gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))  # Devin is weak
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
+            gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))  # the weak one's
+        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("lite",))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
                                     for n in items])
-        self.assertEqual((ctx.cfg.pool.get("devin").lanes, ctx.cfg.pool.machine_parallel), (6, 6))
+        self.assertEqual((ctx.cfg.pool.get("lite").lanes, ctx.cfg.pool.machine_parallel), (6, 6))
         taken = []
         for _ in range(7):
             planned = plan_mod.make(ctx)
@@ -891,21 +895,21 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(n, "devin") for n in items[:6]])
-        self.assertIn("`devin` is busy", planned["reason"])
+        self.assertEqual(taken, [(n, "lite") for n in items[:6]])
+        self.assertIn("`lite` is busy", planned["reason"])
         lanes = plan_mod.read_lanes(ctx, ctx.store.load())
-        self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (6, 6))
-        # With GPT holding a machine run, Devin takes five and waits for room on the box.
+        self.assertEqual((lanes.count("lite"), lanes.on_machine(ctx.cfg.pool)), (6, 6))
+        # With GPT holding a machine run, the weak one takes five and waits for room on the box.
         gh = FakeGitHub()
         for n in items:
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin", "gpt"))
+        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("lite", "gpt"))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
                                     for n in items])
         gh.add_issue(40, labels=(LABEL_WORKING,))
         gh.runs["40"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 40).update(run_id="40", provider="gpt"))
-        devins = 0
+        lites = 0
         for _ in range(7):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
@@ -913,9 +917,9 @@ class MatchingTests(unittest.TestCase):
             gh.runs[str(planned["number"])] = {"status": "in_progress"}
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
-            devins += planned["provider"] == "devin"
-        self.assertEqual(devins, 5)
-        self.assertIn("`devin` waits for room on the machine (6 at once)", planned["reason"])
+            lites += planned["provider"] == "lite"
+        self.assertEqual(lites, 5)
+        self.assertIn("`lite` waits for room on the machine (6 at once)", planned["reason"])
 
     def test_an_easy_audit_goes_to_a_medium_model(self):
         # No weak review runs go out (#725): an easy item's weak approval is answered by the
@@ -1048,7 +1052,7 @@ class WhenTests(unittest.TestCase):
         text = providers.when_free(test_pool(), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
         text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
-        self.assertIn("`muse`, `agy`, `gpt`, `devin` can take it now", text)
+        self.assertIn("`muse`, `agy`, `gpt` can take it now)", text)
 
 
 class SharedPoolTests(unittest.TestCase):

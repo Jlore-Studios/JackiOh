@@ -12,6 +12,9 @@
 //
 // #1991: a complete deck, while the workshop is saved, offers practice with it picked (`practicePath`,
 // worked out by DeckWorkshop).
+//
+// R2119000: Delete deck asks nothing. The workshop takes the deck off at once and holds its DELETE
+// behind an undo toast.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -39,8 +42,8 @@ import {
   DECK_CONFLICTS,
   DECK_COPY_CODE,
   DECK_DELETE,
-  DECK_DELETE_CANCEL,
-  DECK_DELETE_CONFIRM,
+  DECK_DUPLICATE,
+  DECK_DUPLICATE_REASON,
   DECK_DRAG_MIME,
   DECK_EDITOR,
   DECK_NAME_INPUT,
@@ -100,10 +103,15 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
+  /** #2099: the name field lost the focus, so the rename under way is one undo step. */
+  onRenameDone: () => void;
   /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
+  /** R2119000: at once, with no question; the workshop offers Undo. */
   onDelete: () => void;
+  /** #2096: a new deck with this one's cards, portrait and picks, opened in its place. */
+  onDuplicate: () => void;
   onSaveNow: () => void;
   onBack: () => void;
 };
@@ -123,7 +131,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
-  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack } = props;
 
   useLocale();
   const label = deckLabel(deck, limits.nameLength);
@@ -132,13 +140,11 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const [refusedCardId, setRefusedCardId] = useState<string | null>(null);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
   const [codeShown, setCodeShown] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [awaitingComplete, setAwaitingComplete] = useState(false);
   const dragged = useRef<string | null>(null);
-  const keepButton = useRef<HTMLButtonElement>(null);
   const nameId = useId();
   const verdictTitleId = useId();
-  const confirmTextId = useId();
+  const duplicateReasonId = useId();
 
   // Timed by the words it shows, as when it held them: saying the same again leaves its timer running.
   const shown = status === null ? null : status.say();
@@ -163,11 +169,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       setStatus({ say: () => t(DECK_COMPLETE_SAVED) });
     }
   }, [awaitingComplete, saved, deck.cards.length]);
-
-  // Focus the safe answer so a stray Enter keeps the deck.
-  useEffect(() => {
-    if (confirming) keepButton.current?.focus();
-  }, [confirming]);
 
   const compared = useMemo(() => comparedDecks(compare, deck.id, decks, trios), [compare, deck.id, decks, trios]);
   const holders = useMemo(() => holdersOf(compared, limits.nameLength), [compared, limits.nameLength]);
@@ -318,7 +319,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (holders.get(detailCardId) ?? null);
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
-  const triosNamingIt = inTrios.length;
+  const atCap = decks.length >= limits.decks;
   const conflictNames = joinNames([...new Set([...conflicts.values()].map((holder) => holder.name))]);
   const detail: BrowserDetail | null =
     detailCardId === null
@@ -376,6 +377,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           onBlur={() => {
             // D1, gently: the field settles on the name the save sends ("Untitled deck" for none).
             if (deck.name !== label) onRename(label);
+            onRenameDone();
           }}
         />
       </label>
@@ -529,16 +531,28 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             </button>
             <button
               type="button"
+              className="ws-action"
+              data-testid={DECK_DUPLICATE}
+              disabled={atCap}
+              aria-describedby={atCap ? duplicateReasonId : undefined}
+              onClick={onDuplicate}
+            >
+              {t("Duplicate")}
+            </button>
+            <button
+              type="button"
               className="ws-action ws-action--danger"
               data-testid={DECK_DELETE}
-              aria-expanded={confirming}
-              onClick={() => {
-                setConfirming(true);
-              }}
+              onClick={onDelete}
             >
               {t("Delete deck")}
             </button>
           </div>
+          {atCap ? (
+            <p className="ws-cap-note" id={duplicateReasonId} data-testid={DECK_DUPLICATE_REASON}>
+              {t("You have {count} decks, the most you can keep. Delete one to duplicate this.", { count: limits.decks })}
+            </p>
+          ) : null}
           {codeShown ? (
             <label className="ws-code">
               <span className="ws-field-label">{t("Deck code")}</span>
@@ -552,33 +566,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 }}
               />
             </label>
-          ) : null}
-          {confirming ? (
-            <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
-              <p id={confirmTextId}>
-                {triosNamingIt === 0
-                  ? t("Delete “{deck}”? This can’t be undone.", { deck: label })
-                  : triosNamingIt === 1
-                    ? t("Delete “{deck}”? Its slot in {count} trio will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })
-                    : t("Delete “{deck}”? Its slot in {count} trios will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })}
-              </p>
-              <div className="ws-confirm-actions">
-                <button type="button" className="ws-action ws-action--danger" data-testid={DECK_DELETE_CONFIRM} onClick={onDelete}>
-                  {t("Delete")}
-                </button>
-                <button
-                  ref={keepButton}
-                  type="button"
-                  className="ws-action"
-                  data-testid={DECK_DELETE_CANCEL}
-                  onClick={() => {
-                    setConfirming(false);
-                  }}
-                >
-                  {t("Keep it")}
-                </button>
-              </div>
-            </div>
           ) : null}
         </DeckSidebar>
 

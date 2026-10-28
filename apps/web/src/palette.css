@@ -1,0 +1,61 @@
+/* The client's one colour palette (#2105): every board stylesheet names these (src/palette.test.ts).
+   A name is a hue and a step, lighter as the number falls. A new colour raises PALETTE_MAX there. */
+
+:root {
+  --pal-black: #000000;
+  --pal-white: #ffffff;
+  --pal-grey-500: #6b7280;
+
+  --pal-wood-950: #0e0905;
+  --pal-wood-900: #120b07;
+  --pal-wood-800: #2b170c;
+  --pal-wood-600: #713f12;
+
+  --pal-brass-950: #2b1800;
+  --pal-brass-800: #4a3c1a;
+  --pal-brass-600: #a86a1f;
+  --pal-brass-500: #c9953f;
+
+  --pal-gold-400: #f0c04a;
+  --pal-gold-300: #ffd24a;
+  --pal-gold-200: #fde68a;
+  --pal-yellow-400: #facc15;
+  --pal-parchment: #efe0bf;
+
+  --pal-red-300: #fca5a5;
+  --pal-red-400: #f87171;
+  --pal-red-500: #ef4444;
+  --pal-red-600: #c0453f;
+  --pal-red-900: #7f1d1d;
+  --pal-ember-500: #ff5a36;
+  --pal-orange-400: #fb923c;
+
+  --pal-lime-200: #d9f99d;
+  --pal-lime-400: #a3e635;
+  --pal-green-200: #bbf7d0;
+  --pal-green-400: #4ade80;
+  --pal-jade-400: #4ec98a;
+  --pal-green-500: #22c55e;
+  --pal-green-700: #15803d;
+  --pal-green-900: #14532d;
+
+  --pal-cyan-400: #22d3ee;
+  --pal-sky-300: #7dd3fc;
+  --pal-sky-400: #38bdf8;
+  --pal-blue-200: #bfdbfe;
+  --pal-blue-600: #3d7bd4;
+  --pal-blue-700: #1d4ed8;
+  --pal-blue-800: #2f5d8c;
+  --pal-blue-900: #1e3a8a;
+
+  --pal-slate-100: #e8eaf2;
+  --pal-slate-400: #9aa1b8;
+  --pal-slate-700: #3f4964;
+  --pal-slate-800: #2b3349;
+  --pal-slate-900: #141a2e;
+
+  --pal-violet-300: #c4b5fd;
+  --pal-violet-500: #8b5cf6;
+  --pal-violet-700: #6d28d9;
+  --pal-purple-400: #c084fc;
+}

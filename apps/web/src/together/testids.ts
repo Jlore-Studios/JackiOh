@@ -20,7 +20,7 @@ export const togetherTestid = {
   unread: "together-unread",
   remove: "together-remove",
   block: "together-block",
-  /** The inline "are you sure" of Remove and Block. */
+  /** The inline "are you sure" of Block; Remove asks nothing and offers Undo (R2119000). */
   confirm: "together-confirm",
   keep: "together-keep",
   /** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`. */
@@ -69,6 +69,7 @@ export const chatTestid = {
   message: "chat-message",
   close: "chat-close",
   error: "chat-error",
+  join: "chat-join",
   /** #1898: a failed read of the conversation says why, and Try again reads it again. */
   readError: "chat-read-error",
   retry: "chat-retry",

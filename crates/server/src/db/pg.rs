@@ -5953,39 +5953,74 @@ pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> 
     Ok(())
 }
 
-/// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
-/// TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the rating, through their
-/// serde form. R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
-pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(
+/// What `ranked_standings` and `ranked_standings_subset` select, up to their `where`: a season row
+/// joined to its player's CURRENT rating, a ladder bot's being the bot's own (R640000, R610).
+macro_rules! standings_from {
+    () => {
         "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
                 r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
                 coalesce(b.rating, p.rating) as rating, p.kind
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
-           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text
-          where r.season_id = $1::text
-          order by r.profile_id",
-    )
+           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text"
+    };
+}
+
+/// One `standings_from!` row. TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the
+/// rating, through their serde form, marked `bot` for a ladder bot's row (R640000).
+fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
+    let rank = to_season_rank(SeasonRankDbRow::read(row)?);
+    let rating: f64 = get(row, "rating")?;
+    let kind: String = get(row, "kind")?;
+    let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
+    if let Value::Object(fields) = &mut standing {
+        fields.insert(String::from("rating"), json!(rating));
+        fields.insert(String::from("bot"), json!(kind == "bot"));
+    }
+    from_json(standing)
+}
+
+/// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
+/// R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
+pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        standings_from!(),
+        " where r.season_id = $1::text
+          order by r.profile_id"
+    ))
     .bind(season_id)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter()
-        .map(|row| -> Result<SeasonStanding, StoreError> {
-            let rank = to_season_rank(SeasonRankDbRow::read(row)?);
-            let rating: f64 = get(row, "rating")?;
-            let kind: String = get(row, "kind")?;
-            let mut standing =
-                serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
-            if let Value::Object(fields) = &mut standing {
-                fields.insert(String::from("rating"), json!(rating));
-                fields.insert(String::from("bot"), json!(kind == "bot"));
-            }
-            from_json(standing)
-        })
-        .collect()
+    rows.iter().map(standing_of).collect()
+}
+
+/// `ranked_standings` cut to `profile_ids`' rows and every row from `min_ladder` up (#2022), joined
+/// and read as it is, so a ladder bot's row reads its own rating (R640000). An id that is no uuid (a
+/// deleted account's empty seat) names no row and is not bound. Migration 0064's
+/// `season_ranks_season_ladder_idx` serves the ladder range (tests/sql CHECK 21).
+pub async fn ranked_standings_subset(
+    t: &mut PgTx<'_>,
+    season_id: &str,
+    profile_ids: &[String],
+    min_ladder: i32,
+) -> Result<Vec<SeasonStanding>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        standings_from!(),
+        " where r.season_id = $1::text
+            and (r.profile_id = any($2::uuid[]) or r.ladder >= $3::integer)
+          order by r.profile_id"
+    ))
+    .bind(season_id)
+    .bind(ids)
+    .bind(min_ladder)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(standing_of).collect()
 }
 
 pub async fn ranked_rank(

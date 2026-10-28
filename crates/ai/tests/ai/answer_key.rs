@@ -184,3 +184,49 @@ mod r465_the_ai_never_reads_a_problems_key {
         }
     }
 }
+
+// R1870002: Stinkyscape #4.2 KY's Last Exam asks an impossible problem, which no answerer can work out.
+// The AI answers it on either face with a letter the prompt offers, from a redaction that holds no key;
+// the Radiant face's cheat sheet is a mark on a label, which nothing of the AI's reads, so it guesses.
+mod r1870002_the_ai_answers_kys_last_exam {
+    use super::*;
+
+    const EXAM: &str = "stinkyscape-004-2";
+
+    #[test]
+    fn r1870002_the_ai_answers_either_face_with_an_offered_letter_and_no_key() {
+        register_cards();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "seed": format!("r1870002-ai-{radiant}"),
+                "p1": { "hand": [{ "def": EXAM, "radiant": radiant }, "core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            s.play(EXAM, json!({}));
+            let state = clone(s.state());
+            assert_eq!(
+                state.pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Answer)
+            );
+            for seat in [PlayerId::P1, PlayerId::P2] {
+                assert!(
+                    !serde_json::to_string(&redact(&state, seat))
+                        .unwrap()
+                        .contains(ANSWER_KEY)
+                );
+            }
+            let decision = decide(
+                &state,
+                PlayerId::P1,
+                &mut AiOptions::new(create_rng("r1870002-decide", 0)),
+            )
+            .expect("the AI answers");
+            assert!(
+                matches!(decision.action, ActionBody::Answer { .. }),
+                "{:?}",
+                decision.action
+            );
+            assert!(legal_actions(&state, PlayerId::P1).contains(&decision.action));
+        }
+    }
+}

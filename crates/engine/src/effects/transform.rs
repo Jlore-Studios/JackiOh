@@ -288,7 +288,9 @@ fn replace_card(
         } else {
             Some(hidden_from)
         },
+        creator: None,
     });
+    crate::generators::credit_creator(ctx, &replacement.id);
     Some(replacement)
 }
 
@@ -372,6 +374,7 @@ pub fn vanilla(args: TransformTarget) -> Effect {
             to_def_id: card.def_id.clone(),
             new_instance_id: card.id.clone(),
             hidden_from: None,
+            creator: None,
         });
         // R1174000: a Vanilla removes Frozen, as Hearthstone's Silence removes Freeze.
         crate::freeze::unfreeze(&mut ctx.sink, &card.id);
@@ -621,13 +624,15 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
                 instance_id: old.id.clone(),
                 from_def_id: old.def_id.clone(),
                 to_def_id: copy_def_id,
-                new_instance_id: copy_id,
+                new_instance_id: copy_id.clone(),
                 hidden_from: if hidden_from.is_empty() {
                     None
                 } else {
                     Some(hidden_from)
                 },
+                creator: None,
             });
+            crate::generators::credit_creator(ctx, &copy_id);
         }
     })
 }

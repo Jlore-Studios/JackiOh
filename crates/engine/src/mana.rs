@@ -512,12 +512,6 @@ pub fn health_priced(state: &GameState, instance: &CardInstance) -> bool {
     health_price_rule(state, instance).is_some()
 }
 
-/// R1180004: the health a play of this card at `cost` would lose now — `multiple` times the cost
-/// after every modifier (R65; an X Spell its X) — or `None` when it pays in mana as usual.
-pub fn health_price_of(state: &GameState, instance: &CardInstance, cost: i32) -> Option<i32> {
-    health_price_rule(state, instance).map(|(multiple, _)| multiple.saturating_mul(cost.max(0)))
-}
-
 /// R1180004: the mana a play of this card at `cost` takes now — nothing under a health price, else the
 /// cost. What every affordability check compares with the player's spendable mana.
 pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i32 {

@@ -7,6 +7,8 @@
 // - `FaceDownPreview`: fixed beside the back, click-through and hidden from assistive tech, like
 //   HoverPreview; the back itself carries the same words as its label.
 // - `FaceDownSheet`: a modal dialog with Close, as InspectSheet is (useModalOverlay).
+//
+// R2121000: a swipe down closes it too, as InspectSheet's does (useSheetSwipe.tsx).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
@@ -18,6 +20,7 @@ import { FACE_DOWN_HINT, FACE_DOWN_TITLE, PLAGUE_COUNT_WORDS, costPhrase } from 
 import { FACE_DOWN_PREVIEW_HEIGHT_PX, PREVIEW_GLOSSARY_GAP_PX, PREVIEW_GLOSSARY_WIDTH_PX } from "./constants.ts";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
+import { SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import { INSPECT_CLOSE, INSPECT_FACE_DOWN, INSPECT_FACE_DOWN_COST, INSPECT_SCRIM } from "./testids.ts";
 import "./inspect.css";
 
@@ -91,18 +94,21 @@ export function FaceDownSheet({ cost, plague, onClose }: FaceDownProps & { onClo
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
+  const swipe = useSheetSwipe(modal.close);
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
-      <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
+      <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-sheet inspect-facedown"
+        ref={swipe.sheetRef}
         data-testid={INSPECT_FACE_DOWN}
         data-mode="sheet"
         role="dialog"
         aria-modal="true"
         aria-label={t(FACE_DOWN_TITLE)}
+        {...swipe.handlers}
       >
-        <span className="inspect-grip" aria-hidden="true" />
+        <SheetGrip />
         <div className="inspect-sheet-body">
           <span className="inspect-facedown-frame inspect-facedown-frame--sheet">
             <BigBack cost={cost} />

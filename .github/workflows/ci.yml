@@ -215,13 +215,13 @@ jobs:
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
   # of it compiling, so each group compiles only its own crates and what they build on (the engine
   # and the cards at opt-level 2, about two minutes in every group but `engine`, which builds them
-  # at 0), side by side. The engine and the cards each split further, by test binary: `rules`, the
-  # engine's unit tests and the cards' unit tests (one per card) each take two to three minutes to
-  # compile at opt-level 2 on their own, and the golden replay runs apart from the engine's unit
-  # tests (#1608). So does the AI, whose tests take minutes to play their games rather than to
-  # compile. `binaries` lists every test binary of a crate split that way, checked against Cargo so a
-  # new one cannot go unrun; the last group takes every crate no other group names, so a new crate
-  # cannot either.
+  # at 0, and the two `engine rules`), side by side. The engine and the cards each split further, by
+  # test binary: the rule tests (themselves in two, #2090), the engine's unit tests and the cards'
+  # unit tests (one per card) each take two to three minutes to compile at opt-level 2 on their own,
+  # and the golden replay runs apart from the engine's unit tests (#1608). So does the AI, whose
+  # tests take minutes to play their games rather than to compile. `binaries` lists every test binary
+  # of a crate split that way, checked against Cargo so a new one cannot go unrun; the last group
+  # takes every crate no other group names, so a new crate cannot either.
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
   # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
   # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
@@ -242,11 +242,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Without ts, which nothing in `rules` reads: ts-rs's derives only add to the compile.
+          # The engine's rule tests in two binaries side by side (#2090): `rules`, the modules of
+          # tests/rules/ from `a` to `o`, and `rules_2`, the rest, whose replays take the longest to
+          # run. As one binary at Cargo.toml's opt-level 2 they took the job past seven minutes, five
+          # of them compiling the engine, the cards and then that binary, one after another. Here the
+          # engine is at opt-level 1 and the cards at 0 (of the rule tests only rule_benders runs a
+          # real card): on four cores `rules` compiles in about 175 s and runs in 20, `rules_2` in
+          # about 145 and 65. Without ts, which nothing in them reads: ts-rs's derives only add to the
+          # compile. Each `--config` stays one unquoted word, as in `engine` below.
           - group: engine rules
             scope: engine_rules
             cache: engine-rules
-            test: -p jackioh-engine --features jackioh-engine/testkit --test rules
+            test: -p jackioh-engine --features jackioh-engine/testkit --test rules --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0
+          - group: engine rules 2
+            scope: engine_rules
+            cache: engine-rules
+            test: -p jackioh-engine --features jackioh-engine/testkit --test rules_2 --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0
           # The engine's unit tests (with ts, whose export_bindings tests write wire/generated/), its
           # constants export and its doc tests, with the engine and the cards at opt-level 0 (#1608).
           # The unit-test binary links the cards, a dev-dependency, so it waits for them: at
@@ -259,7 +270,7 @@ jobs:
             cache: engine
             test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test export_config --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
             doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
-            binaries: jackioh-engine export_config golden rules
+            binaries: jackioh-engine export_config golden rules rules_2
           # The golden replay (§13) at Cargo.toml's opt-level 2, where its 240 games take under 20 s
           # (over two minutes at 0), and without ts, which it never reads. Everything it reads turns
           # `rust_engine` on, so it runs on that line; it builds on the dependencies `engine rules`

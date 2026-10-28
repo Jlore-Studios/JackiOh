@@ -20,8 +20,9 @@ For people and agents alike. This is a pointer page: the rules live in the files
 Open one through a form (**New issue**): Patch, Bug, Architecture or CI, Night bot. Each starts the
 title (`Patch: `) and puts on the type labels, and triage gives the issue its type (Task, Bug or
 Feature). When it is ready, label it `human` (people do it) or `bot:build` (the night bot does), or
-pick one in the form's Who does it. Work on `.github/`, `bot/`, `.harness/` or `.squishy/` is
-`human`: the bots may not change those paths.
+pick one in the form's Who does it. Work on `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/`
+(but for `.claude/skills/`, which Squishy may change) is `human`: the bots may not change those paths
+(`CLAUDE.md`, The night bot).
 
 ## Titles
 
@@ -36,15 +37,13 @@ Issues and pull requests share them (`docs/issues-and-patches.md`, Titles):
 No title names a version before it ships: `patches ship` names a card change's version from what it
 does to the cards (the classifier, R1365000), and `patches-ship.yml` retitles its issue and pull
 request. The `pr title` check fails a pull request whose title breaks these, the older prefixes
-(`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`, `Night bot`, `CI`, `Architecture`) included since the
-title retcon (#1372). Tools' own pull requests (`patches ship: …`, `patches log: …`,
-`Promote main to production: …`, a training lane's `AI gen N (lane): …`) and GitHub's `Revert "…"`
-of a passing title pass as they are.
+(`CI: `, `Architecture: `, …) included; the titles tools give their own pull requests are in
+`docs/issues-and-patches.md`, Pull requests.
 
 ## Pull requests and commits
 
-- Fill in the template: `Closes #n` (or `Part of #<tracker>`), what changed, the tests you ran,
-  the risks, the rulings and what the fragment claims, and the gates from `CLAUDE.md`, Commands.
+- Fill in every section of the template (`.github/pull_request_template.md`). A part of a split
+  patch says `Closes #<part>` and `Part of #<tracker>`, never `Closes #<tracker>`.
 - The title becomes the squash commit's subject on `main`. Commits on a branch say what they change
   in a short subject, with the why in the body when it isn't obvious. Put `[vercel]` in a branch
   commit's message for a Vercel preview of it (`docs/architecture.md` §4.2).
@@ -58,6 +57,6 @@ of a passing title pass as they are.
 A new ruling takes the lowest number free in its issue's block (`CLAUDE.md` rule 3): issue N
 owns R(N×1000) to R(N×1000+999), so issue #690's first is R690000, and a pull request with no
 issue uses its own number. Name it in your pull request. If another open pull request on the same
-issue took the same number, the one that merges second renumbers its note, its tests and its index
-row first, within the block; `cargo jackioh spec check` catches what it misses
+issue took the same number, the one that merges second renumbers its note, its tests and every
+`R<n>` it cites first, within the block; `cargo jackioh spec check` catches what it misses
 (`docs/issues-and-patches.md`, Ruling numbers).

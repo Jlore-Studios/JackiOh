@@ -16,6 +16,12 @@ eitherPlayer: boolean?,
 extraTurnCooldown: boolean?,
 }
 
+export type ActivationOfArgs = {
+instanceId: string?,
+target: TargetSpec?,
+ability: string?,
+}
+
 export type ActivationUses = number | "unlimited"
 
 export type AddCostRuleArgs = {
@@ -56,6 +62,7 @@ costModUpTo: number?,
 temporary: boolean?,
 chinese: boolean?,
 lucky: number?,
+keywords: {Keyword}?,
 }
 
 export type AddRandomFromGraveyardArgs = {
@@ -310,6 +317,7 @@ busted: boolean?,
 complicated: boolean?,
 everySet: boolean?,
 dealsDamage: boolean?,
+keywords: {KeywordKind}?,
 }
 
 export type CellScope = {
@@ -745,6 +753,7 @@ target: TargetSpec?,
 export type DyingUnit = {
 instanceId: string,
 controller: PlayerId,
+combat: boolean?,
 }
 
 export type EmoteId = "greetings" | "wellPlayed" | "oops" | "thanks" | "threaten" | "sob" | "yawn" | "laugh" | "angry" | "wahWah" | "wave" | "clap" | "thumbsUp" | "facepalm" | "shrug" | "thinking" | "heart" | "fire" | "skull" | "sweat" | "cool" | "gasp" | "salute" | "party"
@@ -892,6 +901,7 @@ label: string,
 hook: string?,
 data: {[string]: JsonValue}?,
 player: PlayerSpec?,
+atEnd: boolean?,
 }
 
 export type ForcedAttackOwnHeroArgs = {
@@ -1039,6 +1049,7 @@ formerId: string?,
 sourceId: string?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+creator: PlayerId?,
 } | {
 ["type"]: "damage",
 sourceId: string | nil,
@@ -1117,12 +1128,14 @@ emptied: true?,
 player: PlayerId,
 instanceId: string,
 defId: string,
+creator: PlayerId?,
 } | {
 ["type"]: "shuffledIn",
 player: PlayerId,
 instanceId: string,
 defId: string,
 position: number,
+creator: PlayerId?,
 } | {
 ["type"]: "buffed",
 instanceId: string,
@@ -1161,6 +1174,7 @@ fromDefId: string,
 toDefId: string,
 newInstanceId: string,
 hiddenFrom: {PlayerId}?,
+creator: PlayerId?,
 } | {
 ["type"]: "fused",
 instanceIds: {string},
@@ -1936,6 +1950,7 @@ seq: number,
 resume: Resume,
 label: string,
 ranTurn: number?,
+atEnd: boolean?,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "healToDamage",
@@ -1979,6 +1994,12 @@ cost: number,
 expiry: ModifierExpiry,
 ["kind"]: "playWatch",
 defIds: {string},
+resume: Resume,
+label: string,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "deathWatch",
+tag: Tag,
 resume: Resume,
 label: string,
 } | {
@@ -2135,6 +2156,7 @@ flicker: InsteadFlicker?,
 to: InsteadTo?,
 interpose: boolean?,
 cancel: boolean?,
+resolveFirst: boolean?,
 }
 
 export type ReplacementMoment = "lethalHit" | "healed" | "wouldDie" | "toGraveyard" | "targeted"
@@ -2335,6 +2357,7 @@ setAttack: number?,
 export type StaticFlags = {
 castOnDraw: boolean?,
 quickdraw: boolean?,
+handSale: boolean?,
 infiniteReserves: boolean?,
 neverDefense: boolean?,
 echo: number?,
@@ -2430,6 +2453,7 @@ defId: string?,
 rememberAs: string?,
 instance: TargetSpec?,
 randomKeywords: number?,
+keywords: {Keyword}?,
 }
 
 export type SummonCopyArgs = {
@@ -3992,6 +4016,10 @@ function J.lose_refreshes(args: LoseRefreshesArgs): EffectCall
 	return { verb = "lose_refreshes", args = args :: any }
 end
 
+function J.lower_brittle(args: GainBrittleArgs): EffectCall
+	return { verb = "lower_brittle", args = args :: any }
+end
+
 function J.make_hero_immune(args: MakeHeroImmuneArgs): EffectCall
 	return { verb = "make_hero_immune", args = args :: any }
 end
@@ -4048,12 +4076,20 @@ function J.refresh_mana(args: RefreshManaArgs): EffectCall
 	return { verb = "refresh_mana", args = args :: any }
 end
 
+function J.refuse_own_activate(args: ActivationOfArgs): EffectCall
+	return { verb = "refuse_own_activate", args = args :: any }
+end
+
 function J.remember(args: RememberArgs): EffectCall
 	return { verb = "remember", args = args :: any }
 end
 
 function J.remember_random(args: RememberRandomArgs): EffectCall
 	return { verb = "remember_random", args = args :: any }
+end
+
+function J.remove_allures(args: any?): EffectCall
+	return { verb = "remove_allures", args = args :: any }
 end
 
 function J.replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs): EffectCall
@@ -4082,6 +4118,10 @@ end
 
 function J.rotate(args: RotateArgs): EffectCall
 	return { verb = "rotate", args = args :: any }
+end
+
+function J.run_activation(args: ActivationOfArgs): EffectCall
+	return { verb = "run_activation", args = args :: any }
 end
 
 function J.sacrifice(args: SacrificeArgs): EffectCall
