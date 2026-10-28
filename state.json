@@ -6068,9 +6068,12 @@
         "by": "`claude` (strong)",
         "sha": "51b5adec900a57cfa602660220b618e7a777c4a3"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-28T02:04:02Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2089,
       "kind": "revise",
       "last_findings": [],
