@@ -6066,6 +6066,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
+      "question": "a person edits `.github/workflows/ci.yml`. The changes: the `web-unit` matrix goes from three shards to five, `promote-production.test.ts` moves off shard 1 into a job of its own, `web (promote-production)`, and the `web` summary job waits on that job. In the same pull request the person also fixes the comments that name `web (unit k/3)` or `web (unit 1/3)`: one in `.github/workflows/super.yml`, two in `scripts/ci-scope.sh` and one in `apps/web/src/net/ci-scope.test.ts`. The night bot can change none of `.github/`. Everything else in the fix is comment text that would be wrong until the ci.yml change lands, so it belongs in the same pull request.",
       "run_id": "40681718180",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T11:39:56Z",
