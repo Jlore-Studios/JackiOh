@@ -47,3 +47,10 @@ asset tests out).
 The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s procedural art instead of
 `procedural.ts`'s: a space backdrop under one subject per family, each weapon the weapon its name says
 (R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins.
+
+## The Training Grounds set's own art
+
+The held Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds.ts`'s procedural art
+the same way: a training yard under one subject per family, its dummies, ogres, knives, totems,
+Felinors, runes, posters and Golem each what the card is (R2202000). Its snapshots #41–#60
+(`SNAPSHOT_ART`) draw the Core card each one freezes, by that card's id, delivered file included.

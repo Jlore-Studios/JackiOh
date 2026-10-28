@@ -869,6 +869,29 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(face.querySelector("img")?.getAttribute("src")).toBe(mark.src);
   });
 
+  it("R2202001 the Training Grounds mark is a straw target with red rings over two crossed wooden swords, not the diamond", () => {
+    const mark = setMarkOf("Training Grounds");
+    expect(mark.kind).toBe("training-grounds");
+    expect(mark.label).toBe("Training Grounds set");
+    const others = ["Core", "Classic", "Classic+", "Meditative", "Stinkyscape", "Meditative+", "Boss"].map((set) => setMarkOf(set).src);
+    expect(others).not.toContain(mark.src);
+    const svg = decodeURIComponent(mark.src);
+    // The two swords (each an outline under its wood) are drawn before the target, and the target is
+    // four rings, straw and red in turn.
+    expect(svg.match(/stroke='#c58a48'/g)).toHaveLength(2);
+    const target = svg.indexOf("fill='#f1dfa8'");
+    expect(target).toBeGreaterThan(svg.lastIndexOf("stroke='#c58a48'"));
+    expect(svg.match(/<circle/g)).toHaveLength(4);
+    expect(svg.match(/fill='#d2452f'/g)).toHaveLength(2);
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    const face = setMark(catalogFace("traininggrounds-017"));
+    expect(face.getAttribute("data-set")).toBe("Training Grounds");
+    expect(face.getAttribute("data-set-mark")).toBe("training-grounds");
+    expect(face.getAttribute("aria-label")).toBe("Training Grounds set");
+    expect(face.querySelector("img")?.getAttribute("src")).toBe(mark.src);
+  });
+
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
     const boss: CardDef = { ...def("core-002"), set: "Boss" };
     const mark = setMark(renderFace({ defId: boss.id, def: boss, radiant: false }));

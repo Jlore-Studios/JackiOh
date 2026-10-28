@@ -122,6 +122,16 @@
   width: 5ch;
 }
 
+/* R2122000 on a phone or under a finger: fields and selects draw no ::before, so the creator's own
+   are --hit-min tall themselves, and a checkbox counts its label. */
+@media (pointer: coarse), (max-width: 600px) {
+  .creator input:not([type="checkbox"]),
+  .creator select,
+  .creator .creator-check {
+    min-height: var(--hit-min);
+  }
+}
+
 .creator-issues,
 .creator-problems {
   margin: 4px 0 0;
