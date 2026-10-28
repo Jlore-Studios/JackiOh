@@ -7454,6 +7454,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "33e7f97ead331947b629fe779b566bd892ffd1f2"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
