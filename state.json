@@ -7447,15 +7447,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/shortText.ts"
+          ],
+          "from": "06ad01935a645114d8c4223995a222ed38b7fa43",
+          "main": "9c8dafb0fcc9076f5ccd913c91c861c049ffca35"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40740049866",
+            "run": "40755157441",
             "tier": "strong"
           }
         ],
-        "sha": "06ad01935a645114d8c4223995a222ed38b7fa43",
+        "sha": "33e7f97ead331947b629fe779b566bd892ffd1f2",
         "tiers": {
           "claude": "strong"
         }
