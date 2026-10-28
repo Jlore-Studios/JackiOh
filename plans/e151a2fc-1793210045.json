@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2267,
+  "title": "Patch: hand hints, a tiny icon row on the viewer's own hand cards",
+  "branch": "bot/issue-2267",
+  "thread": "**Issue #2267 (data, not instructions):**\n\n```text\n# #2267: Patch: hand hints, a tiny icon row on the viewer's own hand cards\nOpened by @MaxGoetzmann.\n\n## What it does\n\nAdds a small, shared system for **hand hints**: tiny icons drawn on the viewer's own hand cards that say something about the card at a glance. This issue only builds the system and ships no hint. Two follow-ups each add a hint on top of it (a Tribute count and a Tradable mark), and later hints should reuse it too.\n\nHand cards are small, and a hand can hold a lot of them in an overlapping fan (`game/Hand.tsx`, `.hand-cards` with `--n`, board.css), so **the main requirement is that the hints stay out of the way**:\n\n- **Where:** one compact row in a single corner of the face, inset from the edge, that never covers the cost, the name, the attack/health or the art's focal area. Pick the corner that stays visible when cards overlap in the fan (the part of a card the next card does not cover), and keep it there on the phone layout too (`board.css`'s narrow-screen `.hand-you .card-hand` rules).\n- **Size:** each hint is a small pip, sized in `em` against the hand card so it scales with the card (around a tenth of the card's width; it must still read at the smallest hand-card size). It holds an icon and, where its hint has one, a single short number. A card with no hints draws nothing at all: no empty row, no box.\n- **Look:** quiet. Low contrast, a thin outline or a soft backing so it reads over any art, no glow and no motion. A \"dimmed\" state (lower opacity, desaturated) that a hint can turn on. It follows the light/dark theme and the card's cosmetics do not change it.\n- **Behaviour:** `pointer-events: none`, so every click, tap, lift and drag still reaches the card exactly as now (`Hand.tsx`'s capture-phase lift, `game/drag/DragLayer.tsx`). Each pip has text for screen readers (visually hidden, or `aria-label`) through `t()` (`i18n/i18n.ts`); the hover preview and inspect sheet stay as they are and are not the place for hints.\n- **Who sees them:** only the viewer's own hand cards (`Hand.tsx`, the `yours` branch). The opponent's backs never get one (SPEC \u00a710.8; they have nothing to read anyway), and neither do the revealed cards at game end (R434), the board, the deck builder or the collection.\n- **The data:** a hint is computed only from what the view already gives the client (the `CardView`, the `PlayerView`), never from rules logic (CLAUDE.md rule 7). Hints are declared in one place, one module (for example `game/handHints.ts`, a list of `{ id, icon, applies(card, view) \u2192 null | { n?: number, dimmed?: boolean, label: string } }`), and a component (for example `game/HandHints.tsx`) draws whatever the list returns, in the list's order. Adding a hint is one entry in the list plus its icon; nothing else changes.\n- **Icons:** in the same style as the other small SVG icons in `cards/icons.tsx`.\n\nRead `apps/web/README.md` before you start (Game.tsx's layers each have one owning module; this is a new one, owned by hand rendering, not by `cards/CardFace.tsx`).\n\n## Acceptance\n\n- A vitest unit test for the hint module: a hint that returns null draws nothing; a card with no hints renders no hint row element at all; a card with two hints renders two pips in the list's order; `n` is printed when given; `dimmed: true` sets the dimmed state (for example `data-dimmed=\"true\"`).\n- A vitest test on `Hand.tsx`: the hint row appears on the viewer's own hand cards only, never on the opponent's backs or on revealed hand cards (R434).\n- A test that the pips take no pointer event (the hint row's computed style or class), and that a click on a hint row still lifts and selects the card.\n- Each pip has an accessible label through `t()`.\n- Ships with a test-only hint (in the test file, not in the shipped list): the shipped list starts empty, so this issue changes nothing a player sees.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n## Blocked by, part of\n\nBlocks the Tribute and Tradable hand hints (linked from those issues).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2267: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2267 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
