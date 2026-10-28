@@ -54,6 +54,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "meditative-081",
         "Deadman's Hand shuffles \"a copy of each card in your hand, and of this\" into your deck (rule 4)",
     ),
+    (
+        "traininggrounds-023",
+        "Quadrupling Felinors summons copies of this (rule 4, as Duplicating Felinors)",
+    ),
 ];
 
 /// The seeds each card is played under.

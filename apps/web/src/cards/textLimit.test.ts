@@ -94,7 +94,7 @@ describe("R1017000 the face text limit", () => {
     }
   });
 
-  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards and five held Stinkyscape rows) each print a short form", () => {
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, five Stinkyscape rows and the held Training Grounds #39) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printed(def.id, face).full.length > TEXT_TIER_MAX.xl).map(
         (face) => `${def.id} ${face ? "radiant" : "base"}`,

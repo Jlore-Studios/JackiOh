@@ -163,7 +163,11 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
 pub fn roll_offers(state: &GameState, rng: &mut Rng, table: &[MarketLot]) -> Vec<MarketOffer> {
     let mut offers: Vec<MarketOffer> = Vec::new();
     for lot in table {
-        let mut candidates = pool_ids(state, lot.pool);
+        // R2201001: a held game offers no Legendary or Mythic card.
+        let mut candidates: Vec<String> = pool_ids(state, lot.pool)
+            .into_iter()
+            .filter(|id| !find_def(Some(state), id).is_some_and(crate::catalog::held_out))
+            .collect();
         for _ in 0..lot.count {
             if candidates.is_empty() {
                 break;
