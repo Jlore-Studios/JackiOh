@@ -20,7 +20,7 @@ export function UndoToast({ held, onUndo }: { held: HeldDeletion | null; onUndo:
   const panelReduces = useSetting("reduceMotion");
   const osReduces = useOsReducedMotion();
   const reduced = panelReduces || osReduces;
-  // The region is always there, so a reader's screen hears the toast that appears in it.
+  // The region is always there, so a screen reader announces each toast put inside it.
   return (
     <div className="undo-toast-region" role="status" aria-live="polite">
       {held === null ? null : (
