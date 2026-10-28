@@ -7527,10 +7527,13 @@
     "what": "build #2257 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-28T19:48:07Z",
+    "at": "2026-10-28T19:55:38Z",
     "notes": [
       "CI on #2217: #2217: queued a CI fix",
-      "CI on #2186: #2186: queued a CI fix"
+      "delivered build #2214 on claude-7 (run 40717950455): approved",
+      "started build #2257 on claude-7 (run 40759004777)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8236,7 +8239,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T19:48:07Z",
+  "loop_tick": "2026-10-28T19:55:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
