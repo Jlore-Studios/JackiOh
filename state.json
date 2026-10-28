@@ -5887,22 +5887,14 @@
     "what": "review #2155 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-28T09:09:48Z",
+    "at": "2026-10-28T09:21:38Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered suggest on claude-8 (run 40657495123): suggested",
-      "delivered revise #2085 on claude-3 (run 40652851554): approved",
-      "delivered build #2024 on claude-8 (run 40650992886): approved",
-      "delivered build #2023 on claude-3 (run 40649598068): approved",
-      "delivered build #2067 on claude-4 (run 40636949725): approved",
-      "#2215: typed it Feature",
-      "#2214: typed it Task",
-      "#2213: typed it Task",
-      "#2212: typed it Task",
-      "#2211: typed it Task",
-      "#2210: typed it Task",
-      "#2209: typed it Task",
-      "#2208: typed it Task"
+      "delivered revise #2207 on muse (run 40652761712): approved",
+      "delivered revise #2155 on muse (run 40648362888): approved",
+      "delivered revise #2088 on claude-7 (run 40644842473): approved",
+      "started review #2155 on claude-8 (run 40664418981)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -6608,7 +6600,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T09:09:48Z",
+  "loop_tick": "2026-10-28T09:21:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
