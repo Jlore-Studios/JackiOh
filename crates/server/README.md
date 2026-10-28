@@ -54,7 +54,7 @@ decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set 
 "newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). Every whole-log
-fold on an async path (a rebuild's three, a replay's opening, the reaper's, a game record's and `timing-backfill`'s) runs there too,
+fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one, before its result's transaction, which its quests and its game record share (#2213), a refiled game record's and `timing-backfill`'s) runs there too,
 one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
@@ -307,8 +307,8 @@ What the actor holds, each with a test named after it:
   then (R744), and it reads as present (`presence`) until the game ends. As for any match, a
   restart's actor is rebuilt when the person's socket comes back.
 
-After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
-engine's `summarize_game`) under the match's mode and the patch the match started on (its row's
+After a result commits, `api::results` files the game in `game_records` (`api::game_records`, from the
+engine's `summarize_game` fold made once before the result's transaction, #2213) under the match's mode and the patch the match started on (its row's
 `catalog_version`), as `source: "live"`, and the store folds it into the card statistics' totals in
 the same transaction (R1044000); a failure is logged as `game.record.failed` and the result stands.
 

@@ -6,7 +6,7 @@
 //
 // The server is a stubbed `fetch` (`test/stubServer.ts`) and time is vitest's fake clock.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
@@ -14,6 +14,7 @@ import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { FRIENDS_PATH, type Friend } from "../net/social.ts";
+import { settle } from "../test/settle.ts";
 import { stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
@@ -55,14 +56,6 @@ function serve(): StubServer {
   });
 }
 
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
-}
-
 /** How many times each social read was made so far. */
 function reads(server: StubServer): { friends: number; challenges: number; unread: number } {
   return {
@@ -96,19 +89,19 @@ describe("#936 the social reads' cadences", () => {
   it("Play together reads its friends list again only every FRIENDS_POLL_MS, not at the chat's pace", async () => {
     const server = serve();
     render(<TogetherRoute />);
-    await settle();
+    await settle({ advance: 0 });
     const first = reads(server);
     expect(first.friends).toBe(1);
     expect(first.challenges).toBeGreaterThan(0);
     expect(first.unread).toBeGreaterThan(0);
 
-    await settle(SOCIAL_POLL_MS);
+    await settle({ advance: SOCIAL_POLL_MS });
     const second = reads(server);
     expect(second.friends, "not again within a social poll").toBe(first.friends);
     expect(second.challenges).toBeGreaterThan(first.challenges);
     expect(second.unread).toBeGreaterThan(first.unread);
 
-    await settle(FRIENDS_POLL_MS - SOCIAL_POLL_MS);
+    await settle({ advance: FRIENDS_POLL_MS - SOCIAL_POLL_MS });
     expect(reads(server).friends).toBe(first.friends + 1);
   });
 
@@ -120,26 +113,26 @@ describe("#936 the social reads' cadences", () => {
         <FriendsButton placement="game" />
       </>,
     );
-    await settle();
+    await settle({ advance: 0 });
     const closed = reads(server);
     expect(closed.unread).toBe(1);
     expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
 
-    await settle(FRIENDS_POLL_MS * 2);
+    await settle({ advance: FRIENDS_POLL_MS * 2 });
     expect(reads(server).friends, "a board being played asks for no friends list").toBe(0);
     expect(reads(server).unread).toBe(closed.unread + Math.floor((FRIENDS_POLL_MS * 2) / SOCIAL_POLL_MS));
 
     fireEvent.click(screen.getByTestId(friendsTestid.button));
-    await settle();
+    await settle({ advance: 0 });
     expect(reads(server).friends).toBe(1);
-    await settle(SOCIAL_POLL_MS);
+    await settle({ advance: SOCIAL_POLL_MS });
     expect(reads(server).friends, "the open panel keeps the heartbeat's pace").toBe(1);
-    await settle(FRIENDS_POLL_MS - SOCIAL_POLL_MS);
+    await settle({ advance: FRIENDS_POLL_MS - SOCIAL_POLL_MS });
     expect(reads(server).friends).toBe(2);
 
     fireEvent.click(screen.getByTestId(friendsTestid.close));
     expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
-    await settle(FRIENDS_POLL_MS * 2);
+    await settle({ advance: FRIENDS_POLL_MS * 2 });
     expect(reads(server).friends, "closed again, the list is not read").toBe(2);
   });
 
@@ -151,23 +144,23 @@ describe("#936 the social reads' cadences", () => {
         <TogetherRoute />
       </>,
     );
-    await settle();
+    await settle({ advance: 0 });
     expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
 
-    await settle(SOCIAL_POLL_MS);
+    await settle({ advance: SOCIAL_POLL_MS });
     expect(reads(server)).toMatchObject({ challenges: 2, unread: 2 });
   });
 
   it("the challenge toast reads the challenges every SOCIAL_POLL_MS, not at the chat's pace", async () => {
     const server = serve();
     render(<ChallengeToast />);
-    await settle();
+    await settle({ advance: 0 });
     const first = reads(server).challenges;
     expect(first).toBe(1);
 
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(reads(server).challenges).toBe(first);
-    await settle(SOCIAL_POLL_MS - CHAT_POLL_MS);
+    await settle({ advance: SOCIAL_POLL_MS - CHAT_POLL_MS });
     expect(reads(server).challenges).toBe(first + 1);
     expect(reads(server).friends, "the toast never reads the friends list").toBe(0);
   });
@@ -182,7 +175,7 @@ describe("R2125000 the friends list opens on its last answer", () => {
 
     expect(screen.getAllByTestId(togetherTestid.friendRow)[0]).toHaveTextContent("Kept");
 
-    await settle();
+    await settle({ advance: 0 });
     const rows = screen.getAllByTestId(togetherTestid.friendRow);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent("Ann");
@@ -196,7 +189,7 @@ describe("R2125000 the friends list opens on its last answer", () => {
 
     expect(screen.queryAllByTestId(togetherTestid.friendRow)).toHaveLength(0);
 
-    await settle();
+    await settle({ advance: 0 });
     expect(screen.getAllByTestId(togetherTestid.friendRow)[0]).toHaveTextContent("Ann");
   });
 });

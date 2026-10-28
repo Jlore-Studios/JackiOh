@@ -1,6 +1,7 @@
 // Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
-// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, and
-// the engine, and an empty read cache before each test (R2125000: a test never starts on another's kept answers).
+// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, a
+// `PointerEvent` that keeps `pointerType`, and the engine, and an empty read cache before each test
+// (R2125000: a test never starts on another's kept answers).
 //
 // The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
@@ -59,6 +60,31 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "scrollTo", { configurable: true, writable: true, value: () => {} });
 }
+
+// A `PointerEvent` that drops `pointerType` makes every touch read as a mouse click (#2215).
+function ensurePointerEvent(): void {
+  const win = document.defaultView;
+  if (win === null) return;
+  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
+  if (probe !== null && probe.pointerType === "touch") return;
+
+  class TestPointerEvent extends win.MouseEvent {
+    readonly pointerType: string;
+    readonly pointerId: number;
+    readonly isPrimary: boolean;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? "";
+      this.pointerId = init.pointerId ?? 1;
+      this.isPrimary = init.isPrimary ?? true;
+    }
+  }
+  for (const target of [win, globalThis]) {
+    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
+  }
+}
+
+if (typeof window !== "undefined") ensurePointerEvent();
 
 beforeEach(() => {
   clearReadCache();

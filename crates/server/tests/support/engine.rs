@@ -352,9 +352,11 @@ pub const FOLD_GATE_WAIT: Duration = Duration::from_secs(5);
 
 /// #1035: what `TEST_FOLD_GATE`'s script shares with its test. Armed, the next play of the card parks
 /// its fold: it tells the test it has parked (`parked`), then waits for the test's release, for at most
-/// `FOLD_GATE_WAIT`. `note` and `order` record the steps in the order they happened.
+/// `FOLD_GATE_WAIT`. `note` and `order` record the steps in the order they happened, and `passes`
+/// counts every play, armed or not (#2213).
 pub struct FoldGate {
     armed: AtomicBool,
+    passes: AtomicUsize,
     parked: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     release: Mutex<mpsc::Receiver<()>>,
     order: Mutex<Vec<&'static str>>,
@@ -371,6 +373,7 @@ impl FoldGate {
         let (parked, parks) = tokio::sync::oneshot::channel();
         let gate = Arc::new(FoldGate {
             armed: AtomicBool::new(false),
+            passes: AtomicUsize::new(0),
             parked: Mutex::new(Some(parked)),
             release: Mutex::new(released),
             order: Mutex::new(Vec::new()),
@@ -397,7 +400,13 @@ impl FoldGate {
             .clone()
     }
 
+    /// #2213: how many plays of `TEST_FOLD_GATE` have run, armed or not: one for each fold of a log that plays it.
+    pub fn passes(&self) -> usize {
+        self.passes.load(Ordering::SeqCst)
+    }
+
     fn pass(&self) {
+        self.passes.fetch_add(1, Ordering::SeqCst);
         if !self.armed.swap(false, Ordering::SeqCst) {
             return;
         }

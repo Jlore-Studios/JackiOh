@@ -3,7 +3,7 @@
 // (R372). Each reads the view and nothing else (CLAUDE.md rule 7): the fixtures below are
 // `PlayerView`s, and the component is the board that renders them.
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -22,9 +22,8 @@ import {
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -34,17 +33,7 @@ afterEach(() => {
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
-const lookup = lookupFromDefs(CATALOG);
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
-
-function renderBoard(view: PlayerView): HTMLElement {
-  const { container } = render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  );
-  return container;
-}
 
 /** The back in one backrow zone. */
 function backIn(side: "you" | "opponent", lane: number): HTMLElement {
