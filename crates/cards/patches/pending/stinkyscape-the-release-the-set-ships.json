@@ -1,7 +1,7 @@
 {
   "title": "Stinkyscape, the release: the set ships",
   "sources": "Issue #1884, the last part of #1856 (tracker #1836)",
-  "notes": "The Stinkyscape set ships (R1420, R1857000): its 175 cards, the Dormant Starship and 52 tokens join every pool that names no set, the deck builder, the Almanac and random decks, while the AI's own random decks keep R1390's soft gate (AI_DECK_GATED_SETS) until issue #1885 measures the AI on the set. Its mechanics are the rulings of #1837 to #1855's phase 0 and of #1857 to #1883's parts. Core #95, Classic+ #73 and Meditative #95 link the two Stinkyscape editions their texts name (R279). Core #82 KY's Trial, which works across every set that ships (R831004), Discovers among six sets now, and every card of an earlier set whose pool names no set (Core #57's KY cards, the random Legendaries, Tribute cards and Calls to Chaos among them, R380) can now offer the set's cards; their texts do not change. The voice set's budget is 16 MiB for the set's lines (R1884000).",
+  "notes": "The Stinkyscape set ships (R1420, R1857000): its 175 cards, the Dormant Starship and 52 tokens join every pool that names no set, the deck builder, the Almanac and random decks, while the AI's own random decks keep R1390's soft gate (AI_DECK_GATED_SETS) until issue #1885 measures the AI on the set. Its mechanics are the rulings of #1837 to #1855's phase 0 and of #1857 to #1883's parts. Core #95, Classic+ #73 and Meditative #95 link the two Stinkyscape editions their texts name (R279). Core #82 KY's Trial, which works across every set that ships (R831004), Discovers among six sets now, and every card of an earlier set whose pool names no set (Core #57's KY cards, the random Legendaries, Tribute cards and Calls to Chaos among them, R380) can now offer the set's cards; their texts do not change, and the set's major claims them, as classify's forced games of KY's Trial play as before against a build that holds the set back (R1884002). The voice set's budget is 16 MiB for the set's lines (R1884000).",
   "player": {
     "title": "Stinkyscape",
     "new": [
@@ -252,8 +252,5 @@
     "stinkyscape-t-ai-08",
     "stinkyscape-t-ai-09",
     "stinkyscape-t-ai-10"
-  ],
-  "plays": [
-    "core-082"
   ]
 }
