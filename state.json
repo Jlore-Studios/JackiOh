@@ -6031,6 +6031,11 @@
             "family": "claude",
             "run": "40675801316",
             "tier": "strong"
+          },
+          {
+            "family": "muse",
+            "run": "40678310673",
+            "tier": "medium"
           }
         ],
         "sha": "0501957549247c58e27837e58ad2d33da59a6801",
