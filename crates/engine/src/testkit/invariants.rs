@@ -1710,14 +1710,19 @@ impl InvariantMonitor {
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
     /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
     /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
-    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// uncover, or anywhere after a rotation moved the piles, R14) takes `summonedTurn`'s word only when
+    /// it names a turn of the action.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
+        // R14: a rotation moves every pile a step, so a zone an event named before it is no longer where
+        // the card it covered stands, and any card of the field may have been uncovered there.
+        let mut rotated = false;
         for event in events {
             match event {
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
+                GameEvent::Rotated { .. } => rotated = true,
                 GameEvent::Summoned {
                     player, row, lane, ..
                 } => landed.push((*player, *row, *lane)),
@@ -1759,7 +1764,7 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let may_have_been = was_dormant || rotated || landed.contains(&(player, row, lane));
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
