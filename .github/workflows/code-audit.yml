@@ -1,0 +1,48 @@
+# The code audit: every three days, one issue that hands the night bot #900's audit again (dead code,
+# duplicated logic, zombie routes; `bot:build`, `difficulty:hard`), for one pull request a person
+# reviews and merges (`person merges`).
+# Its text is .github/hygiene/code.md, where no bot may change it, and it opens through the weekly
+# hygiene run's own `branches.py issue`, which opens none while the last code audit is still open, so
+# the audits never stack up. Nothing here deletes or merges anything. At 22:17 UTC on the 1st, 4th, 7th
+# … of each month (cron's */3 starts again on the 1st), and on demand: `gh workflow run
+# code-audit.yml`, with `-f dry_run=true` to open nothing.
+name: code audit
+
+on:
+  schedule:
+    - cron: "17 22 */3 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Open no issue; show what it would say
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: code-audit
+  cancel-in-progress: false
+
+jobs:
+  open:
+    name: open the code audit for the night bot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/hygiene
+      - name: open the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 .github/hygiene/branches.py issue code .github/hygiene/code.md /dev/null /dev/null \
+            | tee -a "$GITHUB_STEP_SUMMARY"

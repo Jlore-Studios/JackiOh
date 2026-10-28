@@ -57,6 +57,7 @@ import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankCaption, rankShortWords } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
+import StreakFlame from "../rank/StreakFlame.tsx";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
@@ -180,7 +181,7 @@ function asMatchRanks(value: unknown): MatchRanksResponse | null {
 }
 
 /**
- * Both seats' ranks for the match bar (R604, R612): whether this game moves the rating, and each
+ * Both seats' ranks and win streaks for the match bar (R604, R612, R2101000): whether this game moves the rating, and each
  * seat's visible rank beside its username, never its profile id (R1436). Read once: a promotion
  * mid-match shows on the next one. An answer that is not a ranks body — or no answer — leaves no
  * banner rather than breaking the board.
@@ -422,6 +423,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // (VOIDED_CLOSE_CODE, game/net.ts; `close()` runs only as this route unmounts) — has nothing to
   // reconnect to, so the board says the match is gone and offers the lobby.
   const gone = match.connection === "closed";
+  // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
+  const voided = view.result?.reason === "voided";
 
   const board = (
     <Game
@@ -455,12 +458,16 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
-          <button type="button" data-testid={matchTestid.watchReplay} onClick={() => setWatching({ share: false })}>
-            {t("Watch the replay")}
-          </button>
-          <button type="button" data-testid={matchTestid.shareLastTurn} onClick={() => setWatching({ share: true })}>
-            {t("Share the last turn")}
-          </button>
+          {voided ? null : (
+            <>
+              <button type="button" data-testid={matchTestid.watchReplay} onClick={() => setWatching({ share: false })}>
+                {t("Watch the replay")}
+              </button>
+              <button type="button" data-testid={matchTestid.shareLastTurn} onClick={() => setWatching({ share: true })}>
+                {t("Share the last turn")}
+              </button>
+            </>
+          )}
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
             {t("Back to lobby")}
           </button>
@@ -519,18 +526,18 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               <span className="match-ranks__full">
                 {ranks.ranked ? t("Ranked match") : t("Unranked match")} ·{" "}
                 <Username name={ranks.seats.p1.username} />
-                {ranks.seats.p1.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
+                {ranks.seats.p1.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p1.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
                 {rankCaption(ranks.seats.p1.rank)} {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
-                {ranks.seats.p2.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
+                {ranks.seats.p2.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p2.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
                 {rankCaption(ranks.seats.p2.rank)}
               </span>
               <span className="match-ranks__short">
                 {ranks.ranked ? t("Ranked") : t("Unranked")} · <Username name={ranks.seats.p1.username} />
-                {ranks.seats.p1.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
+                {ranks.seats.p1.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p1.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
                 {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
-                {ranks.seats.p2.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
+                {ranks.seats.p2.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p2.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
                 {rankShortWords(ranks.seats.p2.rank)}
               </span>
             </p>

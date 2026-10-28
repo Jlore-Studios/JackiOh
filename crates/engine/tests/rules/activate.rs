@@ -1821,3 +1821,81 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         );
     }
 }
+
+mod r1876000_r1876001_another_cards_activate {
+    use super::*;
+    use jackioh_engine::effects::{ActivationOfArgs, refuse_own_activate, run_activation};
+
+    /// Apply `effect` for `controller` with no card running it, then settle.
+    fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        controller: Some(controller),
+                        ..Default::default()
+                    },
+                );
+                (effect.apply)(&mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        state.rng_cursor = rng.cursor();
+    }
+
+    fn of(id: &str) -> ActivationOfArgs {
+        ActivationOfArgs {
+            instance_id: Some(id.to_string()),
+            ..ActivationOfArgs::default()
+        }
+    }
+
+    #[test]
+    fn r1876000_a_card_whose_own_activate_is_refused_cannot_use_it_and_lists_none() {
+        let mut state = playing("refused");
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        apply(&mut state, P1, refuse_own_activate(of(&unit.id)));
+        assert_eq!(
+            why_not(&state, P1, &unit.id, None),
+            Some("that card can't use its own Activate".to_string())
+        );
+        assert!(!lists_activate_of(&state, &unit.id));
+        assert_eq!(
+            act_result(&state, activate(P1, &unit.id, json!({})))
+                .error
+                .as_deref(),
+            Some("that card can't use its own Activate")
+        );
+    }
+
+    #[test]
+    fn r1876001_running_another_cards_ability_spends_none_of_its_uses_and_ignores_its_refusal() {
+        let mut state = playing("run");
+        let refused = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        let free = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
+        apply(&mut state, P1, refuse_own_activate(of(&refused.id)));
+        let before = state.players.p1.mana.current;
+        apply(&mut state, P1, run_activation(of(&refused.id)));
+        apply(&mut state, P1, run_activation(of(&free.id)));
+        // Each "Gain 1 mana", run as the running card's effect.
+        assert_eq!(state.players.p1.mana.current, before + 2);
+        // The free one still has both of its "Activate 2" uses.
+        state = act(&state, activate(P1, &free.id, json!({})));
+        state = act(&state, activate(P1, &free.id, json!({})));
+        assert_eq!(state.players.p1.mana.current, before + 4);
+    }
+
+    #[test]
+    fn r1876001_an_ability_that_declares_a_target_is_never_run() {
+        let mut state = playing("run-target");
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        let hero = state.players.p2.hero.health;
+        apply(&mut state, P1, run_activation(of(&card.id)));
+        assert_eq!(state.players.p2.hero.health, hero);
+    }
+}

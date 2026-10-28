@@ -686,7 +686,7 @@ costs, stats and keywords are the proposal's; their texts are refined:
   2×) rather than two Radiant ones (4×).
 
 **How they are dealt.** #1853's Marketplace (pending PR #1963) offers one of the ten each cycle, S21's lot
-over their ids (stock 1 to 3, a Radiant one 20% of the time at twice the price). Once the set ships they join
+over their ids (stock 1 to 3, a Radiant one 20% of the time at twice the price), `MARKETPLACE_TABLE`'s last lot ([[R1881006]]). Once the set ships they join
 every AI pool ([[R1421]]): C+ #43 AI Slop (the (1) Cost ones), C+ #78 Claude's Datacenter, M #42's night
 market, M #53, M #59 and M #60, which grow to 24 cards (the release re-pins R480's list).
 
@@ -849,8 +849,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Tradable / Cry: Complete the current stage on all your Quests.
 - **Radiant:** Tradable / Cry: Summon The Greatest Heist. Complete the current stage on all your Quests.
-- **Engine:** Tradable ([[R1838000]]). Cry ([[R1]]): `complete_quests` ([[R1854001]]): every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward given at the next state check; a line hearing back or done has nothing open. Radiant: `summon { defId: stinkyscape-007 }` into the leftmost open backrow zone first ([[R64]]); a summon that names its card fires its Cry ([[R1]], [[R411]]), so S #7's Discover is asked, and its line, not yet open, opens its first stage and has it completed ([[R1854001]]).
-- **Rulings:** ST-S09-1: the Radiant summon names The Greatest Heist, so its Cry runs before the completion; a full backrow summons nothing and the completion reaches the other Quests alone. ST-S09-2: the opponent's Quests and an untagged card with a quest line are passed by (R1854001). These are proposals for S09, which takes R-numbers from its own block. No R-number here.
+- **Engine:** Tradable ([[R1838000]]). Cry ([[R1]]): `complete_quests` ([[R1854001]]): every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward given at the next state check; a line hearing back or done has nothing open. Radiant: `summon { defId: stinkyscape-007 }` into the leftmost open backrow zone first ([[R64]]), then its Cry is triggered there, the summon naming it ([[R411]], [[R1873003]]): its Discover is asked before the completion, and its first stage, opened as it entered, is completed with the rest ([[R1854001]], [[R1873000]]).
+- **Rulings:** ST-S09-1: the Radiant summon names The Greatest Heist, so its Cry runs before the completion; a full backrow summons nothing and the completion reaches the other Quests alone. ST-S09-2: the opponent's Quests and an untagged card with a quest line are passed by (R1854001). Built by S09 (#1873) as [[R1873000]], ST-S09-1's Cry included: the engine's triggered Cry reaches a face-up Field Spell on the field ([[R1873003]]).
 - **Numbers:** none (a verb and a summon).
 - **Check:** R275: stats doubled, and the Radiant face brings its own Quest and completes its first stage at once. Tradable as printed (L2).
 - **Class:** C (staged Quests, M07).
@@ -863,7 +863,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Discover an Acclaimed Unit or a Jelly Bean. / Quest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit. / Quest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource. / Quest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals.
 - **Radiant:** Cry: Discover a Radiant Acclaimed Unit or a Radiant Jelly Bean. / Quest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random Radiant Acclaimed Unit. / Quest: Stage 2, Comradery. Have 2 Acclaimed Units you control die. Reward: Do this {finds|time|times}: at random, add a Radiant Anomaly Found! to your hand or gain a random Radiant Stinkyscape Resource. / Quest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana crystals.
 - **Engine:** A staged Quest ([[R1854000]]): `Script.stages`, three stages of one goal each, the first opened as the card enters the field, each reward's last effect `next_stage`, the line done after Stage 3. Cry ([[R1]]): one Discover over one pool, the non-token Acclaimed Units and the Jelly Bean cards (Core #26–#29, [[R1837000]]) of the sets that ship ([[R380]]); Radiant: the options Radiant. Stage 1: `unitsMadeRadiant { count: 1, tag: Acclaimed }` ([[R1854002]]), reward a random non-token Acclaimed Unit summoned ([[R64]], no Cry, [[R1]]). Stage 2: `unitsDied { count: 2, tag: Acclaimed }`, reward finds rolls from the match rng, each at even odds an Anomaly Found! added to the hand ([[§2.4]]'s cap; #1855's board swap, pending) or a Stinkyscape Resource gained into the tray by [[R1840002]]'s roll ([[R1840000]]: a Resource never enters a hand). Stage 3: `cardsStolen { count: 1 }`, reward `steal_mana_crystals` ([[R1854003]]). Radiant: the summoned Unit, the Anomaly Found! and the Resource Radiant.
-- **Rulings:** ST-S09-3: "an Acclaimed Unit or a Jelly Bean" is one Discover over the union, so a Jelly Bean (a hand card, Core #26's pick) can meet Stage 1 (R1854002). ST-S09-4: "3 random Anomalies or Resources" is three rolls, each an Anomaly Found! or a Resource at even odds. ST-S09-5: a stage line reads `Quest: Stage N, <name>. <goal>. Reward: <reward>.`, since `Quest:` starts its own line (R366). These are proposals for S09, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S09-3: "an Acclaimed Unit or a Jelly Bean" is one Discover over the union, so a Jelly Bean (a hand card, Core #26's pick) can meet Stage 1 (R1854002). ST-S09-4: "3 random Anomalies or Resources" is three rolls, each an Anomaly Found! or a Resource at even odds. ST-S09-5: a stage line reads `Quest: Stage N, <name>. <goal>. Reward: <reward>.`, since `Quest:` starts its own line (R366). Built by S09 (#1873): ST-S09-3 as [[R1873001]], ST-S09-4 as [[R1873002]]; ST-S09-5 is the catalog's text as the foundation wrote it.
 - **Numbers:** finds 3 ↑ (Radiant 3). The stage ordinals and Stage 2's count of 2 are the line's structure (`FIXED` STRUCTURE, R1748003).
 - **Check:** ST8: "Jellybean" is a Jelly Bean (L1's tag). The list prints one face with [Radiant] marks; the Radiant face is built from them. "Empty the VC vault!" is flavour. Resources are gained, never added to a hand (R1840000). R275: every reward and the Discover Radiant.
 - **Class:** C (staged Quests, M07; Resources, M03).
@@ -1201,7 +1201,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Copy the text of a Legendary or Mythic Unit on the field.
 - **Radiant:** Cry: Copy the Radiant text of a Legendary or Mythic Unit on the field.
 - **Engine:** Cry ([[R1]]): a declared target ([[R81]]), a Legendary or Mythic Unit on the field, either side, not itself; `copy_unit_text { target }` ([[R1850000]]): its keywords, aura, triggers, hooks, Death, Activates and numbers on this body until it leaves the field ([[R78]]), its own name, cost, type, tags, rarity and stats kept; the copied Cry does not run. Radiant: `radiant: true`, the target's Radiant text. No target, nothing.
-- **Rulings:** ST-S17-1: "Legendary or Mythic" is the target's rarity; a token's rarity is Token, whatever it printed. ST-S17-2: an Immutable target may be copied; an Immutable Tnack Trav copies nothing (R1850000). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-1: "Legendary or Mythic" is the target's rarity; a token's rarity is Token, whatever it printed. ST-S17-2: an Immutable target may be copied; an Immutable Tnack Trav copies nothing (R1850000). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both are [[R1876003]].
 - **Numbers:** none.
 - **Check:** ST9: Tnack Trav (#20) and Tmack Trav (#94) are two cards. "on the Field" is the field. R275: stats doubled and the Radiant text copied.
 - **Class:** C (M16's copy a Unit's text).
@@ -1265,8 +1265,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy).
 - **Radiant:** Choose a zone. Its Jacobian stretches a unit square. Summon a random Radiant Starship Piece in each of your zones it covers. F(x, y) = (x² − y, xy).
-- **Engine:** The build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5, y 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 their backrow. A zone chosen (`choose_cell`, B5 E18) maps the unit square through the Jacobian J, rows (2x, −1) and (y, x), with its corner at the zone; NEW: each zone whose centre lies in that parallelogram, open and unlocked, gets a random non-token Starship Piece Unit summoned (a pool by keyword, of the sets that ship, [[R380]]) for the side it is on ([[R64]]'s placement, no Cry, [[R1]]), a backrow zone taking it as a Unit standing there ([[R1081000]]). Radiant: only the caster's zones, each piece Radiant.
-- **Rulings:** ST-S18-1: an occupied or Locked zone gets none; the chosen zone itself gets one when it lies in the parallelogram. ST-S18-2: a covered backrow zone takes the piece as a Unit standing in the backrow; S18 may keep pieces to unit zones instead. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Engine:** The build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5, y 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 their backrow. A zone chosen (`choose_cell`, B5 E18) maps the unit square through the Jacobian J, rows (2x, −1) and (y, x), with its corner at the zone; each unit zone whose centre lies in that parallelogram, open and unlocked, gets a random Starship Piece Unit summoned (`query::starship_pieces()`, [[R1878000]]) for the side it is on (no Cry, [[R1]]). Radiant: only the caster's zones, each piece Radiant.
+- **Rulings:** [[R1877000]] (built from ST-S18-1 and ST-S18-2): an occupied or Locked zone gets none; the chosen zone always covers itself (edges included); the build kept the pieces to unit zones, so a covered backrow zone gets none, as no summon puts a Unit in the backrow.
 - **Numbers:** none (the formula is the card's text, not a number; it prints no ASCII digit).
 - **Check:** D6: "Sinkyscape" is Stinkyscape. ST9 Q14 (the coordinates are the build's). R275: Radiant pieces, and only yours.
 - **Class:** D (the Jacobian cover).
@@ -1279,7 +1279,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Choose one: summon a random Starship Piece, or Activate your Universities.
 - **Radiant:** Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Summon a random Radiant Starship Piece, then Activate your Universities.
 - **Engine:** Cry ([[R1]]): `summon { defId: meditative-097-6, radiant }`, a Radiant M #97.6 University ([[R64]]), whose own Activate is refused (a mark on it, NEW). Activate ([[R384]]): base, two modes ([[R81]]): a random non-token Starship Piece Unit summoned (a pool by keyword, [[R380]]), or each University of its controller's runs its Activate's effect (Buff each of its other permanents N times) as an ability of this card, spending none of its uses (NEW); Radiant: both, the piece Radiant.
-- **Rulings:** ST-S17-3: "Its Activate is locked" refuses the summoned University's own use of its Activate (no zone is Locked); this card's Activate still runs it. ST-S17-4: "Activate your Universities" runs every University of yours, the locked one included, and spends none of their uses. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-3: "Its Activate is locked" refuses the summoned University's own use of its Activate (no zone is Locked); this card's Activate still runs it. ST-S17-4: "Activate your Universities" runs every University of yours, the locked one included, and spends none of their uses. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): ST-S17-3 is [[R1876000]], ST-S17-4 [[R1876001]].
 - **Numbers:** none (a summon and two modes).
 - **Check:** D6: "Sinkyscape" is Stinkyscape. The base face's "or" is a choice of modes, the Radiant face's "then" both. R275: stats doubled, both modes each turn and a Radiant piece.
 - **Class:** B (a summon and modes), with a NEW Activate of another card.
@@ -1422,7 +1422,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Each enemy Unit played that costs less than this is Allured. / Death: Remove every Allure on the field.
 - **Radiant:** Divine Shield / Aura: Each enemy Unit played that costs less than this is Allured. / Death: Remove every Allure on the field.
 - **Engine:** While it acts on the field, each Unit its controller's opponent plays whose cost paid ([[R56]]) is less than this card's cost now is Allured as it arrives ([[R963]], [[R1045000]]: the `allure` mark, stolen at the start of its controller's next turn, destroyed with no room). Death ([[§6.2]]): NEW: every Allure mark on the field, both sides', comes off, its steal cancelled ([[R437]]'s mark withdrawn).
-- **Rulings:** ST-S17-5: "played" is played, not summoned; the cost compared is the cost paid against this card's cost now. ST-S17-6: "Remove all Allures" takes off its own Allures and the opponent's, so it steals nothing once it dies. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-5: "played" is played, not summoned; the cost compared is the cost paid against this card's cost now. ST-S17-6: "Remove all Allures" takes off its own Allures and the opponent's, so it steals nothing once it dies. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): ST-S17-5 is [[R1876004]], ST-S17-6 [[R1876002]].
 - **Numbers:** none.
 - **Check:** R275: stats doubled and Divine Shield added.
 - **Class:** B (an Allure watcher), with a NEW Allure removal.
@@ -1447,8 +1447,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Brittle 4 / End of turn: Gain a Narcor. / Activate: Discard a Narcor to lower this card's Brittle by 1. / Death: If Brittle destroyed this, for the rest of the game, gain two Narcors at the end of each of your turns.
 - **Radiant:** Brittle 4 / End of turn: Gain a Red Narcor. / Activate: Discard a Narcor or a Red Narcor to lower this card's Brittle by 1. / Death: If Brittle destroyed this, for the rest of the game, gain two Red Narcors at the end of each of your turns.
-- **Engine:** Brittle 4 ([[§6.1]], [[R385]], [[R638]]). End of turn ([[R62]]): `gain_resources` of one Narcor (S #T-narcor, a one-id pool, [[R1840002]]) into its controller's tray, never a hand ([[R1840000]]); a ninth is sold at once ([[R1840001]]). Activate ([[R384]]), offered only while the tray holds a Narcor (a `canActivate` read of the tray): `discard_resource` of the oldest Narcor ([[R1840004]]), which ceases to exist, then `gain_brittle` of −1 on this card; a count driven to 0 so crumbles it at the state check, a Brittle death. Death: when its destroy was Brittle's (`crumbled`), a rest-of-game player effect on its controller, C+ #52's `never`-expiry modifier shape ([[§10.1]]): at the end of each of their turns, two Narcors, whatever became of the card. Another destroy, or an exile, gives nothing more. Radiant: Red Narcors (S #T-red-narcor), and the Activate takes the oldest Narcor or Red Narcor.
-- **Rulings:** ST-S04-1: "Add a Narcor to your hand" gains it into the tray ([[R1840000]]); "Discard a Narcor" is the oldest one there ([[R1840004]]), the Activate's cost, so it is offered only with a Narcor in the tray. ST-S04-2: lowering Brittle to 0 by the Activate crumbles it at the state check, so its Death reads it as destroyed by Brittle; "died to Brittle" is a `crumbled` destroy, never another destroy. ST-S04-3: "its End of Turn effect doubles and becomes permanent" is a rest-of-game effect of its controller's (C+ #52's shape): two Narcors (Radiant: two Red Narcors) at the end of each of their turns, outliving the card; a second Project that crumbles adds a second such effect.
+- **Engine:** Brittle 4 ([[§6.1]], [[R385]], [[R638]]). End of turn ([[R62]]): `gain_resources` of one Narcor (S #T-narcor, a one-id pool, [[R1840002]]) into its controller's tray, never a hand ([[R1840000]]); a ninth is sold at once ([[R1840001]]). Activate ([[R384]]), offered only while the tray holds a Narcor (a `canActivate` read of the tray): `discard_resource` of the oldest Narcor ([[R1840004]]), which ceases to exist, then `lower_brittle` of 1 on this card, which crumbles it at once when it leaves the count at 0, a Brittle death ([[R1861001]]). Death: when Brittle destroyed it (`brittle_spent` on the Death's snapshot, [[R1861001]]), a rest-of-game player effect on its controller, C+ #52's `never`-expiry modifier shape ([[§10.1]]) with `atEnd` ([[R1861002]]): at the end of each of their turns, the one it died on included, two Narcors, whatever became of the card. Another destroy, or an exile, gives nothing more. Radiant: Red Narcors (S #T-red-narcor), and the Activate takes the oldest Narcor or Red Narcor.
+- **Rulings:** ST-S04-1: "Add a Narcor to your hand" gains it into the tray ([[R1840000]]); "Discard a Narcor" is the oldest one there ([[R1840004]]), the Activate's cost, so it is offered only with a Narcor in the tray. ST-S04-2: lowering Brittle to 0 by the Activate crumbles it at once, so its Death reads it as destroyed by Brittle; "died to Brittle" is a crumble, the tick's or the Activate's, read as the spent count, never another destroy ([[R1861001]]). ST-S04-3: "its End of Turn effect doubles and becomes permanent" is a rest-of-game effect of its controller's (C+ #52's shape, `atEnd`, [[R1861002]]): two Narcors (Radiant: two Red Narcors) at the end of each of their turns, the one it died on included, outliving the card; a second Project that crumbles adds a second such effect.
 - **Numbers:** none (Brittle 4 is a numbered keyword's count ([[R482]]); the Activate's 1 is its step and the Death's two the doubling the designer names).
 - **Check:** The list's "End of Turn" is the label End of turn ([[R366]]); "Add … to your hand" is a gain into the tray ([[R1840000]]). R275: Red Narcor (Mythic) for Narcor (Legendary), about twice the value.
 - **Class:** C.
@@ -1539,7 +1539,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: The AI plays the first 3 actions of each of your turns. / End of turn: Summon a Drone Interceptor.
 - **Radiant:** Aura: The AI plays the first 3 actions of each of your turns. / End of turn: Summon a Radiant Drone Interceptor.
 - **Engine:** The autopilot as an aura ([[R1844000]]): `pilotsActions: 3`, so each of its controller's turns engages [[R1183002]]'s autopilot as it begins (`autopilotEngaged`), the start's prompts included, and [[R456]]'s first three actions, plays and attacks, are the engine's (an answer belongs to the action that asked), then the turn is the player's for good; ending the turn spends the rest. End of turn: `summon` of the Drone Interceptor token (`stinkyscape-t-drone-interceptor`, [[R64]]); Radiant: a Radiant one.
-- **Rulings:** ST-S12-1: the three actions are every one of your turns while it stands (ST9); a card that arrives mid-turn waits for the next (R1844000). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-1 is [[R1844000]]: the three actions are every one of your turns while it stands (ST9), and a card that arrives mid-turn waits for the next.
 - **Numbers:** none: the 3 is the aura's printed count, which no Nerf or Buff moves (R1844000, R386; `FIXED` STRUCTURE).
 - **Check:** D6: "Stinkscape" is Stinkyscape. ST9 (every turn). R275: a Radiant Drone Interceptor each turn.
 - **Class:** C (the AI at the wheel, M10).
@@ -1552,7 +1552,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Brittle 5 / Aura: The AI plays each of your turns. / End of turn: Summon a Drone Corvette.
 - **Radiant:** Brittle 5 / Aura: The AI plays each of your turns. / End of turn: Summon a Radiant Drone Corvette.
 - **Engine:** Brittle 5 ([[§6.1]], a count started as it enters). The autopilot as an aura ([[R1844000]]): `pilotsTurn`, each of its controller's turns played by [[R1183002]]'s autopilot from its start, `AUTOPILOT_MAX_ACTIONS` and the timeout included ([[R1183003]]). End of turn: `summon` of the Drone Corvette token (`stinkyscape-t-drone-corvette`, [[R64]]); Radiant: a Radiant one.
-- **Rulings:** ST-S12-2: a whole turn beats any count (#46's included) and the turn is the autopilot's from its start, its first prompts too (R1844000). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-2 is [[R1844000]]: a whole turn beats any count (#46's included) and the turn is the autopilot's from its start, its first prompts too; one that crumbles as a turn begins leaves that turn to its player, the aura read again before every step.
 - **Numbers:** none (Brittle 5 is a numbered keyword, `FIXED` KEYWORD).
 - **Check:** D6: "Stinkscape" is Stinkyscape. R275: a Radiant Drone Corvette each turn.
 - **Class:** C (the AI at the wheel, M10).
@@ -1747,7 +1747,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate: Gain a random Stinkyscape Resource. Has an extra turn cooldown.
 - **Radiant:** Starship Piece, Equip / Activate: Gain a random Radiant Stinkyscape Resource. Has an extra turn cooldown.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate, once a turn ([[R384]], [[R1751000]]), with `extraTurnCooldown` ([[R1841000]]), refused on its user's next turn: `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1: a Miner's Resource is a Stinkyscape Resource, every Resource the catalog holds, by R1840002's roll; it goes to the controller of the Unit the Activate is on, an equipped host's controller included. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1: a Miner's Resource is a Stinkyscape Resource, every Resource the catalog holds, by R1840002's roll; it goes to the controller of the Unit the Activate is on, an equipped host's controller included. Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate; "has an extra turn cooldown" is the M05 rider. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1760,7 +1760,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate, once a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1773,7 +1773,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 2: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 2: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 2, two uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1786,7 +1786,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 3: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 3: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 3, three uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1799,7 +1799,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Equip / Activate 5: Gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Equip / Activate 5: Gain a random Radiant Stinkyscape Resource.
 - **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate 5, five uses a turn ([[R384]], [[R1751000]]): `gain_resources { count: 1 }`, the rarity roll then one Resource of the rolled rarity over every Resource in the catalog ([[R1840002]]), into its controller's tray and never the hand ([[R1840000]]), a ninth sold at once ([[R1840001]]); the Radiant face's `radiant: true`.
-- **Rulings:** ST-S05-1 (as at S #62). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-1 (as at S #62). Built by S05 (#1872) as [[R1872000]].
 - **Numbers:** none (one Resource a use; the Activate count is no param, R482).
 - **Check:** The designer's "Activate 1" is Activate. R275: health doubled and a Radiant Resource.
 - **Class:** C
@@ -1915,8 +1915,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Starship Piece / Whenever this attacks, gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece / Whenever this attacks, gain a random Radiant Stinkyscape Resource.
-- **Engine:** Starship Piece ([[R1852000]]). A trigger on its own `attackDeclared`, forced attacks included ([[R53]]), C #45 Nature Titan's: `gain_resources` of one random Resource into its controller's tray ([[R1840000]], [[R1840002]]), before the combat, so a Badger that dies in it keeps the Resource; an attack called off before it fought ([[R44]]) gains nothing. Radiant: a Radiant Resource.
-- **Rulings:** ST-S04-5: "When this attacks" gains as the attack is declared and still stands, before the combat (Hearthstone's "whenever this attacks"), once per attack, forced ones included ([[R53]]); C #45 Nature Titan answers after the combat, which S04 may follow instead.
+- **Engine:** Starship Piece ([[R1852000]]). The engine's `afterAttack` hook, Core #32 Prem Panther's ([[R426]]): once each combat it attacked in, declared or forced ([[R53]]), is over and its state check has run, `gain_resources` of one random Resource into its controller's tray ([[R1840000]], [[R1840002]]), so a Badger that dies in the combat still gains; a defending Badger gains nothing, nor an attack called off before it fought ([[R44]]). Radiant: a Radiant Resource.
+- **Rulings:** ST-S04-5: "When this attacks" gains once per attack that is fought, forced ones included ([[R53]]), after the combat, as Core #32 Prem Panther's `afterAttack` answers ([[R426]]): a Badger that dies in the combat still gains, and an attack called off before it fought gains nothing ([[R44]]). S04 took this over a pre-combat hook the engine lacks, since both give the same Resource in every case the text names.
 - **Numbers:** none (one Resource, written "a").
 - **Check:** "add gain a random" is "gain a random" (ST8). R275: stats doubled; Radiant Resources.
 - **Class:** C.
@@ -1928,7 +1928,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Starship Piece, Rush / Whenever this attacks, gain a random Stinkyscape Resource.
 - **Radiant:** Starship Piece, Rush / Whenever this attacks, gain a random Radiant Stinkyscape Resource.
-- **Engine:** As S #75 ([[R1852000]], [[R53]], [[R1840000]]), with Rush ([[§6.1]]), so it may attack a Unit and gain on the turn it lands. Radiant: a Radiant Resource.
+- **Engine:** As S #75 ([[R1852000]], [[R53]], [[R426]], [[R1840000]]), with Rush ([[§6.1]]), so it may attack a Unit and gain on the turn it lands. Radiant: a Radiant Resource.
 - **Rulings:** none new: every reading is a ruling on `main` or the card's text.
 - **Numbers:** none (one Resource, written "a").
 - **Check:** "add gain a random" is "gain a random" (ST8). R275: stats doubled; Radiant Resources.
@@ -1942,7 +1942,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Flying / Cry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you.
 - **Radiant:** Starship Piece, Flying, Lucky 1 / Cry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you.
 - **Engine:** Starship Piece ([[R1852000]]), Flying. Cry ([[R1]]): `trade_offer` ([[R1845002]]): a delayed effect due at the start of the opponent's next turn, a countdown badge on its side; with a card in each hand its controller picks one of theirs (a `hand` prompt), it goes to the opponent's hand as theirs ([[R12]]), then the opponent Discovers one of their other hand cards and it comes to its controller's; an empty hand asks nothing. Radiant: Lucky 1 ([[§6.1]], [[R1438]]).
-- **Rulings:** ST-S18-3: Lucky 1 reaches the rolls its own text makes, the Discover's three options drawn twice; S18 names the comparator (default: the set whose cheapest card costs most, since the opponent gives the worst). These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** [[R1877001]] (built from ST-S18-3): the offer carries Yuma's Lucky as it is made; Lucky 1 draws the Discover's options twice and keeps the set whose cheapest card costs most, the earlier on a tie.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and Lucky 1.
 - **Class:** C (hidden Nerfs and trade offers, M11).
@@ -1955,7 +1955,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece / Cry: Equip a random Miner into this.
 - **Radiant:** Starship Piece / Cry: Equip a random Radiant Miner into this, twice.
 - **Engine:** Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry ([[R1]]): `equip_picks` ([[R1841002]]), a random pick from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id, a fresh copy fused straight into it as an Equip play fuses its card ([[R1086]], [[R77]]): no hand, no play, no Cry, its Activate with it; the Radiant face makes two picks, each Radiant ([[R469]]), the second from the Miners it does not hold. Off the field, Immutable, or holding every Miner, nothing ([[R129]]). It stays a piece, the kept card being one ([[R1852001]]).
-- **Rulings:** ST-S05-2: the designer's "[Radiant]" on both faces marks what the Radiant face changes, as his brackets do on one-face entries (the M05 fixture's chest reads it so): the base face's Miner is plain, the Radiant face's two are Radiant. "twice" is two picks, the second from the Miners it does not hold yet. "Miner vXs" are S #62 to S #66. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-2: the designer's "[Radiant]" on both faces marks what the Radiant face changes, as his brackets do on one-face entries (the M05 fixture's chest reads it so): the base face's Miner is plain, the Radiant face's two are Radiant. "twice" is two picks, the second from the Miners it does not hold yet. "Miner vXs" are S #62 to S #66. Built by S05 (#1872) as [[R1872001]].
 - **Numbers:** none (one pick, two on the Radiant face: the frame).
 - **Check:** The designer's "is Equip this" is "Equip into this". R275: stats doubled, the pick doubled and Radiant.
 - **Class:** C
@@ -1968,7 +1968,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Starship Piece, Flying / Cry: Choose one of 2 Miners and Equip it into this. / Embiggened (5): The Miners offered are Radiant.
 - **Radiant:** Starship Piece, Flying / Cry: Choose one of 2 Miners and Equip it into this, twice. / Embiggened (5): The Miners offered are Radiant.
 - **Engine:** Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry: `equip_picks` with a Discover of `options` 2 ([[R1841002]], `EQUIP_PICK_STEP`) from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id; the Radiant face twice, the second offer once the first pick is in and without it. Embiggened ([[R1175000]]): the offer is Radiant, the Cry reading `instance.embiggened` ([[R81]]). Its Embiggened price, (5), is past `MAX_MANA` (4), so it is played so only with mana an effect gave ([[R1857001]]).
-- **Rulings:** ST-S05-3: the designer's "[Radiant]" is the Embiggened version's (ST8, ST9: the offered Miners are Radiant); the Radiant face's change is "twice" alone, and Embiggened it offers Radiant Miners too. Its (5) is past `MAX_MANA` (4), so it is played Embiggened only with mana an effect gave (R1857001). These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-3: the designer's "[Radiant]" is the Embiggened version's (ST8, ST9: the offered Miners are Radiant); the Radiant face's change is "twice" alone, and Embiggened it offers Radiant Miners too. Its (5) is past `MAX_MANA` (4), so it is played Embiggened only with mana an effect gave (R1857001). Built by S05 (#1872) as [[R1872002]].
 - **Numbers:** none (the offer of 2 and the picks are the frame).
 - **Check:** ST8 and ST9: Embiggened (5), the offered Miners Radiant; the cost {4, embiggen 5} (R1857003's label). R275: stats doubled and the picks doubled.
 - **Class:** C
@@ -1981,7 +1981,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 2, Starship Piece, Flying / Cry: Discover 2 Radiant Miners and Equip them into this.
 - **Radiant:** Tribute 2, Starship Piece, Flying / Cry: Equip a Radiant copy of every Miner into this.
 - **Engine:** Tribute 2 ([[§6.3]] Tribute, [[R101]]), printed in the keyword line ([[R366]]), the script's `tribute`. Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned first if they have none ([[R1852000]]). Cry: `equip_picks`, two Discovers of three in turn ([[R1841002]]) from the five Miners, S #62 Miner v1 to S #66 Miner v5, by id, Radiant, the second without the first; the Radiant face fuses all five, Radiant, Miner v1 first, asking nothing.
-- **Rulings:** ST-S05-4: "Equip this with each Radiant Miner vX" is all five Miners, Radiant, fused one by one, v1 to v5. These are proposals for the S05 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S05-4: "Equip this with each Radiant Miner vX" is all five Miners, Radiant, fused one by one, v1 to v5. Built by S05 (#1872) as [[R1872003]].
 - **Numbers:** none (the picks are the frame; Tribute is no param, R482).
 - **Check:** R275: stats doubled; 2 of 5 → 5 of 5.
 - **Class:** C
@@ -2098,7 +2098,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Your Humans have Poisonous.
 - **Radiant:** Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots.
 - **Engine:** Aura ([[§10.4]]): every Human Unit its controller has on the field (granted tags read, [[R923]]), this one included, has Poisonous. Radiant: Cry ([[R1]]): Core #2 Bigots added while the hand has room ([[§2.4]], M+ #24's fill, [[R1185004]]).
-- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Bigots until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Bigots until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both need no ruling of their own (the aura's [[R923]], the fill's [[R1185004]]).
 - **Numbers:** none (the fill is the hand's room).
 - **Check:** R275: stats doubled and a hand of Bigots.
 - **Class:** B (an aura and a fill).
@@ -2110,10 +2110,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Can be sold from your hand at the Marketplace, like a Resource. / Discover a Stinkyscape card.
 - **Radiant:** Can be sold from your hand at the Marketplace, like a Resource. / Discover a Radiant Stinkyscape card.
-- **Engine:** NEW (S04): a sale from the hand. While #1853's Marketplace (pending PR #1963) is open, its owner may sell it from their hand in their main phase for Credits ([[R1840005]]), a sale as public as a Resource's; #1853's sale takes tray Resources only, and the list prints no sell range ("its price is determined like all other Resources"), so S04 sets it, with a catalog field only if it must (a shared surface). Discover ([[§6.3]]) a non-token Stinkyscape card: the pool names the set, so the held gate does not empty it ([[R380]], [[R1420]]), and it is never Spice ([[R387]]). Radiant: the pick is Radiant.
+- **Engine:** A sale from the hand ([[R1861000]], `StaticFlags.handSale`): while #1853's Marketplace is open, its owner may sell it from their hand in their main phase for Credits ([[R1840005]]), as a tray Resource sells and as publicly ([[R1853003]]), at a quote drawn each turn after the Resources'; the list prints no sell range ("its price is determined like all other Resources"), so it takes a Rare Resource's, 3–10 Credits, Radiant 6–20 (`HAND_SALE_PRICE`). Discover ([[§6.3]]) a non-token Stinkyscape card: the pool names the set, so the held gate does not empty it ([[R380]], [[R1420]]), and it is never Spice ([[R387]]). Radiant: the pick is Radiant.
 - **Rulings:** ST-S04-6: "Can be sold on the Resource marketplace" is a sale from its owner's hand while the Marketplace is open, in their main phase, for Credits, public as a Resource's sale is; Spice stays a hand card, never a Resource, so no tray rule reaches it. ST-S04-7: the designer's "only appearing once a Spice is potentially relevant" (for the AI) is S04's: its sale is offered only while the Marketplace is open.
 - **Numbers:** none (none printed).
-- **Check:** ⚠ designer: no sell range is printed (QUESTION in the part's notes). R275: a Radiant Discover.
+- **Check:** ⚠ designer: no sell range is printed; S04 took a Rare Resource's ([[R1861000]]). R275: a Radiant Discover.
 - **Class:** C.
 
 #### Stinkyscape #90 · After Burner
@@ -2189,7 +2189,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Radiant:** Add a Radiant Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** ST8: the Radiant face keeps Vxyl. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -2371,7 +2371,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Cast a random BUSTED card from anywhere in the game's code.
 - **Radiant:** Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it.
 - **Engine:** Cry ([[R1]]): one pick from `{ busted: true, everySet: true }` ([[R1846000]], [[R1846001]]): every BUSTED catalog card of the sets that ship and the single-player sets, never this card ([[R387]]), cast as a new card (`cast_new`, [[R70]]), a random cast's choices all random ([[§6.3]] Cast). Radiant: a Discover of three from the same pool, Radiant, the pick cast with its caster's choices.
-- **Rulings:** ST-S18-4: "Play" is a Cast (free, a play for every rule, R70); "anywhere in the game's code" is `everySet` (R1846001), single-player sets included once they exist. ST-S18-5: the BUSTED list is the build's (R1846000), so the pool grows with the catalog. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-4 and ST-S18-5 proposed, so no new ruling: "Play" is a Cast (free, a play for every rule, R70); "anywhere in the game's code" is `everySet` (R1846001), single-player sets included once they exist; the BUSTED list is the build's (R1846000), so the pool grows with the catalog.
 - **Numbers:** none.
 - **Check:** ⚠ designer: no Radiant stats printed: 12/22 (R275 doubled, R1857001). The designer's "For AI" note is M12's (R1846000, R1846001). R275: stats doubled and a chosen, Radiant cast.
 - **Class:** C (card metrics, M12).
@@ -2384,7 +2384,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Duo with a permanent and make it Radiant next turn.
 - **Radiant:** Cry: Squad with all your permanents and make them Radiant next turn.
 - **Engine:** Cry ([[R1]]): `duo_radiant { target }` ([[R1850001]]): a declared permanent on either side, face-down or not, marked with the public gold `duo` mark ([[R437]]) and made Radiant at the start of its marker's next turn (`radiantSet`), not if it has left the field meanwhile ([[R174]]), even after this card has left ([[R76]]). Radiant: `squad_radiant`, every permanent its controller has on the field, unit tops in lane order then the backrow, a Radiant face-up card or a Dormant one passed by.
-- **Rulings:** ST-S17-9: "next turn" is the start of your next turn (R1850001). ST-S17-10: Squad does not mark iKwzki itself, which is Radiant already on that face. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-9: "next turn" is the start of your next turn (R1850001). ST-S17-10: Squad does not mark iKwzki itself, which is Radiant already on that face. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both are [[R1850001]]'s.
 - **Numbers:** none.
 - **Check:** The designer's "For AI" note (the Allure animation recoloured) is R1850001's gold mark. R275: stats doubled and every permanent of yours instead of one.
 - **Class:** C (M16's Duo and Squad).
@@ -2397,7 +2397,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Has {keywords|random combat keyword|random combat keywords}. / Cry: Replace both players' hands with random complicated cards.
 - **Radiant:** Aura: Has {keywords|random combat keyword|random combat keywords}. / Cry: Replace both players' hands with random complicated cards. Make yours Radiant.
 - **Engine:** M #65 Keymaster Keenus's aura (`draw_combat_keywords`, [[R781004]]): three different combat keywords drawn as it arrives and kept on it. Cry ([[R1]]): C+ #65.5's `replace_hand_with_random` for each player, its controller's first: each hand moved to its owner's graveyard (no discard) and as many random cards from `{ complicated: true }` ([[R1846000]]) added, repeats allowed ([[R60]]), never this card ([[R387]]). Radiant: its controller's new cards Radiant.
-- **Rulings:** ST-S18-6: each hand is replaced by as many complicated cards as it held; an empty hand gets none (R129). ST-S18-7: the pool is the sets that ship, as no `everySet` is asked (R1846001). These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-6 and ST-S18-7 proposed, so no new ruling: each hand is replaced by as many complicated cards as it held, an empty hand none (R129); the pool is the sets that ship, as no `everySet` is asked (R1846001).
 - **Numbers:** keywords 3 ↑ (Radiant 3).
 - **Check:** Typo "both player's" read as both players'. R275: stats doubled and your new hand Radiant.
 - **Class:** C (card metrics, M12).
@@ -2436,7 +2436,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 2 / Aura: All permanents that cost (2) or less are exiled.
 - **Radiant:** Tribute 2 / Aura: All enemy permanents that cost (2) or less are exiled.
 - **Engine:** Tribute 2, its play's cost ([[R101]]). An exile aura (`Script.exile_auras`, [[R1850002]]): both rows, `maxCost` 2, the cost each card has now ([[R66]]): at every state check each face-up card on the field it reaches is exiled, never this card, a face-down or a Dormant one; an arrival's Cry resolves first. Radiant: the enemy side only.
-- **Rulings:** ST-S17-11: "all Permanents" are both sides' Units and face-up backrow cards; the (2) is the aura's printed filter, no param. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-11: "all Permanents" are both sides' Units and face-up backrow cards; the (2) is the aura's printed filter, no param. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R1850002]]'s.
 - **Numbers:** none (the (2) is the aura's printed filter, `maxCost`, static data).
 - **Check:** R275: stats doubled and your own side spared.
 - **Class:** C (M16's exile aura).
@@ -2449,7 +2449,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Fuse every card in your exile into this.
 - **Radiant:** Cry: Fuse every card in both exiles into this.
 - **Engine:** Cry ([[R1]]): `fuse_cards` ([[R77]], [[R102]]): every card in its controller's exile pile, oldest first, fused into this card in one Fuse, this card kept: summed stats, the union of keywords, the scripts concatenated, cost min(sum, 4); the exiled cards cease to exist. An empty exile, nothing. Radiant: both players' exiles.
-- **Rulings:** ST-S17-12: "your Exile" is your exile pile; the fused cards leave it (they cease to exist, R77), the exile counter unchanged (R55). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-12: "your Exile" is your exile pile; the fused cards leave it (they cease to exist, R77), the exile counter unchanged (R55). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R77]]'s; a Radiant Citadel sums every ingredient's Radiant stats.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and both exiles instead of one.
 - **Class:** B (a Fuse from a pile).
@@ -2462,7 +2462,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 3 / Aura: Every Unit that is neither Human, a Starship Piece nor a Starship is exiled.
 - **Radiant:** Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a Starship is exiled.
 - **Engine:** Tribute 3, its play's cost ([[R101]]). An exile aura ([[R1850002]]): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece and Starship, read through the layers ([[§10.4]]), so a granted tag or keyword spares a Unit; exiled at each state check, never this card, a face-down or a Dormant one. Radiant: the enemy side only.
-- **Rulings:** ST-S17-13: Scornboi exiles Units only (ST9); a Dormant Starship is no Unit until it launches and is passed by (R1839000). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-13: Scornboi exiles Units only (ST9); a Dormant Starship is no Unit until it launches and is passed by (R1839000). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R1850002]]'s.
 - **Numbers:** none.
 - **Check:** ST9: Units. R275: stats doubled and your own side spared.
 - **Class:** C (M16's exile aura).
@@ -2566,7 +2566,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cloaked / Cry: Secretly Nerf a random Unit in your opponent's hand {times|time|times}, never its cost. No one sees the Nerfs until it is played.
 - **Radiant:** Cloaked / Cry: Secretly Nerf a random Unit in your opponent's hand {times|time|times}, never its cost. No one sees the Nerfs until it is played.
 - **Engine:** Cloaked ([[R783004]]; set face-down, its Cry runs as it is revealed, [[R783006]]). Cry ([[R1]]): `degrade_secretly { random: 1, times }` ([[R1845000]]) over the Unit cards of the opponent's hand that can take Nerfs (not Immutable): a hidden count on the card, nothing drawn or reported, no view showing it, the AI's redaction dropping it. It lands as the card is next played, at [[§10.5]] step 3, each Nerf drawn from every row but the cost's ([[R1845001]]).
-- **Rulings:** ST-S18-8: "nerfs avoid cost" and "the opponent does not see the nerfs until they play the card" are R1845001's landing; Gokugains' controller does not see them either (R1845000). An empty hand or one with no Unit, nothing. These are proposals for S18, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** built as ST-S18-8 proposed, so no new ruling: "nerfs avoid cost" and "the opponent does not see the nerfs until they play the card" are R1845001's landing; Gokugains' controller does not see them either (R1845000). An empty hand or one with no Unit, nothing.
 - **Numbers:** times 3 ↑ (Radiant 30), its Cry's (`cry: true`).
 - **Check:** The designer's {…} notes are M11's (R1845000, R1845001). R275: stats doubled and 30 Nerfs against 3 (10×).
 - **Class:** C (hidden Nerfs, M11).
@@ -2578,8 +2578,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Add {cards|random Starship Piece|random Starship Pieces} to your hand.
 - **Radiant:** Add {cards|random Radiant Starship Piece|random Radiant Starship Pieces} to your hand.
-- **Engine:** `add_random_from_catalog`, one draw of the match rng per card ([[R60]]): NEW: a pool of the cards that print Starship Piece ([[§6.1]]), non-tokens, the Dormant Starship never one ([[R1852001]], [[R1857001]]): `CatalogQuery` has no keyword field on main, so S19 adds one or names the pieces by id; a pool that names no set draws from the sets that ship ([[R380]]), so it names Stinkyscape's while the set is held ([[R1420]]); a full hand burns the rest ([[§2.4]]). Radiant: `radiant: true`.
-- **Rulings:** ST-S19-1: "a random Starship Piece" is a random non-token card that prints the keyword on its face, from the set's pieces (about forty, S03's and S06's); the Dormant Starship, no piece, is never one. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** `add_random_from_catalog`, one draw of the match rng per card ([[R60]]), from the Starship Piece pool (`query::starship_pieces()`): the non-token cards that print Starship Piece ([[§6.1]]) on their base face, the query's `keywords` filter, the Dormant Starship never one ([[R1857001]]); the pool names Stinkyscape, the one set that prints the keyword, so it reaches the pieces while the set is held ([[R1420]]); a full hand burns the rest ([[§2.4]]). Radiant: `radiant: true`.
+- **Rulings:** ST-S19-1: "a random Starship Piece" is a random non-token card that prints the keyword on its face, from the set's pieces (about forty, S03's and S06's); the Dormant Starship, no piece, is never one. Built by S19 (#1878) as [[R1878000]]: the base face, sixty pieces as the catalog stands.
 - **Numbers:** cards 3 ↑.
 - **Check:** ST8: the tag "Jlockeed's" is Jlockeed (R278); "Stinkscape" is Stinkyscape. R275: each piece Radiant.
 - **Class:** B
@@ -2591,8 +2591,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Activate: Add a random Starship Piece to your hand.
 - **Radiant:** Activate: Add a random Radiant Starship Piece to your hand.
-- **Engine:** A Field Spell (ST8, [[R1857001]]) whose Activate runs while it is face-up in the backrow, once a turn ([[R384]]): one card from S #124's Starship Piece pool (NEW). Radiant: `radiant: true`.
-- **Rulings:** ST-S19-1 (the pool). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** A Field Spell (ST8, [[R1857001]]) whose Activate runs while it is face-up in the backrow, once a turn ([[R384]]): one card from S #124's Starship Piece pool ([[R1878000]]). Radiant: `radiant: true`.
+- **Rulings:** ST-S19-1 (the pool). Built by S19 (#1878) as [[R1878000]].
 - **Numbers:** none (one card a use; the Activate count is no param, R482).
 - **Check:** ST8: a Field Spell, tagged Jlockeed. The designer's "add" is "Add". R275: a Radiant piece.
 - **Class:** B
@@ -2604,8 +2604,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** For the rest of the game. / Start of turn: Add {cards|random Starship Piece|random Starship Pieces} to your hand.
 - **Radiant:** For the rest of the game. / Start of turn: Add {cards|random Radiant Starship Piece|random Radiant Starship Pieces} to your hand. Each costs ({discount}) less.
-- **Engine:** C+ #52 Jlockeed's Permanent Defense Contract's shape: a rest-of-game start-of-turn modifier on its caster ([[R458]]), kept whatever becomes of the card, adding N cards from S #124's Starship Piece pool (NEW) at the start of each of their turns, before the draw ([[R62]]); a full hand burns them. Radiant: `radiant: true` and a `costMod` of −discount on each ([[R65]]).
-- **Rulings:** ST-S19-2: "at the start of your turn" is each of your turns for the rest of the game, starting with your next, C+ #52's modifier; "costs (1) less" is a cost modifier that never takes it below (0). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** C+ #52 Jlockeed's Permanent Defense Contract's shape: a rest-of-game start-of-turn modifier on its caster ([[R458]]), kept whatever becomes of the card, adding N cards from S #124's Starship Piece pool ([[R1878000]]) at the start of each of their turns, before the draw ([[R62]]); a full hand burns them. Radiant: `radiant: true` and a `costMod` of −discount on each ([[R65]]).
+- **Rulings:** ST-S19-2: "at the start of your turn" is each of your turns for the rest of the game, starting with your next, C+ #52's modifier; "costs (1) less" is a cost modifier that never takes it below (0). Built by S19 (#1878) on [[R458]], [[R62]] and [[R65]], C+ #52's, with no ruling of its own.
 - **Numbers:** cards 1 ↑; discount 1 ↑ (Radiant only, `tunedOn: radiant`).
 - **Check:** Written in C+ #52's words (R366: "Start of turn:", never "at the start of your turn"). R275: Radiant pieces at (1) less.
 - **Class:** B
@@ -2617,8 +2617,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** End of turn: This attacks a random enemy. / Embiggened (4): Starship Piece.
 - **Radiant:** End of turn: This attacks a random enemy. / Embiggened (4): Starship Piece.
-- **Engine:** End of turn ([[R62]]): a forced attack ([[R53]]) on one enemy, the hero or a Unit, drawn from the match rng ([[R60]]) among those it may attack under [[§4.2]] step 2 (Flying's restriction holds, [[R783002]]); position, summoning sickness and Taunt are not read and no exertion is spent; with none, nothing. Embiggened ([[R1175000]]): Starship Piece, a keyword the Embiggened version has as the play resolves (`instance.embiggened`, [[R81]]), as Core #56 Jilliax's Equip comes with its price ([[R831013]]); NEW if the Embiggened version cannot lend a keyword on main, Core #56's Equip being a play option and no keyword.
-- **Rulings:** ST-S19-3: "attacks a random enemy" is a forced attack on an enemy drawn among those it may attack (Flying's rule holding), Taunt not binding; "Embiggen: gain Starship Piece" is the Embiggened version having the keyword for good. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** End of turn ([[R62]]): a forced attack ([[R53]]) on one enemy, the hero or a Unit, drawn from the match rng ([[R60]]) among those it may attack under [[§4.2]] step 2 (Flying's restriction holds, [[R783002]]); position, summoning sickness and Taunt are not read and no exertion is spent; with none, nothing. Embiggened ([[R1175000]]): Starship Piece, a keyword the Embiggened version has as the play resolves (`instance.embiggened`, [[R81]]), as Core #56 Jilliax's Equip comes with its price ([[R831013]]): its `conditionalKeywords`, on the card stamped embiggened. A fused card's texts lend no Starship Piece; a kept card that lent it to itself keeps it as a grant ([[R1852001]], [[R1878001]]).
+- **Rulings:** ST-S19-3: "attacks a random enemy" is a forced attack on an enemy drawn among those it may attack (Flying's rule holding), Taunt not binding; "Embiggen: gain Starship Piece" is the Embiggened version having the keyword for good. Built by S19 (#1878): the attack is [[R53]]'s, the keyword [[R1878001]].
 - **Numbers:** none (no number is printed).
 - **Check:** The designer's "Embiggen:" is "Embiggened (4):" (R1175000). R275: stats doubled, the attack with them.
 - **Class:** B
@@ -2630,8 +2630,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Ranged, Cleave / Embiggened (3): Starship Piece.
 - **Radiant:** Ranged, Cleave / Embiggened (3): Starship Piece.
-- **Engine:** Ranged ([[R783000]]) and Cleave ([[§6.1]], [[R63]]): it takes no strike back from a defender without Ranged, and its attack splashes the Units beside its target, which never strike back. Embiggened ([[R1175000]]): Starship Piece, as S #127's.
-- **Rulings:** ST-S19-3 (the Embiggened keyword). These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** Ranged ([[R783000]]) and Cleave ([[§6.1]], [[R63]]): it takes no strike back from a defender without Ranged, and its attack splashes the Units beside its target, which never strike back. Embiggened ([[R1175000]]): Starship Piece, as S #127's ([[R1878001]]).
+- **Rulings:** ST-S19-3 (the Embiggened keyword). Built by S19 (#1878) as [[R1878001]].
 - **Numbers:** none (keywords and stats).
 - **Check:** R275's effect half: the same keywords on both faces (⚠ designer).
 - **Class:** A
@@ -2644,7 +2644,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies. / Embiggened (2): Starship Piece and Equip.
 - **Radiant:** End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies. / Embiggened (2): Starship Piece and Equip.
 - **Engine:** End of turn ([[R62]]): one hit of ⌊Attack ÷ divisor⌋, its Attack as it stands, to the enemy hero and every enemy Unit (`damage_all`, [[R59]]); a 0 is no hit ([[R63]]). Embiggened ([[R1175000]]): Starship Piece, and Equip as a play option at that price (Core #56 Jilliax's, [[R831013]], [[R1086]]), so it can be fused into a Unit whose Attack it then divides.
-- **Rulings:** ST-S19-4: "floor(attack / 4)" is its Attack as it stands at the end of turn, buffs included; equipped, its text runs on the host and reads the host's Attack. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Rulings:** ST-S19-4: "floor(attack / 4)" is its Attack as it stands at the end of turn, buffs included; equipped, its text runs on the host and reads the host's Attack. Built by S19 (#1878) as [[R1878002]]; its Starship Piece and Equip are lent as S #127's ([[R1878001]]).
 - **Numbers:** divisor 4 ↓ (Radiant 3).
 - **Check:** The designer's "Embiggen:" is "Embiggened (2):". R275: stats doubled, divisor 4 → 3.
 - **Class:** B
@@ -2656,8 +2656,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Add a random Jlockeed card to your hand. It gains Starship Piece.
 - **Radiant:** Add a random Radiant Jlockeed card to your hand. It gains Starship Piece and costs ({discount}) less.
-- **Engine:** `add_random_from_catalog { tags: [Jlockeed] }`, the non-token cards with the tag, itself left out ([[R278]], [[R387]]), then `grant_keyword` Starship Piece on the card in the hand, read on its death as a granted piece is ([[R1852000]]); a full hand burns it ([[§2.4]]). Radiant: `radiant: true` and a `costMod` of −discount ([[R65]]). A card given it fuses only when it dies: a Spell that resolves never does; NEW if a keyword granted in the hand does not ride onto the field (S19 checks).
-- **Rulings:** ST-S19-5: the granted Starship Piece rides the card from the hand onto the field and is read on its death (R1852000); a Spell or Field Spell given it fuses nothing unless it dies; "Radiant" makes the added card Radiant. These are proposals for the S19 part, which takes R-numbers from its own block.
+- **Engine:** `add_random_from_catalog { tags: [Jlockeed] }`, the non-token cards with the tag, itself left out ([[R278]], [[R387]]), given Starship Piece as it reaches the hand (its `keywords` rider, [[R1878003]]), which it keeps onto the field and which is read on its death as a granted piece is ([[R1852000]]); a full hand burns it ([[§2.4]]). Radiant: `radiant: true` and a `costMod` of −discount ([[R65]]). A card given it fuses only when it dies: a Spell that resolves never does.
+- **Rulings:** ST-S19-5: the granted Starship Piece rides the card from the hand onto the field and is read on its death (R1852000); a Spell or Field Spell given it fuses nothing unless it dies; "Radiant" makes the added card Radiant. Built by S19 (#1878) as [[R1878003]].
 - **Numbers:** discount 1 ↑ (Radiant only, `tunedOn: radiant`).
 - **Check:** R275: a Radiant card and (1) less.
 - **Class:** B
@@ -2943,7 +2943,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions. / Death: Shuffle an IN33DH3 Prime into your deck.
 - **Radiant:** Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions. / Death: Shuffle a Radiant IN33DH3 Prime into your deck.
 - **Engine:** Cry ([[R1]]): `pareto_hint` ([[R1844001]]): on its caster's own turn, until that turn's cleanup, their own view marks each hand card ME-PARETO's judge ([[R1125]]) would call optimal to play now (`paretoOptimal: true`), plays only, scored on their concealed copy ([[R222]]); on the opponent's turn nothing. Catalyst: Death shuffles S #147.1 IN33DH3 Prime into its owner's deck (C+ #38's shape, [[R1421]]), a Radiant one on its Radiant face.
-- **Rulings:** ST-S12-3: "For the rest of your turn" is the caster's own turn only (R1844001); a hint never lights an attack, an activation or End turn. These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-3 is [[R1844001]]: "For the rest of your turn" is the caster's own turn only, and a hint never lights an attack, an activation or End turn.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and the Prime Radiant.
 - **Class:** C (the Pareto hint, M10).
@@ -2956,7 +2956,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Summon a Wardrum Blob.
 - **Radiant:** Cry: Summon a Radiant Wardrum Blob.
 - **Engine:** Cry ([[R1]]): `summon { defId: stinkyscape-147-2 }`, S #147.2 Wardrum Blob, into its controller's leftmost open backrow zone ([[R64]]); none with no zone. Radiant: a Radiant one. A Prime: S #147's Death puts it in the deck; once the set ships ([[R1420]]), any Prime pool ([[R1421]]).
-- **Rulings:** ST-S12-4: the Blob is a Field Spell, summoned into the backrow, as M #71's The Cane is. These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-4 is [[R64]]'s summon by type: the Blob is a Field Spell, summoned into the leftmost open backrow zone as M #71's The Cane is, by a cast Prime's Cry too ([[R70]]).
 - **Numbers:** none.
 - **Check:** R275: stats doubled and the Blob Radiant.
 - **Class:** A (one summon).
@@ -2969,7 +2969,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: An AI always helps you make the Pareto Optimal decisions. / Start of turn: Do something helpful.
 - **Radiant:** Aura: An AI always helps you make the Pareto Optimal decisions. / Start of turn: Do something REALLY helpful.
 - **Engine:** `hintsPlays` ([[R1844001]]): during each of its controller's turns while it acts on their field, their own view marks the hand cards the judge calls optimal. Start of turn ([[R62]]): `helpful_cast` ([[R1844002]]): the perfect pool, every non-token card of every set that ships but its own ids ([[R1446]], [[R387]]), ranked for its caster as C+ #27 ranks a hand ([[R416]]), its top card cast free as a new card ([[R70]]), its choices its caster's. Radiant: `radiant: true`, the pool ranked by its Radiant faces and the pick cast Radiant.
-- **Rulings:** ST-S12-5: "REALLY helpful" is `radiant: true` (M10's open question 3); one cast, not two (R1844002). These are proposals for S12, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** none new (S12, #1874): ST-S12-5 is [[R1844002]]: "REALLY helpful" is `radiant: true` (M10's open question 3), one cast, not two.
 - **Numbers:** none.
 - **Check:** The designer's {quasi zeph} note is R1844002's `helpful_cast`. R275: the free cast Radiant.
 - **Class:** C (the AI at the wheel, M10).
@@ -3007,7 +3007,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand.
 - **Radiant:** Add a random Radiant Call to Chaos to your hand.
-- **Engine:** Two picks from the Call to Chaos pool (the cards tagged Call to Chaos; a pool that names no set holds the editions that ship, [[R380]], and S #150 and S #151 join it with their set), each drawn from the match rng ([[R60]]): the first goes to the opponent's hand as theirs at `costOverride` 0, the edition hidden from its caster ([[R97]]); then the second to its caster's hand, Radiant ([[§5.2]]), at its own cost. Radiant: only the caster's. A full hand burns ([[§2.4]]).
+- **Engine:** Two picks from the Call to Chaos pool (the cards tagged Call to Chaos; a pool that names no set holds the editions that ship, [[R380]], and S #150 and S #151 join it with their set), each drawn from the match rng ([[R60]]): the first goes to the opponent's hand as theirs at `costOverride` 0, the edition hidden from its caster ([[R97]]); then the second to its caster's hand, Radiant ([[§5.2]]), at its own cost. Radiant: only the caster's. A full hand burns ([[§2.4]]); [[R1882000]].
 - **Rulings:** ST-S25-1: "a Call to Chaos" is a random edition, the two picks independent; the caster's costs its printed (4).
 - **Numbers:** none.
 - **Check:** The list's "opponents hand" is your opponent's hand. R275: the Radiant face drops the free Call to Chaos the base face gives the opponent.
@@ -3020,7 +3020,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** One random effect: Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos.
 - **Radiant:** Three different random effects, resolved in the order listed: Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos.
-- **Engine:** Call to Chaos ([[§8]]'s family, Legendary): one entry drawn from the match rng and named to both players before it resolves ([[R436]]); Radiant: three different entries in list order ([[R1023]]'s draw). The entries: (1) S #159 ETHICS and S #95 Vanguard Coalition added Radiant; (2) S #113 A Very Dandy Lad and S #114 Arctic Citadel added at `costOverride` 0; (3) three picks, repeats allowed, from the Field Spells tagged Quest or Wincon (`anyTags`, [[R1422]]: C #90 In Too Deep, S #7, S #112 and S #148, the set's by name while it is held), summoned into its caster's backrow where a zone is open ([[R64]]); (4) a random Acclaimed Unit of the set (a pool that names Stinkyscape, [[R1420]]) added, then Refresh by its cost ([[§6.3]], never past max mana, [[R364]]); (5) every enemy Unit switched to Attack Position (an effect's switch, [[R20]]), then Frozen ([[§6.3]] Freeze); (6) `fill_board_random` with the set's Human Units ([[R1080]]); (7) `allure_enemy_units` ([[R963]]); (8) NEW (S25): a rest-of-game rule from this cast: whenever an Acclaimed card dies, either player's, its controller casts a random Call to Chaos, as a granted Death would ([[R1107]]); (9) a Stinkyscape Golem summoned; (10) a random Call to Chaos cast, the chain bounded by `RANDOM_CAST_CHAIN_CAP` ([[R452]]).
+- **Engine:** Call to Chaos ([[§8]]'s family, Legendary): one entry drawn from the match rng and named to both players before it resolves ([[R436]]); Radiant: three different entries in list order ([[R1023]]'s draw). The entries: (1) S #159 ETHICS and S #95 Vanguard Coalition added Radiant; (2) S #113 A Very Dandy Lad and S #114 Arctic Citadel added at `costOverride` 0; (3) three picks, repeats allowed, from the Field Spells tagged Quest or Wincon (`anyTags`, [[R1422]]: C #90 In Too Deep, S #7, S #112 and S #148, the set's by name while it is held), summoned into its caster's backrow where a zone is open ([[R64]]), the pool naming every set the catalog orders ([[R1882001]]); (4) a random Acclaimed Unit of the set (a pool that names Stinkyscape, [[R1420]]) added, then, once it is in the hand, Refresh by its printed cost ([[§6.3]], never past max mana, [[R364]]; a burned card refreshes nothing, [[R1882002]]); (5) every enemy Unit switched to Attack Position (an effect's switch, [[R20]]), then Frozen ([[§6.3]] Freeze, [[R1882003]]); (6) `fill_board_random` with the set's Human Units ([[R1080]]); (7) `allure_enemy_units` ([[R963]]); (8) a rest-of-game death watcher on its caster (`ModifierKind::DeathWatch`, [[R1882004]]): whenever an Acclaimed card dies, either player's, its controller casts a random Call to Chaos, a new chain; at most `CHAOS_STINKY_DEATH_WATCH_CAP` (3) a player, as [[R1241]] bounds M #95's; (9) a Stinkyscape Golem summoned; (10) a random Call to Chaos cast, the chain bounded by `RANDOM_CAST_CHAIN_CAP` ([[R452]]).
 - **Rulings:** ST-S25-2: "Summon 3 random Quests or Wincons": only the Field Spells among them can be summoned (Reach the Summit and Aestheticize the Game are Spells). ST-S25-3: "Refresh mana so you can play it" refreshes as much as the card costs. ST-S25-4: "all enemies" are the enemy Units (Freeze passes a hero by). ST-S25-5: "all Acclaimed cards have Death: Cast a random Call to Chaos" covers both players' Acclaimed cards for the rest of the game, the cast its controller's; it prints no quoted label ([[R1445]]). ST-S25-6: "!!! (three effects)" is three different entries in list order, as every Call to Chaos's Radiant face.
 - **Numbers:** none (the engine's table).
 - **Check:** The list's "???" and "!!!" are "One random effect" and "Three different random effects". R275: three effects against one (3×).
@@ -3046,7 +3046,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos.
 - **Radiant:** Three different random effects, resolved in the order listed: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos.
-- **Engine:** Call to Chaos ([[§8]]'s family, Legendary): one entry drawn from the match rng and named to both players before it resolves ([[R436]]); Radiant: three different entries in list order ([[R1023]]'s draw). The entries: (1) #1855's board swap (pending): its caster's side replaced by one of the ten Anomaly boards (S20's data), every laid Cry fired with random choices, as Anomaly Found! does (ST9 Q7); (2) three Drone Corvettes summoned ([[R64]]); (3) the Drone Battleship, a layered summon (`summon_pile`, [[R1842000]]: Meltdown at the bottom, then Propagation, Shield on top); (4) two different Systems of S #117 to #120 drawn from the rng ([[R60]]) and cast, their choices the caster's ([[R70]]); (5) four random Starship Pieces (the non-token cards printing the keyword; NEW unless S03 or S19 builds that pool by keyword kind) added at `costOverride` 0; (6) NEW (S25): a Drone Interceptor summoned into each of its caster's five unit zones, an occupied one taking it on top as a Stack play would ([[§3.2]]'s pile), a Locked one too ([[R688]]); (7) four random Starship Pieces fused into its caster's Dormant Starship, one summoned first if they have none ([[R1852000]]), then awakened, which launches it for nothing ([[R1852003]], [[R1852006]]): every fused Cry, then every When launched; (8) two random Radiant Weapons (the Weapon tag, [[R1857000]]) at `costOverride` 0; (9) #1853's Marketplace (pending PR #1963): a lot of one Call to Chaos drawn as it is added, its caster's alone, at a fixed 20 Credits, one copy each cycle for the rest of the game, opening the Marketplace if it is closed; (10) a random Call to Chaos cast ([[R452]]).
+- **Engine:** Call to Chaos ([[§8]]'s family, Legendary): one entry drawn from the match rng and named to both players before it resolves ([[R436]]); Radiant: three different entries in list order ([[R1023]]'s draw). The entries: (1) [[R1855000]]'s board swap: its caster's side replaced by one of all ten Anomaly boards (S20's `ALL_BOARDS`, rich ones included), every laid Cry fired with random choices, as Anomaly Found! does (ST9 Q7, [[R1855001]], [[R1882005]]); the table is the card's, since the boards are the cards crate's data; (2) three Drone Corvettes summoned ([[R64]]); (3) the Drone Battleship, a layered summon (`summon_pile`, [[R1842000]]: Meltdown at the bottom, then Propagation, Shield on top); (4) two different Systems of S #117 to #120 drawn from the rng ([[R60]]) and cast in the order drawn, their choices the caster's ([[R70]], [[R1882006]]); (5) four random Starship Pieces ([[R1878000]]'s pool) added at `costOverride` 0; (6) a Drone Interceptor summoned into each of its caster's five unit zones, an occupied one taking it on top as a Stack play would ([[§3.2]]'s pile), a Locked one too ([[R688]], [[R1882007]]); (7) four random Starship Pieces fused into its caster's Dormant Starship, one summoned first if they have none ([[R1852000]]), then awakened, which launches it for nothing ([[R1852003]], [[R1852006]], [[R1882008]]): every fused Cry, then every When launched; (8) two random Radiant Weapons (the Weapon tag, [[R1857000]]) at `costOverride` 0; (9) [[R1853005]]'s Marketplace lot: one Call to Chaos of the pool that names no set, drawn as it is added, its caster's alone, at a fixed 20 Credits, one copy each cycle for the rest of the game, opening the Marketplace if it is closed ([[R1882009]]); (10) a random Call to Chaos cast ([[R452]]).
 - **Rulings:** ST-S25-7: "Trigger any Anomaly" is the board swap with a board from all ten, rich ones included; it makes no Anomaly Found! card. ST-S25-8: "they have stack" is read as stacking: a Drone Interceptor tops each of its caster's unit zones, any Unit there beneath it (the Stack keyword alone would do nothing on the field). ST-S25-9: "Launch a ship with 4 Random Starpieces fused into it" fuses into its caster's Dormant Starship, a new one when they have none, and launches it for free. ST-S25-10: the Marketplace lot is its caster's alone, never Radiant, its 20 fixed.
 - **Numbers:** none (the engine's table).
 - **Check:** "Starpieces" are Starship Pieces (ST5 D6); "stack" read as stacking (⚠ designer, E13). R275: three effects against one (3×).
@@ -3151,7 +3151,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Radiant:** Add a Radiant iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3164,7 +3164,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Radiant:** Add a Radiant Paragon Mk1, Paragon Mk2, Paragon-X and Falcon to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (the digits are card names).
 - **Check:** The list's "Paragon mk1", "mk2" and "Paragon X" are S #72 Paragon Mk1, #73 Paragon Mk2 and #74 Paragon-X. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3177,7 +3177,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Radiant:** Add a Radiant A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** The list's Radiant face drops "to your hand"; it is the same move. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3190,7 +3190,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Radiant:** Add a Radiant Badger, Honey Badger, Ozark, Orca and Galaxy to your hand.
 - **Engine:** Add to hand ([[§6.3]]): a new card of each, in the order printed, owned by its caster; the Radiant face adds each Radiant ([[§5.2]]). A full hand burns the rest, in that order ([[§2.4]]). The cards are named, so they reach the hand while the set is held ([[R1420]]).
-- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price.
+- **Rulings:** ST-S24-1: "a Radiant X, Y and Z" makes every card listed Radiant, as C+ #42.1 KY's Gift's list does; each card is added on its own normal face and price. Built by S24 (#1880) as [[R1880000]].
 - **Numbers:** none (a list of names).
 - **Check:** ST8: the Radiant face adds the five Radiant, and the name is Star-jumper Core, as #163 writes it. R275: every card Radiant (each about 2×).
 - **Class:** A.
@@ -3203,7 +3203,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Choose a Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Radiant:** Choose a Radiant Vanguard Coalition, ETHICS, Golden Accord, Pegasus or Star-jumper Core and add it to your hand. Exile every card you own of the four you didn't choose, wherever it is.
 - **Engine:** A choice of five ([[R81]]'s declared modes, or a `pick` prompt its caster alone sees): the chosen bundle added to the hand (Radiant on the Radiant face, [[§5.2]]), a full hand burning it ([[§2.4]]). Then every card its caster owns of the four other definitions is exiled ([[§6.3]] Exile) from their hand, deck and graveyard, as Core #94 Genn's Greed's exile reaches those zones; the opponent's are untouched.
-- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three.
+- **Rulings:** ST-S24-2: "wherever they are" is every zone its caster's own cards can be in, hand, deck and graveyard (a Spell never stands on the field); the opponent's copies stay. ST-S24-3: the choice shows all five, unlike Discover's three. Built by S24 (#1880) as [[R1880001]] and [[R1880002]], as five declared modes chosen with the play.
 - **Numbers:** none.
 - **Check:** ST8: "Golden" is Golden Accord; the name Swear Loyalities kept as written. R275: the chosen bundle Radiant (about 2×). ⚠ designer: E9.
 - **Class:** B (a choice and an exile across zones).
@@ -3241,8 +3241,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
 - **Radiant:** Lucky 1 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
-- **Engine:** #1855's Anomaly scan (pending): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Radiant: Lucky 1.
-- **Rulings:** ST-S20-1: the two chances are bands of one roll, 5% Radiant and 20% plain (25% in all); "future Scanning Probes" are its controller's later scans with either Probe, and a find keeps the count.
+- **Engine:** #1855's Anomaly scan ([[R1855003]]): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Radiant: Lucky 1.
+- **Rulings:** ST-S20-1: the two chances are bands of one roll, 5% Radiant and 20% plain (25% in all); "future Scanning Probes" are its controller's later scans with either Probe, and a find keeps the count. Built by S20 (#1879): ST-S20-1 is [[R1855003]]'s reading, no ruling of its own.
 - **Numbers:** none (the engine's chances).
 - **Check:** R275: Lucky 1, a second roll, about 1.75× the find (a rider).
 - **Class:** C (M08, the scan).
@@ -3254,7 +3254,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Lucky 1 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
 - **Radiant:** Lucky 3 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
-- **Engine:** #1855's Anomaly scan (pending): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Lucky 1, Radiant Lucky 3.
+- **Engine:** #1855's Anomaly scan ([[R1855003]]): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Lucky 1, Radiant Lucky 3.
 - **Rulings:** ST-S20-1, as S #166.
 - **Numbers:** none (Lucky is a keyword's count, the chances the engine's).
 - **Check:** ST8: Radiant "Luck 3" is Lucky 3 (Luck X is a player's). R275: Lucky 1 → 3 (3× the extra rolls).
@@ -3527,8 +3527,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Replace your side of the field with a random Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices.
 - **Radiant:** Replace your side of the field with a random rich Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices.
-- **Engine:** #1855's board swap (pending): its caster's side only (ST9 Q7); every card there the Spell can reach is exiled, a Dormant card staying ([[R1839000]]), then the board's preset is laid zone by zone, a summon each, and the Cry of every Unit it laid fires in list order, its caster's choices random ([[R452]]'s random mode). The board is drawn from the match rng: on the base face one of the seven (WH, BF, AL, AT, SP, MT, DH), on the Radiant face one of the three rich ones (AN, AA, FO), all S20's data; an asteroid's restricted Resource pool rides on its card (#1855's rider).
-- **Rulings:** ST-S20-2: the base face's boards are the seven the list leaves out of the Radiant three, each equally likely; the text names no board, since "Wormhole" or "Asteroid Field" would name a card ([[R279]]). ST-S20-3: the boards' "Small Asteroid" is S #169 Tiny Asteroid (ST8).
+- **Engine:** #1855's board swap (`replace_board`): its caster's side only (ST9 Q7); every card there the Spell can reach is exiled, a Dormant card staying ([[R1839000]]), then the board's preset is laid zone by zone, a summon each, and the Cry of every Unit it laid fires in list order, its caster's choices random ([[R452]]'s random mode). The board is drawn from the match rng: on the base face one of the seven (WH, BF, AL, AT, SP, MT, DH), on the Radiant face one of the three rich ones (AN, AA, FO), all S20's data; an asteroid's restricted Resource pool rides on its card (#1855's rider).
+- **Rulings:** ST-S20-2: the base face's boards are the seven the list leaves out of the Radiant three, each equally likely; the text names no board, since "Wormhole" or "Asteroid Field" would name a card ([[R279]]). ST-S20-3: the boards' "Small Asteroid" is S #169 Tiny Asteroid (ST8). Built by S20 (#1879): ST-S20-2 and ST-S20-3 as [[R1879000]]; two readings the boards needed, SP's backrow Drone Interceptors standing there by their Flying ([[R1879001]]) and BF's Drone Battleship laid as one pile, Shield on top ([[R1879002]]).
 - **Numbers:** none.
 - **Check:** ST8: "Small Asteroid" is Tiny Asteroid. R275: a rich board (two Narcor or Axnit fields, the Frontier Outpost) against an ordinary one (designer's).
 - **Class:** C (M08, the board swap).
@@ -3554,7 +3554,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Gain a random Common or Rare Stinkyscape Resource.
 - **Radiant:** Gain a random Radiant Common or Rare Stinkyscape Resource.
 - **Engine:** Gain a Resource ([[§6.3]], `gain_resources`, [[R1840002]]) from a pool of the Common and Rare Resources, named by id (Reknite, Korrelite, Gellium): the rarity roll over those two (55 against 25), then one of the rolled rarity; into the tray, never the hand, one past 8 sold at once ([[R1840001]]); Radiant: a Radiant one. It makes no Credits: its average sale, about 4 Credits (Radiant 8), is below its Marketplace price, 5 (Radiant 10). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-2: the pool leaves Axnit, Narcor and Red Narcor out, so buying it to sell its Resource loses Credits.
+- **Rulings:** ST-S21-2: the pool leaves Axnit, Narcor and Red Narcor out, so buying it to sell its Resource loses Credits. Built by S21 (#1881) as [[R1881000]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: a Radiant Resource (2× its effect and its price).
 - **Class:** C (M03, the tray).
@@ -3566,8 +3566,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Discover a Starship Piece. It costs (1) less.
 - **Radiant:** Discover a Radiant Starship Piece. It costs (1) less.
-- **Engine:** A Discover ([[§6.3]]) over the non-token cards that print Starship Piece (NEW unless S03 or S19 builds it: a pool by keyword kind), three different, the pick at `costMod` −1; Radiant: the pick added Radiant ([[§5.2]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-3: "a Starship Piece" is a card that prints the keyword on its face, never a token.
+- **Engine:** A Discover ([[§6.3]]) over the non-token cards that print Starship Piece ([[R1878000]]'s pool, [[R1881001]]), three different, the pick at `costMod` −1; Radiant: the pick added Radiant ([[§5.2]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Rulings:** ST-S21-3: "a Starship Piece" is a card that prints the keyword on its face, never a token. Built by S21 (#1881) as [[R1881001]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: the piece Radiant (2× its stats).
 - **Class:** B.
@@ -3580,7 +3580,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker.
 - **Radiant:** Reveals when an enemy Unit attacks you or one of your Units: Cancel the attack and Freeze the attacker.
 - **Engine:** A face-down Trap in [[§4.2]] step 4's window, on a declared attack by an enemy Unit on a Unit of its controller's (Radiant: or on their hero): Cancel an attack ([[§6.3]], `cancelAttack`, [[R44]]), then Freeze the attacker ([[§6.3]]): its exertion spent on the declaration, it thaws at the cleanup of its controller's next turn, so it cannot attack then either ([[R1174000]]). An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-4: a forced attack declares nothing, so it springs nothing.
+- **Rulings:** ST-S21-4: a forced attack declares nothing, so it springs nothing. Built by S21 (#1881) as [[R1881002]]: an attack by its own controller leaves it set too.
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: its controller's hero guarded too (a broader scope).
 - **Class:** B (a cancel and a Freeze).
@@ -3593,7 +3593,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Your Starship launch costs (1). Draw 1.
 - **Radiant:** Your Starship launch costs (0). Draw 2.
 - **Engine:** `starship_launch_costs { cost: 1 }` ([[R1852006]]): its player's next launch by the Activate costs (1) instead of (3), a public badge, spent by that launch; then a draw ([[§2.4]]). Radiant: (0), and draw 2. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-5: with no Starship yet, the price waits for the next launch.
+- **Rulings:** ST-S21-5: with no Starship yet, the price waits for the next launch. Built by S21 (#1881) as [[R1881003]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: (0) and two cards against (1) and one (2×).
 - **Class:** C (M02, the launch price).
@@ -3619,7 +3619,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Give each of your other Units a random Combat Keyword.
 - **Radiant:** Cry: Give each of your other Units 2 random Combat Keywords.
 - **Engine:** Cry ([[R1]]): each other Unit its controller has on the field gains one random Combat Keyword (Radiant: two), each drawn on its own from [[R21]]'s pool ([[§6.1]] Combat keyword), never one it has, an Indestructible one never offered Taunt ([[R347]]); granted, so gone with [[R78]]'s reset. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-6: each Unit draws its own keyword; a Dormant card is passed by ([[R1839000]]).
+- **Rulings:** ST-S21-6: each Unit draws its own keyword; a Dormant card is passed by ([[R1839000]]). Built by S21 (#1881) as [[R1881004]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: 4/4 and two keywords each against one.
 - **Class:** A.
@@ -3631,8 +3631,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** End of turn: Summon a Drone Interceptor. It gains Starship Piece.
 - **Radiant:** End of turn: Summon a Radiant Drone Interceptor. It gains Starship Piece.
-- **Engine:** End of turn ([[R62]]): a Drone Interceptor (Radiant: a Radiant one) summoned into the leftmost open unit zone ([[R64]]), then given Starship Piece (a granted keyword, kept until it leaves the field, [[R78]]): when it dies, a copy of it fuses into its owner's Dormant Starship, a granted piece fusing as a printed one does ([[R1852000]]). Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
-- **Rulings:** ST-S21-7: the copy that fuses is a plain Drone Interceptor, the granted keyword not carried ([[R1852000]]).
+- **Engine:** End of turn ([[R62]]): a Drone Interceptor (Radiant: a Radiant one) summoned into the leftmost open unit zone ([[R64]]), given Starship Piece as it lands by the summon's `keywords` rider (a granted keyword, kept until it leaves the field, [[R78]], [[R1881005]]): when it dies, a copy of it fuses into its owner's Dormant Starship, a granted piece fusing as a printed one does ([[R1852000]]). Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Rulings:** ST-S21-7: the copy that fuses is a plain Drone Interceptor, the granted keyword not carried ([[R1852000]]). Built by S21 (#1881) as [[R1881005]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15): unlike S #168 Drone Hanger, its drones build the ship. R275: a Radiant drone each turn.
 - **Class:** B (a summon and a granted Starship Piece).
@@ -3644,7 +3644,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt.
 - **Radiant:** Reveals when your opponent plays a Unit: Summon 2 Drone Interceptors. Give them Taunt.
-- **Engine:** A face-down Trap on the opponent's Unit play (`cardPlayed`, [[§10.5]] step 4), going to the graveyard as it fires: a Drone Interceptor (Radiant: two) summoned into the leftmost open unit zones ([[R64]]), each given Taunt ([[§6.1]]), a decoy; one that rolled Taunt keeps it. Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Engine:** A face-down Trap on the opponent's Unit play (`cardPlayed`, [[§10.5]] step 4), going to the graveyard as it fires: a Drone Interceptor (Radiant: two) summoned into the leftmost open unit zones ([[R64]]), each given Taunt ([[§6.1]]) by the summon's `keywords` rider ([[R1881005]]), a decoy; one that rolled Taunt keeps it. Nothing with no open zone. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
 - **Rulings:** none.
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: two decoys against one (2×).
@@ -3724,13 +3724,13 @@ build uses, and the entry in ST13 says the rest.
 | B9 | Drone Battleship (Propagation Layer) (ST-S07-8) | "Activate 2: summon a Drone Interceptor, Activate 1: summon a Drone Corvette" | Two abilities counted apart ([[R1751000]]): up to two Interceptors and one Corvette a turn, offered only while the layer tops its pile ([[R13]]) |
 | B10 | Drone Battleship (Meltdown Layer) (ST-S07-9) | "End of turn: Take 6 damage"; Brittle 3 beneath the pile | The layer hits itself, never its hero; beneath a Stack it runs no hook ([[R13]]), and its Brittle waits while it is buried, as a Dormant countdown waits ([[R1839003]]), ticking once it tops the pile |
 | B11 | The Narcor Project (S #39, ST-S04-1) | "Add a Narcor to your hand"; "Discard a Narcor" | A gain into the tray ([[R1840000]]); the discard is the oldest Narcor there ([[R1840004]]), the Activate's cost, so the Activate is offered only with one in the tray; the Radiant face takes the oldest Narcor or Red Narcor |
-| B12 | The Narcor Project (S #39, ST-S04-2) | "reduce Brittle by 1"; "If this died to Brittle" | The Activate lowers the count by 1; driven to 0 it crumbles at the state check, a Brittle death; "died to Brittle" is a `crumbled` destroy, never another destroy or an exile |
-| B13 | The Narcor Project (S #39, ST-S04-3) | "its End of Turn effect doubles and becomes permanent" | A rest-of-game effect of its controller's (C+ #52's shape): two Narcors (Radiant: two Red Narcors) at the end of each of their turns, outliving the card; a second Project that crumbles adds a second such effect |
+| B12 | The Narcor Project (S #39, ST-S04-2) | "reduce Brittle by 1"; "If this died to Brittle" | The Activate lowers the count by 1; driven to 0 it crumbles at once, a Brittle death; "died to Brittle" is a crumble, read as the spent count, never another destroy or an exile ([[R1861001]]) |
+| B13 | The Narcor Project (S #39, ST-S04-3) | "its End of Turn effect doubles and becomes permanent" | A rest-of-game effect of its controller's (C+ #52's shape, `atEnd`, [[R1861002]]): two Narcors (Radiant: two Red Narcors) at the end of each of their turns, the one it died on included, outliving the card; a second Project that crumbles adds a second such effect |
 | B14 | Tractor Beam (S #67, ST-S04-4) | "Equip" with "Start of your turn: Gain …" | Equipped, its host gains the Resource at its controller's start of turn (the fused text, [[R1086]]) and is no Starship Piece ([[R1852001]]) |
-| B15 | Badger, Honey Badger (S #75, #76, ST-S04-5) | "When this attacks" | As the attack is declared and still stands, before the combat (Hearthstone's "whenever this attacks"), once per attack, forced ones included ([[R53]]); one that dies in the combat keeps its Resource; C #45 Nature Titan answers after the combat, which S04 may follow instead |
+| B15 | Badger, Honey Badger (S #75, #76, ST-S04-5) | "When this attacks" | After each combat it attacked in, forced ones included ([[R53]]), as Core #32 Prem Panther's `afterAttack` ([[R426]]); one that dies in the combat still gains; an attack called off before it fought gains nothing ([[R44]]) |
 | B16 | Siva 1 (S #87, ST-S08-1) | "Allure a random enemy Acclaimed Unit" | One of the enemy's acting Units whose tags, granted ones included, hold Acclaimed; the Allure lands as K-Pop Fanatic's ([[R1045000]], [[R963]]); none, nothing |
 | B17 | Siva 1 (S #87, ST-S08-2) | "If there isn't one, summon a Frozen one to Allure" | A random non-token Acclaimed Unit (never Siva 1, [[R387]]) summoned on the opponent's side, Frozen, then Allured, so it is stolen at the next start of turn; nothing when their unit row is full |
-| B18 | Spice (S #89, ST-S04-6, ST-S04-7) | "Can be sold on the Resource marketplace"; "{For AI: … only appearing once a Spice is potentially relevant}" | A sale from its owner's hand, in their main phase, while #1853's Marketplace is open, for Credits, as public as a Resource's sale; Spice stays a hand card, never a Resource; the sale is offered only while the Marketplace is open. Its price: QUESTION (the part's notes) |
+| B18 | Spice (S #89, ST-S04-6, ST-S04-7) | "Can be sold on the Resource marketplace"; "{For AI: … only appearing once a Spice is potentially relevant}" | A sale from its owner's hand, in their main phase, while #1853's Marketplace is open, for Credits, as public as a Resource's sale; Spice stays a hand card, never a Resource; the sale is offered only while the Marketplace is open. Its price: a Rare Resource's, 3–10 Credits, Radiant 6–20 ([[R1861000]]) |
 | B19 | Ocean Tsunami (S #96, ST-S04-8) | "discard your hand then fill your hand with random Stinkyscape resources" | Every hand card discarded, no Resource; then the Resource tray filled ([[R1840004]]), so nothing is sold |
 | B20 | Asteroid Field (S #97, ST-S04-9) | "all heroes and units"; "all enemy heroes and units"; "add two … to your hand" | Both heroes and every Unit, one hit each; the Radiant face the enemy hero and every enemy Unit; the Resources gained into the tray ([[R1840000]]) |
 | B21 | Megabase (S #116, ST-S04-10) | "choose to give both players 5, 10, or 15 credits"; "your opponent gets 5 less" | Three declared modes, each player gaining that many; the Radiant face gives the opponent 0, 5 or 10; "Can't be tributed" is Untributable ([[R1220]]) |
@@ -3798,7 +3798,7 @@ build uses, and the entry in ST13 says the rest.
 | D18 | #18.3 CASPER | "a random enemy Unit on the field and hand" (Radiant) | Two Allures: a random enemy Unit on the field ([[R963]]) and a random Unit card in your opponent's hand, taken into yours at the start of your next turn if it is still there ([[R1140]]'s hand watch, [[R12]]). NEW (S11): Allure has no hand form on `main` |
 | D19 | #19 Imprisoned Cosmality | "deal 10 damage split among enemies" | Ten hits of 1 on random enemies, the hero included, a Unit at 0 passed by (C+ #3's split); each hit's source is this Unit, so each pierces Armor ([[R346]]) |
 | D20 | #20 Tnack Trav | "a Legendary or Mythic Unit on the Field" | A declared target on either side, not itself, by its rarity: a token's rarity is Token, whatever it printed |
-| D21 | #25 KY's Tricknology | "Choose a zone … lands on each zone it covers" | ST9's coordinates; each covered zone that is open gets a random Starship Piece for the side it is on (none for an occupied or Locked one), a backrow zone taking it as a Unit standing there ([[R1081000]]); Radiant: only your zones. NEW (S18), which may keep pieces to unit zones |
+| D21 | #25 KY's Tricknology | "Choose a zone … lands on each zone it covers" | ST9's coordinates; each covered zone that is open gets a random Starship Piece for the side it is on (none for an occupied or Locked one), a backrow zone taking it as a Unit standing there ([[R1081000]]); Radiant: only your zones. S18 kept the pieces to unit zones ([[R1877000]]) |
 | D22 | #26 ZolarKeth | "Its Activate is locked" | The summoned University cannot use its own Activate; no zone is Locked, and ZolarKeth's Activate still runs it |
 | D23 | #26 ZolarKeth | "or Activate your Universities"; "then" | The base face's "or" is a choice of modes, the Radiant face's "then" both in order; every University of yours runs its Activate's effect, spending none of its uses. NEW (S17): an Activate run by another card |
 | D24 | #37 Kwzka | "Allure all enemy Units played that cost less than this" | Each Unit your opponent plays (not summons) while Kwzka acts on the field, whose cost paid is less than Kwzka's cost now, is Allured as it arrives ([[R963]]) |
@@ -3806,7 +3806,7 @@ build uses, and the entry in ST13 says the rest.
 | D26 | #46 Circadian Halfcycler | "the first 3 actions of your turn" | The first 3 plays or attacks of every one of your turns while it stands (ST9, [[R1844000]]), answers belonging to the action that asked |
 | D27 | #70 Z'Zoth | "Death Units" | Unit cards whose own text prints a Death; a Death granted on the field is gone in the graveyard ([[R78]]) |
 | D28 | #71 A'Zoth | "Activate each Cry with random targets" | Trigger a Cry ([[R467]]) on each Unit it summoned, its targets and choices drawn from the match rng, no prompt asked. NEW (S16); the summon itself fires none ([[R1]]) |
-| D29 | #77 Yuma | Lucky 1 (Radiant) | The trade's Discover options are drawn twice, keeping the set better for Yuma's controller (default: the set whose cheapest card costs most, the opponent giving the worst); S18 names the comparator |
+| D29 | #77 Yuma | Lucky 1 (Radiant) | The trade's Discover options are drawn twice, keeping the set better for Yuma's controller (default: the set whose cheapest card costs most, the opponent giving the worst); the comparator is [[R1877001]]'s |
 | D30 | #88 Siva 2 | "Your Humans"; "Fill your hand with Bigots" | Your Human Units on the field, this one included; Bigots (Core #2) until your hand is full, none burned |
 | D31 | #91, #92 The Propagation's Wasp and Hornet | "After these attacks" | After this attacks, a forced attack included ([[R1849001]]): the copy first, made before it evolves, so the copy lacks Flying |
 | D32 | #94 Tmack Trav | "After this kills a unit" | The Unit it attacked destroyed in that combat (C+ #73.1's reading); a kill while defending does not count; no cap on the attacks it chains |

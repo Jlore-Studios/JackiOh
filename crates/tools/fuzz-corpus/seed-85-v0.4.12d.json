@@ -1,0 +1,9 @@
+{
+  "seed": 85,
+  "catalogVersion": "v0.4.12d",
+  "decks": [
+    ["stinkyscape-087", "meditative-069", "meditative-015", "stinkyscape-115", "stinkyscape-008", "classic-082", "meditativeplus-015", "stinkyscape-064", "stinkyscape-066", "meditativeplus-018", "stinkyscape-005", "meditative-101", "meditative-055", "classicplus-040", "classicplus-029", "core-026", "classic-036", "classic-069", "classic-085", "core-048", "core-059", "meditative-100", "stinkyscape-160", "core-035", "core-030"],
+    ["classic-034", "classic-042", "core-002", "stinkyscape-024", "stinkyscape-037", "core-042", "core-063", "core-037", "stinkyscape-090", "stinkyscape-140", "stinkyscape-088", "meditativeplus-014", "stinkyscape-162", "stinkyscape-098", "stinkyscape-136", "stinkyscape-132", "classicplus-009", "stinkyscape-022", "classicplus-058", "core-050", "meditative-004", "classicplus-063", "meditativeplus-008", "classic-078", "stinkyscape-094"]
+  ],
+  "found": "The 200-seed gate of the S16 build (#1869), before its fix: I4 on turn 8, 22 actions in: c38 (stinkyscape-094 Tmack Trav, p2's) had no summonedTurn on the turn it entered. Its kill had lifted its sickness through `mayAttackAgain` (R1869002), which emits no event, and the monitor read only a Classic Golem's transform as readying a kill's attacker (R424); seeds 15, 79 and 123 tripped I2 on the second attack the same kill freed. Fixed by #1869 in the monitor (testkit/invariants.rs kill credits), proven by crates/cards/tests/cross/invariants.rs's r1869002_i2_a_kill_credit. The decks are decks_for_seed(85) over the 571-card pool, every set previewed (R1420), at the S16 build."
+}

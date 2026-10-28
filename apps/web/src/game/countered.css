@@ -10,9 +10,9 @@
    and the film holds still as a plain green tint with its badge. */
 
 .countered-warning {
-  --countered-rim: #a3e635;
-  --countered-core: #4d7c0f;
-  --countered-bubble: rgb(217 249 157 / 80%);
+  --countered-rim: var(--pal-lime-400);
+  --countered-core: var(--pal-green-700);
+  --countered-bubble: color-mix(in srgb, var(--pal-lime-200) 80%, transparent);
 
   position: absolute;
   inset: 0;
@@ -83,7 +83,7 @@
       var(--countered-rim) calc(50% - 1.5px) calc(50% + 1.5px),
       transparent calc(50% + 1.5px)
     ),
-    rgb(26 46 5 / 88%);
+    color-mix(in srgb, var(--pal-brass-950) 88%, transparent);
   box-shadow: 0 0 8px 1px color-mix(in srgb, var(--countered-rim) 60%, transparent);
   pointer-events: auto;
 }

@@ -26,7 +26,7 @@ cargo build --release -p jackioh-tools    # target/release/jackioh, whose `repla
 cd e2e && pnpm install                    # on its own, as above; the postinstall fetches the Cypress binary
 pnpm exec cypress verify
 pnpm exec tsc -p tsconfig.json
-pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved
+pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved (`pnpm typecheck` runs it too, as CI does)
 ```
 
 ## Run
@@ -147,7 +147,7 @@ place to change.
 | # | Assumption | Where | Ask |
 | --- | --- | --- | --- |
 | A6 | Routes and fixtures for the non-hotseat specs: `/login`, `/invite`, `/decks`, `/play`, `/match/<id>`; `http://localhost:8787` + `ws://localhost:8787/ws/match` (the path is `WS_PATH`, not an assumption); fixture accounts `e2e-p1`, `e2e-p2` (active, own every card), `e2e-pending` (pending, verified email) and `e2e-econ` (pending, verified email, and a dev account under `E2E=1` alone: spec 45 redeems it into a new account's starter cards, R1310000, R1310004); seeded invite codes — one good, one missing, one expired, one exhausted. | `support/config.ts` | `apps/web`, `crates/server` |
-| A8 | The WS protocol `cy.task("wsPlayer")` speaks: `-> hello {token?,matchId?,roomCode?}`, `-> action {action:{…,nonce}}`; `<- view {view}`, `<- ack {nonce,seq}`, `<- error {code,message,nonce?}`, `<- prompt {forYou,…}`, `<- clock {now,clocks}`. Read off `crates/server/src/actor/protocol.rs`, which fixes every shape, so this is documentation now rather than an assumption. Joining a room is **not** on the socket: `POST /api/rooms/:code/join` is, and the `joinRoom` frame exists only to answer a client that tries with `error {code:"unsupported"}`. | `support/tasks/wsPlayer.ts` | — |
+| A8 | The WS protocol `cy.task("wsPlayer")` speaks: `-> hello {token?,matchId?,roomCode?}`, `-> action {action:{…,nonce}}`; `<- view {view}`, `<- ack {nonce,seq}`, `<- error {code,message,nonce?}`, `<- prompt {forYou,…}`, `<- clock {now,clocks}`. Read off `crates/server/src/actor/protocol.rs`, which fixes every shape, so this is documentation now rather than an assumption. Joining a room is **not** on the socket: `POST /api/rooms/:code/join` is, and a `joinRoom` frame is answered `error {code:"malformed"}` (`protocol.rs`, SURFACE §11.3). | `support/tasks/wsPlayer.ts` | — |
 
 ## What `support/` owns, so a spec does not
 

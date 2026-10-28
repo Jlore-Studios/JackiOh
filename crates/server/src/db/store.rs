@@ -703,6 +703,15 @@ pub struct ReplayRow {
     pub actions: i64,
 }
 
+/// R768: one `replays_list` row already paired with what `matches_mode_of` answers for its match,
+/// as the batched `replays_list_with_modes` reads them in one query.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayWithMode {
+    pub replay: ReplayRow,
+    pub mode: Option<QueueMode>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchClocks {
@@ -2108,6 +2117,18 @@ impl Tx<'_> {
         dispatch!(self, replays_get(match_id))
     }
 
+    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each paired with
+    /// what `matches_mode_of` answers for its match. One query instead of one per row, so a page
+    /// costs a constant number of statements however many rows it holds.
+    pub async fn replays_list_with_modes(
+        &mut self,
+        profile_id: &str,
+        limit: i64,
+        offset: i64,
+    ) -> StoreResult<Vec<ReplayWithMode>> {
+        dispatch!(self, replays_list_with_modes(profile_id, limit, offset))
+    }
+
     // rooms
 
     /// False when the code is already taken.
@@ -2284,6 +2305,19 @@ impl Tx<'_> {
     /// Every row of a season, each with the player's current rating, in profile-id order.
     pub async fn ranked_standings(&mut self, season_id: &str) -> StoreResult<Vec<SeasonStanding>> {
         dispatch!(self, ranked_standings(season_id))
+    }
+
+    /// `ranked_standings` cut to what a rank read shows (#2022): the season's rows of `profile_ids`, plus
+    /// every row whose ladder is at least `min_ladder` (`ladder::jlorious_floor()`: every row Jlorious is
+    /// drawn from), each with the player's current rating, in profile-id order. `jlorious_order` over it,
+    /// and the rank of any profile asked for, answer as over the whole season.
+    pub async fn ranked_standings_subset(
+        &mut self,
+        season_id: &str,
+        profile_ids: &[String],
+        min_ladder: i32,
+    ) -> StoreResult<Vec<SeasonStanding>> {
+        dispatch!(self, ranked_standings_subset(season_id, profile_ids, min_ladder))
     }
 
     pub async fn ranked_rank(

@@ -333,6 +333,7 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
                 player,
                 instance_id,
                 def_id,
+                ..
             }
             | GameEvent::Bounced {
                 owner: player,
@@ -1260,6 +1261,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::LaneWatch { label, .. } => label.clone(),
         // R1863000: Stinkyscape #44's watcher, in the card's own words.
         ModifierKind::PlayWatch { label, .. } => label.clone(),
+        // R1882004: Stinkyscape #150's death watcher, in the card's own words.
+        ModifierKind::DeathWatch { label, .. } => label.clone(),
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
@@ -1275,6 +1278,17 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::KeywordNextSpell { keyword } => format!(
             "Your next Spell this turn has {}",
             crate::wire::keyword_key(keyword)
+        ),
+        // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X". R1870004:
+        // #4.4 Last Word's "your Units have Charge during it", the turn named until it comes.
+        ModifierKind::UnitsHaveKeyword { keyword } => format!(
+            "Your Units have {}{}",
+            crate::wire::keyword_key(keyword),
+            if crate::mana::modifier_is_live(state, modifier) {
+                ""
+            } else {
+                " during your next turn"
+            }
         ),
     }
 }
@@ -2178,6 +2192,8 @@ fn redact_event(
         GameEventType::CardPlayed | GameEventType::Summoned => {
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if hidden(&instance) {
                 // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`. Any other hidden play keeps both, as it always has (D14).
@@ -2223,13 +2239,20 @@ fn redact_event(
         | GameEventType::Burned
         | GameEventType::Discarded
         | GameEventType::Drawn
-        | GameEventType::AddedToHand
         // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
         | GameEventType::VoteCast => {
             if !hidden(&instance) {
                 return event.clone();
             }
             hide(&mut shown, &["instanceId", "defId"]);
+            rebuild(shown)
+        }
+        // As above; R2089000's `creator` is the game record's bookkeeping, which no view forwards.
+        GameEventType::AddedToHand => {
+            shown.remove("creator");
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
             rebuild(shown)
         }
 
@@ -2307,6 +2330,8 @@ fn redact_event(
 
         // §9.1: library order is hidden from both players, so the slot never travels either way.
         GameEventType::ShuffledIn => {
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
             }
@@ -2320,6 +2345,8 @@ fn redact_event(
         GameEventType::Transformed => {
             let new_hidden = hidden(&text_at(&shown, "newInstanceId"));
             shown.remove("hiddenFrom");
+            // R2089000: the game record's, as on `addedToHand`.
+            shown.remove("creator");
             if new_hidden || hidden(&instance) {
                 hide(&mut shown, &["instanceId", "fromDefId"]);
             }

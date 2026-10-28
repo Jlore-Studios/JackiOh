@@ -139,7 +139,7 @@ class WorkTests(unittest.TestCase):
         self.assertEqual(result["usage"]["five_hour"]["utilization"], 0.87)
 
     def test_a_run_in_its_sessions_last_hour_goes_on_past_the_cap(self):
-        """`last_hour`: claude-2 at its 90% cap half an hour before its session resets starts
+        """`last_hour`: claude-8 at its 85% cap half an hour before its session resets starts
         its build anyway, and its calls go on past the cap, to the whole session, until the
         reset: the run holds the session it took (`Worker.last_hour`)."""
         at = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
@@ -158,10 +158,10 @@ class WorkTests(unittest.TestCase):
 
         runner = FakeRunner({"build": build, "review": reviewer(APPROVE)})
         plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
-                "thread": "Please make the rules v2.", "provider": "claude-2"}
+                "thread": "Please make the rules v2.", "provider": "claude-8"}
         worker = Worker(self.cfg, plan, runner, self.clone, self.root / "work", self.out,
                         now=lambda: at)
-        worker.start_usage = {"status": "allowed", "five_hour": {"utilization": 0.9,
+        worker.start_usage = {"status": "allowed", "five_hour": {"utilization": 0.85,
                                                                  "resets_at": resets}}
         result = worker.run()
         self.assertEqual(result["status"], "approved", result.get("reason"))
@@ -171,13 +171,13 @@ class WorkTests(unittest.TestCase):
         self.assertEqual([call.role for call in runner.calls], ["build", "review"])
 
     def test_a_session_somebody_else_spent_keeps_its_cap_in_its_last_hour(self):
-        """The same half hour, but the session reads 95%, past what claude-2's own calls leave
+        """The same half hour, but the session reads 95%, past what claude-8's own calls leave
         it: somebody else is spending it, so the build never starts."""
         at = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
         runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
                              "review": reviewer(APPROVE)})
         plan = {"action": "build", "number": 12, "title": "Rules v2", "branch": "bot/issue-12",
-                "thread": "Please make the rules v2.", "provider": "claude-2"}
+                "thread": "Please make the rules v2.", "provider": "claude-8"}
         worker = Worker(self.cfg, plan, runner, self.clone, self.root / "work", self.out,
                         now=lambda: at)
         worker.start_usage = {"status": "allowed", "five_hour": {

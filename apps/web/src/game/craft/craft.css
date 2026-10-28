@@ -40,7 +40,7 @@
 
 /* A meter over its budget reads as a warning, which is the engine's own numbers, not a rule. */
 .craft-meters [data-over="true"] {
-  color: #fca5a5;
+  color: var(--pal-red-300);
   font-weight: 650;
 }
 
@@ -98,7 +98,7 @@
 .craft-block {
   border: 1px solid var(--line-bright);
   border-radius: 8px;
-  background: rgb(255 255 255 / 4%);
+  background: color-mix(in srgb, var(--pal-white) 4%, transparent);
   color: inherit;
   font: inherit;
   font-size: 13px;
@@ -168,7 +168,7 @@
 .craft-hat {
   border: 1px solid var(--line-bright);
   border-radius: 10px;
-  background: rgb(255 255 255 / 3%);
+  background: color-mix(in srgb, var(--pal-white) 3%, transparent);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -230,7 +230,7 @@
   margin: 0;
   padding-left: 18px;
   font-size: 12px;
-  color: #fca5a5;
+  color: var(--pal-red-300);
 }
 
 .craft-reasons:empty {
@@ -265,8 +265,8 @@
   padding: 10px 12px;
   border: 1px solid var(--line-bright);
   border-radius: 10px;
-  background: #0d1017;
-  color: #e5e7eb;
+  background: var(--pal-wood-900);
+  color: var(--pal-slate-100);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
   line-height: 1.5;
@@ -275,14 +275,14 @@
 }
 
 .craft-code-text[aria-invalid="true"] {
-  border-color: #f87171;
+  border-color: var(--pal-red-400);
 }
 
 .craft-code-error {
   margin: 0;
   min-height: 1.3em;
   max-width: none;
-  color: #fca5a5;
+  color: var(--pal-red-300);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
 }

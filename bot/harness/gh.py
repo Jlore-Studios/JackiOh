@@ -205,9 +205,6 @@ class GitHub:
     def viewer(self) -> dict[str, Any]:
         return self.request("GET", "/user")
 
-    def get_user(self, login: str) -> dict[str, Any]:
-        return self.request("GET", f"/users/{urllib.parse.quote(login)}")
-
     # ------------------------------------------------------------------ issues and comments
 
     def get_issue(self, number: int) -> dict[str, Any]:
@@ -680,14 +677,6 @@ class GitHub:
 
     def update_repo(self, **fields: Any) -> dict[str, Any]:
         return self.request("PATCH", self._r, fields)
-
-    def get_protection(self, branch: str) -> dict[str, Any] | None:
-        try:
-            return self.request("GET", f"{self._r}/branches/{branch}/protection")
-        except GitHubError as exc:
-            if exc.status == 404:
-                return None
-            raise
 
     def set_protection(self, branch: str, checks: list[str]) -> None:
         self.request(

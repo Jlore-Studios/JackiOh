@@ -28,7 +28,7 @@ is forced, under its limits):
   hard item. When the builder's own subscription has a seat of that tier, the plan and the
   build share one run; otherwise the planning is a run of its own, and the item goes back to
   the queue to build from the plan. Such a planning run is short and starts before any long
-  run, so a planner plans Devin's next item before it builds one of its own.
+  run, so a planner plans a weak builder's next item before it builds one of its own.
 - **review** in the run: the run's own strongest seat of at least medium, in a fresh
   adversarial session; a weak builder's own model checks itself instead (findings only, never
   an approval), and the change goes to its final audit.
@@ -51,7 +51,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from itertools import islice
 from typing import Any, Iterator, Mapping
 
 from harness import asks, declined, issueplan, review_rule, threads
@@ -73,8 +72,6 @@ from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_iss
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
-#: What an assignment's run does: its action in the plan file.
-ACTIONS = ("plan", "build", "revise", "review")
 #: A run asked for and never taken up is dropped after this long.
 RUN_REQUEST_TTL = timedelta(hours=12)
 CI_LOG_JOBS = 4
@@ -300,15 +297,20 @@ class Lanes:
         """Every run this provider holds now, its planning runs and fill-ins too."""
         return sum(1 for held in self.held.values() if held == provider_id)
 
-    def full(self, provider: Provider) -> bool:
-        """It holds as many runs as its `lanes`. A subscription the quiet check guards, or one
-        with usage caps, counts its planning run too: the quiet check cannot tell a second run of
-        the bot's from its owner, and two runs deciding from one reading go past a cap together
-        (claude-2 planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
+    def used(self, provider: Provider) -> int:
+        """How many of its own `lanes` it holds now: its runs, those in other subscriptions'
+        lanes (`fill_in`) aside. A subscription the quiet check guards, or one with usage caps,
+        counts its planning run too: the quiet check cannot tell a second run of the bot's from
+        its owner, and two runs deciding from one reading go past a cap together (claude-2
+        planned and revised at once from 0% and was refused at 100% 15 minutes later)."""
         held = self.count(provider.id) - self.filling_by(provider.id)
         if provider.quiet_check or provider.limits.stops:
             held += self.planning_by(provider.id)
-        return held >= provider.lanes
+        return held
+
+    def full(self, provider: Provider) -> bool:
+        """It holds as many runs as its `lanes` (`used`)."""
+        return self.used(provider) >= provider.lanes
 
     def on_machine(self, pool: providers_mod.Pool) -> int:
         """How many of the held runs are on the bot's machine."""
@@ -596,8 +598,8 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
     free = {provider.id for provider in providers}
 
     def builds(provider: Provider, seat: Seat) -> bool:
-        # A stand-in (`takes_over`, Sonnet for Devin) builds only an easy item, and only while
-        # the subscription it stands in for cannot take it (#317 part 9).
+        # A stand-in (`takes_over`, a Sonnet seat for a weak one) builds only an easy item, and only
+        # while the subscription it stands in for cannot take it (#317 part 9).
         if seat.takes_over and (difficulty != "easy" or seat.takes_over in free):
             return False
         if tier_at_least(seat.tier, floor):
@@ -764,7 +766,7 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     if candidate.kind == "build" and not plan_meets(candidate):
         # It has no plan its difficulty may build from (#317 part 6): the planning lane writes one
         # (the Needs plan stage), or a builder whose own seat meets the plan floor plans it first
-        # in its run. A builder that cannot plan (Devin) waits for the plan.
+        # in its run. A builder that cannot plan (a weak one) waits for the plan.
         builders = [p for p in builders if "plan" in p.roles
                     and pool.best_seat(p, floor) is not None]
     if candidate.kind == "revise" and (not candidate.bot_pr or candidate.conflict):
@@ -814,7 +816,7 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
                                          KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty),
                                          c.queued_at, c.number))
     # The Needs plan stage first: a planner on the planning lane, which takes no build lane,
-    # plans the items a builder that cannot plan (Devin) waits on before the rest, then the
+    # plans the items a builder that cannot plan (a weak one) waits on before the rest, then the
     # fullsend parts a medium subscription (Muse) builds from their plans, each by a model that
     # meets its plan floor (medium for an easy, medium or unrated item, strong for a hard one).
     planning: list[tuple[Candidate, Assignment]] = []
@@ -1660,6 +1662,3 @@ def suggestion_plan(ctx: Context, lanes: Lanes, *, force: bool,
         **_provider_fields(ctx, provider),
     }
 
-
-def first(iterable: Iterator[Any]) -> Any:
-    return next(islice(iterable, 1), None)

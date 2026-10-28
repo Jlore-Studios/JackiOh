@@ -1184,10 +1184,10 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
   return apiRequest<LeaderboardResponse>("/api/leaderboard", { token });
 }
 
-/** `GET /api/matches/:id/ranks`: both seats' ranks for the match screen (R604, R612). */
+/** `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000). */
 export type MatchRanksResponse = {
   ranked: boolean;
-  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; you: boolean }>;
+  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean }>;
 };
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {
@@ -1339,12 +1339,43 @@ export type PublicCardStat = {
   playRate: number;
   hasEnoughGames: boolean;
   /** R1367000: the card's window, and the versions its figures count. */
-  window?: {
-    from: string;
-    liveGames: number;
-    source: PublicStatsSource;
-    counted: string[];
-  };
+  window?: PublicCardWindow;
+};
+
+/** R1367000: a card's window, and the versions its figures count. */
+export type PublicCardWindow = {
+  from: string;
+  liveGames: number;
+  source: PublicStatsSource;
+  counted: string[];
+};
+
+/**
+ * R2089000: a Created card's figures, apart from the deck cards': the seats that made a copy of it
+ * during a game (a token, a generated or Discovered card, a copy, a transform's result, The Coin).
+ * Used counts the seats that used a copy, split by whether one was Radiant at its first use; Not used
+ * those that made copies and used none, the baseline the delta is taken from.
+ */
+export type PublicCreatedStat = {
+  id: string;
+  name: string;
+  cost: number;
+  rarity: string;
+  set: string;
+  /** The seats counted: `createdPlayedGames` and `createdNotPlayedGames`. */
+  games: number;
+  createdPlayedGames: number;
+  createdPlayedWinRate: number | null;
+  createdNotPlayedGames: number;
+  createdNotPlayedWinRate: number | null;
+  createdPlayedRadiantGames: number;
+  createdPlayedRadiantWinRate: number | null;
+  createdPlayedNormalGames: number;
+  createdPlayedNormalWinRate: number | null;
+  /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
+  createdPlayedDelta: number | null;
+  hasEnoughGames: boolean;
+  window: PublicCardWindow;
 };
 
 /** R654, R1367000: which records a window's figures count. */
@@ -1367,6 +1398,11 @@ export type PublicStatsCardsResponse = {
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
+  /**
+   * R2089000: the Created cards, tokens among them, under the same filters as `cards`: enough games
+   * first, then the most games, then by name. Absent from a response cached before them.
+   */
+  created?: PublicCreatedStat[];
   /**
    * R1973002: every patch the page can show, newest first: the window the cards share, its versions
    * oldest first (its figures are asked for at the last), its games and its live games. Absent from

@@ -17,11 +17,12 @@
 # long, so it waits for the Pro plan. A dispatch (`gh workflow run gather.yml -f games=…`) runs
 # whatever the variable says.
 #
-# Its one job runs on the PC (`jackioh-selfplay-local`, bot/machine/README.md, The local runner).
-# gather.yml is left out of the supervisor's config.json on purpose: a job of a workflow listed there
-# gets a runner of its own, and this one waits for the idle runner the PC keeps, so a learn shard or a
-# night-bot job queued at the same time is served first. Without STATS_IMPORT_DATABASE_URL it plays
-# and keeps the file, and files nothing.
+# Its one job runs on the PC under a label of its own (`jackioh-selfplay-local-gather`,
+# bot/machine/README.md, The local runner; #2134). The supervisor's config.json gives that label a
+# slot outside maxJobs and `priority`, so gather runs beside the learn lane's shard instead of
+# waiting behind it, at the full six CPUs: it takes the CPU ahead of the shard while both want it,
+# and both give way to the owner's own programs. Without STATS_IMPORT_DATABASE_URL it plays and
+# keeps the file, and files nothing.
 name: gather
 
 on:
@@ -55,7 +56,7 @@ jobs:
   gather:
     name: gather the newest patch
     if: ${{ github.event_name == 'workflow_dispatch' || vars.GATHER_ON_PATCH == 'true' }}
-    runs-on: jackioh-selfplay-local
+    runs-on: jackioh-selfplay-local-gather
     # The PC's runner slows a job to half a CPU while the PC is busy, so allow a day.
     timeout-minutes: 1440
     steps:

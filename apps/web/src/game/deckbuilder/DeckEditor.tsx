@@ -41,6 +41,8 @@ import {
   DECK_DELETE,
   DECK_DELETE_CANCEL,
   DECK_DELETE_CONFIRM,
+  DECK_DUPLICATE,
+  DECK_DUPLICATE_REASON,
   DECK_DRAG_MIME,
   DECK_EDITOR,
   DECK_NAME_INPUT,
@@ -100,10 +102,14 @@ export type DeckEditorProps = {
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
+  /** #2099: the name field lost the focus, so the rename under way is one undo step. */
+  onRenameDone: () => void;
   /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
+  /** #2096: a new deck with this one's cards, portrait and picks, opened in its place. */
+  onDuplicate: () => void;
   onSaveNow: () => void;
   onBack: () => void;
 };
@@ -123,7 +129,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
-  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack } = props;
 
   useLocale();
   const label = deckLabel(deck, limits.nameLength);
@@ -139,6 +145,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const nameId = useId();
   const verdictTitleId = useId();
   const confirmTextId = useId();
+  const duplicateReasonId = useId();
 
   // Timed by the words it shows, as when it held them: saying the same again leaves its timer running.
   const shown = status === null ? null : status.say();
@@ -318,6 +325,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (holders.get(detailCardId) ?? null);
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
+  const atCap = decks.length >= limits.decks;
   const triosNamingIt = inTrios.length;
   const conflictNames = joinNames([...new Set([...conflicts.values()].map((holder) => holder.name))]);
   const detail: BrowserDetail | null =
@@ -376,6 +384,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           onBlur={() => {
             // D1, gently: the field settles on the name the save sends ("Untitled deck" for none).
             if (deck.name !== label) onRename(label);
+            onRenameDone();
           }}
         />
       </label>
@@ -529,6 +538,16 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             </button>
             <button
               type="button"
+              className="ws-action"
+              data-testid={DECK_DUPLICATE}
+              disabled={atCap}
+              aria-describedby={atCap ? duplicateReasonId : undefined}
+              onClick={onDuplicate}
+            >
+              {t("Duplicate")}
+            </button>
+            <button
+              type="button"
               className="ws-action ws-action--danger"
               data-testid={DECK_DELETE}
               aria-expanded={confirming}
@@ -539,6 +558,11 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               {t("Delete deck")}
             </button>
           </div>
+          {atCap ? (
+            <p className="ws-cap-note" id={duplicateReasonId} data-testid={DECK_DUPLICATE_REASON}>
+              {t("You have {count} decks, the most you can keep. Delete one to duplicate this.", { count: limits.decks })}
+            </p>
+          ) : null}
           {codeShown ? (
             <label className="ws-code">
               <span className="ws-field-label">{t("Deck code")}</span>
