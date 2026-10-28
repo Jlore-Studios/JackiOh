@@ -6033,6 +6033,14 @@
       "started_at": "2026-10-28T11:39:56Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2224": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T10:23:10Z",
+      "issue": 2125,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
