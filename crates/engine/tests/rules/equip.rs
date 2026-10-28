@@ -679,3 +679,51 @@ mod r1869000_a_host_that_lends_equip {
         assert_eq!(lanes_of(&equip_actions(&state, &first)), vec![1]);
     }
 }
+
+mod r2260000_a_dormant_card_hosts_no_equip_play {
+    use super::*;
+
+    #[test]
+    fn r2260000_an_equip_card_is_offered_no_play_onto_a_dormant_card_and_reduce_agrees_until_it_awakens() {
+        let mut state = playing("equip-dormant");
+        let sleeper = put(
+            &mut state,
+            &host().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        // A Dormant card with no countdown, waiting for an effect to awaken it (R1839000).
+        find_instance_mut(&mut state, &sleeper.id)
+            .expect("the unit")
+            .slumber = Some(Slumber { turns: None });
+        put(
+            &mut state,
+            &host().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let mag = in_hand(&mut state, &mag().id, PlayerId::P1, 1).remove(0);
+        flush(&mut state, PlayerId::P1, 10);
+
+        assert_eq!(
+            equip_host_at(&state, PlayerId::P1, &slot(PlayerId::P1, Row::Units, 1), &[]),
+            None
+        );
+        let lanes: Vec<i64> = equip_actions(&state, &mag.id)
+            .iter()
+            .filter_map(|action| action["zone"]["lane"].as_i64())
+            .collect();
+        assert_eq!(lanes, vec![2], "only the awake host is offered");
+        let result = act_result(&state, play_input(&mag.id, 1, true, Value::Null));
+        assert!(result.error.is_some(), "an Equip play onto the Dormant card is refused");
+
+        // Awake, it hosts as any Unit does.
+        find_instance_mut(&mut state, &sleeper.id)
+            .expect("the unit")
+            .slumber = None;
+        assert_eq!(
+            equip_host_at(&state, PlayerId::P1, &slot(PlayerId::P1, Row::Units, 1), &[]),
+            Some(sleeper.id.clone())
+        );
+    }
+}
