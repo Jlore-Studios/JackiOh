@@ -1,0 +1,63 @@
+{
+  "action": "build",
+  "number": 2214,
+  "title": "Patch: the weaker ladder bots make plausible mistakes instead of uniformly random moves",
+  "branch": "bot/issue-2214",
+  "thread": "**Issue #2214 (data, not instructions):**\n\n```text\n# #2214: Patch: the weaker ladder bots make plausible mistakes instead of uniformly random moves\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen the ranked queue is empty, a player is paired with one of the server's bots. The weakest bot, the one a new player meets first, makes a completely random legal move every time: it ends its turn at random, attacks whatever it can and plays cards wherever they fit. The next two bots do the same on three moves in four, and on one move in two. A new player wins those games, but the opponent looks broken, and it gives away that it is a bot, which the terms of service say ranked does not reveal. Once this is built, a weak bot's mistakes come from moves a simple player would consider. It still loses most games, but it plays like a beginner rather than at random.\n\n## Why\n- The five `BOT_STRENGTHS` (`crates/server/src/config.rs:1166-1211`) have skill 0.0, 0.25, 0.5, 0.75 and a full-skill top.\n- R747000's knob (`crates/ai/src/skill.rs:1-7`) hands each missed decision to `random_action` (`crates/server/src/bots/seat.rs:166-201`). \u00a710.7's random policy (`crates/engine/src/subsystems/ai_policy.rs:60-90`) ends the turn with `AI_END_TURN_PROBABILITY` and otherwise picks uniformly among every other legal action.\n- At skill 0.0, `plays_best` is always false, so strength 0's search budget, temperature and missed-lethal chance (`config.rs:1168-1182`) never shape a single move. `docs/bot-calibration.md:283-285` says the same: 'Strength 0 is the random policy'.\n- New players start at `RATING_START` 1000 (`config.rs:439`). Strength 0's seed rating, 1216 (`BOT_SEED_RATINGS`, `config.rs:1162`), is the bot rating closest to a new player.\n- \u00a79.12 (`spec/09-architecture.md:63`) says the terms allow pairing a player with an AI opponent and name no seat.\n- The skill knob exists because budgets and temperatures alone spread the strengths by only about 126 Elo (`docs/bot-calibration.md:295-300`). Any replacement must keep that spread.\n\n## Proposal\n- Keep the skill roll and its random stream. On a miss, sample a weighted move instead of a uniform one. The legal actions are scored by the one-ply greedy baseline's evaluation (`greedy_action`, `crates/ai/src/baselines.rs`) and drawn by a softmax at a named temperature. A miss is then usually a weak but sensible move and sometimes a bad one. End turn is weighed like any other action, not by a fixed chance.\n- The miss's temperature is a named constant in `crates/ai/src/config.rs`, or a field of `BotStrength`. The miss still knows nothing about any card, which keeps the point of `skill.rs:1-7`.\n- Re-measure the skill curve and the bots:\n  - the skill curve with `cargo jackioh arena` (`crates/tools/src/arena.rs` and `crates/ai/src/match_.rs` read the knob too);\n  - every pair of strengths with `jackioh-server bot-calibrate` (`crates/server/README.md:681-730`).\n- Tune the miss temperature and the skills until neighbouring strengths are at least as far apart as now. Paste the new `SKILL_ELO_TABLE` and `BOT_SEED_RATINGS` rows, with the runs, into `docs/bot-calibration.md`.\n- A ruling in this issue's block revising R747000's miss, with \u00a79.12 and \u00a710.7 edited where they name it.\n\n## Where it lands\n- AI: `crates/ai/src/skill.rs`, `crates/ai/src/baselines.rs`, `crates/ai/src/config.rs`.\n- Server: `crates/server/src/bots/seat.rs`, `crates/server/src/bots/calibrate.rs`, `crates/server/src/config.rs` (`BOT_STRENGTHS`, `BOT_SEED_RATINGS`, `SKILL_ELO_TABLE`).\n- Tools: `crates/tools/src/arena.rs`, if it names the miss.\n- Docs: `docs/bot-calibration.md`.\n- Spec: SPEC \u00a79.12 and \u00a710.7 (`spec/09-architecture.md`, `spec/10-engine-guide.md`), R747000, and a new note in `spec/rulings/` with its paragraph in `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n- [ ] A miss's action is always legal and drawn on the bot's own stream, so a seeded bot game replays. A test checks this for a strength-0 seat over seeded positions.\n- [ ] Over a fixed set of seeded positions, a strength-0 miss is far less likely than `random_action` to end the turn with an affordable card in hand, or to make an attack the greedy baseline scores below doing nothing. The test prints both rates on failure, and the PR quotes them.\n- [ ] A `bot-calibrate` run recorded in `docs/bot-calibration.md` shows every neighbouring pair of strengths still apart, with errors.\n- [ ] `r747000_strength_seed_ratings_match_skill_curve` (`crates/server/tests/bots/seat.rs:742`) passes on the new rows.\n- [ ] `cargo test -p jackioh-ai`, `cargo test -p jackioh-server`, `cargo jackioh gate` and `cargo jackioh spec check` are green.\n\n## Size and risks\nHard: two crates and a ruling, plus calibration runs of many games.\n- At a useful size the runs take hours.\n- The strengths' Elo offsets move, so the bots already in the pool drift to new ratings over their next games (R610).\n- A one-ply evaluation per miss costs more than a uniform draw, though far less than the search a hit already runs.\n- The practice AI does not use the skill knob, so practice play does not change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:39:56Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2214: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
