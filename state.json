@@ -7032,7 +7032,25 @@
       "feedback_since": "2026-10-28T15:37:33Z",
       "issue": 2109,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40717864745",
+            "tier": "medium"
+          }
+        ],
+        "sha": "22241039cfe0fe3eadd0f967c1bf3207f7f9890e",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
