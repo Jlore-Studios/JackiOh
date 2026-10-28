@@ -5425,6 +5425,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-28T03:31:37Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-6` (claude, opus) rejected it: `task`: The pull request body has neither the `Part of #2036` line nor the `## Player note` line that issue #2117's ground rules and the plan's Done"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
