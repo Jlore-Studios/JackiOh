@@ -265,8 +265,9 @@ string_union! {
 
 string_union! {
     /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
-    /// issue #1173, R1178000) ship; Stinkyscape (issue #1836) is held until its release (#1884,
-    /// R1857000); Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// issue #1173, R1178000) and Stinkyscape (issue #1836, R1857000; released by #1884) ship;
+    /// Training Grounds (issue #2193) is held until its release (#2204, R2194000); Boss and Boss-X
+    /// are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
     /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
@@ -275,6 +276,7 @@ string_union! {
         Meditative = "Meditative",
         MeditativePlus = "Meditative+",
         Stinkyscape = "Stinkyscape",
+        TrainingGrounds = "Training Grounds",
         Boss = "Boss",
         BossX = "Boss-X",
         Custom = "Custom",
@@ -296,14 +298,16 @@ pub const SHIPPED_SETS: [SetName; 6] = [
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
-/// Meditative+ (issue #1857, R1857000; shipped by issue #1884).
-pub const CATALOG_SETS: [SetName; 6] = [
+/// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
+/// follows Stinkyscape (issue #2194, R2194000), held until its release (#2204).
+pub const CATALOG_SETS: [SetName; 7] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
     SetName::MeditativePlus,
     SetName::Stinkyscape,
+    SetName::TrainingGrounds,
 ];
 
 /// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.

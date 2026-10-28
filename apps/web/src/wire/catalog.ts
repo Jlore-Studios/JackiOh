@@ -61,8 +61,8 @@ export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
  * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15, issue
- * #1187, R1178000) ship; Stinkyscape (issue #1836) is held until its release (#1884, R1857000); Boss
- * and Boss-X are reserved.
+ * #1187, R1178000) and Stinkyscape (issue #1836, R1857000; released by #1884) ship; Training Grounds
+ * (issue #2193) is held until its release (#2204, R2194000); Boss and Boss-X are reserved.
  */
 export type SetName =
   | "Core"
@@ -71,6 +71,7 @@ export type SetName =
   | "Meditative"
   | "Meditative+"
   | "Stinkyscape"
+  | "Training Grounds"
   | "Boss"
   | "Boss-X"
   | "Custom";
