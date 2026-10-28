@@ -5299,30 +5299,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/i18n/zh-CN.json"
-          ],
-          "from": "32f1f2981e1dd784f33c53b9f431862da026eb3e",
-          "main": "d038c8d93303d8ea2870f026a88b4bfadc4f5b26"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40686316865",
-            "tier": "strong"
-          }
-        ],
-        "sha": "5362b7ca94699c18f209b8d51e5e0e735afbebf3",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "31618d8e0e6b303f85ed028da968175257e18eea",
+        "tiers": {}
       }
     },
     "2158": {
