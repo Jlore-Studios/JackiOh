@@ -7800,7 +7800,25 @@
       "feedback_since": "2026-10-28T17:55:31Z",
       "issue": 2253,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40740305624",
+            "tier": "medium"
+          }
+        ],
+        "sha": "ba2536ae8fd185b08ca46d67cca07f38c15c44a0",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
