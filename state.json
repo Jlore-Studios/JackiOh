@@ -6443,6 +6443,8 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-28T05:02:33Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40635849913",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
