@@ -5879,7 +5879,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
+      "question": "CI's `spec check` is red because of `main`, not this pull request: `spec/rulings/R2115000.md` (from #2207) writes `cards: \"\u00a710.10, R1581000, R200, #2036, #2115\"`, and since #2088 the check reads a bare `#<n>` as a Core card. On a clean checkout of `origin/main` (e4eaa55cf) it fails with the same two problems. Changing that line to `cards: \"\u00a710.10, R1581000, R200, issue #2036, issue #2115\"` makes it pass. Should that fix land on `main` (then merge `main` into this branch again), or should this pull request carry the one-line fix (`/harness revise carry the R2115000 fix`)?",
       "queued_at": "2026-10-28T10:51:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
