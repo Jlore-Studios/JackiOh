@@ -723,6 +723,11 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
+  `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
+  buttons and prefetches each route's code once per page load, and the Practice, Play and match
+  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
   and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks

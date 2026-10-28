@@ -271,6 +271,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       onLeave: () => {
         navigate(paths.together);
       },
+      leaveRoute: paths.together,
       onWatchReplay: () => {
         setWatching(true);
       },
