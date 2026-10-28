@@ -11662,17 +11662,21 @@
         {
           "at": "2026-10-28T09:53:26Z",
           "minutes": 88.4
+        },
+        {
+          "at": "2026-10-28T10:21:58Z",
+          "minutes": 300.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-28T11:39:00Z",
-          "utilization": 0.16
+          "utilization": 0.18
         },
-        "observed_at": "2026-10-28T10:03:40Z",
+        "observed_at": "2026-10-28T10:21:58Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.24
+          "utilization": 0.25
         },
         "status": "allowed"
       }
