@@ -1108,3 +1108,51 @@ mod r1088_summoned_source_id {
         }
     }
 }
+
+/// ST-S03-8 (R1860007): `summon`'s `keywords` rider (issue #1860).
+mod s03_summon_keywords {
+    use super::*;
+    use jackioh_engine::layers::keywords_of;
+    use jackioh_engine::wire::Keyword;
+
+    fn granted(events: &[GameEvent]) -> Vec<GameEvent> {
+        events_of_type(events, GameEventType::KeywordGranted)
+    }
+
+    #[test]
+    fn r1860007_a_fresh_summon_gains_the_rider_keyword_as_it_lands() {
+        let mut state = game();
+        let events = run(
+            &mut state,
+            summon(json_as(json!({
+                "defId": crier().id,
+                "keywords": [{ "kind": "Divine Shield" }],
+            }))),
+            RunOptions::default(),
+        );
+
+        let made = card_at(&state, slot(PlayerId::P1, Row::Units, 1))
+            .cloned()
+            .expect("the summon");
+        assert!(keywords_of(&state, &made).contains(&Keyword::DivineShield));
+        assert_eq!(granted(&events).len(), 1);
+    }
+
+    #[test]
+    fn r1860007_without_the_rider_nothing_is_granted() {
+        let mut state = game();
+        let cursor = state.rng_cursor;
+        let events = run(
+            &mut state,
+            summon(json_as(json!({ "defId": crier().id }))),
+            RunOptions::default(),
+        );
+
+        let made = card_at(&state, slot(PlayerId::P1, Row::Units, 1))
+            .cloned()
+            .expect("the summon");
+        assert!(!keywords_of(&state, &made).contains(&Keyword::DivineShield));
+        assert!(granted(&events).is_empty());
+        assert_eq!(state.rng_cursor, cursor, "the rider draws no random numbers");
+    }
+}
