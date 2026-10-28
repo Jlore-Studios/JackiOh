@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2266,
+  "title": "Patch: the Almanac and the other card grids render fast again",
+  "branch": "bot/issue-2266",
+  "thread": "**Issue #2266 (data, not instructions):**\n\n```text\n# #2266: Patch: the Almanac and the other card grids render fast again\nOpened by @MaxGoetzmann.\n\n## What happens\n\n`/almanac` has become noticeably slow to open, scroll and filter after the last few days' patches. The slowness probably reaches the other places that draw many card faces too: the deck builder's pool (the same `PoolGrid`), the hand and board, pile dialogs and inspect lists.\n\nNobody has profiled it yet. These are the likely causes, all from reading the code on `main` (795c3f2):\n\n1. **#2145 (R2098000) made every keyword on every face a live React component.** `PoolGrid.tsx` wraps each face in `<TermTips>`, so each `cf-term` in a card's text renders `LiveTerm` (`cards/TermTip.tsx`). Each one has a `useId`, a `useState`, four refs, a cleanup `useEffect`, a `useLayoutEffect` and seven pointer, focus and click handlers. With about 710 faces and several keywords per face, that adds up to thousands of stateful components in one grid, mostly for cards no one hovers over. #2145 also added `TermTips` to `game/Card.tsx`, `game/PileBrowser`, `cards/inspect/CardList.tsx` and `useInspectTrigger`.\n2. **The grid nearly doubled.** The Stinkyscape release (#2178) took the Almanac to a 710-entry grid. That release's own description says it gave `almanac-preview.test.tsx` the 30 s grid timeout `almanac.test.tsx` already had. #263 tuned the first layout for 318 faces (`deckbuilder.css`, the `.db-card-face` comment). `content-visibility: auto` skips layout and paint of off-screen faces, but React still mounts and reconciles every `PoolItem`.\n3. **Every item has its own per-card overhead.** Each `PoolItem` gets an `AsOwnCopy` (two context providers, R1956000), a `faceModel` memo, `useFullArt`, `useOwnCopy`, `useInspectTrigger` with its overlay, and `useLocale`. Any change to the filter, sort, win rates or ownership re-renders all ~710 items, because `PoolItem` is not memoized and gets a fresh `deck` object each render from `itemDeck(...)`.\n4. Possibly also the CSS from #2221 (type scale) and #2188 (`text-wrap: balance`, tabular numbers), if those selectors reach the card faces' text. `text-wrap: balance` on hundreds of faces makes layout cost more, and `fit.ts` text fitting re-runs on top of it.\n\nMeasure before changing anything, and fix what the profile shows. Don't treat this list as settled.\n\n## What should happen\n\nThe Almanac should open, scroll and filter at least as fast as it did before #2145 and #2178. Every rule the recent patches added has to keep working:\n\n- R2098000: hovering or long-pressing a keyword shows its rule, and in control mode the term is a tab stop with `role=\"tooltip\"` and `aria-describedby`.\n- R1956000: the signed-in viewer's own copies show their cosmetics.\n- R1383: the \"New\" ribbon.\n- R630 / R654: the read-only grid and the detail view's statistics.\n\n## What to change (guidance, not a prescription)\n\n- **Profile first.** Use a production build (`pnpm --dir apps/web build && pnpm --dir apps/web exec vite preview`) with Chromium's Performance panel or React Profiler, on `/almanac`, on `main`, and on the commit just before e653835 (#2145) for a baseline. Record the time to first render of the grid, the scripting time of a filter change, and frame times while scrolling. Put the numbers in the PR.\n- **Make terms cheap by default.** Faces in a grid could print terms as plain `<strong class=\"cf-term\" data-term data-tip>` and handle hover and long-press with one delegated listener per surface (for example on `TermTips` or the grid's `section`). Only the term being hovered or pressed would then mount the tooltip state. `startsOnTermTip` already finds terms by selector, so delegation fits how the module works. Keep R2098000's behaviour and its tests (`TermTip.test.tsx`, the `PoolGrid`, `Card` and `PileBrowser` cases) green.\n- **Stop re-rendering the whole grid.** Memoize `PoolItem` with stable props: keep `itemDeck`'s result stable for each card, or pass its fields as primitives. Then a filter, sort or ownership change only re-renders the cards it affects.\n- If the profile still shows the grid mount as the cost, consider mounting cards in chunks or virtualizing the rows. That must keep the e2e and unit specs that look up `card-pool-<id>` working, and keep the accessible names.\n- Apply the same fixes wherever else #2145 put `TermTips` and the profile shows a cost: the hand and board, `PileBrowser`, and `CardList`.\n- Any new threshold (chunk size, delay) is a named constant in `cards/constants.ts` or the module's own constants (CLAUDE.md rule 9).\n\n## Acceptance\n\n- The PR description gives before and after numbers for `/almanac` from a production build: first grid render, a filter change, and scroll frame times. Every metric is at or better than the pre-#2145 baseline.\n- A unit test keeps the main fix in place. For example: a rendered `PoolGrid` of N cards mounts no per-term tooltip state until a term is hovered. Or a filter change does not re-render items whose props didn't change.\n- `almanac.test.tsx` and `almanac-preview.test.tsx` pass without needing their 30 s grid timeouts. Remove the timeouts, or explain in the PR why one has to stay.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and the e2e smoke are green.\n\n## Links\n\nRegressions likely from #2145 (R2098000) and #2178; earlier Almanac performance work in #117, #153 and #263.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2266: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
