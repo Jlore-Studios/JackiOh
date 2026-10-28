@@ -58,6 +58,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const MENACE: &str = "core-019";
     const ME_AND_MR_TOKEN: &str = "core-015"; // (1) Common Unit, "Cry: Summon a Rush Token."
+    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill the backrow.
 
     use crate::js;
 
@@ -78,9 +79,16 @@ mod tests {
             card["radiant"] = json!(true);
         }
         let field: Vec<Value> = (0..field.unwrap_or(0)).map(|_| json!(MENACE)).collect();
+        // R2248000: a Flying Unit of the pool stands in the backrow when the unit row is full, so a
+        // full board fills the backrow too.
+        let backrow: Vec<Value> = if field.len() == UNIT_ZONES as usize {
+            vec![json!({ "def": TRAP, "faceUp": false }); BACKROW_ZONES as usize]
+        } else {
+            Vec::new()
+        };
         scenario(json!({
             "seed": seed.unwrap_or("pear"),
-            "p1": { "hand": [card, FILLER], "field": field },
+            "p1": { "hand": [card, FILLER], "field": field, "backrow": backrow },
             "p2": { "hand": [FILLER] }
         }))
     }
