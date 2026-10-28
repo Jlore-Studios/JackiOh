@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2213,
+  "title": "Patch: a finished match's log is folded once, before its result's transaction takes the season and economy locks",
+  "branch": "bot/issue-2213",
+  "thread": "**Issue #2213 (data, not instructions):**\n\n```text\n# #2213: Patch: a finished match's log is folded once, before its result's transaction takes the season and economy locks\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen an online game ends, the server records the result, moves both ratings, pays both players and moves their daily quests, all in one database transaction. To know what the quests count, it replays the whole game inside that transaction. It does so while holding a lock that every other rated game's result also needs, so rated games that end at the same moment wait for each other's replay. Once the result is written, the server replays the same game again to file its statistics, and a third time for a game against a ladder bot. This replays each game once, before the transaction opens, and hands the answer to both places. Players should see their result sooner when many games end together, and the database holds its locks and connections for less time.\n\n## Why\n- `crates/server/src/api/results.rs:177-190`: the whole write (`write_once`) runs inside one transaction, retried on a duplicate.\n- A rated game reaches `rate_ranked_game` (`results.rs:300`), then `plan_ranked_game` and `open_season_in_tx` (`crates/server/src/api/ranked.rs:391`, `:93`).\n- `open_season_in_tx` takes `ranked_lock_seasons`: one exclusive advisory lock for the whole server (`crates/server/src/db/pg.rs:5840-5846`, `SEASON_LOCK_ID`), held to the end of the transaction. A ranked series game takes it first (`results.rs:251-258`).\n- `results.rs:356-367` then takes both accounts' economy locks, reads the whole log and calls `quests_game`. At `results.rs:515` that runs `engine::summarize_game`, a fold of the whole log, with every lock and the connection still held.\n- After the commit, `record_live_game` (`results.rs:557`, `crates/server/src/api/game_records.rs:143-180`) reads the same log in a second transaction and folds it again with the same `summarize_game`.\n- A game with a ladder bot in it is folded a third time, to read a Glitch's seat swap (`game_records.rs:175-176`).\n- In the in-memory store a transaction holds the whole store's lock (`crates/server/src/db/store.rs:1626-1627`), so the e2e server stalls on every fold.\n\n## Proposal\n- `record_result` reads the match row and its log in a short transaction of its own. It folds once, off the runtime as today (`engine::off_runtime`), producing the summary, the swap and the refused actions together. A finished match's log is final, so the fold cannot go stale.\n- The answer is passed into `write_once` for the quests and into the game record's write, which no longer folds. The season and economy locks are then held only around writes.\n- A log that does not fold behaves as today: the quests count the attacks alone (`quests.game.unread`), the result is written all the same, and the game record logs as it does now.\n- What is written does not change (the same rows, ratings, payouts and quest moves), so no ruling is needed.\n\n## Where it lands\n- `crates/server/src/api/results.rs` (`record_result`, `write_result`, `write_once`, `quests_game`).\n- `crates/server/src/api/game_records.rs` (`record_live_game` takes the fold's answer).\n- Tests: `crates/server/tests/api/results.rs`, `tests/api/game_records.rs`, the quests tests and `tests/store/payout_race.rs`, with the fold gate in `crates/server/tests/support/engine.rs:345-370` (`FoldGate`).\n- SPEC \u00a79.5's result idempotency and \u00a714.8's reward hook (`spec/09-architecture.md`, `spec/14-economy.md`) are unchanged, and R611 and R1304001 still hold.\n\n## Acceptance criteria\n- [ ] A finished match calls `summarize_game` once, whatever its kind, counted in a test.\n- [ ] With one match's fold parked by `FoldGate`, a second rated match's result, between two other players, still commits. Today it waits.\n- [ ] The existing tests in `crates/server/tests/api/results.rs`, `game_records.rs`, `quests.rs` and `ranked.rs` pass unchanged.\n- [ ] `sh crates/server/tests/db/run.sh`, `sh crates/server/tests/sql/run.sh` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` are green.\n\n## Size and risks\nMedium: two source files and their tests. No store change, migration or wire change.\n- The retry on a duplicate write must reuse the one fold, not fold again.\n- The PR must show that the payout reads nothing the earlier read cannot see. That holds today, since the log is append-only and the match is over when the result is recorded.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:40:22Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2213: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
