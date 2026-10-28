@@ -9,7 +9,9 @@ mod r1829000_a_card_a_stack_pile_uncovers_is_summoning_sick {
     use jackioh_engine::testkit::*;
 
     use crate::rules::fixtures::combat::{plain, rusher, stacker};
-    use crate::rules::fixtures::harness::{setup_catalog, sink_for};
+    use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
+
+    use crate::rules::fixtures::harness::{Bench, setup_catalog, sink_for, slot};
 
     /// p1 holds `p1_hand` and has `p1_field`; p2 holds one plain unit and has another in lane 5. It is
     /// p1's main phase.
@@ -136,5 +138,83 @@ mod r1829000_a_card_a_stack_pile_uncovers_is_summoning_sick {
         assert!(is_sick(s.state(), &resumed));
         assert!(resumed.exertion.attacked);
         assert!(attack_targets(s.state(), &resumed).is_empty());
+    }
+
+    /// A Unit covered by a Stack card, its pile rotated a lane (R14) and its cover gone, all inside one
+    /// action on a later turn than it entered, as seed 128 of the fuzz played it (Core #52 Silly Silas
+    /// onto ZolarKeth's pile, then TG #14 Explosive Trap): the fuzz's monitor reads the uncovering in the
+    /// lane the pile reached. Without the rotation's event the same state is an entry no event explains,
+    /// which I4 reports.
+    #[test]
+    fn r1829000_the_fuzz_monitor_reads_an_uncovering_where_a_rotation_moved_the_pile() {
+        // The monitor watches p1 play the Unit into lane 2, then a round of turns.
+        let primed = || {
+            let mut s = board("r1829000-rotated", json!([plain.id]), json!([]));
+            let mut monitor = create_invariant_monitor(s.state());
+            s.play(&plain.id, json!({ "zone": 2 }));
+            assert_eq!(monitor.after(s.last_events(), s.state()), Vec::<String>::new());
+            for _ in 0..2 {
+                s.end_turn();
+                monitor.after(s.last_events(), s.state());
+            }
+            assert_eq!(s.state().active, P1);
+            (monitor, s.state().clone())
+        };
+        let (_, start) = primed();
+        let under = card_at(&start, slot(P1, Row::Units, 2))
+            .cloned()
+            .expect("the Unit in lane 2");
+        let mut state = start.clone();
+        let mut bench = Bench::new(&state);
+        let mut cover = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
+        let stacked = place_on_field(
+            &mut state,
+            &mut cover,
+            slot(P1, Row::Units, 2),
+            PlaceOnFieldOptions { stack: Some(true) },
+        );
+        assert!(stacked, "the Stacker tops the pile");
+        bench.run(&mut state, |sink| {
+            rotate_rings(
+                sink,
+                &RotationArgs {
+                    direction: RotationDirection::Left,
+                    perspective: P1,
+                    radiant: None,
+                },
+            )
+        });
+        bench.run(&mut state, |sink| {
+            let card = find_instance(sink.state, &cover.id).cloned().expect("the cover");
+            bounce_card(sink, &card);
+        });
+        let resumed = find_instance(&state, &under.id).expect("uncovered");
+        assert_ne!(
+            slot_of(&state, resumed),
+            Some(slot(P1, Row::Units, 2)),
+            "the pile moved"
+        );
+        assert_eq!(resumed.summoned_turn, Some(state.turn));
+        assert!(
+            under.summoned_turn < Some(state.turn),
+            "it entered on an earlier turn"
+        );
+
+        let entry_mismatches = |events: &[GameEvent]| -> Vec<String> {
+            primed()
+                .0
+                .after(events, &state)
+                .into_iter()
+                .filter(|found| found.starts_with("I4 entry mismatch"))
+                .collect()
+        };
+        assert_eq!(entry_mismatches(&bench.events), Vec::<String>::new());
+        let unrotated: Vec<GameEvent> = bench
+            .events
+            .iter()
+            .filter(|event| !matches!(event, GameEvent::Rotated { .. }))
+            .cloned()
+            .collect();
+        assert_eq!(entry_mismatches(&unrotated).len(), 1, "{unrotated:?}");
     }
 }
