@@ -9,6 +9,7 @@
 //! goes in the file its name falls in.
 
 pub mod activate;
+pub mod adjacency_aura;
 pub mod after_attack;
 pub mod after_attacked;
 pub mod ai_policy;

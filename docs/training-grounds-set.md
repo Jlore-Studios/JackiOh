@@ -849,6 +849,13 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   (`catalog.rs:8561`, R1837000: `tagged(Tag::JellyBean)` == core-026…029 exactly; #50 and TG #27 Hopeful Jelly Bean join it).
   A TG pool named by set (`set: "Training Grounds"`, TG #20, #36, #38, #39's entries) holds the snapshots too (⚠ designer:
   "a random Training-Grounds card" may mean #1–#40 only).
+- **As built (#2195, [[R2195000]]–[[R2195003]]).** The pair is `snapshotOf` on the snapshot's entry, read through
+  `catalog::pair_key` by `validate_deck_with`, the shared validator's L3, `build_ai_deck` (so every server and
+  practice deal) and the fuzz deal; the draft rules (`check_deck_draft`, `validator.rs:681`) are not, since a draft
+  is judged by L3 when it is played, and the deck builder shows the other of a pair unavailable ("in this deck, as
+  its Core card"). Each snapshot's `loc` is its own count (TG6 #27's default). Besides `loc`, a snapshot's element
+  ([[R980]]) and Meditative #14 Prime Time read its own number, so "plays exactly as" holds for the card's own
+  behaviour, not for what other cards read off its number.
 
 #### Training Grounds #41 · Bigot
 `traininggrounds-041` · (2) Unit, Human · Common (Core Common) · 4/1 → 8/2 · built by P2 (#2195)
