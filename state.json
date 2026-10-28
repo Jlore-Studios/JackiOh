@@ -5888,15 +5888,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/tools/tests/acceptance.rs"
+          ],
+          "from": "f02eb6fb56122c9844befc6f67da34211e167840",
+          "main": "dc1ba6aa90bbc72263a23d083ec859bc44ae57b0"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40649598068",
+            "run": "40665979889",
             "tier": "strong"
           }
         ],
-        "sha": "f02eb6fb56122c9844befc6f67da34211e167840",
+        "sha": "a16deb5b9cedf001b4381e1bde2b5a6034a6d377",
         "tiers": {
           "claude": "strong"
         }
