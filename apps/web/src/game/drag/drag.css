@@ -9,7 +9,7 @@
 
 :root {
   /* The arrow and ghost colour over a spot that would do nothing on release. */
-  --drag-invalid: #ff5a36;
+  --drag-invalid: var(--pal-ember-500);
 }
 
 /* ---- The board while drag to play is on ------------------------------------------------- */
@@ -105,16 +105,16 @@
   border: 2px solid var(--drag-invalid);
   border-radius: 10px;
   background:
-    radial-gradient(70% 45% at 50% 68%, rgb(125 211 252 / 16%), transparent 70%),
-    linear-gradient(165deg, #2f3752 0%, #1c2133 55%, #151925 100%);
-  color: #f8f5ff;
+    radial-gradient(70% 45% at 50% 68%, color-mix(in srgb, var(--pal-sky-300) 16%, transparent), transparent 70%),
+    linear-gradient(165deg, var(--pal-slate-800) 0%, var(--pal-slate-900) 55%, var(--pal-slate-900) 100%);
+  color: var(--pal-white);
   font-size: clamp(11px, 3vmin, 12px);
   font-weight: 700;
   line-height: 1.15;
   text-align: left;
   box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.55),
-    0 0 14px rgba(255, 90, 54, 0.35);
+    0 12px 28px color-mix(in srgb, var(--pal-black) 55%, transparent),
+    0 0 14px color-mix(in srgb, var(--pal-ember-500) 35%, transparent);
   transform: translate(-50%, -50%) rotate(-4deg) scale(1.06);
   transition:
     border-color 120ms ease,
@@ -134,14 +134,14 @@
 }
 
 .drag-ghost[data-valid="true"] {
-  border-color: var(--glow-ready, #4ade80);
+  border-color: var(--glow-ready, var(--pal-green-400));
   box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.55),
-    0 0 18px rgba(74, 222, 128, 0.55);
+    0 12px 28px color-mix(in srgb, var(--pal-black) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--pal-green-400) 55%, transparent);
 }
 
 .drag-ghost[data-radiant="true"] {
-  background: linear-gradient(160deg, #6b5320 0%, #2b2110 100%);
+  background: linear-gradient(160deg, var(--pal-wood-600) 0%, var(--pal-brass-950) 100%);
 }
 
 .drag-ghost-cost {
@@ -152,13 +152,13 @@
   place-items: center;
   width: 28px;
   height: 28px;
-  border: 2px solid #c7d7ff;
+  border: 2px solid var(--pal-blue-200);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #6aa5ff 0%, #2156c9 70%);
-  color: #fff;
+  background: radial-gradient(circle at 35% 30%, var(--pal-sky-400) 0%, var(--pal-blue-700) 70%);
+  color: var(--pal-white);
   font-size: 15px;
   font-weight: 800;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 70%, transparent);
 }
 
 /* The rules text, in a darker box across the lower card as on a printed card. A diamond used to sit
@@ -172,9 +172,9 @@
   padding: 4px 5px;
   overflow: hidden;
   border-radius: 5px;
-  background: rgb(0 0 0 / 32%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
-  color: #d8dcf0;
+  background: color-mix(in srgb, var(--pal-black) 32%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pal-white) 6%, transparent);
+  color: var(--pal-blue-200);
   font-size: 0.78em;
   font-weight: 600;
   line-height: 1.2;
@@ -208,19 +208,19 @@
   min-width: 24px;
   height: 24px;
   padding: 0 4px;
-  border: 2px solid rgb(255 255 255 / 70%);
+  border: 2px solid color-mix(in srgb, var(--pal-white) 70%, transparent);
   border-radius: 999px;
-  color: #fff;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 75%);
-  box-shadow: 0 2px 4px rgb(0 0 0 / 55%);
+  color: var(--pal-white);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 75%, transparent);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 .drag-ghost-attack {
-  background: radial-gradient(circle at 35% 30%, #fcd34d, #d97706 60%, #92400e);
+  background: radial-gradient(circle at 35% 30%, var(--pal-gold-300), var(--pal-brass-500) 60%, var(--pal-wood-600));
 }
 
 .drag-ghost-health {
-  background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626 60%, #7f1d1d);
+  background: radial-gradient(circle at 35% 30%, var(--pal-red-300), var(--pal-red-600) 60%, var(--pal-red-900));
 }
 
 /* Only the first line steps clear of the cost gem, through a float, so a first word too long to
@@ -253,7 +253,7 @@
 
 .drag-arrow {
   --drag-arrow-colour: var(--drag-invalid);
-  --drag-arrow-core: #ffe4d9;
+  --drag-arrow-core: var(--pal-slate-100);
   position: absolute;
   inset: 0;
   width: 100%;
@@ -262,8 +262,8 @@
 }
 
 .drag-arrow[data-valid="true"] {
-  --drag-arrow-colour: var(--glow-ready, #4ade80);
-  --drag-arrow-core: #effff4;
+  --drag-arrow-colour: var(--glow-ready, var(--pal-green-400));
+  --drag-arrow-core: var(--pal-white);
 }
 
 .drag-arrow-stop-tail {
@@ -278,7 +278,7 @@
 
 .drag-arrow-shadow {
   fill: none;
-  stroke: rgba(0, 0, 0, 0.5);
+  stroke: color-mix(in srgb, var(--pal-black) 50%, transparent);
   stroke-width: 17;
   stroke-linecap: round;
 }
@@ -300,7 +300,7 @@
 
 .drag-arrow-pulse {
   fill: none;
-  stroke: #fff;
+  stroke: var(--pal-white);
   stroke-opacity: 0.75;
   stroke-width: 5;
   stroke-linecap: round;
@@ -310,14 +310,14 @@
 
 .drag-arrow-head {
   fill: var(--drag-arrow-colour);
-  stroke: rgba(0, 0, 0, 0.5);
+  stroke: color-mix(in srgb, var(--pal-black) 50%, transparent);
   stroke-width: 2;
   stroke-linejoin: round;
 }
 
 .drag-arrow-origin {
   fill: var(--drag-arrow-colour);
-  stroke: rgba(255, 255, 255, 0.85);
+  stroke: color-mix(in srgb, var(--pal-white) 85%, transparent);
   stroke-width: 2.5;
 }
 
@@ -333,7 +333,7 @@
    ticks stop short of the middle, so the name or the health under the ring stays readable. */
 
 .drag-reticle {
-  --drag-reticle-colour: var(--glow-ready, #4ade80);
+  --drag-reticle-colour: var(--glow-ready, var(--pal-green-400));
   --drag-reticle-tick: 8px;
   --drag-reticle-out: 4px;
   position: absolute;
@@ -342,7 +342,7 @@
   border-radius: 50%;
   background: radial-gradient(closest-side, transparent 72%, color-mix(in srgb, var(--drag-reticle-colour) 22%, transparent));
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 45%),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 45%, transparent),
     0 0 16px var(--drag-reticle-colour),
     inset 0 0 10px color-mix(in srgb, var(--drag-reticle-colour) 70%, transparent);
   transform: translate(-50%, -50%);
@@ -359,7 +359,7 @@
 .drag-reticle[data-shape="pad"] {
   z-index: 1;
   border-width: 3px;
-  border-color: color-mix(in srgb, var(--drag-reticle-colour) 45%, white);
+  border-color: color-mix(in srgb, var(--drag-reticle-colour) 45%, var(--pal-white));
   border-radius: 12px;
   background: color-mix(in srgb, var(--drag-reticle-colour) 24%, transparent);
   box-shadow:
@@ -382,7 +382,7 @@
   border-radius: 12px;
   background: none;
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 45%),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 45%, transparent),
     0 0 18px 2px var(--drag-reticle-colour),
     inset 0 0 12px color-mix(in srgb, var(--drag-reticle-colour) 55%, transparent);
   animation-name: drag-frame-pulse;
@@ -419,7 +419,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border-radius: 2px;
-  filter: drop-shadow(0 0 3px rgb(0 0 0 / 60%));
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--pal-black) 60%, transparent));
 }
 
 .drag-reticle::before {
