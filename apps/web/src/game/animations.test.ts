@@ -835,7 +835,7 @@ describe("createAnimationQueue", () => {
     const onSettled = vi.fn();
     const queue = createAnimationQueue({ schedule: clock.schedule, onSettled });
 
-    const events = longStream(6); // 240 events, every type six times over.
+    const events = longStream(6); // Every event type six times over.
     expect(events.length).toBeGreaterThanOrEqual(200);
 
     queue.enqueue(events, view);

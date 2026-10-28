@@ -15,7 +15,8 @@ subscription the planner would give no work, never "starts next" for an item it 
 each subscription's usage as bars and charts against its caps; the last runs; the statistics
 (`stats.py`: the last six hours, day, week and all time, counted every 30 minutes and kept in the
 issue between counts, with which set's cards win most, `cardsets.py`, read from production once a
-day); and the full status text folded underneath. Times are clock times, which
+day); and the full status text folded underneath (left out first when the issue would
+pass GitHub's limit, `fit`: `/harness status` gives it). Times are clock times, which
 stay true between rewrites; hovering one shows how long it had been running when the issue was
 written. Editing an issue's body notifies nobody, so the rewrites stay quiet. The issue's number
 is kept in the state file; when it is missing or the issue was closed, an open issue with the
@@ -43,6 +44,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -268,6 +270,13 @@ BOX_STYLES = (
     "    classDef broken fill:#ffebe9,stroke:#cf222e,color:#82071e",
     "    classDef off fill:#f6f8fa,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
 )
+
+
+def styles(lines: list[str], extra: tuple[str, ...] = ()) -> list[str]:
+    """The `classDef`s of `BOX_STYLES` and `extra` that `lines` use (`:::name`): a chart declaring
+    the rest only spends the issue's room (`MAX_BODY`)."""
+    used = set(re.findall(r":::(\w+)", "\n".join(lines)))
+    return [style for style in (*BOX_STYLES, *extra) if style.split()[1] in used]
 #: Each kind of `waiting.Now` as a box style.
 STYLE = {"busy": "busy", "next": "next", "idle": "idle", "reviews": "paused", "full": "paused",
          "capped": "paused", "closed": "closed", "broken": "broken", "off": "off"}
@@ -423,7 +432,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
             lines.append("    hosted ~~~ machine")
         training = training_boxes(ctx)
         lines += training + (["    machine ~~~ training"] if training else [])
-    lines += [*BOX_STYLES, "```"]
+    lines += [*styles(lines), "```"]
     planning_runs = {n for n in live
                      if n and status_mod.record_of(state, n).get("action") == "plan"}
     # GitHub's runners have lanes of their own, apart from the night box's slots (`plan.Lanes`).
@@ -1738,8 +1747,7 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
         groups.append("qu")
     if len(groups) > 1:
         lines.append("    " + " ~~~ ".join(groups))
-    ghosts = [GHOST_STYLE] if any(":::ghost" in line for line in lines) else []
-    return lines + [*BOX_STYLES, *ghosts, "```"]
+    return lines + [*styles(lines, (GHOST_STYLE,)), "```"]
 
 
 def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = None, *,
@@ -1886,10 +1894,10 @@ def section(ctx: Context) -> str:
     lines += ["### Its account", ""] + subscription_table(ctx, state, live, explained.now) + [""]
     if MODES:
         lines += ["### Its trees", ""] + trees_table(ctx, state) + [""]
-    lines += [f"### Last {BOT_TITLE} runs", ""] + view.runs + [""]
-    lines += [f"<details><summary>{BOT_TITLE}'s full status</summary>", "",
-              view.report, "", "</details>"]
-    head = lines.index(f"## 🫧 {BOT_TITLE}") + 2
+    # No full status: the line under its heading says where it is, and the issue keeps under
+    # GitHub's limit (`MAX_BODY`).
+    lines += [f"### Last {BOT_TITLE} runs", ""] + view.runs
+    head =lines.index(f"## 🫧 {BOT_TITLE}") + 2
     lines[head:] = fold(f"What {BOT_TITLE} is working on, its queue, account and last runs",
                         lines[head:])
     return "\n".join(lines + [SECTION_END])
@@ -1908,9 +1916,10 @@ def fold(summary: str, lines: list[str]) -> list[str]:
 
 
 def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
-           view: View | None = None) -> str:
+           view: View | None = None, *, full: bool = True) -> str:
     """The whole issue: the headline, the night bot's facts, its statistics, then each other
-    bot's section (`extra`), then the full status folded."""
+    bot's section (`extra`), then the full status folded (without `full`, a line saying where to
+    read it instead: it is the same facts as the sections above, `fit`)."""
     view = view or look(ctx)
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
@@ -1960,20 +1969,34 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     # least read at a glance.
     lines += ["---", "", view.runners if view.runners is not None else runners_section(ctx, state),
               ""]
-    lines += ["<details><summary>The full status</summary>", "",
-              view.report, "", "</details>", "", MARKER]
+    if full:
+        lines += ["<details><summary>The full status</summary>", "", view.report, "",
+                  "</details>"]
+    else:
+        lines += [f"<sub>{FULL_LEFT_OUT}</sub>"]
+    lines += ["", MARKER]
     return "\n".join(lines)
 
 
+#: What stands at the foot of the issue when the full status is left out for room (`fit`).
+FULL_LEFT_OUT = (f"The full status is left out to keep this issue under GitHub's limit: "
+                 f"`{SLASH} status` gives it.")
+
+
 def fit(ctx: Context, view: View, extra: tuple[str, ...], draw: Callable[[int], str]) -> str:
-    """The body, listing fewer merged pull requests in the statistics (`draw(shown)`) while it
-    would pass GitHub's limit on an issue's body, then fewer busy runners (`_room`), and leaving
-    the statistics out last of all."""
+    """The body, while it would pass GitHub's limit on an issue's body: without the full status
+    (the same facts as the sections above, and `/harness status` gives it), then listing fewer
+    merged pull requests in the statistics (`draw(shown)`), then fewer busy runners (`_room`), and
+    leaving the statistics out last of all."""
+    body = render(ctx, extra, draw(SHOWN_STEPS[0]), view)
+    if len(body) <= MAX_BODY:
+        return body
     for shown in SHOWN_STEPS:
-        body = render(ctx, extra, draw(shown), view)
+        body = render(ctx, extra, draw(shown), view, full=False)
         if len(body) <= MAX_BODY:
             return body
-    body = _room(ctx, view, body, lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view))
+    body = _room(ctx, view, body,
+                 lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view, full=False))
     return body if len(body) <= MAX_BODY else render(ctx, extra, "", view)
 
 
@@ -2021,7 +2044,8 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     `STATS_EVERY` has passed (or `force_stats`, or the issue has none yet, or the kept block no
     longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
     the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds.
-    A count reads which set's cards win most from production through `read_cards` once a day
+    Without `stats` (bot-commands.yml's rewrite after a sweep) nothing is counted, and the block
+    the issue holds is kept too, while it fits. A count reads which set's cards win most from production through `read_cards` once a day
     (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
     view.found = read_runners(ctx)
@@ -2031,7 +2055,7 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     if issue is not None:
         explain(ctx, int(issue["number"]), state)
     view.runners = runners_section(ctx, state, view.found)
-    body_now = issue.get("body") if (stats and issue is not None) else None
+    body_now = issue.get("body") if issue is not None else None
     kept = stats_mod.kept(body_now)
     note = ""
 
@@ -2042,10 +2066,13 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
         body, note = count()
     elif kept is not None:
         body = render(ctx, extra, kept, view)
-        # More runners busy than at the last count: fewer listed, rather than a count again.
-        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view))
+        # Without the full status, then fewer runners listed, as `fit` makes room, rather than a
+        # count again.
         if len(body) > MAX_BODY:
-            body, note = count()
+            body = render(ctx, extra, kept, view, full=False)
+        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view, full=False))
+        if len(body) > MAX_BODY:
+            body, note = count() if stats else (render(ctx, extra, "", view), "")
     else:
         body = render(ctx, extra, "", view)
     if issue is None:

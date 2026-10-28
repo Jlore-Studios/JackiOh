@@ -268,6 +268,26 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 12),
             ],
         },
+        // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): 60
+        // cards (#1 to #40 and the Core snapshots #41 to #60, part 2's) and the one token #39 defines,
+        // #39.1. Its rarities over its 60 cards: 26 Common, 19 Rare, 11 Epic, 3 Legendary and 1 Mythic.
+        // It does not ship yet, so its entries are checked for their shape alone until its release
+        // (#2204).
+        SetExpectation {
+            set: "Training Grounds",
+            segment: "traininggrounds",
+            cards: 60,
+            shared_cards: Vec::new(),
+            card_defined_tokens: texts(&["39.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[
+                ("Common", 26),
+                ("Rare", 19),
+                ("Epic", 11),
+                ("Legendary", 3),
+                ("Mythic", 1),
+            ],
+        },
     ]
 }
 
@@ -285,38 +305,47 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
 /// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
 /// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420),
-/// and the held Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
-/// from its release (#1884).
+/// the Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
+/// from its release (#1884), and the held Training Grounds set's (docs/training-grounds-set.md TG2's census
+/// of its 61, R2194000), which counts from its release (#2204).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
         // #114, #115, #147 and #147.1.
-        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20),
+        // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the snapshots #41, #43,
+        // #53 and #54.
+        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20) + training_grounds(15),
         // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
         // Stinkyscape #87.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1),
+        // Training Grounds #17, #22, #23 and #33, and the snapshots #44 and #51.
+        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2),
         // Meditative+ #21 Harmony Spirit.
         // Stinkyscape #142.
-        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1),
+        // Training Grounds #29 Oriental.
+        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
         // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
         // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
-        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1),
+        // Training Grounds' snapshot #59 Fig of Life.
+        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
-        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2),
+        // Training Grounds #39.
+        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #16, #44, #116, #148 and #154.
-        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5),
+        // Training Grounds #40 Goetzmann Game Design.
+        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
-        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7),
+        // Training Grounds' snapshots #45 and #48.
+        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7) + training_grounds(2),
         // Meditative+ #15 Book of Potions.
         // Stinkyscape #102.
         Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
@@ -350,14 +379,16 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Quest => 1 + stinkyscape(2),
         Tag::Otherworldly => 1 + stinkyscape(3),
         Tag::OtherOrigins => 3 + stinkyscape(9),
-        Tag::JellyBean => 4,
+        // Training Grounds #27 Hopeful Jelly Bean and the snapshot #50 Glowy Jelly Bean.
+        Tag::JellyBean => 4 + training_grounds(2),
         // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
         // (Weapon); the four #137 tokens (War Doctrine); #91 and #92, its Swarm Units (Swarm).
         Tag::DroneCore => stinkyscape(10),
         Tag::Weapon => stinkyscape(16),
         Tag::WarDoctrine => stinkyscape(4),
         Tag::Swarm => stinkyscape(2),
-        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52),
+        // Training Grounds #39.1.
+        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1),
     }
 }
 
@@ -379,6 +410,15 @@ fn meditative_plus(count: usize) -> usize {
 /// R1420, R1857000: the same for a Stinkyscape entry, held until its release (#1884).
 fn stinkyscape(count: usize) -> usize {
     if set_ships(SetName::Stinkyscape) { count } else { 0 }
+}
+
+/// R2194000: `count` once the Training Grounds set ships, else 0.
+fn training_grounds(count: usize) -> usize {
+    if set_ships(SetName::TrainingGrounds) {
+        count
+    } else {
+        0
+    }
 }
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
@@ -1727,9 +1767,11 @@ pub fn count_loc(source: &str) -> usize {
     code_lines(source).len()
 }
 
-/// The lines `count_loc` counts, each trimmed: what `classify` compares to tell a change to a file's
-/// code from one to its comments, tests, imports or layout (R1365000).
-pub fn code_lines(source: &str) -> Vec<String> {
+/// The lines that hold code once comments are removed, each trimmed, above the file's first
+/// `#[cfg(test)]`, its `use` declarations included: what `classify` compares for a Rust or
+/// TypeScript file that is no card script, where an import can change which code a call reaches
+/// (R2050000).
+pub fn code_lines_with_uses(source: &str) -> Vec<String> {
     let mut code_lines: Vec<String> = Vec::new();
     let mut block_depth = 0usize;
     let mut quote: Option<Quote> = None;
@@ -1815,17 +1857,21 @@ pub fn code_lines(source: &str) -> Vec<String> {
         }
         code_lines.push(code.trim().to_string());
     }
+    code_lines
+        .into_iter()
+        // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
+        .take_while(|line| !line.starts_with("#[cfg(test)]"))
+        .filter(|line| !line.is_empty())
+        .collect()
+}
 
+/// The lines `count_loc` counts, each trimmed: `code_lines_with_uses` without its `use`
+/// declarations, what `classify` compares to tell a change to a card script's code from one to its
+/// comments, tests, imports or layout (R1365000).
+pub fn code_lines(source: &str) -> Vec<String> {
     let mut code = Vec::new();
     let mut in_use = false;
-    for line in code_lines {
-        // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
-        if line.starts_with("#[cfg(test)]") {
-            break;
-        }
-        if line.is_empty() {
-            continue;
-        }
+    for line in code_lines_with_uses(source) {
         if !in_use && starts_use(&line) {
             in_use = true;
         }
@@ -2189,7 +2235,9 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, 0);
+        // Stinkyscape ships, so leaving it out holds no more apart: only the held Training Grounds set
+        // is (R2194000).
+        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
         // So a card it lacks fails, as any shipped set's would: the totals and the index.
         let mut missing = shipped_catalog();
@@ -2731,6 +2779,16 @@ mod tests {
 }
 "##;
         assert_eq!(count_loc(source), 7);
+    }
+
+    #[test]
+    fn r2050000_code_lines_with_uses_keeps_use_declarations_and_drops_comments_tests_and_blank_lines() {
+        let source = "//! A module.\n\nuse crate::a::{\n    f,\n};\n\n/// It.\npub fn g() -> i32 {\n    f() // the call\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n";
+        assert_eq!(
+            code_lines_with_uses(source),
+            ["use crate::a::{", "f,", "};", "pub fn g() -> i32 {", "f()", "}"]
+        );
+        assert_eq!(code_lines(source), ["pub fn g() -> i32 {", "f()", "}"]);
     }
 
     #[test]

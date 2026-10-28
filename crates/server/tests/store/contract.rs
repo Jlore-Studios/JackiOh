@@ -5247,6 +5247,56 @@ mod game_records {
         assert!(q!(harness, t => t.stats_decklists("v9")).is_empty());
     }
 
+    /// R2089000: a record's Created cards are folded with its deck cards, into the same rows by
+    /// card, and the store loads them as the records give them: apart from the deck table, tokens
+    /// among them, and nothing from a record written without them.
+    async fn r2089000_folds_the_created_figures_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let mut records = mixed_records();
+        let deck = json!(["core-001", "core-002"]);
+        records.push(game_record(
+            "m-f",
+            json!({ "game": { "first": "p1", "winner": "p1", "reason": "hero-death", "turns": 6, "seats": {
+                "p1": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001"],
+                        "createdUsed": [{ "card": "core-t-rush", "turn": 3, "radiant": true }],
+                        "createdUnused": ["core-t-rush"] },
+                "p2": { "deck": deck, "opening": [], "drawn": [], "played": [],
+                        "createdUnused": ["core-t-coin"] },
+            } } }),
+        ));
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+        let filter = CardStatsFilter {
+            source: SourceFilter::Live,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        };
+        let report = card_stats_of(&totals, &filter);
+        assert_eq!(report, card_stats(&records, &filter));
+        let created: Vec<&str> = report.created.iter().map(|stats| stats.card.as_str()).collect();
+        assert_eq!(created, ["core-t-coin", "core-t-rush"]);
+        assert!(
+            report
+                .cards
+                .iter()
+                .all(|stats| !stats.card.starts_with("core-t-"))
+        );
+        let rush = &report.created[1];
+        assert_eq!(
+            (rush.created_played.games, rush.created_played_radiant.games),
+            (1, 1)
+        );
+        assert_eq!(rush.created_not_played.games, 0);
+        // The records written without the lists count as they did.
+        let before = mixed_records();
+        assert_eq!(report.cards.len(), card_stats(&before, &filter).cards.len());
+        assert!(card_stats(&before, &filter).created.is_empty());
+    }
+
     /// R1044000: a record written before the totals (migration 0041) is folded by
     /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
     async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
@@ -5557,6 +5607,7 @@ mod game_records {
         r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
+        r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
     );
 }
 
@@ -9942,6 +9993,45 @@ mod economy {
         );
     }
 
+    /// R2210000: the quests a profile replaced in a window are its own `removed` rows with the
+    /// reason `quest` and `at` in the half-open window: a completed quest, a `removed` row going
+    /// live wrote (reason `launch`) and another profile's apart.
+    async fn r2210000_removed_quest_count_uses_one_window_change_and_reason(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let (day_start, day_end) = (10 * 86_400_000_i64, 11 * 86_400_000_i64);
+        let launch = |quest_id: &str, change: &str, at: i64| -> QuestGrant {
+            from(json!({
+                "profileId": owner.id, "questId": quest_id, "change": change, "progress": 0,
+                "reason": "launch", "reference": null, "dev": false, "at": at,
+            }))
+        };
+        for grant in [
+            quest(&owner.id, "win-games", "arrived", 0, day_start - 10),
+            quest(&owner.id, "play-spells", "arrived", 0, day_start - 9),
+            quest(&owner.id, "play-units", "arrived", 0, day_start - 8),
+            quest(&owner.id, "play-traps", "arrived", 0, day_start - 7),
+            launch("play-cards", "arrived", day_start - 6),
+            quest(&other.id, "win-games", "arrived", 0, day_start - 5),
+            quest(&owner.id, "win-games", "removed", 0, day_start),
+            quest(&owner.id, "play-spells", "removed", 0, day_end - 1),
+            quest(&owner.id, "play-units", "removed", 0, day_end),
+            quest(&owner.id, "play-traps", "completed", 0, day_start + 1),
+            launch("play-cards", "removed", day_start + 2),
+            quest(&other.id, "win-games", "removed", 0, day_start + 3),
+        ] {
+            assert!(q!(harness, t => t.economy_quests_change(&grant)));
+        }
+        let count = |profile_id: &str, window: (i64, i64)| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_quests_removed_count(&profile_id, window.0, window.1)) }
+        };
+        assert_eq!(count(&owner.id, (day_start, day_end)).await, 2);
+        assert_eq!(count(&owner.id, (day_end, day_end + 1)).await, 1);
+        assert_eq!(count(&owner.id, (day_start + 1, day_end - 1)).await, 0);
+        assert_eq!(count(&other.id, (day_start, day_end)).await, 1);
+    }
+
     /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
     /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
     async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
@@ -10065,6 +10155,7 @@ mod economy {
         a_deleted_account_takes_its_economy_with_it,
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
+        r2210000_removed_quest_count_uses_one_window_change_and_reason,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
     );

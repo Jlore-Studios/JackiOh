@@ -14,7 +14,7 @@ describe("R1436 a username on screen", () => {
   it("R1436 an Arabic name sits in a left-to-right <bdi>, its base in a dir=auto <bdi> and its tag apart", () => {
     const { container } = render(
       <p>
-        Max is taken, so you’d be <Username name="محمد#2" />
+        Max is taken, so you'd be <Username name="محمد#2" />
       </p>,
     );
     const outer = container.querySelector("p > bdi");

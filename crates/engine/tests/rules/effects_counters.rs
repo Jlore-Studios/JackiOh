@@ -11,33 +11,9 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, new_game, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, new_game, put, slot};
 use super::fixtures::scripts::mana_well;
 use crate::rules::fixtures::harness::{json_of, live};
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 /// TS `run`'s options: `{ self?: CardInstance | null; controller?: PlayerId; targets?: Selection[] }`.
 #[derive(Default)]
@@ -98,10 +74,10 @@ mod plague_s6_3_plague_counter_m3_t1 {
     fn c91_adds_plague_counters_any_number_of_them_and_reports_the_new_count() {
         let mut state = new_game("plague-add", None);
         let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "chosen" }, "amount": 1 }))),
             RunOptions {
                 targets: Some(on_instance(&unit)),
@@ -109,7 +85,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 1 }))),
             RunOptions {
                 self_: Some(unit.clone()),
@@ -117,7 +93,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 5 }))),
             RunOptions {
                 self_: Some(unit.clone()),
@@ -125,7 +101,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
 
-        assert_eq!(live(sink.state, &unit).counters.plague, Some(7));
+        assert_eq!(live(&state, &unit).counters.plague, Some(7));
         // R471: every gain is a placement, reported with how many tokens it put there.
         assert_eq!(
             json_of(events_of_type(&sink.events, GameEventType::CounterChanged)),
@@ -141,41 +117,41 @@ mod plague_s6_3_plague_counter_m3_t1 {
     fn takes_tokens_off_floors_the_count_at_0_and_clears_the_counter_outright() {
         let mut state = new_game("plague-clear", None);
         let card = put(&mut state, &mana_well().id, slot(P1, Backrow, 1), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
         let as_self = || RunOptions {
             self_: Some(card.clone()),
             ..Default::default()
         };
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 3 }))),
             as_self(),
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": -2 }))),
             as_self(),
         );
-        assert_eq!(live(sink.state, &card).counters.plague, Some(1));
+        assert_eq!(live(&state, &card).counters.plague, Some(1));
 
         // Removing more than the card has leaves it at 0, not below.
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": -9 }))),
             as_self(),
         );
-        assert_eq!(live(sink.state, &card).counters.plague, None);
+        assert_eq!(live(&state, &card).counters.plague, None);
         assert_eq!(counter_values(&sink.events), vec![3, 1, 0]);
 
         // A count that does not change emits nothing: no tokens to remove, none to clear.
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": -1 }))),
             as_self(),
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             clear_plague(json_as(json!({ "target": { "of": "self" } }))),
             as_self(),
         );
@@ -185,12 +161,16 @@ mod plague_s6_3_plague_counter_m3_t1 {
         );
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 4 }))),
             as_self(),
         );
-        run(&mut sink.sink(), clear_plague(Default::default()), as_self());
-        assert_eq!(live(sink.state, &card).counters.plague, None);
+        run(
+            &mut sink.sink(&mut state),
+            clear_plague(Default::default()),
+            as_self(),
+        );
+        assert_eq!(live(&state, &card).counters.plague, None);
         assert_eq!(counter_values(&sink.events), vec![3, 1, 0, 4, 0]);
     }
 
@@ -198,36 +178,36 @@ mod plague_s6_3_plague_counter_m3_t1 {
     fn r78_plague_counters_reset_when_the_card_leaves_the_field() {
         let mut state = new_game("plague-leaves", None);
         let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 3 }))),
             RunOptions {
                 self_: Some(unit.clone()),
                 ..Default::default()
             },
         );
-        assert_eq!(live(sink.state, &unit).counters.plague, Some(3));
+        assert_eq!(live(&state, &unit).counters.plague, Some(3));
 
-        let mut moving = live(sink.state, &unit).clone();
+        let mut moving = live(&state, &unit).clone();
         move_to_zone(
-            sink.state,
+            &mut state,
             &mut moving,
             OffFieldZone::Graveyard,
             Default::default(),
         );
-        assert_eq!(live(sink.state, &unit).counters.plague, None);
+        assert_eq!(live(&state, &unit).counters.plague, None);
     }
 
     #[test]
     fn does_nothing_without_a_card_a_hero_selection_an_empty_selection_or_a_zero_amount() {
         let mut state = new_game("plague-fizzle", None);
         let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "enemyHero" }, "amount": 2 }))),
             RunOptions {
                 controller: Some(P1),
@@ -235,7 +215,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "chosen" }, "amount": 2 }))),
             RunOptions {
                 targets: Some(vec![]),
@@ -243,7 +223,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             plague(json_as(json!({ "target": { "of": "self" }, "amount": 0 }))),
             RunOptions {
                 self_: Some(unit.clone()),
@@ -251,7 +231,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
             },
         );
 
-        assert_eq!(live(sink.state, &unit).counters.plague, None);
+        assert_eq!(live(&state, &unit).counters.plague, None);
         assert_eq!(sink.events.len(), 0);
     }
 }
@@ -263,10 +243,10 @@ mod lock_s3_2_m3_t1 {
     fn s3_2_the_current_occupant_is_unaffected_and_the_lock_outlives_it() {
         let mut state = new_game("lock-occupant", None);
         let occupant = put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "chosen" } }))),
             RunOptions {
                 targets: Some(on_instance(&occupant)),
@@ -277,19 +257,19 @@ mod lock_s3_2_m3_t1 {
 
         // The occupant stays where it was, with its stats and its zone untouched.
         assert_eq!(
-            card_at(sink.state, slot(P2, Units, 2)).map(|card| card.id.clone()),
+            card_at(&state, slot(P2, Units, 2)).map(|card| card.id.clone()),
             Some(occupant.id.clone())
         );
         assert_eq!(
-            live(sink.state, &occupant).zone,
+            live(&state, &occupant).zone,
             Zone::Field {
                 player: P2,
                 row: Units,
                 lane: 2
             }
         );
-        assert!(is_locked(sink.state, slot(P2, Units, 2)));
-        assert!(!is_open(sink.state, slot(P2, Units, 2)));
+        assert!(is_locked(&state, slot(P2, Units, 2)));
+        assert!(!is_open(&state, slot(P2, Units, 2)));
         assert_eq!(
             json_of(events_of_type(&sink.events, GameEventType::Locked)),
             json!([{ "type": "locked", "player": "p2", "row": "units", "lane": 2 }])
@@ -297,37 +277,37 @@ mod lock_s3_2_m3_t1 {
 
         // Once it leaves, the lock lasts until the game ends — but R688 lets placements in: a Lock
         // refuses plays, never summons or moves.
-        let mut moving = live(sink.state, &occupant).clone();
+        let mut moving = live(&state, &occupant).clone();
         move_to_zone(
-            sink.state,
+            &mut state,
             &mut moving,
             OffFieldZone::Graveyard,
             Default::default(),
         );
-        assert!(card_at(sink.state, slot(P2, Units, 2)).is_none());
-        assert!(is_locked(sink.state, slot(P2, Units, 2)));
-        let mut newcomer = new_instance(&mut *sink.state, &plain.id, P2, Zone::Hand { player: P2 });
+        assert!(card_at(&state, slot(P2, Units, 2)).is_none());
+        assert!(is_locked(&state, slot(P2, Units, 2)));
+        let mut newcomer = new_instance(&mut state, &plain.id, P2, Zone::Hand { player: P2 });
         assert!(place_on_field(
-            sink.state,
+            &mut state,
             &mut newcomer,
             slot(P2, Units, 2),
             Default::default()
         ));
         assert_eq!(
-            card_at(sink.state, slot(P2, Units, 2)).map(|card| card.id.clone()),
+            card_at(&state, slot(P2, Units, 2)).map(|card| card.id.clone()),
             Some(newcomer.id.clone())
         );
-        assert!(is_locked(sink.state, slot(P2, Units, 2)));
+        assert!(is_locked(&state, slot(P2, Units, 2)));
     }
 
     #[test]
     fn c36_magic_jammed_locks_a_named_backrow_zone_and_locking_it_again_changes_nothing() {
         let mut state = new_game("lock-backrow", None);
         let trap = put(&mut state, &mana_well().id, slot(P2, Backrow, 4), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "chosen" } }))),
             RunOptions {
                 targets: Some(on_instance(&trap)),
@@ -335,21 +315,21 @@ mod lock_s3_2_m3_t1 {
                 ..Default::default()
             },
         );
-        let mut moving = live(sink.state, &trap).clone();
+        let mut moving = live(&state, &trap).clone();
         move_to_zone(
-            sink.state,
+            &mut state,
             &mut moving,
             OffFieldZone::Graveyard,
             Default::default(),
         );
 
-        assert!(is_locked(sink.state, slot(P2, Backrow, 4)));
+        assert!(is_locked(&state, slot(P2, Backrow, 4)));
         // Only that row and lane: the unit zone in the same lane is untouched.
-        assert!(!is_locked(sink.state, slot(P2, Units, 4)));
-        assert!(!is_locked(sink.state, slot(P1, Backrow, 4)));
+        assert!(!is_locked(&state, slot(P2, Units, 4)));
+        assert!(!is_locked(&state, slot(P1, Backrow, 4)));
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(
                 json!({ "zone": { "of": "lane", "player": "enemy", "row": "backrow", "lane": 4 } }),
             )),
@@ -364,10 +344,10 @@ mod lock_s3_2_m3_t1 {
     #[test]
     fn s3_1_locks_a_lane_by_index_and_r64s_placement_then_skips_it() {
         let mut state = new_game("lock-lane", None);
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(
                 json!({ "zone": { "of": "lane", "row": "units", "lane": 1 } }),
             )),
@@ -381,24 +361,18 @@ mod lock_s3_2_m3_t1 {
             json_of(events_of_type(&sink.events, GameEventType::Locked)),
             json!([{ "type": "locked", "player": "p1", "row": "units", "lane": 1 }])
         );
-        assert_eq!(
-            first_free_zone(sink.state, P1, Units).map(|zone| zone.lane),
-            Some(2)
-        );
-        assert_eq!(
-            first_free_zone(sink.state, P2, Units).map(|zone| zone.lane),
-            Some(1)
-        );
+        assert_eq!(first_free_zone(&state, P1, Units).map(|zone| zone.lane), Some(2));
+        assert_eq!(first_free_zone(&state, P2, Units).map(|zone| zone.lane), Some(1));
     }
 
     #[test]
     fn locks_the_zone_the_card_running_the_effect_sits_in_s3_1_this_lane() {
         let mut state = new_game("lock-self", None);
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 3), json!({}));
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "self" } }))),
             RunOptions {
                 self_: Some(self_card.clone()),
@@ -406,7 +380,7 @@ mod lock_s3_2_m3_t1 {
             },
         );
 
-        assert!(is_locked(sink.state, slot(P1, Units, 3)));
+        assert!(is_locked(&state, slot(P1, Units, 3)));
         assert_eq!(events_of_type(&sink.events, GameEventType::Locked).len(), 1);
     }
 
@@ -414,10 +388,10 @@ mod lock_s3_2_m3_t1 {
     fn does_nothing_when_the_zone_cannot_be_named_no_card_an_off_field_card_a_bad_lane() {
         let mut state = new_game("lock-fizzle", None);
         let in_hand_card = hand_card(&mut state, &plain.id);
-        let mut sink = sink_for(&mut state);
+        let mut sink = Bench::new(&state);
 
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "self" } }))),
             RunOptions {
                 self_: None,
@@ -425,7 +399,7 @@ mod lock_s3_2_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "chosen" } }))),
             RunOptions {
                 targets: Some(vec![]),
@@ -433,7 +407,7 @@ mod lock_s3_2_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(json!({ "zone": { "of": "chosen" } }))),
             RunOptions {
                 targets: Some(on_instance(&in_hand_card)),
@@ -441,7 +415,7 @@ mod lock_s3_2_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(
                 json!({ "zone": { "of": "lane", "row": "units", "lane": 6 } }),
             )),
@@ -451,7 +425,7 @@ mod lock_s3_2_m3_t1 {
             },
         );
         run(
-            &mut sink.sink(),
+            &mut sink.sink(&mut state),
             lock(json_as(
                 json!({ "zone": { "of": "lane", "row": "backrow", "lane": 0 } }),
             )),
@@ -463,7 +437,7 @@ mod lock_s3_2_m3_t1 {
 
         assert_eq!(sink.events.len(), 0);
         assert_eq!(
-            json_of(&sink.state.players.p1.locks),
+            json_of(&state.players.p1.locks),
             json!({
                 "units": [false, false, false, false, false],
                 "backrow": [false, false, false, false, false],

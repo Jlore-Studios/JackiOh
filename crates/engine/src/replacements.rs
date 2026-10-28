@@ -690,7 +690,11 @@ pub fn would_die_window(
         return WouldDie::Die(left);
     }
     for mut cand in candidates(sink.state, None) {
-        if resolved_first.contains(&cand.card.id) {
+        // R1884001: nor, inside its own follow-up, a card whose replacement is resolving up this call: a
+        // check that follow-up runs (its cast's own state check, R460) would ask it again, and a card
+        // that is never spent (no Trap in the backrow, as a fused Field Spell holding Stinkyscape #138's
+        // text) would answer it without end.
+        if resolved_first.contains(&cand.card.id) || sink.dying_replaced_by.contains(&cand.card.id) {
             continue;
         }
         let theirs: Vec<CardInstance> = left
@@ -724,6 +728,7 @@ pub fn would_die_window(
                 flickered: None,
             };
             if let Some(resume) = spend(sink, &cand, &def, &record, fired) {
+                sink.dying_replaced_by.push(cand.card.id.clone());
                 crate::prompts::run_resume(
                     sink,
                     &resume,
@@ -732,6 +737,7 @@ pub fn would_die_window(
                         ..crate::prompts::ResumeOptions::default()
                     },
                 );
+                sink.dying_replaced_by.pop();
             }
             return WouldDie::StartOver;
         }
@@ -881,6 +887,7 @@ pub fn answer_targeting(
             source_id: None,
             arrived_during: None,
             exits_from: None,
+            creator: None,
         });
         // R783010: a Crater Joro Locks the zone it was summoned into.
         crate::crater::lock_on_arrival(sink, &card.id);

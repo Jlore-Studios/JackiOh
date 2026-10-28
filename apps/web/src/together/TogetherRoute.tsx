@@ -10,19 +10,25 @@
 // (`status`, `watchable`), and every refusal is shown in the server's words.
 //
 // A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
-// server says the game is `watchable`; Chat always; Remove and Block, each asking once.
+// server says the game is `watchable`; Chat always; Remove, at once, and Block, asking once.
+//
+// R2119000: Remove asks nothing. The friend leaves the list at once behind "Friend removed · Undo",
+// and the unfriend waits for the undo window (`undo/hold.ts`); Undo puts the friend back and sends
+// nothing, and an unfriend that fails puts the friend back and shows the server's words.
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { withSession } from "../net/gate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
+  cachedFriends,
   cancelChallenge,
   cancelFriendRequest,
   declineFriendRequest,
@@ -37,6 +43,9 @@ import {
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
+import { UndoToast } from "../undo/UndoToast.tsx";
 import { SHARED_ANCHOR } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
@@ -61,9 +70,24 @@ function when(iso: string): string {
   return Number.isFinite(at) ? formatDateTime(at, { dateStyle: "medium", timeStyle: "short" }) : iso;
 }
 
-export function TogetherRoute(): ReactElement {
+/** `undoTimer`: the undo window's timers (R2119000); a test hands a manual one. */
+export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): ReactElement {
   useLocale();
-  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
+  const { held, hold, undo, sendNow } = useUndoHold(undoTimer);
+  /** R2119000: friends a held or sent Remove took off the list, until the list no longer names them. */
+  const [hiddenFriends, setHiddenFriends] = useState<ReadonlySet<string>>(() => new Set());
+  const hideFriend = (id: string): void => {
+    setHiddenFriends((before) => new Set(before).add(id));
+  };
+  const showFriend = (id: string): void => {
+    setHiddenFriends((before) => {
+      if (!before.has(id)) return before;
+      const after = new Set(before);
+      after.delete(id);
+      return after;
+    });
+  };
   // The challenges and unread counts are the tab's one read of them (`socialPoll.ts`), shared with the shell's toast.
   const social = useSocialPoll();
   const [shared, reloadShared] = usePolled(getSharedReplays, null);
@@ -79,6 +103,21 @@ export function TogetherRoute(): ReactElement {
   useEffect(() => {
     if (friends.kind === "ready") noteFriends(friends.value);
   }, [friends]);
+
+  // R2119000: a removed friend the list no longer names needs hiding no more, so a friend made again shows.
+  useEffect(() => {
+    if (friends.kind !== "ready") return;
+    const listed = new Set(friends.value.friends.map((friend) => friend.profileId));
+    setHiddenFriends((before) => {
+      const kept = [...before].filter((id) => listed.has(id));
+      return kept.length === before.size ? before : new Set(kept);
+    });
+  }, [friends]);
+
+  const shownFriends = useMemo(
+    () => (friends.kind === "ready" ? friends.value.friends.filter((friend) => !hiddenFriends.has(friend.profileId)) : null),
+    [friends, hiddenFriends],
+  );
 
   // "Shared with me →" on `/replays` opens this page at its list.
   useEffect(() => {
@@ -163,11 +202,7 @@ export function TogetherRoute(): ReactElement {
               reloadFriends();
             }}
           />
-          {friends.kind === "loading" ? (
-            <p className="lobby-note" role="status">
-              {t("Loading your friends…")}
-            </p>
-          ) : null}
+          {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
           {friends.kind === "failed" ? (
             <AccountError
               message={friends.message}
@@ -177,14 +212,15 @@ export function TogetherRoute(): ReactElement {
               retryTestId={togetherTestid.friendsRetry}
             />
           ) : null}
-          {list !== null && list.friends.length === 0 ? (
-            <p className="lobby-note" data-testid={togetherTestid.noFriends}>
-              {t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-            </p>
+          {shownFriends !== null && shownFriends.length === 0 ? (
+            <EmptyState
+              text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
+              testId={togetherTestid.noFriends}
+            />
           ) : null}
-          {list !== null && list.friends.length > 0 ? (
+          {shownFriends !== null && shownFriends.length > 0 ? (
             <ul className="together-list">
-              {list.friends.map((friend) => (
+              {shownFriends.map((friend) => (
                 <FriendRow
                   key={friend.profileId}
                   friend={friend}
@@ -198,7 +234,27 @@ export function TogetherRoute(): ReactElement {
                     setChatWith({ profileId: friend.profileId, username: friend.username });
                   }}
                   onRemove={() => {
-                    act(() => removeFriend(friend.profileId));
+                    const id = friend.profileId;
+                    setError(null);
+                    // `hold` first, since it sends any Remove held before this one.
+                    hold({
+                      words: () => t("Friend removed"),
+                      send: (keepalive) => {
+                        void attempt(() => (keepalive ? removeFriend(id, { keepalive: true }) : removeFriend(id))).then(
+                          () => {
+                            reloadFriends();
+                          },
+                          (cause: unknown) => {
+                            showFriend(id);
+                            setError(messageOf(cause));
+                          },
+                        );
+                      },
+                      restore: () => {
+                        showFriend(id);
+                      },
+                    });
+                    hideFriend(id);
                   }}
                   onBlock={() => {
                     act(() => blockPlayer(friend.profileId));
@@ -295,11 +351,7 @@ export function TogetherRoute(): ReactElement {
             <h2 id="together-shared-heading" className="together-panel__heading">
               {t("Shared with me")}
             </h2>
-            {shared.kind === "loading" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading…")}
-              </p>
-            ) : null}
+            {shared.kind === "loading" ? <Skeleton variant="rows" label={t("Loading…")} /> : null}
             {shared.kind === "failed" ? (
               <>
                 <p className="notice" role="alert">
@@ -319,9 +371,10 @@ export function TogetherRoute(): ReactElement {
               </>
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length === 0 ? (
-              <p className="lobby-note" data-testid={togetherTestid.noShared}>
-                {t("When a friend shares a replay with you, it is listed here.")}
-              </p>
+              <EmptyState
+                text={t("When a friend shares a replay with you, it is listed here.")}
+                testId={togetherTestid.noShared}
+              />
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length > 0 ? (
               <ul className="together-list">
@@ -336,6 +389,8 @@ export function TogetherRoute(): ReactElement {
                         type="button"
                         data-testid={togetherTestid.sharedOpen}
                         onClick={() => {
+                          // R2119000: the replay leaves this screen, so a held Remove goes now.
+                          sendNow();
                           setWatching(replay);
                         }}
                       >
@@ -348,7 +403,7 @@ export function TogetherRoute(): ReactElement {
             ) : null}
           </section>
 
-          <CoopPanel friends={list?.friends ?? NO_FRIENDS} />
+          <CoopPanel friends={shownFriends ?? NO_FRIENDS} />
 
           {list !== null && list.blocked.length > 0 ? (
             <section className="lobby-card together-panel" aria-labelledby="together-blocked-heading">
@@ -408,6 +463,7 @@ export function TogetherRoute(): ReactElement {
           }}
         />
       )}
+      <UndoToast held={held} onUndo={undo} />
     </div>
   );
 }

@@ -1,23 +1,19 @@
 // R1081000: a Flying Unit standing in the backrow renders as a hovering minion — the unit block
 // the view carries — and offers its switch action like a unit-zone minion does.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CATALOG } from "@jackioh/cards";
 import type { PlayerView, UnitView } from "@jackioh/shared";
 
+import { renderBoard } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type ClickTarget } from "./contract.ts";
 import { targetFromElement } from "./drag/targets.ts";
 
 afterEach(() => {
   cleanup();
 });
-
-const lookup = lookupFromDefs(CATALOG);
 
 function flyer(position: "ATK" | "DEF"): UnitView {
   return unit("p1", {
@@ -54,14 +50,6 @@ function backrowFlyerView(position: "ATK" | "DEF"): PlayerView {
   });
 }
 
-function renderBoard(view: PlayerView, highlight?: { legal: Set<string>; selected: Set<string> }, onClick?: (target: ClickTarget) => void): void {
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} highlight={highlight} onClick={onClick} />
-    </CatalogContext.Provider>,
-  );
-}
-
 describe("R1081000 a Flying Unit in the backrow", () => {
   it("R1081000 a Flying Unit in the backrow renders as a hovering minion", () => {
     renderBoard(backrowFlyerView("ATK"));
@@ -78,7 +66,7 @@ describe("R1081000 a Flying Unit in the backrow", () => {
     const view = backrowFlyerView("ATK");
     const onClick = vi.fn<(target: ClickTarget) => void>();
     const legal = new Set([testid.switchPosition("bird-1")]);
-    renderBoard(view, { legal, selected: new Set() }, onClick);
+    renderBoard(view, { highlight: { legal, selected: new Set() }, onClick });
 
     const button = screen.getByTestId(testid.switchPosition("bird-1"));
     expect(button.tagName).toBe("BUTTON");

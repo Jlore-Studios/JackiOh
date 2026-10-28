@@ -190,6 +190,26 @@ mod tests {
             assert_eq!(hits_from(&s, &me), vec![2, 2]);
             s.expect_health(PlayerId::P2, 28);
         }
+
+        #[test]
+        fn counters_and_damage_read_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [CAPSULE, ANCHOR], "mana": 10, "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
+            }));
+            let counters = crate::upgrade_number(&mut s, CAPSULE, "counters");
+            let damage = crate::upgrade_number(&mut s, CAPSULE, "damage");
+            s.play(CAPSULE, json!({ "zone": 1 }));
+            let me = s.card(CAPSULE).id.clone();
+            s.answer(json!(me));
+            assert_eq!(s.card(CAPSULE).counters.plague, Some(counters));
+
+            s.end_turn();
+            // One hit of counters × damage on the enemy Unit and the enemy hero.
+            assert_eq!(hits_from(&s, &me), vec![counters * damage; 2]);
+        }
     }
 
     mod radiant {

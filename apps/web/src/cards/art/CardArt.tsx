@@ -11,7 +11,8 @@ import { useDefResolver } from "../refContext.tsx";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
-import { proceduralArtUri } from "./svg.ts";
+import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
+import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
@@ -61,7 +62,10 @@ export function CardArt({
   }, [near]);
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
-  const motif = motifFor(name ?? resolve?.(defId)?.name, theme);
+  const cardName = name ?? resolve?.(defId)?.name;
+  // R2170000: the Stinkyscape set draws its own families; every other card keeps R503's art.
+  const stinky = isStinkyscapeArt(defId);
+  const motif = stinky ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
   const real = artUrl(defId, radiant, manifest);
 
@@ -89,7 +93,11 @@ export function CardArt({
     );
   }
 
-  const uri = near ? proceduralArtUri(defId, theme, compositionFor(type), radiant, motif) : null;
+  const uri = !near
+    ? null
+    : stinky
+      ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
+      : proceduralArtUri(defId, theme, compositionFor(type), radiant, motif);
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
@@ -99,6 +107,7 @@ export function CardArt({
       data-art-theme={theme}
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
+      data-art-family={stinky ? stinkySubject(defId, cardName, tags, type).family : undefined}
       data-art-pending={uri === null ? "true" : undefined}
       aria-hidden="true"
       style={

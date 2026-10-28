@@ -38,6 +38,10 @@ export const duosTestid = {
   coopLiveRetry: "coop-live-retry",
   // The board's own: the rail's pieces, the concede offer and the result.
   board: "duos-board",
+  /** R2095000: the rail's Both boards toggle, and each board's own wrapper. */
+  both: "duos-both",
+  boardOwn: "duos-board-own",
+  boardTeammate: "duos-board-teammate",
   lifeStrip: "duos-life-strip",
   round: "duos-round",
   waiting: "duos-waiting",
@@ -51,6 +55,9 @@ export const duosTestid = {
   resultJlore: "duos-result-jlore",
   /** #1755: the rail's "Result", while "View the board" has folded the result panel; it opens it again. */
   resultReopen: "duos-result-reopen",
+  /** R2092000: the result panel's Play again, and its status line. */
+  resultAgain: "duos-result-again",
+  resultAgainStatus: "duos-result-again-status",
   // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",

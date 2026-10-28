@@ -9,6 +9,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import { getGameStats, type PublicStatsGamesResponse } from "../net/api.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { statsTestid } from "./testids.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
@@ -59,7 +60,7 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
     <section className="stats-games-panel" data-testid={statsTestid.gamesPanel}>
       <h2 className="stats-games-title">{t("Game figures")}</h2>
       {loading ? (
-        <p className="stats-games-status">{t("Loading game figures…")}</p>
+        <Skeleton variant="rows" label={t("Loading game figures…")} />
       ) : error ? (
         <div className="stats-games-status">
           <p>{t("Game figures unavailable")}</p>

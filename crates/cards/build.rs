@@ -36,7 +36,9 @@
 //! the catalog ids its snapshot (`patches/<version>.json`) lacks (`absent`), for each id whose entry
 //! differs from `catalog.json`'s, an index into `patches` (`changed`), and, when it has a win-rate
 //! table file (`patches/win_rates/<version>.json`, R1329000), an index into `winRates`, which holds
-//! each table once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
+//! each table once, and, when it has a card-lists file (`patches/card_metrics/<version>.json`,
+//! R2173000), an index into `cardLists`, which holds each version's BUSTED and complicated lists
+//! once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
 //! differs, with that value, and the keys only `catalog.json`'s entry has. An id the catalog no longer
 //! has is not carried. `src/history.rs` reads it.
 //!
@@ -65,16 +67,26 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
+// R1846000, R2173000: the code-line counter, shared with the crate (`jackioh_cards::code_lines`) and
+// through it the tools, so the lists a build compiles in and the ones `patches ship` keeps per version
+// are counted alike.
+#[allow(dead_code)]
+#[path = "src/code_lines.rs"]
+mod code_lines;
+use code_lines::{code_lines, without_comments};
+
 /// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
 /// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
-/// `stinkyscape` is the held Stinkyscape set's (issue #1836, R1857000).
-const SETS: [&str; 6] = [
+/// `stinkyscape` is the Stinkyscape set's (issue #1836, R1857000), and `training_grounds` the held
+/// Training Grounds set's (issue #2193, R2194000).
+const SETS: [&str; 7] = [
     "core",
     "classic",
     "classic_plus",
     "meditative",
     "meditative_plus",
     "stinkyscape",
+    "training_grounds",
 ];
 
 /// One card file: its set, its module name, its absolute path and its `ID`.
@@ -102,6 +114,10 @@ fn main() {
     println!("cargo:rerun-if-changed={}", catalog_path.display());
     println!("cargo:rerun-if-changed={}", patches_path.display());
     println!("cargo:rerun-if-changed={}", scripts_dir.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        manifest.join("src").join("code_lines.rs").display()
+    );
     let win_rates_path = manifest.join("data").join("win_rates.json");
     println!("cargo:rerun-if-changed={}", win_rates_path.display());
     let patches_dir = manifest.join("patches");
@@ -206,18 +222,6 @@ fn read_config_usize(path: &Path, name: &str) -> usize {
             rest.trim().strip_suffix(';')?.trim().parse::<usize>().ok()
         })
         .unwrap_or_else(|| panic!("{}: no `pub const {name}: usize = N;` line", path.display()))
-}
-
-/// R1846000: a card script's code lines: the lines above its `#[cfg(test)]` (its tests are not its
-/// code) that hold code once its comments are taken out (`without_comments`), so neither a comment
-/// nor a blank line counts and every other line does, a `use` declaration's included.
-fn code_lines(source: &str) -> usize {
-    without_comments(source)
-        .iter()
-        .map(|code| code.trim())
-        .take_while(|code| !code.starts_with("#[cfg(test)]"))
-        .filter(|code| !code.is_empty())
-        .count()
 }
 
 /// R1846000: `$OUT_DIR/card_metrics.rs`: `CODE_LINES`, every catalog entry's script's code lines,
@@ -346,119 +350,6 @@ fn starts_use(code: &str) -> bool {
         .is_some_and(|tail| tail.is_empty() || tail.starts_with(|c: char| c.is_whitespace() || c == '{'))
 }
 
-/// Each line of `source` with its comments taken out (`crates/tools`' `count_loc` scanner): `//` to
-/// the line's end and nested `/* */` blocks, while a string (plain or raw) or a character literal is
-/// read as such, so a `//` inside one is code.
-fn without_comments(source: &str) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    let mut block_depth = 0usize;
-    // `Some(0)` inside a plain string, `Some(n + 1)` inside a raw string of `n` hashes.
-    let mut quote: Option<usize> = None;
-    for line in source.split('\n') {
-        let chars: Vec<char> = line.chars().collect();
-        let mut code = String::new();
-        let mut i = 0;
-        while i < chars.len() {
-            let ch = chars[i];
-            let next = chars.get(i + 1).copied();
-            if block_depth > 0 {
-                if ch == '*' && next == Some('/') {
-                    block_depth -= 1;
-                    i += 2;
-                } else if ch == '/' && next == Some('*') {
-                    block_depth += 1;
-                    i += 2;
-                } else {
-                    i += 1;
-                }
-                continue;
-            }
-            match quote {
-                Some(0) => {
-                    code.push(ch);
-                    if ch == '\\' {
-                        if let Some(next) = next {
-                            code.push(next);
-                        }
-                        i += 2;
-                        continue;
-                    }
-                    if ch == '"' {
-                        quote = None;
-                    }
-                    i += 1;
-                    continue;
-                }
-                Some(raw) => {
-                    let hashes = raw - 1;
-                    code.push(ch);
-                    let closes = ch == '"'
-                        && chars.len() > i + hashes
-                        && chars[i + 1..=i + hashes].iter().all(|c| *c == '#');
-                    if closes {
-                        code.extend(std::iter::repeat_n('#', hashes));
-                        quote = None;
-                        i += 1 + hashes;
-                    } else {
-                        i += 1;
-                    }
-                    continue;
-                }
-                None => {}
-            }
-            if ch == '/' && next == Some('/') {
-                break;
-            }
-            if ch == '/' && next == Some('*') {
-                block_depth += 1;
-                i += 2;
-                continue;
-            }
-            if ch == '"' {
-                quote = Some(0);
-                code.push(ch);
-                i += 1;
-                continue;
-            }
-            let raw_start = (ch == 'r' || (ch == 'b' && next == Some('r')))
-                && !(i > 0 && (chars[i - 1].is_alphanumeric() || chars[i - 1] == '_'));
-            if raw_start {
-                let after_r = if ch == 'b' { i + 2 } else { i + 1 };
-                let hashes = chars[after_r.min(chars.len())..]
-                    .iter()
-                    .take_while(|c| **c == '#')
-                    .count();
-                if chars.get(after_r + hashes) == Some(&'"') {
-                    code.extend(&chars[i..=after_r + hashes]);
-                    quote = Some(hashes + 1);
-                    i = after_r + hashes + 1;
-                    continue;
-                }
-            }
-            if ch == '\'' {
-                // A character literal (`'x'`, `'\n'`) is one token; a lifetime is a quote and a name.
-                let length = if next == Some('\\') {
-                    chars[i + 2..]
-                        .iter()
-                        .position(|c| *c == '\'')
-                        .map_or(1, |at| at + 3)
-                } else if chars.get(i + 2) == Some(&'\'') {
-                    3
-                } else {
-                    1
-                };
-                code.extend(&chars[i..(i + length).min(chars.len())]);
-                i += length;
-                continue;
-            }
-            code.push(ch);
-            i += 1;
-        }
-        out.push(code);
-    }
-    out
-}
-
 /// `json` without the whitespace outside its strings (the header): every other character kept, in
 /// order, so it parses to the same value with its keys in the same order.
 fn compact_json(json: &str) -> String {
@@ -514,6 +405,8 @@ fn history_json(
     let mut seen: BTreeMap<String, usize> = BTreeMap::new();
     let mut tables: Vec<serde_json::Value> = Vec::new();
     let mut seen_tables: BTreeMap<String, usize> = BTreeMap::new();
+    let mut card_lists: Vec<serde_json::Value> = Vec::new();
+    let mut seen_lists: BTreeMap<String, usize> = BTreeMap::new();
     let mut carried: Vec<serde_json::Value> = Vec::new();
     let first = from.map_or(0, |from| {
         versions
@@ -554,6 +447,15 @@ fn history_json(
             }
             entry["winRates"] = serde_json::Value::from(at);
         }
+        let lists_path = patches_dir.join("card_metrics").join(format!("{version}.json"));
+        if lists_path.exists() {
+            let lists = read_json(&lists_path);
+            let at = *seen_lists.entry(lists.to_string()).or_insert(card_lists.len());
+            if at == card_lists.len() {
+                card_lists.push(lists);
+            }
+            entry["cardLists"] = serde_json::Value::from(at);
+        }
         carried.push(entry);
     }
     // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps.
@@ -563,8 +465,15 @@ fn history_json(
     } else {
         serde_json::json!({})
     };
-    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried, "aliases": aliases })
-        .to_string()
+    serde_json::json!({
+        "order": versions,
+        "patches": patches,
+        "winRates": tables,
+        "cardLists": card_lists,
+        "versions": carried,
+        "aliases": aliases,
+    })
+    .to_string()
 }
 
 /// R767000: what turns `now`'s entry back into `old`'s: `old`'s top-level keys whose value differs

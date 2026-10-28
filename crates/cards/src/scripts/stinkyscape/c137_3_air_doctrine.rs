@@ -66,9 +66,9 @@ mod tests {
     }
 
     /// p1's Starship (two Startos, 6/6), launched if `launch`; p2 with two Mr. Vanillas; the Doctrine
-    /// (Radiant if `radiant`) cast from p1's hand. Returns the scenario and what an enemy hit may name:
-    /// p2's hero and Units.
-    fn cast(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
+    /// (Radiant if `radiant`) in p1's hand, not yet cast. Returns the scenario and what an enemy hit may
+    /// name: p2's hero and Units.
+    fn board(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
         let (mut s, ship) = built_starship(
             seed,
             json!([{ "def": STARTOS, "lane": 1 }, { "def": STARTOS, "lane": 2 }]),
@@ -87,6 +87,12 @@ mod tests {
             s.unit_at(PlayerId::P2, 2).id,
         ];
         s.state_mut().players.p1.mana.current = 10;
+        (s, enemies)
+    }
+
+    /// `board`, then the Doctrine cast.
+    fn cast(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
+        let (mut s, enemies) = board(seed, radiant, launch);
         s.play(ID, json!({}));
         (s, enemies)
     }
@@ -114,6 +120,14 @@ mod tests {
     fn r1859010_radiant_twice_its_attack() {
         let (s, _) = cast("r1859010-air-radiant", true, true);
         assert_eq!(hits(&s).len(), 12);
+    }
+
+    #[test]
+    fn multiplier_reads_through_param() {
+        let (mut s, _) = board("air-param", false, true);
+        let multiplier = crate::upgrade_number(&mut s, ID, "multiplier");
+        s.play(ID, json!({}));
+        assert_eq!(hits(&s).len(), usize::try_from(multiplier * 6).expect("a count"));
     }
 
     #[test]

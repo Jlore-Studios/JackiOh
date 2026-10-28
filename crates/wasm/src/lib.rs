@@ -247,6 +247,19 @@ pub fn ai_decide(
     ))
 }
 
+/// R2102000: whether `seat` has a sure win this turn by what it can see, the Easy practice tier's
+/// lethal hint. `deadline_ms` is a `Date.now()` time, as `ai_decide`'s is: a search still running once
+/// the clock passes it lights nothing; `deadline_ms <= 0` means no clock.
+#[wasm_bindgen]
+pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> Result<bool, JsError> {
+    js(wasm_core::lethal_hint(
+        state_json,
+        seat,
+        deadline_ms,
+        js_sys::Date::now,
+    ))
+}
+
 /// `{ deck, rngCursor }` (TS `buildAiDeck(createRng(rngSeed, rngCursor), size, options)`). Every key
 /// but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read by its own serde, so an absent
 /// `banned` (the shadow ban), an absent `theme` (roll one) and a `null` one (none) keep their meanings,

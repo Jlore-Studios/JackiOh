@@ -46,7 +46,7 @@
 
 .market-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--type-3xl);
   letter-spacing: 0.04em;
 }
 
@@ -58,7 +58,7 @@
 
 .market-purse {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--type-2xl);
 }
 
 .market-stall,
@@ -82,7 +82,7 @@
 
 .market-barters h3 {
   margin: 0.75rem 0 0.4rem;
-  font-size: 1rem;
+  font-size: var(--type-xl);
 }
 
 .market-deal,
@@ -111,7 +111,7 @@
 }
 
 .market-caption {
-  font-size: 0.85rem;
+  font-size: var(--type-md);
   text-align: center;
 }
 
@@ -189,7 +189,7 @@
 .marketplace-restock,
 .marketplace-left {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--type-md);
   opacity: 0.85;
 }
 
@@ -210,6 +210,15 @@
   border: 1px solid var(--pal-blue-800);
   border-radius: 0.5rem;
   background: color-mix(in srgb, var(--pal-slate-900) 85%, transparent);
+}
+
+/* A lot's face: a card-shaped box for the face to fill, since `.cf` takes its height from its parent
+   and a bare inline span has none, which left every lot a name over an empty dot. */
+.marketplace-face {
+  display: block;
+  width: min(100%, 7rem);
+  aspect-ratio: 5 / 7;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 /* A lot an effect added for the rest of the game, the viewer's alone (R1853005). */
@@ -242,7 +251,7 @@
 
 .marketplace-sales h3 {
   margin: 0.75rem 0 0.4rem;
-  font-size: 1rem;
+  font-size: var(--type-xl);
 }
 
 /* The phone and a short landscape screen (prompt.css's breakpoint): two lots a row. */

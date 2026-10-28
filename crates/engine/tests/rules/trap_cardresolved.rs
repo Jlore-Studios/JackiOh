@@ -11,28 +11,7 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, slot};
-
-// The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
-// so the event list and the rng live here and each call borrows the state again.
-
-struct SinkFor {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> SinkFor {
-    SinkFor {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl SinkFor {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
+use crate::rules::fixtures::harness::{Bench, both, events_of_type, new_game, put, slot};
 
 // Fixtures.
 
@@ -235,9 +214,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         assert_eq!(watching, vec![trap.id.clone()]);
 
         let before = enemy_health(&state);
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         sink.events.push(resolved(&played, true));
-        settle(&mut sink.on(&mut state), SettleOptions::default());
+        settle(&mut sink.sink(&mut state), SettleOptions::default());
 
         // §10.3: the trap fired immediately, to completion, and was consumed (§5.1).
         assert_eq!(trap_fired_ids(&sink.events), vec![trap.id.clone()]);
@@ -265,9 +244,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
 
         // A card that has left play reports `permanent: false`: the trap declines and stays armed
         // (R99: a condition that must leave the trap armed belongs in `when`).
-        let mut spent = sink_for(&state);
+        let mut spent = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut spent.on(&mut state), &resolved(&played, false)).fired,
+            fire_traps_for(&mut spent.sink(&mut state), &resolved(&played, false)).fired,
             Vec::<String>::new()
         );
         assert_eq!(enemy_health(&state), before);
@@ -280,9 +259,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             Some(true)
         );
 
-        let mut kept = sink_for(&state);
+        let mut kept = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut kept.on(&mut state), &resolved(&played, true)).fired,
+            fire_traps_for(&mut kept.sink(&mut state), &resolved(&played, true)).fired,
             vec![trap.id.clone()]
         );
         assert_eq!(enemy_health(&state), before - 3);
@@ -308,21 +287,23 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         assert!(!TRAP_WINDOW_EVENTS.contains(&GameEventType::CardResolved));
         assert!(!is_trap_window_event(&event));
 
-        let mut window = sink_for(&state);
+        let mut window = Bench::new(&state);
         let turn_ended = GameEvent::TurnEnded {
             player: PlayerId::P1,
             turn: state.turn,
             unspent_mana: 0,
         };
         assert_eq!(
-            run_trap_window(&mut window.on(&mut state), &turn_ended).fired,
+            run_trap_window(&mut window.sink(&mut state), &turn_ended).fired,
             Vec::<String>::new()
         );
         assert!(state.work.is_empty());
 
-        let mut immediate = sink_for(&state);
+        let mut immediate = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut immediate.on(&mut state), &event).fired.len(),
+            fire_traps_for(&mut immediate.sink(&mut state), &event)
+                .fired
+                .len(),
             1
         );
     }
@@ -346,10 +327,10 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
 
         // Step 7: a trap played this turn is on the field when its own `cardResolved` is dispatched,
         // so only R119 keeps it from answering its own arrival.
-        let mut own = sink_for(&state);
+        let mut own = Bench::new(&state);
         assert!(traps_watching(&state, &resolved(&after, true)).is_empty());
         assert_eq!(
-            fire_traps_for(&mut own.on(&mut state), &resolved(&after, true)).fired,
+            fire_traps_for(&mut own.sink(&mut state), &resolved(&after, true)).fired,
             Vec::<String>::new()
         );
 
@@ -367,9 +348,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             exits_from: None,
         };
         assert!(traps_watching(&state, &play).is_empty());
-        let mut answered = sink_for(&state);
+        let mut answered = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut answered.on(&mut state), &play).fired,
+            fire_traps_for(&mut answered.sink(&mut state), &play).fired,
             Vec::<String>::new()
         );
 
@@ -394,9 +375,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let mut next = sink_for(&state);
+        let mut next = Bench::new(&state);
         assert_eq!(
-            fire_traps_for(&mut next.on(&mut state), &resolved(&played, true)).fired,
+            fire_traps_for(&mut next.sink(&mut state), &resolved(&played, true)).fired,
             vec![after.id.clone()]
         );
         assert_eq!(enemy_health(&state), before - 2);

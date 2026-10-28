@@ -7,6 +7,7 @@ import argparse
 import contextlib
 import io
 import json
+import re
 import unittest
 from datetime import timedelta
 from unittest import mock
@@ -707,13 +708,21 @@ class StatisticsTests(unittest.TestCase):
         self.assertEqual(opened(gh), [number])
         self.assertEqual(gh.pinned, [f"I_{number}"])
         self.assertFalse(any(t["title"] == "Night bot statistics" for t in gh.threads.values()))
-        # Without --stats (Squishy's own loop, a test) the issue carries none.
+        # Without --stats (bot-commands.yml's rewrite after a sweep) nothing is counted, and the
+        # block the issue holds is kept rather than wiped until the loop's next tick.
+        held = stats.kept(gh.threads[number]["body"])
+        with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")):
+            self.assertEqual(dashboard.update(later), f"rewrote #{number}")
+        self.assertEqual(stats.kept(gh.threads[number]["body"]), held)
+        # An issue that holds none carries none.
+        gh.threads[number]["body"] = "no statistics"
         dashboard.update(later)
         self.assertIsNone(stats.kept(gh.threads[number]["body"]))
 
     def test_more_runners_busy_are_cut_to_the_room_before_a_count(self):
         """Between counts the issue keeps its statistics; when more runners are busy than the
-        issue has room for, fewer are listed rather than the statistics counted again."""
+        issue has room for, the full status is left out, then fewer are listed, rather than the
+        statistics counted again."""
         from harness import stats
         from tests.support import DAY
         from tests.test_stats import world
@@ -728,13 +737,22 @@ class StatisticsTests(unittest.TestCase):
                                       "labels": ["ubuntu-latest"],
                                       "runner_name": f"GitHub Actions {n}"}]
         soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
-        body = dashboard.render(soon, (), stats.kept(gh.threads[number]["body"]))
+        kept = stats.kept(gh.threads[number]["body"])
+        full = dashboard.render(soon, (), kept)
         with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")), \
-                mock.patch.object(dashboard, "MAX_BODY", len(body) - 500):
+                mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
+            self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
+        body = gh.threads[number]["body"]
+        self.assertIn(dashboard.FULL_LEFT_OUT, body)
+        self.assertNotIn("…and ", body)
+        self.assertEqual(stats.kept(body), kept)
+        lean = dashboard.render(soon, (), kept, full=False)
+        with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")), \
+                mock.patch.object(dashboard, "MAX_BODY", len(lean) - 500):
             self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
         body = gh.threads[number]["body"]
         self.assertIn("…and ", body)
-        self.assertIsNotNone(stats.kept(body))
+        self.assertEqual(stats.kept(body), kept)
 
     def test_a_body_too_long_for_github_lists_fewer_merges_then_none(self):
         from harness import stats
@@ -746,10 +764,20 @@ class StatisticsTests(unittest.TestCase):
         facts = stats.collect(ctx)
         view = dashboard.look(ctx)
         full = dashboard.render(ctx, (), stats.block(ctx, facts), view)
+        self.assertIn("<summary>The full status</summary>", full)
 
         def draw(shown):
             return stats.block(ctx, facts, shown=shown)
+        # The full status goes first, every merge still listed: it is the sections' facts again.
         with mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
+            body = dashboard.fit(ctx, view, (), draw)
+        self.assertNotIn("<summary>The full status</summary>", body)
+        self.assertIn(dashboard.FULL_LEFT_OUT, body)
+        self.assertTrue(body.endswith(dashboard.MARKER))
+        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN} older ones._", body)
+        # Then fewer merges.
+        lean = dashboard.render(ctx, (), stats.block(ctx, facts), view, full=False)
+        with mock.patch.object(dashboard, "MAX_BODY", len(lean) - 1):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
         # Then fewer busy runners, with no merge listed, before the statistics go.
@@ -760,14 +788,15 @@ class StatisticsTests(unittest.TestCase):
         view = dashboard.look(ctx)
         view.found = dashboard.read_runners(ctx)
         view.runners = dashboard.runners_section(ctx, view.state, view.found)
-        bare = dashboard.render(ctx, (), stats.block(ctx, facts, shown=0), view)
+        bare = dashboard.render(ctx, (), stats.block(ctx, facts, shown=0), view, full=False)
         with mock.patch.object(dashboard, "MAX_BODY", len(bare) - 1):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertRegex(body, r"\n…and \d more\.\n")
         self.assertLessEqual(len(body), len(bare) - 1)
         self.assertIsNotNone(stats.kept(body))
         view.runners = dashboard.runners_section(ctx, view.state, view.found, room=0)
-        with mock.patch.object(dashboard, "MAX_BODY", len(dashboard.render(ctx, (), "", view))):
+        least = dashboard.render(ctx, (), stats.block(ctx, facts, shown=0), view, full=False)
+        with mock.patch.object(dashboard, "MAX_BODY", len(least) - 1):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIsNone(stats.kept(body))  # left out last of all
         self.assertTrue(body.endswith(dashboard.MARKER))
@@ -1002,6 +1031,10 @@ class RunnersTests(unittest.TestCase):
         self.assertIn("    gh ~~~ nb ~~~ mb ~~~ pc ~~~ qu\n", diagram)
         self.assertIn("classDef busy fill:#1f883d", diagram)
         self.assertNotIn("ghost", diagram)  # one row each: nothing to pad
+        # Only the styles its boxes use: the rest would spend the issue's room.
+        for name in set(re.findall(r"classDef (\w+)", diagram)):
+            self.assertIn(f":::{name}", diagram)
+        self.assertNotIn("classDef broken", diagram)
         # A label no runner holds but a job waits for: the box is starting, or full.
         self.gh.jobs["104"][0]["labels"] = ["night-vm-gpt"]
         diagram = self.section().split("```mermaid\n")[1].split("```")[0]

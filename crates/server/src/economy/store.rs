@@ -629,6 +629,18 @@ impl Tx<'_> {
         economy_dispatch!(self, quests_set_next_due(profile_id, next_due_at))
     }
 
+    /// R2210000: how many of the profile's quest rows are a `Removed` change with the quest reason
+    /// and `at` in `[from, until)` (milliseconds): the quests it replaced then. A replace reads it
+    /// under the account's economy lock.
+    pub async fn economy_quests_removed_count(
+        &mut self,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> StoreResult<i64> {
+        economy_dispatch!(self, quests_removed_count(profile_id, from, until))
+    }
+
     /// §14.2: the cosmetics the account owns, per card (by card, then cosmetic) and on the account.
     pub async fn economy_cosmetics_get(&mut self, profile_id: &str) -> StoreResult<OwnedCosmetics> {
         economy_dispatch!(self, cosmetics_get(profile_id))
@@ -770,9 +782,9 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
-        PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal,
-        literal, track_after,
+        EconomyReason, GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
+        OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
+        from_literal, literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -1241,6 +1253,29 @@ mod pg {
         .execute(&mut **t)
         .await?;
         Ok(())
+    }
+
+    /// One aggregate over the profile's rows (`quest_grants_profile_idx` leads it).
+    pub async fn quests_removed_count(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<i64, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        Ok(sqlx::query_scalar(
+            "select count(*)::bigint from public.quest_grants
+              where profile_id = $1::uuid and change = $2::text and reason = $3::text
+                and at >= to_timestamp($4::double precision / 1000.0)
+                and at < to_timestamp($5::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(literal(&QuestChange::Removed)?)
+        .bind(literal(&EconomyReason::Quest)?)
+        .bind(from)
+        .bind(until)
+        .fetch_one(&mut **t)
+        .await?)
     }
 
     pub async fn cosmetics_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<OwnedCosmetics, StoreError> {
@@ -1717,9 +1752,9 @@ mod pg {
 mod fake {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyTables, GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
-        OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
-        literal, track_after,
+        EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant,
+        JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant,
+        count_after, literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -1963,6 +1998,26 @@ mod fake {
             None => tables.quest_schedules.push((profile_id.to_string(), next_due_at)),
         }
         Ok(())
+    }
+
+    pub fn quests_removed_count(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<i64, StoreError> {
+        let tables = call(f, "economy.quests.removedCount")?;
+        let count = tables
+            .quest_grants
+            .iter()
+            .filter(|grant| {
+                grant.profile_id == profile_id
+                    && grant.change == QuestChange::Removed
+                    && grant.reason == EconomyReason::Quest
+                    && (from..until).contains(&grant.at)
+            })
+            .count();
+        Ok(i64::try_from(count).unwrap_or(i64::MAX))
     }
 
     pub fn cosmetics_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<OwnedCosmetics, StoreError> {

@@ -50,6 +50,15 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// R2102000: the stream the Easy practice tier's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
+/// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
+pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
+
+/// R2102000: the hint's worlds and its solver's nodes, the AI's own, so that it proves a lethal as the
+/// AI's solver does.
+pub const LETHAL_HINT_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
+pub const LETHAL_HINT_NODES: usize = AI_BUDGET.lethal_nodes;
+
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
 /// baseline, `duos.rs`'s `duos_gate`.
@@ -100,8 +109,8 @@ pub struct AiSearch {
     /// rather than played on (#1797, `beam_search`). Its screen, 400 games of improve-dev against the
     /// parent (`2bcd74f93`), read 215-184 with one game aborted, edge 0.078 (0.019 to 0.136).
     pub zone_variants: i32,
-    /// #1759, R1759000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
-    /// would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
+    /// #1759, R1759000, R2021000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
+    /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
     /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
     /// every one, and a unit that cannot win its next fight never stood down in a line, as the
     /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
@@ -815,10 +824,24 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
 /// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
 /// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// The list is empty since issue #732 measured the AI on the Meditative set (MN08 of #496), which it
-/// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
-/// before the AI is trained on it is listing it here.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496). It holds the
+/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8): the set ships with
+/// the AI dealing itself none of it, though the AI answers every card of it a player brings, until
+/// fullsend 2's sweep (issue #1885) measures the AI on the set and empties the list again. Gating a
+/// set that ships before the AI is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Stinkyscape];
+
+/// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
+/// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a
+/// permission to play from the graveyard with no price floor (Classic #90 In Too Deep's reward L) is
+/// legal again after every cast, and each cast scored a little better than ending the turn, so the
+/// AI cast it until the match's action cap (#1885, Stinkyscape's Reknite and The Coin).
+pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
+
+/// R1885000: the most Stinkyscape cards the shadow ban (R186) may hold, 20% of the set's 175 non-token
+/// cards (`docs/stinkyscape-set.md` ST6, fullsend 2). `cargo jackioh sweep --write` refuses reports of
+/// record that ban more; the Meditative and Meditative+ sets keep R732000's half.
+pub const STINKYSCAPE_BAN_CEILING: usize = 35;
 
 /// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
 #[derive(Clone, Copy, Debug, PartialEq)]

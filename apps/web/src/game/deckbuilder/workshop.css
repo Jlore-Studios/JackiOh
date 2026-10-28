@@ -353,17 +353,6 @@
   font-size: 12px;
 }
 
-.ws-empty {
-  padding: 40px 16px;
-  border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
-  text-align: center;
-}
-
-.ws-empty p {
-  margin: 0 auto;
-}
-
 /* --- an editor's head: the way back, the name, the server's refusal ------------------------------ */
 
 .ws-editor {
@@ -583,28 +572,6 @@
   color: var(--text);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 12px;
-}
-
-.ws-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--opponent) 60%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--opponent) 10%, var(--bg-raised));
-}
-
-.deckbuilder.app-shell .ws-confirm p {
-  margin: 0;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.ws-confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 /* --- the trio editor ----------------------------------------------------------------------------- */
@@ -964,16 +931,42 @@
 @media (max-width: 560px) {
   .workshop .db-header {
     column-gap: 10px;
+    row-gap: 2px;
+  }
+
+  /* #2099: an open deck's Undo, Redo and cosmetics buttons join Back and the gear on the first row,
+     and the title moves down to the save status's row, so the header keeps two rows and the pool's
+     first row stays on the first screen (BUILD M5-T1). Undo and Redo stay 44 px tall and 40 wide. */
+  .workshop .db-header .db-title {
+    order: 1;
+  }
+
+  .workshop .db-header .ws-sync {
+    order: 2;
+  }
+
+  .ws-history {
+    gap: 4px;
+  }
+
+  .deckbuilder.app-shell .ws-history-button,
+  .deckbuilder.app-shell .ws-cosmetics-button {
+    padding-inline: 0;
+  }
+
+  /* Past the touch-sizing block's 44 px width below; 40 still clears axe's 24 px target size. */
+  .deckbuilder.app-shell .db-header .ws-history-button {
+    min-width: 40px;
   }
 
   /* #2096: Practice, Copy code, Duplicate and Delete deck stay on one row in a 390 px phone's
-     sidebar (344 px inside), so the pool's first row stays on the first screen (BUILD M5-T1). */
+     sidebar: 344 px inside, or 329 px when the pool's scrollbar takes its 15 px. */
   .ws-actions {
-    gap: 6px;
+    gap: 4px;
   }
 
   .deckbuilder.app-shell .ws-actions .ws-action {
-    padding-inline: 8px;
+    padding-inline: 5px;
   }
 }
 

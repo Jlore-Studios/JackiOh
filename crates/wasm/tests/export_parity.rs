@@ -29,6 +29,7 @@ const SHARED: &[&str] = &[
     "preview_sets",
     "ai_to_act",
     "ai_decide",
+    "lethal_hint",
     "build_ai_deck",
     "choose_action",
     "constants",

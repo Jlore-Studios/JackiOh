@@ -8,7 +8,7 @@
 use jackioh_engine::effects::{choose_mode, damage};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, in_hand};
+use crate::rules::fixtures::harness::{Bench, act, in_hand};
 use crate::rules::fixtures::play_pipeline_b::{only, pb_playing, round_trip};
 
 fn unit(name: &str, index: i32) -> CardDef {
@@ -92,26 +92,6 @@ fn playing(seed: &str, mana: i32) -> GameState {
     register_scripts(all);
     state.players.p1.mana.current = mana;
     state
-}
-
-/// TS `sinkFor(state)`: a sink's events and rng (from the state's cursor), lent with the state to one
-/// engine call at a time.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 /// TS `{ ...body, playerId }`: an action body with its sender, as the JSON the fixtures take.

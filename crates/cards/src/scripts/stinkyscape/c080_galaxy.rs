@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn radiant_20_20_and_all_five_radiant_miners_fused_asking_nothing() {
+    fn r1872003_radiant_20_20_and_all_five_radiant_miners_fused_v1_to_v5_asking_nothing() {
         let (mut s, host) = played(true);
         assert!(s.state().pending.is_none());
         let fusions = s
@@ -160,7 +160,20 @@ mod tests {
             .filter(|id| MINERS.contains(&id.as_str()))
             .collect();
         held.sort();
-        assert_eq!(held, MINERS.map(String::from).to_vec());
+        assert_eq!(held, MINERS.map(String::from).to_vec(), "one of each");
+        // Fused one at a time from v1 to v5: each fusion's result holds the next Miner.
+        let mut order: Vec<String> = Vec::new();
+        for event in s.last_events() {
+            if let GameEvent::Fused { def_id, .. } = event {
+                let added: Vec<String> = self_def_ids(Some(s.state()), def_id)
+                    .into_iter()
+                    .filter(|id| MINERS.contains(&id.as_str()) && !order.contains(id))
+                    .collect();
+                assert_eq!(added.len(), 1, "{added:?}");
+                order.extend(added);
+            }
+        }
+        assert_eq!(order, MINERS.map(String::from).to_vec());
         assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
     }
 }

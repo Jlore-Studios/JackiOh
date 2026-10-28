@@ -27,8 +27,6 @@ import { FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { HINDERED_ATTR } from "../fx/manaMarks.ts";
 import { getFxSettings, resetFxSettingsForTests } from "../fx/settings.ts";
 import { scaleForSpeed } from "../game/animations.ts";
-import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import Clock, { type ClockFrame } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS } from "../game/clockConstants.ts";
 import { testid } from "../game/contract.ts";
@@ -56,6 +54,7 @@ import PlayRoute, { MODE_LABEL, playModeTestid, playTestid } from "../routes/pla
 import { SettingsPanel, __resetSettingsForTests, writeSettings } from "../settings/index.ts";
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import { renderBoard, withCatalog } from "./board.tsx";
 import { baseView, card, emptySide, fullBoardView, withEvents } from "./fixtures.ts";
 import { setReducedMotion } from "./setup.ts";
 
@@ -79,20 +78,11 @@ vi.mock("../net/navigate.ts", async (importOriginal) => {
 });
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const lookup = lookupFromDefs(CATALOG);
 const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
 
 const HINDER = "core-021";
 const BLOOD = "core-027";
 const CUBE = "core-022";
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
-
-function renderBoard(view: PlayerView): HTMLElement {
-  return render(withCatalog(<Board view={view} />)).container;
-}
 
 function renderGame(view: PlayerView): void {
   render(withCatalog(<Game view={view} legal={[]} onAction={vi.fn()} />));

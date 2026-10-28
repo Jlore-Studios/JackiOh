@@ -204,8 +204,19 @@ mod tests {
             let (mut s, translated, english) = translated_board("prime-translated", false);
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 3 }));
+            // The Cry destroys each one; a Trap the Cry set may then return one (Classic #14 on this
+            // seed since the Stinkyscape release, #1884, moved the five Traps it rolls), so the check is
+            // the destruction, not the zone it ends in.
+            let destroyed: Vec<String> = s
+                .events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Destroyed { instance_id, .. } => Some(instance_id.clone()),
+                    _ => None,
+                })
+                .collect();
             for id in &translated {
-                s.expect_in_zone(id, "graveyard");
+                assert!(destroyed.contains(id), "{id} destroyed: {destroyed:?}");
             }
             assert_eq!(s.unit(P1, 2).expect("the English Vanilla stands").id, english);
         }

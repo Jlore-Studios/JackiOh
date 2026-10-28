@@ -285,9 +285,10 @@ export const DECK_SAVE_ERROR = "deck-save-error";
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
+/** R2119000: deletes at once; the undo toast (`apps/web/src/undo/UndoToast.tsx`) offers Undo. */
 export const DECK_DELETE = "deck-delete";
-export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
-export const DECK_DELETE_CANCEL = "deck-delete-cancel";
+export const UNDO_TOAST = "undo-toast";
+export const UNDO_TOAST_UNDO = "undo-toast-undo";
 
 /** R251: comparison accepts a trio, deck or none. */
 export const DECK_COMPARE_SELECT = "deck-compare-select";
@@ -337,8 +338,6 @@ export function trioCardId(slot: number, catalogCardId: string): string {
 }
 
 export const TRIO_DELETE = "trio-delete";
-export const TRIO_DELETE_CONFIRM = "trio-delete-confirm";
-export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
 /** R339: trio-code output. */
 export const TRIO_COPY_CODE = "trio-copy-code";
 export const TRIO_CODE_OUTPUT = "trio-code-output";
@@ -883,6 +882,9 @@ export const COOP_DECK = "coop-deck";
 export const COOP_ERROR = "coop-error";
 export const COOP_LINK = "duos-coop-link";
 export const DUOS_BOARD = "duos-board";
+export const DUOS_BOTH = "duos-both";
+export const DUOS_BOARD_OWN = "duos-board-own";
+export const DUOS_BOARD_TEAMMATE = "duos-board-teammate";
 export const DUOS_CARD_ACTIONS = "duos-card-actions";
 export const DUOS_ROUND = "duos-round";
 export const DUOS_WAITING = "duos-waiting";
@@ -891,6 +893,8 @@ export const DUOS_CONCEDE_STATUS = "duos-concede-status";
 export const DUOS_RESULT = "duos-result";
 export const DUOS_RESULT_REPLAY = "duos-result-replay";
 export const DUOS_RESULT_JLORE = "duos-result-jlore";
+export const DUOS_RESULT_AGAIN = "duos-result-again";
+export const DUOS_RESULT_AGAIN_STATUS = "duos-result-again-status";
 export const DUOS_REPLAY = "duos-replay";
 export const DUOS_LIFE_STRIP = "duos-life-strip";
 

@@ -18,10 +18,12 @@ import {
   type DecksResponse,
   type SavedDeck,
   type SavedTrio,
+  type SendOptions,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
+import { settle } from "../../test/settle.ts";
 import { fixtureCardId } from "./fixtures.ts";
 import {
   IMPORT_OFFLINE_MESSAGE,
@@ -45,14 +47,6 @@ const CATALOG_VERSION = "test-catalog-1";
 const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * 1000;
 
 // Fakes
-
-async function settle(): Promise<void> {
-  for (let round = 0; round < 5; round += 1) {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  }
-}
 
 type ManualClock = SyncClock & { advance(ms: number): Promise<void>; pending(): number };
 
@@ -83,10 +77,10 @@ function manualClock(start = 1_000): ManualClock {
         timers.delete(due[0]);
         now = due[1].at;
         due[1].run();
-        await settle();
+        await settle({ macrotasks: 5, ticks: 0, act: false });
       }
       now = target;
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     },
   };
 }
@@ -116,7 +110,13 @@ type Call = {
   op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio";
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
+  /** R2119000: sent with `keepalive`, as the page went away. */
+  keepalive?: true;
 };
+
+function sentWith(options: SendOptions | undefined): { keepalive?: true } {
+  return options?.keepalive === true ? { keepalive: true } : {};
+}
 
 /** Mirrors deck/trio refusals from `crates/server/src/api/decks.rs`. */
 function fakeServer() {
@@ -143,8 +143,8 @@ function fakeServer() {
       decks.set(id, input);
       return { deck: { id } };
     },
-    async deleteDeck(id: string) {
-      await gate({ op: "deleteDeck", id });
+    async deleteDeck(id: string, options?: SendOptions) {
+      await gate({ op: "deleteDeck", id, ...sentWith(options) });
       const deleted = decks.delete(id);
       for (const [trioId, trio] of trios) {
         trios.set(trioId, { ...trio, deckIds: trio.deckIds.map((slot) => (slot === id ? null : slot)) as TrioSlots });
@@ -163,8 +163,8 @@ function fakeServer() {
       trios.set(id, input);
       return { trio: { id } };
     },
-    async deleteTrio(id: string) {
-      await gate({ op: "deleteTrio", id });
+    async deleteTrio(id: string, options?: SendOptions) {
+      await gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
     },
     /** R341: import is all-or-nothing under the server caps. */
@@ -319,7 +319,7 @@ describe("the debounced save", () => {
 
     store.updateDeck(id, { cards: [fixtureCardId(7)] });
     release();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(store.getSnapshot().unsynced.has(id), "the confirmation was for the older revision").toBe(true);
 
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
@@ -335,7 +335,7 @@ describe("the debounced save", () => {
     store.start();
     const id = store.createDeck({ name: "Aggro" }) ?? "";
     window.dispatchEvent(new Event("pagehide"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls.map((call) => call.id)).toEqual([id]);
   });
 
@@ -349,7 +349,7 @@ describe("the debounced save", () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     try {
       document.dispatchEvent(new Event("visibilitychange"));
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     } finally {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
@@ -438,7 +438,7 @@ describe("offline", () => {
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     server.state.offline = false;
     window.dispatchEvent(new Event("online"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.decks.has(id)).toBe(true);
   });
 
@@ -451,7 +451,7 @@ describe("offline", () => {
     const id = first.createDeck({ name: "Made on the train", cards: [fixtureCardId(4)] }) ?? "";
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     const second = open({ api: server.api, clock: manualClock(), storage });
     expect(second.getSnapshot().decks.map((deck) => deck.id)).toEqual([id]);
@@ -529,7 +529,7 @@ describe("merging the mirror over the server", () => {
     first.deleteDeck("d1");
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     server.state.offline = false;
     const secondClock = manualClock();
@@ -635,6 +635,98 @@ describe("deletes and trios", () => {
   });
 });
 
+describe("a held deletion (R2119000)", () => {
+  function seeded(decks: SavedDeck[], trios: SavedTrio[] = []) {
+    const server = fakeServer();
+    for (const deck of decks) server.decks.set(deck.id, { name: deck.name, cards: deck.cards, catalogVersion: CATALOG_VERSION });
+    for (const trio of trios) server.trios.set(trio.id, { name: trio.name, deckIds: trio.deckIds });
+    const clock = manualClock();
+    const store = open({ api: server.api, clock, server: response(decks, trios) });
+    return { server, clock, store };
+  }
+
+  it("R2119000 a hidden deck is listed nowhere and never saved, its trio slots read empty, and unhide brings both back", async () => {
+    const { server, clock, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)],
+      [savedTrio("t1", "Ladder", ["d1", "d2", null], 3)],
+    );
+    store.updateDeck("d1", { name: "Aggro 2" });
+    store.hide("deck", "d1");
+    const hidden = store.getSnapshot();
+    expect(hidden.decks.map((deck) => deck.id)).toEqual(["d2"]);
+    expect(hidden.trios[0]?.deckIds).toEqual([null, "d2", null]);
+    expect(hidden.held).toEqual({ kind: "deck", id: "d1" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS * 2);
+    expect(server.calls, "the unsaved rename waits with its deck").toEqual([]);
+    expect(store.getSnapshot().status.state).toBe("saved");
+
+    store.unhide();
+    const back = store.getSnapshot();
+    expect(back.decks.map((deck) => deck.id)).toEqual(["d1", "d2"]);
+    expect(back.trios[0]?.deckIds).toEqual(["d1", "d2", null]);
+    expect(back.held).toBeNull();
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["putDeck d1"]);
+    expect(server.decks.get("d1")?.name).toBe("Aggro 2");
+  });
+
+  it("R2119000 a trio edited while a deck is hidden keeps the hidden deck's slot", async () => {
+    const { server, clock, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2), savedDeck("d3", "Midrange", [], 3)],
+      [savedTrio("t1", "Ladder", ["d1", "d2", null], 4)],
+    );
+    store.hide("deck", "d1");
+    const shown = store.getSnapshot().trios[0]?.deckIds ?? [null, null, null];
+    store.updateTrio("t1", { deckIds: [shown[0], shown[1], "d3"] });
+    expect(store.getSnapshot().trios[0]?.deckIds).toEqual([null, "d2", "d3"]);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.trios.get("t1")?.deckIds).toEqual(["d1", "d2", "d3"]);
+
+    store.unhide();
+    expect(store.getSnapshot().trios[0]?.deckIds).toEqual(["d1", "d2", "d3"]);
+  });
+
+  it("R2119000 a flush made as the page hides sends its deletions with keepalive", async () => {
+    const { server, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)],
+      [savedTrio("t1", "Ladder", ["d1", null, null], 3)],
+    );
+    store.deleteDeck("d1");
+    store.deleteTrio("t1");
+    await store.flush({ keepalive: true });
+    expect(server.calls).toEqual([
+      { op: "deleteTrio", id: "t1", keepalive: true },
+      { op: "deleteDeck", id: "d1", keepalive: true },
+    ]);
+
+    store.deleteDeck("d2");
+    await store.flush();
+    expect(server.calls.at(-1), "the next flush is a plain one").toEqual({ op: "deleteDeck", id: "d2" });
+  });
+
+  it("R2119000 a refused deletion puts the deck back in the server's words, and a transport failure keeps it deleted and tries again", async () => {
+    const { server, clock, store } = seeded([savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)]);
+    const message = "This account can't change its decks.";
+    server.state.refusals.set("d1", new ApiRequestError(403, { code: "forbidden", message }));
+    store.deleteDeck("d1");
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d2"]);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(store.getSnapshot().decks.map((deck) => deck.id), "back in its place").toEqual(["d1", "d2"]);
+    expect(store.getSnapshot().refused.get("d1")).toBe(message);
+    expect(store.getSnapshot().status).toEqual({ state: "error", message });
+
+    server.state.offline = true;
+    store.deleteDeck("d2");
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(store.getSnapshot().status.state).toBe("offline");
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d1"]);
+    server.state.offline = false;
+    await clock.advance(RETRY_MS);
+    expect(server.decks.has("d2")).toBe(false);
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d1"]);
+  });
+});
+
 describe("refusals", () => {
   it("R256 a refusal shows the server's message, is not retried, and goes again once the deck is edited", async () => {
     const server = fakeServer();
@@ -726,7 +818,7 @@ describe("a trio import", () => {
     expect(result.ok ? result.trioId : "").toBe(trio?.id);
     expect(trio?.deckIds).toEqual([snapshot.decks[0]?.id, null, snapshot.decks[1]?.id]);
     expect(trio?.name).toBe("Shared trio");
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls).toHaveLength(1);
   });
 

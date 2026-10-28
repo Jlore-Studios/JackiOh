@@ -17,8 +17,8 @@
 //! and the lean adds no rng draw.
 //!
 //! The soft gate (R1390): the random draw never deals a card of a set in `gated_sets`, whose default is
-//! `AI_DECK_GATED_SETS` (empty since issue #732 trained the AI on the Meditative set, which it held
-//! until then), whatever ships or a thread previews; a player's random deck passes `Some(vec![])` and
+//! `AI_DECK_GATED_SETS` (the Stinkyscape set from its release, issue #1884, until issue #1885 measures
+//! the AI on it; the Meditative set until issue #732 did), whatever ships or a thread previews; a player's random deck passes `Some(vec![])` and
 //! is dealt from every set, and a lean on a gated set leans on the newest set that ships and is not
 //! gated. An empty gate deals exactly what the draw dealt before it.
 //!

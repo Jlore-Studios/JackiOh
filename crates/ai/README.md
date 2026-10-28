@@ -95,7 +95,7 @@ line on a tie. So the placements the beam tries reach the reply, which prices a 
 neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
-the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
@@ -109,6 +109,25 @@ and a softmax
 `temperature`, in evaluation points, over the finalists' means (`pick_finalist`) instead of always the
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
+
+## The lethal hint (R2102000)
+
+```rust
+pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;
+pub const LETHAL_HINT_SEED: &str;                  // "ai:lethal-hint"
+pub const LETHAL_HINT_DETERMINIZATIONS: usize;     // AI_BUDGET.determinizations
+pub const LETHAL_HINT_NODES: usize;                // AI_BUDGET.lethal_nodes
+```
+
+Whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's lethal hint
+(§9.9): the practice worker asks it for the human's seat. Like `decide` it reads the true state only
+through `redact`, so two states that differ only in what the seat cannot see give one answer. It
+fills the redaction in as `LETHAL_HINT_DETERMINIZATIONS` worlds drawn from `LETHAL_HINT_SEED`'s
+stream, a stream of its own (never the match's or a caller's), and answers whether `find_lethal`
+proves a line that wins on every one of them within `LETHAL_HINT_NODES` nodes. It is false outside
+`seat`'s own main phase with no prompt open, once the game is over, when the search panics, and
+when `should_stop` (the browser's clock, as the AI's) stops the search before it proves a line.
+`decide` never calls it, so it changes no decision and no game.
 
 ## Budgets
 
@@ -145,8 +164,9 @@ counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets`
 thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
-#732 did once it had measured the AI on the Meditative set, the list's one set until then: the list is
-empty, and gating a set that ships before the AI is trained on it is listing it there. `shape`
+#732 did once it had measured the AI on the Meditative set, the list's one set until then. It holds the
+Stinkyscape set from its release (issue #1884) until issue #1885 measures the AI on it: gating a set that
+ships before the AI is trained on it is listing it there. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still
@@ -157,23 +177,24 @@ never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrit
 and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
 oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
 A card takes the row of the latest report that lists it, in either table (R1186000), and none when the
-latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative and Meditative+ rows,
+latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative, Meditative+ and Stinkyscape rows,
 less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those and the cleared).
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
-set held to its own half (R1186000): no sweep, lane or person adds a card of an
+set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
+`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
 (every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
 runners, `.github/workflows/sweep.yml`. `cargo jackioh sweep --due <base>` names the cards: the bans and
-the watched Meditative and Meditative+ cards when the AI changed, every non-token card of a set that
+the watched Meditative, Meditative+ and Stinkyscape cards when the AI changed, every non-token card of a set that
 ships now and did not. Its report goes under `training/history/`, `--write` reads it last, and a
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
-promotion may ban a card of those two sets again when the new AI is slow with it, within each set's
-half; a record `--write` refuses opens an issue for a person instead.
+promotion may ban a card of those three sets again when the new AI is slow with it, within each
+set's ceiling; a record `--write` refuses opens an issue for a person instead.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
 when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that

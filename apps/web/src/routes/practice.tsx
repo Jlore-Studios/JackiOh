@@ -119,6 +119,7 @@ import { DIFFICULTY_LABEL, TierCrest } from "../practice/Tier.tsx";
 import "../auth/tavern.css";
 import "../practice/practice.css";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
+import { useSetting } from "../settings/store.ts";
 import { useTutorialAccountSync, type TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { Coach } from "../tutorial/Coach.tsx";
 import type { LessonScript } from "../tutorial/coach.ts";
@@ -1012,6 +1013,7 @@ function PracticeScreen({
   // This game's own end: a Play again renders once with the old controller's finished state.
   const finished = state.config === game && state.snapshot?.view.result != null;
   const boardAnimating = useBoardAnimating(boardRoot);
+  const lethalHintOn = useSetting("lethalHint");
   useEffect(() => {
     // The burst that ended the game plays out first (Game.tsx no longer drains it): the dialog
     // opens once the board has settled, and `delay` is the wait after that for the board's own
@@ -1055,11 +1057,12 @@ function PracticeScreen({
     // stays whole either way.
     controller
       .claim()
-      .then((claim) => api.claim(token, claim))
+      .then(({ claim, clockCut }) => api.claim(token, claim).then((answer) => ({ answer, clockCut })))
       .then(
-        (answer) => {
+        ({ answer, clockCut }) => {
           if (!answer.paid) {
-            settleTo({ kind: "refused", reason: answer.reason });
+            // R2208000: the device's clock mark goes with the refusal, for the dialog to word.
+            settleTo({ kind: "refused", reason: answer.reason, ...(clockCut ? { clockCut: true as const } : {}) });
             return;
           }
           // #1664: the game's Jlore is in the wallet now, and its tracks and quests are for the dialog to play.
@@ -1297,6 +1300,9 @@ function PracticeScreen({
         // R1297000: the saved deck being played brings its own playmat, backdrop and card back.
         deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
         {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
+        // R2102000: the lethal hint, a teaching aid of the Easy tier's free games alone, which the
+        // Lethal hint setting turns off.
+        lethalHint={lethalHintOn && config.difficulty === "easy" && config.lesson === undefined && snapshot.lethal === true}
       />
     </FullArtAllowed>
   );

@@ -388,7 +388,7 @@ fn pass(instance_id: &str) -> DuosActionBody {
 
 fn mulligan_keeping_all(state: &DuosState, seat: DuosSeat) -> DuosActionBody {
     duel(ActionBody::Mulligan {
-        keep: hand_ids(state, seat),
+        keep: seat_hand_ids(state, seat),
     })
 }
 
@@ -428,7 +428,7 @@ fn side_mut(state: &mut DuosState, seat: DuosSeat) -> &mut PlayerState {
     &mut state.duels[seat.duel()].players[seat.player()]
 }
 
-fn hand_ids(state: &DuosState, seat: DuosSeat) -> Vec<String> {
+fn seat_hand_ids(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     side(state, seat)
         .hand
         .iter()
@@ -876,7 +876,7 @@ mod b2_mulligans {
         let mut state = duos_begin(&duos_create(&options("b2"))).state;
         assert_eq!(sorted(duos_seats_to_act(&state)), DUOS_SEATS);
         for seat in DUOS_SEATS {
-            let hand = hand_ids(&state, seat);
+            let hand = seat_hand_ids(&state, seat);
             let mulligans: Vec<Vec<String>> = duos_legal_actions(&state, seat)
                 .into_iter()
                 .filter_map(|offered| match offered {
@@ -942,7 +942,7 @@ mod b2_mulligans {
             );
             refused(&state, seat, end_turn());
         }
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         refused(&state, A1, raw_play(&state, A1, &card));
         refused(&state, A1, pass(&card));
         assert_eq!(sorted(duos_seats_to_act(&state)), [A2, B2]);
@@ -1015,10 +1015,10 @@ mod b4_round_seats {
         for seat in [A1, A2] {
             give(&mut state, seat, NOOP);
         }
-        let a2_card = hand_ids(&state, A2)[0].clone();
+        let a2_card = seat_hand_ids(&state, A2)[0].clone();
         let body = legal_play(&state, A2, &a2_card);
         let state = ok(&state, A2, body);
-        let a1_card = hand_ids(&state, A1)[0].clone();
+        let a1_card = seat_hand_ids(&state, A1)[0].clone();
         let body = legal_play(&state, A1, &a1_card);
         let state = ok(&state, A1, body);
 
@@ -1039,7 +1039,7 @@ mod b4_round_seats {
                 acting_moves(&state, seat)
             );
             refused(&state, seat, end_turn());
-            for card in hand_ids(&state, seat) {
+            for card in seat_hand_ids(&state, seat) {
                 refused(&state, seat, raw_play(&state, seat, &card));
             }
         }
@@ -1211,7 +1211,7 @@ mod b5_turn_end_sync {
                 acting_moves(&state, seat)
             );
             refused(&state, seat, end_turn());
-            for card in hand_ids(&state, seat) {
+            for card in seat_hand_ids(&state, seat) {
                 refused(&state, seat, raw_play(&state, seat, &card));
                 refused(&state, seat, pass(&card));
             }
@@ -1225,7 +1225,7 @@ mod b6_ended_seat {
     #[test]
     fn b6_an_ended_seat_has_no_main_phase_actions() {
         let state = begun("b6");
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let state = ok(&state, A1, end_turn());
         assert!(
             acting_moves(&state, A1).is_empty(),
@@ -1246,7 +1246,7 @@ mod b6_ended_seat {
         give(&mut state, A2, NOOP);
         let state = ok(&state, A1, end_turn());
         let before = side(&state, A1).hand.len();
-        let card = hand_ids(&state, A2)[0].clone();
+        let card = seat_hand_ids(&state, A2)[0].clone();
         let state = ok(&state, A2, pass(&card));
         assert_eq!(side(&state, A1).hand.len(), before + 1);
         assert_eq!(state.ended, [true, false]);
@@ -1289,7 +1289,7 @@ mod b7_turn_ended_by_an_effect {
             acting_moves(&state, B1)
         );
         refused(&state, B1, end_turn());
-        for card in hand_ids(&state, B1) {
+        for card in seat_hand_ids(&state, B1) {
             refused(&state, B1, raw_play(&state, B1, &card));
         }
         assert!(!duos_seats_to_act(&state).contains(&B1));
@@ -2147,7 +2147,7 @@ mod b19_pass_legality {
         let state = begun("b19");
         let mut offered = passes_offered(&state, A1);
         offered.sort();
-        let mut hand = hand_ids(&state, A1);
+        let mut hand = seat_hand_ids(&state, A1);
         hand.sort();
         assert!(!hand.is_empty());
         assert_eq!(offered, hand);
@@ -2159,7 +2159,7 @@ mod b19_pass_legality {
         give(&mut state, A1, NOOP);
         side_mut(&mut state, A1).mana.current = DUOS_PASS_COST - 1;
         assert!(passes_offered(&state, A1).is_empty());
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         refused(&state, A1, pass(&card));
     }
 
@@ -2168,7 +2168,7 @@ mod b19_pass_legality {
         let mut state = begun_with("b19-free", free_passes());
         give(&mut state, A1, NOOP);
         side_mut(&mut state, A1).mana.current = 0;
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         assert!(passes_offered(&state, A1).contains(&card));
         let before = side(&state, A2).hand.len();
         let state = ok(&state, A1, pass(&card));
@@ -2184,13 +2184,13 @@ mod b19_pass_legality {
             ..DUOS_HUMAN_TEAM
         };
         let state = begun_with("b19-cap", capped);
-        let cards = hand_ids(&state, A1);
+        let cards = seat_hand_ids(&state, A1);
         let state = ok(&state, A1, pass(&cards[0]));
         let state = ok(&state, A1, pass(&cards[1]));
         assert!(passes_offered(&state, A1).is_empty());
         refused(&state, A1, pass(&cards[2]));
         // The cap is each seat's own.
-        let a2_card = hand_ids(&state, A2)[0].clone();
+        let a2_card = seat_hand_ids(&state, A2)[0].clone();
         assert!(passes_offered(&state, A2).contains(&a2_card));
         ok(&state, A2, pass(&a2_card));
     }
@@ -2201,7 +2201,7 @@ mod b19_pass_legality {
         while (side(&state, A2).hand.len() as i32) < HAND_CAP - 1 {
             give(&mut state, A2, NOOP);
         }
-        let cards = hand_ids(&state, A1);
+        let cards = seat_hand_ids(&state, A1);
         let state = ok(&state, A1, pass(&cards[0])); // the last free slot
         assert_eq!(side(&state, A2).hand.len() as i32, HAND_CAP);
         assert!(passes_offered(&state, A1).is_empty());
@@ -2211,7 +2211,7 @@ mod b19_pass_legality {
     #[test]
     fn b19_no_pass_from_an_ended_seat() {
         let state = begun("b19-ended");
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let state = ok(&state, A1, end_turn());
         assert!(passes_offered(&state, A1).is_empty());
         refused(&state, A1, pass(&card));
@@ -2222,7 +2222,7 @@ mod b19_pass_legality {
         let state = begun("b19-out");
         for seat in [B1, B2] {
             assert!(passes_offered(&state, seat).is_empty(), "{seat}");
-            for card in hand_ids(&state, seat) {
+            for card in seat_hand_ids(&state, seat) {
                 refused(&state, seat, pass(&card));
             }
         }
@@ -2246,7 +2246,7 @@ mod b20_what_a_pass_does {
     fn b20_a_pass_pays_its_cost_and_puts_the_card_at_the_right_end_of_the_teammates_hand() {
         let mut state = begun("b20");
         give(&mut state, A1, NOOP); // A1 keeps a move once the pass has spent its mana
-        let card_id = hand_ids(&state, A1)[0].clone();
+        let card_id = seat_hand_ids(&state, A1)[0].clone();
         if let Some(card) = side_mut(&mut state, A1)
             .hand
             .iter_mut()
@@ -2263,14 +2263,14 @@ mod b20_what_a_pass_does {
             .cloned()
             .expect("the card is in A1's hand");
         let mana = side(&state, A1).mana.current;
-        let teammate_hand = hand_ids(&state, A2);
+        let teammate_hand = seat_hand_ids(&state, A2);
 
         let result = duos_act(&state, A1, pass(&card_id));
         assert!(result.error.is_none());
         let state = result.state;
 
         assert_eq!(side(&state, A1).mana.current, mana - DUOS_PASS_COST);
-        assert!(!hand_ids(&state, A1).contains(&card_id));
+        assert!(!seat_hand_ids(&state, A1).contains(&card_id));
         let hand = &side(&state, A2).hand;
         assert_eq!(hand.len(), teammate_hand.len() + 1);
         let kept: Vec<String> = hand[..teammate_hand.len()]
@@ -2388,14 +2388,14 @@ mod b21_playing_a_passed_card {
     fn b21_a_passed_card_is_playable_by_a_receiver_still_in_its_round() {
         let mut state = begun("b21");
         give(&mut state, A1, NOOP);
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none());
         let id = new_id(&result.events);
         let state = result.state;
         let body = legal_play(&state, A2, &id);
         let state = ok(&state, A2, body);
-        assert!(!hand_ids(&state, A2).contains(&id));
+        assert!(!seat_hand_ids(&state, A2).contains(&id));
         assert!(on_field(&state, A2, &id));
     }
 
@@ -2404,14 +2404,14 @@ mod b21_playing_a_passed_card {
         let mut state = begun("b21-ended");
         give(&mut state, A1, NOOP);
         let state = ok(&state, A2, end_turn());
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none());
         let id = new_id(&result.events);
         let state = result.state;
         assert_eq!(state.round, 1);
         assert_eq!(state.ended, [false, true]);
-        assert!(hand_ids(&state, A2).contains(&id));
+        assert!(seat_hand_ids(&state, A2).contains(&id));
         assert!(!offers_play(&state, A2, &id));
         refused(&state, A2, raw_play(&state, A2, &id));
     }
@@ -2424,7 +2424,7 @@ mod b21_playing_a_passed_card {
         let state = ok(&state, A1, end_turn());
         let state = ok(&state, A2, end_turn());
         assert_eq!(state.round_seats, [A1, B2]);
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none(), "a pass needs no round seat to receive it");
         let id = new_id(&result.events);
@@ -2452,18 +2452,18 @@ mod b22_passes_left {
         assert_eq!(duos_view_for(&state, A1).team.pass_cost, 0);
         assert_eq!(duos_view_for(&state, A1).enemy.pass_cost, DUOS_PASS_COST);
 
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let state = ok(&state, A1, pass(&card));
         assert_eq!(duos_view_for(&state, A1).team.passes_left, [1, 2]);
         assert_eq!(duos_view_for(&state, A2).team.passes_left, [1, 2]);
-        let card = hand_ids(&state, A2)[0].clone();
+        let card = seat_hand_ids(&state, A2)[0].clone();
         let state = ok(&state, A2, pass(&card));
         assert_eq!(duos_view_for(&state, A1).team.passes_left, [1, 1]);
 
         let state = finish_round(state); // round 2: team B's
         let state = finish_round(state); // round 3: team A's again
         assert_eq!(duos_view_for(&state, A1).team.passes_left, [2, 2]);
-        let cards = hand_ids(&state, A1);
+        let cards = seat_hand_ids(&state, A1);
         let state = ok(&state, A1, pass(&cards[0]));
         let state = ok(&state, A1, pass(&cards[1]));
         assert_eq!(duos_view_for(&state, A1).team.passes_left, [0, 2]);
@@ -2473,7 +2473,7 @@ mod b22_passes_left {
     fn b22_the_enemy_teams_ended_and_passes_left_are_hidden() {
         let mut state = begun("b22-hidden");
         give(&mut state, A1, NOOP);
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let state = ok(&state, A1, pass(&card));
         let state = ok(&state, A2, end_turn());
 
@@ -2500,7 +2500,7 @@ mod b23_views {
     fn b23_own_and_teammate_are_each_duels_own_view_for() {
         let mut state = begun("b23");
         give(&mut state, A1, NOOP);
-        let card = hand_ids(&state, A1)[0].clone();
+        let card = seat_hand_ids(&state, A1)[0].clone();
         let body = legal_play(&state, A1, &card);
         let state = ok(&state, A1, body);
         let state = cast(state, A2, BOLT).state;
@@ -2629,7 +2629,7 @@ mod r1074000_a_passed_card_reads_to_its_passer_alone {
         give(&mut state, A1, NOOP); // A1 keeps a move once the pass has spent its mana
         let (id, def) = newest_draw(&state, A1);
         let state = ok(&state, A1, pass(&id));
-        assert!(!hand_ids(&state, A1).contains(&id), "the card left duel 0");
+        assert!(!seat_hand_ids(&state, A1).contains(&id), "the card left duel 0");
 
         assert!(
             names_draw(&duos_view_for(&state, A1).own, &id, &def),
@@ -2697,7 +2697,7 @@ mod b24_fold {
     fn b24_a_fold_of_the_live_log_reaches_the_live_state_and_hash() {
         let mut live = Live::begin("b24");
         live.keep_all();
-        let card = hand_ids(&live.state, A1)[0].clone();
+        let card = seat_hand_ids(&live.state, A1)[0].clone();
         live.step(A1, pass(&card));
         play_randomly(&mut live, "b24", 100);
         assert!(live.state.round >= 2, "the log crosses a round");

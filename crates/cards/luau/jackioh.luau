@@ -1049,6 +1049,7 @@ formerId: string?,
 sourceId: string?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+creator: PlayerId?,
 } | {
 ["type"]: "damage",
 sourceId: string | nil,
@@ -1127,12 +1128,14 @@ emptied: true?,
 player: PlayerId,
 instanceId: string,
 defId: string,
+creator: PlayerId?,
 } | {
 ["type"]: "shuffledIn",
 player: PlayerId,
 instanceId: string,
 defId: string,
 position: number,
+creator: PlayerId?,
 } | {
 ["type"]: "buffed",
 instanceId: string,
@@ -1171,6 +1174,7 @@ fromDefId: string,
 toDefId: string,
 newInstanceId: string,
 hiddenFrom: {PlayerId}?,
+creator: PlayerId?,
 } | {
 ["type"]: "fused",
 instanceIds: {string},
@@ -2264,7 +2268,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,

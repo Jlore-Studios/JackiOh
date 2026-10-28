@@ -1494,6 +1494,7 @@ pub fn report_graveyard_landing(sink: &mut EngineSink<'_>, instance: &CardInstan
                 instance_id,
                 def_id,
                 position,
+                creator: None,
             });
         }
         _ => {}

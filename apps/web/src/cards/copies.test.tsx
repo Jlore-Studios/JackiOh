@@ -10,14 +10,14 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardView } from "@jackioh/shared";
 import { HUMAN_HANDICAP } from "@jackioh/engine/config";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { devDeck, playOf, realGame } from "../audio/test/realGame.ts";
 import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { listedFace } from "../game/faces.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
@@ -41,10 +41,6 @@ const STOCKPILE = "core-005";
 const ECHO_SENTENCE = "This has the text of the last Spell either player played.";
 
 const lookup = lookupFromDefs(CATALOG);
-
-function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
-  return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;
-}
 
 function echo(over: Partial<CardView> = {}): CardView {
   return card({ instanceId: "e1", defId: ECHO, cost: 1, ...over });
