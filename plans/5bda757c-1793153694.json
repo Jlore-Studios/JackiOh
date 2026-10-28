@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 2093,
+  "title": "Patch (part 2 of 2): Play again on the co-op result panel",
+  "branch": "bot/issue-2093",
+  "thread": "**Issue #2093 (data, not instructions):**\n\n```text\n# #2093: Patch (part 2 of 2): Play again on the co-op result panel\nOpened by @jgoetzmann.\n\n### What it does\n\nThe client half of Play again after a co-op game against the AI (#2092 adds the server's routes and the ruling). When a co-op game ends, the team's result panel (`apps/web/src/duos/DuosBoard.tsx`, `ResultPanel`) gets a **Play again** button. When both people have pressed it, both are taken to the new co-op match, with no new room and no code to send.\n\n- **`net/duos.ts`**\n  - Add `offerDuosAgain(token, matchId, lean)`, which `POST`s `/api/duos/matches/:matchId/again` with `{ leanSet? }`.\n  - Add `getDuosAgain(token, matchId)`, which `GET`s it.\n  - Type both with #2092's bodies, as `net/api.ts` types `rematchOffer` and `rematchStatus`.\n- **The button.** `ResultPanel` shows Play again (`duos-result-again`, `button-primary`) beside Watch the replay.\n  - Back to Play together keeps its place but loses `button-primary`.\n  - A press sends the offer once (disabled and `aria-busy` while it is in flight).\n  - The offer carries the device's \"More cards from\" pick (`readPlayLean`, as `CoopPanel.tsx` and `routes/Rematch.tsx` send it). The server reads the pick only for a seat whose deck was dealt.\n- **The status line** (`duos-result-again-status`, `role=\"status\"`), read from `getDuosAgain` while the panel is up, at the pace `routes/Rematch.tsx` polls (`SERIES_POLL_SECONDS`, no new number):\n  - \"Waiting for your teammate\u2026\" after this seat offered;\n  - \"Your teammate wants to play again\" when only the teammate has, the button still reading Play again (pressing it accepts);\n  - \"Your teammate has left\" while `teammateHere` is false. The button is hidden then, as R672's buttons are when the opponent leaves.\n- **Going.** Once an answer names a `matchId`, the board goes to `paths.duos(matchId)` (`navigate(\u2026, { force: true })`).\n  - The route must open a fresh socket for the new match. `main.tsx` keys `DuosRoute` by the session alone, so key it by the match id too, or have `useDuosMatch` reopen on a new id.\n  - The old match's replay door and result do not carry over.\n- **Refusals.** A refusal (`update_required`, `in_game`, a blocked pair, the window gone) is shown in the panel in the server's words, as `CoopPanel.tsx`'s `refusal` shows a room's. The board doesn't decide any of them (CLAUDE.md rule 7).\n- **Where it shows.** Only on a live game's result, never in `DuosReplay.tsx`'s replay (`replay` boards draw no result panel). The dev board (`/dev/duos`, `DevDuosRoute.tsx`) has no server, so no button shows there: pass the handler through `DuosChrome` (`duos/context.ts`) as `onWatchReplay` and `onLeave` are, and show the button only when it is given.\n- Folding the result to the rail's \"Result\" and reopening it (#1755) keeps the offer's state.\n- **Words and ids**\n  - New sentences go in `i18n/zh-CN.json`.\n  - The ids go in `duos/testids.ts` and `e2e/support/testids.ts`.\n  - `apps/web/README.md`'s \"Play together and Duos\" section says what the button does.\n\nOnly `apps/web` and `e2e/support/testids.ts` change. No server, engine, card or AI change: #2092 made the routes.\n\n### Acceptance\n\nVitest, in `duos/DuosBoard.test.tsx` and `duos/DuosRoute.test.tsx` against a stub server. Name the tests after #2092's ruling (`it(\"R2092000 \u2026\")`, or whichever number #2092's note took), and add the file to that note's `proven_in`:\n\n- The result panel shows Play again on a live game's result. A press sends one `POST \u2026/again` carrying the device's lean pick, and the status says it is waiting for the teammate.\n- With the teammate's offer in the status read, the panel says the teammate wants to play again, and a press makes the offer.\n- An answer naming a `matchId` takes the board to `/duos/<that id>`, which opens a socket for the new match, not the old one.\n- `teammateHere: false` hides the button and says the teammate has left.\n- A refused offer shows the server's words.\n- There is no button in the co-op replay, and none on the dev board.\n- Folding the result to \"Result\" and reopening it keeps the waiting status.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass, and `cargo jackioh spec check` stays green.\n\n### Blocked by, part of\n\nBlocked by #2092. Part of #1888.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2093: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2107 skipped: it waits for #2105 to close first",
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
