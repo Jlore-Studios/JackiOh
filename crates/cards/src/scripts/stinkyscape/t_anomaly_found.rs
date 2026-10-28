@@ -9,9 +9,12 @@
 //! Engine: #1855's board swap, `replace_board`, on its caster's side only (ST9 Q7): what the Spell
 //! reaches there is exiled, a Dormant card staying (R1839000), the board is laid zone by zone, a
 //! summon each, and every Unit it laid fires its Cry in list order with its caster's choices random
-//! (R1855000, R1855001). The board is drawn from the match rng as the Spell resolves, each equally
+//! (R1855000, R1855001). The board is drawn from the match rng as the card arrives where it can be
+//! looked at (its start-of-game clause, as Heroic Power rolls its power, R43, R151), each equally
 //! likely: on the base face one of the seven `BASE_BOARDS`, on the Radiant face one of the three rich
-//! `RICH_BOARDS` (R1879000, ST-S20-2). The ten boards are the designer's, "Small Asteroid" read as
+//! `RICH_BOARDS` (R1879000, ST-S20-2). It is remembered as the card's label, its code ("FO"), which
+//! its owner's view shows in place of its text, and its Cry lays that board; one that holds none
+//! draws as it resolves (R2247000). The ten boards are the designer's, "Small Asteroid" read as
 //! S #169 Tiny Asteroid (ST-S20-3), an asteroid field's "only gives …" a `resourcePool` rider on each
 //! of its asteroids (R1855002), SP's backrow Drone Interceptors standing there by their Flying
 //! (R1879001), and BF's Drone Battleship its three layers in one pile, Meltdown at the bottom and the
@@ -260,13 +263,42 @@ pub fn replace_with_random(rng: &mut Rng, boards: &[Board]) -> Vec<Effect> {
     vec![replace_board(preset(board))]
 }
 
+/// R2247000: the board this card holds, by the code its label remembers, any of the ten: a card made
+/// Radiant after it drew keeps the board it shows.
+pub fn held_board(card: Option<&CardInstance>) -> Option<&'static Board> {
+    let code = card?.memory.get(CARD_LABEL_KEY)?.as_str()?;
+    ALL_BOARDS.iter().find(|board| board.code == code)
+}
+
+/// R2247000: as the card arrives in a hand, a library or on the field, it draws one of `boards`, each
+/// equally likely, and remembers its code as its label; a card that holds a board already draws nothing.
+fn draw_board(ctx: &EffectContext<'_>, boards: &[Board]) -> Vec<Effect> {
+    if held_board(ctx.self_.as_ref()).is_some() {
+        return vec![];
+    }
+    vec![remember_random(RememberRandomArgs {
+        key: CARD_LABEL_KEY.to_string(),
+        options: boards.iter().map(|board| json!(board.code)).collect(),
+    })]
+}
+
+/// R2247000: the board the card holds, else (R1879000) one of `boards` drawn as it resolves.
+fn lay(ctx: &mut EffectContext<'_>, boards: &[Board]) -> Vec<Effect> {
+    match held_board(ctx.self_.as_ref()) {
+        Some(board) => vec![replace_board(preset(board))],
+        None => replace_with_random(&mut *ctx.rng, boards),
+    }
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
-        cry: Some(hook(|ctx| replace_with_random(&mut *ctx.rng, &BASE_BOARDS))),
+        start_of_game: Some(hook(|ctx| draw_board(ctx, &BASE_BOARDS))),
+        cry: Some(hook(|ctx| lay(ctx, &BASE_BOARDS))),
         ..Script::default()
     };
     let radiant = Script {
-        cry: Some(hook(|ctx| replace_with_random(&mut *ctx.rng, &RICH_BOARDS))),
+        start_of_game: Some(hook(|ctx| draw_board(ctx, &RICH_BOARDS))),
+        cry: Some(hook(|ctx| lay(ctx, &RICH_BOARDS))),
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -554,6 +586,110 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    mod r2247000_the_board_it_holds {
+        use super::*;
+
+        const PROBE: &str = "stinkyscape-166";
+
+        /// P1's main phase with a Scanning Probe Mk1 in hand after `misses` misses, scanned: the
+        /// Anomaly Found! it found, if any, added to the hand as any card is (its arrival runs).
+        fn scanned(seed: &str, misses: i32) -> (Scenario, Option<CardInstance>) {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [PROBE],
+                    "field": [{ "def": VANILLA, "lane": 1 }],
+                    "library": [FILLER, FILLER, FILLER],
+                },
+                "p2": { "field": [VANILLA], "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+            }));
+            s.state_mut().players[P1].anomaly_misses = Some(misses);
+            s.play(PROBE, json!({}));
+            let found = s.hand(P1).into_iter().find(|card| card.def_id == ID);
+            (s, found)
+        }
+
+        fn code_of(card: &CardInstance) -> Option<&str> {
+            card.memory.get(CARD_LABEL_KEY).and_then(Value::as_str)
+        }
+
+        /// The label P1's own view shows on the card, and whether P2's view of P1's hand can show any.
+        fn labels(s: &Scenario, id: &str) -> (Option<String>, bool) {
+            let mine = match &s.view(P1).you.hand {
+                HandView::Cards(cards) => cards
+                    .iter()
+                    .find(|card| card.instance_id == id)
+                    .and_then(|card| card.label.clone()),
+                HandView::Count { .. } => None,
+            };
+            let theirs = matches!(&s.view(P2).opponent.hand, HandView::Cards(_));
+            (mine, theirs)
+        }
+
+        #[test]
+        fn r2247000_a_found_radiant_one_holds_a_rich_board_its_owner_reads_and_play_lays_it() {
+            let rich: Vec<&str> = RICH_BOARDS.iter().map(|board| board.code).collect();
+            let mut seen: IndexSet<String> = IndexSet::new();
+            for seed in 0..40 {
+                // R1855003: at 95 misses every scan finds a Radiant one.
+                let (mut s, found) = scanned(&format!("r2247000-rich-{seed}"), 95);
+                let card = found.expect("a find");
+                assert!(card.radiant);
+                let code = code_of(&card).expect("it holds a board").to_string();
+                assert!(rich.contains(&code.as_str()), "{code} is a rich board");
+                let (mine, theirs_readable) = labels(&s, &card.id);
+                assert_eq!(mine.as_deref(), Some(code.as_str()), "its owner reads the code");
+                assert!(!theirs_readable, "the other player reads a count");
+                s.play(card.id.as_str(), json!({}));
+                assert_eq!(laid(&s, &ALL_BOARDS), code, "it lays the board it showed");
+                seen.insert(code);
+            }
+            assert_eq!(seen.len(), rich.len(), "each rich board is found over the seeds");
+        }
+
+        #[test]
+        fn r2247000_a_found_plain_one_holds_one_of_the_seven_and_play_lays_it() {
+            let base: Vec<&str> = BASE_BOARDS.iter().map(|board| board.code).collect();
+            let mut checked = 0;
+            for seed in 0..80 {
+                // At 16 misses every scan finds one, a plain one 79 times in 100.
+                let (mut s, found) = scanned(&format!("r2247000-base-{seed}"), 16);
+                let card = found.expect("a find");
+                if card.radiant {
+                    continue;
+                }
+                let code = code_of(&card).expect("it holds a board").to_string();
+                assert!(base.contains(&code.as_str()), "{code} is one of the seven");
+                s.play(card.id.as_str(), json!({}));
+                assert_eq!(laid(&s, &ALL_BOARDS), code);
+                checked += 1;
+            }
+            assert!(checked > 20, "{checked} plain finds checked");
+        }
+
+        #[test]
+        fn r2247000_a_card_that_holds_a_board_lays_it_on_either_face_and_draws_no_other() {
+            for (code, radiant) in [("FO", false), ("WH", true), ("AA", false)] {
+                let mut s = setup(&format!("r2247000-held-{code}"), radiant, json!([]));
+                let id = s.card(ID).id.clone();
+                s.card_mut(&id).memory.insert(CARD_LABEL_KEY.to_string(), json!(code));
+                s.play(id.as_str(), json!({}));
+                assert_eq!(laid(&s, &ALL_BOARDS), code);
+            }
+        }
+
+        #[test]
+        fn r2247000_r1879000_one_that_holds_no_board_still_draws_as_it_resolves() {
+            // A scenario's hand is laid with no arrival, so it holds none.
+            let mut s = setup("r2247000-none", false, json!([]));
+            assert!(code_of(s.card(ID)).is_none());
+            s.play(ID, json!({}));
+            let code = laid(&s, &ALL_BOARDS);
+            assert!(BASE_BOARDS.iter().any(|board| board.code == code));
         }
     }
 }

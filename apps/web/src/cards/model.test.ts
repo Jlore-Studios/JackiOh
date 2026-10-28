@@ -522,6 +522,15 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
   });
 
+  it("R2247000 an Anomaly Found! that holds a board prints its code in play, and its catalog text in the collection", () => {
+    for (const [code, radiant] of [["FO", true], ["WH", false]] as const) {
+      const f = face("stinkyscape-t-anomaly-found", radiant, { inPlay: { label: code } });
+      expect(f.text).toEqual({ full: code, marks: [] });
+    }
+    expect(face("stinkyscape-t-anomaly-found", false).text.full).toContain("Replace your side of the field");
+    expect(face("stinkyscape-t-anomaly-found", false, { inPlay: {} }).text.full).toContain("Replace your side of the field");
+  });
+
   it("R754 Steady Shot's {shot} prints the card's number as the view gives it", () => {
     const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "burn" }, params: { shot: 8 } } });
     expect(f.text.full).toContain("Activate: Spend (1): Deal 8 damage to the enemy hero.");

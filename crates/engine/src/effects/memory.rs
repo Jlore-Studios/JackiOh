@@ -23,6 +23,10 @@ use crate::work::remember_on;
 
 use super::targets::self_on_its_stay;
 
+/// R2247000: the memory key a card keeps a word under that it shows in place of its text in its owner's
+/// hand (the view's `CardView.label`): Anomaly Found!'s board code, remembered as it arrives.
+pub const CARD_LABEL_KEY: &str = "cardLabel";
+
 /// `remember`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

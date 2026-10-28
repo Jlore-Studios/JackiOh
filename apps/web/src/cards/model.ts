@@ -262,6 +262,8 @@ export type InPlay = {
   vanilla?: boolean;
   /** R43, R243: the power a #98 Heroic Power rolled (R752). */
   power?: RolledPower;
+  /** R2247000: the word the card shows in place of its text, Anomaly Found!'s board code (`CardView.label`). */
+  label?: string;
   /** R280: what the card's formula comes to now (`CardView.preview`). */
   preview?: readonly PreviewValue[];
   /**
@@ -542,7 +544,8 @@ function concealed(def: CardDef | undefined): boolean {
 
 /**
  * What the rules box prints in play (inPlay.ts). A Vanilla unit's text is gone; a Call to Chaos is
- * "???"; a #98 Heroic Power is the power it rolled. Anything else prints its printed text.
+ * "???"; a card with a label prints it (R2247000); a #98 Heroic Power is the power it rolled. Anything
+ * else prints its printed text.
  */
 function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay, chinese: boolean): FaceText {
   // R711000: a face drawn in Chinese for a reader of Chinese says it in the reader's words; the English
@@ -551,6 +554,8 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
   if (inPlay.vanilla === true) return { full: reader ? t(VANILLA_TEXT) : VANILLA_TEXT, marks: [] };
   if (def === undefined) return printedText;
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
+  // R2247000: a card that holds a label (Anomaly Found!'s "FO") prints it as its text.
+  if (inPlay.label !== undefined) return { full: inPlay.label, marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
     // B3.4: Steady Shot's {shot} is the card's number as it stands (the view's), else as printed.
