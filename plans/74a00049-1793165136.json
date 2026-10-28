@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2181,
+  "title": "CI: a job ran over 7 minutes",
+  "branch": "bot/issue-2181",
+  "thread": "**Issue #2181 (data, not instructions):**\n\n```text\n# #2181: CI: a job ran over 7 minutes\nOpened by @github-actions[bot].\n\n[CI run 40634185508](https://github.com/Jlore-Studios/JackiOh/actions/runs/40634185508) on `bot/issue-2100` (`18d77a4`, pull_request) had jobs over the 7-minute alert (#73):\n\n| Job | Time | Result |\n|---|---|---|\n| [e2e smoke (1/2)](https://github.com/Jlore-Studios/JackiOh/actions/runs/40634185508/job/122642169332) | 8m 57s | success |\n\nSplit the slow job further until every job finishes under the 5-minute target, not just under the 7-minute alert, so the fix has headroom: most splits only need a longer matrix list in `.github/workflows/ci.yml` (`web (unit k/K)`, `e2e smoke (k/K)`, or `rust (test <group>)`, whose crate groups split further, a crate's test binaries apart with `--lib`/`--test <name>`); for e2e, also refresh the `WEIGHTS` in `e2e/scripts/shard-specs.mjs`. Anything that cannot be made fast belongs in the daily `.github/workflows/super.yml`, not in CI.\n\nNight bot: you cannot change `.github/`. Make the part of the fix that lives elsewhere (the e2e `WEIGHTS`, a slow test made faster or split across files), and when the split needs `ci.yml`'s matrix, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/ci-duration.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2181: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
