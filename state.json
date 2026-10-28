@@ -7004,7 +7004,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-28T17:25:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:e97bfd66-1793208712",
+      "run_id": "40736653782",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T17:32:11Z",
       "stop_requested": false,
