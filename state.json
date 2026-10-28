@@ -5957,6 +5957,13 @@
     "2208": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T13:19:14Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 3 fails outright: a new ruling R2208000 with spec/pending and \u00a79.9/\u00a714.8 edits, across apps/web and spec/ in 17 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
