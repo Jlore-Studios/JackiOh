@@ -6439,7 +6439,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-28T05:02:33Z",
-      "run_id": "pending:e71fb761-1793163827",
+      "run_id": "40635849913",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-28T05:04:20Z",
