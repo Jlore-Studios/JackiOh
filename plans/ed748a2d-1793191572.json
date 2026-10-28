@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2211,
+  "title": "Patch: a replay shows what each of your own choices offered, read-only",
+  "branch": "bot/issue-2211",
+  "thread": "**Issue #2211 (data, not instructions):**\n\n```text\n# #2211: Patch: a replay shows what each of your own choices offered, read-only\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a player watches back one of their games, every choice they made passes without showing what was on offer: the mulligan, a Discover, picking a mode or a card from a list. The log only says that a choice was made. Once this is built, scrubbing to a step where the player was choosing shows that choice's panel as they saw it. It is greyed out and folded, so it never covers the board, and they can see what they passed up. Only the player's own choices show. When the opponent was choosing, the replay shows the same waiting panel the live game showed.\n\n## Why\n- `apps/web/src/game/Game.tsx:739` reads `{replay || promptOver(shown, burst, inFlight) ? null : (<Prompt ...`, so a replay never draws a prompt.\n- `apps/web/src/replay/ReplayPlayer.tsx:1-4` calls the replay board one with 'no legal action, glow or prompt'. `ReplayPlayer.test.tsx:336-346` asserts there is no prompt at step 0, the mulligan, even though `steps[0].view.pending` is set.\n- The data is already in every step. R768 makes step k exactly `view_for(state_k, seat)` (`crates/engine/src/replay.rs:975-979`), so the replay's seat's open prompt arrives with its `options`, `min`, `max` and text (`apps/web/src/wire/generated/PendingPromptView.ts`). Nothing hidden is added: the seat saw those options when it chose.\n- The log cannot stand in for it. The answer's event carries only `player` and `choiceId`, and `apps/web/src/game/Log.tsx:398-404` names no option.\n- \u00a79.2 (`spec/09-architecture.md:38`) keeps mid-action choices in state so that 'prompts are identical in live play, replays and tests'.\n\n## Proposal\n- `Prompt` gets a read-only mode: options drawn and `aria-disabled`, with no confirm, cancel or timer.\n- `Game` renders it in that mode when `replay` is set, opened folded with the existing 'View the board' peek (#1204). The board and the replay toolbar stay in reach, and Play never waits on it.\n- The waiting panel for the other seat's prompt (`Prompt.tsx:1480-1499`) shows in a replay as it does live.\n- A prompt kind that cannot render read-only, such as the craft editor, falls back to the waiting panel.\n- No engine or server change: the steps already carry the data.\n- Out of scope: watched live games (`WatchRoute.tsx`), which can follow once their view is checked, and marking which option was picked, which needs the next step's view.\n\n## Where it lands\n- Web: `apps/web/src/game/Game.tsx`, `Prompt.tsx`, `prompt.css`, `apps/web/src/replay/ReplayPlayer.tsx`.\n- Tests: `apps/web/src/replay/ReplayPlayer.test.tsx` and `apps/web/src/game/Prompt.test.tsx`. Check the co-op replay too, since it shares `ReplayToolbar.tsx`.\n- Spec: SPEC \u00a79.2 and \u00a79.3 (`spec/09-architecture.md`) and R768 (`spec/rulings/R0768.md`), which says what a replay shows. Edit that note, or add a ruling in this issue's block.\n\n## Acceptance criteria\n- [ ] At a replay step with a prompt pending for the replay's seat, the prompt's options show, disabled. No click on them or on the board dispatches anything.\n- [ ] The read-only panel opens folded and never covers the replay toolbar, and step, play and jump all work from that step.\n- [ ] At a step where the other seat is choosing, the replay shows the waiting panel and no options.\n- [ ] Live play's prompt is unchanged, and the existing `Prompt*.test.tsx` files pass.\n- [ ] `pnpm --dir apps/web exec vitest run src/replay src/game/Prompt.test.tsx`, `pnpm --dir apps/web typecheck` and `cargo jackioh spec check` are green.\n\n## Size and risks\nSmall to medium: four or five web files.\n- `Prompt` is large and has many kinds (craft, market, sequence questions), and each must either render read-only or fall back without crashing.\n- The e2e replay specs may assert that no prompt shows, and would need updating.\n- Step 0 now shows the mulligan's panel, folded.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:37:58Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2211: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
