@@ -901,6 +901,7 @@ label: string,
 hook: string?,
 data: {[string]: JsonValue}?,
 player: PlayerSpec?,
+atEnd: boolean?,
 }
 
 export type ForcedAttackOwnHeroArgs = {
@@ -1949,6 +1950,7 @@ seq: number,
 resume: Resume,
 label: string,
 ranTurn: number?,
+atEnd: boolean?,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "healToDamage",
@@ -2349,6 +2351,7 @@ setAttack: number?,
 export type StaticFlags = {
 castOnDraw: boolean?,
 quickdraw: boolean?,
+handSale: boolean?,
 infiniteReserves: boolean?,
 neverDefense: boolean?,
 echo: number?,
@@ -4005,6 +4008,10 @@ end
 
 function J.lose_refreshes(args: LoseRefreshesArgs): EffectCall
 	return { verb = "lose_refreshes", args = args :: any }
+end
+
+function J.lower_brittle(args: GainBrittleArgs): EffectCall
+	return { verb = "lower_brittle", args = args :: any }
 end
 
 function J.make_hero_immune(args: MakeHeroImmuneArgs): EffectCall

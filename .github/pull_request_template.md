@@ -35,7 +35,7 @@ Closes #
 - [ ] `cargo fmt --check`
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings`
 - [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` (commit any diff it writes to `apps/web/src/wire/`)
-- [ ] `cargo jackioh spec check` (a ruling added or changed: `cargo jackioh spec index` first)
+- [ ] `cargo jackioh spec check` (a ruling added: its §11 paragraph in `spec/pending/<issue>.md`; no `spec index`, the daily fold runs it)
 - [ ] `cargo jackioh catalog check` and `cargo jackioh patches check` (card data changed)
 - [ ] `cargo jackioh classify --base origin/main --claims` (a card script, the engine or the AI changed: `--parent-bin` with a build of `origin/main` when it asks)
 - [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` (the client or the e2e specs changed)
