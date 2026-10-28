@@ -242,11 +242,6 @@ def vote(body: str, bot_login: str) -> tuple[str, str]:
     return "", ""
 
 
-def mentions(body: str, bot_login: str) -> bool:
-    """True when a command line of `body` names the bot or says `/harness`."""
-    return bool(parse(body, bot_login))
-
-
 def names_the_bot(body: str, bot_login: str) -> bool:
     """True when the bot's handle, or `/harness`, appears anywhere outside quotes and code, even
     mid-sentence: a request that did not parse is answered with a hint, never ignored."""

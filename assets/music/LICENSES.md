@@ -153,6 +153,71 @@ attribution is required when they play in the game.
 | `intro-meditativeplus-001` | `apps/web/public/audio/music/intro-meditativeplus-001.m4a` | Intro of Meditative+ #1 Bob's Plan (Mythic): pan flute, harp, double bass, D major, 4/4 at 120 | 5.0 s |
 | `intro-meditativeplus-024` | `apps/web/public/audio/music/intro-meditativeplus-024.m4a` | Intro of Meditative+ #24 Bob, Wisconsin's Strongest Soldier (Legendary): trumpet, brass, tuba, B-flat major, 4/4 at 112 | 5.3 s |
 | `intro-meditativeplus-026` | `apps/web/public/audio/music/intro-meditativeplus-026.m4a` | Intro of Meditative+ #26 Scratch Pad (Mythic): electric piano, marimba, fingered bass, E major, 4/4 at 112 | 5.3 s |
+| `intro-stinkyscape-004` | `apps/web/public/audio/music/intro-stinkyscape-004.m4a` | Intro of Stinkyscape #4 Olivian Expanse (Mythic): glockenspiel, strings, cello, E-flat dorian, 4/4 at 120 | 5.0 s |
+| `intro-stinkyscape-004-1` | `apps/web/public/audio/music/intro-stinkyscape-004-1.m4a` | Intro of Stinkyscape #4.1 Farewell (Mythic): organ, choir pad, contrabass, A-flat phrygian, 4/4 at 114 | 5.2 s |
+| `intro-stinkyscape-004-2` | `apps/web/public/audio/music/intro-stinkyscape-004-2.m4a` | Intro of Stinkyscape #4.2 KY's Last Exam (Mythic): vibes, celesta, fretless bass, D-flat major, 4/4 at 103 | 5.7 s |
+| `intro-stinkyscape-004-3` | `apps/web/public/audio/music/intro-stinkyscape-004-3.m4a` | Intro of Stinkyscape #4.3 Event Horizon (Mythic): organ, choir pad, contrabass, B-flat phrygian, 3/4 at 120 | 5.5 s |
+| `intro-stinkyscape-004-4` | `apps/web/public/audio/music/intro-stinkyscape-004-4.m4a` | Intro of Stinkyscape #4.4 Last Word (Mythic): organ, choir pad, contrabass, G phrygian, 4/4 at 102 | 5.7 s |
+| `intro-stinkyscape-004-5` | `apps/web/public/audio/music/intro-stinkyscape-004-5.m4a` | Intro of Stinkyscape #4.5 1v1 Final Destination (Mythic): organ, choir pad, contrabass, E-flat phrygian, 3/4 at 113 | 5.8 s |
+| `intro-stinkyscape-004-6` | `apps/web/public/audio/music/intro-stinkyscape-004-6.m4a` | Intro of Stinkyscape #4.6 The Big Crunch (Mythic): organ, choir pad, contrabass, G-flat phrygian, 3/4 at 110 | 5.9 s |
+| `intro-stinkyscape-006` | `apps/web/public/audio/music/intro-stinkyscape-006.m4a` | Intro of Stinkyscape #6 Tylannt (Mythic): horn, strings, contrabass, D dorian, 4/4 at 106 | 5.5 s |
+| `intro-stinkyscape-007` | `apps/web/public/audio/music/intro-stinkyscape-007.m4a` | Intro of Stinkyscape #7 The Greatest Heist (Legendary): oboe, choir, cello, E mixolydian, 4/4 at 102 | 5.7 s |
+| `intro-stinkyscape-016` | `apps/web/public/audio/music/intro-stinkyscape-016.m4a` | Intro of Stinkyscape #16 Rod of Ages (Mythic): whistle, steel guitar, acoustic bass, G-flat dorian, 4/4 at 141 | 4.4 s |
+| `intro-stinkyscape-018` | `apps/web/public/audio/music/intro-stinkyscape-018.m4a` | Intro of Stinkyscape #18 Imitated Instrumentality (Legendary): glockenspiel, strings, cello, F dorian, 4/4 at 119 | 5.0 s |
+| `intro-stinkyscape-018-1` | `apps/web/public/audio/music/intro-stinkyscape-018-1.m4a` | Intro of Stinkyscape #18.1 MELCHIOR (Legendary): clarinet, choir, cello, B mixolydian, 4/4 at 110 | 5.4 s |
+| `intro-stinkyscape-018-2` | `apps/web/public/audio/music/intro-stinkyscape-018-2.m4a` | Intro of Stinkyscape #18.2 BALTHASAR (Legendary): oboe, choir, cello, C major, 3/4 at 112 | 5.8 s |
+| `intro-stinkyscape-018-3` | `apps/web/public/audio/music/intro-stinkyscape-018-3.m4a` | Intro of Stinkyscape #18.3 CASPER (Legendary): oboe, choir, cello, E-flat mixolydian, 3/4 at 113 | 5.8 s |
+| `intro-stinkyscape-026` | `apps/web/public/audio/music/intro-stinkyscape-026.m4a` | Intro of Stinkyscape #26 ZolarKeth (Legendary): horn, strings, contrabass, G-flat major, 4/4 at 126 | 4.8 s |
+| `intro-stinkyscape-034` | `apps/web/public/audio/music/intro-stinkyscape-034.m4a` | Intro of Stinkyscape #34 Drone Core VIII (Legendary): saw lead, synth strings, synth bass, G-flat phrygian, 4/4 at 149 | 4.2 s |
+| `intro-stinkyscape-035` | `apps/web/public/audio/music/intro-stinkyscape-035.m4a` | Intro of Stinkyscape #35 Drone Core IX (Legendary): saw lead, synth strings, synth bass, B minor, 4/4 at 126 | 4.8 s |
+| `intro-stinkyscape-036` | `apps/web/public/audio/music/intro-stinkyscape-036.m4a` | Intro of Stinkyscape #36 Drone Core X (Mythic): saw lead, synth strings, synth bass, D-flat phrygian, 4/4 at 148 | 4.2 s |
+| `intro-stinkyscape-037` | `apps/web/public/audio/music/intro-stinkyscape-037.m4a` | Intro of Stinkyscape #37 Kwzka (Legendary): horn, strings, contrabass, A dorian, 4/4 at 115 | 5.2 s |
+| `intro-stinkyscape-039` | `apps/web/public/audio/music/intro-stinkyscape-039.m4a` | Intro of Stinkyscape #39 The Narcor Project (Legendary): clarinet, choir, cello, C major, 4/4 at 107 | 5.5 s |
+| `intro-stinkyscape-044` | `apps/web/public/audio/music/intro-stinkyscape-044.m4a` | Intro of Stinkyscape #44 Great Replacement Theory (Mythic): whistle, steel guitar, acoustic bass, C dorian, 4/4 at 137 | 4.5 s |
+| `intro-stinkyscape-058` | `apps/web/public/audio/music/intro-stinkyscape-058.m4a` | Intro of Stinkyscape #58 Beam v5 (Legendary): synth brass, brass, contrabass, B minor, 4/4 at 107 | 5.5 s |
+| `intro-stinkyscape-059` | `apps/web/public/audio/music/intro-stinkyscape-059.m4a` | Intro of Stinkyscape #59 Repeater v5 (Legendary): synth brass, brass, contrabass, E-flat harmonic minor, 4/4 at 116 | 5.1 s |
+| `intro-stinkyscape-060` | `apps/web/public/audio/music/intro-stinkyscape-060.m4a` | Intro of Stinkyscape #60 Cannon v5 (Legendary): synth brass, brass, contrabass, B harmonic minor, 4/4 at 108 | 5.4 s |
+| `intro-stinkyscape-061` | `apps/web/public/audio/music/intro-stinkyscape-061.m4a` | Intro of Stinkyscape #61 Flak v5 (Legendary): synth brass, brass, contrabass, A minor, 4/4 at 116 | 5.1 s |
+| `intro-stinkyscape-066` | `apps/web/public/audio/music/intro-stinkyscape-066.m4a` | Intro of Stinkyscape #66 Miner v5 (Legendary): trumpet, strings, contrabass, G dorian, 4/4 at 109 | 5.4 s |
+| `intro-stinkyscape-070` | `apps/web/public/audio/music/intro-stinkyscape-070.m4a` | Intro of Stinkyscape #70 Z'Zoth (Legendary): horn, strings, contrabass, E minor, 4/4 at 125 | 4.8 s |
+| `intro-stinkyscape-071` | `apps/web/public/audio/music/intro-stinkyscape-071.m4a` | Intro of Stinkyscape #71 A'Zoth (Legendary): trumpet, strings, contrabass, D minor, 4/4 at 127 | 4.8 s |
+| `intro-stinkyscape-073` | `apps/web/public/audio/music/intro-stinkyscape-073.m4a` | Intro of Stinkyscape #73 Paragon Mk2 (Legendary): horn, horn, contrabass, B-flat minor, 4/4 at 122 | 4.9 s |
+| `intro-stinkyscape-074` | `apps/web/public/audio/music/intro-stinkyscape-074.m4a` | Intro of Stinkyscape #74 Paragon-X (Mythic): trumpet, strings, contrabass, E minor, 4/4 at 114 | 5.2 s |
+| `intro-stinkyscape-080` | `apps/web/public/audio/music/intro-stinkyscape-080.m4a` | Intro of Stinkyscape #80 Galaxy (Legendary): horn, horn, contrabass, F minor, 4/4 at 129 | 4.7 s |
+| `intro-stinkyscape-085` | `apps/web/public/audio/music/intro-stinkyscape-085.m4a` | Intro of Stinkyscape #85 Prototype-X1 (Legendary): trumpet, horn, contrabass, G dorian, 4/4 at 106 | 5.5 s |
+| `intro-stinkyscape-086` | `apps/web/public/audio/music/intro-stinkyscape-086.m4a` | Intro of Stinkyscape #86 Prototype-X2 (Mythic): trumpet, strings, contrabass, C minor, 4/4 at 116 | 5.1 s |
+| `intro-stinkyscape-087` | `apps/web/public/audio/music/intro-stinkyscape-087.m4a` | Intro of Stinkyscape #87 Siva 1 (Legendary): pizzicato strings, strings, pizzicato strings, B harmonic minor, 4/4 at 140 | 4.4 s |
+| `intro-stinkyscape-088` | `apps/web/public/audio/music/intro-stinkyscape-088.m4a` | Intro of Stinkyscape #88 Siva 2 (Legendary): horn, strings, contrabass, E mixolydian, 4/4 at 124 | 4.9 s |
+| `intro-stinkyscape-109` | `apps/web/public/audio/music/intro-stinkyscape-109.m4a` | Intro of Stinkyscape #109 xxFreshJack (Mythic): horn, strings, contrabass, D mixolydian, 4/4 at 117 | 5.1 s |
+| `intro-stinkyscape-110` | `apps/web/public/audio/music/intro-stinkyscape-110.m4a` | Intro of Stinkyscape #110 iKwzki (Mythic): horn, strings, contrabass, G-flat major, 4/4 at 105 | 5.6 s |
+| `intro-stinkyscape-111` | `apps/web/public/audio/music/intro-stinkyscape-111.m4a` | Intro of Stinkyscape #111 Shockwave447 (Mythic): horn, strings, contrabass, B mixolydian, 4/4 at 112 | 5.3 s |
+| `intro-stinkyscape-112` | `apps/web/public/audio/music/intro-stinkyscape-112.m4a` | Intro of Stinkyscape #112 Job Application (Legendary): clarinet, choir, cello, C mixolydian, 3/4 at 110 | 5.9 s |
+| `intro-stinkyscape-112-1` | `apps/web/public/audio/music/intro-stinkyscape-112-1.m4a` | Intro of Stinkyscape #112.1 Paycheck (Legendary): flute, strings, cello, B-flat dorian, 4/4 at 109 | 5.4 s |
+| `intro-stinkyscape-115` | `apps/web/public/audio/music/intro-stinkyscape-115.m4a` | Intro of Stinkyscape #115 Scornboi (Legendary): horn, strings, contrabass, A dorian, 4/4 at 117 | 5.1 s |
+| `intro-stinkyscape-116` | `apps/web/public/audio/music/intro-stinkyscape-116.m4a` | Intro of Stinkyscape #116 Megabase (Legendary): whistle, steel guitar, acoustic bass, B dorian, 4/4 at 129 | 4.7 s |
+| `intro-stinkyscape-137-1` | `apps/web/public/audio/music/intro-stinkyscape-137-1.m4a` | Intro of Stinkyscape #137.1 Land Doctrine (Legendary): trumpet, horn, tuba, A-flat minor, 4/4 at 121 | 5.0 s |
+| `intro-stinkyscape-137-2` | `apps/web/public/audio/music/intro-stinkyscape-137-2.m4a` | Intro of Stinkyscape #137.2 Sea Doctrine (Legendary): trumpet, horn, tuba, D-flat minor, 4/4 at 109 | 5.4 s |
+| `intro-stinkyscape-137-3` | `apps/web/public/audio/music/intro-stinkyscape-137-3.m4a` | Intro of Stinkyscape #137.3 Air Doctrine (Legendary): trumpet, horn, tuba, G minor, 4/4 at 111 | 5.3 s |
+| `intro-stinkyscape-137-4` | `apps/web/public/audio/music/intro-stinkyscape-137-4.m4a` | Intro of Stinkyscape #137.4 Space Doctrine (Legendary): trumpet, horn, tuba, E-flat minor, 4/4 at 122 | 4.9 s |
+| `intro-stinkyscape-147` | `apps/web/public/audio/music/intro-stinkyscape-147.m4a` | Intro of Stinkyscape #147 IN33DH3 (Legendary): horn, strings, contrabass, E-flat dorian, 4/4 at 114 | 5.2 s |
+| `intro-stinkyscape-147-1` | `apps/web/public/audio/music/intro-stinkyscape-147-1.m4a` | Intro of Stinkyscape #147.1 IN33DH3 Prime (Legendary): horn, strings, contrabass, B-flat dorian, 4/4 at 107 | 5.5 s |
+| `intro-stinkyscape-147-2` | `apps/web/public/audio/music/intro-stinkyscape-147-2.m4a` | Intro of Stinkyscape #147.2 Wardrum Blob (Legendary): clarinet, choir, cello, E mixolydian, 4/4 at 110 | 5.4 s |
+| `intro-stinkyscape-148` | `apps/web/public/audio/music/intro-stinkyscape-148.m4a` | Intro of Stinkyscape #148 Alteran Reach (Mythic): whistle, steel guitar, acoustic bass, A dorian, 4/4 at 136 | 4.5 s |
+| `intro-stinkyscape-148-1` | `apps/web/public/audio/music/intro-stinkyscape-148-1.m4a` | Intro of Stinkyscape #148.1 Edge of the Universe (Mythic): glockenspiel, strings, cello, D-flat dorian, 4/4 at 116 | 5.1 s |
+| `intro-stinkyscape-149` | `apps/web/public/audio/music/intro-stinkyscape-149.m4a` | Intro of Stinkyscape #149 Wildar (Legendary): celesta, strings, cello, A-flat dorian, 4/4 at 119 | 5.0 s |
+| `intro-stinkyscape-150` | `apps/web/public/audio/music/intro-stinkyscape-150.m4a` | Intro of Stinkyscape #150 Call to Chaos (Stinky Edition) (Legendary): calliope, xylophone, tuba, A mixolydian, 4/4 at 118 | 5.1 s |
+| `intro-stinkyscape-150-1` | `apps/web/public/audio/music/intro-stinkyscape-150-1.m4a` | Intro of Stinkyscape #150.1 Stinkyscape Golem (Legendary): horn, strings, contrabass, A minor, 4/4 at 122 | 4.9 s |
+| `intro-stinkyscape-151` | `apps/web/public/audio/music/intro-stinkyscape-151.m4a` | Intro of Stinkyscape #151 Call to Chaos (Scape Edition) (Legendary): calliope, xylophone, tuba, E mixolydian, 4/4 at 131 | 4.7 s |
+| `intro-stinkyscape-152` | `apps/web/public/audio/music/intro-stinkyscape-152.m4a` | Intro of Stinkyscape #152 Sanctum (Legendary): oboe, choir, cello, G mixolydian, 3/4 at 119 | 5.5 s |
+| `intro-stinkyscape-153` | `apps/web/public/audio/music/intro-stinkyscape-153.m4a` | Intro of Stinkyscape #153 Stimmycheck (Legendary): flute, strings, cello, E dorian, 4/4 at 107 | 5.5 s |
+| `intro-stinkyscape-154` | `apps/web/public/audio/music/intro-stinkyscape-154.m4a` | Intro of Stinkyscape #154 Dice of Doom (Mythic): whistle, steel guitar, acoustic bass, B mixolydian, 4/4 at 138 | 4.5 s |
+| `intro-stinkyscape-t-dormant-starship` | `apps/web/public/audio/music/intro-stinkyscape-t-dormant-starship.m4a` | Intro of Stinkyscape Dormant Starship (Legendary): trumpet, strings, contrabass, B-flat major, 4/4 at 113 | 5.2 s |
+| `intro-stinkyscape-t-shield-layer` | `apps/web/public/audio/music/intro-stinkyscape-t-shield-layer.m4a` | Intro of Stinkyscape Drone Battleship (Shield Layer) (Mythic): trumpet, strings, contrabass, E-flat minor, 4/4 at 112 | 5.3 s |
+| `intro-stinkyscape-t-propagation-layer` | `apps/web/public/audio/music/intro-stinkyscape-t-propagation-layer.m4a` | Intro of Stinkyscape Drone Battleship (Propagation Layer) (Mythic): horn, horn, contrabass, C minor, 4/4 at 125 | 4.8 s |
+| `intro-stinkyscape-t-meltdown-layer` | `apps/web/public/audio/music/intro-stinkyscape-t-meltdown-layer.m4a` | Intro of Stinkyscape Drone Battleship (Meltdown Layer) (Mythic): trumpet, horn, contrabass, E-flat major, 4/4 at 109 | 5.4 s |
+| `intro-stinkyscape-t-narcor` | `apps/web/public/audio/music/intro-stinkyscape-t-narcor.m4a` | Intro of Stinkyscape Narcor (Legendary): flute, strings, cello, F major, 3/4 at 123 | 5.4 s |
+| `intro-stinkyscape-t-red-narcor` | `apps/web/public/audio/music/intro-stinkyscape-t-red-narcor.m4a` | Intro of Stinkyscape Red Narcor (Mythic): flute, strings, cello, D-flat dorian, 4/4 at 127 | 4.8 s |
+| `intro-stinkyscape-t-anomaly-found` | `apps/web/public/audio/music/intro-stinkyscape-t-anomaly-found.m4a` | Intro of Stinkyscape Anomaly Found! (Mythic): glockenspiel, strings, cello, F dorian, 4/4 at 107 | 5.5 s |
 
 ## Third-party material
 

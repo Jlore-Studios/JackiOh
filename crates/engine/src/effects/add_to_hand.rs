@@ -54,6 +54,8 @@ struct HandRiders {
     memory: Option<IndexMap<String, Value>>,
     /// R1848003: an X-cost card reaches the hand with its X set at this.
     fixed_x: Option<i32>,
+    /// R1878003: the card is given these keywords as it reaches the hand.
+    keywords: Option<Vec<Keyword>>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -116,6 +118,12 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     {
         card.granted_keywords.push(Keyword::Lucky { n });
     }
+    // R1878003: "It gains Starship Piece" — given in the hand as Lucky is, it is the card's from there
+    // on: R78's reset takes a granted keyword off only as the card leaves the field, so it rides the
+    // card onto the field, where the layers read it (§10.4).
+    for keyword in riders.keywords.iter().flatten() {
+        card.granted_keywords.push(keyword.clone());
+    }
 }
 
 /// §2.4's pipeline, with the riders applied around it as `apply_radiant_rider` explains.
@@ -168,7 +176,9 @@ fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders
     let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
     let card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
     crate::generators::record_generator(ctx, &card);
+    let id = card.id.clone();
     put_in_hand_with(ctx, card, riders);
+    crate::generators::credit_creator(ctx, &id);
 }
 
 /// R57, R1242: what a copy made into a hand carries of the card copied, as `library_copies`'s do.
@@ -254,6 +264,7 @@ impl AddToHandArgs {
             lucky: self.lucky,
             memory: self.memory.clone(),
             fixed_x: self.fixed_x,
+            keywords: None,
         }
     }
 }
@@ -284,7 +295,9 @@ pub fn add_to_hand(args: AddToHandArgs) -> Effect {
             let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Hand { player });
             copy_riders(&mut copy, &source);
             crate::generators::record_generator(ctx, &copy);
+            let id = copy.id.clone();
             put_in_hand_with(ctx, copy, &riders);
+            crate::generators::credit_creator(ctx, &id);
             return;
         }
         if let Some(spec) = &args.instance {
@@ -352,6 +365,10 @@ pub struct AddRandomFromCatalogArgs {
     /// R1438: give each card added Lucky X once it is in the hand (Meditative #101 Gachaholic).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lucky: Option<i32>,
+    /// R1878003: give each card added these keywords once it is in the hand (Stinkyscape #130's "It
+    /// gains Starship Piece").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -371,6 +388,7 @@ impl AddRandomFromCatalogArgs {
             lucky: self.lucky,
             memory: None,
             fixed_x: None,
+            keywords: self.keywords.clone(),
         }
     }
 }

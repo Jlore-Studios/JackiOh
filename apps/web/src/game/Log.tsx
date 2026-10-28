@@ -541,7 +541,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return t("{seat} sold {card} for {credits} Credits", { seat: name.seat(event.player), card: named(event.defId), credits: event.credits });
     case "starshipFused":
       // R1852000: a piece died, and a copy of it fused into its owner's Dormant Starship.
-      return t("{card} fused into {whose} Dormant Starship ({n} pieces)", {
+      return t(event.pieces === 1 ? "{card} fused into {whose} Dormant Starship ({n} piece)" : "{card} fused into {whose} Dormant Starship ({n} pieces)", {
         card: name.def(event.defId),
         whose: name.whose(event.player),
         n: event.pieces,

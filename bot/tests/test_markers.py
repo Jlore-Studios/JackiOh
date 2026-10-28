@@ -1,7 +1,7 @@
 """#317 part 2: no path from the model job to a push carries a conflict marker.
 
-Devin committed nested conflict markers in SPEC §11 and the rulings index on #203, #214 and #287,
-more than once each: its self checks ran out with them still open, the run ended `built`, and
+A weak builder committed nested conflict markers in SPEC §11 and the rulings index on #203, #214 and
+#287, more than once each: its self checks ran out with them still open, the run ended `built`, and
 deliver pushed it. Review runs then spent themselves finding them.
 """
 
@@ -24,20 +24,20 @@ PLAN = ("<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n"
         "<!-- /jackioh-bot:plan -->")
 
 
-def devin_harness(test):
-    h = Harness(test, env={"HARNESS_SECRETS_SET": ""}, machine=("devin",))
+def weak_harness(test):
+    h = Harness(test, env={"HARNESS_SECRETS_SET": ""}, machine=("lite",))
     h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:easy"), body=PLAN)
     return h
 
 
 class WorkTests(unittest.TestCase):
     def test_markers_that_survive_the_self_checks_and_one_fix_end_unapproved(self):
-        h = devin_harness(self)
+        h = weak_harness(self)
         runner = FakeRunner({"build": builder({"src/game.txt": MARKED}),
                              "self_check": reviewer(APPROVE),
                              "fix": builder({"src/game.txt": MARKED + "again\n"})})
         planned, result = h.night(runner)
-        self.assertEqual(planned["provider"], "devin")
+        self.assertEqual(planned["provider"], "lite")
         self.assertEqual(result["status"], "not_approved")
         self.assertIn("conflict markers are still in src/game.txt", result["reason"])
         self.assertIn("marker_fix", result["cycles"][0])
@@ -46,7 +46,7 @@ class WorkTests(unittest.TestCase):
         self.assertIn("conflict markers are still in `src/game.txt`", h.gh.bot_comments(12)[-1])
 
     def test_a_fix_that_clears_them_lets_it_go_to_review(self):
-        h = devin_harness(self)
+        h = weak_harness(self)
         runner = FakeRunner({"build": builder({"src/game.txt": MARKED}),
                              "self_check": reviewer(APPROVE),
                              "fix": builder({"src/game.txt": "rules v2, with main's\n"})})

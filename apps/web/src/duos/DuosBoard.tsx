@@ -31,6 +31,10 @@
 // THE RESULT (#1755): the team's result panel takes focus on its first way on as it comes in, and
 // "View the board" folds it to the rail's "Result", which takes the focus and opens it again, its
 // XP reveal and replay door with it, as the 1v1 result folds to its chip (Result.tsx).
+//
+// PLAY AGAIN (R2092000): the panel draws the chrome's `playAgain` and decides nothing: the route's
+// last status read and the last offer's refusal pick the line, and the button only sends the offer.
+// A replay or /dev/duos hangs no `playAgain`, so draws no button.
 
 import {
   useCallback,
@@ -61,7 +65,7 @@ import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { tradeOfferFor } from "../game/TradeControl.tsx";
 import { CardActions, type PingMarker } from "./CardActions.tsx";
-import { DuosChromeContext } from "./context.ts";
+import { DuosChromeContext, type DuosPlayAgain } from "./context.ts";
 import { LifeStrip, TeammateStrip } from "./LifeStrip.tsx";
 import { PING_LABEL } from "./pings.ts";
 import { duelOf, seatLabel, teamOf, teammateOf } from "./seats.ts";
@@ -69,8 +73,6 @@ import { playPingSound } from "./sounds.ts";
 import { spotOfElement, spotOfTarget } from "./spots.ts";
 import { duosTestid } from "./testids.ts";
 import "./duos.css";
-
-export type { ReceivedPing } from "../net/duos.ts";
 
 export type DuosBoardProps = {
   view: DuosView;
@@ -163,6 +165,18 @@ function resultWords(result: DuosResult, team: Team): { outcome: "win" | "loss" 
   }
 }
 
+/** R2092000: the Play again line, from the route's last read and the last offer's refusal. */
+function againLine(again: DuosPlayAgain | undefined): { words: string; alert: boolean } | null {
+  if (again === undefined) return null;
+  const status = again.status;
+  if (status !== null && !status.teammateHere) return { words: t("Your teammate has left"), alert: false };
+  if (again.refusal !== null) return { words: t(again.refusal), alert: true };
+  if (status === null || status.matchId !== null) return null;
+  if (status.youOffered) return { words: t("Waiting for your teammate…"), alert: false };
+  if (status.teammateOffered) return { words: t("Your teammate wants to play again"), alert: false };
+  return null;
+}
+
 /** B11: the team's concede, offered by one seat and agreed by the other; agreeing asks twice. */
 function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boolean; onConcede: () => void }): ReactElement | null {
   const [armedFor, setArmedFor] = useState<DuosSeat | null>(null);
@@ -212,6 +226,7 @@ function ResultPanel({
   onShowBoard,
   onWatchReplay,
   onLeave,
+  playAgain,
 }: {
   view: DuosView;
   jloreCapped: boolean;
@@ -219,6 +234,7 @@ function ResultPanel({
   onShowBoard: () => void;
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
+  playAgain: DuosPlayAgain | undefined;
 }): ReactElement | null {
   // #1755: the panel takes focus as it comes in (and again when the rail's "Result" reopens it,
   // which mounts it afresh), on its first way on, as the 1v1 result does (Result.tsx).
@@ -228,6 +244,7 @@ function ResultPanel({
   }, []);
   if (view.result === null) return null;
   const words = resultWords(view.result, teamOf(view.seat));
+  const line = againLine(playAgain);
   return (
     <div className="duos-result" data-testid={duosTestid.result} data-outcome={words.outcome} role="dialog" aria-label={words.heading}>
       <h2 className="duos-result__heading">{words.heading}</h2>
@@ -248,12 +265,29 @@ function ResultPanel({
             {t("Watch the replay")}
           </button>
         )}
+        {playAgain === undefined || playAgain.status?.teammateHere !== true ? null : (
+          <button
+            type="button"
+            className="button-primary"
+            data-testid={duosTestid.resultAgain}
+            disabled={playAgain.offering}
+            aria-busy={playAgain.offering}
+            onClick={playAgain.offer}
+          >
+            {t("Play again")}
+          </button>
+        )}
         {onLeave === undefined ? null : (
-          <button type="button" className="button-primary" data-testid={duosTestid.resultBack} onClick={onLeave}>
+          <button type="button" data-testid={duosTestid.resultBack} onClick={onLeave}>
             {t("Back to Play together")}
           </button>
         )}
       </div>
+      {line === null ? null : (
+        <p className="duos-result__note" data-testid={duosTestid.resultAgainStatus} role={line.alert ? "alert" : "status"}>
+          {line.words}
+        </p>
+      )}
     </div>
   );
 }
@@ -513,10 +547,9 @@ export function DuosBoard({
           }}
           onWatchReplay={chrome?.onWatchReplay}
           onLeave={chrome?.onLeave}
+          playAgain={chrome?.playAgain}
         />
       ) : null}
     </div>
   );
 }
-
-export default DuosBoard;

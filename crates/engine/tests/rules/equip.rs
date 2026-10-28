@@ -122,8 +122,22 @@ fn paid() -> CardDef {
     def_of_kind("paid", 1906, json!({ "cost": { "base": 1, "embiggen": 2 } }))
 }
 
+/// Stinkyscape #16 Rod of Ages's shape (R1869000): a plain 2/2 that lends Equip
+/// (`staticFlags.lendsEquip`), so any Unit card may be played onto it as an Equip play.
+fn lender() -> CardDef {
+    def_of_kind("lender", 1907, json!({}))
+}
+
 fn defs() -> Vec<CardDef> {
-    vec![host(), mag(), stack_and_equip(), immutable(), sentry(), paid()]
+    vec![
+        host(),
+        mag(),
+        stack_and_equip(),
+        immutable(),
+        sentry(),
+        paid(),
+        lender(),
+    ]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -191,6 +205,17 @@ fn scripts() -> IndexMap<String, CardScripts> {
         CardScripts {
             base: paid_equip(),
             radiant: paid_equip(),
+        },
+    );
+    let lends = || Script {
+        static_flags: Some(json_as(json!({ "lendsEquip": true }))),
+        ..Script::default()
+    };
+    scripts.insert(
+        lender().id,
+        CardScripts {
+            base: lends(),
+            radiant: lends(),
         },
     );
     scripts
@@ -544,5 +569,113 @@ mod r831013_an_equip_a_price_grants {
         assert!(after.error.is_none(), "{:?}", after.error);
         assert_eq!(fused_events(&after.events).len(), 1, "it fused into the host");
         assert_eq!(after.state.players.p1.mana.current, 5 - 2);
+    }
+}
+
+// R1869000 (Stinkyscape #16 Rod of Ages): a host that lends Equip takes any Unit card of its
+// controller's as an Equip play while it is no fusion.
+mod r1869000_a_host_that_lends_equip {
+    use super::*;
+
+    /// A lender in p1's unit zone 1 and two plain Units in hand, p1 with mana to play both.
+    fn lending() -> (GameState, String, String, String) {
+        let mut state = playing("equip-lender");
+        put(
+            &mut state,
+            &lender().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let lender_id = card_at(&state, slot(PlayerId::P1, Row::Units, 1))
+            .expect("the lender")
+            .id
+            .clone();
+        let mut plain = in_hand(&mut state, &host().id, PlayerId::P1, 2);
+        flush(&mut state, PlayerId::P1, 10);
+        let second = plain.remove(1).id;
+        let first = plain.remove(0).id;
+        (state, lender_id, first, second)
+    }
+
+    fn lanes_of(actions: &[Value]) -> Vec<i64> {
+        actions
+            .iter()
+            .filter_map(|action| action["zone"]["lane"].as_i64())
+            .collect()
+    }
+
+    #[test]
+    fn r1869000_a_plain_unit_is_offered_onto_a_lender_and_fuses_into_it() {
+        let (state, lender_id, first, _) = lending();
+        assert_eq!(lanes_of(&equip_actions(&state, &first)), vec![1]);
+
+        let result = act_result(&state, play_input(&first, 1, true, Value::Null));
+        assert_eq!(result.error, None);
+        assert_eq!(fused_events(&result.events).len(), 1);
+        let fused = card_at(&result.state, slot(PlayerId::P1, Row::Units, 1)).expect("the fusion");
+        assert_eq!(fused.id, lender_id, "the lender is the kept instance");
+        let view = unit_view(&result.state, fused);
+        assert_eq!((view.attack, view.health), (4, 4), "the two 2/2s summed");
+        assert!(find_instance(&result.state, &first).is_none());
+    }
+
+    #[test]
+    fn r1869000_a_lender_that_holds_a_fusion_lends_no_more() {
+        let (state, _, first, second) = lending();
+        let state = act(&state, play_input(&first, 1, true, Value::Null));
+
+        assert!(equip_actions(&state, &second).is_empty());
+        let refused = act_result(&state, play_input(&second, 1, true, Value::Null));
+        assert!(
+            refused
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("is not Equip")),
+            "{:?}",
+            refused.error
+        );
+        // It still plays as usual, into an open zone.
+        let plain = act_result(&state, play_input(&second, 2, false, Value::Null));
+        assert_eq!(plain.error, None);
+        assert!(fused_events(&plain.events).is_empty());
+    }
+
+    #[test]
+    fn r1869000_a_plain_unit_is_not_offered_onto_a_plain_host_and_reduce_agrees() {
+        let mut state = playing("equip-no-lender");
+        put(
+            &mut state,
+            &host().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let plain = in_hand(&mut state, &host().id, PlayerId::P1, 1).remove(0);
+        flush(&mut state, PlayerId::P1, 10);
+
+        assert!(equip_actions(&state, &plain.id).is_empty());
+        let refused = act_result(&state, play_input(&plain.id, 1, true, Value::Null));
+        assert!(
+            refused
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("is not Equip")),
+            "{:?}",
+            refused.error
+        );
+    }
+
+    #[test]
+    fn r1869000_an_equip_card_still_goes_onto_a_lender_and_the_enemys_lender_lends_nothing() {
+        let (mut state, _, first, _) = lending();
+        put(
+            &mut state,
+            &lender().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let mag = in_hand(&mut state, &mag().id, PlayerId::P1, 1).remove(0);
+
+        assert_eq!(lanes_of(&equip_actions(&state, &mag.id)), vec![1]);
+        assert_eq!(lanes_of(&equip_actions(&state, &first)), vec![1]);
     }
 }

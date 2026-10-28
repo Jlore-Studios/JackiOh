@@ -5,7 +5,7 @@
 
 use jackioh_engine::testkit::*;
 
-use jackioh_engine::effects::damage_split;
+use jackioh_engine::effects::{damage_random_enemies, damage_split};
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::EngineSink;
@@ -45,6 +45,23 @@ fn split_from(
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
         let mut ctx = make_context(&mut sink, self_, options);
         apply_effects(&[damage_split(json_as(args))], &mut ctx);
+    }
+    events
+}
+
+/// As `split_from`, for ST-S03-5's `damageRandomEnemies` (R1860004).
+fn random_enemies_from(
+    state: &mut GameState,
+    self_: Option<&CardInstance>,
+    options: HookOptions,
+    args: Value,
+) -> Vec<GameEvent> {
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    let mut events = Vec::new();
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, self_, options);
+        apply_effects(&[damage_random_enemies(json_as(args))], &mut ctx);
     }
     events
 }
@@ -208,5 +225,98 @@ mod e37_damage_split {
                 .collect::<Vec<_>>(),
             vec!["hero-p2", "hero-p2", "hero-p2", "hero-p2"]
         );
+    }
+}
+
+mod s03_damage_random_enemies {
+    use super::*;
+
+    /// Two walls (1/8) and the hero stand: count 2 hits two different enemies, one instance each.
+    fn two_walls() -> (GameState, CardInstance) {
+        let mut state = playing("dc-random-enemies");
+        let source = put(
+            &mut state,
+            &grunt.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(&mut state, &wall.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(&mut state, &wall.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        (state, source)
+    }
+
+    #[test]
+    fn r1860004_count_2_hits_two_different_enemies_one_instance_each() {
+        let (mut state, source) = two_walls();
+        let events = random_enemies_from(
+            &mut state,
+            Some(&source),
+            HookOptions::default(),
+            json!({ "count": 2, "amount": 3 }),
+        );
+        let hits = events_json(&events, "damage");
+        assert_eq!(hits.len(), 2);
+        for hit in &hits {
+            assert_eq!(text(hit, "sourceId"), source.id);
+            assert_eq!(hit["amount"], json!(3));
+        }
+        let targets: Vec<String> = hits.iter().map(|hit| text(hit, "targetId")).collect();
+        let mut unique = targets.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), 2, "no enemy takes both hits: {targets:?}");
+        // The same seed and board draw the same enemies (R60: the match rng).
+        let (mut again, source) = two_walls();
+        let redrawn = events_json(
+            &random_enemies_from(
+                &mut again,
+                Some(&source),
+                HookOptions::default(),
+                json!({ "count": 2, "amount": 3 }),
+            ),
+            "damage",
+        );
+        assert_eq!(
+            redrawn
+                .iter()
+                .map(|hit| text(hit, "targetId"))
+                .collect::<Vec<_>>(),
+            targets
+        );
+    }
+
+    #[test]
+    fn r1860004_one_standing_takes_one_fewer_when_fewer_stand() {
+        let (mut state, source) = two_walls();
+        for zone in state.players.p2.units.iter_mut() {
+            *zone = None;
+        }
+        let events = random_enemies_from(
+            &mut state,
+            Some(&source),
+            HookOptions::default(),
+            json!({ "count": 2, "amount": 3 }),
+        );
+        assert_eq!(
+            events_json(&events, "damage")
+                .iter()
+                .map(|hit| text(hit, "targetId"))
+                .collect::<Vec<_>>(),
+            vec!["hero-p2".to_string()]
+        );
+        assert_eq!(state.players.p2.hero.health, 30 - 3);
+    }
+
+    #[test]
+    fn r1860004_zero_amount_or_zero_count_hits_nothing() {
+        let (mut state, source) = two_walls();
+        for args in [
+            json!({ "count": 0, "amount": 3 }),
+            json!({ "count": 2, "amount": 0 }),
+        ] {
+            let events = random_enemies_from(&mut state, Some(&source), HookOptions::default(), args);
+            assert!(events_json(&events, "damage").is_empty());
+        }
+        assert_eq!(state.players.p2.hero.health, 30);
     }
 }

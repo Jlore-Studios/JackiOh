@@ -9,6 +9,7 @@
 mod agent;
 mod arena;
 mod board;
+mod card_lists;
 mod catalog;
 mod claims;
 mod classify;

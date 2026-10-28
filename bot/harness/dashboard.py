@@ -2,16 +2,21 @@
 `bot-status` loop rewrites every five minutes with what the night bot is doing and what it has
 done.
 
-It opens with a headline (what runs, what waits and on what, which subscriptions can start work),
-then draws the same facts as `/harness status` (`status.py`) for a glance: what each lane is doing
-and a timeline of the runs going now; every subscription as a box with what it is doing or why it
-is not, and its usage, always; the queue, each item with the tier its difficulty needs and what it
+It opens with its date, then a bar chart of how far the owner's PC's two local jobs have played (the
+learn lane's export of `LEARN_GAMES` with its shard, and gather's games of its patch, from the PC's
+heartbeat: `progress`), then a headline (what runs, what waits and on what, which subscriptions can
+start work), then draws the same facts as `/harness status` (`status.py`) for a glance: what each
+lane is doing and a timeline of the runs going now, the PC's jobs among them; every subscription
+as a box with what it is doing or why it
+is not, and its usage, always; every subscription's lanes, held and open, Squishy's too, with the
+totals and the limits on them (`lanes_table`); the queue, each item with the tier its difficulty needs and what it
 waits for (`waiting.py`, the planner's own rules on the lanes held now: never "free" for a
 subscription the planner would give no work, never "starts next" for an item it would not start);
 each subscription's usage as bars and charts against its caps; the last runs; the statistics
 (`stats.py`: the last six hours, day, week and all time, counted every 30 minutes and kept in the
 issue between counts, with which set's cards win most, `cardsets.py`, read from production once a
-day); and the full status text folded underneath. Times are clock times, which
+day); and the full status text folded underneath (left out first when the issue would
+pass GitHub's limit, `fit`: `/harness status` gives it). Times are clock times, which
 stay true between rewrites; hovering one shows how long it had been running when the issue was
 written. Editing an issue's body notifies nobody, so the rewrites stay quiet. The issue's number
 is kept in the state file; when it is missing or the issue was closed, an open issue with the
@@ -22,7 +27,8 @@ Every runner has a section too, low in the issue (`runners_section`): each job a
 the step it is on and what it is for, and the jobs queued for one, as boxes the way the
 subscriptions are drawn and as a table, each folding away. The owner's PC's group carries its load
 and the gather workflow, from a heartbeat its supervisor writes to a gist (`read_runners`). Between
-rewrites the loop redraws that section alone every two minutes (`refresh_runners`). What each runner
+rewrites the loop redraws that section and the progress chart alone every two minutes
+(`refresh_runners`). What each runner
 and each workflow is for changes only with the pool or the workflows, so it is a comment on the issue
 (`explain`), which the section links.
 
@@ -52,6 +58,7 @@ from harness import status as status_mod
 from harness import waiting as waiting_mod
 from harness.clock import human_delta, parse_iso, zone
 from harness.config import LABEL_BLOCKED, LABEL_TREE, MODES, NIGHT_WORKFLOW, SLASH
+from harness.config import NAME as BOT_NAME
 from harness.config import TITLE as BOT_TITLE
 from harness.context import Context
 from harness.errors import GitHubError
@@ -199,33 +206,53 @@ def _tick(span: timedelta) -> str:
     return "2hour"
 
 
-def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
+#: The timeline's bars carry their own colours, as the boxes do (`BOX_STYLES`): dark blue on light
+#: blue in a bar. A bar too short for its name draws it beside the bar, on the page itself (Mermaid
+#: draws every section's band at a fifth of its colour), so that text is GitHub's muted grey, which
+#: reads on its light page and its dark one alike (4.5:1 and 3.9:1). Bars are plain tasks, not
+#: `active` ones: Mermaid gives an active bar's name one colour inside the bar and beside it, and
+#: GitHub's dark theme made it dark, unreadable beside a short bar.
+TIMELINE_STYLE = ('%%{init: {"themeVariables": {"taskBkgColor": "#ddf4ff", "taskBorderColor": '
+                  '"#54aeff", "taskTextColor": "#0a3069", "taskTextOutsideColor": "#6e7781"}}}%%')
+
+
+def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str],
+             found: Found | None = None) -> list[str]:
     """A Mermaid timeline of the runs going now: GitHub's runners, then the machine, the
-    longest-running first, each bar named by its subscription, what it does and for how long.
-    (A gantt chart reads `#` as a comment, so items are named without it.)"""
-    if not live:
+    longest-running first, each bar named by its subscription, what it does and for how long;
+    then, with the runners `found`, the jobs on the owner's PC (the learn lane's, gather's), each
+    named by its workflow and job. (A gantt chart reads `#` as a comment, so items are named
+    without it.)"""
+    pc_jobs = [(run, job) for run, job in (found.busy if found else []) if _where(job)[0] == 3]
+    if not live and not pc_jobs:
         return ["Nothing is running right now."]
     pool = ctx.cfg.pool
     now = _local(ctx, ctx.now())
     fmt = "%Y-%m-%d %H:%M"
-    rows: dict[str, list[str]] = {"hosted": [], "night": []}
+    rows: dict[str, list[str]] = {"hosted": [], "night": [], "pc": []}
     earliest = now
-    for number, provider_id in _by_start(ctx, state, live):
-        doing, item, since = _doing(state, number)
+
+    def add(where: str, name: str, since: datetime | None) -> None:
+        nonlocal earliest
         start = _local(ctx, since) if since else now
         earliest = min(earliest, start)
         end = max(now, start + timedelta(minutes=1))  # a run that just started still shows
         took = human_delta(now - start)
-        name = (f"{provider_id} · {doing} {item.lstrip('#')} · "
-                f"{'just started' if took == 'now' else took}")
-        where = "night" if pool.on_machine(provider_id) else "hosted"
-        rows[where].append(
-            f"    {name.replace(':', ' ')} :active, {start.strftime(fmt)}, {end.strftime(fmt)}")
-    lines = ["```mermaid", "gantt",
+        name += f" · {'just started' if took == 'now' else took}"
+        rows[where].append(f"    {name.replace(':', ' ').replace('#', '')} :{start.strftime(fmt)}, "
+                           f"{end.strftime(fmt)}")
+    for number, provider_id in _by_start(ctx, state, live):
+        doing, item, since = _doing(state, number)
+        add("night" if pool.on_machine(provider_id) else "hosted",
+            f"{provider_id} · {doing} {item.lstrip('#')}", since)
+    for run, job in pc_jobs:
+        add("pc", _job_name(run, job), parse_iso(job.get("started_at")))
+    lines = ["```mermaid", TIMELINE_STYLE, "gantt",
              f"    title Runs going now, as of {now.strftime('%H:%M')} (Central time)",
              "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M",
              f"    tickInterval {_tick(now - earliest)}", "    todayMarker off"]
-    for where, section_name in (("hosted", "GitHub's runners"), ("night", "The night box")):
+    for where, section_name in (("hosted", "GitHub's runners"), ("night", "The night box"),
+                                ("pc", "The owner's PC")):
         if rows[where]:
             lines += [f"    section {section_name}"] + rows[where]
     return lines + ["```"]
@@ -408,6 +435,193 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
                     f"{plan_note}.</sub>"]
 
 
+# ------------------------------------------------------------------ the lanes
+
+#: The lanes table's order after the Claude accounts, which come first by number: the AWS boxes'
+#: subscriptions, as the owner reads them. Any other follows by name, and the other bots' last.
+LANE_ORDER = ("agy", "gpt", "muse")
+#: How a bot's section carries its lanes to the night bot's table (`lanes_mark`): JSON in an HTML
+#: comment, which GitHub draws for nobody.
+LANES_MARK = "<!-- jackioh-bot:lanes "
+#: What the Claude accounts' secrets are named (`providers.SECRETS`): one account each.
+CLAUDE_SECRET = "CLAUDE_CODE_OAUTH_TOKEN"
+
+
+def _lanes_where(pool: Any, provider: Any) -> str:
+    if not pool.on_machine(provider.id):
+        return "GitHub's runners"
+    places = [place for place, owners, extras in BOX_SLOTS if provider.id in owners + extras]
+    return " and ".join(f"the {place}" for place in places) or f"`{provider.runs_on}`"
+
+
+def lane_rows(ctx: Context, state: dict[str, Any], live: dict[int, str],
+              halted: str = "") -> list[dict[str, Any]]:
+    """Each subscription's lanes, in `LANE_ORDER`: how many it has, how many of them its runs
+    hold now (`plan.Lanes.used`, what the planner holds to them), whether it is switched off or
+    may start a build or a plan now (`waiting.held_by`: its usage and hours; nothing while the
+    bot is `halted`), its secret and where it runs. A fill-in's runs (`FillIn`) count in the
+    lanes they fill, the first of its `for` first; a planning run the planning lane holds counts
+    beside its lanes (`planning`)."""
+    pool, cfg = ctx.cfg.pool, ctx.cfg
+    lanes = waiting_mod.lanes_of(ctx, state, live)
+    rows: dict[str, dict[str, Any]] = {}
+    for p in pool.ordered():
+        off = (not p.enabled or providers_mod.switched_off_by_date(p, ctx.now(), cfg.timezone)
+               or (p.login == "secret" and cfg.secrets.has(p.secret) is False))
+        counted = p.quiet_check or p.limits.stops
+        rows[p.id] = {"id": p.id, "bot": "", "claude": p.family == "claude",
+                      "where": _lanes_where(pool, p), "github": not pool.on_machine(p.id),
+                      "secret": p.secret if p.login == "secret" else "",
+                      "startable": not (off or halted)
+                      and waiting_mod.held_by(ctx, state, p) is None,
+                      "lanes": p.lanes, "used": lanes.used(p), "off": bool(off),
+                      "planning": 0 if counted else lanes.planning_by(p.id),
+                      "runs": lanes.all_by(p.id), "filling": lanes.filling_by(p.id),
+                      "fills": pool.filled_by(p), "filled": 0, "filler": ""}
+    for filler in pool.ordered():
+        left = rows[filler.id]["filling"]
+        for owner in pool.filled_by(filler):
+            row = rows[owner]
+            took = min(left, max(0, row["lanes"] - row["used"]))
+            row["filled"], row["filler"], left = took, filler.id if took else "", left - took
+
+    def order(row: dict[str, Any]) -> tuple[int, int, str]:
+        number = row["id"].removeprefix("claude-")
+        if row["claude"] and number.isdigit():
+            return (0, int(number), "")
+        if row["id"] in LANE_ORDER:
+            return (1, LANE_ORDER.index(row["id"]), "")
+        return (2, 0, row["id"])
+    return sorted(rows.values(), key=order)
+
+
+def lanes_mark(ctx: Context, state: dict[str, Any], live: dict[int, str],
+               halted: str = "") -> str:
+    """This bot's lanes for the night bot's table (`marked_lanes`), named for this bot."""
+    rows = [{**row, "bot": BOT_TITLE} for row in lane_rows(ctx, state, live, halted)]
+    # No `>` inside, so nothing in it can close the comment.
+    return LANES_MARK + json.dumps(rows).replace(">", "\\u003e") + " -->"
+
+
+def marked_lanes(parts: tuple[str, ...]) -> list[dict[str, Any]]:
+    """The other bots' lanes their sections carry (`lanes_mark`), in their order. A section with
+    none, or with one that cannot be read, adds no row."""
+    found: list[dict[str, Any]] = []
+    for part in parts:
+        start = part.find(LANES_MARK)
+        if start < 0:
+            continue
+        try:
+            rows = json.loads(part[start + len(LANES_MARK):part.index(" -->", start)])
+            found += [{"id": str(r["id"]), "bot": str(r.get("bot") or ""),
+                       "claude": bool(r.get("claude")), "where": str(r.get("where") or ""),
+                       "github": bool(r.get("github")), "off": bool(r.get("off")),
+                       "secret": str(r.get("secret") or ""),
+                       "startable": bool(r.get("startable")),
+                       **{key: int(r.get(key) or 0) for key in ("lanes", "used", "planning",
+                                                                "runs", "filling", "filled")},
+                       "fills": [str(o) for o in r.get("fills") or []],
+                       "filler": str(r.get("filler") or "")} for r in rows]
+        except (ValueError, TypeError, KeyError, AttributeError):
+            continue
+    return found
+
+
+def _open(row: dict[str, Any]) -> int:
+    return 0 if row["off"] else max(0, row["lanes"] - row["used"] - row["filled"])
+
+
+def _in_use(row: dict[str, Any]) -> str:
+    fills = " or ".join(f"`{owner}`'s" for owner in row["fills"])
+    notes = ([f"{row['filled']} of them `{row['filler']}`'s"] if row["filled"] else []) + (
+        [f"+{row['filling']} filling in {fills}"] if row["filling"] else []) + (
+        [f"+{row['planning']} planning, on the planning lane"] if row["planning"] else [])
+    return str(row["used"] + row["filled"]) + (f" <sub>({', '.join(notes)})</sub>" if notes else "")
+
+
+def lanes_table(ctx: Context, state: dict[str, Any], live: dict[int, str],
+                others: tuple[str, ...] = (), halted: str = "") -> list[str]:
+    """How many lanes each subscription has, how many its runs hold and how many are open: the
+    night bot's, the Claude accounts first by number (`lane_rows`), then each other bot's from its
+    section (`marked_lanes`), then the totals, the Claude accounts' and everyone's. Under them,
+    the limits on the lanes: an account's own, the Claude secrets the workflows hand over, the
+    runs GitHub's runners, the planning lane and the AWS boxes take at once, usage and hours, and
+    how many more Claude runs there is room for now."""
+    pool = ctx.cfg.pool
+    rows = lane_rows(ctx, state, live, halted) + marked_lanes(others)
+    lines = ["| Subscription | Runs on | Lanes | In use | Open |", "|---|---|---|---|---|"]
+    for row in rows:
+        name = f"`{row['id']}`" + (f" ({row['bot']})" if row["bot"] else "")
+        lines.append(f"| {name} | {row['where']} | {row['lanes']} | {_in_use(row)} "
+                     f"| {'⚫ off' if row['off'] else _open(row)} |")
+    claude = [r for r in rows if r["claude"]]
+    for label, picked in ((f"All {len(claude)} Claude accounts", claude),
+                          (f"All {len(rows)} subscriptions", rows)):
+        if not picked or (picked is rows and len(claude) == len(rows)):
+            continue
+        off = sum(1 for r in picked if r["off"])
+        lines.append(f"| **{label}**{f' ({off} off)' if off else ''} | "
+                     f"| **{sum(r['lanes'] for r in picked)}** "
+                     f"| **{sum(r['used'] + r['filled'] for r in picked)}** "
+                     f"| **{sum(_open(r) for r in picked)}** |")
+    return lines + ["", "**The limits on the lanes**", "", *lane_limits(ctx, state, live, rows)]
+
+
+def lane_limits(ctx: Context, state: dict[str, Any], live: dict[int, str],
+                rows: list[dict[str, Any]]) -> list[str]:
+    """What holds the lanes, as a list (`lanes_table`), each limit with how much of it is held."""
+    pool = ctx.cfg.pool
+    claude, github = [r for r in rows if r["claude"]], [r for r in rows if r["github"]]
+    runs = {BOT_NAME: sum(1 for p in live.values() if not pool.on_machine(p))}
+    for row in github:
+        if row["bot"]:
+            runs[row["bot"]] = runs.get(row["bot"], 0) + row["runs"]
+    held, on_github = sum(runs.values()), sum(r["lanes"] for r in github)
+    secrets = [name for name in providers_mod.SECRETS if name.startswith(CLAUDE_SECRET)]
+    named: dict[str, set[str]] = {}
+    for row in claude:
+        if row["secret"] in secrets:
+            named.setdefault(row["bot"] or BOT_NAME, set()).add(row["secret"])
+    free = [f"`{name}`" for name in secrets if not any(name in n for n in named.values())]
+    there = "Claude lanes" if all(r["claude"] for r in github) else "lanes there"
+    limits = [
+        "- **Each account:** its `lanes` in its bot's `providers.json`, 1 or more; the code sets "
+        "no top. Each lane is a run on a GitHub runner of its own, and its runs share the "
+        "account's usage: each reads it before it starts and watches it while it works, so "
+        "together they pass its cap by at most one reading each.",
+        f"- **Accounts:** the workflows hand over {len(secrets)} Claude secrets "
+        f"(`providers.SECRETS`), one an account: "
+        + ", ".join(f"{len(n)} {bot}'s" for bot, n in named.items())
+        + (f"; free: {', '.join(free)}." if free else
+           ", so none is free: another account needs a new secret there and in the workflows."),
+        f"- **At once:** GitHub's runners take {pool.max_parallel} of the bots' runs, planning "
+        f"runs too ({held} now: " + ", ".join(f"{n} {bot}'s" for bot, n in runs.items())
+        + f"), the organization's {HOSTED_RUNNERS} hosted jobs less the "
+        f"{HOSTED_RUNNERS - pool.max_parallel} kept for CI (#1455)."
+        + (f" So the {on_github} {there} never all run at once: past {pool.max_parallel}, a "
+           "lane lets work go to an account with room while others are capped or outside "
+           "their hours." if on_github > pool.max_parallel else "")]
+    if pool.plan_lanes:
+        planning = sum(1 for n in live
+                       if n and status_mod.record_of(state, n).get("action") == "plan")
+        limits.append(f"- **Planning:** the planning lane runs {pool.plan_lanes} plans at once "
+                      f"beside the accounts' own lanes ({planning} now), on those same runners.")
+    if pool.machine_parallel:
+        on_machine = sum(1 for p in live.values() if pool.on_machine(p))
+        limits.append(f"- **The AWS boxes:** {pool.machine_parallel} runs at once "
+                      f"({on_machine} now), apart from GitHub's runners.")
+    startable = sum(_open(r) for r in claude if r["startable"])
+    room = max(0, pool.max_parallel - held)
+    limits += [
+        "- **Usage and hours:** an open lane takes work only while its subscription is under "
+        "its caps and in its hours (🔋 Subscriptions); a capped account counts its planning run "
+        "in its own lanes.",
+        f"- **Now:** {startable} Claude {'lane is' if startable == 1 else 'lanes are'} open on "
+        f"accounts that may start work, and GitHub's runners have {room} free, so there is room "
+        f"for {min(startable, room)} more Claude {'run' if min(startable, room) == 1 else 'runs'}."]
+    return limits
+
+
 # ------------------------------------------------------------------ the subscriptions
 
 def _now_cell(ctx: Context, state: dict[str, Any], now: waiting_mod.Now,
@@ -517,8 +731,9 @@ def usage_charts(ctx: Context, state: dict[str, Any]) -> list[str]:
 def difficulty_legend(pool: Any) -> str:
     """What each difficulty may be built by, in one line above the queue."""
     names = {tier: waiting_mod.tier_names(pool, tier) for tier in ("weak", "medium", "strong")}
-    return ("<sub>🟢 **easy**: any model, the weak ones first "
-            f"({names['weak']}) · 🟡 **medium**, and ⚪ **unrated** until its planner rates it: "
+    weak = f", the weak ones first ({names['weak']})" if names["weak"] != "none" else ""
+    return (f"<sub>🟢 **easy**: any model{weak} · 🟡 **medium**, and ⚪ **unrated** until its "
+            "planner rates it: "
             f"a medium or strong model ({names['medium']}, then {names['strong']}) · 🔴 **hard**: "
             f"a strong model only ({names['strong']}). A build needs a plan first, by a medium "
             "or strong model (strong for a hard one); a review run of a medium or hard change "
@@ -678,9 +893,10 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
 #: the lane's pull request and its runs.
 LEARN_WORKFLOW = "learn.yml"
 LEARN_BRANCH = "ai/learn"
-#: learn.yml's schedule, "23 6 * * *": every day at 06:23 UTC. Each run starts the next as it ends
-#: (its `next` job), so the schedule only starts the lane again when that chain stops.
-LEARN_SCHEDULE = (6, 23)
+#: learn.yml's schedule, "23 6,18 * * *": twice a day, at 06:23 and 18:23 UTC. Each run starts the
+#: next as it ends (its `next` job), so the schedule only starts the lane again when that chain
+#: stops.
+LEARN_SCHEDULE = ((6, 23), (18, 23))
 #: learn.yml's LEARN_PR_STALE_HOURS: a lane pull request open this long is closed by the next run.
 LEARN_PR_STALE = timedelta(hours=48)
 LEARN_ROWS = 5
@@ -688,9 +904,10 @@ LEARN_ROWS = 5
 
 def next_learn_run(now: datetime) -> datetime:
     """When learn.yml's schedule next fires (GitHub fires schedules late; never early)."""
-    hour, minute = LEARN_SCHEDULE
-    at = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
-    return at if at > now else at + timedelta(days=1)
+    day = now.astimezone(timezone.utc).replace(second=0, microsecond=0)
+    times = [day.replace(hour=hour, minute=minute) + timedelta(days=ahead)
+             for ahead in (0, 1) for hour, minute in LEARN_SCHEDULE]
+    return min(at for at in times if at > now)
 
 
 #: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
@@ -746,9 +963,12 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
     return "gated out"
 
 
-def learn_lane(ctx: Context) -> list[str]:
+def learn_lane(ctx: Context, found: Found | None = None) -> list[str]:
     """The learn lane's section: the AI on main, the lane's pull request, the next scheduled run,
-    and its last runs with how each ended. Each part says so when GitHub cannot be read."""
+    the owner's PC it runs on (its heartbeat: whether it is working and on what, from the runners
+    `found`, and how loaded it is, with and without its runners), and its last runs with how each
+    ended. Each part says so when GitHub cannot be read. Without `found` it reads the heartbeat
+    alone, which says a runner is in a job but not which."""
     lines = ["## 🧠 The learn lane", "",
              "<sub>`learn.yml` retrains the learned evaluation on fresh self-play on the owner's "
              "PC, one run after another (the local runner, only while the PC is idle: a run takes "
@@ -782,16 +1002,26 @@ def learn_lane(ctx: Context) -> list[str]:
         pulled = "could not be read."
     lines.append(f"- **Its pull request:** {pulled}")
     upcoming = _local(ctx, next_learn_run(ctx.now())).strftime("%a %b %d %H:%M")
-    lines += [f"- **Next scheduled run:** {upcoming} (Central).", ""]
+    lines.append(f"- **Next scheduled run:** {upcoming} (Central).")
+    beat, note = (found.pc, found.pc_note) if found is not None else _heartbeat(ctx)
+    pc = _pc_words(ctx, beat, note, _pc_jobs(found) if found is not None else None, full=True)
+    lines += [f"- **The owner's PC:** {pc}.", ""]
     try:
         runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
-                if r.get("event") != "workflow_run"][:LEARN_ROWS]
+                if r.get("event") != "workflow_run"]
     except GitHubError:
         return lines + ["Its runs could not be read."]
     rows = []
     for run in runs:
+        if len(rows) == LEARN_ROWS:
+            break
         try:
             jobs = ctx.gh.list_jobs(run["id"]) if run.get("status") == "completed" else []
+            # A scheduled run queued behind a running one is cancelled by GitHub when the next
+            # schedule queues another (the `learn` concurrency group holds one waiting): it never
+            # ran, so it is no row.
+            if run.get("conclusion") == "cancelled" and not any(j.get("runner_name") for j in jobs):
+                continue
             result = learn_outcome(run, jobs)
         except (GitHubError, KeyError):
             result = RESULT.get(str(run.get("conclusion")), str(run.get("conclusion")))
@@ -823,8 +1053,10 @@ HOSTED_RUNNERS = 20
 RUNNER_RUNS = 40
 #: How many busy runners the table lists at most; fewer when the issue has no room for them.
 RUNNER_ROWS = 25
-#: The owner's PC's own label (bot/machine/README.md, The local runner).
+#: The owner's PC's own label, and its gather slot's, outside the PC's one job at a time
+#: (bot/machine/README.md, The local runner; #2134).
 LOCAL_LABEL = "jackioh-selfplay-local"
+GATHER_LABEL = "jackioh-selfplay-local-gather"
 #: What each workflow is for, by file. A workflow added without a line here fails `bot selftest`
 #: (test_dashboard.RunnersTests).
 WORKFLOWS = {
@@ -838,6 +1070,7 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
                        "Central",
+    "code-audit.yml": "every three days: the code audit's issue for the night bot",
     "db-size.yml": "twice a day: an issue once production's database nears its Supabase plan's cap",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
@@ -850,6 +1083,7 @@ WORKFLOWS = {
     "promote-production.yml": "merges main into production once a day",
     "selfplay-shards.yml": "one round of a self-play export's shards",
     "selfplay.yml": "a self-play export, on the owner's PC unless asked otherwise",
+    "spec-fold.yml": "folds the pending §11 paragraphs and rewrites the rulings index once a day",
     "squishy-commands.yml": "Squishy's ears and its sweep",
     "squishy-run.yml": "Squishy: gate, plan, `work` on its own Claude account, deliver",
     "super.yml": "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
@@ -869,16 +1103,20 @@ HOSTED_ROLES = (
     ("macos-15", "GitHub's macOS", "`voice`'s macOS `say` lines"),
     ("windows-2022", "GitHub's Windows", "`voice`'s Windows SAPI lines"),
 )
-LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while "
-              "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
-              "exports and `gather`")
+LOCAL_ROLES = (
+    (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while the PC is "
+     "otherwise idle", "`learn`, every job of it, back to back, and `selfplay` exports"),
+    (GATHER_LABEL, "the owner's PC, a slot of its own beside the learn lane's, ahead of it for the "
+     "CPU: a container a job, `pc-gather-<time>`, only while the PC is otherwise idle", "`gather`"),
+)
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
               "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "
-              "load without its runners, and each runner's CPUs and whether it is slowed), which "
-              "the PC's group in the runners section shows with the gather workflow's state. "
+              "CPU and memory in use, with and without its runners, and each runner's CPUs and "
+              "whether it is slowed), which the PC's group in the runners section and the learn "
+              "lane show with whether it is working, the group with the gather workflow's state. "
               "bot/machine/README.md has the rest.")
 
 
@@ -900,7 +1138,7 @@ def explanation(ctx: Context) -> str:
                 rows.append(f"| `{provider.fill_in.runs_on}` | the bot's AWS boxes, in the lanes "
                             f"of {of} | `{provider.id}`'s `work` in those lanes while they cannot "
                             "start work (capped, off, backing off), as the same user |")
-    rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
+    rows += [f"| `{label}` | {where} | {what} |" for label, where, what in LOCAL_ROLES]
     flows = [f"| `{name.removesuffix('.yml')}` | {what} |" for name, what in sorted(WORKFLOWS.items())]
     return "\n".join([
         "## 🖥️ What each runner is for", "",
@@ -1029,7 +1267,7 @@ def _where(job: dict[str, Any]) -> tuple[int, str]:
     """Where a job runs, from its runner's name and its label, as (order, words)."""
     name, labels = str(job.get("runner_name") or ""), [str(x) for x in job.get("labels") or []]
     label = labels[0] if labels else ""
-    if name.startswith("pc-") or label == LOCAL_LABEL:
+    if name.startswith("pc-") or label in (LOCAL_LABEL, GATHER_LABEL):
         return 3, "owner's PC"
     if name.startswith("night-vm-") or label.startswith("night-vm-"):
         return (2, "Muse box") if memory_mod.box_of(name, label) else (1, "night box")
@@ -1089,10 +1327,15 @@ def _run_for(state: dict[str, Any], items: dict[str, int], run: dict[str, Any]) 
     return f"{run.get('event')}: {_cell(title, 36)}"
 
 
+def _flow(run: dict[str, Any]) -> str:
+    """`ci`: a run's workflow by its file, or by its name when the run does not say its file."""
+    flow = str(run.get("path") or "").rsplit("/", 1)[-1].removesuffix(".yml")
+    return flow or _cell(run.get("name"), 24)
+
+
 def _job_name(run: dict[str, Any], job: dict[str, Any]) -> str:
     """`ci · rust (test engine)`: the workflow by its file, then the job."""
-    flow = str(run.get("path") or "").rsplit("/", 1)[-1].removesuffix(".yml")
-    return f"{flow or _cell(run.get('name'), 24)} · {_cell(job.get('name'), 32)}"
+    return f"{_flow(run)} · {_cell(job.get('name'), 32)}"
 
 
 def _text(value: Any, limit: int = 34) -> str:
@@ -1131,20 +1374,71 @@ def _fresh(ctx: Context, found: Found) -> dict[str, Any] | None:
     return found.pc if at is not None and ctx.now() - at <= PC_QUIET else None
 
 
-def _pc_title(ctx: Context, found: Found) -> str:
-    """The PC's group: how loaded it is, from its heartbeat, and when it was heard."""
-    if found.pc is None:
-        return f"The owner's PC: {found.pc_note}"
-    beat, at = found.pc, parse_iso(found.pc.get("at"))
-    if _fresh(ctx, found) is None:
-        return (f"The owner's PC: not heard since {_clock(ctx, at)}: off, asleep, or its "
-                "supervisor stopped")
+def _pc_load(beat: dict[str, Any], full: bool = False) -> str:
+    """How loaded the PC is, as its CPU and memory in use, runners included; with `full`, also
+    its memory's size and its load without its runners (what decides whether it lends itself). A
+    heartbeat from a supervisor older than its memory's size says its load without its runners,
+    in GB."""
     try:
-        load = f"CPU {float(beat.get('cpu')):.0f}%, {float(beat.get('memGB')):.1f} GB in use"
-    except (TypeError, ValueError):
-        load = "its load not reported"
+        if not beat.get("memTotalGB"):
+            return f"CPU {float(beat['cpu']):.0f}%, {float(beat['memGB']):.1f} GB in use"
+        whole = float(beat["memTotalGB"])
+        cpu = float(beat.get("cpuAll", beat["cpu"]))
+        mem = float(beat.get("memAllGB", beat["memGB"]))
+        load = f"CPU {cpu:.0f}%, memory {100 * mem / whole:.0f}%"
+        if full:
+            load += (f" of {whole:.0f} GB ({float(beat['cpu']):.0f}% and "
+                     f"{100 * float(beat['memGB']) / whole:.0f}% without its runners)")
+        return load
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return "its load not reported"
+
+
+def _pc_jobs(found: Found) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """The jobs the PC's runners hold now, as GitHub lists them."""
+    return [(run, job) for run, job in found.busy if _where(job)[0] == 3]
+
+
+def _pc_work(beat: dict[str, Any], jobs: list[tuple[dict[str, Any], dict[str, Any]]],
+             full: bool = False) -> str:
+    """Whether the PC is working: the workflows of the jobs its runners hold (GitHub's jobs, or
+    the heartbeat's busy runners when GitHub has not listed them yet), with `full` each job's name
+    and whether it is slowed; or that it is not, and whether a runner of its waits for a job."""
+    runners = _pc_runners(beat)
+    if not jobs and not any(r.get("busy") for r in runners):
+        waiting = any(not r.get("busy") for r in runners)
+        return "not working: " + ("a runner waits for a job" if waiting else "no job")
+    if not jobs:
+        return "working on a job"
+    if not full:
+        return "working on " + " and ".join(dict.fromkeys(_flow(run) for run, _ in jobs))
+    slowed = any(_pc_runner(beat, str(job.get("runner_name") or "")).get("throttled")
+                 for _, job in jobs)
+    return ("working on " + "; ".join(f"{_flow(run)} ({_cell(job.get('name'), 48)})"
+                                      for run, job in jobs)
+            + (", slowed while the PC is busy" if slowed else ""))
+
+
+def _pc_words(ctx: Context, beat: dict[str, Any] | None, note: str,
+              jobs: list[tuple[dict[str, Any], dict[str, Any]]] | None = None,
+              full: bool = False) -> str:
+    """The PC from its heartbeat: lending itself or busy, whether it is working (on `jobs`, the
+    ones GitHub lists on its runners), how loaded, and when it was heard; or that it has gone
+    quiet, or why there is no heartbeat (`note`)."""
+    if beat is None:
+        return note
+    at = parse_iso(beat.get("at"))
+    if at is None or ctx.now() - at > PC_QUIET:
+        return f"not heard since {_clock(ctx, at)}: off, asleep, or its supervisor stopped"
     mood = "calm, lending itself" if beat.get("calm") else "busy with its owner's work"
-    return f"The owner's PC: {mood}, {load} · heard {_clock(ctx, at)}"
+    return (f"{mood}, {_pc_work(beat, jobs or [], full)}, {_pc_load(beat, full)} · heard "
+            f"{_clock(ctx, at)}")
+
+
+def _pc_title(ctx: Context, found: Found) -> str:
+    """The PC's group: whether it is working, how loaded it is, from its heartbeat, and when it
+    was heard."""
+    return f"The owner's PC: {_pc_words(ctx, found.pc, found.pc_note, _pc_jobs(found))}"
 
 
 def _pc_runners(beat: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -1193,12 +1487,106 @@ def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tupl
     return [title, f"❌ its last run: {_text(last.get('conclusion'), 12)}", when], "broken"
 
 
+#: learn.yml's `games` default: the export a scheduled learn run plays, in shards whose ranges the
+#: heartbeat names, so a shard's games read as the export's (`progress`).
+LEARN_GAMES = 100_000
+#: The top of the issue after its date: how far the PC's two local jobs have played, between
+#: these markers, so the runners' redraw keeps them as fresh as the heartbeat (`refresh_runners`).
+PROGRESS_START = "<!-- jackioh-bot:progress -->"
+PROGRESS_END = "<!-- /jackioh-bot:progress -->"
+
+
+def _played(runner: dict[str, Any], kind: str) -> dict[str, int | str] | None:
+    """A heartbeat runner's `progress` (bot/machine/local/supervisor.ps1, `Get-Progress`) when it
+    is playing games with `jackioh <kind>`: the games it plays, those done, and its --from and
+    --patch."""
+    progress = runner.get("progress")
+    if not isinstance(progress, dict) or progress.get("kind") != kind:
+        return None
+    try:
+        games, done = int(progress["games"]), int(progress["done"])
+        start = int(progress.get("from") or 1)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if games <= 0 or done < 0:
+        return None
+    return {"games": games, "done": min(done, games), "from": start,
+            "patch": str(progress.get("patch") or "")}
+
+
+#: The progress chart's colours, the usage charts' (`USAGE_CHART`): a grey bar to 100% behind, the
+#: games played in green over it; and its height, low enough to sit at the top of the issue.
+PROGRESS_CHART = ('%%{init: {"xyChart": {"height": 220}, "themeVariables": {"xyChart": '
+                  '{"plotColorPalette": "#d0d7de, #1f883d"}}}}%%')
+
+
+def progress(ctx: Context, found: Found | None = None) -> str:
+    """The top of the issue, between `PROGRESS_START` and `PROGRESS_END`: how far the owner's
+    PC's two local jobs have played, as a Mermaid bar chart in percent, with a line under it. The
+    learn lane's export is the game it is at of `LEARN_GAMES`, then its shard's games; gather is
+    its games of its patch. Each comes from the games its `jackioh` has written so far (the
+    heartbeat's `progress`); a job playing none has a bar at 0 that says why. Without `found` it
+    reads the heartbeat alone."""
+    if found is None:
+        found = Found([], [])
+        found.pc, found.pc_note = _heartbeat(ctx)
+    beat = _fresh(ctx, found)
+    runners = _pc_runners(beat)
+    bars: list[tuple[str, float]] = []
+    notes: list[str] = []
+    if beat is None:
+        at = parse_iso((found.pc or {}).get("at"))
+        why = (f"not heard since {_clock(ctx, at)}" if at is not None
+               else found.pc_note or "no heartbeat")
+        bars = [("learn: no heartbeat", 0.0), ("gather: no heartbeat", 0.0)]
+        notes = [f"The owner's PC: {why}"]
+    else:
+        queued = {"selfplay": any(LOCAL_LABEL in (job.get("labels") or [])
+                                  for _, job in found.queued),
+                  "stats": any(_is_gather(run) for run, _ in found.queued)}
+        for name, label, kind, between in (
+                ("learn", LOCAL_LABEL, "selfplay", "a build, the retrain, the screen or the gate"),
+                ("gather", GATHER_LABEL, "stats", "its build")):
+            busy = [r for r in runners if r.get("label") == label and r.get("busy")]
+            played = next((p for p in (_played(r, kind) for r in busy) if p), None)
+            if played is None:
+                state = ("working, no games" if busy else
+                         "waiting for its runner" if queued[kind] else "not playing")
+                bars.append((f"{name}: {state}", 0.0))
+                if busy:
+                    notes.append(f"{name} is playing no games now ({between})")
+                continue
+            games, done, first = int(played["games"]), int(played["done"]), int(played["from"])
+            if kind == "stats":
+                bars.append((f"gather: game {done:,} of {games:,}", done / games))
+                if played["patch"]:
+                    notes.append(f"gather plays {played['patch']}")
+                continue
+            at, last = first - 1 + done, first + games - 1
+            if last <= LEARN_GAMES:
+                bars.append((f"learn: game {at:,} of {LEARN_GAMES:,}", at / LEARN_GAMES))
+            else:
+                notes.append(f"learn is at game {at:,}, past learn.yml's {LEARN_GAMES:,}")
+            bars.append((f"its shard: {done:,} of {games:,}", done / games))
+            notes.append(f"the shard plays games {first:,}–{last:,}")
+        notes.append(f"heard {_clock(ctx, parse_iso(beat.get('at')))}")
+    labels = ", ".join(f'"{_text(label, 40)}"' for label, _ in bars)
+    chart = ["```mermaid", PROGRESS_CHART, "xychart-beta horizontal",
+             "    title \"The owner's PC: how far its two local jobs have played, %\"",
+             f"    x-axis [{labels}]", '    y-axis "% played" 0 --> 100',
+             f"    bar [{', '.join('100' for _ in bars)}]",
+             f"    bar [{', '.join(f'{min(max(v, 0.0), 1.0) * 100:.1f}' for _, v in bars)}]", "```"]
+    note = " · ".join(notes)
+    return "\n".join([PROGRESS_START, *chart, f"<sub>{note[:1].upper()}{note[1:]}.</sub>",
+                      PROGRESS_END])
+
+
 #: Each AWS box as its slots, as register-runners.sh lays the runners out (its header, and
 #: bot/machine/README.md, The Muse box; #2069): the place `_where` names it, the subscription whose
-#: lane each slot is, and the subscriptions whose runners there take no slot of their own (Devin's,
-#: until its plan ends), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
+#: lane each slot is, and the subscriptions whose runners there take no slot of their own (none
+#: now), drawn after the slots while they hold a job. A fill-in (`FillIn`) takes
 #: the slot of a subscription it fills while that one has no job in it. Change it with the boxes.
-BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ("devin",)),
+BOX_SLOTS = (("night box", ("gpt", "agy", "muse"), ()),
              ("Muse box", ("muse", "muse", "muse"), ()))
 _PLACE_ORDER = {"night box": 1, "Muse box": 2}
 
@@ -1245,7 +1633,7 @@ def _box_slots(ctx: Context, state: dict[str, Any], items: dict[str, int], place
             slots.append(([head, "⚪ free", f"{_text(fill[0])} may fill it" if fill else ""],
                           "idle"))
     busy = sum(1 for _, style in slots if style == "busy")
-    for pair in left:  # its other runners' jobs (Devin's), and any no slot names
+    for pair in left:  # its other runners' jobs, and any no slot names
         run, job = pair
         slots.append(([f"<b>{_text(job.get('runner_name'))}</b>",
                        f"🟢 {_text(_job_name(run, job))}", *working(pair)], "busy"))
@@ -1320,7 +1708,7 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
             continue
         name = f"<b>{_text(runner.get('name'))}</b>"
         pc.append(([name, "🟢 in a job"], "busy") if runner.get("busy")
-                  else ([name, "⚪ idle, waiting", f"for a {_text(runner.get('label'), 24)} job"],
+                  else ([name, "⚪ idle, waiting", f"for a {_text(runner.get('label'), 30)} job"],
                         "idle"))
     if not pc:
         pc.append(([f"<b>{LOCAL_LABEL}</b>", "💤 no job",
@@ -1424,8 +1812,9 @@ def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = N
 
 
 def refresh_runners(ctx: Context) -> str:
-    """Redraw the status issue's runners section alone, between the loop's rewrites: the rest of
-    the issue stays as the last rewrite left it, and the table lists what room it leaves."""
+    """Redraw the status issue's runners section alone, between the loop's rewrites, and the
+    PC's progress chart at its top (`progress`): the rest of the issue stays as the last rewrite
+    left it, and the table lists what room it leaves."""
     state = ctx.store.load()
     number = (state.get("dashboard") or {}).get("issue")
     if not number:
@@ -1435,8 +1824,13 @@ def refresh_runners(ctx: Context) -> str:
     start, end = body.find(RUNNERS_START), body.find(RUNNERS_END)
     if issue.get("state") != "open" or start < 0 or end < start:
         return f"#{number} has no runners section to redraw: the next rewrite draws it"
+    found = read_runners(ctx)
+    top, bottom = body.find(PROGRESS_START), body.find(PROGRESS_END)
+    if 0 <= top < bottom < start:
+        body = body[:top] + progress(ctx, found) + body[bottom + len(PROGRESS_END):]
+        start, end = body.find(RUNNERS_START), body.find(RUNNERS_END)
     rest = len(body) - (end + len(RUNNERS_END) - start)
-    fresh = (body[:start] + runners_section(ctx, state, room=MAX_BODY - rest)
+    fresh = (body[:start] + runners_section(ctx, state, found, room=MAX_BODY - rest)
              + body[end + len(RUNNERS_END):])
     if len(fresh) > MAX_BODY:
         return f"#{number} would pass GitHub's limit: the next rewrite makes room"
@@ -1479,7 +1873,8 @@ def section(ctx: Context) -> str:
     view = look(ctx)
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
-    lines = [SECTION_START, f"## 🫧 {BOT_TITLE}", "",
+    # Its lanes first, for the night bot's lanes table, which lists every bot's (`marked_lanes`).
+    lines = [SECTION_START, lanes_mark(ctx, state, live, halted), f"## 🫧 {BOT_TITLE}", "",
              f"{'🛑 **Halted.** ' if halted else ''}_@{ctx.cfg.bot_login}, on its own Claude "
              f"account and GitHub's runners. `{SLASH} status` gives the same facts on demand._",
              "", headline(ctx, live, explained), "", "### What it is working on", ""]
@@ -1514,15 +1909,18 @@ def fold(summary: str, lines: list[str]) -> list[str]:
 
 
 def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
-           view: View | None = None) -> str:
+           view: View | None = None, *, full: bool = True) -> str:
     """The whole issue: the headline, the night bot's facts, its statistics, then each other
-    bot's section (`extra`), then the full status folded."""
+    bot's section (`extra`), then the full status folded (without `full`, a line saying where to
+    read it instead: it is the same facts as the sections above, `fit`)."""
     view = view or look(ctx)
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
     updated = _local(ctx, ctx.now()).strftime("%Y-%m-%d %H:%M %Z")
-    # The first line, so a glance at the issue says how fresh it is.
-    lines = [f"**Last updated at {updated}**", "", f"# 🤖 {TITLE}", ""]
+    # The first line, so a glance at the issue says how fresh it is; then how far the PC's two
+    # local jobs have played.
+    lines = [f"**Last updated at {updated}**", "", progress(ctx, view.found), "",
+             f"# 🤖 {TITLE}", ""]
     if halted:
         lines += ["> [!WARNING]", f"> 🛑 **Halted**: {halted}. Nothing starts until it is lifted.",
                   ""]
@@ -1535,8 +1933,12 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
               "## ⚡ Running now", ""]
     running = running_table(ctx, state, live, issues)
     lines += fold("What each lane is doing, the runs going on a timeline, and every subscription",
-                  (running + [""] if running else []) + timeline(ctx, state, live) + [""]
+                  (running + [""] if running else []) + timeline(ctx, state, live, view.found)
+                  + [""]
                   + lanes_boxes(ctx, state, live, explained.now))
+    lines += ["## 🛣️ Lanes", ""] + fold(
+        "How many lanes each subscription has, how many its runs hold and how many are open, "
+        "with the totals and the limits", lanes_table(ctx, state, live, extra, halted))
     people = waiting_for_people(issues)
     lines += ["## 📋 Queue", ""] + fold(
         "What each queued item waits for, in the order the planner takes them",
@@ -1549,8 +1951,8 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
         + ([disk_line, ""] if disk_line else []) + ([memory_line] if memory_line else []))
     lines += ["## 🏃 Last night-bot runs", ""] + fold(f"bot-night.yml's last {RUN_ROWS} runs",
                                                       view.runs)
-    learn = view.learn if view.learn is not None else learn_lane(ctx)
-    lines += learn[:2] + fold("The AI on main, the lane's pull request and its last runs",
+    learn = view.learn if view.learn is not None else learn_lane(ctx, view.found)
+    lines += learn[:2] + fold("The AI on main, the lane's pull request, the PC and its last runs",
                               learn[2:])
     if statistics:
         lines += [statistics.strip(), ""]
@@ -1560,20 +1962,34 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     # least read at a glance.
     lines += ["---", "", view.runners if view.runners is not None else runners_section(ctx, state),
               ""]
-    lines += ["<details><summary>The full status</summary>", "",
-              view.report, "", "</details>", "", MARKER]
+    if full:
+        lines += ["<details><summary>The full status</summary>", "", view.report, "",
+                  "</details>"]
+    else:
+        lines += [f"<sub>{FULL_LEFT_OUT}</sub>"]
+    lines += ["", MARKER]
     return "\n".join(lines)
 
 
+#: What stands at the foot of the issue when the full status is left out for room (`fit`).
+FULL_LEFT_OUT = (f"The full status is left out to keep this issue under GitHub's limit: "
+                 f"`{SLASH} status` gives it.")
+
+
 def fit(ctx: Context, view: View, extra: tuple[str, ...], draw: Callable[[int], str]) -> str:
-    """The body, listing fewer merged pull requests in the statistics (`draw(shown)`) while it
-    would pass GitHub's limit on an issue's body, then fewer busy runners (`_room`), and leaving
-    the statistics out last of all."""
+    """The body, while it would pass GitHub's limit on an issue's body: without the full status
+    (the same facts as the sections above, and `/harness status` gives it), then listing fewer
+    merged pull requests in the statistics (`draw(shown)`), then fewer busy runners (`_room`), and
+    leaving the statistics out last of all."""
+    body = render(ctx, extra, draw(SHOWN_STEPS[0]), view)
+    if len(body) <= MAX_BODY:
+        return body
     for shown in SHOWN_STEPS:
-        body = render(ctx, extra, draw(shown), view)
+        body = render(ctx, extra, draw(shown), view, full=False)
         if len(body) <= MAX_BODY:
             return body
-    body = _room(ctx, view, body, lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view))
+    body = _room(ctx, view, body,
+                 lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view, full=False))
     return body if len(body) <= MAX_BODY else render(ctx, extra, "", view)
 
 
@@ -1621,17 +2037,18 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     `STATS_EVERY` has passed (or `force_stats`, or the issue has none yet, or the kept block no
     longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
     the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds.
-    A count reads which set's cards win most from production through `read_cards` once a day
+    Without `stats` (bot-commands.yml's rewrite after a sweep) nothing is counted, and the block
+    the issue holds is kept too, while it fits. A count reads which set's cards win most from production through `read_cards` once a day
     (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
-    view.learn = learn_lane(ctx)
     view.found = read_runners(ctx)
+    view.learn = learn_lane(ctx, view.found)
     state = view.state
     issue = find(ctx, state)
     if issue is not None:
         explain(ctx, int(issue["number"]), state)
     view.runners = runners_section(ctx, state, view.found)
-    body_now = issue.get("body") if (stats and issue is not None) else None
+    body_now = issue.get("body") if issue is not None else None
     kept = stats_mod.kept(body_now)
     note = ""
 
@@ -1642,10 +2059,13 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
         body, note = count()
     elif kept is not None:
         body = render(ctx, extra, kept, view)
-        # More runners busy than at the last count: fewer listed, rather than a count again.
-        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view))
+        # Without the full status, then fewer runners listed, as `fit` makes room, rather than a
+        # count again.
         if len(body) > MAX_BODY:
-            body, note = count()
+            body = render(ctx, extra, kept, view, full=False)
+        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view, full=False))
+        if len(body) > MAX_BODY:
+            body, note = count() if stats else (render(ctx, extra, "", view), "")
     else:
         body = render(ctx, extra, "", view)
     if issue is None:

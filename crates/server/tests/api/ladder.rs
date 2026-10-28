@@ -13,8 +13,9 @@ use jackioh_server::config::{
 };
 use jackioh_server::ranked::ladder::{
     ApplyRankedGameInput, GRAPE_TIERS, GameResult, LADDER_TOP, PIPS_PER_TIER, Percentile, PipDeltaInput,
-    SeasonRank, Standing, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
-    pip_delta, place_of, target_ladder, tier_bottom, tier_index_of, visible_rank, with_jlorious_peak,
+    SeasonRank, Standing, apply_ranked_game, fresh_rank, jlorious_floor, jlorious_order, peak_badge,
+    percentile_of, pip_delta, place_of, target_ladder, tier_bottom, tier_index_of, visible_rank,
+    with_jlorious_peak,
 };
 use serde_json::{Value, json};
 
@@ -495,6 +496,19 @@ mod r608_jlorious {
             standing("mythic-high", Some(mythic() + 1), 1700.0),
         ]);
         assert_eq!(order, ["mythic-high", "mythic-low"]);
+    }
+
+    /// #2022: the rank reads fetch the rows from `jlorious_floor()` up for Jlorious, so it must be
+    /// exactly where Jlorious starts reading: one pip below it is never Jlorious, and it is.
+    #[test]
+    fn r608_jlorious_floor_is_the_lowest_ladder_position_jlorious_reads() {
+        assert_eq!(jlorious_floor(), mythic());
+        let order = jlorious_order(&[
+            standing("one-pip-below", Some(jlorious_floor() - 1), 2600.0),
+            standing("at-the-floor", Some(jlorious_floor()), 1500.0),
+            standing("at-the-top", Some(LADDER_TOP), 1400.0),
+        ]);
+        assert_eq!(order, ["at-the-floor", "at-the-top"]);
     }
 
     #[test]

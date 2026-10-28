@@ -45,6 +45,6 @@ pnpm install --prefer-offline --silent
 
 echo
 echo "worktree ready: $dir (branch wt/$name)"
-echo "  verify with:  cd '$dir' && cargo test -p jackioh-engine --features testkit --test rules"
+echo "  verify with:  cd '$dir' && cargo test -p jackioh-engine --features testkit --test 'rules*'"
 echo "  merge back:   git -C '$root' merge wt/$name"
 echo "  remove with:  git -C '$root' worktree remove '$dir'"

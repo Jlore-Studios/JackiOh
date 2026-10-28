@@ -4,16 +4,18 @@
 // carrying the riders its own text reads (R1855002); and a scan that finds a Radiant or a plain
 // Anomaly, each miss raising that player's later chances (`scan_for_anomaly`, R1855003). Each through
 // a fixture script (`fixtures/anomalies.rs`) before a card uses it: Stinkyscape's Anomaly Found!, its
-// ten boards and the Scanning Probes (S20).
+// ten boards and the Scanning Probes (S20), whose boards add two readings: a Flying Unit named in the
+// backrow stands there (R1879001), and an entry laid on top of an earlier one makes a pile (R1879002).
 
 use jackioh_engine::effects::{AnomalyScan, anomaly_chances, anomaly_scan_of};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::anomalies::{
-    AIM_DAMAGE, ASK_DAMAGE, MODE_THREE, MODE_TWO, aimer, anomaly, asker, banisher, crowd, exodus, field,
-    found, greeter, grunt, lucky_probe, mine, misfit, modal, parley, planner, polite, probe,
-    register_anomaly_fixtures, scheme, spinner, trap, wall, ward, welcome, whirl, wipe,
+    AIM_DAMAGE, ASK_DAMAGE, FLIER_DAMAGE, MODE_THREE, MODE_TWO, aimer, anomaly, asker, banisher, crowd,
+    exodus, field, fleet, flier, found, greeter, grunt, hangar, lucky_probe, mine, misfit, modal, parley,
+    planner, polite, probe, register_anomaly_fixtures, scheme, spinner, trap, wall, ward, welcome, whirl,
+    wipe,
 };
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::resources::{ASTEROID, ASTEROID_YIELD, MYTHIC};
@@ -629,5 +631,100 @@ mod r1855003_an_anomaly_scan_finds_at_5_and_20_percent_and_each_miss_adds_1_and_
         let s = scan_on(&seed, &lucky_probe, None);
         assert_eq!(finds(&s).len(), 1, "Lucky rolls again and keeps the find");
         assert_eq!(s.state().players[P1].anomaly_misses, None);
+    }
+}
+
+mod r1879001_a_preset_flying_unit_named_in_the_backrow_stands_there {
+    use super::*;
+
+    #[test]
+    fn r1879001_a_flying_unit_stands_in_its_backrow_zone_and_fires_its_cry() {
+        let mut s = board("r1879001-hangar", json!({ "hand": [hangar.id] }), json!({}));
+        let health = s.state().players[P2].hero.health;
+        s.play(hangar.id.as_str(), json!({}));
+
+        assert_eq!(
+            summoned(s.last_events()),
+            vec![
+                (flier.id.clone(), Row::Backrow, 1),
+                (flier.id.clone(), Row::Backrow, 3),
+            ],
+            "the fliers stand in their backrow zones; a Unit without Flying lays nothing there"
+        );
+        let first = s.backrow(P1, 1).expect("the flier");
+        assert_eq!(first.def_id, flier.id);
+        assert!(s.backrow(P1, 2).is_none(), "the grunt lays nothing");
+        let third = s.backrow(P1, 3).expect("the Radiant flier");
+        assert!(third.radiant, "the entry is Radiant");
+        assert_eq!(third.position, Some(Position::Def), "and in Defense Position");
+        for lane in 1..=5 {
+            assert!(s.unit(P1, lane).is_none(), "unit lane {lane} stays empty");
+        }
+        assert_eq!(
+            s.state().players[P2].hero.health,
+            health - 2 * FLIER_DAMAGE,
+            "each flier's Cry fires once the board is laid"
+        );
+    }
+}
+
+mod r1879002_a_stacked_preset_entry_tops_the_card_laid_before_it {
+    use super::*;
+
+    #[test]
+    fn r1879002_a_stacked_entry_makes_a_pile_on_a_laid_card_and_lays_alone_in_an_empty_zone() {
+        let mut s = board("r1879002-fleet", json!({ "hand": [fleet.id] }), json!({}));
+        s.play(fleet.id.as_str(), json!({}));
+
+        let pile: Vec<String> = pile_at(
+            s.state(),
+            ZoneSlot {
+                player: P1,
+                row: Row::Units,
+                lane: 2,
+            },
+        )
+        .expect("the pile")
+        .iter()
+        .map(|card| card.def_id.clone())
+        .collect();
+        assert_eq!(
+            pile,
+            vec![grunt.id.clone(), wall.id.clone()],
+            "the grunt on top, the wall beneath (a pile is top first)"
+        );
+        assert_eq!(s.unit(P1, 2).expect("the top").def_id, grunt.id);
+        assert_eq!(
+            s.unit(P1, 4).expect("the lone grunt").def_id,
+            grunt.id,
+            "an empty zone takes a stacked entry as any entry"
+        );
+    }
+
+    #[test]
+    fn r1879002_a_stacked_entry_lays_nothing_on_a_card_the_replacement_did_not_lay() {
+        let mut s = board(
+            "r1879002-dormant",
+            json!({
+                "hand": [fleet.id],
+                "field": [{ "def": plain.id, "lane": 2, "slumber": { "turns": 2 } }],
+            }),
+            json!({}),
+        );
+        let dormant = unit_id(&s, P1, 2);
+        s.play(fleet.id.as_str(), json!({}));
+
+        assert_eq!(unit_id(&s, P1, 2), dormant, "the Dormant card stays on top");
+        let pile = pile_at(
+            s.state(),
+            ZoneSlot {
+                player: P1,
+                row: Row::Units,
+                lane: 2,
+            },
+        )
+        .expect("its zone");
+        assert_eq!(pile.len(), 1, "nothing is stacked onto it");
+        assert_eq!(s.unit(P1, 4).expect("the lone grunt").def_id, grunt.id);
     }
 }

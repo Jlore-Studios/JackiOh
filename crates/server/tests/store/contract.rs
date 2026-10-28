@@ -47,7 +47,7 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
-use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
+use jackioh_server::config::{JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
@@ -55,12 +55,14 @@ use jackioh_server::db::store::{
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
-    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery,
-    StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
-    UsernameClaim, UsernameClaimOutcome,
+    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
-use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
+use jackioh_server::ranked::ladder::{
+    LADDER_TOP, SeasonRank, Standing, fresh_rank, jlorious_floor, jlorious_order, visible_rank,
+};
 use jackioh_server::ranked::season::ResetChange;
 use jackioh_server::username::{normalize_username, username_key};
 
@@ -5245,6 +5247,56 @@ mod game_records {
         assert!(q!(harness, t => t.stats_decklists("v9")).is_empty());
     }
 
+    /// R2089000: a record's Created cards are folded with its deck cards, into the same rows by
+    /// card, and the store loads them as the records give them: apart from the deck table, tokens
+    /// among them, and nothing from a record written without them.
+    async fn r2089000_folds_the_created_figures_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let mut records = mixed_records();
+        let deck = json!(["core-001", "core-002"]);
+        records.push(game_record(
+            "m-f",
+            json!({ "game": { "first": "p1", "winner": "p1", "reason": "hero-death", "turns": 6, "seats": {
+                "p1": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001"],
+                        "createdUsed": [{ "card": "core-t-rush", "turn": 3, "radiant": true }],
+                        "createdUnused": ["core-t-rush"] },
+                "p2": { "deck": deck, "opening": [], "drawn": [], "played": [],
+                        "createdUnused": ["core-t-coin"] },
+            } } }),
+        ));
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+        let filter = CardStatsFilter {
+            source: SourceFilter::Live,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        };
+        let report = card_stats_of(&totals, &filter);
+        assert_eq!(report, card_stats(&records, &filter));
+        let created: Vec<&str> = report.created.iter().map(|stats| stats.card.as_str()).collect();
+        assert_eq!(created, ["core-t-coin", "core-t-rush"]);
+        assert!(
+            report
+                .cards
+                .iter()
+                .all(|stats| !stats.card.starts_with("core-t-"))
+        );
+        let rush = &report.created[1];
+        assert_eq!(
+            (rush.created_played.games, rush.created_played_radiant.games),
+            (1, 1)
+        );
+        assert_eq!(rush.created_not_played.games, 0);
+        // The records written without the lists count as they did.
+        let before = mixed_records();
+        assert_eq!(report.cards.len(), card_stats(&before, &filter).cards.len());
+        assert!(card_stats(&before, &filter).created.is_empty());
+    }
+
     /// R1044000: a record written before the totals (migration 0041) is folded by
     /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
     async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
@@ -5555,6 +5607,7 @@ mod game_records {
         r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
+        r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
     );
 }
 
@@ -7668,6 +7721,121 @@ mod bots {
         assert_eq!(person_row["rating"].as_f64(), Some(person.rating));
     }
 
+    /// #2022: the rank reads' cut of a season, its asked rows and every row from the Jlorious floor
+    /// up, answers Jlorious (R608) and each asked rank as the whole season does: over ladder bots
+    /// (R640000), rating ties at Jlorious's cut, more Mythic Grape rows than Jlorious holds, rows
+    /// below Mythic Grape, unplaced rows, another season's row, an unknown id and a deleted seat.
+    async fn ranked_standings_subset_answers_jlorious_and_every_asked_rank_as_the_whole_season_does(
+        harness: &StoreHarness,
+    ) {
+        let now = harness.now();
+        for (season_id, patch_version) in [("v0.1", "v0.1.1"), ("v0.2", "v0.2.0")] {
+            let season: Season =
+                from(json!({ "id": season_id, "patchVersion": patch_version, "startedAt": now }));
+            q!(harness, t => t.ranked_create_season(&season));
+        }
+        let floor = jlorious_floor();
+        fn placed(season_id: &str, profile_id: &str, ladder: Option<i32>, at: i64) -> SeasonRank {
+            from(spread(
+                j(&fresh_rank(season_id, profile_id, at)),
+                json!({ "games": 10, "ladder": ladder }),
+            ))
+        }
+        async fn person(harness: &StoreHarness, ladder: Option<i32>, rating: f64) -> String {
+            let profile = active_profile(harness, None).await;
+            let glicko: Glicko = from(json!({ "rating": rating, "deviation": 350, "volatility": 0.06 }));
+            q!(harness, t => t.ranked_put_rank(&placed("v0.1", &profile.id, ladder, harness.now())));
+            q!(harness, t => t.profiles_set_glicko(&profile.id, &glicko));
+            profile.id
+        }
+        async fn bot(harness: &StoreHarness, ladder: Option<i32>, seed_rating: f64) -> String {
+            let bot = new_bot(2, harness.now() - DAY, seed_rating);
+            q!(harness, t => t.bots_create(&bot));
+            q!(harness, t => t.ranked_put_rank(&placed("v0.1", &bot.profile_id, ladder, harness.now())));
+            bot.profile_id
+        }
+
+        // One Mythic Grape person past Jlorious's size, rated in pairs, so the last place in and the
+        // first out tie on rating and the id decides.
+        let mut mythic = Vec::new();
+        for n in 0..i32::try_from(JLORIOUS_SIZE).expect("a size") + 1 {
+            let ladder = floor + n % (LADDER_TOP - floor + 1);
+            mythic.push(person(harness, Some(ladder), 1000.0 + f64::from(n / 2)).await);
+        }
+        let mythic_bot = bot(harness, Some(LADDER_TOP), 5000.0).await;
+        let golden = person(harness, Some(floor - 1), 9000.0).await;
+        q!(harness, t => t.ranked_put_rank(&placed("v0.2", &golden, Some(LADDER_TOP), now)));
+        person(harness, Some(0), 1000.0).await;
+        bot(harness, Some(floor - 1), 1000.0).await;
+        let raisin = person(harness, None, 1000.0).await;
+        let unplaced_bot = bot(harness, None, 1000.0).await;
+
+        let asked = vec![
+            golden.clone(),
+            raisin.clone(),
+            unplaced_bot.clone(),
+            mythic[0].clone(),
+            id(),
+            String::new(),
+        ];
+        let whole = q!(harness, t => t.ranked_standings("v0.1"));
+        let shown = q!(harness, t => t.ranked_standings_subset("v0.1", &asked, floor));
+        let expected: Vec<SeasonStanding> = whole
+            .iter()
+            .filter(|standing| {
+                asked.contains(&standing.rank.profile_id)
+                    || standing.rank.ladder.is_some_and(|ladder| ladder >= floor)
+            })
+            .cloned()
+            .collect();
+        assert_eq!(shown, expected);
+        assert!(shown.len() < whole.len(), "the cut leaves rows out");
+
+        // As `api/ranked.rs`'s `standings_of` and `rank_in` read them.
+        let jlorious_of = |standings: &[SeasonStanding]| {
+            let people: Vec<Standing> = standings
+                .iter()
+                .filter(|standing| !standing.bot)
+                .map(|standing| Standing {
+                    profile_id: standing.rank.profile_id.clone(),
+                    ladder: standing.rank.ladder,
+                    rating: standing.rating,
+                })
+                .collect();
+            jlorious_order(&people)
+        };
+        let jlorious = jlorious_of(&whole);
+        assert_eq!(jlorious_of(&shown), jlorious);
+        assert_eq!(jlorious.len(), JLORIOUS_SIZE);
+        assert!(
+            mythic.len() > JLORIOUS_SIZE,
+            "premise: more Mythic Grape players than Jlorious holds"
+        );
+        assert!(
+            !jlorious.contains(&mythic_bot),
+            "R640000: a bot takes no Jlorious place"
+        );
+        let rank_of = |standings: &[SeasonStanding], order: &[String], profile_id: &str| {
+            visible_rank(
+                standings
+                    .iter()
+                    .find(|standing| standing.rank.profile_id == profile_id)
+                    .map(|standing| &standing.rank),
+                order
+                    .iter()
+                    .position(|candidate| candidate == profile_id)
+                    .map(|at| i32::try_from(at + 1).expect("a position")),
+            )
+        };
+        for profile_id in &asked {
+            assert_eq!(
+                rank_of(&shown, &jlorious_of(&shown), profile_id),
+                rank_of(&whole, &jlorious, profile_id),
+                "{profile_id:?}"
+            );
+        }
+    }
+
     /// R641000: a bot's Conquest trio is kept beside the catalog version it was dealt for, and its
     /// Best-of-1 decks are left as they were.
     async fn r641000_a_bot_s_trio_is_kept_for_its_catalog(harness: &StoreHarness) {
@@ -7908,6 +8076,7 @@ mod bots {
         r640002_counts_the_results_that_ended_since_a_bot_s_game_included,
         r640002_a_ticket_claimed_for_a_bot_lists_its_wait,
         r640000_standings_mark_a_bot_s_row_and_read_its_own_rating,
+        ranked_standings_subset_answers_jlorious_and_every_asked_rank_as_the_whole_season_does,
         r641000_a_bot_s_trio_is_kept_for_its_catalog,
         r641000_a_series_claim_takes_the_ticket_and_puts_the_bot_in_no_match,
         r641000_a_bot_in_a_series_not_over_is_claimed_by_nothing_else,

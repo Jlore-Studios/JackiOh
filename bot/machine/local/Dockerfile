@@ -1,6 +1,6 @@
 # The local runner's image (bot/machine/README.md, The local runner): the tools bot/machine/setup.sh
 # puts on the night box (Node 24 and pnpm through corepack, Python 3.12, Rust 1.97.0, a C++ compiler,
-# gh, the claude, codex, agy, muse and devin CLIs) and the GitHub Actions runner, in one image. Each
+# gh, the claude, codex, agy and muse CLIs) and the GitHub Actions runner, in one image. Each
 # container is one ephemeral runner: it takes one job and exits. A night box subscription's login
 # lives in its own volume, mounted at /home/runner; a self-play runner has none. Built from this directory:
 #   docker build -t jackioh-pc-runner:latest bot/machine/local
@@ -40,13 +40,7 @@ RUN npm install -g --loglevel=error @anthropic-ai/claude-code@latest @openai/cod
  && mkdir -p /usr/local/lib/muse && curl -fsSL https://dev.meta.ai/install.sh -o /tmp/muse.sh \
  && MUSE_INSTALL_DIR=/usr/local/lib/muse MUSE_NO_AUTO_UPDATE=1 bash /tmp/muse.sh >/dev/null 2>&1 \
  && ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse && chmod -R a+rX /usr/local/lib/muse \
- && manifest="$(curl -fsSL https://static.devin.ai/cli/current/manifest.json)" \
- && curl -fsSL -o /tmp/devin.tgz "$(jq -r '.platforms["x86_64-unknown-linux"].url' <<<"$manifest")" \
- && echo "$(jq -r '.platforms["x86_64-unknown-linux"].sha256' <<<"$manifest")  /tmp/devin.tgz" | sha256sum -c --quiet - \
- && mkdir -p /usr/local/lib/devin && tar xzf /tmp/devin.tgz -C /usr/local/lib/devin \
- && echo curl-bash > /usr/local/lib/devin/distribution \
- && ln -sf /usr/local/lib/devin/bin/devin /usr/local/bin/devin && chmod -R a+rX /usr/local/lib/devin \
- && rm -f /tmp/*.sh /tmp/devin.tgz
+ && rm -f /tmp/*.sh
 # The job user: no sudo, no Docker socket, like the night box's agent-<id> users.
 RUN useradd -m -u 1001 -s /bin/bash runner \
  && mkdir -p /opt/rustup /opt/cargo /actions-runner && chown runner:runner /opt/rustup /opt/cargo /actions-runner

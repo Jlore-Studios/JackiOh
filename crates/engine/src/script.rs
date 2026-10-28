@@ -478,6 +478,9 @@ pub struct StaticFlags {
     /// Starts in the opening hand instead of a draw (§6.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickdraw: Option<bool>,
+    /// R1861000: sells from its owner's hand at an open Marketplace, as a tray Resource sells.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hand_sale: Option<bool>,
     /// Replaces an empty-library draw with a Rush Token card (#75).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infinite_reserves: Option<bool>,
@@ -752,6 +755,12 @@ pub struct StaticFlags {
     /// is shown the Pareto hint on each of their turns (`subsystems::pareto::pareto_hint_ids`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hints_plays: Option<bool>,
+    // ---- Stinkyscape S16 (issue #1869) ----
+    /// R1869000 (Stinkyscape #16 Rod of Ages): "The first Unit you play onto this is Equipped into it".
+    /// While this Unit's definition is no fusion, any Unit card its controller plays may be played onto
+    /// it as an Equip play (R1086) though it has no Equip (`play_choices::equip_onto_at`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lends_equip: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -1484,6 +1493,11 @@ pub enum HealedRef {
 pub struct DyingUnit {
     pub instance_id: String,
     pub controller: PlayerId,
+    /// R1875006 (Stinkyscape #138 Pocket Peptides, "would die in combat"): a hit killed it (R42) and
+    /// the last hit it took in this action was combat damage (§4.3, Cleave's included). Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub combat: Option<bool>,
 }
 
 string_union! {
@@ -1646,6 +1660,10 @@ pub struct ReplacementInstead {
     /// R1704001 (on `lethalHit`): only ever `Some(true)`, the hit is cancelled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancel: Option<bool>,
+    /// R1875006 (on `wouldDie`): only ever `Some(true)`. Nothing is flickered: the card's `then`
+    /// resolves at once, before any card moves, and the state check starts over.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolve_first: Option<bool>,
 }
 
 /// One replacement a card makes. The moment fixes what `instead` may say:
@@ -1660,6 +1678,8 @@ pub struct ReplacementInstead {
 ///    modifier). Answers only a heal on its controller's enemies.
 ///  - `wouldDie`: `flicker: "yours"` — its controller's units among the dying flicker instead (E22):
 ///    back in their zones at once, reset, summoning sick, no Death, no Reborn. One firing for them all.
+///    `resolveFirst: true` — its `then` resolves at once, before any card moves, and the check starts
+///    over, judging every unit again on the board the step left (Stinkyscape #138, R1875006, R460).
 ///  - `toGraveyard`: `to` — exile, or the bottom of the owner's library.
 ///  - `targeted`: `interpose: true` — summon this from its controller's hand (leftmost open unit
 ///    zone; with none it does nothing), no Cry, summoning sick, and the attack or pick moves to it.

@@ -27,8 +27,9 @@ before changing code. The rules people most often miss:
 
 - A rules decision the spec does not make follows Hearthstone semantics and gets a new ruling: a
   note `spec/rulings/R<nnnn>.md` with the next free number, a test named after it (`fn r<n>_…` in
-  Rust, `it("R<n> …")` in the web's TypeScript) listed in the note's `proven_in`, and
-  `spec/INDEX.md` rewritten by `cargo jackioh spec index` (CLAUDE.md rule 3; `spec/README.md`,
+  Rust, `it("R<n> …")` in the web's TypeScript) listed in the note's `proven_in`, and its §11
+  paragraph in `spec/pending/<issue>.md`, never at the end of `spec/11-rulings.md`; never run
+  `cargo jackioh spec index`, which a daily job does on `main` (CLAUDE.md rule 3; `spec/README.md`,
   "Adding a ruling").
 - `crates/engine`, `crates/cards` and `crates/ai` stay pure (rule 4; each one's `clippy.toml`
   holds it). Card scripts return effects and never mutate state (rule 5). Every card has its
