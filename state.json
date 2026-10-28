@@ -3436,6 +3436,9 @@
       "suggestion": true,
       "verdict_rounds": 1
     },
+    "2052": {
+      "suggestion": true
+    },
     "2053": {
       "action": "build",
       "died": 0,
