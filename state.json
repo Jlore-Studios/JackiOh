@@ -7104,6 +7104,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-28T17:29:52Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40736824322",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
