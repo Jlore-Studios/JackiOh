@@ -23924,7 +23924,7 @@
     "refs": [
       "meditative-036"
     ],
-    "loc": 66,
+    "loc": 75,
     "base": {
       "keywords": [],
       "text": "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
@@ -26081,7 +26081,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 1,
       "health": 3,
@@ -26117,7 +26117,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Gain a random Common or Rare Stinkyscape Resource."
@@ -26141,7 +26141,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Discover a Starship Piece. It costs (1) less."
@@ -26165,7 +26165,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
@@ -26189,7 +26189,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Your Starship launch costs (1). Draw 1."
@@ -26217,7 +26217,7 @@
       "stinkyscape-166",
       "stinkyscape-167"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add 2 Scanning Probe Mk1s to your hand. They cost (0)."
@@ -26241,7 +26241,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
@@ -26272,7 +26272,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a Drone Interceptor. It gains Starship Piece."
@@ -26299,7 +26299,7 @@
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt."
@@ -26323,7 +26323,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 1,
       "health": 2,

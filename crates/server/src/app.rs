@@ -74,6 +74,9 @@ pub struct App {
     /// SPEC §11 R672: the rematch offers in memory (`api::rematch`). One per app, so parallel tests
     /// never share offers.
     pub rematch_offers: api::rematch::RematchOffers,
+    /// SPEC §11 R2092000: the co-op Play again offers in memory (`duos::again`). One per app, so
+    /// parallel tests never share offers.
+    pub duos_again_offers: crate::duos::again::DuosAgainOffers,
     /// SPEC §11 R1523000: the seat ledger, the one game each profile holds (`seats`). One per app,
     /// so parallel tests never share seats; `serve` boots it before the port opens.
     pub seats: crate::seats::Seats,
@@ -897,6 +900,18 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::duos::replay::get_replay),
     ),
+    (
+        "POST",
+        "/api/duos/matches/:matchId/again",
+        AuthLevel::Active,
+        h!(crate::duos::again::offer_again),
+    ),
+    (
+        "GET",
+        "/api/duos/matches/:matchId/again",
+        AuthLevel::Active,
+        h!(crate::duos::again::again_status),
+    ),
     // ---- end Duos co-op (#946) ----
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
@@ -986,6 +1001,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         queue_presence: api::queue::QueuePresence::new(),
         queue_readout: api::queue::KeptReadout::default(),
         rematch_offers: api::rematch::RematchOffers::default(),
+        duos_again_offers: crate::duos::again::DuosAgainOffers::default(),
         seats: crate::seats::Seats::default(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
