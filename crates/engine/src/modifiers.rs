@@ -397,13 +397,15 @@ pub fn add_play_watch(
 }
 
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
-/// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage). Its `seq`
-/// is the one its id is numbered from (`addModifier`), R68's creation order among the delayed effects.
+/// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage), or with
+/// `at_end` at each end of their turn (R1861002). Its `seq` is the one its id is numbered from
+/// (`addModifier`), R68's creation order among the delayed effects.
 pub fn add_start_of_turn_effect(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
     resume: Resume,
     label: &str,
+    at_end: bool,
 ) -> PlayerModifier {
     let seq = sink.state.next_seq;
     add_modifier(
@@ -415,6 +417,7 @@ pub fn add_start_of_turn_effect(
             resume,
             label: label.to_string(),
             ran_turn: None,
+            at_end: at_end.then_some(true),
         },
     )
 }

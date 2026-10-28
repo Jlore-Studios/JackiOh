@@ -154,7 +154,7 @@ A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-priced Resource in the viewer's tray. Each is live exactly when `legal` lists its `marketBuy` or
+sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
 ## Commands
