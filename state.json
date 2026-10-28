@@ -6709,6 +6709,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2191": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T04:47:35Z",
+      "issue": 2120,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
