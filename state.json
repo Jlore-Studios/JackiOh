@@ -6993,6 +6993,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-28T17:42:37Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `apps/web/src/shop/TokenPicker.tsx:257`: In a real browser the Unlock confirm is drawn underneath the card's detail modal, so the player cannot see or click Conf"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
