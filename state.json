@@ -24,13 +24,11 @@
   "items": {
     "1474": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T02:47:20Z",
       "planned_by": "`claude-squishy` (claude, `opus`, strong)",
@@ -38,25 +36,20 @@
       "planned_tier": "strong",
       "pr": 1478,
       "provider": "claude-squishy",
-      "question": "",
       "round_tier": "strong",
       "run_id": "39527587613",
       "started_at": "2026-10-21T01:31:34Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1475": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T02:57:38Z",
       "planned_by": "`claude-squishy` (claude, `opus`, strong)",
@@ -64,14 +57,11 @@
       "planned_tier": "strong",
       "pr": 1479,
       "provider": "claude-squishy",
-      "question": "",
       "round_tier": "strong",
       "run_id": "39527831669",
       "started_at": "2026-10-21T01:32:25Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1478": {
@@ -86,26 +76,7 @@
       "feedback_since": "2026-10-21T01:31:34Z",
       "issue": 1474,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39527587613",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8c87c0532de52a04c7f875fa392527951d98711a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1479": {
       "cleared": {
@@ -119,26 +90,7 @@
       "feedback_since": "2026-10-21T01:32:25Z",
       "issue": 1475,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39527831669",
-            "tier": "strong"
-          }
-        ],
-        "sha": "00a85d28604fc774e9e5f1b12f744407fd4bdaad",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     }
   },
   "labels_synced": "75e0a1e22ad67e90",
@@ -199,9 +151,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-21T01:31:26Z",
+    "at": "2026-10-28T01:19:54Z",
     "dropped": 0,
-    "shed": 0
+    "shed": 4
   },
   "rate_limited_until": null,
   "secrets": {
