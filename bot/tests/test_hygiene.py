@@ -120,7 +120,14 @@ class IssueTests(unittest.TestCase):
         self.assertIn("would open 'Patch: audit the codebase for dead code, duplicates and zombie routes, "
                       "2026-10-28'", out)
         self.assertIn("run https://run", out)
-        self.assertIn("squishy:build", out)
+        self.assertIn("bot:build", out)
+        self.assertNotIn("squishy:", out)
+
+    def test_the_weekly_two_stay_squishys(self):
+        for kind in ("files", "instructions"):
+            out = self.open(kind, [])
+            self.assertIn("squishy:build", out)
+            self.assertNotIn("bot:build", out)
 
     def test_none_while_the_last_of_its_kind_is_open(self):
         open_audit = [{"number": 7, "title": branches.KINDS["code"] + ", 2026-10-25"},

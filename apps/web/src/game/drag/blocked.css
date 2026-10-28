@@ -13,19 +13,19 @@
   min-width: 28px;
   min-height: 28px;
   overflow: visible;
-  filter: drop-shadow(0 0 6px rgb(255 90 54 / 70%));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--pal-ember-500) 70%, transparent));
   animation: jk-blocked-pop calc(420ms * var(--anim-scale, 1)) ease-out both;
 }
 
 .drag-blocked-ring {
-  fill: rgb(28 17 10 / 78%);
-  stroke: var(--drag-invalid, #ff5a36);
+  fill: color-mix(in srgb, var(--pal-wood-900) 78%, transparent);
+  stroke: var(--drag-invalid, var(--pal-ember-500));
   stroke-width: 1.6;
 }
 
 .drag-blocked-x {
   fill: none;
-  stroke: var(--drag-invalid, #ff5a36);
+  stroke: var(--drag-invalid, var(--pal-ember-500));
   stroke-width: 2.6;
   stroke-linecap: round;
 }

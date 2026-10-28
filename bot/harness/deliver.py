@@ -736,7 +736,7 @@ class Deliverer:
 
     def _infra(self, number: int, kind: str, *, requeue: str | None = None) -> None:
         """A run that could not work. Its subscription is left alone for a while
-        (`providers.INFRA_BACKOFF`), so the item goes to another one. When the model job reported
+        (`providers.INFRA_BACKOFFS`), so the item goes to another one. When the model job reported
         why (its login, its CLI, an install on untouched main), that is all. When the job left no
         result at all (its runner died or timed out), it may be this item too: it goes to the back
         of the queue, and two in a row block it."""

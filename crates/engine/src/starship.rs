@@ -283,6 +283,14 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     });
 }
 
+/// R1882008 (Stinkyscape #151's "fuse 4 random Starship Pieces into your Dormant Starship"): a fresh
+/// card of `def_id`, on its printed base face and owned by `player`, fuses into `player`'s Dormant
+/// Starship as a dead piece's copy does (`fuse_dead_piece`), summoning one first if they have none.
+pub fn fuse_fresh_piece(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str) {
+    let fresh = new_instance(sink.state, def_id, player, Zone::Gone { player });
+    fuse_dead_piece(sink, &fresh);
+}
+
 // ---------------------------------------------------------------------------------------------
 // The launch (R1852003–R1852006)
 // ---------------------------------------------------------------------------------------------

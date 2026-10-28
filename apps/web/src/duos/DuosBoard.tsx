@@ -74,8 +74,6 @@ import { spotOfElement, spotOfTarget } from "./spots.ts";
 import { duosTestid } from "./testids.ts";
 import "./duos.css";
 
-export type { ReceivedPing } from "../net/duos.ts";
-
 export type DuosBoardProps = {
   view: DuosView;
   legal: readonly DuosActionBody[];
@@ -555,5 +553,3 @@ export function DuosBoard({
     </div>
   );
 }
-
-export default DuosBoard;

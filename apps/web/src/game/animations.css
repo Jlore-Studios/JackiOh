@@ -124,7 +124,7 @@
 }
 
 .zone[data-animating="summoned"] {
-  --jk-land: var(--you, #3b82f6);
+  --jk-land: var(--you);
   /* The zone box itself never moves. */
   animation-name: none;
 }
@@ -145,7 +145,7 @@
 }
 
 .zone[data-side="opponent"][data-animating="summoned"] {
-  --jk-land: var(--opponent, #c0453f);
+  --jk-land: var(--opponent);
 }
 
 .zone[data-animating="summoned"]::after {
@@ -157,14 +157,14 @@
   height: 100%;
   translate: -50% -50%;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--jk-land) 60%, white);
+  border: 1px solid color-mix(in srgb, var(--jk-land) 60%, var(--pal-white));
   border-radius: var(--radius, 7px);
   background:
-    radial-gradient(ellipse at 50% 35%, rgb(255 255 255 / 55%), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--jk-land) 55%, #232839), #171a24);
+    radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--pal-white) 55%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in srgb, var(--jk-land) 55%, var(--pal-slate-800)), var(--pal-slate-900));
   box-shadow:
     0 0 16px 3px color-mix(in srgb, var(--jk-land) 70%, transparent),
-    inset 0 0 10px color-mix(in srgb, white 30%, transparent);
+    inset 0 0 10px color-mix(in srgb, var(--pal-white) 30%, transparent);
   pointer-events: none;
   animation-name: jk-summon-scale;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
@@ -320,7 +320,7 @@
   translate: -50% 0;
   font-weight: 700;
   font-size: 20px;
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 1px 2px var(--pal-black);
   pointer-events: none;
   animation-name: jk-number-pop;
   animation-fill-mode: both;
@@ -329,11 +329,11 @@
 }
 
 .damage-pop {
-  color: #ff5a4f;
+  color: var(--pal-ember-500);
 }
 
 .heal-pop {
-  color: #4ec98a;
+  color: var(--pal-jade-400);
 }
 
 .loss-pop {
@@ -495,12 +495,12 @@
   pointer-events: none;
   background: linear-gradient(
     to top,
-    var(--bg-sunken, #0b0d13) 0%,
-    var(--bg-sunken, #0b0d13) 36%,
-    #2a0e05 40%,
-    #d9480f 43%,
-    color-mix(in srgb, var(--radiant, #ffd24a) 80%, white) 45%,
-    color-mix(in srgb, #ff7a1a 40%, transparent) 47%,
+    var(--bg-sunken) 0%,
+    var(--bg-sunken) 36%,
+    var(--pal-wood-800) 40%,
+    var(--pal-red-500) 43%,
+    color-mix(in srgb, var(--radiant) 80%, var(--pal-white)) 45%,
+    color-mix(in srgb, var(--pal-orange-400) 40%, transparent) 47%,
     transparent 50%
   );
   animation-name: jk-burn-climb;
@@ -1214,7 +1214,7 @@
 /* With the effects layer on, a stand-in of the stolen card flies to its new zone (fx/stage.ts), so
    the zone itself stays put and only glows where the card lands, as a summon's zone does. */
 .game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="controlChanged"] {
-  --jk-land: var(--plague, #8b5cf6);
+  --jk-land: var(--plague);
   animation-name: none;
   /* Under the effects layer, so the stand-in lands on the zone rather than behind it. */
   z-index: auto;
@@ -1317,11 +1317,11 @@
 
 @keyframes jk-chain-close {
   0% {
-    box-shadow: inset 0 0 0 0 var(--locked, #6b7280);
+    box-shadow: inset 0 0 0 0 var(--locked);
     opacity: 1;
   }
   100% {
-    box-shadow: inset 0 0 0 3px var(--locked, #6b7280);
+    box-shadow: inset 0 0 0 3px var(--locked);
     opacity: 0.8;
   }
 }
@@ -1410,7 +1410,7 @@
   animation-duration: calc(150ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-fill-mode: both;
   animation-timing-function: ease-out;
-  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--mana) 75%, white);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--mana) 75%, var(--pal-white));
 }
 
 /* --- turnStarted / turnAutoEnded: the turn banner (600 ms) --------------------------- */
@@ -1572,14 +1572,14 @@
   width: max-content;
   max-width: calc(100vw - 32px);
   padding: 20px 28px 22px;
-  border: 1px solid color-mix(in srgb, var(--selected, #f0c04a) 45%, var(--line-bright, #454d66));
+  border: 1px solid color-mix(in srgb, var(--selected) 45%, var(--line-bright));
   border-radius: 14px;
   background:
-    radial-gradient(120% 80% at 50% 0%, rgb(255 210 120 / 10%), transparent 70%),
-    linear-gradient(180deg, var(--bg-raised, #1a1d28), var(--bg-sunken, #0b0d13));
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--pal-gold-300) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 8%),
-    0 18px 48px rgb(0 0 0 / 70%);
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 8%, transparent),
+    0 18px 48px color-mix(in srgb, var(--pal-black) 70%, transparent);
   text-align: center;
   animation-name: jk-result-overlay;
   animation-duration: calc(220ms * var(--anim-scale) * var(--anim-squeeze, 1));
@@ -1596,22 +1596,22 @@
 }
 
 [data-outcome="win"] > .result-overlay__word {
-  color: #fcd34d;
-  text-shadow: 0 0 18px rgb(252 211 77 / 45%), 0 2px 0 #713f12;
+  color: var(--pal-gold-300);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--pal-gold-300) 45%, transparent), 0 2px 0 var(--pal-wood-600);
 }
 
 [data-outcome="loss"] > .result-overlay__word {
-  color: #f87171;
-  text-shadow: 0 0 18px rgb(192 69 63 / 45%), 0 2px 0 #450a0a;
+  color: var(--pal-red-400);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--pal-red-600) 45%, transparent), 0 2px 0 var(--pal-wood-800);
 }
 
 [data-outcome="draw"] > .result-overlay__word {
-  color: #cbd5e1;
-  text-shadow: 0 2px 0 #1e293b;
+  color: var(--pal-blue-200);
+  text-shadow: 0 2px 0 var(--pal-slate-800);
 }
 
 .result-overlay__reason {
-  color: var(--text, #e8eaf2);
+  color: var(--text);
   font-size: 1.05em;
 }
 
@@ -1629,7 +1629,7 @@
   order: 1;
   flex-basis: 100%;
   margin: 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
   font-size: 0.9em;
   text-align: center;
 }
@@ -1651,16 +1651,16 @@
    the rule used to paint the whole block gold and hand its ink to Double or nothing). */
 .result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),
 .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child {
-  border-color: var(--primary-edge, #fde68a);
-  background: var(--primary-face, #d4a017);
-  color: var(--primary-ink, #2b1800);
-  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+  border-color: var(--primary-edge);
+  background: var(--primary-face);
+  color: var(--primary-ink);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
   box-shadow: var(--primary-shadow, none);
 }
 
 .result-overlay__actions > :first-child:not(.result-overlay__view, .rematch):hover,
 .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child:hover:not(:disabled) {
-  background: var(--primary-face-hover, #e3b12a);
+  background: var(--primary-face-hover);
 }
 
 /* The chip: one line at the foot of the screen, over the hand rather than the field. */
@@ -1688,7 +1688,7 @@
 
 [data-form="chip"] > .result-overlay__reason {
   font-size: 0.9em;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
 }
 
 /* Practice's chip has no button, so it keeps its right padding. */
@@ -1725,7 +1725,7 @@
   position: fixed;
   inset: 0;
   z-index: 39;
-  background: radial-gradient(ellipse at 50% 45%, rgb(5 7 12 / 55%), rgb(5 7 12 / 82%));
+  background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--pal-wood-950) 55%, transparent), color-mix(in srgb, var(--pal-wood-950) 82%, transparent));
   animation-name: jk-result-scrim;
   animation-duration: calc(220ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-fill-mode: both;
