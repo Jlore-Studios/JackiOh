@@ -6,12 +6,13 @@
 // #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.
 // R2120000: a send shows at once; its answer replaces it, a refusal marks it failed with Retry and Discard.
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
+import { settle } from "../test/settle.ts";
 import { must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
@@ -108,17 +109,9 @@ function holdSends(): () => void {
   };
 }
 
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
-}
-
 /** After the first render: the account (if the panel reads one), the first page, its render. */
 async function opened(): Promise<void> {
-  for (let round = 0; round < 3; round += 1) await settle();
+  for (let round = 0; round < 3; round += 1) await settle({ advance: 0 });
 }
 
 beforeEach(() => {
@@ -201,7 +194,7 @@ describe("B58 the conversation", () => {
     await waitFor(() => {
       expect(server.to("GET", `/api/chat/${ANN.profileId}`).length).toBeGreaterThan(0);
     }, SLOW);
-    await settle(CHAT_POLL_MS + 1);
+    await settle({ advance: CHAT_POLL_MS + 1 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(0);
     expect(screen.getByTestId("chat-input")).toBeInTheDocument();
@@ -216,7 +209,7 @@ describe("B58 the conversation", () => {
     await waitFor(() => {
       expect(server.to("GET", `/api/chat/${ANN.profileId}`).length).toBeGreaterThan(0);
     }, SLOW);
-    await settle(CHAT_POLL_MS + 1);
+    await settle({ advance: CHAT_POLL_MS + 1 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(0);
   });
@@ -249,7 +242,7 @@ describe("B58 the conversation", () => {
     }, SLOW);
     type("x".repeat(501));
     send();
-    await settle(CHAT_POLL_MS + 1);
+    await settle({ advance: CHAT_POLL_MS + 1 });
     if (server.to("POST", `/api/chat/${ANN.profileId}`).length > 0) {
       await waitFor(() => {
         expect(document.body).toHaveTextContent(words);
@@ -268,7 +261,7 @@ describe("B58 the conversation", () => {
     }, SLOW);
     type("    ");
     send();
-    await settle(CHAT_POLL_MS + 1);
+    await settle({ advance: CHAT_POLL_MS + 1 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(2);
   });
@@ -325,10 +318,10 @@ describe("B58 polling while open", () => {
     const first = reads();
     expect(first).toBeGreaterThan(0);
 
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     const second = reads();
     expect(second).toBeGreaterThan(first);
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(reads()).toBeGreaterThan(second);
   });
 
@@ -338,7 +331,7 @@ describe("B58 polling while open", () => {
     render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
     await opened();
     const first = server.to("GET", `/api/chat/${ANN.profileId}`).length;
-    await settle(Math.floor(CHAT_POLL_MS / 2));
+    await settle({ advance: Math.floor(CHAT_POLL_MS / 2) });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(first);
   });
 
@@ -351,7 +344,7 @@ describe("B58 polling while open", () => {
     expect(shown()).toHaveLength(2);
 
     messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(shown()).toHaveLength(3);
     expect(must(shown()[2], "the new message")).toContain("rematch?");
   });
@@ -361,10 +354,10 @@ describe("B58 polling while open", () => {
     const server = serve(conversation());
     const { unmount } = render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
     await opened();
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     unmount();
     const before = server.to("GET", `/api/chat/${ANN.profileId}`).length;
-    await settle(CHAT_POLL_MS * 3);
+    await settle({ advance: CHAT_POLL_MS * 3 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(before);
   });
 });
@@ -390,7 +383,7 @@ describe("#1898 a failed read of the conversation", () => {
     expect(screen.queryByText("No messages yet. Say hello!")).toBeNull();
     expect(shown()).toHaveLength(0);
 
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(screen.getByTestId("chat-read-error")).toHaveTextContent("Something went wrong.");
     expect(screen.queryByText("No messages yet. Say hello!")).toBeNull();
   });
@@ -404,7 +397,7 @@ describe("#1898 a failed read of the conversation", () => {
     expect(screen.getByTestId("chat-read-error")).toBeInTheDocument();
 
     refused.read = false;
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(screen.queryByTestId("chat-read-error")).toBeNull();
     expect(screen.queryByTestId("chat-retry")).toBeNull();
     expect(shown()).toHaveLength(2);
@@ -420,7 +413,7 @@ describe("#1898 a failed read of the conversation", () => {
 
     refused.read = false;
     fireEvent.click(screen.getByTestId("chat-retry"));
-    await settle();
+    await settle({ advance: 0 });
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(before + 1);
     expect(screen.queryByTestId("chat-read-error")).toBeNull();
     expect(screen.getByText("No messages yet. Say hello!")).toBeInTheDocument();
@@ -440,7 +433,7 @@ describe("#1898 a failed read of the conversation", () => {
       expect(screen.getByTestId("chat-pending")).toHaveTextContent(words);
     }, SLOW);
 
-    await settle(CHAT_POLL_MS + 1);
+    await settle({ advance: CHAT_POLL_MS + 1 });
     expect(screen.getByTestId("chat-pending")).toHaveTextContent(words);
     expect(screen.getByTestId("chat-pending")).toHaveAttribute("data-state", "failed");
     expect(screen.queryByTestId("chat-read-error")).toBeNull();
@@ -468,10 +461,10 @@ describe("R2120000 a message shows at once while it sends", () => {
     type("gg");
     expect(screen.getByTestId("chat-send")).toBeEnabled();
 
-    await settle();
+    await settle({ advance: 0 });
     expect(server.to("POST", CHAT)).toHaveLength(1);
     release();
-    await settle();
+    await settle({ advance: 0 });
     expect(pending()).toHaveLength(0);
     expect(shown()).toHaveLength(3);
     expect(must(shown()[2], "the answered message")).toContain("well played");
@@ -487,19 +480,19 @@ describe("R2120000 a message shows at once while it sends", () => {
 
     type("well played");
     send();
-    await settle();
+    await settle({ advance: 0 });
     const reads = server.to("GET", CHAT).length;
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(server.to("GET", CHAT).length).toBeGreaterThan(reads);
     expect(once()).toBe(1);
     expect(pending()).toHaveLength(1);
 
     release();
-    await settle();
+    await settle({ advance: 0 });
     expect(pending()).toHaveLength(0);
     expect(once()).toBe(1);
     expect(shown()).toHaveLength(3);
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(once()).toBe(1);
   });
 
@@ -513,7 +506,7 @@ describe("R2120000 a message shows at once while it sends", () => {
 
     type("hello again");
     send();
-    await settle();
+    await settle({ advance: 0 });
     const row = must(pending()[0], "the failed message");
     expect(row).toHaveAttribute("data-state", "failed");
     expect(row).toHaveTextContent(words);
@@ -522,7 +515,7 @@ describe("R2120000 a message shows at once while it sends", () => {
 
     refused.send = false;
     fireEvent.click(within(row).getByTestId("chat-pending-retry"));
-    await settle();
+    await settle({ advance: 0 });
     expect(server.to("POST", CHAT).map((call) => call.body)).toEqual([{ body: "hello again" }, { body: "hello again" }]);
     expect(pending()).toHaveLength(0);
     expect(shown()).toHaveLength(3);
@@ -537,11 +530,11 @@ describe("R2120000 a message shows at once while it sends", () => {
 
     type("still there?");
     send();
-    await settle();
+    await settle({ advance: 0 });
     expect(must(pending()[0], "the failed message")).toHaveAttribute("data-state", "failed");
 
     fireEvent.click(screen.getByTestId("chat-pending-discard"));
-    await settle();
+    await settle({ advance: 0 });
     expect(pending()).toHaveLength(0);
     expect(shown()).toHaveLength(2);
     expect(server.to("POST", CHAT)).toHaveLength(1);
@@ -559,19 +552,19 @@ describe("R2120000 a message shows at once while it sends", () => {
     send();
     type("second");
     send();
-    await settle();
+    await settle({ advance: 0 });
     expect(pending().map((row) => row.getAttribute("data-state"))).toEqual(["sending", "sending"]);
     expect(server.to("POST", CHAT)).toHaveLength(1);
 
     messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
-    await settle(CHAT_POLL_MS);
+    await settle({ advance: CHAT_POLL_MS });
     expect(bodies()).toEqual(["good luck", "you too", "rematch?", "first", "second"]);
 
     release();
-    await settle();
+    await settle({ advance: 0 });
     expect(server.to("POST", CHAT)).toHaveLength(2);
     release();
-    await settle();
+    await settle({ advance: 0 });
     expect(server.to("POST", CHAT).map((call) => call.body)).toEqual([{ body: "first" }, { body: "second" }]);
     expect(pending()).toHaveLength(0);
     expect(bodies()).toEqual(["good luck", "you too", "rematch?", "first", "second"]);
@@ -662,7 +655,7 @@ describe("B58 chat from the Friends panel", () => {
         <FriendsButton placement="game" />
       </>,
     );
-    await settle(SOCIAL_POLL_MS + 1);
+    await settle({ advance: SOCIAL_POLL_MS + 1 });
     expect(server.to("GET", "/api/chat/unread")).toHaveLength(2);
     expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
     expect(screen.queryByTestId("chat-input")).toBeNull();

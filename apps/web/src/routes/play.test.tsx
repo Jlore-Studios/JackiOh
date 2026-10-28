@@ -44,6 +44,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
@@ -1253,13 +1254,6 @@ describe("R767 a room shared as a link", () => {
     await screen.findByTestId(playTestid.roomCode);
   }
 
-  /** Lets a settled clipboard or share promise reach its handler. */
-  async function settle(): Promise<void> {
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    });
-  }
-
   it("R767 /play?room=abc234&mode=bo1 fills in ABC234, chooses Best of 1, says what to pick, focuses the deck and sends no join", async () => {
     // The last choice was Conquest, so the switch to Best of 1 is the link's doing.
     window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
@@ -1415,7 +1409,7 @@ describe("R767 a room shared as a link", () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledTimes(2);
     });
-    await settle();
+    await settle({ macrotasks: 1, ticks: 0 });
 
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(screen.getByTestId(playTestid.copyRoomCode)).toHaveTextContent("Copy");
@@ -1426,7 +1420,7 @@ describe("R767 a room shared as a link", () => {
   it("R767 no clipboard at all (an insecure origin) leaves the buttons as they were", async () => {
     await createRandomRoom();
     fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
-    await settle();
+    await settle({ macrotasks: 1, ticks: 0 });
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
   });
@@ -1457,7 +1451,7 @@ describe("R767 a room shared as a link", () => {
     await waitFor(() => {
       expect(share).toHaveBeenCalledTimes(1);
     });
-    await settle();
+    await settle({ macrotasks: 1, ticks: 0 });
 
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(writeText).not.toHaveBeenCalled();

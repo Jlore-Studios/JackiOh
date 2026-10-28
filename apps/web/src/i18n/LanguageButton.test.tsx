@@ -36,7 +36,7 @@ function screens(): void {
   );
 }
 
-function settle(): void {
+function settleDevice(): void {
   act(() => {
     for (let i = 0; i < LANGUAGE_SETTLED_VISITS; i++) countLocaleVisit();
   });
@@ -63,7 +63,7 @@ describe("R1916000 the language button once the device has settled", () => {
 
   it("R1916000 a language change from settings or the button, or settings' reset, sets the count to 0 and brings the button back", async () => {
     // From settings.
-    settle();
+    settleDevice();
     render(
       <>
         <BackLink />
@@ -95,7 +95,7 @@ describe("R1916000 the language button once the device has settled", () => {
     expect(screen.getByTestId("language-nav")).toBeInTheDocument();
 
     // From settings' reset.
-    settle();
+    settleDevice();
     expect(screen.queryByTestId("language-nav")).toBeNull();
     act(() => {
       SETTINGS_SLOTS.find((slot) => slot.id === "language")?.reset?.();
@@ -139,7 +139,7 @@ describe("R1916000 the language button once the device has settled", () => {
         "The screens and the cards read in this language. The button at the top of every screen switches it too.",
       ),
     ).toBeInTheDocument();
-    settle();
+    settleDevice();
     expect(screen.getByTestId("setting-language")).toBeInTheDocument();
     expect(screen.getByText("The screens and the cards read in this language.")).toBeInTheDocument();
     expect(screen.queryByText(/The button at the top of every screen/u)).toBeNull();

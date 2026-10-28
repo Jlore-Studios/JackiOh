@@ -197,6 +197,14 @@ pnpm --dir apps/web test         # vitest (jsdom)
 needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
 so run one of them (or the script) once first.
 
+The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
+`scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
+`fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
+`settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
+mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
+defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
+
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).

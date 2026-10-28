@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate } from "../net/navigate.ts";
+import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import SeriesRoute, { endReasonWords, seriesTestid } from "./series.tsx";
 
@@ -106,13 +107,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Let the effects a render scheduled (the auto-open among them) run. */
-async function settle(): Promise<void> {
-  await act(async () => {
-    await Promise.resolve();
-  });
-}
-
 /** Let a read that has been answered reach its handler and clear its in-flight mark. */
 async function settleReads(): Promise<void> {
   await act(async () => {
@@ -123,7 +117,7 @@ async function settleReads(): Promise<void> {
 async function renderSeries(): Promise<void> {
   render(<SeriesRoute seriesId={SERIES_ID} token={TOKEN} />);
   await screen.findByTestId(seriesTestid.score);
-  await settle();
+  await settle({ ticks: 1 });
 }
 
 describe("the series screen", () => {
@@ -501,7 +495,7 @@ describe("the series screen", () => {
     expect(screen.queryByTestId(seriesTestid.score)).toBeNull();
 
     await screen.findByTestId(seriesTestid.score);
-    await settle();
+    await settle({ ticks: 1 });
     expect(screen.queryByTestId(seriesTestid.loading)).toBeNull();
     expect(screen.queryByText("Loading the series…")).toBeNull();
   });
