@@ -4723,6 +4723,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-28T15:37:33Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-3` (claude, opus) rejected it: `apps/web/src/game/animations.css:494`: The dying card's burn front was flattened to one translucent orange, so the existing test B45 in fx/css.test.ts fails and"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
