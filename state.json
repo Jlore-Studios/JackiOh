@@ -6063,11 +6063,13 @@
         "by": "`claude` (strong)",
         "sha": "e2f2ebcc18d370479b264ec2ee09c4abd16fe5bb"
       },
+      "closed_at": "2026-10-28T12:06:53Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T10:23:10Z",
       "issue": 2125,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
