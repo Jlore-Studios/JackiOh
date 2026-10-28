@@ -4,15 +4,20 @@
 // server's refusal in its words, "Shared with me", and the co-op panel.
 //
 // The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
-// `net/session.ts` reads it, as the gate tests do.
+// `net/session.ts` reads it, as the gate tests do. R2119000: Remove is undone, not asked, its undo
+// window run on a manual clock.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { manualClock } from "../game/deckbuilder/testkit.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
+import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
+import { togetherTestid } from "./testids.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -159,10 +164,14 @@ afterEach(() => {
 // reading the page
 // ---------------------------------------------------------------------------------------------
 
-async function renderPage(state: World = world(), special?: (call: Call) => Reply | undefined): Promise<StubServer> {
+async function renderPage(
+  state: World = world(),
+  special?: (call: Call) => Reply | undefined,
+  undoTimer?: UndoTimer,
+): Promise<StubServer> {
   signIn("tok-together");
   const server = serve(state, special);
-  render(<TogetherRoute />);
+  render(<TogetherRoute {...(undoTimer === undefined ? {} : { undoTimer })} />);
   if (state.friends.length > 0) {
     await waitFor(() => {
       expect(screen.getAllByTestId(TESTID.friendRow)).toHaveLength(state.friends.length);
@@ -582,9 +591,14 @@ describe("B56 each friend row's controls", () => {
   });
 
   it("B56 every friend is offered Remove, which deletes the friendship", async () => {
-    const server = await renderPage();
+    const clock = manualClock();
+    const server = await renderPage(world(), undefined, clock);
     const remove = within(rowOf(ANN)).getByRole("button", { name: /^remove/i });
-    await clickConfirmed(remove, () => server.to("DELETE", "/api/friends/f-ann").length > 0);
+    fireEvent.click(remove);
+    expect(server.to("DELETE", "/api/friends/f-ann"), "R2119000: held for the undo window").toHaveLength(0);
+    await act(async () => {
+      await clock.advance(UNDO_WINDOW_MS);
+    });
     await waitFor(() => {
       expect(server.to("DELETE", "/api/friends/f-ann")).toHaveLength(1);
     }, SLOW);
@@ -611,6 +625,99 @@ describe("B56 each friend row's controls", () => {
     await settle(FRIENDS_POLL_MS + 1);
     expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(server.to("POST", "/api/challenges")).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R2119000: Remove is undone, not asked
+// ---------------------------------------------------------------------------------------------
+
+describe("R2119000 removing a friend is undone, not asked", () => {
+  const ANN_PATH = "/api/friends/f-ann";
+
+  /** The page, Remove pressed on Ann's row; the server unfriends her, or gives `answer`. */
+  async function removeAnn(answer?: Reply): Promise<{ server: StubServer; tick: (ms: number) => Promise<void> }> {
+    const state = world();
+    const clock = manualClock();
+    const server = await renderPage(
+      state,
+      (call) => {
+        if (call.method !== "DELETE" || call.path !== ANN_PATH) return undefined;
+        if (answer !== undefined) return answer;
+        state.friends = state.friends.filter((friend) => friend.profileId !== ANN.profileId);
+        return { status: 204 };
+      },
+      clock,
+    );
+    fireEvent.click(within(rowOf(ANN)).getByRole("button", { name: /^remove/i }));
+    return {
+      server,
+      tick: async (ms) => {
+        await act(async () => {
+          await clock.advance(ms);
+        });
+      },
+    };
+  }
+
+  function listed(): (string | null)[] {
+    return rows().map((row) => row.getAttribute("data-profile-id"));
+  }
+
+  it("R2119000 Remove takes the friend off at once behind \"Friend removed · Undo\", asks nothing and sends nothing", async () => {
+    const { server, tick } = await removeAnn();
+    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Friend removed · Undo");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await tick(UNDO_WINDOW_MS - 1);
+    expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
+  });
+
+  it("R2119000 Undo puts the friend back in their place and sends nothing", async () => {
+    const { server, tick } = await removeAnn();
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(listed()).toEqual([ANN.profileId, BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
+  });
+
+  it("R2119000 the window's end sends the unfriend exactly once", async () => {
+    const { server, tick } = await removeAnn();
+    const reads = server.to("GET", "/api/friends").length;
+    await tick(UNDO_WINDOW_MS);
+    await waitFor(() => {
+      expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
+    }, SLOW);
+    expect(server.to("DELETE", ANN_PATH)[0]?.keepalive).toBe(false);
+    // The list is read again, and no longer names her.
+    await waitFor(() => {
+      expect(server.to("GET", "/api/friends").length).toBeGreaterThan(reads);
+    }, SLOW);
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
+    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+  });
+
+  it("R2119000 pagehide sends the unfriend at once, with keepalive", async () => {
+    const { server } = await removeAnn();
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    await waitFor(() => {
+      expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
+    }, SLOW);
+    expect(server.to("DELETE", ANN_PATH)[0]?.keepalive).toBe(true);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+  });
+
+  it("R2119000 a failed unfriend puts the friend back and shows the server's words", async () => {
+    const { tick } = await removeAnn(refusal(404, "not_found", "That player is not your friend."));
+    await tick(UNDO_WINDOW_MS);
+    await waitFor(() => {
+      expect(listed()).toEqual([ANN.profileId, BOB.profileId, CY.profileId, DEE.profileId]);
+    }, SLOW);
+    expect(screen.getByTestId(togetherTestid.error)).toHaveTextContent("That player is not your friend.");
   });
 });
 

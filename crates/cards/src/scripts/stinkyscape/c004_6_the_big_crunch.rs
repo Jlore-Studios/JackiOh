@@ -206,6 +206,28 @@ mod tests {
         }
 
         #[test]
+        fn r1870006_base_many_seeds_end_within_the_caps() {
+            let mut nested = false;
+            for i in 0..20 {
+                let s = crunched(&format!("big-crunch-base-caps-{i}"), false);
+                assert!(
+                    s.state().pending.is_none() || s.state().result.is_some(),
+                    "seed {i}: the play completes"
+                );
+                let plays = chaos_plays(&s).len();
+                assert!(
+                    plays <= EDITIONS.len() * usize::try_from(CALL_TO_CHAOS_CHAIN_CAP).unwrap_or(usize::MAX),
+                    "seed {i}: {plays} Calls, past every chain's cap"
+                );
+                nested |= plays > EDITIONS.len();
+            }
+            assert!(
+                nested,
+                "some seed rolled a nested Call to Chaos, so a cap was in play"
+            );
+        }
+
+        #[test]
         fn r1870006_radiant_many_seeds_end_within_the_caps() {
             for i in 0..20 {
                 let s = crunched(&format!("big-crunch-caps-{i}"), true);

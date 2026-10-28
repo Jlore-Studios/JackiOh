@@ -11,7 +11,7 @@
     "prebuild": "JACKIOH_WASM_PREVIEW=0 sh ../../scripts/build-wasm.sh",
     "build": "vite build",
     "preview": "vite preview",
-    "// build:e2e": "A production build deletes what the suite drives. main.tsx:168 serves NotFound for /dev/hotseat, net.ts:670 and hotseat.tsx:97 return early, so `window.__jackioh` is absent: measured 0 occurrences of it in a `vite build` bundle and 7 in this one. The two bundles differ by 20 bytes and nothing else — MODE is the only thing this flag moves.",
+    "// build:e2e": "A production build deletes what the suite drives. main.tsx serves NotFound for /dev/hotseat (its HotseatRoute is null), and game/net.ts and routes/dev/hotseat.tsx return early, so `window.__jackioh` is absent: measured 0 occurrences of it in a `vite build` bundle and 7 in this one. The two bundles differ by 20 bytes and nothing else — MODE is the only thing this flag moves.",
     "prebuild:e2e": "sh ../../scripts/build-wasm.sh",
     "build:e2e": "vite build --mode development",
     "typecheck": "tsc -p tsconfig.json",

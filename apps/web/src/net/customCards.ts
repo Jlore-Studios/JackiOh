@@ -6,7 +6,7 @@
 
 import type { CustomCard, CustomFrame, CustomIssue } from "@jackioh/shared";
 
-import { ApiRequestError, apiRequest } from "./api.ts";
+import { ApiRequestError, apiRequest, type SendOptions } from "./api.ts";
 
 /** `GET /api/custom-cards`: the caller's cards, oldest first, and the cap they live under. */
 export type CustomCardsResponse = { cards: CustomCard[]; limits: { cards: number } };
@@ -49,8 +49,8 @@ export function updateCustomCard(token: string, id: string, version: number, inp
 }
 
 /** `DELETE /api/custom-cards/:id`: idempotent; `deleted: false` when there was nothing to delete. */
-export function deleteCustomCard(token: string, id: string): Promise<{ deleted: boolean }> {
-  return apiRequest<{ deleted: boolean }>(`/api/custom-cards/${encodeURIComponent(id)}`, { method: "DELETE", token });
+export function deleteCustomCard(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
+  return apiRequest<{ deleted: boolean }>(`/api/custom-cards/${encodeURIComponent(id)}`, { method: "DELETE", token, ...options });
 }
 
 /** The validator's issues a 400 carries, or `[]` for any other failure. */
