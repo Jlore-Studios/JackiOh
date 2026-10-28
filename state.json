@@ -6556,31 +6556,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T10:22:42Z",
+      "feedback_since": "2026-10-28T13:21:27Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2122,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The global hit-area rule gives no extra width to a control that is 44 px tall or more but narrower than 44 px, and spec 47 would report that control as passing, so the spec cannot fail a control that is too narrow, which the issue requires.",
-          "evidence": "For a box with height h >= 44, `top`/`bottom: clamp((h-44)/2, (h-44)*1000, 50%)` resolves to 50%, so the `::before` is 0 px tall. `left`/`right: min(0px, (w-44)/2)` widen it to 44 px, but a 0-px-tall box catches no tap. In 47-tap-areas.cy.ts `hitBox` merges the pseudo's left and right edges whatever its height (`hit.left = min(hit.left, origin.x + x)`, with `h = 0` changing only the vertical side). A 30x50 button would therefore measure 44 px across while it still takes taps over only 30 px. The issue's spec bullet asks for a failure 'below the minimum in either dimension'. The CSS comment ('left and right reach out only by what the width falls short') is wrong whenever the box is tall. The ruling's first paragraph ('every interactive element smaller than 44x44 ... gets a hit area of at least that size') also disagrees with its own 'a control shorter than the minimum' paragraph and the README's 'shorter than that'. At minimum, `hitBox` should skip a pseudo with zero width or height; then the CSS should cover tall, narrow controls, or the ruling should say plainly that it does not.",
-          "severity": "blocking",
-          "where": "apps/web/src/index.css:441"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-10-28T13:18:56Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "40695685873",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-28T13:21:27Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
