@@ -5403,20 +5403,29 @@
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/deckbuilder/DeckEditor.tsx",
+            "apps/web/src/game/deckbuilder/TrioEditor.tsx"
+          ],
+          "from": "ceec386e93cec5203bbeb081f787f1561789ba3c",
+          "main": "8784ff73dedd6fa0e73510ee6d8ae7914b5028a3"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "40641687269",
-            "tier": "strong"
+            "family": "muse",
+            "run": "40650898037",
+            "tier": "medium"
           }
         ],
-        "sha": "ceec386e93cec5203bbeb081f787f1561789ba3c",
+        "sha": "06b34f848ed46fa4e7fe4d2a771f780f95e79e98",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
