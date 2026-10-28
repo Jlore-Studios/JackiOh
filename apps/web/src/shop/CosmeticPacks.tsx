@@ -23,6 +23,7 @@ import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   buyChase,
@@ -229,7 +230,7 @@ export default function CosmeticPacks({
               </div>
             </>
           ) : (
-            <p>{t("No unopened packs.")}</p>
+            <EmptyState text={t("No unopened packs.")} />
           )}
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>

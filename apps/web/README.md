@@ -55,6 +55,13 @@ same drawing. Still text: the deck builder's win-rate line and the chat's and th
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
 boards' "Joining …" panels.
 
+A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
+the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
+`useShownAfterDelay` sets `data-shown` on the skeleton and, through `shown`, on `ShellPanel`. It is
+a timer because Reduce motion zeroes CSS delays. The blocks are brass. An empty menu panel draws
+`empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
+for a link, `onPress` for a button). The ruling lists what stays text.
+
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
 reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic

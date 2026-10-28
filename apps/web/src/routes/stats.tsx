@@ -32,6 +32,7 @@ import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -1052,7 +1053,7 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             ) : filteredCards.length === 0 ? (
-              <p className="stats-empty">{t("No cards match the selected filters.")}</p>
+              <EmptyState text={t("No cards match the selected filters.")} />
             ) : view === "grid" ? (
               <ul className="stats-grid" data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
@@ -1428,7 +1429,7 @@ export default function StatsRoute(): ReactElement {
             ) : setsData === null ? (
               <Skeleton variant="table" label={t("Loading set statistics…")} />
             ) : sets.length === 0 ? (
-              <p className="stats-empty">{t("No games on patch {patch} yet.", { patch: setsData.patch })}</p>
+              <EmptyState text={t("No games on patch {patch} yet.", { patch: setsData.patch })} />
             ) : (
               <>
                 <p className="stats-player-note">
@@ -1617,7 +1618,7 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             ) : playersList.length === 0 ? (
-              <p className="stats-empty">{t("No players found.")}</p>
+              <EmptyState text={t("No players found.")} />
             ) : (
               <div className="stats-table-wrapper">
                 <table className="stats-table" data-testid={statsTestid.playersTable}>
