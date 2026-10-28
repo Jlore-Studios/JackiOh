@@ -1071,3 +1071,92 @@ mod r1857001_the_dormant_starship_is_in_no_pool_and_no_deck {
         assert!(deckable(&booster));
     }
 }
+
+mod r2249000_a_dormant_starship_arrives_in_the_middle_of_the_backrow {
+    use super::*;
+
+    /// The zone p1's Dormant Starship stands in, and whether it tops a pile.
+    fn ship_zone(s: &Scenario) -> (Row, i32) {
+        let ship = ship_of(s, P1);
+        match ship.zone {
+            Zone::Field { row, lane, .. } => (row, lane),
+            other => panic!("the Starship is not on the field: {other:?}"),
+        }
+    }
+
+    /// p1 with a booster in unit lane 1, `units` more plain Units and `backrow` countdown Traps in the
+    /// lanes given; the booster is bolted, so a Starship is summoned.
+    fn summoned_with(units: &[i32], backrow: &[i32]) -> Scenario {
+        let mut field = vec![json!({ "def": booster.id, "lane": 1 })];
+        field.extend(units.iter().map(|lane| json!({ "def": plain.id, "lane": lane })));
+        let traps: Vec<Value> = backrow
+            .iter()
+            .map(|lane| json!({ "def": countdown.id, "lane": lane }))
+            .collect();
+        register_starship_fixtures();
+        let library = json!([plain.id, plain.id, plain.id, plain.id, plain.id, plain.id]);
+        let mut s = scenario(json!({
+            "seed": "r2249000",
+            "active": "p1",
+            "p1": { "hand": [bolt.id], "field": field, "backrow": traps, "library": library },
+            "p2": { "hand": [plain.id], "library": library },
+        }));
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        s
+    }
+
+    #[test]
+    fn r2249000_it_stands_in_backrow_lane_3_first_then_2_4_1_5() {
+        let s = summoned_with(&[], &[]);
+        assert_eq!(ship_zone(&s), (Row::Backrow, 3));
+        assert_eq!(STARSHIP_LANE_ORDER, [3, 2, 4, 1, 5]);
+        for (taken, expected) in [(vec![3], 2), (vec![3, 2], 4), (vec![3, 2, 4], 1), (vec![3, 2, 4, 1], 5)] {
+            let s = summoned_with(&[], &taken);
+            assert_eq!(ship_zone(&s), (Row::Backrow, expected), "{taken:?} taken");
+        }
+    }
+
+    #[test]
+    fn r2249000_r1081000_standing_in_the_backrow_it_is_its_owners_dormant_starship_and_launches() {
+        let mut s = summoned_with(&[], &[]);
+        let ship = ship_of(&s, P1);
+        assert!(stands_in_backrow(s.state(), &ship));
+        assert!(building_a_ship(s.state(), P1));
+        assert_eq!(piece_defs(&ship), vec![booster.id.clone()]);
+        // Both seats see it, the Unit standing in that backrow zone, with its pieces.
+        for viewer in [P1, P2] {
+            let view = s.view(viewer);
+            let side = if viewer == P1 { &view.you } else { &view.opponent };
+            let unit = side.backrow[2]
+                .as_ref()
+                .and_then(|card| match card {
+                    BackrowView::Public(card) => card.unit.clone(),
+                    _ => None,
+                })
+                .expect("backrow lane 3 shows the Starship");
+            assert_eq!(unit.starship.expect("its memory").pieces.len(), 1, "{viewer:?}");
+        }
+        assert!(offers_launch(&s, P1, &ship.id));
+        launch(&mut s, &ship.id);
+        assert!(is_launched_starship(s.card(&ship.id)));
+        assert!(
+            active_units_of(s.state(), P1)
+                .iter()
+                .any(|unit| unit.id == ship.id),
+            "launched, it is a Unit for every rule"
+        );
+    }
+
+    #[test]
+    fn r2249000_with_the_backrow_full_it_takes_the_unit_row_middle_first_and_with_both_full_tops_lane_3() {
+        let backrow = [1, 2, 3, 4, 5];
+        let s = summoned_with(&[], &backrow);
+        assert_eq!(ship_zone(&s), (Row::Units, 3));
+        let s = summoned_with(&[3], &backrow);
+        assert_eq!(ship_zone(&s), (Row::Units, 2));
+        let s = summoned_with(&[2, 3, 4, 5], &backrow);
+        // The bolted booster's own zone, lane 1, is the one left.
+        assert_eq!(ship_zone(&s), (Row::Units, 1));
+    }
+}

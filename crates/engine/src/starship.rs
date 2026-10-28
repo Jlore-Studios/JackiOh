@@ -10,9 +10,10 @@
 //!   discard, a mill or any other way into a graveyard fuses nothing.
 //! - **The hull.** The Dormant Starship (`DORMANT_STARSHIP_DEF_ID`) is a 0/0 Unit that prints Dormant
 //!   (`slumber.rs`) and the hull (`StaticFlags.starship_hull`); entering the field it starts a memory
-//!   (`CardInstance.starship`), the pieces it holds (R1852005). It is summoned into its owner's leftmost
-//!   open unit zone, else stacked on top of their lane-3 unit zone, Locked or not, and the copy fuses into
-//!   it at once, so no state check ever reads it at 0/0. A Fuse never makes it a piece (R1852001).
+//!   (`CardInstance.starship`), the pieces it holds (R1852005). It is summoned into its owner's backrow,
+//!   the middle first, standing there, else their unit row the same way (R2249000), else stacked on top
+//!   of their lane-3 unit zone, Locked or not, and the copy fuses into it at once, so no state check ever
+//!   reads it at 0/0. A Fuse never makes it a piece (R1852001).
 //! - **The launch.** While it is Dormant its one ability is the engine's launch, Activate: (3)
 //!   (`launch_decl`, `STARSHIP_LAUNCH_COST`, moved by "your Starship launch costs (N)", R1852006), which
 //!   awakens it; an awakening of a hull is its launch, whatever awakened it (`slumber::awaken_card`
@@ -26,8 +27,8 @@
 //! serializes, hashes and replays exactly as before (D14).
 
 use crate::config::{
-    DORMANT_STARSHIP_DEF_ID, STARSHIP_FULL_ROW_LANE, STARSHIP_LAUNCH_COST, STARSHIP_LAUNCH_USES,
-    STARSHIP_NAMES,
+    DORMANT_STARSHIP_DEF_ID, STARSHIP_FULL_ROW_LANE, STARSHIP_LANE_ORDER, STARSHIP_LAUNCH_COST,
+    STARSHIP_LAUNCH_USES, STARSHIP_NAMES,
 };
 use crate::script::{ActivationCost, ActivationDecl, ActivationUses, EngineSink, TriggerDef, hook};
 use crate::state::{
@@ -38,7 +39,9 @@ use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::wire::{
     GameEvent, GameEventType, Keyword, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName, has_keyword,
 };
-use crate::zones::{PlaceOnFieldOptions, ZoneSlot, first_entry_zone, place_on_field};
+use crate::zones::{
+    PlaceOnFieldOptions, ZoneSlot, is_open, place_on_field, place_standing_on_field, takes_move,
+};
 
 /// R1852003: the id of a Dormant Starship's launch, the one ability it has while it is Dormant.
 pub const STARSHIP_LAUNCH_ABILITY: &str = "launch";
@@ -103,11 +106,14 @@ pub fn is_launched_starship(card: &CardInstance) -> bool {
 /// R1852000, R1852005: `player`'s Dormant Starship — one a time, the first in lane order, beneath a
 /// Stack pile or not (a card buried there is still theirs and still Dormant, R1839003).
 pub fn dormant_starship_of(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player]
-        .units
+    let side = &state.players[player];
+    // R2249000: one standing in a backrow zone, or beneath a backrow pile, counts too.
+    side.units
         .iter()
         .flatten()
         .flatten()
+        .chain(side.backrow.iter().flatten())
+        .chain(side.backrow_piles.iter().flatten().flatten())
         .find(|card| is_dormant_starship(card))
 }
 
@@ -176,13 +182,20 @@ fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     copy
 }
 
-/// R1852000: summon `player` a Dormant Starship — into their leftmost open unit zone (a Locked one
-/// takes a summon, R688), else stacked on top of their lane-3 unit zone, Locked or not — and report it.
-/// `None`, with nothing made, when no catalog holds the Dormant Starship (until the set ships) or the
-/// zone cannot take it (held for a Reborn return, R64).
-fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Option<String> {
-    crate::catalog::find_def(Some(&*sink.state), DORMANT_STARSHIP_DEF_ID)?;
-    let (slot, stack) = match first_entry_zone(sink.state, player, Row::Units) {
+/// R2249000: where `player`'s new Dormant Starship goes, and whether it stacks: the middle first
+/// (`STARSHIP_LANE_ORDER`), the backrow before the unit row, an open zone before an empty Locked one
+/// (a summon enters a Locked zone, R688); with every zone of both rows taken, on top of their lane-3
+/// unit zone, Locked or not (R1852000).
+fn starship_zone(state: &GameState, player: PlayerId) -> (ZoneSlot, bool) {
+    let in_order = |row: Row| {
+        STARSHIP_LANE_ORDER
+            .into_iter()
+            .map(move |lane| ZoneSlot { player, row, lane })
+    };
+    let rows = [Row::Backrow, Row::Units];
+    let open = rows.iter().flat_map(|row| in_order(*row)).find(|slot| is_open(state, *slot));
+    let locked = || rows.iter().flat_map(|row| in_order(*row)).find(|slot| takes_move(state, *slot));
+    match open.or_else(locked) {
         Some(slot) => (slot, false),
         None => (
             ZoneSlot {
@@ -192,7 +205,16 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
             },
             true,
         ),
-    };
+    }
+}
+
+/// R1852000, R2249000: summon `player` a Dormant Starship — into the zone `starship_zone` names, a
+/// backrow zone standing there as a Flying Unit does (R1081000) — and report it. `None`, with nothing
+/// made, when no catalog holds the Dormant Starship (until the set ships) or the zone cannot take it
+/// (held for a Reborn return, R64).
+fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Option<String> {
+    crate::catalog::find_def(Some(&*sink.state), DORMANT_STARSHIP_DEF_ID)?;
+    let (slot, stack) = starship_zone(sink.state, player);
     if !crate::zones::is_reserved(sink.state, slot) {
         let mut card = new_instance(
             sink.state,
@@ -200,12 +222,13 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
             player,
             Zone::Resolving { player },
         );
-        if place_on_field(
-            sink.state,
-            &mut card,
-            slot,
-            PlaceOnFieldOptions { stack: Some(stack) },
-        ) {
+        let options = PlaceOnFieldOptions { stack: Some(stack) };
+        let placed = if slot.row == Row::Backrow {
+            place_standing_on_field(sink.state, &mut card, slot, options)
+        } else {
+            place_on_field(sink.state, &mut card, slot, options)
+        };
+        if placed {
             let turn = sink.state.turn;
             let id = card.id.clone();
             if let Some(live) = find_instance_mut(sink.state, &id) {

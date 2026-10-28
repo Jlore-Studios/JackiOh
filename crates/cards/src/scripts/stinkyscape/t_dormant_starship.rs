@@ -2,10 +2,8 @@
 //! R1852003–R1852007, R1857001, R1859013): (3) Unit, Legendary, 0/0, the set's one entry that is
 //! neither a numbered card nor a token, of the held Stinkyscape set (R1420).
 //!
-//! Base and Radiant: "Dormant until it launches.\nEach of your Starship Pieces that dies fuses a copy
-//! into this.\nA card played onto this by Stack while it is Dormant is exiled before it resolves.
-//! \nActivate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires,
-//! then every When launched."
+//! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
+//! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
 //! Engine: its text is the engine's rules written out (R1859013), so its script is the hull alone:
 //! `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown (R1839000), its
 //! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000), exiles a

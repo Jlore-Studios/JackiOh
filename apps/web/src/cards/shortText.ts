@@ -111,7 +111,6 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-171": { base: "clamp" },
   "stinkyscape-172": { base: "clamp" },
   "stinkyscape-173": { base: "clamp", radiant: "clamp" },
-  "stinkyscape-t-dormant-starship": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
   // R2194000: the held Training Grounds set's rows.
   "traininggrounds-016": { radiant: "clamp" },
@@ -149,8 +148,6 @@ export const LONG_FACES: readonly string[] = [
   "stinkyscape-150 radiant",
   "stinkyscape-151 base",
   "stinkyscape-151 radiant",
-  "stinkyscape-t-dormant-starship base",
-  "stinkyscape-t-dormant-starship radiant",
   // R2202001: the held Training Grounds set's longest, its Call to Chaos edition's table.
   "traininggrounds-039 base",
   "traininggrounds-039 radiant",

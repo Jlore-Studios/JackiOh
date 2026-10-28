@@ -2173,9 +2173,12 @@ pub const PERCENT: i32 = 100;
 /// (`StaticFlags.starshipHull`). Its catalog entry ships with the set's cards (S02); until then no
 /// catalog holds it, and a piece's death summons nothing.
 pub const DORMANT_STARSHIP_DEF_ID: &str = "stinkyscape-t-dormant-starship";
-/// R1852000: the unit zone a Dormant Starship is stacked onto when its player's unit row is full
+/// R1852000: the unit zone a Dormant Starship is stacked onto when both its player's rows are full
 /// ("stack it on top of your Lane 3 front row, regardless if it's Locked or not").
 pub const STARSHIP_FULL_ROW_LANE: i32 = 3;
+/// R2249000: the lanes a Dormant Starship is summoned into, the middle first: its owner's backrow zones
+/// in this order, standing there (R1081000), then their unit zones in the same order.
+pub const STARSHIP_LANE_ORDER: [i32; 5] = [3, 2, 4, 1, 5];
 /// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (3) to awaken").
 pub const STARSHIP_LAUNCH_COST: i32 = 3;
 /// R1852003: how many times a turn the launch may be activated (once; a launched Starship has no
