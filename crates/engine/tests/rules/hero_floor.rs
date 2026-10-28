@@ -114,7 +114,7 @@ mod r2201000_a_seat_that_cannot_lose {
         assert_eq!(state.players[FLOORED].handicap, Some(TUTORIAL_HUMAN));
         assert!(!state::can_lose(&state, FLOORED));
         assert!(state::can_lose(&state, OTHER));
-        let json = serde_json::to_value(&state.players[FLOORED].handicap).expect("serialises");
+        let json = serde_json::to_value(state.players[FLOORED].handicap).expect("serialises");
         assert_eq!(json["heroFloor"], json!(1));
     }
 
@@ -401,7 +401,7 @@ mod r2201000_r2201001_hashes_and_replays {
         // The tiers store neither key.
         for tier in [AI_DIFFICULTY.medium, AI_DIFFICULTY.hard, AI_TUTORIAL] {
             let state = created("r2201000-tier", None, Some(tier));
-            let json = serde_json::to_value(&state.players.p2.handicap).expect("serialises");
+            let json = serde_json::to_value(state.players.p2.handicap).expect("serialises");
             assert!(json.get("heroFloor").is_none(), "{json}");
             assert!(json.get("poolHold").is_none(), "{json}");
         }
