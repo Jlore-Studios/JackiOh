@@ -5696,6 +5696,7 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "strong",
+      "ci_fixed_head": "d0aaebf2ffeb69485dcef66db30d29888d3d1877",
       "ci_fixes": 1,
       "ci_reruns": {
         "0c06eddf6a03edf2d1e7c0fed4838c322673a5a8": 1
@@ -5711,7 +5712,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-27T23:14:17Z",
+      "feedback_since": "2026-10-28T02:26:12Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2095,
@@ -5728,11 +5729,11 @@
       "run_id": "40620924813",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-28T02:26:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
