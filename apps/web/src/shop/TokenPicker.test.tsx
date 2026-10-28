@@ -13,7 +13,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
 import { CHINESE } from "../cards/chinese.ts";
-import { INSPECT_DETAIL } from "../cards/index.ts";
+import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/index.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT } from "../game/deckbuilder/filters.ts";
 import { DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
@@ -163,14 +163,40 @@ describe("#1309 the token picker", () => {
     fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
     const dialog = await screen.findByTestId(T.cardDialog);
     expect(dialog).toHaveTextContent(CATALOG["core-002"]!.name);
+    expect(screen.getByRole("alertdialog", { name: `Unlock ${CATALOG["core-002"]!.name}? This spends 1 card token.` })).toBe(
+      dialog,
+    );
+    // The question is in the detail's own actions row, in place of Unlock: the detail is a modal
+    // over the page, so a confirm anywhere else would lie under its scrim and out of Tab's reach.
+    expect(screen.getByTestId(INSPECT_DETAIL)).toContainElement(dialog);
+    expect(screen.queryByTestId(T.cardPick("core-002"))).toBeNull();
+    expect(screen.getByTestId(T.cardCancel)).toHaveFocus();
 
     fireEvent.click(screen.getByTestId(T.cardCancel));
     expect(screen.queryByTestId(T.cardDialog)).toBeNull();
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
     // The detail is still open and the pool unchanged: nothing was spent.
     expect(screen.getByTestId(INSPECT_DETAIL)).toBeInTheDocument();
+    expect(screen.getByTestId(T.cardPick("core-002"))).toBeEnabled();
     expect(screen.getByTestId(poolCardId("core-002"))).toBeInTheDocument();
     expect(screen.getByTestId(T.heldCard)).toHaveTextContent("1");
+  });
+
+  it("closing the detail while it asks drops the question and sends nothing", async () => {
+    const server = tokenServer();
+    render(<TokenPicker token={TOKEN} />);
+
+    fireEvent.click(await screen.findByTestId(poolCardId("core-002")));
+    fireEvent.click(await screen.findByTestId(T.cardPick("core-002")));
+    await screen.findByTestId(T.cardDialog);
+    fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+
+    // Opened again, the card offers Unlock, not the question it was asking.
+    fireEvent.click(screen.getByTestId(poolCardId("core-002")));
+    expect(await screen.findByTestId(T.cardPick("core-002"))).toBeEnabled();
+    expect(screen.queryByTestId(T.cardDialog)).toBeNull();
+    expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
   });
 
   it("Confirm sends one redeem-card and the card leaves the pool", async () => {

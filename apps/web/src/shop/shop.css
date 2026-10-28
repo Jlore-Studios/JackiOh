@@ -208,9 +208,14 @@
 }
 
 /* The card-token pick (#2251): the unlock confirm, and the deck builder's browse pane inside the
-   token panel. The confirm wears the token row's border; the browse keeps its own look
+   token panel. The confirm wears the token row's border and takes a whole line of the card
+   detail's actions row (inspect.css), above its Close; the browse keeps its own look
    (deckbuilder.css) and only gives up its minimum width, scrolling its pool frame so the bars and
    held counts stay reachable on a 390px phone. */
+.inspect-actions > .token-confirm {
+  flex: 1 1 100%;
+}
+
 .token-confirm {
   display: flex;
   flex-direction: column;

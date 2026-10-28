@@ -9,7 +9,7 @@
 // card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
 // changed on screen.
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useId, useMemo, useState, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -180,29 +180,64 @@ function TokenBody({
   const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  // Whether the open detail asks before it spends the token.
+  const [asking, setAsking] = useState(false);
+  const questionId = useId();
   const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
   const unowned = useMemo(() => unownedCards(collection), [collection]);
   const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort]);
   const detailDef = detailCardId === null ? undefined : CATALOG[detailCardId];
-  const confirmDef = confirmId === null ? undefined : CATALOG[confirmId];
   // The detail closes behind the inspect overlay, as in the deck editor: at most one at a time.
   const openDetail = (cardId: string): void => {
     closeInspect();
+    setAsking(false);
     setDetailCardId(cardId);
   };
+  const closeDetail = (): void => {
+    setAsking(false);
+    setDetailCardId(null);
+  };
+  // The question takes Unlock's place in the detail's own actions row: the detail is a modal over
+  // the page (CardDetail.tsx), so a confirm drawn anywhere else lies under its scrim, out of Tab's
+  // reach. Cancel, which spends nothing, takes the focus.
   const detail =
     detailCardId === null || detailDef === undefined
       ? null
       : {
           cardId: detailCardId,
-          actions: (
+          actions: asking ? (
+            <div className="token-confirm" role="alertdialog" aria-labelledby={questionId} data-testid={shopTestid.cardDialog}>
+              <p id={questionId}>{t("Unlock {name}? This spends 1 card token.", { name: readerName(detailDef) })}</p>
+              <div className="token-confirm__actions">
+                <button
+                  type="button"
+                  data-testid={shopTestid.cardConfirm}
+                  onClick={() => {
+                    onPickCard(detailCardId);
+                    closeDetail();
+                  }}
+                >
+                  {t("Confirm")}
+                </button>
+                <button
+                  type="button"
+                  data-testid={shopTestid.cardCancel}
+                  autoFocus
+                  onClick={() => {
+                    setAsking(false);
+                  }}
+                >
+                  {t("Cancel")}
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
               type="button"
               data-testid={shopTestid.cardPick(detailCardId)}
               disabled={bars.tokens.card < 1 || busy !== null}
               onClick={() => {
-                setConfirmId(detailCardId);
+                setAsking(true);
               }}
             >
               {busy === detailCardId ? t("Redeeming…") : t("Unlock")}
@@ -247,38 +282,9 @@ function TokenBody({
             ownedControl={false}
             onInspect={openDetail}
             detail={detail}
-            onCloseDetail={() => {
-              setDetailCardId(null);
-            }}
+            onCloseDetail={closeDetail}
           />
         </CardDefsProvider>
-      )}
-      {confirmId === null ? null : (
-        <div role="alertdialog" aria-modal="true" data-testid={shopTestid.cardDialog} className="token-confirm">
-          <p>{t("Unlock {name}? This spends 1 card token.", { name: confirmDef === undefined ? confirmId : readerName(confirmDef) })}</p>
-          <div className="token-confirm__actions">
-            <button
-              type="button"
-              data-testid={shopTestid.cardConfirm}
-              onClick={() => {
-                onPickCard(confirmId);
-                setConfirmId(null);
-                setDetailCardId(null);
-              }}
-            >
-              {t("Confirm")}
-            </button>
-            <button
-              type="button"
-              data-testid={shopTestid.cardCancel}
-              onClick={() => {
-                setConfirmId(null);
-              }}
-            >
-              {t("Cancel")}
-            </button>
-          </div>
-        </div>
       )}
       {bars.tokens.card < 1 ? (
         <p className="token-held" data-testid={shopTestid.cardHint}>

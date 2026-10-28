@@ -508,7 +508,8 @@ function redeemACardToken(loop: Loop): void {
       expect(owned.size, "and nothing else").to.eq(loop.owned.size + 1);
       loop.owned = owned;
     });
-    cy.get(ts(tokenCardPickId(picked)), { timeout: timeouts.view }).should("not.exist");
+    // The collection's re-read takes the unlocked card out of the pool.
+    cy.get(ts(poolCardId(picked)), { timeout: timeouts.view }).should("not.exist");
   });
 }
 
