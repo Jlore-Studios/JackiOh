@@ -636,8 +636,8 @@ function draw() {
  *     where music-cards.json gives one, else the first of its tags the card art reads (its tribe),
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
- *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal), and a Mythic
- *     adds a prismatic shimmer over a soft choir.
+ *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal, Training Grounds
+ *     a xylophone), and a Mythic adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
  * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
@@ -660,15 +660,17 @@ const INTRO_SPAN_S = [3, 5];
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
-const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"];
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
  * kalimba, a plucked run that rings like the set's East-Asian colours (compose.mjs's GM table names no
  * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up; the
- * Stinkyscape set's is a crystal, a glassy synth bell like a star's glint (R1883000).
+ * Stinkyscape set's is a crystal, a glassy synth bell like a star's glint (R1883000); the Training
+ * Grounds set's is a xylophone, wood struck like the yard's practice swords (R2202001).
  */
 const INTRO_SET_GLINT = {
   Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox, Stinkyscape: GM.crystal,
+  "Training Grounds": GM.xylophone,
 };
 
 /**
@@ -1772,6 +1774,12 @@ const INTRO_CARDS = [
   { card: "stinkyscape-t-narcor", name: "Narcor", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Legendary" },
   { card: "stinkyscape-t-red-narcor", name: "Red Narcor", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Mythic" },
   { card: "stinkyscape-t-anomaly-found", name: "Anomaly Found!", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Mythic" },
+  // ---- Training Grounds (R2202001): derived, held with the set (R1420) ----
+  { card: "traininggrounds-037", name: "Seance", set: "Training Grounds", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "traininggrounds-038", name: "Tutorial Master", set: "Training Grounds", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "traininggrounds-039", name: "Call to Chaos (Training-Grounds Edition)", set: "Training Grounds", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary" },
+  { card: "traininggrounds-039-1", name: "Training-Grounds Golem", set: "Training Grounds", type: "Unit", tags: ["Token"], rarity: "Legendary" },
+  { card: "traininggrounds-040", name: "Goetzmann Game Design", set: "Training Grounds", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic" },
 ];
 
 /* ------------------------------------------------------------------------------------------- *
