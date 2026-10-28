@@ -6597,7 +6597,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-28T13:41:01Z",
-      "run_id": "pending:47918e39-1793195401",
+      "run_id": "40700137214",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-28T13:50:21Z",
