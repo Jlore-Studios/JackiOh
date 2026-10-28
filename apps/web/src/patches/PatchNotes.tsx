@@ -9,6 +9,7 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { listSeparator, readerName } from "../cards/chinese.ts";
 import { isGlitch } from "../cards/glitch.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
@@ -117,9 +118,10 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
 
   if (nothing) {
     return (
-      <p className="patch-status" data-testid={patchTestid.noMatch}>
-        {query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
-      </p>
+      <EmptyState
+        text={query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
+        testId={patchTestid.noMatch}
+      />
     );
   }
   return (
@@ -469,11 +471,7 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
     );
   }
   if (read.value.length === 0) {
-    return (
-      <p className="patch-status" data-testid={patchTestid.empty}>
-        {t("There are no patch notes yet.")}
-      </p>
-    );
+    return <EmptyState text={t("There are no patch notes yet.")} testId={patchTestid.empty} />;
   }
   return <PatchList patches={read.value} releases={releases} />;
 }

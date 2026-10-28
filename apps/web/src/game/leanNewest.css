@@ -7,7 +7,7 @@
   align-items: flex-start;
   gap: 8px;
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.35;
   text-align: left;
 }
@@ -51,6 +51,6 @@
 
 .lean-newest__note {
   flex: 1 0 100%;
-  font-size: 12px;
+  font-size: var(--type-sm);
   opacity: 0.8;
 }
