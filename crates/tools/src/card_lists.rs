@@ -138,7 +138,8 @@ pub(crate) fn working(repo_root: &Path, catalog: &Catalog) -> Result<Scripts> {
     Scripts::read(&sources, catalog, &config)
 }
 
-/// The scripts at commit `rev`, against that commit's `catalog`, read in one `git cat-file --batch`.
+/// The scripts at commit `rev`, against that commit's `catalog`, read in one `git cat-file --batch`;
+/// none for a commit with no scripts folder.
 pub(crate) fn at_rev(root: &Path, rev: &str, catalog: &Catalog) -> Result<Scripts> {
     let names = crate::patches::git(
         root,
@@ -150,6 +151,10 @@ pub(crate) fn at_rev(root: &Path, rev: &str, catalog: &Catalog) -> Result<Script
         .filter(|path| path.ends_with(".rs"))
         .map(|path| format!("{rev}:{path}"))
         .collect();
+    // A tree with no card scripts (a fixture repository's) has none, and so no reader.
+    if wanted.is_empty() {
+        return Ok(Scripts::default());
+    }
     wanted.push(format!("{rev}:{CONFIG_REL}"));
     let mut texts = batch(root, &wanted)?;
     let config = texts
