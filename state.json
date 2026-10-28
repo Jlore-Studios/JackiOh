@@ -6030,8 +6030,12 @@
     "what": "revise #2131 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-28T01:20:28Z",
-    "notes": [],
+    "at": "2026-10-28T01:30:08Z",
+    "notes": [
+      "delivered revise #2131 on claude-8 (run 40600824979): approved",
+      "started revise #2131 on claude-8 (run 40615556177)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-28T01:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 68h 28m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 75h 28m"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -6736,7 +6740,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T01:20:28Z",
+  "loop_tick": "2026-10-28T01:30:08Z",
   "machine_disk": {
     "issue": 2154,
     "reading": {
