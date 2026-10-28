@@ -114,6 +114,8 @@ fn hero_check(sink: &mut EngineSink<'_>) -> bool {
     let dead: Vec<PlayerId> = PLAYER_IDS
         .into_iter()
         .filter(|player| sink.state.players[*player].hero.health <= 0)
+        // R2201000: a floored seat never dies (its hero never reads below the floor anyway).
+        .filter(|player| crate::state::can_lose(sink.state, *player))
         .collect();
     if dead.is_empty() {
         return false;
