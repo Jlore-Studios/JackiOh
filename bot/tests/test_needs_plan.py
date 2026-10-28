@@ -1,6 +1,6 @@
 """The Needs plan stage: every queued item gets a strong model's plan first, on a planning lane of
 its own that takes no build lane, and the plan goes into the issue's description, where the
-builder (Devin above all) starts from it."""
+builder (a weak one above all) starts from it."""
 
 from __future__ import annotations
 
@@ -91,7 +91,7 @@ class StageTests(unittest.TestCase):
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
-        when it holds nothing else; Devin builds once a strong model planned it. The load
+        when it holds nothing else; the weak one builds once a strong model planned it. The load
         balancer (`plan.balance`) gives the first plan to claude-1, which holds nothing, over
         claude-3, which builds; claude-2, claude-5, claude-6, claude-7 and claude-8, idle too,
         would plan the second, so they have no secret here."""
@@ -102,7 +102,7 @@ class PlanningLaneTests(unittest.TestCase):
             "CLAUDE_CODE_OAUTH_TOKEN_8"))))
         busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
         queue(gh, ctx, 3, "priority:high", planned=False)    # medium and urgent
-        queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned
+        queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: the weak one's, once planned
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
                          ("plan", 4, "claude-1"))  # claude-1 holds nothing else
@@ -121,7 +121,7 @@ class PlanningLaneTests(unittest.TestCase):
         gh.threads[4]["labels"] = [{"name": n} for n in (LABEL_BUILD, EASY, "priority:low")]
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("build", 4, "devin"))
+                         ("build", 4, "lite"))
         self.assertIsNone(seats(planned)["plan"])  # built from the plan, not planned again
 
     def test_an_uncapped_account_plans_as_many_items_at_once_as_its_lanes(self):
@@ -252,9 +252,9 @@ class PlanningLaneTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "muse"))
         self.assertEqual(seats(planned)["plan"], ("muse", "muse-spark-1.3-contributor", "medium"))
-        # An easy item nobody planned is never Devin's.
+        # An easy item nobody planned is never the weak one's.
         gh = FakeGitHub()
-        ctx = lane_ctx(gh, at=DAY, machine=("devin",))
+        ctx = lane_ctx(gh, at=DAY, machine=("lite",))
         queue(gh, ctx, 3, EASY, planned=False)
         self.assertEqual(plan_mod.make(ctx)["action"], "none")
         self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(3))
@@ -285,15 +285,15 @@ class PersonsPlanTests(unittest.TestCase):
         return (f"{task}\n\n{issueplan.START}\n## Plan\n\n1. In `apps/web/src/cards/art/Art.tsx`, "
                 f"delay the draw.\n{issueplan.END}\n")
 
-    def test_it_counts_as_a_strong_plan_and_devin_builds_from_it(self):
+    def test_it_counts_as_a_strong_plan_and_the_weak_one_builds_from_it(self):
         gh = FakeGitHub()
-        ctx = lane_ctx(gh, machine=("devin",))
+        ctx = lane_ctx(gh, machine=("lite",))
         busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
             ("claude-3", "claude-1", "claude-4", "claude-2"))])  # no strong model is free
         gh.add_issue(3, labels=(LABEL_BUILD, EASY), body=self.body())
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("build", 3, "devin"))
+                         ("build", 3, "lite"))
         self.assertIsNone(seats(planned)["plan"])  # not planned again
         self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))
         self.assertEqual(planned["handoff"]["notes"],
@@ -310,7 +310,7 @@ class PersonsPlanTests(unittest.TestCase):
         # The bot's own record wins over the description: a medium item a medium model planned
         # builds from that plan (#695), on Sonnet with its run's own Opus reviewer.
         gh = FakeGitHub()
-        ctx = lane_ctx(gh, machine=("devin",))
+        ctx = lane_ctx(gh, machine=("lite",))
         busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
             ("claude-3", "claude-1", "claude-4", "claude-2"))])
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:medium"), body=self.body())

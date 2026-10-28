@@ -4,11 +4,8 @@
   "plan_lanes": 6,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
   "balance": true,
-  "priority": ["claude-3", "claude-7", "claude-8", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
+  "priority": ["claude-3", "claude-7", "claude-8", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2"],
   "tiers": {
-    "weak": [
-      { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
-    ],
     "medium": [
       { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
       { "model": "gemini-3.8-flash-high", "note": "Google through agy." },
@@ -41,7 +38,7 @@
       "quiet_check": false
     },
     "claude-2": {
-      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. One lane, so it works one item at a time (#695).",
+      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. One lane, so it works one item at a time (#695).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -154,7 +151,7 @@
       "quiet_check": false
     },
     "claude-8": {
-      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. Three lanes since 2026-10-27, so it works up to three items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth.",
+      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. Two lanes (three on 2026-10-27, #2112; two since #2129), so it works up to two items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -166,7 +163,7 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
       "runs_on": "ubuntu-latest",
-      "lanes": 3,
+      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.85 },
       "last_hour": true,
@@ -198,25 +195,6 @@
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 1.0, "seven_day": 1.0 },
-      "quiet_check": false
-    },
-    "devin": {
-      "note": "Cognition's Devin CLI, logged in on the machine as agent-devin (`devin auth login --force-manual-token-flow`). SWE-2, its effort in the name; `devin models list` names the models. Weak, so it builds easy items only, and it takes them ahead of the stronger models while it has a free lane (easy_first). Off from 2026-10-05 to 2026-10-06 (#311): every call failed within seconds from 07:30Z; back on once a `devin -p` call answered on the machine again (#318).",
-      "enabled": true,
-      "cli": "devin",
-      "family": "cognition",
-      "model": "swe-2-max",
-      "effort": "",
-      "tier": "weak",
-      "self_check": true,
-      "easy_first": true,
-      "login": "machine",
-      "runs_on": "night-vm-devin",
-      "lanes": 6,
-      "off_from": "2026-11-02",
-      "off_reason": "Windsurf, which Devin's plan came with, is canceled: the plan runs out on 2026-11-02, so Devin takes no new work from that day. Until then it draws on the plan's allowance.",
-      "schedule": { "mode": "always" },
-      "limits": { "mode": "none" },
       "quiet_check": false
     },
     "muse": {

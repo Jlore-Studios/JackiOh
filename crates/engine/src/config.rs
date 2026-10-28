@@ -19,8 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, SetName, StarscapeReward, Tag,
-    string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, ResourcePrice, SetName,
+    StarscapeReward, Tag, string_union,
 };
 
 /// §2.6, R1705000
@@ -882,6 +882,11 @@ pub const HEAL_MULTIPLIER: i32 = 2;
 /// nothing. A deck that refills itself with answering cards would otherwise answer forever.
 pub const SPELL_ANSWER_CHAIN_CAP: i32 = 20;
 
+/// R1870002 (Stinkyscape #4.2 KY's Last Exam, issue #1870): the most Echo repeats one play of a card may
+/// give itself (`effects::gain_echo`). A run of right guesses is one in four each, but a Spell that gains
+/// a repeat with every resolution would otherwise be owed one more for as long as the guesses held.
+pub const SELF_ECHO_GAIN_CAP: i32 = 20;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).
@@ -1190,6 +1195,20 @@ pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
 pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
 /// R1853005: the stock each cycle renews for a lot an effect added for the rest of the game.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
+/// R1861000: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice) draws
+/// each turn, its base face's: "its price is determined like all other Resources", so a Rare Resource's,
+/// Gellium's. `buy` is never read: such a card is no Resource and its lot, if any, is priced as a card.
+pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
+    sell_min: 3,
+    sell_max: 10,
+    buy: 0,
+};
+/// R1861000: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's.
+pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
+    sell_min: 6,
+    sell_max: 20,
+    buy: 0,
+};
 
 // ---------------------------------------------------------------------------------------------
 // Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,

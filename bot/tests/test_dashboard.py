@@ -20,7 +20,7 @@ from harness.errors import GitHubError
 from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
-from tests.support import ALL_MACHINE, NIGHT, ROOT, make_config, make_ctx, raw_providers
+from tests.support import ALL_MACHINE, NIGHT, ROOT, WEAK, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
 from tests.test_providers import EARLY, too_close_to_start
 from tests.test_providers import secrets as providers_secrets
@@ -180,14 +180,17 @@ class LearnLaneTests(unittest.TestCase):
                                                  "conclusion": "skipped"}], "cancelled"),
                          "⏹️ cancelled")
 
-    def test_the_next_scheduled_run_is_the_next_0623_utc(self):
-        """Each run starts the next as it ends (#1976); the daily schedule starts the lane again."""
+    def test_the_next_scheduled_run_is_the_next_0623_or_1823_utc(self):
+        """Each run starts the next as it ends (#1976); the schedule, twice a day, starts the lane
+        again."""
         before = NIGHT  # 2026-09-30 03:00 UTC
         self.assertEqual(dashboard.next_learn_run(before).isoformat(), "2026-09-30T06:23:00+00:00")
         after = NIGHT.replace(hour=7)
-        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-10-01T06:23:00+00:00")
+        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-09-30T18:23:00+00:00")
         at = NIGHT.replace(hour=6, minute=23)
-        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-10-01T06:23:00+00:00")
+        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-09-30T18:23:00+00:00")
+        evening = NIGHT.replace(hour=18, minute=23)
+        self.assertEqual(dashboard.next_learn_run(evening).isoformat(), "2026-10-01T06:23:00+00:00")
 
     def test_the_section_says_what_is_on_main_its_pull_request_and_its_runs(self):
         gh = FakeGitHub()
@@ -210,6 +213,28 @@ class LearnLaneTests(unittest.TestCase):
         self.assertIn("| 🔄 running | [22]", body)
         # A watch run (CI on the lane's pull request) is not one of the lane's runs.
         self.assertNotIn("[21]", body)
+
+    def test_a_scheduled_run_cancelled_before_it_ran_is_left_out(self):
+        """A scheduled run queued behind a running one is cancelled when the next schedule queues
+        another (the `learn` concurrency group holds one waiting): it never ran, so it is no row,
+        and the table still shows `LEARN_ROWS` runs. One cancelled after a job began is a row."""
+        gh = FakeGitHub()
+        for n in range(dashboard.LEARN_ROWS):
+            self.run_with(gh, 40 + n, number=10 + n)
+        for n in range(3):
+            self.run_with(gh, 50 + n, number=20 + n)
+            gh.runs[str(50 + n)]["conclusion"] = "cancelled"
+        self.run_with(gh, 60, number=30, jobs=[{"name": "plan", "conclusion": "cancelled",
+                                                 "runner_name": "pc-selfplay-1"}])
+        gh.runs["60"]["conclusion"] = "cancelled"
+        # Newest first, as GitHub lists them.
+        gh.runs = dict(sorted(gh.runs.items(), key=lambda item: -int(item[0])))
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("| ⏹️ cancelled | [30]", body)
+        for number in (20, 21, 22):
+            self.assertNotIn(f"[{number}]", body)
+        shown = [n for n in range(10, 10 + dashboard.LEARN_ROWS) if f"[{n}]" in body]
+        self.assertEqual(len(shown), dashboard.LEARN_ROWS - 1)
 
     def test_a_promotion_open_too_long_is_one_the_next_run_closes(self):
         gh = FakeGitHub()
@@ -341,16 +366,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(muse_row, body)
         self.assertIn(claude_row, body)
         self.assertLess(body.index(muse_row), body.index(claude_row))
-        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n# 🤖 "))
+        # The date first, then how far the PC's two local jobs have played (no heartbeat here).
+        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n"
+                                        f"{dashboard.PROGRESS_START}\n🧠 **learn** on the owner's "
+                                        "PC: no heartbeat set up (JACKIOH_PC_GIST)<br>\n"))
+        self.assertIn(f"{dashboard.PROGRESS_END}\n\n# 🤖 ", body)
         self.assertIn("`bot-status` rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
-        self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
-                      body)
+        self.assertIn(f"```mermaid\n{dashboard.TIMELINE_STYLE}\ngantt\n    title Runs going now, "
+                      "as of 22:00 (Central time)", body)
         self.assertIn("    tickInterval 30minute\n    todayMarker off", body)
-        self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :active, "
+        self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :"
                       "2026-09-29 21:13, 2026-09-29 22:00", body)
-        self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :active, ", body)
-        gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
+        self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :", body)
+        gantt = body.split(f"{dashboard.TIMELINE_STYLE}\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # Every subscription as a box, with what it does or why not and its usage, always:
         # the Claude accounts, then the night box's.
@@ -546,8 +575,9 @@ class DashboardTests(unittest.TestCase):
 
     def test_every_subscriptions_lanes_with_the_totals(self):
         """The lanes section: each subscription's lanes, how many its runs hold and how many are
-        open, the Claude accounts by number, then agy, gpt, Devin and Muse, then Squishy's from
-        the comment its section carries; Muse's fill-in counts in the lane it fills, and a
+        open, the Claude accounts by number, then agy, gpt and Muse, then any other by name (the
+        tests' weak one), then Squishy's from the comment its section carries; Muse's fill-in
+        counts in the lane it fills, and a
         planning run of claude-3's (no caps) on the planning lane beside its own."""
         cfg = make_config(env=providers_secrets(*providers.SECRETS), machine=ALL_MACHINE,
                           plan_lanes=None)
@@ -573,15 +603,15 @@ class DashboardTests(unittest.TestCase):
             "| `claude-3` | GitHub's runners | 2 | 0 <sub>(+1 planning, on the planning lane)</sub>"
             " | 2 |",
             *[f"| `claude-{n}` | GitHub's runners | 1 | 0 | 1 |" for n in (4, 5, 6, 7)],
-            "| `claude-8` | GitHub's runners | 3 | 2 | 1 |",
+            "| `claude-8` | GitHub's runners | 2 | 2 | 0 |",
             "| `agy` | the night box | 1 | 0 | 1 |",
             "| `gpt` | the night box | 1 | 1 <sub>(1 of them `muse`'s)</sub> | 0 |",
-            "| `devin` | the night box | 6 | 0 | 6 |",
             "| `muse` | the night box and the Muse box | 4 | 1 <sub>(+1 filling in `gpt`'s or "
             "`agy`'s)</sub> | 3 |",
+            "| `lite` | `night-vm-lite` | 6 | 0 | 6 |",
             "| `claude-squishy` (Squishy) | GitHub's runners | 2 | 1 | 1 |",
-            "| **All 9 Claude accounts** | | **13** | **3** | **10** |",
-            "| **All 13 subscriptions** | | **25** | **5** | **20** |"])
+            "| **All 9 Claude accounts** | | **12** | **3** | **9** |",
+            "| **All 13 subscriptions** | | **24** | **5** | **19** |"])
         # Under them, the limits on the lanes, each with how much of it is held now.
         limits = [line for line in lanes.splitlines() if line.startswith("- **")]
         self.assertEqual([line.split("**")[1] for line in limits],
@@ -593,19 +623,19 @@ class DashboardTests(unittest.TestCase):
                       "needs a new secret there and in the workflows.", limits[1])
         self.assertIn("GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "
                       "night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "
-                      "kept for CI (#1455). So the 13 Claude lanes never all run at once: past 8,",
+                      "kept for CI (#1455). So the 12 Claude lanes never all run at once: past 8,",
                       limits[2])
         self.assertIn("runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
         self.assertIn("6 runs at once (2 now)", limits[4])
         self.assertTrue(limits[6].endswith(
-            "10 Claude lanes are open on accounts that may start work, and GitHub's runners have "
+            "9 Claude lanes are open on accounts that may start work, and GitHub's runners have "
             "4 free, so there is room for 4 more Claude runs."))
         # A subscription switched off has no open lane, and the totals say how many are off;
         # with no Squishy row, its secret is the one free.
         self.ctx = make_ctx(self.gh, at=NIGHT)  # only claude-1's secret, the machine's off
         lanes = "\n".join(dashboard.lanes_table(self.ctx, self.ctx.store.load(), {}))
-        self.assertIn("| `claude-8` | GitHub's runners | 3 | 0 | ⚫ off |", lanes)
-        self.assertIn("| **All 8 Claude accounts** (7 off) | | **11** | **0** | **1** |", lanes)
+        self.assertIn("| `claude-8` | GitHub's runners | 2 | 0 | ⚫ off |", lanes)
+        self.assertIn("| **All 8 Claude accounts** (7 off) | | **10** | **0** | **1** |", lanes)
         self.assertIn("one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
                       lanes)
         self.assertIn("**Now:** 1 Claude lane is open on accounts that may start work, and GitHub's "
@@ -620,7 +650,7 @@ class DashboardTests(unittest.TestCase):
         [row] = [r for r in dashboard.marked_lanes((section,)) if r["id"] == "claude-8"]
         self.assertEqual((row["bot"], row["lanes"], row["used"], row["off"], row["startable"],
                           row["secret"]),
-                         (dashboard.BOT_TITLE, 3, 0, True, False, "CLAUDE_CODE_OAUTH_TOKEN_8"))
+                         (dashboard.BOT_TITLE, 2, 0, True, False, "CLAUDE_CODE_OAUTH_TOKEN_8"))
         self.assertLess(section.index(dashboard.LANES_MARK), section.index("## 🫧"))
         for broken in ("[{]", '{"id": "x"}', '[{"lanes": 2}]', '[{"id": "x", "lanes": "two"}]'):
             self.assertEqual(dashboard.marked_lanes((f"{dashboard.LANES_MARK}{broken} -->",)), [])
@@ -861,6 +891,13 @@ class RunnersTests(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
         self.ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config())
+        # The tests' weak subscription has runners on the night box that take no slot of their
+        # own, as the committed weak one's did until #2129, so the boxes' other runners stay tested.
+        boxes = mock.patch.object(dashboard, "BOX_SLOTS", (
+            ("night box", ("gpt", "agy", "muse"), (WEAK,)),
+            ("Muse box", ("muse", "muse", "muse"), ())))
+        boxes.start()
+        self.addCleanup(boxes.stop)
         ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
 
         def seed(state):
@@ -973,7 +1010,7 @@ class RunnersTests(unittest.TestCase):
 
     def test_a_fill_in_takes_a_free_slot_and_other_runners_follow_the_slots(self):
         """Muse's fill-in runners take gpt's or agy's slot while it has no job of its own
-        (#2028); Devin's runners on the night box take none, and follow the slots."""
+        (#2028); the weak one's runners on the night box take none, and follow the slots."""
         def night(jobs):
             self.gh.jobs["103"] = [{"name": "work", "status": "in_progress", "labels": [label],
                                     "runner_name": name, "started_at": iso(NIGHT)}
@@ -990,10 +1027,10 @@ class RunnersTests(unittest.TestCase):
         self.assertIn('nb1["<b>Slot 2 · agy\'s lane</b><br/>🟢 muse fills it<br/>', box)
         self.assertIn('nb2["<b>Slot 3 · muse\'s lane</b><br/>⚪ free"]', box)  # no fill-in's
         self.assertIn('nb3["<b>night-vm-muse-fill-2</b><br/>🟢 ci · work<br/>', box)
-        box = night([("night-vm-devin", "night-vm-devin-3")])
+        box = night([("night-vm-lite", "night-vm-lite-3")])
         self.assertIn('subgraph nb["The night box (AWS): 0 of 3 slots busy · 1 more on its other '
                       'runners"]', box)
-        self.assertIn('nb3["<b>night-vm-devin-3</b><br/>🟢 ci · work<br/>', box)
+        self.assertIn('nb3["<b>night-vm-lite-3</b><br/>🟢 ci · work<br/>', box)
         # A machine subscription no box's slots name has its labels drawn apart.
         with mock.patch.object(dashboard, "BOX_SLOTS", (("night box", ("gpt", "muse"), ()),
                                                          ("Muse box", ("muse",), ()))):
@@ -1020,9 +1057,9 @@ class RunnersTests(unittest.TestCase):
         return diagram[diagram.index('    subgraph pc['):].split("    end")[0]
 
     def beat(self, minutes_ago: int = 1, **fields) -> dict:
-        runners = [{"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL, "busy": True,
-                    "cpus": 5.8, "throttled": False},
-                   {"name": "pc-devin-2", "label": "night-vm-devin", "busy": False}]
+        runners = [{"name": "pc-gather-1", "label": dashboard.GATHER_LABEL, "busy": True,
+                    "cpus": 1.9, "throttled": False},
+                   {"name": "pc-lite-2", "label": "night-vm-lite", "busy": False}]
         return {"at": iso(NIGHT - timedelta(minutes=minutes_ago)), "calm": True, "cpu": 7.4,
                 "memGB": 11.2, "logical": 16, "runners": runners, **fields}
 
@@ -1032,8 +1069,8 @@ class RunnersTests(unittest.TestCase):
                                "path": ".github/workflows/gather.yml",
                                "display_title": "Patch v0.3.40", "created_at": ago(13)}
         self.gh.jobs["300"] = [{"name": "gather the newest patch", "status": status,
-                                "labels": [dashboard.LOCAL_LABEL], "created_at": ago(13),
-                                **({"runner_name": "pc-selfplay-1", "started_at": ago(12),
+                                "labels": [dashboard.GATHER_LABEL], "created_at": ago(13),
+                                **({"runner_name": "pc-gather-1", "started_at": ago(12),
                                     "steps": [{"name": "build", "status": "completed"},
                                               {"name": "play (cargo jackioh stats --series "
                                                        "gather)", "status": "in_progress"}]}
@@ -1048,13 +1085,13 @@ class RunnersTests(unittest.TestCase):
         group = self.pc(self.beat())
         self.assertIn('subgraph pc["The owner\'s PC: calm, lending itself, working on gather, '
                       'CPU 7%, 11.2 GB in use · heard 21:59"]', group)
-        self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
+        self.assertIn('pc0["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch<br/>push: '
                       'Patch v0.3.40<br/>play (cargo jackioh stats --serie…<br/>12m"]:::busy',
                       group)
-        self.assertIn('pc1["<b>pc-devin-2</b><br/>⚪ idle, waiting<br/>for a night-vm-devin job"]'
+        self.assertIn('pc1["<b>pc-lite-2</b><br/>⚪ idle, waiting<br/>for a night-vm-lite job"]'
                       ':::idle', group)
         self.assertIn('pc2["<b>gather</b><br/>🟢 gathering<br/>play (cargo jackioh stats --serie…'
-                      '<br/>for 12m<br/>on 5.8 CPUs"]:::busy', group)
+                      '<br/>for 12m<br/>on 1.9 CPUs"]:::busy', group)
         # The PC busy with its owner's work: gather goes on, slowed.
         slowed = self.beat(calm=False)
         slowed["runners"][0]["throttled"] = True
@@ -1069,7 +1106,7 @@ class RunnersTests(unittest.TestCase):
         # PowerShell 5.1 may write a list as {"value": [...]}.
         wrapped = self.beat()
         wrapped["runners"] = {"value": wrapped["runners"], "Count": 2}
-        self.assertIn("on 5.8 CPUs", self.pc(wrapped))
+        self.assertIn("on 1.9 CPUs", self.pc(wrapped))
         # No job on the PC: not working, and whether a runner of its waits for one.
         del self.gh.runs["300"]
         idle = self.beat()
@@ -1079,11 +1116,134 @@ class RunnersTests(unittest.TestCase):
         self.assertIn("calm, lending itself, not working: no job, CPU 7%",
                       self.pc(self.beat(runners=[])))
 
+    def test_learn_and_gather_side_by_side(self):
+        """Gather's label has a slot of its own on the PC, outside the learn lane's one job at a
+        time (#2134), so the two run together and the group names both."""
+        self.gather_going()
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        self.gh.runs["104"]["status"] = "in_progress"
+        self.gh.jobs["104"] = [{"name": "export (shard 3)", "status": "in_progress",
+                                "labels": [dashboard.LOCAL_LABEL], "runner_name": "pc-selfplay-1",
+                                "started_at": ago(40), "steps": [{"name": "play",
+                                                                  "status": "in_progress"}]}]
+        beat = self.beat()
+        beat["runners"].insert(0, {"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL,
+                                   "busy": True, "cpus": 5.8, "throttled": False})
+        group = self.pc(beat)
+        self.assertIn("The owner's PC: calm, lending itself, working on learn and gather, CPU 7%",
+                      group)
+        self.assertIn('pc0["<b>pc-selfplay-1</b><br/>🟢 learn · export (shard 3)', group)
+        self.assertIn('pc1["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch', group)
+        self.assertIn('<br/>on 1.9 CPUs"]:::busy', group)
+
+    def both_playing(self, learn: dict | None = None, gather: dict | None = None) -> None:
+        """A learn shard and gather both going on the PC, as above, with each runner's `progress`
+        in the heartbeat as given (bot/machine/local/supervisor.ps1, `Get-Progress`)."""
+        self.gather_going()
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+        self.gh.runs["104"]["status"] = "in_progress"
+        self.gh.jobs["104"] = [{"name": "export (shard 3)", "status": "in_progress",
+                                "labels": [dashboard.LOCAL_LABEL], "runner_name": "pc-selfplay-1",
+                                "started_at": ago(40), "steps": []}]
+        beat = self.beat()
+        beat["runners"].insert(0, {"name": "pc-selfplay-1", "label": dashboard.LOCAL_LABEL,
+                                   "busy": True, "cpus": 5.8, "throttled": False})
+        for runner, played in zip(beat["runners"], (learn, gather)):
+            if played is not None:
+                runner["progress"] = played
+        self.heartbeat(beat)
+
+    def heartbeat(self, beat: dict | None, gist: str = "g1") -> None:
+        self.ctx = make_ctx(self.gh, at=NIGHT,
+                            cfg=make_config(env={"JACKIOH_PC_GIST": gist} if gist else {}))
+        if beat is not None:
+            self.gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(beat)}}}}
+
+    def top(self) -> list[str]:
+        """The issue's lines on how far the PC's two local jobs have played."""
+        return dashboard.progress(self.ctx, dashboard.read_runners(self.ctx)).split("\n")
+
+    def test_the_top_lines_say_how_far_the_pcs_two_jobs_have_played(self):
+        """Under the issue's date, the learn lane's export as the game it is at of learn.yml's
+        100,000, with its shard's games, and gather's games of its patch: from the heartbeat's
+        `progress`, the games each `jackioh` has written so far."""
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 2304, "from": 65001},
+                          gather={"kind": "stats", "games": 2000, "done": 1320, "from": 300001,
+                                  "patch": "v0.4.12d"})
+        start, learn, gather, end = self.top()
+        self.assertEqual((start, end), (dashboard.PROGRESS_START, dashboard.PROGRESS_END))
+        self.assertEqual(learn, "🧠 **learn** on the owner's PC: game 67,304 of 100,000 "
+                         f"{dashboard.bar(0.67304)} · its shard, games 65,001–70,000: 2,304 of "
+                         "5,000<br>")
+        self.assertEqual(gather, "🌾 **gather** on the owner's PC: game 1,320 of 2,000 "
+                         f"{dashboard.bar(0.66)} of v0.4.12d")
+        # An export larger than learn.yml's default: the game it is at, of no total.
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 10, "from": 100001})
+        self.assertIn("PC: game 100,010 · its shard, games 100,001–105,000: 10 of 5,000",
+                      self.top()[1])
+        # Busy but playing no games: building, retraining, gating.
+        self.both_playing()
+        _, learn, gather, _ = self.top()
+        self.assertIn("**learn** on the owner's PC: working, playing no games now (a build, the "
+                      "retrain, the screen or the gate)", learn)
+        self.assertEqual(gather, "🌾 **gather** on the owner's PC: working, playing no games now "
+                         "(its build)")
+        # Jobs queued for runners the PC has not started (it is not quiet yet), then none at all.
+        self.gather_going(status="queued")
+        self.gh.runs["104"]["status"] = "queued"
+        self.gh.jobs["104"] = [{"name": "plan", "status": "queued",
+                                "labels": [dashboard.LOCAL_LABEL]}]
+        self.heartbeat(self.beat(runners=[]))
+        _, learn, gather, _ = self.top()
+        self.assertIn("**learn** on the owner's PC: waiting for the PC to start its runner", learn)
+        self.assertIn("**gather** on the owner's PC: waiting for the PC to start its runner", gather)
+        self.gh.runs.clear()
+        self.assertIn("**gather** on the owner's PC: not playing now", self.top()[2])
+        # No heartbeat to trust: the lines say why.
+        self.heartbeat(self.beat(minutes_ago=30))
+        self.assertIn("**learn** on the owner's PC: not heard since 21:30<br>", self.top()[1])
+        self.heartbeat(None, gist="")
+        self.assertIn("PC: no heartbeat set up (JACKIOH_PC_GIST)", self.top()[2])
+
+    def test_the_export_size_is_learn_ymls_default(self):
+        text = (ROOT / ".github" / "workflows" / "learn.yml").read_text(encoding="utf-8")
+        self.assertIn(f"games: ${{{{ inputs.games || '{dashboard.LEARN_GAMES}' }}}}", text)
+
+    def test_the_timeline_draws_the_pcs_jobs(self):
+        """The runs-going-now timeline draws the PC's jobs too, by workflow and job, in readable
+        colours: plain bars, whose name beside a short bar is grey, not the dark theme's dark."""
+        self.both_playing()
+        found = dashboard.read_runners(self.ctx)
+        chart = "\n".join(dashboard.timeline(self.ctx, {}, {}, found))
+        self.assertTrue(chart.startswith(f"```mermaid\n{dashboard.TIMELINE_STYLE}\ngantt\n"))
+        self.assertIn('"taskTextOutsideColor": "#6e7781"', dashboard.TIMELINE_STYLE)
+        self.assertIn("    section The owner's PC\n"
+                      "    learn · export (shard 3) · 40m :2026-09-29 21:20, 2026-09-29 22:00\n"
+                      "    gather · gather the newest patch · 12m :2026-09-29 21:48, "
+                      "2026-09-29 22:00", chart)
+        self.assertNotIn(":active", chart)
+        self.assertEqual(dashboard.timeline(self.ctx, {}, {}), ["Nothing is running right now."])
+
+    def test_a_redraw_keeps_the_top_lines_fresh(self):
+        self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 2304, "from": 65001})
+        self.gh.add_issue(148, dashboard.TITLE, "x", user=OPERATOR)
+        self.ctx.store.update(lambda s: s.update(dashboard={"issue": 148}))
+        self.gh.threads[148]["body"] = (
+            f"date\n\n{dashboard.PROGRESS_START}\nold lines\n{dashboard.PROGRESS_END}\n\ntop\n"
+            f"{dashboard.RUNNERS_START}\nold runners\n{dashboard.RUNNERS_END}\nbottom")
+        self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
+        body = self.gh.threads[148]["body"]
+        self.assertTrue(body.startswith(f"date\n\n{dashboard.PROGRESS_START}\n🧠 **learn**"))
+        self.assertIn("game 67,304 of 100,000", body)
+        self.assertNotIn("old lines", body)
+        self.assertNotIn("old runners", body)
+        self.assertTrue(body.endswith(dashboard.RUNNERS_END + "\nbottom"))
+
     def test_a_pc_gone_quiet_or_never_heard(self):
         group = self.pc(self.beat(minutes_ago=30))
         self.assertIn("The owner's PC: not heard since 21:30: off, asleep, or its supervisor "
                       "stopped", group)
-        self.assertNotIn("pc-devin-2", group)  # an old heartbeat's runners are not trusted
+        self.assertNotIn("pc-lite-2", group)  # an old heartbeat's runners are not trusted
         self.assertIn('["<b>jackioh-selfplay-local</b><br/>💤 no job<br/>idle, or the PC is off"]',
                       group)
         self.assertIn("The owner's PC: no heartbeat set up (JACKIOH_PC_GIST)", self.pc(gist=""))
@@ -1167,11 +1327,12 @@ class RunnersTests(unittest.TestCase):
         self.assertTrue(text.startswith("## 🖥️ What each runner is for"))
         self.assertIn(dashboard.EXPLAINED, text)
         self.assertIn("| `ubuntu-latest` | GitHub's Linux", text)
-        self.assertIn("| `night-vm-devin` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
-                      "`devin`: the `devin` CLI with `swe-2-max`, as the Linux user "
-                      "`agent-devin`, which holds that login alone |", text)
+        self.assertIn("| `night-vm-lite` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
+                      "`lite`: the `codex` CLI with `lite-1`, as the Linux user "
+                      "`agent-lite`, which holds that login alone |", text)
         self.assertIn("| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
         self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", text)
+        self.assertIn(f"| `{dashboard.GATHER_LABEL}` | the owner's PC, a slot of its own", text)
         self.assertIn("| `voice` | renders a branch's voice lines", text)
         # None of the statistics' outcomes reads it as a run's.
         from harness import stats
@@ -1207,10 +1368,11 @@ class RunnersTests(unittest.TestCase):
         for name, label, where in (("GitHub Actions 7", "ubuntu-latest", "Linux"),
                                    ("GitHub Actions 8", "macos-15", "macOS"),
                                    ("GitHub Actions 9", "windows-2022", "Windows"),
-                                   ("night-vm-devin-3", "night-vm-devin", "night box"),
+                                   ("night-vm-lite-3", "night-vm-lite", "night box"),
                                    ("night-vm-muse-b2", "night-vm-muse", "Muse box"),
-                                   ("pc-devin-1026021400", "night-vm-devin", "owner's PC"),
+                                   ("pc-lite-1026021400", "night-vm-lite", "owner's PC"),
                                    ("", dashboard.LOCAL_LABEL, "owner's PC"),
+                                   ("", dashboard.GATHER_LABEL, "owner's PC"),
                                    ("someone-elses", "gpu", "unknown box")):
             self.assertEqual(dashboard._where({"runner_name": name, "labels": [label]})[1], where)
 

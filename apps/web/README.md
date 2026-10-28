@@ -154,7 +154,7 @@ A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-priced Resource in the viewer's tray. Each is live exactly when `legal` lists its `marketBuy` or
+sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
 ## Commands
@@ -233,8 +233,10 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
-                        (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
-                        (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
+                        (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
+                        new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
+                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online

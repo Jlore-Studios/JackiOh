@@ -1,11 +1,11 @@
-"""The easy rule: what `difficulty:easy` means, so that what Devin may build is what Devin finishes
-(#317, "The easy rule").
+"""The easy rule: what `difficulty:easy` means, so that what a weak model may build is what it
+finishes (#317, "The easy rule").
 
-Devin, the weak tier, may build only easy items. On this repository it could not resolve the
+The weak tier may build only easy items. On this repository its model could not resolve the
 conflicts in SPEC §11 and the rulings index (every pull request appended the next R number there;
 since v0.3.0 a ruling is a note in `spec/rulings/`, listed in the generated `spec/INDEX.md`), could
-not hold a big change together, cannot plan, runs no tests where it works, and cannot judge what it
-cannot see. Its clean merges were all small (7–15 files, under about 500 lines).
+not hold a big change together, could not plan, ran no tests where it worked, and could not judge
+what it could not see. Its clean merges were all small (7–15 files, under about 500 lines).
 
 The rule is in the planner's prompt (`RULE`, `bot/prompts/plan.md`), and the harness holds the
 rating to it twice, trusting nothing the model said: deliver checks the plan's "Files to touch"

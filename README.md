@@ -66,7 +66,7 @@ flowchart LR
     NB -- "work job" --> HR
   end
   subgraph aws["AWS, us-east-2"]
-    NV["night box<br/>Codex, agy, Muse, Devin"]
+    NV["night box<br/>Codex, agy, Muse"]
     TB["training box<br/>improve, unban, gather"]
     ST["starter Lambda<br/>every 5 minutes"]
     ST -- "starts it when a job waits" --> NV
@@ -84,7 +84,7 @@ flowchart LR
 | CI | GitHub's runners | the five required checks on every pull request, and the slow suites once a day | [`CLAUDE.md`](CLAUDE.md), CI |
 | The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |
 | The Claude accounts' work | GitHub's runners | the work jobs of `claude-1` to `claude-8`, logged in from secrets | [`bot/README.md`](bot/README.md), Subscriptions |
-| The night box | AWS EC2, `m7i-flex.xlarge`, tagged `jackioh-night-vm` | the work jobs of Codex, agy, one of Muse's lanes and Devin, each a Linux user of its own with its own runners, and Muse's in gpt's or agy's lane while that one cannot start work. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
+| The night box | AWS EC2, `m7i-flex.xlarge`, tagged `jackioh-night-vm` | the work jobs of Codex, agy and one of Muse's lanes, each a Linux user of its own with its own runners, and Muse's in gpt's or agy's lane while that one cannot start work. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
 | The Muse box (the training box) | AWS EC2, `m7i-flex.xlarge`, tagged `jackioh-train-box` | three of Muse's four lanes of its own, and the `gather` lane as a systemd service outside the night bot (#1677 stopped `improve` and `unban`); it powers off after 30 idle minutes too | [`bot/machine/README.md`](bot/machine/README.md#the-muse-box), [`training/README.md`](training/README.md) |
 | Squishy | GitHub Actions and GitHub's runners | `@squishy-squooby`, the same harness on its own Claude account | [`bot/README.md`](bot/README.md#squishy) |
 | The local runner | the owner's PC, in Docker | the learned evaluation's self-play exports, and night-box jobs while the PC is idle | [`bot/machine/README.md`](bot/machine/README.md#the-local-runner) |
@@ -96,8 +96,8 @@ architecture: the crates, the wire and the client.
 ## The night bot
 
 `@jgoetzmann-bot` builds the issues you hand it, at any hour, on whichever of its subscriptions is
-free: eight Claude accounts (Opus and Sonnet), and ChatGPT through Codex, Gemini through agy, Muse
-and Devin on the night box. Label an issue `bot:build`, assign it the bot, or comment
+free: eight Claude accounts (Opus and Sonnet), and ChatGPT through Codex, Gemini through agy and
+Muse on the night box. Label an issue `bot:build`, assign it the bot, or comment
 `/harness build` or `@jgoetzmann-bot <what you want>`.
 
 Every item has a difficulty, which decides who may plan, build and approve it. A medium or strong

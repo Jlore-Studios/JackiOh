@@ -34,8 +34,8 @@ def planner(text):
     return FakeRunner({"plan": lambda request: RunResult(True, text, duration_s=300)})
 
 
-def day_harness(test, machine=("muse", "devin")):
-    """By day: no Claude account (they keep to the night in tests), Muse and Devin on the
+def day_harness(test, machine=("muse", "lite")):
+    """By day: no Claude account (they keep to the night in tests), Muse and the weak one on the
     machine, and the planning lane on."""
     return Harness(test, env={"HARNESS_SECRETS_SET": ""}, machine=machine, at=DAY,
                    plan_lanes=None)
@@ -60,9 +60,9 @@ class RatingTests(unittest.TestCase):
         self.assertIn("Rated `difficulty:easy` by `muse`", said)
         self.assertIn("Cleared and queued to build", said)
         self.assertNotIn("<!-- bot:", issueplan.plan_of(h.gh.threads[12]["body"]))
-        # Devin builds it from Muse's plan, which meets an easy item's floor.
+        # The weak one builds it from Muse's plan, which meets an easy item's floor.
         planned = plan_mod.make(h.ctx)
-        self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
+        self.assertEqual((planned["action"], planned["provider"]), ("build", "lite"))
 
     def test_a_plan_with_no_rating_line_still_labels_the_item_medium(self):
         """A planner that leaves out its `<!-- bot: ... -->` line must not leave the item
@@ -138,13 +138,13 @@ class RatingTests(unittest.TestCase):
         self.assertIsNone(h.origin_sha("bot/issue-12"))
 
     def test_a_weak_builders_change_that_breaks_the_rule_is_not_pushed(self):
-        h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("devin",))
+        h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("lite",))
         h.gh.add_issue(12, labels=(LABEL_BUILD, EASY), body=issueplan.with_plan(
             "Make it.", "1. Edit src/game.txt.", "a person"))
         many = {f"src/f{n}.txt": "x\n" for n in range(11)}
         planned, result = h.night(FakeRunner({"build": builder(many),
                                               "self_check": reviewer(APPROVE)}))
-        self.assertEqual((planned["provider"], result["status"]), ("devin", "built"))
+        self.assertEqual((planned["provider"], result["status"]), ("lite", "built"))
         self.assertEqual(h.gh.list_pulls(), [])
         self.assertIn("breaks the easy rule (line 1: it changes 11 files, over 10)",
                       h.gh.bot_comments(12)[-1])
@@ -153,7 +153,7 @@ class RatingTests(unittest.TestCase):
         self.assertIn(LABEL_BUILD, h.gh.label_names(12))
         self.assertEqual(h.ctx.store.load()["items"]["12"]["difficulty_floor"], "medium")
         self.assertIsNotNone(h.origin_sha("bot/issue-12"))  # the work is kept on its branch
-        self.assertEqual(plan_mod.make(h.ctx)["action"], "none")  # Devin may not take it now
+        self.assertEqual(plan_mod.make(h.ctx)["action"], "none")  # The weak one may not take it now
 
 
 class StepUpTests(unittest.TestCase):

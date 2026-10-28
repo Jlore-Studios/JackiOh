@@ -19,7 +19,7 @@ use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
 use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
-use crate::effects::buff::grant_random_keywords;
+use crate::effects::buff::{grant_keyword, grant_random_keywords};
 use crate::effects::radiant::set_radiant;
 use crate::effects::targets::{
     PlayerSpec, ScopeSide, TargetSpec, instance_of, player_of, resolve_target, sides_of,
@@ -33,11 +33,12 @@ use crate::script::{Effect, EffectContext, EffectPart};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
-    AttackHealth, CardType, CostRange, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
+    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, remove_from_any_zone, row_size,
+    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, place_standing_on_field,
+    remove_from_any_zone, row_size,
 };
 
 // R1 (`CRY_ON_PLAY_ONLY`): a summon fires no Cry, nor does any other verb that puts a card on the
@@ -137,6 +138,12 @@ pub struct SummonArgs {
     /// (§9.3), and removes the fizzle hazard of a follow-up effect aimed at a card that never landed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random_keywords: Option<i32>,
+    /// ST-S03-8 (R1860007's Felinor Containment Chamber, issue #1860): keywords the fresh summon
+    /// gains as it lands ("It gains Divine Shield"). The grant belongs to the summon for the same
+    /// reason as `random_keywords` above: no `TargetSpec` can name a just-created card (see that
+    /// comment). Fresh summons only; a card moved by `instance` keeps what it has.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
 }
 
 impl SummonArgs {
@@ -210,14 +217,27 @@ fn summon_onto(
     at: &SummonPlacement,
     former_id: Option<String>,
 ) -> bool {
-    if !place_on_field(
-        ctx.state,
-        card,
-        slot,
-        PlaceOnFieldOptions {
-            stack: Some(at.stack == Some(true)),
-        },
-    ) {
+    summon_onto_as(ctx, card, slot, at, former_id, false)
+}
+
+/// `summon_onto`, with `stands` for a Unit set down standing in a backrow zone (R1081000, R1879001).
+fn summon_onto_as(
+    ctx: &mut EffectContext<'_>,
+    card: &mut CardInstance,
+    slot: &ZoneSlot,
+    at: &SummonPlacement,
+    former_id: Option<String>,
+    stands: bool,
+) -> bool {
+    let options = PlaceOnFieldOptions {
+        stack: Some(at.stack == Some(true)),
+    };
+    let placed = if stands {
+        place_standing_on_field(ctx.state, card, slot, options)
+    } else {
+        place_on_field(ctx.state, card, slot, options)
+    };
+    if !placed {
         return false;
     }
 
@@ -281,7 +301,40 @@ pub(crate) fn summon_fresh(
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
     let slot = zone_for(ctx, player, row, at)?;
+    summon_fresh_into(ctx, def_id, player, &slot, at, false)
+}
 
+/// R1879001: a fresh Unit summoned standing in its controller's backrow zone `at.lane`, as a Flying
+/// play stands there (R1081000): an open, unreserved zone, else nothing. The caller vets the card.
+pub(crate) fn summon_fresh_standing(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> Option<CardInstance> {
+    let lane = at.lane?;
+    if lane < 1 || lane > row_size(Row::Backrow) {
+        return None;
+    }
+    let slot = ZoneSlot {
+        player,
+        row: Row::Backrow,
+        lane,
+    };
+    if is_reserved(ctx.state, slot) || !is_empty(ctx.state, slot) {
+        return None;
+    }
+    summon_fresh_into(ctx, def_id, player, &slot, at, true)
+}
+
+fn summon_fresh_into(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    slot: &ZoneSlot,
+    at: &SummonPlacement,
+    stands: bool,
+) -> Option<CardInstance> {
     let mut card = new_instance(&mut *ctx.state, def_id, player, Zone::Resolving { player });
     if at.radiant == Some(true) {
         card.radiant = true;
@@ -297,7 +350,7 @@ pub(crate) fn summon_fresh(
         card.x = Some(x);
     }
     crate::generators::record_generator(ctx, &card);
-    if summon_onto(ctx, &mut card, &slot, at, None) {
+    if summon_onto_as(ctx, &mut card, slot, at, None, stands) {
         Some(card)
     } else {
         None
@@ -376,6 +429,26 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
     ctx.exits_from = before;
 }
 
+/// The `keywords` rider, granted to the card the summon just made once it has landed. Each keyword
+/// goes through the `grantKeyword` effect aimed at the fresh card by its id — the same stay-marked
+/// path as `roll_random_keywords` above (R174) — so every grant is announced (`keywordGranted`) as
+/// any other grant is.
+fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywords: Vec<Keyword>) {
+    if keywords.is_empty() {
+        return;
+    }
+    let before = ctx.exits_from;
+    ctx.exits_from = Some(exit_mark(ctx.state));
+    for keyword in keywords {
+        let effect = grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": card.id },
+            "keyword": keyword,
+        })));
+        (effect.apply)(ctx);
+    }
+    ctx.exits_from = before;
+}
+
 /// §6.3 Summon: put a card on the field from anywhere else, with no Cry. With no lane named it takes
 /// the leftmost empty, unlocked, unreserved zone of its row (R64) and fails silently when the row
 /// has none; a named lane fails the same way when it is occupied or Locked (R47).
@@ -399,6 +472,7 @@ pub fn summon(args: SummonArgs) -> Effect {
         };
         if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
             roll_random_keywords(ctx, &made, args.random_keywords);
+            grant_summon_keywords(ctx, &made, args.keywords.clone().unwrap_or_default());
             // MD-D30, R1126: the running card remembers the summon under `rememberAs`, written the
             // way `effects::memory::remember` writes it (its own stay, its own part's key).
             if let Some(key) = &args.remember_as
