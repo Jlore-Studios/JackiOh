@@ -51,7 +51,7 @@ const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 63] = [
+const ACTIVATE_CARDS: [&str; 70] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -87,6 +87,7 @@ const ACTIVATE_CARDS: [&str; 63] = [
     "stinkyscape-018-2",
     "stinkyscape-018-3",
     "stinkyscape-026",
+    "stinkyscape-039",
     "stinkyscape-050",
     "stinkyscape-051",
     "stinkyscape-052",
@@ -105,6 +106,7 @@ const ACTIVATE_CARDS: [&str; 63] = [
     "stinkyscape-065",
     "stinkyscape-066",
     "stinkyscape-112",
+    "stinkyscape-116",
     "stinkyscape-125",
     "stinkyscape-140",
     "stinkyscape-141",
@@ -112,6 +114,11 @@ const ACTIVATE_CARDS: [&str; 63] = [
     "stinkyscape-143",
     "stinkyscape-148",
     "stinkyscape-157",
+    "stinkyscape-169",
+    "stinkyscape-170",
+    "stinkyscape-171",
+    "stinkyscape-172",
+    "stinkyscape-173",
     "stinkyscape-175",
     "stinkyscape-t-dormant-starship",
     "stinkyscape-t-propagation-layer",
@@ -1903,4 +1910,83 @@ mod stinkyscape {
             assert_eq!(s.state().players.p1.mana.current, mana - 3);
         }
     }
+
+    /// R1840006: a mining node Tributes itself through its Activate, and its Death pays.
+    fn mined(def: &str, radiant: bool) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": { "field": [on(def, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let id = s.card(def).id.clone();
+        activate_listed(&mut s, def, any);
+        s.expect_in_zone(id.as_str(), "graveyard");
+        s
+    }
+
+    fn tray_len(s: &Scenario) -> usize {
+        s.state().players.p1.resource_tray.as_ref().map_or(0, Vec::len)
+    }
+
+    both_faces!(s_n169_tiny_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-169", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-169", "resources", radiant)
+        );
+    });
+    both_faces!(s_n170_medium_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-170", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-170", "resources", radiant)
+        );
+    });
+    both_faces!(s_n171_large_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-171", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-171", "resources", radiant)
+        );
+    });
+    both_faces!(s_n172_huge_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-172", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-172", "resources", radiant)
+        );
+    });
+    both_faces!(s_n173_abandoned_spice_tower, |radiant: bool| {
+        let s = mined("stinkyscape-173", radiant);
+        let spices = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == "stinkyscape-089")
+            .count();
+        assert_eq!(spices as i32, printed("stinkyscape-173", "spices", radiant));
+    });
+
+    both_faces!(s_n116_megabase, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "field": [on("stinkyscape-116", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        activate_listed(&mut s, "stinkyscape-116", any);
+        let credits = |player: PlayerId| s.state().players[player].market_credits.unwrap_or(0);
+        assert!(credits(P1) > 0, "its controller gains Credits");
+        assert_eq!(credits(P2), if radiant { credits(P1) - 5 } else { credits(P1) });
+    });
+
+    both_faces!(s_n39_the_narcor_project, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-039", radiant)], "hand": [STOCKPILE], "library": [X, X, X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X, X, X] },
+        }));
+        // Offered only while the tray holds a Narcor: its own end of turn gains one.
+        assert!(listed(&s, &s.card("stinkyscape-039").id).is_empty());
+        s.end_turn().end_turn();
+        let held = tray_len(&s);
+        assert!(held >= 1, "its end of turn gained a Narcor");
+        activate_listed(&mut s, "stinkyscape-039", any);
+        assert_eq!(tray_len(&s), held - 1, "a Narcor discarded");
+    });
 }
