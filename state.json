@@ -6192,6 +6192,7 @@
       "feedback_since": "2026-10-27T23:58:41Z",
       "issue": 2103,
       "kind": "revise",
+      "queued_at": "2026-10-28T03:09:05Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [
