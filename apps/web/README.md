@@ -431,7 +431,7 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
 - the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
   (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
-  `duos-board-own`, silent so it feeds no audio, with pings and inspection working on it and a hand
+  `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
   card dragged onto it passing when `legal` lists it. The choice is kept per device in
   `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
   screen while both boards show, and below 600px the toggle hides and the board falls back to one

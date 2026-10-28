@@ -187,8 +187,10 @@ export type GameProps = {
    */
   tradeBar?: boolean;
   /**
-   * R2095000: the board feeds no audio. The Duos both-boards view sets it on the teammate's
-   * read-only board, so two mounted boards play only the own duel's cues and music. Absent, off.
+   * R2095000: the board feeds no audio and draws no effects layer or showcase. The Duos both-boards
+   * view sets it on the teammate's read-only board: the audio hook and the effects find their anchors
+   * on the whole page (the first `[data-testid="board"]`, the first hand), so a second board would
+   * play the other duel's cues and shake, spark and mark the own board. Absent, off.
    */
   silent?: boolean;
 };
@@ -728,10 +730,10 @@ export default function Game({
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
-      <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
+      {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
-      <CardShowcase view={view} queue={runner} />
+      {silent ? null : <CardShowcase view={view} queue={runner} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {replay || promptOver(shown, burst, inFlight) ? null : (

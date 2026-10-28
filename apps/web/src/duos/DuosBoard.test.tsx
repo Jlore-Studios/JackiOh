@@ -1066,6 +1066,42 @@ describe("R2095000 pings and passes on the teammate's board", () => {
   });
 });
 
+describe("R2095000 a drop on the teammate's board is no drop on the own board", () => {
+  it("R2095000 dragging a card onto the teammate's lane passes it and plays nothing on the own board", () => {
+    const play: DuosActionBody = {
+      kind: "duel",
+      body: { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+    };
+    const board = renderBoard({ legal: [END_TURN, play, PASS_H1] });
+    toggleBoth();
+    const mate = within(screen.getByTestId(ID.boardTeammate));
+    // The teammate's board draws the own board's test ids: its lane 3 must not take the own card.
+    const lane = mate.getByTestId("zone-you-units-3");
+    const restore = pointAt(screen.getByTestId(ID.boardTeammate));
+    document.elementsFromPoint = (() => [lane, screen.getByTestId(ID.boardTeammate)]) as Document["elementsFromPoint"];
+    try {
+      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
+      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(window, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+      fireEvent.pointerUp(window, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+    } finally {
+      delete (document as Partial<Document>).elementsFromPoint;
+      restore();
+    }
+    expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
+    expect(board.onAction).not.toHaveBeenCalledWith(play);
+  });
+});
+
+describe("R2095000 the teammate's board draws no effects of its own", () => {
+  it("R2095000 only the own board mounts an effects layer, so the teammate's duel never marks the own board", () => {
+    renderBoard({ legal: [END_TURN, PASS_H1] });
+    toggleBoth();
+    expect(within(screen.getByTestId(ID.boardOwn)).getAllByTestId("fx-layer")).toHaveLength(1);
+    expect(within(screen.getByTestId(ID.boardTeammate)).queryByTestId("fx-layer")).toBeNull();
+  });
+});
+
 describe("R2095000 the teammate's board feeds no audio", () => {
   it("R2095000 the teammate's board feeds no audio", () => {
     vi.mocked(createSoundDirector).mockClear();
