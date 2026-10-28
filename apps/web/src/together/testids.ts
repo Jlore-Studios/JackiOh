@@ -78,6 +78,10 @@ export const chatTestid = {
   reportReason: "chat-report-reason",
   reportSend: "chat-report-send",
   reported: "chat-reported",
+  /** R2120000: one per message sent from this panel that no answer has replaced yet: `data-state` (`sending|failed`), `data-from="you"`. */
+  pending: "chat-pending",
+  pendingRetry: "chat-pending-retry",
+  pendingDiscard: "chat-pending-discard",
 } as const;
 
 /** #1831: the Friends button every signed-in screen has at the top right, and its panel. */

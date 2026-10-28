@@ -146,6 +146,36 @@ mod tests {
 
             assert!(hits_from(&s, &me.id).is_empty());
         }
+
+        #[test]
+        fn targets_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "seed": "spacemine-param",
+                "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [SPACEMINE], "library": filler(4) },
+                "p2": {
+                    "hand": [ANCHOR],
+                    "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                    "library": filler(4),
+                },
+            }));
+            let targets = crate::upgrade_number(&mut s, SPACEMINE, "targets");
+            let me = s.card(SPACEMINE).clone();
+            let mine = me.clone();
+            destroy(&mut s, &mine);
+
+            let hit = targets_of(&s, &me.id);
+            let mut unique = hit.clone();
+            unique.sort();
+            unique.dedup();
+            assert_eq!(
+                unique.len(),
+                usize::try_from(targets).expect("a count"),
+                "{hit:?}"
+            );
+            assert_eq!(hit.len(), unique.len(), "different enemies");
+        }
     }
 
     mod radiant {

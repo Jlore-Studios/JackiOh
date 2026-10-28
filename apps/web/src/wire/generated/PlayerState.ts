@@ -86,6 +86,13 @@ trades?: DrawCount,
  */
 tradesPerTurn?: number, 
 /**
+ * R2176001: how many Calls to Chaos this player has cast on turn `turn` by S #150's death watch
+ * (R1882004), kept as `draws` is: a count kept for an earlier turn reads as 0
+ * (`call_to_chaos_stinky::death_watch_casts_this_turn`). Absent until the watch first casts, so a
+ * game without one hashes as it did before this field existed (D14).
+ */
+deathWatchCasts?: DrawCount, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
