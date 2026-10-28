@@ -390,9 +390,27 @@ pub fn decks_for_seed(seed: u32) -> (Vec<String>, Vec<String>) {
 /// `decks_for_seed` over another pool: the golden traces deal seed k from `SHIPPED_FUZZ_POOL`.
 pub fn decks_for_seed_from(seed: u32, pool: &[String]) -> (Vec<String>, Vec<String>) {
     let mut rng = Rng::new(&format!("jackioh-fuzz-decks-{seed}"), 0);
-    let shuffled = rng.shuffle(pool);
+    let mut shuffled = rng.shuffle(pool).into_iter();
     let size = usize::try_from(DECK_SIZE).unwrap_or(0);
-    (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec())
+    let p1 = deal_deck(&mut shuffled, size);
+    (p1, deal_deck(&mut shuffled, size))
+}
+
+/// The next `size` cards of a shuffled pool, as one deck. R2195000: a deck holds a Core card or its
+/// Training Grounds snapshot, so a card whose pair the deck already holds is passed over; over a pool
+/// with no snapshot that is the plain slice of the shuffle every deal took before.
+pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize) -> Vec<String> {
+    let mut deck: Vec<String> = Vec::with_capacity(size);
+    let mut pairs: Vec<String> = Vec::with_capacity(size);
+    while deck.len() < size {
+        let Some(id) = shuffled.next() else { break };
+        let key = jackioh_engine::catalog::pair_key(jackioh_engine::catalog::def_of(None, &id)).to_string();
+        if !pairs.contains(&key) {
+            pairs.push(key);
+            deck.push(id);
+        }
+    }
+    deck
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2793,11 +2811,14 @@ pub(crate) fn handicap_decks_for_seed_from(
     handicap: &Handicap,
     pool: &[String],
 ) -> (Vec<String>, Vec<String>) {
-    let shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(pool);
+    let mut shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0)
+        .shuffle(pool)
+        .into_iter();
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
-    let big = shuffled[..big_size].to_vec();
-    let small = shuffled[big_size..big_size + small_size].to_vec();
+    // R2195000: one of each Core card and snapshot pair per deck (`deal_deck`).
+    let big = deal_deck(&mut shuffled, big_size);
+    let small = deal_deck(&mut shuffled, small_size);
     match seat {
         PlayerId::P1 => (big, small),
         PlayerId::P2 => (small, big),

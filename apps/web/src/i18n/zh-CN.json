@@ -401,6 +401,8 @@
   "No card matches these filters.": "没有符合这些筛选条件的卡牌。",
   "{card} is already in this deck.": "{card}已在这套卡组中。",
   "{card} is in {deck}.": "{card}在{deck}中。",
+  "this deck, as its Core card": "本卡组，作为其核心原版",
+  "this deck, as its Training Grounds snapshot": "本卡组，作为其训练场快照",
   "{deck} has {size} cards. Take one out to add another.": "{deck}已有{size}张牌。先取出一张，才能再加入。",
   "{card} added · {count}/{size}": "已加入{card} · {count}/{size}",
   "{card} removed · {count}/{size}": "已移除{card} · {count}/{size}",

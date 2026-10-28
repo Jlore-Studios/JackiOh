@@ -622,6 +622,7 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         radiant_fallback: None,
         ingredients: None,
         craft: None,
+        snapshot_of: None,
         base: face.clone(),
         radiant: face,
     }
