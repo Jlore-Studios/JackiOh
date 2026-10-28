@@ -361,6 +361,13 @@ pub static defender: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender",
 pub static defender_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender-asker", 4745, 1, 6));
 /// R1704001: Classic #52's shape since #1704: cancel a lethal hit on its hero, then heal 10 and draw 3.
 pub static cancel_gambit: LazyLock<CardDef> = LazyLock::new(|| def("cancel-gambit", 4746, "Trap", json!({})));
+/// R2199000: "After one of your Units attacks": notes the attacker, whether the attack was forced,
+/// whether the attacker survived, and the player it acts for (Training Grounds #31 Level Up!'s shape).
+pub static ally_noter: LazyLock<CardDef> =
+    LazyLock::new(|| def("ally-noter", 4747, "Field Spell", json!({})));
+/// R2199000: the same, whose hook asks its controller before it finishes.
+pub static ally_asker: LazyLock<CardDef> =
+    LazyLock::new(|| def("ally-asker", 4748, "Field Spell", json!({})));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -410,6 +417,8 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         defender.clone(),
         defender_asker.clone(),
         cancel_gambit.clone(),
+        ally_noter.clone(),
+        ally_asker.clone(),
     ]
 });
 
@@ -954,6 +963,40 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                     let zone = ctx.self_.as_ref().map_or("none", |card| card.zone.z().as_str());
                     vec![note(format!("attacked:{attacker}:{forced}:{survived}:{zone}"))]
                 })),
+                ..Script::default()
+            }),
+        ),
+        (
+            ally_noter.id.clone(),
+            both(Script {
+                ally_attack: Some(hook(|ctx| {
+                    let facts = ally_attack_of(&*ctx);
+                    let attacker = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.attacker_id.clone());
+                    let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
+                    let survived = js_bool(facts.as_ref().map(|facts| facts.survived));
+                    vec![note(format!(
+                        "ally:{attacker}:{forced}:{survived}:{}",
+                        ctx.controller
+                    ))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            ally_asker.id.clone(),
+            both(Script {
+                ally_attack: Some(hook(|_ctx| {
+                    vec![note("ally:before"), ask_controller("answered"), note("ally:tail")]
+                })),
+                resume: IndexMap::from([(
+                    "answered",
+                    hook(|ctx| {
+                        let survived = js_bool(ally_attack_of(&*ctx).map(|facts| facts.survived));
+                        vec![note(format!("ally:answered:{survived}"))]
+                    }),
+                )]),
                 ..Script::default()
             }),
         ),

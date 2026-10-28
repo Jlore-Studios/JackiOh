@@ -1173,6 +1173,13 @@ pub struct Script {
     /// or a forced one (R121). `ctx.data` holds `{ attackerId, defenderId }`, read with
     /// `combat::ally_attacked_of`. A whole effect list, parkable like any (R113).
     pub ally_attacked: Option<Hook>,
+    /// R2199000 (Training Grounds #31 Level Up!): "After one of your Units attacks". Run for each card
+    /// acting on the attacker's side once the state check that closes each of its combats has run, a
+    /// declared attack's or a forced one's, after the attacker's `afterAttack` and the defender's
+    /// `afterAttacked`, in R68's order — the attacker itself included. Not for an attack called off
+    /// before it fought (R44). `ctx.data` holds `{ attackerId, targetId, forced, survived }`, read with
+    /// `combat::ally_attack_of`. A whole effect list, parkable like any (R113).
+    pub ally_attack: Option<Hook>,
     // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
     /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
     /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
@@ -1281,6 +1288,7 @@ impl Script {
             "afterAttacked" => self.after_attacked.as_ref(),
             "evolve" => self.evolve.as_ref(),
             "allyAttacked" => self.ally_attacked.as_ref(),
+            "allyAttack" => self.ally_attack.as_ref(),
             "startOfOpponentTurn" => self.start_of_opponent_turn.as_ref(),
             _ => None,
         }

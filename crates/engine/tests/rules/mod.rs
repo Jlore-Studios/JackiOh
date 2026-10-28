@@ -13,6 +13,7 @@ pub mod after_attack;
 pub mod after_attacked;
 pub mod ai_policy;
 pub mod ai_wheel;
+pub mod ally_attack;
 pub mod alt_wins;
 pub mod animated;
 pub mod announce;

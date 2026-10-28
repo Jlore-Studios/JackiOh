@@ -740,6 +740,7 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@combatCopies" => crate::combat::run_owed_combat_copies(sink, item),
         "@afterAttacked" => crate::combat::run_owed_after_attacked(sink, item),
         "@allyAttacked" => crate::combat::run_owed_ally_attacked(sink, item),
+        "@allyAttack" => crate::combat::run_owed_ally_attack(sink, item),
         "@startOfTurn" => crate::turn::run_owed_start_of_turn(sink, item),
         "@endOfTurn" => crate::turn::run_owed_end_of_turn(sink, item),
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),

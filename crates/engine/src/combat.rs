@@ -2028,6 +2028,37 @@ fn close_combat(
     if sink.state.result.is_some() {
         return;
     }
+    // R2199000: the cards of the attacker's side that answer "after one of your Units attacks",
+    // read as the check closes; they run after the combatants' own hooks. None, nothing runs.
+    let allies = OwedAllyAttack {
+        attacker_id: snapshot.id.clone(),
+        target_id: target_id_of(target),
+        forced,
+        since,
+        holders: ally_attack_holders(sink.state, snapshot.controller),
+        survived: None,
+        check_only: None,
+    };
+    combatant_hooks(sink, snapshot, defender_snapshot, target, forced, since, from);
+    if !allies.holders.is_empty() && sink.state.result.is_none() {
+        if is_paused(sink) {
+            owe_ally_attack(sink, &allies);
+        } else {
+            answer_ally_attack(sink, allies, None);
+        }
+    }
+}
+
+/// MD-C26: the attacker's `afterAttack`, then the defender's `afterAttacked`, each when it has one.
+fn combatant_hooks(
+    sink: &mut EngineSink<'_>,
+    snapshot: CardInstance,
+    defender_snapshot: Option<CardInstance>,
+    target: &AttackTarget,
+    forced: bool,
+    since: u32,
+    from: usize,
+) {
     // MD-C26: the attacker's `afterAttack` runs first; only when it has one.
     let attacker_id = snapshot.id.clone();
     if crate::scripts::script_of(sink.state, &snapshot)
@@ -2572,4 +2603,194 @@ pub fn run_owed_ally_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
         .unwrap_or_else(|| crate::stays::exit_mark(sink.state));
     let bounce = declared.bounce_after == Some(true);
     fight_declared(sink, declared, since, bounce);
+}
+
+// ---------------------------------------------------------------------------------------------
+// "After one of your Units attacks": the attacker's side's `allyAttack` hooks, once the state
+// check that closes the combat has run (Training Grounds #31 Level Up!, R2199000)
+// ---------------------------------------------------------------------------------------------
+
+/// R113: the `resume.hook` of the engine sequence this section parks — the `allyAttack` hooks a
+/// combat still owes after its check and its combatants' own hooks: the rest of a hook after a
+/// question of its own, the check that follows a hook, or the holders a question stopped.
+pub const ALLY_ATTACK_WORK: &str = "@allyAttack";
+
+/// The facts an `allyAttack` hook is handed in its `ctx.data` (`ally_attack_of` reads them back):
+/// the attacker's id, the attack's target (a Unit's id or `hero-<player>`), whether the attack was
+/// forced (R53), and whether the attacker still stands on the field as this hook starts.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AllyAttackFacts {
+    pub attacker_id: String,
+    pub target_id: String,
+    pub forced: bool,
+    pub survived: bool,
+}
+
+/// The facts an `allyAttack` hook was handed, or `None` outside one.
+pub fn ally_attack_of(ctx: &crate::script::EffectContext<'_>) -> Option<AllyAttackFacts> {
+    let data = &ctx.data;
+    Some(AllyAttackFacts {
+        attacker_id: data.get("attackerId")?.as_str()?.to_string(),
+        target_id: data.get("targetId")?.as_str()?.to_string(),
+        forced: data.get("forced")?.as_bool()?,
+        survived: data.get("survived")?.as_bool()?,
+    })
+}
+
+/// What an owed `@allyAttack` carries, all JSON: the combat's facts and the holders still to answer
+/// it in R68's order — the first is the one a pause stood in.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct OwedAllyAttack {
+    attacker_id: String,
+    target_id: String,
+    forced: bool,
+    /// The field's departures before the closing check, to tell a survivor from a Reborn body (R174).
+    since: u32,
+    holders: Vec<String>,
+    /// The first holder's `survived`, judged once as its hook starts, so a pause re-reads the same.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    survived: Option<bool>,
+    /// The first holder's hook is done and only the state check that follows it is owed. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    check_only: Option<bool>,
+}
+
+const ALLY_ATTACK_KEY: &str = "allyAttack";
+
+/// R2199000: the cards that answer a combat of `player`'s attacker — every card acting on that
+/// player's side with an `allyAttack` hook, the attacker itself included, in R68's order.
+fn ally_attack_holders(state: &GameState, player: PlayerId) -> Vec<String> {
+    crate::damage::acting_texts_of(state, player)
+        .into_iter()
+        .filter(|card| crate::scripts::script_of(state, card).ally_attack.is_some())
+        .map(|card| card.id)
+        .collect()
+}
+
+fn owe_ally_attack(sink: &mut EngineSink<'_>, owed: &OwedAllyAttack) {
+    let mut data = IndexMap::new();
+    data.insert(ALLY_ATTACK_KEY.to_string(), to_json(owed));
+    owe(sink, engine_resume(ALLY_ATTACK_WORK, "hook", data));
+}
+
+/// R2199000: the holders' hooks, one after another, each a whole effect followed by its state check
+/// (R59), from `paused` when a question split the first. A holder no longer acting on the field is
+/// passed over. A question stops the sequence, whose rest is then owed on `state.work` (R113).
+fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut paused: Option<PausedStep>) {
+    if owed.check_only.take() == Some(true) && !owed.holders.is_empty() {
+        owed.holders.remove(0);
+        owed.survived = None;
+        crate::state_check::state_check(sink);
+        if is_paused(sink) {
+            if sink.state.result.is_none() {
+                owe_ally_attack(sink, &owed);
+            }
+            return;
+        }
+    }
+    while let Some(id) = owed.holders.first().cloned() {
+        if sink.state.result.is_some() {
+            return;
+        }
+        let resumed = paused.take();
+        let card = find_instance(sink.state, &id)
+            .filter(|card| resumed.is_some() || is_active_on_field(sink.state, card))
+            .cloned();
+        let hook = card
+            .as_ref()
+            .and_then(|card| crate::scripts::script_of(sink.state, card).ally_attack.clone());
+        let (Some(card), Some(hook)) = (card, hook) else {
+            owed.holders.remove(0);
+            owed.survived = None;
+            continue;
+        };
+        let survived = *owed.survived.get_or_insert_with(|| {
+            find_instance(sink.state, &owed.attacker_id).is_some_and(|live| {
+                is_active_on_field(sink.state, live)
+                    && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
+            })
+        });
+        let mut data: IndexMap<String, Value> = IndexMap::new();
+        data.insert("attackerId".to_string(), json!(owed.attacker_id));
+        data.insert("targetId".to_string(), json!(owed.target_id));
+        data.insert("forced".to_string(), json!(owed.forced));
+        data.insert("survived".to_string(), json!(survived));
+        let mut plan_data = IndexMap::new();
+        plan_data.insert(ALLY_ATTACK_KEY.to_string(), to_json(&owed));
+        let plan = WorkPlan {
+            def_id: String::new(),
+            hook: ALLY_ATTACK_WORK.to_string(),
+            step: "hook".to_string(),
+            radiant: false,
+            instance_id: None,
+            data: plan_data,
+            owner: card.controller,
+        };
+        let status = {
+            let mut ctx = crate::resolve::make_context(
+                sink,
+                Some(&card),
+                crate::resolve::HookOptions {
+                    controller: Some(card.controller),
+                    data: Some(data),
+                    ..crate::resolve::HookOptions::default()
+                },
+            );
+            if let Some(resumed) = &resumed {
+                if let Some(exits_from) = resumed.exits_from {
+                    ctx.exits_from = Some(exits_from);
+                }
+                if let Some(summoned) = &resumed.summoned {
+                    ctx.summoned = Some(summoned.clone());
+                }
+            }
+            let effects = hook(&mut ctx);
+            crate::prompts::run_resumable_list(&mut ctx, &plan, effects, resumed)
+        };
+        match status {
+            crate::prompts::ListStatus::Done => {
+                owed.holders.remove(0);
+                owed.survived = None;
+                crate::state_check::state_check(sink);
+                if is_paused(sink) {
+                    if sink.state.result.is_none() {
+                        owe_ally_attack(sink, &owed);
+                    }
+                    return;
+                }
+            }
+            // The hook's last effect asked: the hook is done, and its check waits for the answer.
+            crate::prompts::ListStatus::Asked => {
+                owe_ally_attack(
+                    sink,
+                    &OwedAllyAttack {
+                        check_only: Some(true),
+                        ..owed
+                    },
+                );
+                return;
+            }
+            // Parked: the rest of the hook went to `state.work` as this sequence's own item.
+            crate::prompts::ListStatus::Parked | crate::prompts::ListStatus::Over => return,
+        }
+    }
+}
+
+fn owed_ally_attack_of(data: &IndexMap<String, Value>) -> Option<OwedAllyAttack> {
+    let raw = data.get(ALLY_ATTACK_KEY)?;
+    let owed = raw.as_object()?;
+    owed.get("attackerId")?.as_str()?;
+    owed.get("holders")?.as_array()?;
+    serde_json::from_value::<OwedAllyAttack>(raw.clone()).ok()
+}
+
+/// `work.rs`'s handler: the hooks still owed, where the pause left them (R113).
+pub fn run_owed_ally_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
+    let Some(owed) = owed_ally_attack_of(&item.resume.data) else {
+        return;
+    };
+    answer_ally_attack(sink, owed, paused_of(&item.resume.data));
 }

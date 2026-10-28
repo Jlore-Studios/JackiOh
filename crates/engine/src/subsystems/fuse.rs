@@ -1311,6 +1311,7 @@ fn combine_objects(records: &[Script]) -> Script {
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
         ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),
+        ally_attack: hooks(|s| s.ally_attack.clone(), "allyAttack"),
         plague_multiplier: None,
         echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
