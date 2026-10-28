@@ -6182,11 +6182,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-28T12:59:18Z",
+        "at": "2026-10-28T15:34:01Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "design-across-crates line: the miss spans crates/ai, crates/server, crates/tools, spec and docs, so cross-crate design holds and it is hard"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "AI work in crates/ai/src/ plus the server and tools crates and a new ruling: the hard line (AI, design across crates) holds, and it was rated hard already"
       },
       "failures": 0,
       "forced": false,
