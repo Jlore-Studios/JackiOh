@@ -101,7 +101,7 @@ A team shares its private information, and an opponent's hidden cards stay hidde
 
 Of the other team a seat sees the life only: whether those seats have ended and how many passes they have left stay hidden. Nothing of an opponent's hidden cards appears beyond what a 1v1 `view_for` already gives that seat, and the teammate's part shows only what the teammate may see.
 
-The client draws the seat's own duel as the 1v1 board ([[§10.10]]), with a life strip that shows both teams' own HP and pools, a spent seat's own bar giving way to its pool. A portal on the board flips it to the teammate's duel, read-only: its cards can be hovered and inspected and never played. A teammate strip always shows the teammate's own HP, mana and hand count and whether they have ended, and once the seat has ended its turn the board says it is waiting for its teammate. A Duos match deals no emote hand and relays no emote and no aim ([[§9.5]]): a team talks by pings ([[§13.10]]).
+The client draws the seat's own duel as the 1v1 board ([[§10.10]]), with a life strip that shows both teams' own HP and pools, a spent seat's own bar giving way to its pool. A portal on the board flips it to the teammate's duel, read-only: its cards can be hovered and inspected and never played. On a screen wide enough, the player may instead show the teammate's duel beside their own, still read-only and silent ([[R2095000]]). A teammate strip always shows the teammate's own HP, mana and hand count and whether they have ended, and once the seat has ended its turn the board says it is waiting for its teammate. A Duos match deals no emote hand and relays no emote and no aim ([[§9.5]]): a team talks by pings ([[§13.10]]).
 
 ### 13.7 The AI team
 
