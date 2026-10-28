@@ -970,7 +970,7 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
     "core-legend": { type: "Unit", tags: ["Human"], rarity: "Legendary" },
     "core-mythic": { type: "Unit", tags: [], rarity: "Mythic" },
   };
-  const withCatalog = (over: Partial<CueContext> = {}): CueContext =>
+  const withCueCatalog = (over: Partial<CueContext> = {}): CueContext =>
     ctx({ card: (defId) => CATALOG[defId], ...over });
   const summoned = (defId: string, row: "units" | "backrow" = "units"): GameEvent => ({
     type: "summoned",
@@ -993,23 +993,23 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
   });
 
   it("a unit the viewer can name lands with its family's accent on the thud", () => {
-    const cue = sfxCue(cuesFor(summoned(UNIT), withCatalog()), "summon");
+    const cue = sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "summon");
     expect(cue?.params?.timbre).toBe("felinor");
   });
 
   it("a Legendary unit enters with the brass sting, a Mythic one with the prismatic sting, at the thud", () => {
-    const legend = cuesFor(summoned("core-legend"), withCatalog());
+    const legend = cuesFor(summoned("core-legend"), withCueCatalog());
     expect(sfxCue(legend, "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
     expect(sfxCue(legend, "summon")?.params?.timbre).toBe("human");
 
-    const mythic = cuesFor(summoned("core-mythic"), withCatalog());
+    const mythic = cuesFor(summoned("core-mythic"), withCueCatalog());
     expect(sfxCue(mythic, "entrance")).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
-    expect(sfxCue(cuesFor(summoned(UNIT), withCatalog()), "entrance")).toBeUndefined();
+    expect(sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "entrance")).toBeUndefined();
   });
 
   it("a cast spell rings in its family's chimes, a Field Spell in the field's", () => {
-    expect(sfxCue(cuesFor(played(SPELL), withCatalog()), "spell")?.params).toEqual({ timbre: "chaos" });
-    expect(sfxCue(cuesFor(played(FIELD_SPELL), withCatalog()), "spell")?.params).toEqual({ timbre: "field" });
+    expect(sfxCue(cuesFor(played(SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "chaos" });
+    expect(sfxCue(cuesFor(played(FIELD_SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "field" });
   });
 
   it("with no catalog every card keeps its type's plain sounds", () => {
@@ -1020,7 +1020,7 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
 
   it("R203 a card behind the sentinel is never looked up: no accent, no sting, the generic sound", () => {
     const asked: string[] = [];
-    const context = withCatalog({
+    const context = withCueCatalog({
       card: (defId) => {
         asked.push(defId);
         return CATALOG["core-mythic"];
@@ -1034,10 +1034,10 @@ describe("the catalog colours summons and spells, never what the viewer cannot n
   });
 
   it("R203 a Trap sounds like every Trap: its set and its backrow arrival take no family", () => {
-    expect(shape(played(TRAP), withCatalog())).toEqual([sfx("trapSet")]);
-    const arrival = sfxCue(cuesFor(summoned(TRAP, "backrow"), withCatalog()), "summon");
+    expect(shape(played(TRAP), withCueCatalog())).toEqual([sfx("trapSet")]);
+    const arrival = sfxCue(cuesFor(summoned(TRAP, "backrow"), withCueCatalog()), "summon");
     expect(arrival?.params?.timbre).toBeUndefined();
-    expect(sfxCue(cuesFor(summoned("core-mythic", "backrow"), withCatalog()), "entrance")).toBeUndefined();
+    expect(sfxCue(cuesFor(summoned("core-mythic", "backrow"), withCueCatalog()), "entrance")).toBeUndefined();
   });
 });
 

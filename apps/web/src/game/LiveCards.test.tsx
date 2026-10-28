@@ -9,7 +9,6 @@
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type GameEvent, type HeroPowerView, type PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -26,9 +25,8 @@ import {
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
+import { renderBoard, withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit, withEvents } from "../test/fixtures.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import Log from "./Log.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
@@ -44,20 +42,10 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-const lookup = lookupFromDefs(CATALOG);
-
 function def(id: string): CardDef {
   const found = CATALOG[id];
   if (found === undefined) throw new Error(`the catalog has no ${id}`);
   return found;
-}
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
-
-function renderBoard(view: PlayerView): void {
-  render(withCatalog(<Board view={view} />));
 }
 
 /** Rests a mouse on `element` until its hover preview is up, and returns the preview. */

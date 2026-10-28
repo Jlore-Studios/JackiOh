@@ -47,6 +47,16 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
+`(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
+`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
+what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
+switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
+`::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
+radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
+measures the board and every menu of `46` at 390x844.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -206,6 +216,14 @@ pnpm --dir apps/web test         # vitest (jsdom)
 needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
 so run one of them (or the script) once first.
 
+The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
+`scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
+`fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
+`settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
+mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
+defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
+
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
@@ -333,7 +351,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; moved from /account (#1307). The landing's bookmark
+                        reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
+                        a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next

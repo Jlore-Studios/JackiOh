@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
@@ -82,33 +82,6 @@ function serve(answer: MeAnswer): void {
     }),
   );
 }
-
-/** jsdom's fallback drops `pointerType`; install this subclass only when the probe detects that loss. */
-function ensurePointerEvent(): void {
-  const win = document.defaultView;
-  if (win === null) return;
-  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
-  if (probe !== null && probe.pointerType === "touch") return;
-
-  class TestPointerEvent extends win.MouseEvent {
-    readonly pointerType: string;
-    readonly pointerId: number;
-    readonly isPrimary: boolean;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerType = init.pointerType ?? "";
-      this.pointerId = init.pointerId ?? 1;
-      this.isPrimary = init.isPrimary ?? true;
-    }
-  }
-  for (const target of [win, globalThis]) {
-    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
-  }
-}
-
-beforeAll(() => {
-  ensurePointerEvent();
-});
 
 function landing(): HTMLElement {
   return screen.getByTestId(landingTestid.root);

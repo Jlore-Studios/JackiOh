@@ -5,7 +5,6 @@
 // crates/cards/tests/cross/preview.rs's.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -13,9 +12,9 @@ import type { CardDef, PlayerView } from "@jackioh/shared";
 
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
 import { CardDetail } from "./inspect/CardDetail.tsx";
@@ -32,16 +31,10 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-const lookup = lookupFromDefs(CATALOG);
-
 function def(id: string): CardDef {
   const found = CATALOG[id];
   if (found === undefined) throw new Error(`no ${id}`);
   return found;
-}
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
 }
 
 function hover(element: HTMLElement): HTMLElement {

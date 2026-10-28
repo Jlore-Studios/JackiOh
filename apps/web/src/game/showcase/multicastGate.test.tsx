@@ -6,18 +6,16 @@
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetFxSettingsForTests } from "../../fx/settings.ts";
 import { __resetSettingsForTests } from "../../settings/store.ts";
+import { withCatalog } from "../../test/board.tsx";
 import { baseView, withEvents } from "../../test/fixtures.ts";
 import { createAnimationQueue, type AnimationQueue } from "../animations.ts";
-import { CatalogContext, lookupFromDefs } from "../catalog.ts";
 import CardShowcase from "./CardShowcase.tsx";
 import { MULTICAST_TEXT, SHOWCASE_GATE_MAX_MS, SHOWCASE_HOLD_MS, showcaseTestid as T } from "./constants.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const BOX = "classicplus-047";
 const BOX_NAME = CATALOG[BOX]?.name ?? "";
 const SPELL = "core-010";
@@ -26,10 +24,6 @@ const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 const box = (): GameEvent => ({ type: "cardPlayed", player: "p2", instanceId: "box", defId: BOX, costPaid: 4 });
 const cast = (id: string): GameEvent => ({ type: "cardPlayed", player: "p2", instanceId: id, defId: SPELL, costPaid: 0 });
 const resolved = (id: string): GameEvent => ({ type: "cardResolved", player: "p2", instanceId: id, defId: SPELL, permanent: false, costPaid: 0 });
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
 
 /** Mounts on a first view, then gives it `view` (with `events` after TURN). */
 function mountThen(events: GameEvent[], options: { queue?: AnimationQueue; view?: PlayerView } = {}) {

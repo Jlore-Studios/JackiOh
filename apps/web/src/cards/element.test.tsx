@@ -2,31 +2,17 @@
 // acts — a hand card (the tall face), a unit (the minion face) — and with no element there is no
 // chip. The views here are fixtures shaped as `viewFor` builds them (src/test/fixtures.ts).
 
-import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
-import type { PlayerView } from "@jackioh/shared";
-import { CATALOG } from "@jackioh/cards";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 
 afterEach(() => {
   cleanup();
 });
-
-const lookup = lookupFromDefs(CATALOG);
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
-
-function renderBoard(view: PlayerView): void {
-  render(withCatalog(<Board view={view} />));
-}
 
 describe("R980 a card's element is printed on its face", () => {
   it("R980 a hand card's element is printed on its face", () => {
