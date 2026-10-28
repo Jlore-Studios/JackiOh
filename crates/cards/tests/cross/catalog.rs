@@ -7611,8 +7611,8 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
                 "a shipped set holds every card it lists"
             );
         }
-        // Every entry of the set is `stinkyscape-…` (B2.2's segment) and, until the release (#1884),
-        // none of them ships.
+        // Every entry of the set is `stinkyscape-…` (B2.2's segment), and since the release (#1884)
+        // the set ships.
         for entry in entries()
             .into_iter()
             .filter(|entry| entry.set == SetName::Stinkyscape)
@@ -7620,7 +7620,10 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             assert!(entry.id.starts_with("stinkyscape-"), "{}", entry.id);
             assert_eq!(set_of_id(&entry.id), Some(SetName::Stinkyscape), "{}", entry.id);
         }
-        assert!(!set_ships(SetName::Stinkyscape), "the set is held until #1884");
+        assert!(
+            set_ships(SetName::Stinkyscape),
+            "the set ships from its release, #1884"
+        );
     }
 
     #[test]

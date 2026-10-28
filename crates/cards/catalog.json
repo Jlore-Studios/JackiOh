@@ -3434,7 +3434,9 @@
       "core-t-rush",
       "core-095-1",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -10818,7 +10820,9 @@
       "classicplus-073-1",
       "core-095",
       "classicplus-073",
-      "meditative-095"
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 3,
     "base": {
@@ -15841,7 +15845,9 @@
       "meditative-039-5",
       "meditative-095-1",
       "core-095",
-      "classicplus-073"
+      "classicplus-073",
+      "stinkyscape-150",
+      "stinkyscape-151"
     ],
     "loc": 22,
     "base": {
@@ -23756,6 +23762,9 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
+    "refs": [
+      "stinkyscape-t-dormant-starship"
+    ],
     "loc": 46,
     "base": {
       "attack": 9,
@@ -23765,7 +23774,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike\nCry: If you are building a ship, launch it, then Discover a War Doctrine and cast it."
+      "text": "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
     },
     "radiant": {
       "attack": 18,
@@ -23775,7 +23784,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike\nCry: If you are building a ship, launch it, then Discover a Radiant War Doctrine and cast it."
+      "text": "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a Radiant War Doctrine and cast it."
     }
   },
   "stinkyscape-137-1": {
@@ -26246,13 +26255,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Give each of your other Units a random Combat Keyword."
+      "text": "Cry: Give each of your other Units a random combat keyword."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Give each of your other Units 2 random Combat Keywords."
+      "text": "Cry: Give each of your other Units 2 random combat keywords."
     }
   },
   "stinkyscape-t-ai-08": {

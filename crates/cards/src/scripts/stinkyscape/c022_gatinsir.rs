@@ -245,6 +245,26 @@ mod tests {
         }
 
         #[test]
+        fn r2176000_a_phalanx_that_has_left_the_field_by_then_runs_nothing() {
+            let mut s = trapped("gatinsir-cry-left", false, json!([]));
+            roll_next(&mut s, CHANCE, true);
+            let attacker = s.unit_at(P1, 1);
+            s.attack(&attacker, "hero");
+            // The first Phalanx's Cry asks; the second Phalanx leaves the field before its own runs.
+            assert!(s.state().pending.is_some(), "the first Phalanx's Discover");
+            let lanes: Vec<i32> = (1..=5)
+                .filter(|lane| s.unit(P2, *lane).is_some_and(|card| card.def_id == PHALANX))
+                .collect();
+            assert_eq!(lanes.len(), 2);
+            let gone = s.unit_at(P2, lanes[1]).id;
+            let pile = s.state_mut().players[P2].units[(lanes[1] - 1) as usize].take().expect("its pile");
+            s.state_mut().players[P2].graveyard.extend(pile);
+            // Only the first Phalanx's two picks are asked; the one that left runs nothing.
+            assert_eq!(answer_phalanx_discovers(&mut s), PHALANX_PICKS);
+            s.expect_in_zone(gone.as_str(), "graveyard");
+        }
+
+        #[test]
         fn r1875002_a_forced_attack_rolls_nothing() {
             // Moths to the Flame on Gatinsir's side makes p1's Vanilla attack it at p2's start of turn: an
             // enemy Unit's attack that no one declared (R121).

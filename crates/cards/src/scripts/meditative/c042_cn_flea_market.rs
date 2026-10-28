@@ -74,10 +74,12 @@ mod tests {
 
     /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
     /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
-    /// tokens join the AI shelf's pool.
+    /// tokens join the AI shelf's pool, and #1563's #1.3 and #1.4 after them; and for the Stinkyscape
+    /// release (#1884): its T-AI-1 to T-AI-10.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
-        ids.extend(["meditativeplus-001-1", "meditativeplus-001-2"].map(String::from));
+        ids.extend((1..=4).map(|n| format!("meditativeplus-001-{n}")));
+        ids.extend((1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")));
         ids
     }
 

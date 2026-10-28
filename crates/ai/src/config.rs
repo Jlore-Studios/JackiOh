@@ -824,10 +824,12 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
 /// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
 /// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// The list is empty since issue #732 measured the AI on the Meditative set (MN08 of #496), which it
-/// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
-/// before the AI is trained on it is listing it here.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496). It holds the
+/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8): the set ships with
+/// the AI dealing itself none of it, though the AI answers every card of it a player brings, until
+/// fullsend 2's sweep (issue #1885) measures the AI on the set and empties the list again. Gating a
+/// set that ships before the AI is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Stinkyscape];
 
 /// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a
