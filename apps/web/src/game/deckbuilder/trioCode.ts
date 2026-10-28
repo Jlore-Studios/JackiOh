@@ -73,16 +73,16 @@ export type DecodedTrio =
 
 /** Every refusal, as the trio import shows it. */
 export const TRIO_CODE_MESSAGES = Object.freeze({
-  tooLong: "That’s too long to be a JackiOh trio code.",
+  tooLong: "That's too long to be a JackiOh trio code.",
   empty: "Paste a trio code to import it.",
-  notACode: "That isn’t a JackiOh trio code.",
-  deckCode: "That’s a deck code, not a trio code: import it with Import, under Decks.",
+  notACode: "That isn't a JackiOh trio code.",
+  deckCode: "That's a deck code, not a trio code: import it with Import, under Decks.",
   newer: "This trio code was made by a newer version of JackiOh. Reload the page to update, then try again.",
-  older: "This trio code was made by an older version of JackiOh, and this version can’t read it.",
+  older: "This trio code was made by an older version of JackiOh, and this version can't read it.",
   damaged: "That trio code is damaged. Copy it again from where it was shared.",
   incomplete: "That trio code is incomplete. Copy the whole code and try again.",
-  checksum: "That trio code doesn’t check out: part of it was changed or lost. Copy it again from where it was shared.",
-  unreadable: "That trio code couldn’t be read.",
+  checksum: "That trio code doesn't check out: part of it was changed or lost. Copy it again from where it was shared.",
+  unreadable: "That trio code couldn't be read.",
 });
 
 const NAME_LENGTH_BYTES = 1;

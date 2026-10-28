@@ -306,7 +306,7 @@ export default function SettingsPanel({
         {sync.phase === "error" ? (
           <div className="settings-sync">
             <p className="settings-sync__text" role="status" data-testid="settings-sync-error">
-              {t("Settings didn’t save to your account.")}
+              {t("Settings didn't save to your account.")}
             </p>
             <TryAgainButton onRetry={retrySettingsSync} testId="settings-sync-retry" className="settings-sync__retry" />
           </div>

@@ -198,7 +198,7 @@ describe("the series screen", () => {
     expect(vi.mocked(pickSeriesDeck)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(pickSeriesDeck)).toHaveBeenCalledWith(TOKEN, SERIES_ID, 1, 1);
     expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("Waiting for your opponent…");
-    expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("You’re playing Control in game 1.");
+    expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("You're playing Control in game 1.");
     expect(screen.getByTestId(seriesTestid.deck(1))).toHaveAttribute("data-picked", "true");
     // Sealed: no deck can be chosen any more.
     expect(screen.queryByTestId(seriesTestid.pick(2))).toBeNull();
@@ -224,7 +224,7 @@ describe("the series screen", () => {
     const picker = screen.getByTestId(seriesTestid.picker);
     expect(picker).toHaveAttribute("data-state", "waiting");
     expect(picker).toHaveAttribute("data-auto", "true");
-    expect(picker).toHaveTextContent("Ramp is your last deck that hasn’t won, so it was picked for you for game 3.");
+    expect(picker).toHaveTextContent("Ramp is your last deck that hasn't won, so it was picked for you for game 3.");
     expect(screen.queryByTestId(seriesTestid.lockIn)).toBeNull();
   });
 

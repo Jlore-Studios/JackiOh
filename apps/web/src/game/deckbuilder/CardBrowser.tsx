@@ -95,7 +95,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
           role={winRates.status === "failed" ? "alert" : "status"}
         >
           {winRates.status === "failed"
-            ? t("Win rates couldn’t be loaded, so the cards are in cost order.")
+            ? t("Win rates couldn't be loaded, so the cards are in cost order.")
             : t("Loading win rates… Until they arrive, the cards are in cost order.")}
           {winRates.status === "failed" ? (
             <>

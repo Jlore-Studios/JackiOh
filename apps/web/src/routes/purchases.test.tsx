@@ -254,7 +254,7 @@ describe("R1665000 /purchases signed out", () => {
     expect(screen.getByTestId(purchasesTestid.disclaimer)).toHaveTextContent(
       "Jlore is earned by playing and never sold: nothing here is bought with money.",
     );
-    expect(screen.getByTestId(purchasesTestid.disclaimer)).toHaveTextContent("the server’s seeded, logged roll");
+    expect(screen.getByTestId(purchasesTestid.disclaimer)).toHaveTextContent("the server's seeded, logged roll");
     const link = within(screen.getByTestId(purchasesTestid.signIn)).getByRole("link", { name: "Sign in" });
     expect(link).toHaveAttribute("href", paths.login);
     expect(screen.queryByTestId(purchasesTestid.odds)).toBeNull();

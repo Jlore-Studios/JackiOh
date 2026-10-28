@@ -207,7 +207,7 @@ describe("R388 the Patch notes page", () => {
     const patches = source.patches;
     const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
     renderPage({ ...source, patches: () => (failures-- > 0 ? Promise.reject(new Error("offline")) : patches()) });
-    expect(await screen.findByTestId(patchTestid.error)).toHaveTextContent("The patch notes didn’t load.");
+    expect(await screen.findByTestId(patchTestid.error)).toHaveTextContent("The patch notes didn't load.");
     fireEvent.click(screen.getByTestId(patchTestid.retry));
     expect(await screen.findAllByTestId(patchTestid.patch)).toHaveLength(3);
     quiet.mockRestore();
@@ -222,7 +222,7 @@ describe("R388 the Patch notes page", () => {
       ...source,
       snapshot: (version) => (version === V2 && failures-- > 0 ? Promise.reject(new Error("offline")) : snapshot(version)),
     });
-    expect(await screen.findByTestId(patchTestid.cardsError)).toHaveTextContent("This patch’s cards didn’t load.");
+    expect(await screen.findByTestId(patchTestid.cardsError)).toHaveTextContent("This patch's cards didn't load.");
     fireEvent.click(screen.getByTestId(patchTestid.cardsRetry));
     expect(await screen.findByTestId(patchTestid.cards)).toBeInTheDocument();
     quiet.mockRestore();

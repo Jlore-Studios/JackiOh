@@ -4,7 +4,7 @@
 // its characters, its script or the filter (R1432, R1433). `USERNAME_PREVIEW_DEBOUNCE_MS` after the
 // last keystroke the field asks `GET /api/username/preview` what a save would give, aborting the
 // question before it, and shows the answer as it stands: the exact username, tag and all ("Max is
-// taken, so you’d be Max#3"), or the server's own sentence for a refusal. The length and cooldown
+// taken, so you'd be Max#3"), or the server's own sentence for a refusal. The length and cooldown
 // numbers in the hint are only words for the player, and the input carries no `maxLength`, since
 // the server counts what a player sees (graphemes), not what a browser counts.
 //
@@ -37,9 +37,9 @@ import { usernameTestid } from "./testids.ts";
 const SECONDS_PER_HOUR = 3600;
 
 /** A preview could not be read (the network, a rate limit): said plainly, never as a verdict. */
-export const USERNAME_PREVIEW_FAILED = "Couldn’t check that name just now. Try again in a moment.";
+export const USERNAME_PREVIEW_FAILED = "Couldn't check that name just now. Try again in a moment.";
 /** A save failed for a reason that carried no preview. */
-export const USERNAME_SAVE_FAILED = "Couldn’t save your username just now. Try again in a moment.";
+export const USERNAME_SAVE_FAILED = "Couldn't save your username just now. Try again in a moment.";
 /** A save the server refused because the outcome changed since the preview (a 409's fresh one). */
 export const USERNAME_CHANGED = "That changed since you looked. Check the name above, then save again.";
 
@@ -72,7 +72,7 @@ function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
   }
   if (preview.tagged) {
     // Split around the two names, so English keeps the text node it always had between them.
-    const [before = "", between = "", after = ""] = t("{base} is taken, so you’d be {username}").split(/\{base\}|\{username\}/);
+    const [before = "", between = "", after = ""] = t("{base} is taken, so you'd be {username}").split(/\{base\}|\{username\}/);
     return (
       <>
         {before}
@@ -83,7 +83,7 @@ function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
       </>
     );
   }
-  const [before = "", after = ""] = t("You’d be {username}").split("{username}");
+  const [before = "", after = ""] = t("You'd be {username}").split("{username}");
   return (
     <>
       {before}

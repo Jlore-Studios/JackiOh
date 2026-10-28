@@ -274,7 +274,7 @@ describe("R1435 the username prompt at the gate", () => {
     render(<App />);
 
     const prompt = await screen.findByTestId("username-prompt", undefined, SLOW);
-    expect(prompt).toHaveTextContent("You’re Player#7 for now.");
+    expect(prompt).toHaveTextContent("You're Player#7 for now.");
     expect(screen.getByTestId("username-prompt-skip")).toBeInTheDocument();
     expect(pathname(), "the prompt stands in place, it does not move the browser").toBe("/decks");
   });

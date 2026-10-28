@@ -52,6 +52,7 @@ export default function CreatorRoute({ token, api }: CreatorRouteProps): ReactEl
   return (
     <div className="app-shell app-shell--wide tavern creator-screen one-screen">
       <BackLink
+        to={paths.collection}
         onPress={() => {
           navigate(paths.collection);
         }}

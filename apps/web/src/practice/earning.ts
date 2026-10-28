@@ -55,23 +55,23 @@ export type PracticeEarning =
 function refusalText(reason: string): string {
   switch (reason) {
     case "economy_off":
-      return t("earning is off");
+      return t("rewards are switched off for now");
     case "unknown_seed":
-      return t("the server has no seed for it");
+      return t("we have no record of it starting");
     case "already_claimed":
       return t("it was claimed already");
     case "expired":
-      return t("its seed expired");
+      return t("it came in too late to count");
     case "does_not_fold":
-      return t("the server could not replay it");
+      return t("we couldn't check how it was played");
     case "ai_mismatch":
-      return t("the AI chose another move on the server");
+      return t("the AI's moves didn't check out");
     case "not_finished":
       return t("it did not finish");
     case "voided":
       return t("a Glitch voided it");
     case "result_mismatch":
-      return t("its result was not the server's");
+      return t("its result didn't check out");
     default:
       return reason;
   }

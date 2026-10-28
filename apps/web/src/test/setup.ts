@@ -1,6 +1,6 @@
 // Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
 // animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, and
-// the engine.
+// the engine, and an empty read cache before each test (R2125000: a test never starts on another's kept answers).
 //
 // The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
+import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
 // A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
@@ -60,6 +61,7 @@ if (typeof window !== "undefined") {
 }
 
 beforeEach(() => {
+  clearReadCache();
   try {
     window.sessionStorage.clear();
   } catch {
