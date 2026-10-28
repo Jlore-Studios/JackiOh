@@ -6080,7 +6080,7 @@
       "provider": "claude-5",
       "queued_at": "2026-10-28T12:44:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:f9ade83f-1793192413",
+      "run_id": "40692571273",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T13:00:31Z",
       "stop_requested": false,
