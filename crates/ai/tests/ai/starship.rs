@@ -189,8 +189,14 @@ fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() 
         !dense_names().iter().any(|name| name.contains("Starship")),
         "no dense feature names a Starship keyword"
     );
-    // And the search tells a Dormant Starship's position apart from the board without it.
+    // And the search tells a Dormant Starship's position apart from the board without it, standing in
+    // the middle of the backrow (R2249000).
+    let lane = STARSHIP_LANE_ORDER[0] as usize - 1;
     let mut without = state.clone();
-    without.players[AI].units[0] = None;
+    assert_eq!(
+        without.players[AI].backrow[lane].as_ref().map(|card| card.id.clone()),
+        Some(ship.clone())
+    );
+    without.players[AI].backrow[lane] = None;
     assert_ne!(search_signature(&state, AI), search_signature(&without, AI));
 }
