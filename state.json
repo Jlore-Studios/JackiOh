@@ -5724,6 +5724,8 @@
     "2135": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -5731,19 +5733,32 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2092,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Fix pass 2 added a `creating` flag and a `Claim::Wait` loop that spins on `yield_now`, but nothing clears the flag if the creating request's future is dropped mid-create (the client disconnects or a proxy times out) or panics; every later offer on that match then loops forever at full CPU and never answers.",
+          "evidence": "`entry.creating = true` is set under the lock before `create_again(...).await`. Only the two post-await branches reset it, and there is no drop guard. `api::http::dispatch` runs handlers inline in axum's connection task with no spawn and no timeout layer (app.rs `router` and `serve_until`), so a client disconnect drops the future. Each `Wait` pass also sets `entry.at = now`, so neither `live_entry` nor the reaper's sweep ever ages the entry out while someone waits. The 1v1 `api/rematch.rs` `offer_as` has no waiter and no such state.",
+          "severity": "blocking",
+          "where": "crates/server/src/duos/again.rs:215"
+        },
+        {
+          "claim": "A refusal caused by the teammate being in another game shows the caller the teammate's live co-op match id or Conquest series id. The code's own comment says this refusal carries no details, and R1065000 says so too.",
+          "evidence": "`assert_free_to_play(app, &finished.a2)` and the `busy` closure `|taken| in_game(&taken.seat)` both go through `api::decks::in_game`, which attaches `details.duosMatchId` or `details.seriesId`. R1065000 says: 'a rematch with a seat in one is `409 already_in_match` with no details, since the seat may be the other player's'. The 1v1 rematch uses a detail-less `already_in_match()` for exactly this case. The test `r2092000_a_seat_in_another_game_gets_the_free_to_play_refusal` only covers the busy seat itself making the offer, so it never sees the leak.",
+          "severity": "blocking",
+          "where": "crates/server/src/duos/again.rs:363"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-5",
       "question": "",
-      "queued_at": "2026-10-28T00:07:22Z",
+      "queued_at": "2026-10-28T00:22:41Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "40606826937",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-28T00:08:24Z",
       "stop_requested": false,
       "taken_asks": [],
