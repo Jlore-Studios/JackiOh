@@ -46,10 +46,18 @@ export type Polled<T> =
  * `read` now, and again every `everyMs` while mounted (never, for null), and whenever `reload` is
  * called. A failed read after a good one keeps the good one on screen; an answer older than one
  * already shown is dropped. After a failure, a later failed poll keeps the failure first shown, so
- * the wait it stated (R192) is counted once; `reload` after a failure shows loading (#1691).
+ * the wait it stated (R192) is counted once; `reload` after a failure shows loading (#1691). R2125000:
+ * a mount that finds `kept` holding an answer starts on it, so a failed read leaves it too.
  */
-export function usePolled<T>(read: () => Promise<T>, everyMs: number | null): [Polled<T>, () => void] {
-  const [state, setState] = useState<Polled<T>>({ kind: "loading" });
+export function usePolled<T>(
+  read: () => Promise<T>,
+  everyMs: number | null,
+  kept?: () => T | undefined,
+): [Polled<T>, () => void] {
+  const [state, setState] = useState<Polled<T>>(() => {
+    const value = kept?.();
+    return value === undefined ? { kind: "loading" } : { kind: "ready", value };
+  });
   const [round, setRound] = useState(0);
   const reader = useRef(read);
   reader.current = read;

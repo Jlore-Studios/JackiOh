@@ -311,6 +311,7 @@ export interface JackiohWasmLuauModule {
   _preview_sets(sets: number): number;
   _ai_to_act(state: number, seat: number): number;
   _ai_decide(state: number, seat: number, options: number, deadlineMs: number): number;
+  _lethal_hint(state: number, seat: number, deadlineMs: number): number;
   _build_ai_deck(options: number): number;
   _choose_action(state: number, seat: number, rngSeed: number, rngCursor: number): number;
   _constants(): number;

@@ -29,10 +29,12 @@ import {
   getTokens,
   getTracks,
   getWallet,
+  keptPaths,
   type CollectionResponse,
 } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
+import { rememberRead } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
@@ -361,5 +363,104 @@ describe("R1655000 the Collection's card view", () => {
     expect(readCosmetics().foil).toBe("foil-none");
     // Who owns what is the session's (`useCanEquip`, from the screen's `ViewerFullArt`): the section reads nothing more for it.
     expect(getOwnedCosmetics).not.toHaveBeenCalled();
+  });
+});
+
+describe("R2125000 the Cards section opens on what the last visit kept", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "", paths.collectionSection("cards"));
+  });
+
+  /** Every read waits for ever: only what is kept can be on screen. */
+  function pendAll(): void {
+    vi.mocked(getCollection).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getWallet).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getPacks).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getCosmeticPacks).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getTracks).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getQuests).mockReturnValue(new Promise(() => undefined));
+  }
+
+  /** What a first visit's reads left behind: the wallet panel's three answers and the quests. */
+  function keepWallet(): void {
+    rememberRead(TOKEN, keptPaths.wallet, walletInfo());
+    rememberRead(TOKEN, keptPaths.packs, packsInfo());
+    rememberRead(TOKEN, keptPaths.cosmeticPacks, cosmeticPacksInfo());
+    rememberRead(TOKEN, keptPaths.quests, questsHeld());
+  }
+
+  it("R2125000 a revisit draws the kept wallet and quests at once, the rest loading", () => {
+    keepWallet();
+    pendAll();
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(T.jlore)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.loading("wallet"))).toBeNull();
+    expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("Win 3 games");
+    expect(screen.queryByTestId(questsTestid.loading)).toBeNull();
+    expect(screen.getByTestId(T.loading("cards"))).toBeInTheDocument();
+    expect(screen.getByTestId(T.loading("tracks"))).toBeInTheDocument();
+    // Every panel still reads again behind what it shows.
+    for (const read of [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests]) {
+      expect(read).toHaveBeenCalledWith(TOKEN);
+    }
+  });
+
+  it("R2125000 half of a panel's answers is a first visit: its skeleton shows", () => {
+    rememberRead(TOKEN, keptPaths.wallet, walletInfo());
+    pendAll();
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(T.loading("wallet"))).toBeInTheDocument();
+    expect(screen.queryByTestId(T.jlore)).toBeNull();
+  });
+
+  it("R2125000 a read that fails behind a kept panel keeps it and says nothing", async () => {
+    keepWallet();
+    answerAll();
+    vi.mocked(getWallet).mockRejectedValue(new Error("the wallet is unavailable"));
+    vi.mocked(getQuests).mockRejectedValue(new Error("the quests are unavailable"));
+    render(<CollectionRoute token={TOKEN} />);
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(screen.getByTestId(T.jlore)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.error("wallet"))).toBeNull();
+    expect(screen.queryByTestId(T.retry("wallet"))).toBeNull();
+    expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("Win 3 games");
+    expect(screen.queryByTestId(questsTestid.error)).toBeNull();
+    expect(getWallet).toHaveBeenCalledTimes(1);
+  });
+
+  it("R2125000 another account's kept answers never draw", () => {
+    keepWallet();
+    pendAll();
+    render(<CollectionRoute token="token-other" />);
+
+    expect(screen.getByTestId(T.loading("wallet"))).toBeInTheDocument();
+    expect(screen.queryByTestId(T.jlore)).toBeNull();
+    expect(screen.getByTestId(questsTestid.loading)).toBeInTheDocument();
+  });
+
+  it("R2125000 an account switch behind a failing read never keeps the other account's answer", async () => {
+    keepWallet();
+    pendAll();
+    const { rerender } = render(<CollectionRoute token={TOKEN} />);
+    expect(screen.getByTestId(T.jlore)).toHaveTextContent("37 Jlore");
+
+    vi.mocked(getWallet).mockRejectedValue(new Error("the wallet is unavailable"));
+    rerender(<CollectionRoute token="token-other" />);
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(screen.queryByTestId(T.jlore)).toBeNull();
+    expect(screen.getByTestId(T.error("wallet"))).toBeInTheDocument();
   });
 });

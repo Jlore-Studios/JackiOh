@@ -458,7 +458,7 @@ describe("B55 the add form", () => {
   });
 
   it.each([
-    ["self", "That’s you."],
+    ["self", "That's you."],
     ["already_friends", "You are already friends."],
     ["already_requested", "You already asked them."],
     ["friend_cap", "Your friends list is full."],

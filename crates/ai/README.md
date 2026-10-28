@@ -110,6 +110,25 @@ and a softmax
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
+## The lethal hint (R2102000)
+
+```rust
+pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;
+pub const LETHAL_HINT_SEED: &str;                  // "ai:lethal-hint"
+pub const LETHAL_HINT_DETERMINIZATIONS: usize;     // AI_BUDGET.determinizations
+pub const LETHAL_HINT_NODES: usize;                // AI_BUDGET.lethal_nodes
+```
+
+Whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's lethal hint
+(§9.9): the practice worker asks it for the human's seat. Like `decide` it reads the true state only
+through `redact`, so two states that differ only in what the seat cannot see give one answer. It
+fills the redaction in as `LETHAL_HINT_DETERMINIZATIONS` worlds drawn from `LETHAL_HINT_SEED`'s
+stream, a stream of its own (never the match's or a caller's), and answers whether `find_lethal`
+proves a line that wins on every one of them within `LETHAL_HINT_NODES` nodes. It is false outside
+`seat`'s own main phase with no prompt open, once the game is over, when the search panics, and
+when `should_stop` (the browser's clock, as the AI's) stops the search before it proves a line.
+`decide` never calls it, so it changes no decision and no game.
+
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's

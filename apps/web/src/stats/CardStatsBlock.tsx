@@ -130,7 +130,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">{t("Played Δ")}</span>
+          <span className="inspect-stats-metric-label">{t("Played vs held")}</span>
           <span className="inspect-stats-metric-value">{playedDeltaDisplay}</span>
         </div>
       </div>

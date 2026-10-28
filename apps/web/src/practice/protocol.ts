@@ -126,6 +126,12 @@ export type PracticeSnapshot = {
    * lesson or a game Glitch voided, which are not kept.
    */
   replay?: Pick<PracticeReplaySummary, "game" | "steps">;
+  /**
+   * R2102000: present, and true, only while the human of a free game against the Easy AI has a sure
+   * win this turn by what they can see (`lethalHint`); the page shows it only with the Lethal hint
+   * setting on. It never says how.
+   */
+  lethal?: true;
 };
 
 /** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */

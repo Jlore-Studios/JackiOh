@@ -11,14 +11,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
+import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import type { Friend } from "../net/social.ts";
+import { FRIENDS_PATH, type Friend } from "../net/social.ts";
 import { stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { TogetherRoute } from "./TogetherRoute.tsx";
-import { friendsTestid } from "./testids.ts";
+import { friendsTestid, togetherTestid } from "./testids.ts";
 
 const ANN: Friend = {
   profileId: "f-ann",
@@ -169,5 +170,33 @@ describe("#936 the social reads' cadences", () => {
     await settle(SOCIAL_POLL_MS - CHAT_POLL_MS);
     expect(reads(server).challenges).toBe(first + 1);
     expect(reads(server).friends, "the toast never reads the friends list").toBe(0);
+  });
+});
+
+describe("R2125000 the friends list opens on its last answer", () => {
+  it("R2125000 the friends list draws its kept answer at once, then the read's", async () => {
+    const kept: Friend = { ...ANN, profileId: "f-kept", username: "Kept#9" };
+    rememberRead("tok-polling", FRIENDS_PATH, { friends: [kept], incoming: [], outgoing: [], blocked: [] });
+    serve();
+    render(<TogetherRoute />);
+
+    expect(screen.getAllByTestId(togetherTestid.friendRow)[0]).toHaveTextContent("Kept");
+
+    await settle();
+    const rows = screen.getAllByTestId(togetherTestid.friendRow);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Ann");
+  });
+
+  it("R2125000 another account's kept friends never draw", async () => {
+    const kept: Friend = { ...ANN, profileId: "f-kept", username: "Kept#9" };
+    rememberRead("tok-other", FRIENDS_PATH, { friends: [kept], incoming: [], outgoing: [], blocked: [] });
+    serve();
+    render(<TogetherRoute />);
+
+    expect(screen.queryAllByTestId(togetherTestid.friendRow)).toHaveLength(0);
+
+    await settle();
+    expect(screen.getAllByTestId(togetherTestid.friendRow)[0]).toHaveTextContent("Ann");
   });
 });

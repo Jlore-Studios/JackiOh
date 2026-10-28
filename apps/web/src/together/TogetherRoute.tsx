@@ -27,6 +27,7 @@ import { withSession } from "../net/gate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
+  cachedFriends,
   cancelChallenge,
   cancelFriendRequest,
   declineFriendRequest,
@@ -71,7 +72,7 @@ function when(iso: string): string {
 /** `undoTimer`: the undo window's timers (R2119000); a test hands a manual one. */
 export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): ReactElement {
   useLocale();
-  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const { held, hold, undo, sendNow } = useUndoHold(undoTimer);
   /** R2119000: friends a held or sent Remove took off the list, until the list no longer names them. */
   const [hiddenFriends, setHiddenFriends] = useState<ReadonlySet<string>>(() => new Set());
