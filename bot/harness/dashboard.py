@@ -1045,6 +1045,7 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
                        "Central",
+    "code-audit.yml": "every three days: the code audit's issue for Squishy",
     "db-size.yml": "twice a day: an issue once production's database nears its Supabase plan's cap",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
@@ -1057,6 +1058,7 @@ WORKFLOWS = {
     "promote-production.yml": "merges main into production once a day",
     "selfplay-shards.yml": "one round of a self-play export's shards",
     "selfplay.yml": "a self-play export, on the owner's PC unless asked otherwise",
+    "spec-fold.yml": "folds the pending §11 paragraphs and rewrites the rulings index once a day",
     "squishy-commands.yml": "Squishy's ears and its sweep",
     "squishy-run.yml": "Squishy: gate, plan, `work` on its own Claude account, deliver",
     "super.yml": "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
