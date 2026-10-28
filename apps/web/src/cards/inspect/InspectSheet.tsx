@@ -11,6 +11,8 @@
 //
 // Issue #1017: a face that prints less than its whole text has the whole text under it (Extended.tsx),
 // and a Summit in a game prints its next Ascent line (R280).
+//
+// Issue #2121 (R2121000): a swipe down closes it too, as Close does (useSheetSwipe.tsx).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
@@ -29,6 +31,7 @@ import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes } from "./StateNotes.tsx";
 import { RefsInteractive } from "../refContext.tsx";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
+import { SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
 import "./inspect.css";
 
@@ -38,21 +41,24 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
+  const swipe = useSheetSwipe(modal.close);
   const ascentLevel = ascentLevelOf(face.values);
   // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
   const own = useOwnCopy();
 
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
-      <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
+      <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-sheet"
+        ref={swipe.sheetRef}
         data-testid={INSPECT_SHEET}
         role="dialog"
         aria-modal="true"
         aria-label={face.name}
+        {...swipe.handlers}
       >
-        <span className="inspect-grip" aria-hidden="true" />
+        <SheetGrip />
         <div className="inspect-sheet-body">
           <RefsInteractive>
             <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>

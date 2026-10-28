@@ -3,6 +3,7 @@
 // B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
 // sheet (CLAUDE.md rule 7). R1571000: where "Play" would be, a face the view says cannot be played
 // now (`FaceModel.playReason`) says why instead, in the grid and opened large; nothing is clickable.
+// R2121000: a swipe down closes the sheet too, as Close does (useSheetSwipe.tsx).
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -25,6 +26,7 @@ import { Glossary } from "./Glossary.tsx";
 import { Printed } from "./Printed.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
+import { SHEET_HANDLE_PROPS, SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import {
   INSPECT_CLOSE,
   INSPECT_FACE,
@@ -278,6 +280,7 @@ export function CardListSheet({
   const backButton = useRef<HTMLButtonElement>(null);
   const grid = useRef<HTMLUListElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
+  const swipe = useSheetSwipe(modal.close);
   const [open, setOpen] = useState<string | null>(null);
   // A back opens nothing: it has no face to show large.
   const openedEntry = open === null ? undefined : entries.find((entry) => entry.key === open);
@@ -307,9 +310,18 @@ export function CardListSheet({
 
   return createPortal(
     <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
-      <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
-      <div className="inspect-list-sheet" data-testid={INSPECT_LIST_SHEET} role="dialog" aria-modal="true" aria-label={t(title)}>
-        <header className="inspect-list-head">
+      <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
+      <div
+        className="inspect-list-sheet"
+        ref={swipe.sheetRef}
+        data-testid={INSPECT_LIST_SHEET}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t(title)}
+        {...swipe.handlers}
+      >
+        <SheetGrip />
+        <header className="inspect-list-head" {...SHEET_HANDLE_PROPS}>
           <h2 className="inspect-list-title">{t(title)}</h2>
           <span className="inspect-list-count" data-testid={INSPECT_LIST_COUNT} data-count={total}>
             {cardsWord(total)}
