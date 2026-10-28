@@ -30,4 +30,16 @@ extraDrawsPerTurn: number,
  * HERO_HEALTH, which is why the three practice tiers never set it and hash exactly as before the
  * field existed. Only the tutorial's handicap (`AI_TUTORIAL`) sets it, and only lower.
  */
-heroHealth?: number, };
+heroHealth?: number, 
+/**
+ * R2201000: the least health this seat's hero can fall to, so the seat cannot lose the game.
+ * Absent means none, which is why no tier sets it and every other game hashes as before the
+ * field existed. Only a lesson's human (`TUTORIAL_HUMAN`) sets it.
+ */
+heroFloor?: number, 
+/**
+ * R2201001: while either seat's handicap sets it, every random pool the game draws from leaves
+ * out Legendary and Mythic cards. Absent means no hold, so every other game hashes as before.
+ * Only a lesson before the last sets it (§9.10).
+ */
+poolHold?: boolean, };
