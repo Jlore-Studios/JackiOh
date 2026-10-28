@@ -45,6 +45,30 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
+shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
+and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
+line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer only under
+`data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
+root that clips them, so the one-screen rule holds. `main.tsx`'s `Loading` takes `skeleton` for the
+same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
+more" buttons (content or a button is already there), the practice start screen's shuffle and the
+boards' "Joining …" panels.
+
+A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
+menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
+reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
+packs, decks, leaderboard), `cardStatsPath(options)` for one statistics filter's table (public) and
+`FRIENDS_PATH` in `net/social.ts`. A screen starts its state from `cachedRead` (never an effect's dependency),
+reads again and takes the new answer; a read that fails behind a kept answer keeps it and says nothing, so a
+skeleton and an error show on a first visit only. A write's answer folds into its entry (`buyPack`, `openPack`,
+`openCosmeticPack`, `buyChase`, both token redemptions, the decks' and trios' save, delete and import, a friend
+accepted or removed), so a revisit never shows the old value first. `clearSession` empties the cache and the
+first answer kept for another account does too; a reload starts empty. Never kept: a match's, a series',
+a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
+for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
+`key`, when the decks that land differ, since its store is made once.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -398,7 +422,9 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
-                         this site's room link draws a Join button that navigates in-app (R2094000)
+                         this site's room link draws a Join button that navigates in-app (R2094000);
+                         a send shows at once, sends go one at a time, a failed one offers Retry and
+                         Discard (R2120000)
 net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
                          (/together?coop=…): built for the share sheet or the clipboard, read once off
                          the address bar into this tab, through a sign-in, for the lobby or the co-op panel
@@ -425,7 +451,7 @@ duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one
                          go to /duos/:matchId once the guest joins
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
-                         teammate strip and the ping wheel
+                         Both boards toggle (R2095000), the teammate strip and the ping wheel
 duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
                          DuosBoard's `replay` mode (nothing live) with the replay toolbar (`replay/ReplayToolbar.tsx`)
 duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): the seat's views as one
@@ -442,6 +468,14 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
+- the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
+  (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
+  `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
+  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
+  screen while both boards show, and below 600px the toggle hides and the board falls back to one
+  with the portal flipping: the rail rides whichever board the portal names, so the one drawn
+  always carries it;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
   the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
@@ -462,8 +496,8 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
 `friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
-`duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
-`duos-ping-<kind>` and `duos-ping-marker`.
+`duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
+`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>` and `duos-ping-marker`.
 
 ## Practice
 
@@ -689,6 +723,11 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
+  `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
+  buttons and prefetches each route's code once per page load, and the Practice, Play and match
+  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
   and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
@@ -735,6 +774,13 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   module, records no card statistics, and keeps its custom cards in its save, its replay and its
   debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
   in the log.
+
+## Player-facing words
+
+Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
+`src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
+client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
+apostrophe there or in a dictionary key, and no straight double quote there.
 
 ## Internationalisation
 

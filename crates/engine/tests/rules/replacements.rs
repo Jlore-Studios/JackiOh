@@ -12,7 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
     round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
-use crate::rules::fixtures::harness::{events_json, in_hand, live, live_mut, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_json, in_hand, live, live_mut, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 const P1: PlayerId = PlayerId::P1;
@@ -37,50 +37,40 @@ fn unit_in(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInst
         .and_then(|pile| pile.first())
 }
 
-/// The three parts of a sink side by side, so the state stays readable between engine calls.
-struct Bench {
-    state: GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
+fn apply(
+    bench: &mut Bench,
+    state: &mut GameState,
+    me: Option<&CardInstance>,
+    options: HookOptions,
+    effects: Vec<Effect>,
+) {
+    let me = me.map(|card| {
+        find_instance(state, &card.id)
+            .cloned()
+            .unwrap_or_else(|| card.clone())
+    });
+    let mut sink = bench.sink(state);
+    let mut ctx = make_context(&mut sink, me.as_ref(), options);
+    apply_effects(&effects, &mut ctx);
 }
 
-impl Bench {
-    fn sink_for(state: GameState) -> Bench {
-        let rng = Rng::new(&state.seed, state.rng_cursor);
-        Bench {
-            state,
-            events: Vec::new(),
-            rng,
-        }
-    }
-
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
-    }
-
-    fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
-        let me = me.map(|card| {
-            find_instance(&self.state, &card.id)
-                .cloned()
-                .unwrap_or_else(|| card.clone())
-        });
-        let mut sink = self.sink();
-        let mut ctx = make_context(&mut sink, me.as_ref(), options);
-        apply_effects(&effects, &mut ctx);
-    }
-
-    fn deal(&mut self, source: Option<&CardInstance>, target: DamageTarget, amount: i32) -> i32 {
-        let source = source.map(|card| live(&self.state, card).clone());
-        deal_damage(
-            &mut self.sink(),
-            DamageArgs {
-                source,
-                target,
-                amount,
-                flags: None,
-            },
-        )
-    }
+fn deal(
+    bench: &mut Bench,
+    state: &mut GameState,
+    source: Option<&CardInstance>,
+    target: DamageTarget,
+    amount: i32,
+) -> i32 {
+    let source = source.map(|card| live(state, card).clone());
+    deal_damage(
+        &mut bench.sink(state),
+        DamageArgs {
+            source,
+            target,
+            amount,
+            flags: None,
+        },
+    )
 }
 
 fn hero_target(player: PlayerId) -> DamageTarget {
@@ -268,16 +258,16 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         );
         state.players.p1.hero.health = 1;
         state.players.p2.hero.health = 1;
-        let mut b = Bench::sink_for(state);
-        b.deal(None, hero_target(P2), 5);
+        let mut b = Bench::new(&state);
+        deal(&mut b, &mut state, None, hero_target(P2), 5);
         assert_eq!(
             events_json(&b.events, GameEventType::Redirected).len(),
             DAMAGE_REDIRECT_CAP as usize
         );
         // An even number of moves brings it back to p2, where it lands.
         assert_eq!(DAMAGE_REDIRECT_CAP % 2, 0);
-        assert_eq!(hero(&b.state, P2), -4);
-        assert_eq!(hero(&b.state, P1), 1);
+        assert_eq!(hero(&state, P2), -4);
+        assert_eq!(hero(&state, P1), 1);
     }
 
     #[test]
@@ -290,14 +280,14 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
             Default::default(),
         );
         state.players.p2.hero.health = 5;
-        let mut b = Bench::sink_for(state);
-        b.deal(None, hero_target(P2), 4);
-        assert_eq!(hero(&b.state, P2), 1);
+        let mut b = Bench::new(&state);
+        deal(&mut b, &mut state, None, hero_target(P2), 4);
+        assert_eq!(hero(&state, P2), 1);
         // R18: lose health is not damage, so no replacement answers it, lethal or not.
-        lose_health(&mut b.sink(), P2, 3);
-        assert_eq!(hero(&b.state, P2), -2);
+        lose_health(&mut b.sink(&mut state), P2, 3);
+        assert_eq!(hero(&state, P2), -2);
         assert_eq!(
-            backrow_at(&b.state, P2, 1).map(|c| c.id.clone()),
+            backrow_at(&state, P2, 1).map(|c| c.id.clone()),
             Some(trap.id.clone())
         );
         assert!(!event_types(&b.events).contains(&"trapFired".to_string()));
@@ -314,18 +304,18 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         );
         state.players.p2.library = Vec::new();
         state.players.p2.hero.health = 1;
-        let mut b = Bench::sink_for(state);
-        draw_one(&mut b.sink(), P2, None);
-        assert_eq!(hero(&b.state, P2), 1);
-        assert_eq!(hero(&b.state, P1), 29);
+        let mut b = Bench::new(&state);
+        draw_one(&mut b.sink(&mut state), P2, None);
+        assert_eq!(hero(&state, P2), 1);
+        assert_eq!(hero(&state, P1), 29);
         // The follow-up is owed on `state.work` (R113, R462) and the resolution loop resolves it.
-        let owed: Vec<String> = b.state.work.iter().map(|item| item.resume.step.clone()).collect();
+        let owed: Vec<String> = state.work.iter().map(|item| item.resume.step.clone()).collect();
         assert_eq!(owed, strings(&["after"]));
-        settle(&mut b.sink(), Default::default());
+        settle(&mut b.sink(&mut state), Default::default());
         // Heal 10, then three more fatigue draws of 2, 3 and 4.
-        assert_eq!(hero(&b.state, P2), 1 + 10 - 2 - 3 - 4);
-        assert_eq!(b.state.players.p2.fatigue_count, 4);
-        assert!(b.state.work.is_empty());
+        assert_eq!(hero(&state, P2), 1 + 10 - 2 - 3 - 4);
+        assert_eq!(state.players.p2.fatigue_count, 4);
+        assert!(state.work.is_empty());
     }
 
     #[test]
@@ -351,30 +341,30 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         );
         state.players.p1.hero.armor = 1;
         state.players.p2.hero.health = 9;
-        let mut b = Bench::sink_for(state);
-        let dealt = b.deal(None, hero_target(P2), 12);
+        let mut b = Bench::new(&state);
+        let dealt = deal(&mut b, &mut state, None, hero_target(P2), 12);
         // 12 − 1 Armor = 11, halved and rounded up = 6, capped at Anti-oneshot's 5.
         assert_eq!(dealt, 5);
-        assert_eq!(hero(&b.state, P1), 25);
-        assert_eq!(hero(&b.state, P2), 9);
+        assert_eq!(hero(&state, P1), 25);
+        assert_eq!(hero(&state, P2), 9);
         // And a cap alone keeps a hit from being lethal in the first place.
         put(
-            &mut b.state,
+            &mut state,
             &anime_armor.id,
             slot(P2, Row::Units, 1),
             Default::default(),
         );
-        b.state.players.p2.hero.health = 2;
+        state.players.p2.hero.health = 2;
         let second = put(
-            &mut b.state,
+            &mut state,
             &gambit.id,
             slot(P2, Row::Backrow, 3),
             Default::default(),
         );
-        b.deal(None, hero_target(P2), 12);
-        assert_eq!(hero(&b.state, P2), 1);
+        deal(&mut b, &mut state, None, hero_target(P2), 12);
+        assert_eq!(hero(&state, P2), 1);
         assert_eq!(
-            backrow_at(&b.state, P2, 3).map(|c| c.id.clone()),
+            backrow_at(&state, P2, 3).map(|c| c.id.clone()),
             Some(second.id.clone())
         );
     }
@@ -523,11 +513,11 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
 
         // "For the rest of this turn": gone at the turn's cleanup.
         game.play(input(json!({ "type": "endTurn", "playerId": "p1" })));
-        let now = game.state().clone();
+        let mut now = game.state().clone();
         assert!(now.players.p2.mods.is_empty());
-        let mut b = Bench::sink_for(now);
-        heal_hero(&mut b.sink(), P1, 4);
-        assert_eq!(hero(&b.state, P1), 24);
+        let mut b = Bench::new(&now);
+        heal_hero(&mut b.sink(&mut now), P1, 4);
+        assert_eq!(hero(&now, P1), 24);
     }
 
     #[test]
@@ -542,56 +532,54 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         );
         let sucker = put(&mut state, &leech.id, slot(P1, Row::Units, 1), Default::default());
         let target = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        let mut b = Bench::sink_for(state);
+        let mut b = Bench::new(&state);
         // Lifesteal: 3 dealt heals p1 3, which Blood Moon turns into 3 Pierce damage on p1.
         let hit = DamageTarget::Unit {
-            instance: live(&b.state, &target).clone(),
+            instance: live(&state, &target).clone(),
         };
-        b.deal(Some(&sucker), hit, 3);
-        assert_eq!(hero(&b.state, P1), 27);
+        deal(&mut b, &mut state, Some(&sucker), hit, 3);
+        assert_eq!(hero(&state, P1), 27);
         // Heal up to 30: the 3 it would restore.
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&sucker),
             HookOptions::default(),
             vec![heal(json_as(
                 json!({ "target": { "of": "selfHero" }, "upTo": 30 }),
             ))],
         );
-        assert_eq!(hero(&b.state, P1), 24);
+        assert_eq!(hero(&state, P1), 24);
         // Heal to full on the leech's 2 damage: 2.
-        live_mut(&mut b.state, &sucker).damage = 2;
-        b.apply(
+        live_mut(&mut state, &sucker).damage = 2;
+        apply(
+            &mut b,
+            &mut state,
             Some(&sucker),
             HookOptions::default(),
             vec![heal(json_as(
                 json!({ "target": { "of": "self" }, "toFull": true }),
             ))],
         );
-        assert_eq!(live(&b.state, &sucker).damage, 4);
+        assert_eq!(live(&state, &sucker).damage, 4);
         // Heal 5 on an undamaged unit: 5, though it would restore nothing.
-        let fresh = put(
-            &mut b.state,
-            &grunt.id,
-            slot(P1, Row::Units, 2),
-            Default::default(),
-        );
-        b.apply(
+        let fresh = put(&mut state, &grunt.id, slot(P1, Row::Units, 2), Default::default());
+        apply(
+            &mut b,
+            &mut state,
             Some(&sucker),
             HookOptions::default(),
             vec![heal(json_as(
                 json!({ "target": { "of": "instance", "instanceId": fresh.id }, "amount": 5 }),
             ))],
         );
-        assert_eq!(live(&b.state, &fresh).damage, 5);
+        assert_eq!(live(&state, &fresh).damage, 5);
         // A heal of nothing (heal to full on an undamaged unit) is no heal at all: nothing converts.
-        let whole = put(
-            &mut b.state,
-            &grunt.id,
-            slot(P1, Row::Units, 3),
-            Default::default(),
-        );
+        let whole = put(&mut state, &grunt.id, slot(P1, Row::Units, 3), Default::default());
         let before = b.events.len();
-        b.apply(
+        apply(
+            &mut b,
+            &mut state,
             Some(&sucker),
             HookOptions::default(),
             vec![heal(json_as(
@@ -599,7 +587,7 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
             ))],
         );
         assert_eq!(b.events.len(), before);
-        assert_eq!(live(&b.state, &whole).damage, 0);
+        assert_eq!(live(&state, &whole).damage, 0);
     }
 
     #[test]
@@ -638,22 +626,22 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
             slot(P2, Row::Backrow, 1),
             json_as(json!({ "radiant": true })),
         );
-        let mut b = Bench::sink_for(state);
-        heal_hero(&mut b.sink(), P1, 4);
-        assert_eq!(hero(&b.state, P1), 26);
+        let mut b = Bench::new(&state);
+        heal_hero(&mut b.sink(&mut state), P1, 4);
+        assert_eq!(hero(&state, P1), 26);
         assert_eq!(
             field_of(&b.events, GameEventType::TrapFired, "instanceId"),
             vec![json!(moon.id)]
         );
-        assert_eq!(backrow_at(&b.state, P2, 1).and_then(|c| c.face_up), Some(true));
+        assert_eq!(backrow_at(&state, P2, 1).and_then(|c| c.face_up), Some(true));
         // From now on: the face-up Field Trap converts by its text, with no firing and no modifier.
-        heal_hero(&mut b.sink(), P1, 6);
-        assert_eq!(hero(&b.state, P1), 20);
+        heal_hero(&mut b.sink(&mut state), P1, 6);
+        assert_eq!(hero(&state, P1), 20);
         assert_eq!(events_json(&b.events, GameEventType::TrapFired).len(), 1);
-        assert!(b.state.players.p2.mods.is_empty());
+        assert!(state.players.p2.mods.is_empty());
         // Its own side's heals go through.
-        heal_hero(&mut b.sink(), P2, 6);
-        assert_eq!(hero(&b.state, P2), 36);
+        heal_hero(&mut b.sink(&mut state), P2, 6);
+        assert_eq!(hero(&state, P2), 36);
     }
 }
 
@@ -754,13 +742,13 @@ mod e5_would_die {
             slot(P1, Row::Backrow, 1),
             Default::default(),
         );
-        let mut b = Bench::sink_for(state);
-        let victim = live(&b.state, &unit).clone();
-        sacrifice_now(&mut b.sink(), &victim);
-        assert!(in_pile(&b.state, P1, ZoneName::Graveyard, &unit.id));
-        assert_eq!(notes(&b.state), strings(&["rattle:death:p1"]));
+        let mut b = Bench::new(&state);
+        let victim = live(&state, &unit).clone();
+        sacrifice_now(&mut b.sink(&mut state), &victim);
+        assert!(in_pile(&state, P1, ZoneName::Graveyard, &unit.id));
+        assert_eq!(notes(&state), strings(&["rattle:death:p1"]));
         assert_eq!(
-            backrow_at(&b.state, P1, 1).map(|c| c.id.clone()),
+            backrow_at(&state, P1, 1).map(|c| c.id.clone()),
             Some(trap.id.clone())
         );
     }
@@ -776,12 +764,12 @@ mod e5_would_die {
             Default::default(),
         );
         live_mut(&mut state, &unit).marked_destroyed = Some(true);
-        let mut b = Bench::sink_for(state);
-        state_check(&mut b.sink());
-        let data = b.state.work.first().map(|owed| owed.resume.data.clone());
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        let data = state.work.first().map(|owed| owed.resume.data.clone());
         let record = data
             .and_then(|data| {
-                let mut sink = b.sink();
+                let mut sink = b.sink(&mut state);
                 let ctx = make_context(
                     &mut sink,
                     None,
@@ -878,11 +866,11 @@ mod e5_would_go_to_a_graveyard {
         );
         live_mut(&mut state, &walker).marked_destroyed = Some(true);
         live_mut(&mut state, &bell).marked_destroyed = Some(true);
-        let mut b = Bench::sink_for(state);
-        state_check(&mut b.sink());
-        assert!(in_pile(&b.state, P1, ZoneName::Graveyard, &walker.id));
-        assert!(in_pile(&b.state, P2, ZoneName::Graveyard, &bell.id));
-        assert_eq!(notes(&b.state), strings(&["rattle:death:p2"]));
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        assert!(in_pile(&state, P1, ZoneName::Graveyard, &walker.id));
+        assert!(in_pile(&state, P2, ZoneName::Graveyard, &bell.id));
+        assert_eq!(notes(&state), strings(&["rattle:death:p2"]));
     }
 
     #[test]
@@ -908,11 +896,11 @@ mod e5_would_go_to_a_graveyard {
         );
         live_mut(&mut state, &own).marked_destroyed = Some(true);
         live_mut(&mut state, &foe).marked_destroyed = Some(true);
-        let mut b = Bench::sink_for(state);
-        state_check(&mut b.sink());
-        assert!(in_pile(&b.state, P1, ZoneName::Graveyard, &own.id));
-        assert!(in_pile(&b.state, P2, ZoneName::Exile, &foe.id));
-        assert_eq!(notes(&b.state), strings(&["rattle:death:p1"]));
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        assert!(in_pile(&state, P1, ZoneName::Graveyard, &own.id));
+        assert!(in_pile(&state, P2, ZoneName::Exile, &foe.id));
+        assert_eq!(notes(&state), strings(&["rattle:death:p1"]));
     }
 
     #[test]
@@ -931,9 +919,9 @@ mod e5_would_go_to_a_graveyard {
             Default::default(),
         );
         state.players.p2.hero.health = 3;
-        let mut b = Bench::sink_for(state);
-        b.deal(None, hero_target(P2), 5);
-        assert!(in_pile(&b.state, P2, ZoneName::Exile, &trap.id));
+        let mut b = Bench::new(&state);
+        deal(&mut b, &mut state, None, hero_target(P2), 5);
+        assert!(in_pile(&state, P2, ZoneName::Exile, &trap.id));
         assert_eq!(
             field_of(&b.events, GameEventType::Exiled, "instanceId"),
             vec![json!(trap.id)]
@@ -953,10 +941,10 @@ mod e5_would_go_to_a_graveyard {
         let foe = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
         live_mut(&mut state, &own).marked_destroyed = Some(true);
         live_mut(&mut state, &foe).marked_destroyed = Some(true);
-        let mut b = Bench::sink_for(state);
-        state_check(&mut b.sink());
-        assert!(in_pile(&b.state, P1, ZoneName::Exile, &own.id));
-        assert!(in_pile(&b.state, P2, ZoneName::Graveyard, &foe.id));
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        assert!(in_pile(&state, P1, ZoneName::Exile, &own.id));
+        assert!(in_pile(&state, P2, ZoneName::Graveyard, &foe.id));
     }
 
     #[test]
@@ -1006,8 +994,10 @@ mod e5_would_go_to_a_graveyard {
         // Discarded from a hand: the same replacement, whatever sends it.
         let mut second = playing("dc-pile-discard");
         let held = first_in_hand(&mut second, &pile_on.id, P1);
-        let mut b = Bench::sink_for(second);
-        b.apply(
+        let mut b = Bench::new(&second);
+        apply(
+            &mut b,
+            &mut second,
             None,
             HookOptions {
                 controller: Some(P1),
@@ -1017,7 +1007,7 @@ mod e5_would_go_to_a_graveyard {
                 json!({ "target": { "of": "instance", "instanceId": held.id } }),
             ))],
         );
-        let lib = &b.state.players.p1.library;
+        let lib = &second.players.p1.library;
         assert_eq!(lib.last().map(|c| c.id.clone()), Some(held.id.clone()));
         let moves: Vec<String> = event_types(&b.events)
             .into_iter()
@@ -1178,12 +1168,12 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         let mut state = playing("dc-joro-pick");
         let chosen = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
         let decoy = first_in_hand(&mut state, &joro.id, P2);
-        let mut b = Bench::sink_for(state);
+        let mut b = Bench::new(&state);
         // Its own controller's pick is no opponent's targeting.
-        let target = live(&b.state, &chosen).clone();
-        let own = answer_targeting(&mut b.sink(), &target, P2, TargetedWhat::Target);
+        let target = live(&state, &chosen).clone();
+        let own = answer_targeting(&mut b.sink(&mut state), &target, P2, TargetedWhat::Target);
         assert!(own.is_none());
-        let moved = answer_targeting(&mut b.sink(), &target, P1, TargetedWhat::Target);
+        let moved = answer_targeting(&mut b.sink(&mut state), &target, P1, TargetedWhat::Target);
         assert_eq!(moved.map(|card| card.id), Some(decoy.id.clone()));
         assert_eq!(
             events_json(&b.events, GameEventType::Redirected),
@@ -1192,8 +1182,8 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
             ]
         );
         assert_eq!(
-            unit_in(&b.state, P2, 2).and_then(|c| c.summoned_turn),
-            Some(b.state.turn)
+            unit_in(&state, P2, 2).and_then(|c| c.summoned_turn),
+            Some(state.turn)
         );
     }
 

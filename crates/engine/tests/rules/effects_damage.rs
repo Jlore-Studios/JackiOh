@@ -13,32 +13,8 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::{armoured, plain, shielded};
-use super::fixtures::harness::{events_of_type, new_game, put, slot};
+use super::fixtures::harness::{Bench, events_of_type, new_game, put, slot};
 use crate::rules::fixtures::harness::{json_of, live};
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
-struct Bench<'a> {
-    state: &'a mut GameState,
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench<'_> {
-    fn sink(&mut self) -> EngineSink<'_> {
-        EngineSink::new(self.state, &mut self.events, &mut self.rng)
-    }
-}
-
-fn sink_for(state: &mut GameState) -> Bench<'_> {
-    let rng = Rng::new(&state.seed, state.rng_cursor);
-    Bench {
-        state,
-        events: Vec::new(),
-        rng,
-    }
-}
 
 /// A Spell, so a damage effect can run with the resolving card as its source.
 fn bolt_def() -> CardDef {
@@ -132,8 +108,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let effect = damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })));
         assert_eq!(effect.kind, "damage");
 
-        let mut sink = sink_for(&mut state);
-        let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&enemy));
+        let mut sink = Bench::new(&state);
+        let mut ctx = ctx_for(sink.sink(&mut state), Some(&self_card), on_instance(&enemy));
         run(&mut ctx, vec![effect]);
         assert_eq!(live(ctx.state, &enemy).damage, 3);
         assert_eq!(
@@ -150,8 +126,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     fn reads_every_target_spec_the_effect_can_name_a_hero_on_either_side_and_itself() {
         let mut state = game("damage-targets");
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
-        let mut ctx = ctx_for(sink.sink(), Some(&self_card), None);
+        let mut sink = Bench::new(&state);
+        let mut ctx = ctx_for(sink.sink(&mut state), Some(&self_card), None);
 
         run(
             &mut ctx,
@@ -190,8 +166,12 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
 
         // Without the flag Armor eats the hit, and a hit reduced to 0 emits nothing (R63).
         {
-            let mut sink = sink_for(&mut state);
-            let mut blocked = ctx_for(sink.sink(), Some(&self_card), on_instance(&armoured_unit));
+            let mut sink = Bench::new(&state);
+            let mut blocked = ctx_for(
+                sink.sink(&mut state),
+                Some(&self_card),
+                on_instance(&armoured_unit),
+            );
             run(
                 &mut blocked,
                 vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))],
@@ -201,8 +181,12 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         }
 
         {
-            let mut sink = sink_for(&mut state);
-            let mut through = ctx_for(sink.sink(), Some(&self_card), on_instance(&armoured_unit));
+            let mut sink = Bench::new(&state);
+            let mut through = ctx_for(
+                sink.sink(&mut state),
+                Some(&self_card),
+                on_instance(&armoured_unit),
+            );
             run(
                 &mut through,
                 vec![damage(json_as(
@@ -212,8 +196,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             assert_eq!(live(through.state, &armoured_unit).damage, 4);
         }
 
-        let mut sink = sink_for(&mut state);
-        let mut hero = ctx_for(sink.sink(), Some(&self_card), None);
+        let mut sink = Bench::new(&state);
+        let mut hero = ctx_for(sink.sink(&mut state), Some(&self_card), None);
         run(
             &mut hero,
             vec![damage(json_as(
@@ -235,8 +219,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let mut state = game("damage-combat-flag");
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         let enemy = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
-        let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&enemy));
+        let mut sink = Bench::new(&state);
+        let mut ctx = ctx_for(sink.sink(&mut state), Some(&self_card), on_instance(&enemy));
 
         run(
             &mut ctx,
@@ -260,8 +244,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         state.players.p1.hero.health = 20;
 
         {
-            let mut sink = sink_for(&mut state);
-            let mut plain_hit = ctx_for(sink.sink(), Some(&self_card), None);
+            let mut sink = Bench::new(&state);
+            let mut plain_hit = ctx_for(sink.sink(&mut state), Some(&self_card), None);
             run(
                 &mut plain_hit,
                 vec![damage(json_as(
@@ -272,8 +256,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             assert_eq!(events_of_type(plain_hit.events, GameEventType::Healed).len(), 0);
         }
 
-        let mut sink = sink_for(&mut state);
-        let mut stealing = ctx_for(sink.sink(), Some(&self_card), None);
+        let mut sink = Bench::new(&state);
+        let mut stealing = ctx_for(sink.sink(&mut state), Some(&self_card), None);
         run(
             &mut stealing,
             vec![damage(json_as(
@@ -296,8 +280,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
 
         // Step 8 reads the amount after Armor and the cap, not the printed amount.
         {
-            let mut sink = sink_for(&mut state);
-            let mut capped = ctx_for(sink.sink(), Some(&self_card), None);
+            let mut sink = Bench::new(&state);
+            let mut capped = ctx_for(sink.sink(&mut state), Some(&self_card), None);
             run(
                 &mut capped,
                 vec![damage(json_as(
@@ -311,8 +295,12 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         // A Divine Shield negates the hit at step 1, so there is nothing to steal.
         let shielded_unit = put(&mut state, &shielded.id, slot(P2, Units, 1), json!({}));
         {
-            let mut sink = sink_for(&mut state);
-            let mut negated = ctx_for(sink.sink(), Some(&self_card), on_instance(&shielded_unit));
+            let mut sink = Bench::new(&state);
+            let mut negated = ctx_for(
+                sink.sink(&mut state),
+                Some(&self_card),
+                on_instance(&shielded_unit),
+            );
             run(
                 &mut negated,
                 vec![damage(json_as(
@@ -325,8 +313,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         }
 
         // With no instance to be the source the damage still lands, but no hero heals.
-        let mut sink = sink_for(&mut state);
-        let mut sourceless = ctx_for(sink.sink(), None, None);
+        let mut sink = Bench::new(&state);
+        let mut sourceless = ctx_for(sink.sink(&mut state), None, None);
         run(
             &mut sourceless,
             vec![damage(json_as(
@@ -349,8 +337,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
 
         // A chosen target the play never carried, one that is nowhere, and a mode pick.
         {
-            let mut sink = sink_for(&mut state);
-            let mut empty = ctx_for(sink.sink(), None, None);
+            let mut sink = Bench::new(&state);
+            let mut empty = ctx_for(sink.sink(&mut state), None, None);
             run(
                 &mut empty,
                 vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 5 })))],
@@ -358,9 +346,9 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             seen.push(empty.events.clone());
         }
         {
-            let mut sink = sink_for(&mut state);
+            let mut sink = Bench::new(&state);
             let mut gone = ctx_for(
-                sink.sink(),
+                sink.sink(&mut state),
                 None,
                 Some(vec![Selection::Instance {
                     instance_id: "no-such-card".into(),
@@ -373,9 +361,9 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             seen.push(gone.events.clone());
         }
         {
-            let mut sink = sink_for(&mut state);
+            let mut sink = Bench::new(&state);
             let mut mode = ctx_for(
-                sink.sink(),
+                sink.sink(&mut state),
                 None,
                 Some(vec![Selection::Mode {
                     option: "burn".into(),
@@ -389,8 +377,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         }
         // And "itself" while no instance is resolving (a Spell's own script).
         {
-            let mut sink = sink_for(&mut state);
-            let mut no_self = ctx_for(sink.sink(), None, None);
+            let mut sink = Bench::new(&state);
+            let mut no_self = ctx_for(sink.sink(&mut state), None, None);
             run(
                 &mut no_self,
                 vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 5 })))],
@@ -411,8 +399,12 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         let mut state = game("damage-zero");
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         let shielded_unit = put(&mut state, &shielded.id, slot(P2, Units, 1), json!({}));
-        let mut sink = sink_for(&mut state);
-        let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&shielded_unit));
+        let mut sink = Bench::new(&state);
+        let mut ctx = ctx_for(
+            sink.sink(&mut state),
+            Some(&self_card),
+            on_instance(&shielded_unit),
+        );
 
         run(
             &mut ctx,

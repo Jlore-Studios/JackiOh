@@ -26,8 +26,8 @@ use crate::rules::fixtures::activate::{
 };
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_ok, act_result, events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip,
-    set_library, setup_catalog, slot,
+    act, act_ok, act_result, events_of_type, ids_of, in_hand, json_of, matches_object, new_game, put,
+    round_trip, set_library, setup_catalog, slot,
 };
 
 // Harness
@@ -163,10 +163,6 @@ fn instance_ids<E: serde::Serialize>(events: &[E]) -> Vec<Value> {
         .iter()
         .map(|event| json_of(event)["instanceId"].clone())
         .collect()
-}
-
-fn ids_of(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn fuse_onto(

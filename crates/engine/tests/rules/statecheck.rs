@@ -9,31 +9,7 @@ use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{both, events_of_type, json_of, new_game, put, slot};
-
-// ---------------------------------------------------------------------------
-// The sink: TS `sinkFor(state, events)`, a sink whose rng starts at the state's cursor, as reduce
-// does. Rust's `EngineSink` borrows the state, so the event list and the rng live here and each
-// call borrows the state again; the state is read between calls as TS read `state`.
-// ---------------------------------------------------------------------------
-
-struct SinkFor {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> SinkFor {
-    SinkFor {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl SinkFor {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
+use crate::rules::fixtures::harness::{Bench, both, events_of_type, json_of, new_game, put, slot};
 
 /// The live card TS's test kept a handle on, read back from the state.
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
@@ -448,7 +424,7 @@ mod the_state_check_m2_t5 {
                 expected.extend(mine.into_iter().map(|entry| Some(entry.2.clone())));
             }
 
-            let mut sink = sink_for(&state);
+            let mut sink = Bench::new(&state);
             let spell = new_instance(
                 &mut state,
                 &mass_smite().id,
@@ -457,7 +433,7 @@ mod the_state_check_m2_t5 {
             );
 
             run_hook(
-                &mut sink.on(&mut state),
+                &mut sink.sink(&mut state),
                 &spell,
                 HookName::Cry,
                 HookOptions::default(),
@@ -465,7 +441,7 @@ mod the_state_check_m2_t5 {
             // §4.5: the whole effect lands first; nothing has died yet.
             assert_eq!(events_of_type(&sink.events, GameEventType::Destroyed).len(), 0);
 
-            state_check(&mut sink.on(&mut state));
+            state_check(&mut sink.sink(&mut state));
 
             assert_eq!(events_of_type(&sink.events, GameEventType::Destroyed).len(), 6);
             assert_eq!(state.counters.destroyed, 6);
@@ -491,8 +467,8 @@ mod the_state_check_m2_t5 {
         );
         lethal_damage(&mut state, &reborner.id);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         // Its own Death trigger summoned while lane 1 was reserved, so the spawn took lane 2 (R64).
@@ -521,8 +497,8 @@ mod the_state_check_m2_t5 {
 
         // R8: the second death fires Death again, and this time the unit stays dead.
         card_mut(&mut state, &reborner.id).damage += 1;
-        let mut again = sink_for(&state);
-        state_check(&mut again.on(&mut state));
+        let mut again = Bench::new(&state);
+        state_check(&mut again.sink(&mut state));
         let again = again.events;
 
         assert_eq!(
@@ -562,8 +538,8 @@ mod the_state_check_m2_t5 {
         lethal_damage(&mut state, &reborner.id);
         lethal_damage(&mut state, &lane2.id);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         // The locker's Death trigger fired after the Reborn unit was collected, so the zone it had
@@ -596,8 +572,8 @@ mod the_state_check_m2_t5 {
         assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
 
         card_mut(&mut state, &warded.id).marked_destroyed = Some(true);
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -659,8 +635,8 @@ mod the_state_check_m2_t5 {
         assert_eq!(survivor_view.max_health, 4);
         assert_eq!(survivor_view.health, -6);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -802,8 +778,8 @@ mod the_state_check_m2_t5 {
         lethal_damage(&mut state, &crier.id);
         let enemy_hero = state.players.p2.hero.health;
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -847,9 +823,9 @@ mod the_state_check_m2_t5 {
             live.armor_override = Some(2);
             live.granted_keywords.push(Keyword::Reborn);
         }
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         {
-            let mut engine = sink.on(&mut state);
+            let mut engine = sink.sink(&mut state);
             let mut ctx = make_context(
                 &mut engine,
                 None,
@@ -865,7 +841,7 @@ mod the_state_check_m2_t5 {
             Some(AttackHealth { attack: 3, health: 3 })
         );
         lethal_damage(&mut state, &token.id);
-        state_check(&mut sink.on(&mut state));
+        state_check(&mut sink.sink(&mut state));
 
         let reborn = card(&state, &token.id);
         assert_eq!(
@@ -895,8 +871,8 @@ mod the_state_check_m2_t5 {
         );
         lethal_damage(&mut state, &token.id);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 1)).is_none());
@@ -917,8 +893,8 @@ mod the_state_check_m2_t5 {
         drawn.turn = 5;
         drawn.players.p1.hero.health = 0;
         drawn.players.p2.hero.health = -3;
-        let mut draw_sink = sink_for(&drawn);
-        state_check(&mut draw_sink.on(&mut drawn));
+        let mut draw_sink = Bench::new(&drawn);
+        state_check(&mut draw_sink.sink(&mut drawn));
         let draw_events = draw_sink.events;
 
         assert_eq!(
@@ -937,8 +913,8 @@ mod the_state_check_m2_t5 {
         let mut lost = game("one-hero");
         lost.turn = 5;
         lost.players.p2.hero.health = 0;
-        let mut loss_sink = sink_for(&lost);
-        state_check(&mut loss_sink.on(&mut lost));
+        let mut loss_sink = Bench::new(&lost);
+        state_check(&mut loss_sink.sink(&mut lost));
         let loss_events = loss_sink.events;
 
         assert_eq!(
@@ -966,8 +942,8 @@ mod the_state_check_m2_t5 {
         );
         card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert!(card_at(&state, slot(PlayerId::P1, Row::Backrow, 2)).is_none());
@@ -994,8 +970,8 @@ mod the_state_check_m2_t5 {
         );
         card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -1024,8 +1000,8 @@ mod the_state_check_m2_t5 {
             live.marked_destroyed = Some(true);
         }
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         // R78 wipes the instance's memory on the way out, so the hook must read the snapshot.
@@ -1064,8 +1040,8 @@ mod the_state_check_m2_t5 {
         card_mut(&mut state, &unit.id).marked_destroyed = Some(true);
         card_mut(&mut state, &locker_unit.id).marked_destroyed = Some(true);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert!(is_locked(&state, slot(PlayerId::P1, Row::Units, 1)));
@@ -1110,11 +1086,11 @@ mod what_a_death_reports_r89_m3 {
         assert_eq!(view.attack, 4);
         assert_eq!(view.max_health, 5);
 
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let source = card(&state, &killer.id).clone();
         let target = card(&state, &victim.id).clone();
         deal_damage(
-            &mut sink.on(&mut state),
+            &mut sink.sink(&mut state),
             DamageArgs {
                 source: Some(source),
                 target: DamageTarget::Unit { instance: target },
@@ -1122,7 +1098,7 @@ mod what_a_death_reports_r89_m3 {
                 flags: None,
             },
         );
-        state_check(&mut sink.on(&mut state));
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -1163,8 +1139,8 @@ mod what_a_death_reports_r89_m3 {
         // destroyed by an effect, not by a unit's damage
         card_mut(&mut state, &victim.id).marked_destroyed = Some(true);
 
-        let mut sink = sink_for(&state);
-        state_check(&mut sink.on(&mut state));
+        let mut sink = Bench::new(&state);
+        state_check(&mut sink.sink(&mut state));
         let events = sink.events;
 
         assert_eq!(
@@ -1225,9 +1201,9 @@ mod the_pass_cap_s4_5_step_5 {
         );
         card_mut(&mut state, &doomed.id).stats_override = Some(AttackHealth { attack: 0, health: 0 });
 
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
         let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            state_check(&mut sink.on(&mut state));
+            state_check(&mut sink.sink(&mut state));
         }));
         let message = panic_text(caught.expect_err("the state check settled"));
         assert!(

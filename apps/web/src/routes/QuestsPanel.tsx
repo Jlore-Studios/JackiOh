@@ -14,7 +14,9 @@ import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import { getQuests, type QuestsResponse } from "../net/api.ts";
+import { getQuests, keptPaths, type QuestsResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 
 /** Unit conversions, not configuration. */
 const SECONDS_PER_MINUTE = 60;
@@ -110,14 +112,17 @@ export function QuestsList({
 
 /**
  * The caller's quests, read on mount and again on Try again. The landing's bookmark (R2035000)
- * shares this, so `/collection` and the landing show the same rows from the same read.
+ * shares this, so `/collection` and the landing show the same rows from the same read. R2125000: it
+ * starts on the quests the last visit kept, and a read that fails behind them keeps them and says nothing.
  */
 export function useQuests(token: string): {
   quests: QuestsResponse | null;
   error: string | null;
   reread: () => void;
 } {
-  const [quests, setQuests] = useState<QuestsResponse | null>(null);
+  const [quests, setQuests] = useState<QuestsResponse | null>(
+    () => cachedRead<QuestsResponse>(token, keptPaths.quests) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -128,7 +133,10 @@ export function useQuests(token: string): {
         if (!cancelled) setQuests(next);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (cancelled) return;
+        const kept = cachedRead<QuestsResponse>(token, keptPaths.quests);
+        if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
+        else setQuests(kept);
       });
     return () => {
       cancelled = true;
@@ -178,9 +186,7 @@ export function QuestsView({
     return (
       <div className="account-quests">
         <h3 className="account-heading">{t("Quests")}</h3>
-        <p className="notice" role="status" data-testid={questsTestid.loading}>
-          {t("Loading your quests…")}
-        </p>
+        <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );
   }

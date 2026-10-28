@@ -4,28 +4,8 @@ use jackioh_engine::draw::{DrawOutcome, ShuffleInOutcome, draw, draw_one, shuffl
 use jackioh_engine::effects::draw as draw_effect;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_json, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{Bench, events_json, new_game, put, set_library, slot};
 use crate::rules::fixtures::scripts::{anti_oneshot, cn_virus, hinder, infinite_reserves};
-
-/// TS `sinkFor(state, events)`: a sink's events and rng (from the state's cursor), lent with the state
-/// to one engine call at a time, so the test reads the state between calls as TS did.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
 
 fn strings(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()

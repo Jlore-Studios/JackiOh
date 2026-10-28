@@ -8,15 +8,13 @@
 //! multi-card spec could not be threaded through them. The fixture cards these tests need are
 //! registered here, so no shared fixture has to grow (BUILD §0).
 
-use std::borrow::Borrow;
-
 use jackioh_engine::effects::{
     BoardScope, TargetSpec, adjacent_to, cards_in_scope, instance_of, matches_scope, resolve_target,
 };
 use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog as catalog_fx;
-use super::fixtures::harness::{json_of, live, new_game, put, slot};
+use super::fixtures::harness::{ids_of, json_of, live, new_game, put, slot};
 
 // Fixture cards: two tags and a backrow type, so every filter has something to bite on.
 
@@ -80,10 +78,6 @@ fn with_ctx<R>(
         },
     );
     f(&mut ctx)
-}
-
-fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
-    cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
 fn instance_spec(instance_id: &str) -> TargetSpec {

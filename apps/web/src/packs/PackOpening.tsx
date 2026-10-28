@@ -51,8 +51,10 @@ import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
-import { getPacks, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { getPacks, keptPaths, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { useSetting } from "../settings/store.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
   PACK_FLIP_MS,
@@ -396,7 +398,10 @@ export default function PackOpening({
   revision?: number;
   onChanged?: () => void;
 }): ReactElement {
-  const [info, setInfo] = useState<PacksResponse | null>(null);
+  // R2125000: a revisit starts on the packs the last visit kept and reads again behind them.
+  const [info, setInfo] = useState<PacksResponse | null>(
+    () => cachedRead<PacksResponse>(token, keptPaths.packs) ?? null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scene, setScene] = useState<SceneState | null>(null);
   const [round, setRound] = useState(0);
@@ -421,8 +426,15 @@ export default function PackOpening({
       },
       (cause: unknown) => {
         if (!cancelled) {
-          setLoadError(wordsOf(cause));
           setReading(false);
+          // R2125000: a read that fails behind kept packs leaves them and says nothing; only a first visit says why.
+          const kept = cachedRead<PacksResponse>(token, keptPaths.packs);
+          if (kept === undefined) {
+            setLoadError(wordsOf(cause));
+          } else {
+            setInfo(kept);
+            setLoadError(null);
+          }
         }
       },
     );
@@ -499,9 +511,7 @@ export default function PackOpening({
         </>
       )}
       {info === null && loadError === null ? (
-        <p className="notice" role="status" data-testid={packTestid.loading}>
-          {t("Loading your packs…")}
-        </p>
+        <Skeleton variant="rows" label={t("Loading your packs…")} testId={packTestid.loading} />
       ) : null}
       {info === null ? null : (
         <>

@@ -186,6 +186,13 @@ export type GameProps = {
    * puts the Trade button in its card bar beside the pass control instead. Absent, on.
    */
   tradeBar?: boolean;
+  /**
+   * R2095000: the board feeds no audio and draws no effects layer or showcase. The Duos both-boards
+   * view sets it on the teammate's read-only board: the audio hook and the effects find their anchors
+   * on the whole page (the first `[data-testid="board"]`, the first hand), so a second board would
+   * play the other duel's cues and shake, spark and mark the own board. Absent, off.
+   */
+  silent?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -231,6 +238,7 @@ export default function Game({
   replay = false,
   lesson = false,
   tradeBar = true,
+  silent = false,
 }: GameProps): ReactElement {
   useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -396,7 +404,7 @@ export default function Game({
   }
   const runner = queue.current;
   useGameStats(view, trackStats);
-  useGameAudio(runner, view); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
+  useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9); hotseat and online play simply carry it.
   const speaking = useVoiceSpeaking();
@@ -722,10 +730,10 @@ export default function Game({
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
-      <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
+      {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
-      <CardShowcase view={view} queue={runner} />
+      {silent ? null : <CardShowcase view={view} queue={runner} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {replay || promptOver(shown, burst, inFlight) ? null : (

@@ -150,6 +150,7 @@ export function FriendRow({
             <button
               type="button"
               data-testid={togetherTestid.watch}
+              data-route={watchLink(friend.matchId, friend.profileId)}
               onClick={() => {
                 if (friend.matchId === null) return;
                 onWatch?.();

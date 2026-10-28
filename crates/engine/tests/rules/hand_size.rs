@@ -9,36 +9,17 @@ use jackioh_engine::effects::{add_to_hand, give_from_hand, set_hand_cap};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, set_library};
+use crate::rules::fixtures::harness::{Bench, events_of_type, in_hand, set_library};
 use crate::rules::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The events and rng of a sink over `state`, the rng starting at the state's cursor as `reduce` does.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
-
-impl Sink {
-    fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
-}
-
 /// Apply one effect for `controller` outside any card, then settle, as a resolution does.
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         {
             let mut ctx = make_context(
                 &mut engine,
@@ -58,9 +39,9 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
 
 /// `count` §2.4 draws of `player`'s.
 fn draws(state: &mut GameState, player: PlayerId, count: i32) -> Vec<GameEvent> {
-    let mut sink = sink_for(state);
+    let mut sink = Bench::new(state);
     {
-        let mut engine = sink.on(state);
+        let mut engine = sink.sink(state);
         jackioh_engine::draw::draw(&mut engine, player, count);
         settle(&mut engine, Default::default());
     }

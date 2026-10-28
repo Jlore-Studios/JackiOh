@@ -2208,7 +2208,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       expect(line).toHaveAttribute("data-earning", "refused");
     });
     expect(line).toHaveAttribute("data-reason", "ai_mismatch");
-    expect(line).toHaveTextContent("This game earned nothing (the AI chose another move on the server).");
+    expect(line).toHaveTextContent("This game earned nothing (the AI's moves didn't check out).");
 
     fireEvent.click(screen.getByTestId(T.playAgain));
     await waitFor(() => {

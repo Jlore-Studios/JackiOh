@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
 import { getQuests, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -155,6 +156,7 @@ describe("QuestsPanel", () => {
     render(<QuestsPanel token={TOKEN} />);
 
     expect(screen.getByTestId(questsTestid.loading)).toHaveTextContent("Loading your quests…");
+    expectSkeleton(screen.getByTestId(questsTestid.loading), "rows");
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
 
     await act(async () => {
@@ -162,6 +164,7 @@ describe("QuestsPanel", () => {
       await Promise.resolve();
     });
     expect(screen.queryByTestId(questsTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading your quests…")).toBeNull();
     expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
   });
 
