@@ -4249,7 +4249,7 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "round_tier": "strong",
-      "run_id": "pending:5a94395e-1793164503",
+      "run_id": "40636949725",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T05:15:38Z",
       "stop_requested": false,
