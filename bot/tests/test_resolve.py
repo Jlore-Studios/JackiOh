@@ -403,9 +403,21 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(result["status"], "approved", result.get("reason"))
         self.assertEqual([c.role for c in runner.calls], ["review", "fix", "review"])
         self.assertIn("say v3", runner.calls[1].prompt)
-        self.assertIn(f"- `{INDEX}`: took `main`'s version", runner.calls[1].prompt)
+        self.assertIn(f"- `{INDEX}`: took `main`'s version; leave it as it is", runner.calls[1].prompt)
         check, head = self.head()
         self.assertEqual(git(check, "show", f"{head}:{GAME}"), "rules v3")
+
+    def test_a_fix_after_a_regenerated_file_is_told_to_run_its_command_again(self):
+        """The traces the harness blessed are the merged tree's: a fix pass that then changes
+        what they record must bless them again, not leave them."""
+        self.diverge({GOLDEN: "game 1 branch\n", GAME: "rules v2\n"}, {GOLDEN: "game 1 main\n"})
+        runner = FakeRunner({"review": [lambda r: RunResult(True, CHANGES), lambda r: RunResult(True, APPROVE)],
+                             "fix": lambda r: RunResult(True, DONE)})
+        self.run_worker(runner, self.plan())
+        fix = runner.calls[1].prompt
+        self.assertIn(f"- `{GOLDEN}`: ran `{BLESS}`; it is that command's output from the merged "
+                      f"tree, so run `{BLESS}` again if you change anything it reads", fix)
+        self.assertNotIn("leave it as it is", fix)
 
     def test_red_checks_on_the_harness_merge_are_not_approved(self):
         """A harness merge the checks turn red is not approved, whatever its reviewer says: the

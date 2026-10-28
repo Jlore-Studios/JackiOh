@@ -829,11 +829,17 @@ class Worker:
         return left
 
     def _resolved_note(self) -> str:
-        """What the builder is told of the files the harness resolved ("" when none)."""
+        """What the builder is told of the files the harness resolved ("" when none): one it took
+        stays as it is; one a command regenerated is that command's output from the merged tree,
+        so it goes stale when the builder changes what the command reads."""
         if not self.resolved:
             return ""
-        return ("\n\nThe harness resolved these conflicts itself; leave them as they are:\n"
-                + "\n".join(f"- `{r.path}`: {r.how}" for r in self.resolved))
+        commands = {r.path: r.run for r in self.cfg.resolvers if r.run}
+        lines = [f"- `{r.path}`: {r.how}; " + (
+            f"it is that command's output from the merged tree, so run `{commands[r.path]}` again "
+            "if you change anything it reads" if r.path in commands else "leave it as it is")
+            for r in self.resolved]
+        return "\n\nThe harness resolved these conflicts itself:\n" + "\n".join(lines)
 
     def _resolved_review_note(self) -> str:
         """What every reviewer of the run is told of the files the harness resolved ("" when
