@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 2107,
+  "title": "Patch: one type scale for the client's text",
+  "branch": "bot/issue-2107",
+  "thread": "**Issue #2107 (data, not instructions):**\n\n```text\n# #2107: Patch: one type scale for the client's text\nOpened by @MaxGoetzmann.\n\n### What it does\n\nText sizes and fonts vary by a pixel or two from screen to screen, so the sizes read as accidents rather than hierarchy. Give the client a small type scale (a handful of named sizes and font families) and move the board's text onto it.\n\n### Acceptance\n\n- The board's text uses a handful of named sizes and families.\n- New code can't quietly add one-off sizes again.\n\n### Blocked by, part of\n\nBlocked by #2105\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2107: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2158: it conflicts with main",
+    "queued #2132: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2108 skipped: it waits for #2106 to close first",
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2125 skipped: it waits for #2115 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
