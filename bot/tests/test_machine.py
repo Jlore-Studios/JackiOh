@@ -372,6 +372,15 @@ class SetupTests(unittest.TestCase):
     def test_it_parses(self):
         self.assertEqual(subprocess.run(["bash", "-n", str(SETUP)]).returncode, 0)
 
+    def test_both_boxes_swap_to_compressed_memory_before_the_swapfile(self):
+        """Three jobs overrun an 8 GB box; paging to the swapfile on EBS stalled one for 766 s."""
+        shared = self.text.split('if [ -n "$training" ]; then', 1)[0]
+        self.assertIn("apt-get install -y -qq zram-tools", shared)
+        self.assertIn("printf 'ALGO=zstd\\nPERCENT=50\\nPRIORITY=100\\n' > /etc/default/zramswap",
+                      shared)
+        self.assertIn("systemctl restart zramswap", shared)
+        self.assertIn("swapon /swapfile", shared)  # the swapfile stays, below it
+
     def test_every_user_that_runs_the_checks_gets_the_pinned_rust(self):
         toml = (REPO_ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
         channel = re.search(r'^channel = "([^"]+)"', toml, re.M).group(1)

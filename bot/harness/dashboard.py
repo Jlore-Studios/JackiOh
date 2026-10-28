@@ -1083,7 +1083,7 @@ LOCAL_ROLES = (
      "CPU: a container a job, `pc-gather-<time>`, only while the PC is otherwise idle", "`gather`"),
 )
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
-              "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
+              "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "

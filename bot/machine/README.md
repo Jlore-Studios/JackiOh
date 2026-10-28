@@ -25,7 +25,7 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.xlarge` (4 vCPUs, 16 GB, plus 8 GB swap) since 2026-10-26, an `m7i-flex.large` (2 vCPUs, 8 GB) before; Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), the largest the project's Free plan allows: the move to `m7i-flex.xlarge` planned for 2026-10-26 never took (its jobs still read 7.6 GB of memory on 10-27, `reviews/2026-10-27-muse-usage.md`, finding 4); Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
@@ -74,7 +74,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## Building it
 
-1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.xlarge` with a 120 GB gp3 disk, an
+1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 120 GB gp3 disk, an
    instance profile holding `AmazonSSMManagedInstanceCore`, a security group with no inbound
    rule, no key pair, shutdown behaviour **stop**, and the tag `Name=jackioh-night-vm`.
 2. **Set it up**, with the ids from `providers.json`:
@@ -139,7 +139,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.xlarge` (4 vCPUs, 16 GB, plus 8 GB swap) since 2026-10-26, Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) was an `m7i-flex.large` (2 vCPUs, 8 GB) until then |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is an `m7i-flex.large`. The move to `m7i-flex.xlarge` planned for 2026-10-26 never took (finding 4 of `reviews/2026-10-27-muse-usage.md`) |
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
@@ -201,15 +201,18 @@ Running the lanes:
   Muse keeps every session in `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop
   deletes one 8 hours after it ended, as `clean.sh` does on the night box. The records
   (`training-out/`) and logs stay.
-- **Cost**: about $0.19 an hour for the instance (on-demand `m7i-flex.xlarge` in `us-east-2`), so
-  about $140 a month were it always on (the Muse box stops when idle), plus about $8 for its disk.
+- **Cost**: about $0.096 an hour for the instance (on-demand `m7i-flex.large` in `us-east-2`), so
+  about $70 a month were it always on (the Muse box stops when idle), plus about $8 for its disk,
+  all taken from the Free plan's credits while they last.
 
 ## The Muse box
 
 Since #1677 the training box also carries Muse's runners. Two builds at once on one 8 GB box swap
 (`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse build that shared the box took a median
 57 minutes in its build call, against 34 alone, so each box held one Muse runner. Since 2026-10-26
-both boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB), and each runs three of these jobs at most:
+each box runs three of these jobs at most. That was set for `m7i-flex.xlarge` (4 vCPUs, 16 GB), but
+both boxes are still `m7i-flex.large` (2 vCPUs, 8 GB), so three building jobs overrun a box's
+memory; compressed swap in memory (`setup.sh`, zram) takes the overflow before the swapfile does:
 
 - **The Muse box** holds three of Muse's four lanes of its own (`runs_on` `night-vm-muse`,
   `"lanes": 4`): `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2`.
@@ -229,7 +232,7 @@ which is why both boxes are AWS's.
 
 | | The night box (`jackioh-night-vm`) | The Muse box (`jackioh-train-box`) |
 |---|---|---|
-| Instance | `m7i-flex.xlarge` (4 vCPUs, 16 GB) | `m7i-flex.xlarge` (4 vCPUs, 16 GB) |
+| Instance | `m7i-flex.large` (2 vCPUs, 8 GB) | `m7i-flex.large` (2 vCPUs, 8 GB) |
 | Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-muse` and Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2` | `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2` |
 | At once | three: gpt's lane and agy's, which Muse fills while either cannot start work, and one of Muse's own | three of Muse's own |
 | Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
@@ -288,9 +291,9 @@ repository admin:
    REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
 
-**Moving the boxes to three jobs each** (2026-10-26), once both instances are `m7i-flex.xlarge`
-(stop each, change its type, start it again; neither the idle stop nor the starters change for
-that): run step 4's two commands, in that order, and step 6. Until the night box's fill-in
+**Moving the boxes to three jobs each** (2026-10-26), meant for once both instances are
+`m7i-flex.xlarge`, which needs AWS's Paid plan (stop each, change its type, start it again;
+neither the idle stop nor the starters change for that): run step 4's two commands, in that order, and step 6. Until the night box's fill-in
 runners are registered, a Muse run the planner puts in gpt's or agy's lane waits queued for them.
 
 **Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`. Never
@@ -448,8 +451,7 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   the engine's crate held about 1.4 GB while it compiled); clippy, the cargo tests and the web's
   unit tests (`"machine": false`) run in CI. The
   Claude accounts run on GitHub's runners, under `max_parallel` (11), apart from these six. Both
-  boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB) since 2026-10-26; the Free plan's largest had been
-  the 2-vCPU `m7i-flex.large` and `c7i-flex.large`.
+  boxes are `m7i-flex.large` (2 vCPUs, 8 GB), the Free plan's largest with `c7i-flex.large`.
 - **Memory** (#317): EC2 records only the CPU (hourly averages above 60% in 27 of the 48 hours
   to 2026-10-05, peaks of 100%), so `setup.sh` installs the CloudWatch agent, which sends
   `mem_used_percent`, `mem_available` and `swap_used_percent` every 60 s to the
@@ -464,9 +466,9 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   5 s or more), with the least memory available and how many runs swapped
   ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
   `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to
-  spare. Both boxes have 4 vCPUs and 16 GB since 2026-10-26.
-- **Cost:** the machine is billed by the hour while it runs (about $0.19 an hour for the
-  `m7i-flex.xlarge`, so about $140 a month if it never stopped) plus its disk (about $9.60 a
+  spare. Both boxes have 2 vCPUs and 8 GB.
+- **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour for the
+  `m7i-flex.large`, so about $70 a month if it never stopped) plus its disk (about $9.60 a
   month for 120 GB of gp3). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
 - **The starter** looks only at bot-night runs, through GitHub's public API by repository id, so a
