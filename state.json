@@ -6314,10 +6314,23 @@
     "what": "build #2118 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-28T03:12:00Z",
+    "at": "2026-10-28T03:23:39Z",
     "notes": [
-      "delivered build #2115 on muse (run 40617535408): infra (its model job left no upload)",
-      "#2165: typed it Task"
+      "#2107 needs a plan",
+      "delivered review #2166 on claude-7 (run 40625090858): reviewed",
+      "delivered revise #2132 on claude-6 (run 40620924813): built",
+      "delivered revise #2158 on claude-3 (run 40618730528): approved",
+      "delivered revise #2155 on muse (run 40614111227): infra (its model job left no upload)",
+      "delivered build #2106 on muse (run 40606908645): approved",
+      "started plan #2107 on claude-6 (run 40626835168)",
+      "started review #2168 on claude-7 (run 40626888229)",
+      "started revise #2163 on claude-8 (run 40626946400)",
+      "started revise #2158 on claude-1 (run 40627004828)",
+      "started revise #2155 on muse (run 40627070126)",
+      "started revise #2132 on claude-3 (run 40627138311)",
+      "started build #2117 on muse (run 40627196743)",
+      "started build #2118 on muse (run 40627253604)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 66h 27m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 88%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it takes reviews only; it can start a build or a plan again in 73h 27m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7023,7 +7036,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T03:12:00Z",
+  "loop_tick": "2026-10-28T03:23:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
