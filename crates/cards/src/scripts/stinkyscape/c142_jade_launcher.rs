@@ -14,7 +14,8 @@
 //! on the Radiant face twice (R384, R1857003). R1862005: the target takes the 2 the Auspicious Rock
 //! (M #39.1) costs its caster (`damage`, whole on a hero), then the Rock's reward: one roll on the
 //! Rock's own table (`add_rolled`, R960) adds a Dud, a Jade or a Red Jade to its controller's hand, a
-//! full hand burning it (§2.4). No Rock is made or cast, and no health is lost. The number is the
+//! full hand burning it (§2.4). The Launcher prints no Lucky, but the roll keeps a best, so its
+//! controller's Luck rolls it again (§6.1 Luck X, R987). No Rock is made or cast, and no health is lost. The number is the
 //! declared `damage` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
@@ -151,6 +152,39 @@ mod tests {
             let mut s = launcher_on(false, json!({}));
             s.activate(ID, at_hero());
             s.expect_refused_with(|s| s.activate(ID, at_hero()), "already been used");
+        }
+
+        #[test]
+        fn r987_its_controllers_luck_rolls_the_reward_again_keeping_the_best() {
+            // M #40 Feng Shui's Luck 1 gives the Launcher's roll a second roll, keeping the better.
+            const FENG_SHUI: &str = "meditative-040";
+            // Worst to best (R960): Dud < Jade < Red Jade.
+            const RANKED: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
+            const SEEDS: u32 = 30;
+            let rank = |s: &Scenario| {
+                let got = rewards(&s.hand(P1));
+                assert_eq!(got.len(), 1, "{got:?}");
+                RANKED.iter().position(|id| *id == got[0]).expect("a reward")
+            };
+            let (mut worse_never, mut better_once) = (true, false);
+            for n in 0..SEEDS {
+                let seed = format!("jade-luck-{n}");
+                let field = json!([{ "def": ID }]);
+                let mut plain = weapon_board(&seed, json!({ "field": field }), json!({ "field": [VANILLA] }));
+                plain.activate(ID, at_hero());
+                let mut lucky = weapon_board(
+                    &seed,
+                    json!({ "field": field, "backrow": [FENG_SHUI] }),
+                    json!({ "field": [VANILLA] }),
+                );
+                assert_eq!(luck_of(lucky.state(), P1), 1);
+                lucky.activate(ID, at_hero());
+                let (without, with) = (rank(&plain), rank(&lucky));
+                worse_never &= with >= without;
+                better_once |= with > without;
+            }
+            assert!(worse_never, "Luck keeps the best of the rolls");
+            assert!(better_once, "over {SEEDS} seeds some roll improves");
         }
 
         #[test]

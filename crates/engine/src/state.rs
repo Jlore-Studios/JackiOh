@@ -1340,6 +1340,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub trades_per_turn: Option<i32>,
+    /// R2176001: how many Calls to Chaos this player has cast on turn `turn` by S #150's death watch
+    /// (R1882004), kept as `draws` is: a count kept for an earlier turn reads as 0
+    /// (`call_to_chaos_stinky::death_watch_casts_this_turn`). Absent until the watch first casts, so a
+    /// game without one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub death_watch_casts: Option<DrawCount>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -2063,6 +2070,7 @@ pub fn create_player_state() -> PlayerState {
         answer_chain: None,
         trades: None,
         trades_per_turn: None,
+        death_watch_casts: None,
         resource_tray: None,
         market_credits: None,
         votes: None,

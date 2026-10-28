@@ -81,6 +81,22 @@ mod tests {
             // The opponent's turn started, not its controller's: still 4/4.
             s.expect_stats(RR, json!({ "attack": 4 }));
         }
+
+        #[test]
+        fn attack_gain_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "field": [RR], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let gain = crate::upgrade_number(&mut s, RR, "attackGain");
+            let before = s.stats(RR).attack;
+            s.end_turn();
+            s.end_turn();
+
+            assert_eq!(s.stats(RR).attack, before + gain);
+        }
     }
 
     mod radiant {

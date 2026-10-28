@@ -132,6 +132,14 @@ mod tests {
     }
 
     #[test]
+    fn times_reads_through_param() {
+        let mut s = board(false, "gokugains-param", json!([VANILLA]));
+        let times = crate::upgrade_number(&mut s, ID, "times");
+        s.play(ID, json!({ "zone": 1 }));
+        assert_eq!(hidden(&s), vec![(VANILLA.to_string(), Some(times))]);
+    }
+
+    #[test]
     fn r1845000_radiant_is_a_4_2_and_nerfs_thirty_times() {
         let mut s = board(true, "gokugains-radiant", json!([VANILLA]));
         s.play(ID, json!({ "zone": 1 }));
