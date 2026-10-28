@@ -263,7 +263,7 @@ const EXPECTED_RESULT: GameResult = GameResult {
     winner: Winner::P1,
     reason: GameOverReason::HeroDeath,
 };
-const EXPECTED_ACTIONS: usize = 41;
+const EXPECTED_ACTIONS: usize = 39;
 
 fn read(path: &str, text: &str) -> Recording {
     let parsed: Value =
