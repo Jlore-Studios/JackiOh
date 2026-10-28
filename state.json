@@ -6778,13 +6778,10 @@
     "what": "review #2221 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-28T14:42:52Z",
+    "at": "2026-10-28T14:55:12Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered review #2234 on claude-8 (run 40707595172): reviewed",
-      "delivered revise #2221 on muse (run 40701467307): approved",
-      "started review #2221 on claude-8 (run 40708991362)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2221 on claude-8 (run 40708991362): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7490,7 +7487,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T14:42:52Z",
+  "loop_tick": "2026-10-28T14:55:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
