@@ -6785,6 +6785,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-28T07:07:07Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40648267377",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
