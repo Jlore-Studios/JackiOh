@@ -45,12 +45,12 @@ MEDIUM = {"muse": ("muse-spark-1.3-contributor", "muse"), "agy": ("gemini-3.8-fl
 
 
 class ReviewRuleTests(unittest.TestCase):
-    def build_on_medium(self, h, provider="muse"):
+    def build_on_medium(self, h, provider="muse", edits=None):
         """By day the Claude accounts are closed: Muse, first of the medium models (#317 part 9),
         or `provider` when it is the only one, plans, builds and reviews it in one run, and its
         own approval is one medium vote."""
         h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
-        runner = FakeRunner({"build": timed_builder({"src/game.txt": "rules v2\n"}),
+        runner = FakeRunner({"build": timed_builder(edits or {"src/game.txt": "rules v2\n"}),
                              "review": reviewer(APPROVE)})
         planned, result = h.night(runner)
         self.assertEqual((planned["provider"], result["status"]), (provider, "approved"))
@@ -350,15 +350,15 @@ class ConflictCarryTests(unittest.TestCase):
     resolves them ships on its own run's adversarial review, with no review run, when it started
     from the cleared commit and changed nothing but the conflicted files."""
 
-    def conflicted(self, h, pr):
+    def conflicted(self, h, pr, main=None):
         """`main` moves on and the branch no longer merges."""
-        push_branch(h.origin, h.root, "main", {"src/game.txt": "rules from main\n"})
+        push_branch(h.origin, h.root, "main", main or {"src/game.txt": "rules from main\n"})
         h.gh.threads[pr]["mergeable_state"] = "dirty"
 
-    def cleared_pr(self, h):
+    def cleared_pr(self, h, edits=None, main=None):
         """Muse builds and approves it by day; at night a Strong seat reviews it: the rule is
         met (#695), and then `main` conflicts with it."""
-        pr, built = ReviewRuleTests.build_on_medium(self, h)
+        pr, built = ReviewRuleTests.build_on_medium(self, h, edits=edits)
         next_run(h, "778")
         h.ctx.clock_fn.at = NIGHT
         planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
@@ -368,9 +368,38 @@ class ConflictCarryTests(unittest.TestCase):
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertEqual(record["cleared"]["sha"], built["head"])
         self.assertEqual(record["cleared"]["by"], "`muse` (medium), `claude` (strong)")
-        self.conflicted(h, pr)
+        self.conflicted(h, pr, main)
         next_run(h, "779")
         return pr, built["head"]
+
+    def test_a_conflict_the_harness_resolves_carries_with_no_builder(self):
+        """`main` conflicts with the cleared change only in `spec/INDEX.md`, which the committed
+        resolvers take from `main` (`resolve.py`): the revision spends no builder session, its own
+        reviewer approves the merge, and the clearance carries as for a builder's resolution."""
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        pr, cleared_sha = self.cleared_pr(
+            h, edits={"src/game.txt": "rules v2\n", "spec/INDEX.md": "| R12 |\n"},
+            main={"spec/INDEX.md": "| R13 |\n"})
+        runner = FakeRunner({"review": reviewer(APPROVE)})
+        planned, result = h.night(runner)
+        self.assertEqual((planned["action"], planned["source"]), ("revise", "conflict"))
+        self.assertEqual(result["status"], "approved", result.get("reason"))
+        self.assertEqual([c.role for c in runner.calls], ["review"])
+        self.assertIn("the harness resolved `spec/INDEX.md` itself (took `main`'s version)",
+                      runner.calls[0].prompt)
+        self.assertEqual(result["cycles"][0]["builder"]["role"], "merge")
+        # Delivered: auto-merge back on at the merged head, the clearance carried over it.
+        self.assertEqual(h.gh.auto_merge_heads[f"PR_{pr}"], result["head"])
+        record = h.ctx.store.load()["items"][str(pr)]
+        carried = record["votes"]["carried"]
+        self.assertEqual((carried["from"], carried["conflicts"]), (cleared_sha, ["spec/INDEX.md"]))
+        self.assertIn("This revision only merged `main` and resolved the conflicts in "
+                      "`spec/INDEX.md`, and its own reviewer approved that, so the clearance "
+                      "carries over", h.gh.bot_comments(pr)[-1])
+        check = h.root / "check-merge"
+        git(h.root, "clone", "-q", str(h.origin), str(check))
+        self.assertEqual(git(check, "show", f"origin/bot/issue-12:spec/INDEX.md"), "| R13 |")
+        self.assertEqual(git(check, "show", "origin/bot/issue-12:src/game.txt"), "rules v2")
 
     def test_a_conflict_on_a_cleared_change_ships_on_its_own_review(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
