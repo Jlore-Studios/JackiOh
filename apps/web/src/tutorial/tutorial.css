@@ -1116,7 +1116,7 @@
   padding-left: 10px;
   border-left: 3px solid color-mix(in srgb, var(--coach) 60%, var(--line));
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 /* Hint is the quieter of the bubble's buttons: outlined, never the filled Got it. */
@@ -1127,7 +1127,7 @@
   border-radius: 10px;
   background: transparent;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-lg);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -1157,7 +1157,7 @@
   padding: 6px 12px;
   border-color: var(--line-bright);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -1169,7 +1169,7 @@
   display: flex;
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   overflow-y: auto;
-  background: rgb(7 9 14 / 80%);
+  background: color-mix(in srgb, var(--bg-sunken) 85%, transparent);
 }
 
 .field-guide {
@@ -1196,13 +1196,13 @@
 
 .app-shell .field-guide__title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--type-2xl);
 }
 
 .app-shell .field-guide__count {
   margin: 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .field-guide__entries {
@@ -1221,7 +1221,7 @@
   padding: 8px 10px;
   border-radius: 10px;
   background: var(--bg-sunken);
-  font-size: 14px;
+  font-size: var(--type-lg);
 }
 
 .field-guide__entry[data-found="false"] {

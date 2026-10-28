@@ -96,7 +96,7 @@ export type LessonScript = {
   tips: readonly CoachTip[];
   /** The Field Guide entries this lesson lists; their discovery bubbles always show (R2205000). */
   teaches?: readonly string[];
-  /** The entries the coach watches for; every lesson watches the whole Field Guide. Tests pass fixtures. */
+  /** The entries the coach watches for: the whole Field Guide in every lesson that lists `teaches`. Tests pass fixtures. */
   guide?: readonly Discovery[];
 };
 
@@ -168,7 +168,9 @@ function safely(test: () => boolean): boolean {
   }
 }
 
+/** A script that lists no `teaches` is a step list with no moments, and watches for nothing. */
 function guideOf(script: LessonScript): readonly Discovery[] {
+  if (script.teaches === undefined) return [];
   return script.guide ?? FIELD_GUIDE;
 }
 
