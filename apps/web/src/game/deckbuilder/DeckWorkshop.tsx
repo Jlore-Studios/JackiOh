@@ -2,6 +2,7 @@
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
 // the local store and supplied API (R256).
+// #2096: Duplicate, on each deck's row and in its editor, makes a new deck with its cards, portrait and picks under copyName's name, and opens it.
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -10,7 +11,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
-import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
+import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
@@ -53,11 +54,12 @@ import {
   WORKSHOP,
   WORKSHOP_BACK,
   WORKSHOP_EMPTY,
+  deckDuplicateId,
   deckRowId,
   trioRowId,
 } from "./testids.ts";
 import TrioEditor from "./TrioEditor.tsx";
-import { deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
+import { copyName, deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
@@ -132,11 +134,12 @@ type RailProps = {
   open: WorkshopOpen;
   onOpen: (next: WorkshopOpen) => void;
   onNewDeck: () => void;
+  onDuplicateDeck: (deck: DeckItem) => void;
   onNewTrio: () => void;
 };
 
 function Rail(props: RailProps): ReactElement {
-  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onNewTrio } = props;
+  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onDuplicateDeck, onNewTrio } = props;
   const { decks, trios, limits, unsynced } = snapshot;
   const decksAtCap = decks.length >= limits.decks;
   const triosAtCap = trios.length >= limits.trios;
@@ -194,8 +197,13 @@ function Rail(props: RailProps): ReactElement {
               nameLength={limits.nameLength}
               current={open?.kind === "deck" && open.id === deck.id}
               unsynced={unsynced.has(deck.id)}
+              atCap={decksAtCap}
+              reasonId={decksAtCap ? deckReason : undefined}
               onOpen={() => {
                 onOpen({ kind: "deck", id: deck.id });
+              }}
+              onDuplicate={() => {
+                onDuplicateDeck(deck);
               }}
             />
           ))}
@@ -273,10 +281,13 @@ type DeckRowProps = {
   nameLength: number;
   current: boolean;
   unsynced: boolean;
+  atCap: boolean;
+  reasonId: string | undefined;
   onOpen: () => void;
+  onDuplicate: () => void;
 };
 
-function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onOpen }: DeckRowProps): ReactElement {
+function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atCap, reasonId, onOpen, onDuplicate }: DeckRowProps): ReactElement {
   const verdict = deckVerdict(deck, catalog, collection, nameLength);
   const status = deckStatus(verdict, collection !== null);
   // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
@@ -289,7 +300,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
     status: practice ? t("{status}, practice only", { status: status.label }) : status.label,
   };
   return (
-    <li>
+    <li className="ws-list-item">
       <button
         type="button"
         className="ws-row"
@@ -322,6 +333,18 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
       </button>
+      {/* #2096: drawn as two sheets, in words for a reader and on hover: a worded button would wrap
+          every row of the 208 px rail. */}
+      <button
+        type="button"
+        className="ws-row-duplicate"
+        data-testid={deckDuplicateId(deck.id)}
+        aria-label={t("Duplicate {deck}", { deck: label })}
+        title={t("Duplicate {deck}", { deck: label })}
+        disabled={atCap}
+        aria-describedby={reasonId}
+        onClick={onDuplicate}
+      />
     </li>
   );
 }
@@ -477,6 +500,13 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     if (id !== null) openItem({ kind: "deck", id });
   };
 
+  // #2096: trios name decks by id (R252), so every trio naming the original still does.
+  const duplicateDeck = (source: DeckItem): void => {
+    const name = copyName(deckLabel(source, limits.nameLength), decks.map((deck) => deckLabel(deck, limits.nameLength)), limits.nameLength);
+    const id = store.createDeck({ ...pickedDeckCosmetics(source), name, cards: source.cards, portrait: source.portrait });
+    if (id !== null) openItem({ kind: "deck", id });
+  };
+
   const newTrio = (): void => {
     const id = store.createTrio({ name: nextName((number) => t("Trio {number}", { number }), trios.map((trio) => trio.name)) });
     if (id !== null) openItem({ kind: "trio", id });
@@ -566,6 +596,9 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           store.deleteDeck(openDeck.id);
           setOpen(next === null ? null : { kind: "deck", id: next.id });
           setView("list");
+        }}
+        onDuplicate={() => {
+          duplicateDeck(openDeck);
         }}
         onSaveNow={() => {
           void store.flush();
@@ -709,6 +742,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           open={open}
           onOpen={openItem}
           onNewDeck={newDeck}
+          onDuplicateDeck={duplicateDeck}
           onNewTrio={newTrio}
         />
         <main ref={mainRef} className="ws-main">

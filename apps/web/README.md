@@ -233,8 +233,10 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
-                        (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
-                        (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341);
+                        (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
+                        new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
+                        autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
+                        one POST /api/trios/import, never the autosave (R341);
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)

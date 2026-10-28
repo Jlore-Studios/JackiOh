@@ -18,6 +18,7 @@ import {
   addCard,
   clampName,
   comparedDecks,
+  copyName,
   deckStatus,
   deckVerdict,
   holdersOf,
@@ -165,5 +166,16 @@ describe("names", () => {
   it("a typed name is cut at the limit in characters, an emoji counting as one", () => {
     expect([...clampName("🂡".repeat(NAME + 3), NAME)]).toHaveLength(NAME);
     expect(clampName("Aggro", NAME)).toBe("Aggro");
+  });
+
+  it("#2096 a copy is '<name> (copy)', then '(copy 2)' and on, cut to fit the name limit", () => {
+    expect(copyName("Aggro", ["Aggro"], NAME)).toBe("Aggro (copy)");
+    expect(copyName("Aggro", ["Aggro", " aggro (COPY) "], NAME)).toBe("Aggro (copy 2)");
+    expect(copyName("Aggro", ["Aggro", "Aggro (copy)", "Aggro (copy 2)"], NAME)).toBe("Aggro (copy 3)");
+    const long = "x".repeat(NAME);
+    expect(copyName(long, [long], NAME)).toBe(`${"x".repeat(NAME - 7)} (copy)`);
+    expect([...copyName(long, [long], NAME)]).toHaveLength(NAME);
+    expect(copyName(long, [long, `${"x".repeat(NAME - 7)} (copy)`], NAME)).toBe(`${"x".repeat(NAME - 9)} (copy 2)`);
+    expect(copyName("Aggro Tempo", [], 13)).toBe("Aggro (copy)");
   });
 });

@@ -747,6 +747,7 @@ target: TargetSpec?,
 export type DyingUnit = {
 instanceId: string,
 controller: PlayerId,
+combat: boolean?,
 }
 
 export type EmoteId = "greetings" | "wellPlayed" | "oops" | "thanks" | "threaten" | "sob" | "yawn" | "laugh" | "angry" | "wahWah" | "wave" | "clap" | "thumbsUp" | "facepalm" | "shrug" | "thinking" | "heart" | "fire" | "skull" | "sweat" | "cool" | "gasp" | "salute" | "party"
@@ -2137,6 +2138,7 @@ flicker: InsteadFlicker?,
 to: InsteadTo?,
 interpose: boolean?,
 cancel: boolean?,
+resolveFirst: boolean?,
 }
 
 export type ReplacementMoment = "lethalHit" | "healed" | "wouldDie" | "toGraveyard" | "targeted"
@@ -2432,6 +2434,7 @@ defId: string?,
 rememberAs: string?,
 instance: TargetSpec?,
 randomKeywords: number?,
+keywords: {Keyword}?,
 }
 
 export type SummonCopyArgs = {
