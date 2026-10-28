@@ -16,8 +16,8 @@
 //
 // Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
 // chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
-// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's) arrive with the
-// set and never before.
+// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's, the Stinkyscape
+// set's and its four, R1883000) arrive with the set and never before.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -85,14 +85,21 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Quest",
   "Otherworldly",
   "Jelly Bean",
+  // The Stinkyscape set's (R1857000, R1883000): #27 to #36 the Drone Cores, the weapon rack's Weapons
+  // and #91 and #92 the Propagation's Swarm. "War Doctrine" is left out with "Prime": only #137's four
+  // Doctrines carry it.
+  "Drone Core",
+  "Weapon",
+  "Swarm",
 ];
 
 /**
- * The almanac's tag chips (R630): the deck builder's, then the four only tokens carry, "Prime" (the
- * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000)
- * and "Token", since the almanac shows tokens. Every tag a catalog card carries.
+ * The almanac's tag chips (R630): the deck builder's, then the five only tokens carry, "Prime" (the
+ * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
+ * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000) and "Token", since the almanac shows tokens.
+ * Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {

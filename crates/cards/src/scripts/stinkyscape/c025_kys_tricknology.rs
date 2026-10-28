@@ -1,13 +1,280 @@
-//! SPEC §8.10 Stinkyscape 25 KY's Tricknology, a card of the held Stinkyscape set (R1420).
-//! STUB (#1857): no behaviour yet; S18 (#1877) writes its script and its tests
-//! (CLAUDE.md rule 6). Its catalog row, sound, flavour and Chinese entries are already written.
+//! Stinkyscape #25 KY's Tricknology (SPEC §8.10 row 25). (2) Spell, KY, Epic; held (R1420).
+//!   Base:    "Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each
+//!            zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy)."
+//!   Radiant: "Choose a zone. Its Jacobian stretches a unit square. Summon a random Radiant Starship Piece
+//!            in each of your zones it covers. F(x, y) = (x² − y, xy)."
+//!
+//! R1877000, the build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5 and y its row from
+//! the caster's seat, 1 their unit row, 2 their backrow, −1 the enemy's unit row, −2 the enemy's backrow;
+//! a zone's point is its centre. The caster chooses any zone (`choose_cell`, B5 E18). The unit square
+//! mapped through the Jacobian of F at that point, J = [[2x, −1], [y, x]], with its corner at the zone,
+//! is the parallelogram of the points (x, y) + s·(2x, y) + t·(−1, x), s and t in 0 to 1, edges included
+//! (`covers`; at (1, −2) J is singular and it is a segment). Each unit zone whose point lies in it, open
+//! and not Locked, gets one random Starship Piece Unit (`query::starship_pieces()`, R1878000) summoned
+//! for the player whose zone it is (`summon_random`: no Cry, R1; R387), the caster's zones first, each
+//! lane upward. A covered backrow zone gets none, as an occupied or Locked unit zone gets none. The
+//! Radiant face reaches the caster's zones alone, each piece Radiant. Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-025";
 
+/// The resume step the chosen zone comes back to (§10.6).
+const CHOSEN: &str = "chosen";
+
+/// R1877000: the y of each row, from the caster's seat.
+const YOUR_UNITS_Y: i32 = 1;
+const YOUR_BACKROW_Y: i32 = 2;
+
+/// R1877000: a zone's point (x, y) from `caster`'s seat.
+fn point_of(caster: PlayerId, zone: &ZoneRef) -> (i32, i32) {
+    let y = if zone.row == Row::Units {
+        YOUR_UNITS_Y
+    } else {
+        YOUR_BACKROW_Y
+    };
+    (zone.lane, if zone.player == caster { y } else { -y })
+}
+
+/// R1877000: whether `point` lies in the unit square mapped through F's Jacobian at `corner`, cornered
+/// there: `point − corner = s·a + t·b` with a = (2x, y), b = (−1, x) and s, t in 0 to 1. With
+/// det J = 2x² + y > 0 (every zone but (1, −2)) that is J⁻¹·d in the unit square, J⁻¹ = [[x, 1], [−y, 2x]]
+/// / det, in integers; with det J = 0, a and b lie on one line and the cover is the segment of it from
+/// min(0, a·b) to a·a + max(0, a·b) along a.
+fn covers(corner: (i32, i32), point: (i32, i32)) -> bool {
+    let (x, y) = corner;
+    let (dx, dy) = (point.0 - x, point.1 - y);
+    let det = 2 * x * x + y;
+    if det > 0 {
+        let s = x * dx + dy;
+        let t = -y * dx + 2 * x * dy;
+        return (0..=det).contains(&s) && (0..=det).contains(&t);
+    }
+    let a = (2 * x, y);
+    let b = (-1, x);
+    let on_line = a.0 * dy - a.1 * dx == 0;
+    let along = a.0 * dx + a.1 * dy;
+    let ab = a.0 * b.0 + a.1 * b.1;
+    let aa = a.0 * a.0 + a.1 * a.1;
+    on_line && (ab.min(0)..=aa + ab.max(0)).contains(&along)
+}
+
+/// R1877000: the unit zones a choice of `chosen` covers that take a piece now (open zones are
+/// `summon_random`'s to find; a Locked one is passed by), the caster's first, each lane upward; on the
+/// Radiant face only the caster's.
+fn piece_zones(ctx: &EffectContext<'_>, chosen: &ZoneRef, radiant: bool) -> Vec<ZoneRef> {
+    let caster = ctx.controller;
+    let corner = point_of(caster, chosen);
+    let mut sides = vec![caster];
+    if !radiant {
+        sides.push(opponent_of(caster));
+    }
+    sides
+        .into_iter()
+        .flat_map(|player| {
+            (1..=UNIT_ZONES).map(move |lane| ZoneRef {
+                player,
+                row: Row::Units,
+                lane,
+            })
+        })
+        .filter(|zone| covers(corner, point_of(caster, zone)) && !is_locked(&*ctx.state, zone))
+        .collect()
+}
+
+fn tricknology(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![choose_cell(json_as(
+                json!({ "step": CHOSEN, "prompt": "KY's Tricknology: choose a zone" }),
+            ))]
+        })),
+        resume: IndexMap::from([(
+            CHOSEN,
+            hook(move |ctx| {
+                let Some(chosen) = chosen_cells(&*ctx).into_iter().next() else {
+                    return vec![];
+                };
+                let mut query = crate::query::starship_pieces();
+                query.type_ = Some(OneOrMany::One(CardType::Unit));
+                piece_zones(&*ctx, &chosen, radiant)
+                    .into_iter()
+                    .map(|zone| {
+                        summon_random(SummonRandomArgs {
+                            query: Some(query.clone()),
+                            player: Some(if zone.player == ctx.controller {
+                                PlayerSpec::SelfSide
+                            } else {
+                                PlayerSpec::Enemy
+                            }),
+                            lane: Some(zone.lane),
+                            radiant: radiant.then_some(true),
+                            stack: None,
+                        })
+                    })
+                    .collect()
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: tricknology(false),
+        radiant: tricknology(true),
+    }
+}
+
+// Stinkyscape #25 KY's Tricknology — SPEC §8.10 row 25, BUILD M12 row S 25: "the cover of each chosen zone
+// follows ST9's J, rows (2x, −1) and (y, x) (a table test over the 20 zones); each covered open zone gets a
+// random Starship Piece for its side, an occupied or Locked one none; the same seed covers the same zones;
+// radiant: only your zones, the pieces Radiant". R1877000 keeps the pieces to unit zones.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::testkit::*;
+
+    use crate::{filler, scenario};
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const FILLER: &str = "core-005"; // (1) Spell.
+    const VANILLA: &str = "core-008"; // (1) 4/4.
+
+    /// Every zone's point from the caster's seat: 5 lanes by the rows 1, 2, −1 and −2.
+    fn every_point() -> Vec<(i32, i32)> {
+        [1, 2, -1, -2]
+            .into_iter()
+            .flat_map(|y| (1..=UNIT_ZONES).map(move |x| (x, y)))
+            .collect()
+    }
+
+    /// The cover in floating point, by J's inverse, for a corner where J is invertible: an independent
+    /// reading of the same parallelogram.
+    fn covers_by_inverse(corner: (i32, i32), point: (i32, i32)) -> bool {
+        let (x, y) = (f64::from(corner.0), f64::from(corner.1));
+        let (dx, dy) = (f64::from(point.0) - x, f64::from(point.1) - y);
+        let det = 2.0 * x * x + y;
+        let s = (x * dx + dy) / det;
+        let t = (-y * dx + 2.0 * x * dy) / det;
+        let within = |v: f64| (-1e-9..=1.0 + 1e-9).contains(&v);
+        within(s) && within(t)
+    }
+
+    #[test]
+    fn r1877000_the_cover_of_each_of_the_20_zones_follows_the_jacobian() {
+        for corner in every_point() {
+            let cover: Vec<(i32, i32)> = every_point().into_iter().filter(|p| covers(corner, *p)).collect();
+            assert!(cover.contains(&corner), "{corner:?} covers itself");
+            if corner == (1, -2) {
+                // det J = 0: the segment from (0, −1) to (3, −4) holds no other zone.
+                assert_eq!(cover, vec![(1, -2)]);
+                continue;
+            }
+            let by_inverse: Vec<(i32, i32)> =
+                every_point().into_iter().filter(|p| covers_by_inverse(corner, *p)).collect();
+            assert_eq!(cover, by_inverse, "{corner:?}");
+        }
+        // Worked by hand: (1, 1)'s J = [[2, −1], [1, 1]] spans (1, 1), (3, 2), (0, 2), (2, 3).
+        let at = |corner| -> Vec<(i32, i32)> { every_point().into_iter().filter(|p| covers(corner, *p)).collect() };
+        assert_eq!(at((1, 1)), vec![(1, 1), (1, 2), (2, 2), (3, 2)]);
+        // (3, −1)'s J = [[6, −1], [−1, 3]], det 17.
+        assert_eq!(at((3, -1)), vec![(3, 1), (4, 1), (5, 1), (2, 2), (3, -1), (4, -1), (5, -1)]);
+    }
+
+    /// p1 holds Tricknology (Radiant on `radiant`); each side's unit row as given.
+    fn board(radiant: bool, seed: &str, mine: Value, theirs: Value) -> Scenario {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": mine, "library": filler(6), "mana": 10 },
+            "p2": { "hand": [FILLER], "field": theirs, "library": filler(6) },
+        }));
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        s
+    }
+
+    /// Cast it and choose `zone`.
+    fn choose(s: &mut Scenario, zone: Selection) {
+        s.play(ID, json!({}));
+        let pending = s.state().pending.clone().expect("the zone prompt");
+        assert_eq!(pending.kind, PromptKind::Cell);
+        assert_eq!(pending.options.len(), 20, "any zone of the board");
+        let key = pending
+            .options
+            .iter()
+            .find(|option| option.selection == zone)
+            .map(|option| option.key.clone())
+            .expect("offered");
+        s.answer(json!(key));
+    }
+
+    /// The pieces summoned by the last step, as (player, lane, definition, face).
+    fn summoned(s: &Scenario) -> Vec<(PlayerId, i32, String, bool)> {
+        s.last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned { player, instance_id, def_id, row: Row::Units, lane, .. } => {
+                    Some((*player, *lane, def_id.clone(), s.card(instance_id.as_str()).radiant))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn is_piece(def_id: &str) -> bool {
+        let def = crate::card_def(def_id);
+        def.type_ == CardType::Unit && has_keyword(&def.base.keywords, KeywordKind::StarshipPiece)
+    }
+
+    fn enemy_unit_lane(lane: i32) -> Selection {
+        Selection::Zone { player: P2, row: Row::Units, lane }
+    }
+
+    #[test]
+    fn r1877000_each_covered_open_unit_zone_gets_a_piece_for_its_side_the_same_seed_the_same() {
+        crate::register_all();
+        let run = || {
+            // (3, −1) covers the unit lanes 3 to 5 of both sides and p1's backrow lane 2.
+            let mut s = board(false, "tricknology", json!([]), json!([]));
+            choose(&mut s, enemy_unit_lane(3));
+            summoned(&s)
+        };
+        let pieces = run();
+        let places: Vec<(PlayerId, i32)> = pieces.iter().map(|(player, lane, ..)| (*player, *lane)).collect();
+        assert_eq!(places, vec![(P1, 3), (P1, 4), (P1, 5), (P2, 3), (P2, 4), (P2, 5)]);
+        assert!(pieces.iter().all(|(_, _, def_id, radiant)| is_piece(def_id) && !radiant));
+        assert_eq!(run(), pieces);
+    }
+
+    #[test]
+    fn r1877000_an_occupied_or_locked_zone_gets_none() {
+        crate::register_all();
+        let mut s = board(false, "tricknology-full", json!([{ "def": VANILLA, "lane": 3 }]), json!([]));
+        lock_zone(s.state_mut(), ZoneRef { player: P2, row: Row::Units, lane: 4 });
+        choose(&mut s, enemy_unit_lane(3));
+        let places: Vec<(PlayerId, i32)> = summoned(&s).iter().map(|(player, lane, ..)| (*player, *lane)).collect();
+        assert_eq!(places, vec![(P1, 4), (P1, 5), (P2, 3), (P2, 5)]);
+    }
+
+    #[test]
+    fn r1877000_a_cover_of_backrow_zones_alone_summons_nothing() {
+        crate::register_all();
+        let mut s = board(false, "tricknology-backrow", json!([]), json!([]));
+        // (1, −2): J is singular, and its segment holds only the enemy's backrow lane 1.
+        choose(&mut s, Selection::Zone { player: P2, row: Row::Backrow, lane: 1 });
+        assert!(summoned(&s).is_empty());
+    }
+
+    #[test]
+    fn r1877000_radiant_only_your_zones_each_piece_radiant() {
+        crate::register_all();
+        let mut s = board(true, "tricknology-radiant", json!([]), json!([]));
+        choose(&mut s, enemy_unit_lane(3));
+        let pieces = summoned(&s);
+        let places: Vec<(PlayerId, i32)> = pieces.iter().map(|(player, lane, ..)| (*player, *lane)).collect();
+        assert_eq!(places, vec![(P1, 3), (P1, 4), (P1, 5)]);
+        assert!(pieces.iter().all(|(_, _, def_id, radiant)| is_piece(def_id) && *radiant));
+    }
 }
