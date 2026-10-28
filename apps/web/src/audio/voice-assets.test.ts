@@ -669,19 +669,19 @@ describe("gen-voice.mjs --check (B37)", () => {
   }
 
   it(
-    "R1420 R1178000 R1857000 owes no file for a line of a set that has not shipped, the held Stinkyscape set's included, and the same line on a shipped card, Meditative+'s since v0.4.0 included, is missing",
+    "R1420 R1178000 R1857000 owes no file for a line of a set that has not shipped, and the same line on a shipped card, Meditative+'s since v0.4.0 and Stinkyscape's since its release included, is missing",
     () => {
-      // The reserved Boss set, which ships no card, and the held Stinkyscape set, whose files are owed
-      // from the release that ships it (#1884, R1857000).
-      for (const set of ["Boss", "Stinkyscape"]) {
+      // The reserved Boss set, which ships no card.
+      for (const set of ["Boss"]) {
         const unshipped = unrenderedTree(set);
         const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
         expect(quiet.status, describeRun(quiet)).toBe(0);
         expect(reportedKeys(quiet)).toEqual([]);
       }
 
-      // Core, and Meditative+, whose files are owed from the release that ships it (R1178000).
-      for (const set of ["Core", "Meditative+"]) {
+      // Core, Meditative+, whose files were owed from the release that shipped it (R1178000), and
+      // Stinkyscape, whose files are owed from its release (#1884, R1857000).
+      for (const set of ["Core", "Meditative+", "Stinkyscape"]) {
         const shipped = unrenderedTree(set);
         const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
         expect(loud.status, describeRun(loud)).toBe(1);

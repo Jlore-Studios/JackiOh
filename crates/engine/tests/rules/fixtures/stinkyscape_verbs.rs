@@ -118,6 +118,9 @@ pub const PLAIN: &str = "sv-plain";
 /// A Trap: "Reveals when one of your Units would die in combat: give it +10 Health" (Stinkyscape #138
 /// Pocket Peptides' shape, R1875006).
 pub const REPRIEVE: &str = "sv-reprieve";
+/// R1884001: a Field Spell holding a would-die replacement that is never spent (no Trap fires), whose
+/// follow-up casts a bolt at the dying Unit: the cast's own state check would ask it again.
+pub const ENDLESS_REPRIEVE: &str = "sv-endless-reprieve";
 /// A Spell: "Cast a new bolt at the enemy hero, and only there" (a bolt aims at Units alone).
 pub const AIM_ONLY: &str = "sv-aim-only";
 /// A Spell: "Cast a new bolt at the enemy hero", which falls back to its caster's choice.
@@ -277,6 +280,44 @@ fn reprieve() -> Script {
                             json!({ "target": instance(&id), "health": REPRIEVE_HEALTH }),
                         ))]
                     })
+                    .unwrap_or_default()
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+/// R1884001: the reprieve's replacement on a card no firing spends, its follow-up a bolt cast at the
+/// Unit that would die, so the cast's own state check meets the same death.
+fn endless_reprieve() -> Script {
+    let in_combat = |event: &ReplacedEvent, controller: PlayerId| match event {
+        ReplacedEvent::WouldDie { units } => units
+            .iter()
+            .find(|unit| unit.controller == controller && unit.combat == Some(true))
+            .map(|unit| unit.instance_id.clone()),
+        _ => None,
+    };
+    Script {
+        replacements: vec![ReplacementDef {
+            id: "sv-endless-reprieve".into(),
+            on: ReplacementMoment::WouldDie,
+            where_: None,
+            when: Some(replacement_when(move |rc| {
+                in_combat(rc.event, rc.controller).is_some()
+            })),
+            instead: ReplacementInstead {
+                resolve_first: Some(true),
+                ..ReplacementInstead::default()
+            },
+            then: Some("bolt".into()),
+            by: None,
+        }],
+        resume: IndexMap::from([(
+            "bolt",
+            hook(move |ctx| {
+                replacement_of(&*ctx)
+                    .and_then(|record| in_combat(&record.event, ctx.controller))
+                    .map(|id| vec![effects::cast_new(json_as(json!({ "def": BOLT, "aimAt": id })))])
                     .unwrap_or_default()
             }),
         )]),
@@ -580,6 +621,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             }),
         ),
         (REPRIEVE.to_string(), both(reprieve())),
+        (ENDLESS_REPRIEVE.to_string(), both(endless_reprieve())),
         (AIM_ONLY.to_string(), both(aimed_bolt(true))),
         (AIM_FALLBACK.to_string(), both(aimed_bolt(false))),
     ])
@@ -645,6 +687,7 @@ fn defs() -> Vec<CardDef> {
         card(18527, REPRIEVE, "Trap", None, json!([])),
         card(18528, AIM_ONLY, "Spell", None, json!([])),
         card(18529, AIM_FALLBACK, "Spell", None, json!([])),
+        card(18530, ENDLESS_REPRIEVE, "Field Spell", None, json!([])),
     ]
 }
 

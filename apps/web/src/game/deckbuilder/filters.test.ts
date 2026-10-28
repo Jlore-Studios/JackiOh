@@ -626,13 +626,14 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
       "db-filter-set-classic-plus",
       "db-filter-set-meditative",
       "db-filter-set-meditative-plus",
+      "db-filter-set-stinkyscape",
     ]);
   });
 
@@ -653,7 +654,9 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(pool(["Meditative"])).toHaveLength(deckableIn(["Meditative"]));
     expect(pool(["Meditative+"])).toHaveLength(deckableIn(["Meditative+"]));
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
-    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]));
+    expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
+    expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
+    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]));
   });
 });
 
