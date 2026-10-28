@@ -16,6 +16,7 @@ import {
   type DeckVersion,
   type SavedDeck,
   type SavedTrio,
+  type SendOptions,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
@@ -109,11 +110,17 @@ export type ServerCall = {
   body?: DeckInput | TrioInput | TrioImportInput;
   /** R2100000: the version a restore names. */
   versionId?: string;
+  /** R2119000: the request was sent with `keepalive`, as the page went away. */
+  keepalive?: true;
 };
 
 /** The server's 404 for a deck or version that is not the caller's. */
 function notFound(what: "deck" | "version"): ApiRequestError {
   return new ApiRequestError(404, { code: "not_found", message: `There is no such ${what}.` });
+}
+
+function sentWith(options: SendOptions | undefined): { keepalive?: true } {
+  return options?.keepalive === true ? { keepalive: true } : {};
 }
 
 /** An in-memory `/api/decks` and `/api/trios`, with the refusals the store has to handle. */
@@ -142,8 +149,8 @@ export function fakeDeckServer() {
       decks.set(id, input);
       return { deck: { id } };
     },
-    async deleteDeck(id) {
-      gate({ op: "deleteDeck", id });
+    async deleteDeck(id, options) {
+      gate({ op: "deleteDeck", id, ...sentWith(options) });
       return { deleted: decks.delete(id) };
     },
     async putTrio(id, input) {
@@ -158,8 +165,8 @@ export function fakeDeckServer() {
       trios.set(id, input);
       return { trio: { id } };
     },
-    async deleteTrio(id) {
-      gate({ op: "deleteTrio", id });
+    async deleteTrio(id, options) {
+      gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
     },
     async importTrio(input) {

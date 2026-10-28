@@ -19,6 +19,7 @@ import {
   type DeckVersion,
   type SavedDeck,
   type SavedTrio,
+  type SendOptions,
   type TrioImportInput,
   type TrioInput,
   type TrioSlots,
@@ -123,10 +124,16 @@ type Call = {
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
   versionId?: string;
+  /** R2119000: sent with `keepalive`, as the page went away. */
+  keepalive?: true;
 };
 
 function notFound(what: "deck" | "version"): ApiRequestError {
   return new ApiRequestError(404, { code: "not_found", message: `There is no such ${what}.` });
+}
+
+function sentWith(options: SendOptions | undefined): { keepalive?: true } {
+  return options?.keepalive === true ? { keepalive: true } : {};
 }
 
 /** Mirrors deck/trio refusals from `crates/server/src/api/decks.rs`. */
@@ -156,8 +163,8 @@ function fakeServer() {
       decks.set(id, input);
       return { deck: { id } };
     },
-    async deleteDeck(id: string) {
-      await gate({ op: "deleteDeck", id });
+    async deleteDeck(id: string, options?: SendOptions) {
+      await gate({ op: "deleteDeck", id, ...sentWith(options) });
       const deleted = decks.delete(id);
       for (const [trioId, trio] of trios) {
         trios.set(trioId, { ...trio, deckIds: trio.deckIds.map((slot) => (slot === id ? null : slot)) as TrioSlots });
@@ -176,8 +183,8 @@ function fakeServer() {
       trios.set(id, input);
       return { trio: { id } };
     },
-    async deleteTrio(id: string) {
-      await gate({ op: "deleteTrio", id });
+    async deleteTrio(id: string, options?: SendOptions) {
+      await gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
     },
     /** R341: import is all-or-nothing under the server caps. */
@@ -664,6 +671,98 @@ describe("deletes and trios", () => {
     expect(server.trios.get(trio)?.deckIds).toEqual([null, deck, null]);
     expect(store.getSnapshot().unsynced.size).toBe(0);
     expect(store.getSnapshot().status.state).toBe("saved");
+  });
+});
+
+describe("a held deletion (R2119000)", () => {
+  function seeded(decks: SavedDeck[], trios: SavedTrio[] = []) {
+    const server = fakeServer();
+    for (const deck of decks) server.decks.set(deck.id, { name: deck.name, cards: deck.cards, catalogVersion: CATALOG_VERSION });
+    for (const trio of trios) server.trios.set(trio.id, { name: trio.name, deckIds: trio.deckIds });
+    const clock = manualClock();
+    const store = open({ api: server.api, clock, server: response(decks, trios) });
+    return { server, clock, store };
+  }
+
+  it("R2119000 a hidden deck is listed nowhere and never saved, its trio slots read empty, and unhide brings both back", async () => {
+    const { server, clock, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)],
+      [savedTrio("t1", "Ladder", ["d1", "d2", null], 3)],
+    );
+    store.updateDeck("d1", { name: "Aggro 2" });
+    store.hide("deck", "d1");
+    const hidden = store.getSnapshot();
+    expect(hidden.decks.map((deck) => deck.id)).toEqual(["d2"]);
+    expect(hidden.trios[0]?.deckIds).toEqual([null, "d2", null]);
+    expect(hidden.held).toEqual({ kind: "deck", id: "d1" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS * 2);
+    expect(server.calls, "the unsaved rename waits with its deck").toEqual([]);
+    expect(store.getSnapshot().status.state).toBe("saved");
+
+    store.unhide();
+    const back = store.getSnapshot();
+    expect(back.decks.map((deck) => deck.id)).toEqual(["d1", "d2"]);
+    expect(back.trios[0]?.deckIds).toEqual(["d1", "d2", null]);
+    expect(back.held).toBeNull();
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls.map((call) => `${call.op} ${call.id}`)).toEqual(["putDeck d1"]);
+    expect(server.decks.get("d1")?.name).toBe("Aggro 2");
+  });
+
+  it("R2119000 a trio edited while a deck is hidden keeps the hidden deck's slot", async () => {
+    const { server, clock, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2), savedDeck("d3", "Midrange", [], 3)],
+      [savedTrio("t1", "Ladder", ["d1", "d2", null], 4)],
+    );
+    store.hide("deck", "d1");
+    const shown = store.getSnapshot().trios[0]?.deckIds ?? [null, null, null];
+    store.updateTrio("t1", { deckIds: [shown[0], shown[1], "d3"] });
+    expect(store.getSnapshot().trios[0]?.deckIds).toEqual([null, "d2", "d3"]);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.trios.get("t1")?.deckIds).toEqual(["d1", "d2", "d3"]);
+
+    store.unhide();
+    expect(store.getSnapshot().trios[0]?.deckIds).toEqual(["d1", "d2", "d3"]);
+  });
+
+  it("R2119000 a flush made as the page hides sends its deletions with keepalive", async () => {
+    const { server, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)],
+      [savedTrio("t1", "Ladder", ["d1", null, null], 3)],
+    );
+    store.deleteDeck("d1");
+    store.deleteTrio("t1");
+    await store.flush({ keepalive: true });
+    expect(server.calls).toEqual([
+      { op: "deleteTrio", id: "t1", keepalive: true },
+      { op: "deleteDeck", id: "d1", keepalive: true },
+    ]);
+
+    store.deleteDeck("d2");
+    await store.flush();
+    expect(server.calls.at(-1), "the next flush is a plain one").toEqual({ op: "deleteDeck", id: "d2" });
+  });
+
+  it("R2119000 a refused deletion puts the deck back in the server's words, and a transport failure keeps it deleted and tries again", async () => {
+    const { server, clock, store } = seeded([savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)]);
+    const message = "This account can't change its decks.";
+    server.state.refusals.set("d1", new ApiRequestError(403, { code: "forbidden", message }));
+    store.deleteDeck("d1");
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d2"]);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(store.getSnapshot().decks.map((deck) => deck.id), "back in its place").toEqual(["d1", "d2"]);
+    expect(store.getSnapshot().refused.get("d1")).toBe(message);
+    expect(store.getSnapshot().status).toEqual({ state: "error", message });
+
+    server.state.offline = true;
+    store.deleteDeck("d2");
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(store.getSnapshot().status.state).toBe("offline");
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d1"]);
+    server.state.offline = false;
+    await clock.advance(RETRY_MS);
+    expect(server.decks.has("d2")).toBe(false);
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d1"]);
   });
 });
 

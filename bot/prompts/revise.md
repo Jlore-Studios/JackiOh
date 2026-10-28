@@ -39,10 +39,13 @@ Read the whole change before editing: `git diff $base...HEAD`.
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
   A ruling of this branch whose number `main` took meanwhile takes the next number free in its
   issue's block: rename its note, its `id`, its test names (`r<n>_…`, `R<n>`) and every citation of
-  it on this branch to match; `main`'s notes stay exactly as they are. A conflict on `spec/INDEX.md`
-  or the end of `spec/11-rulings.md` (a branch from before the daily fold) takes `main`'s side: the
-  branch's §11 paragraph moves to `spec/pending/<issue>.md`, and the fold rewrites the index. Then
-  run `cargo jackioh spec check`. Before you stop, run
+  it on this branch to match; `main`'s notes stay exactly as they are. A conflict on
+  `spec/INDEX.md` or the end of `spec/11-rulings.md` (a branch from before the daily fold) takes
+  `main`'s side: the branch's §11 paragraph moves to `spec/pending/<issue>.md`, and the fold
+  rewrites the index. The harness resolves some conflicts itself before you start and names them
+  above, if any: leave those as they are. A conflicted `games.jsonl` it left is yours: resolve the
+  rest first, then run `cargo jackioh golden bless`. Then run `cargo jackioh spec check`. Before
+  you stop, run
   `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec` and every other file the merge left
   conflicted, and make sure it prints nothing. A change that still holds a marker is never
   delivered.

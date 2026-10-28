@@ -36,6 +36,10 @@
    padding, hover and press. */
 .log .log-card {
   display: inline;
+  /* A button stays an inline block whatever its display says, and an inline block sits on the line
+     by its last line's baseline, so a wrapped line's number fell to its last line: the top keeps the
+     number on the first. */
+  vertical-align: top;
   margin: 0;
   padding: 0;
   border: 0;
