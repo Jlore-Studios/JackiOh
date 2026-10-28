@@ -88,6 +88,8 @@ a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
 
+A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
+
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
 `commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
