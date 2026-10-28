@@ -11312,9 +11312,9 @@
     },
     "muse": {
       "infra": {
-        "at": "2026-10-28T03:12:46Z",
+        "at": "2026-10-28T03:26:05Z",
         "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "streak": 1
+        "streak": 2
       },
       "spent": [
         {
