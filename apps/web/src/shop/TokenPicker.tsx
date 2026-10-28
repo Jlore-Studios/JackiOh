@@ -17,6 +17,7 @@ import { t } from "../i18n/i18n.ts";
 import { getCollection, getTokens, redeemCardToken, type CollectionResponse, type TokenBarsResponse } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, unownedCards } from "./shop.ts";
 import "./shop.css";
 
@@ -120,9 +121,7 @@ export default function TokenPicker({
       )}
       {bars === null || collection === null ? (
         loadError === null ? (
-          <p className="notice" role="status" data-testid={shopTestid.tokenLoading}>
-            {t("Loading your tokens…")}
-          </p>
+          <Skeleton variant="panel" label={t("Loading your tokens…")} testId={shopTestid.tokenLoading} />
         ) : null
       ) : (
         <TokenBody bars={bars} collection={collection} busy={busy} onPickCard={pickCard} />

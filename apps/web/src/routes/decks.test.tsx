@@ -27,6 +27,7 @@ import {
 } from "../net/api.ts";
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import DecksRoute from "./decks.tsx";
 import { navTestid } from "./nav.tsx";
 
@@ -262,11 +263,13 @@ describe("what the screen opens with", () => {
 
     fireEvent.click(screen.getByTestId(DECKBUILDER_RETRY));
     expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId("deckbuilder-loading"), "rows");
     expect(screen.queryByTestId(DECKBUILDER_RETRY)).toBeNull();
 
     await waitFor(() => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
     });
+    expect(screen.queryByTestId("deckbuilder-loading")).toBeNull();
     expect(getDecks).toHaveBeenCalledTimes(2);
   });
 
@@ -279,12 +282,14 @@ describe("what the screen opens with", () => {
     );
     render(<DecksRoute />);
     expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId("deckbuilder-loading"), "rows");
     expect(screen.queryByTestId("settings-open-nav"), "while the account is read").toBeNull();
 
     await waitFor(() => {
       expect(getDecks).toHaveBeenCalledWith(TOKEN);
     });
     expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId("deckbuilder-loading"), "rows");
     expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
     expect(screen.queryByTestId("settings-open-nav"), "while the decks are read").toBeNull();
 
@@ -296,6 +301,7 @@ describe("what the screen opens with", () => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
     });
     expect(screen.getByTestId("settings-open-nav"), "the workshop's own gear").toBeInTheDocument();
+    expect(screen.queryByTestId("deckbuilder-loading")).toBeNull();
   });
 });
 

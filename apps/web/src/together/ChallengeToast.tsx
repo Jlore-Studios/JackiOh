@@ -38,6 +38,7 @@ import { currentPath, leaveFirst, navigate, paths } from "../net/navigate.ts";
 import { roomLinkPath } from "../net/roomLink.ts";
 import { declineChallenge, type Challenge } from "../net/social.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { choiceOf, pickDeck, pickTrio, readChallengeChoice, rememberChallengeChoice } from "./challengeChoice.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
 import { messageOf } from "./session.ts";
@@ -251,9 +252,7 @@ export function ChallengeToast(): ReactElement {
                 />
               </p>
               {challenge.mode !== "random" && saved === null ? (
-                <p className="lobby-note" role="status">
-                  {t("Loading your decks…")}
-                </p>
+                <Skeleton variant="panel" label={t("Loading your decks…")} />
               ) : null}
               {challenge.mode !== "random" && list.length > 0 && pick !== null ? (
                 <label className="challenge-toast__pick">
