@@ -368,8 +368,8 @@ class DashboardTests(unittest.TestCase):
         self.assertLess(body.index(muse_row), body.index(claude_row))
         # The date first, then how far the PC's two local jobs have played (no heartbeat here).
         self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n"
-                                        f"{dashboard.PROGRESS_START}\n🧠 **learn** on the owner's "
-                                        "PC: no heartbeat set up (JACKIOH_PC_GIST)<br>\n"))
+                                        f"{dashboard.PROGRESS_START}\n```mermaid\n"))
+        self.assertIn("<sub>The owner's PC: no heartbeat set up (JACKIOH_PC_GIST).</sub>", body)
         self.assertIn(f"{dashboard.PROGRESS_END}\n\n# 🤖 ", body)
         self.assertIn("`bot-status` rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
@@ -1159,51 +1159,71 @@ class RunnersTests(unittest.TestCase):
         if beat is not None:
             self.gh.gists = {"g1": {"files": {dashboard.PC_FILE: {"content": json.dumps(beat)}}}}
 
-    def top(self) -> list[str]:
-        """The issue's lines on how far the PC's two local jobs have played."""
-        return dashboard.progress(self.ctx, dashboard.read_runners(self.ctx)).split("\n")
+    def top(self) -> str:
+        """The top of the issue: how far the PC's two local jobs have played, as a chart."""
+        return dashboard.progress(self.ctx, dashboard.read_runners(self.ctx))
 
-    def test_the_top_lines_say_how_far_the_pcs_two_jobs_have_played(self):
-        """Under the issue's date, the learn lane's export as the game it is at of learn.yml's
-        100,000, with its shard's games, and gather's games of its patch: from the heartbeat's
-        `progress`, the games each `jackioh` has written so far."""
+    def bars(self) -> tuple[str, str, str]:
+        """The progress chart's labels, its played bar and the line under it."""
+        lines = self.top().split("\n")
+        return (next(line for line in lines if line.startswith("    x-axis")),
+                [line for line in lines if line.startswith("    bar ")][1],
+                next(line for line in lines if line.startswith("<sub>")))
+
+    def test_the_top_of_the_issue_charts_how_far_the_pcs_two_jobs_have_played(self):
+        """Under the issue's date, a Mermaid bar chart: the learn lane's export as the game it is
+        at of learn.yml's 100,000, its shard's games, and gather's games, each in percent over a
+        grey bar to 100, from the heartbeat's `progress` (the games each `jackioh` has written so
+        far); under it, the shard's range, gather's patch and when the PC was heard."""
         self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 2304, "from": 65001},
                           gather={"kind": "stats", "games": 2000, "done": 1320, "from": 300001,
                                   "patch": "v0.4.12d"})
-        start, learn, gather, end = self.top()
-        self.assertEqual((start, end), (dashboard.PROGRESS_START, dashboard.PROGRESS_END))
-        self.assertEqual(learn, "🧠 **learn** on the owner's PC: game 67,304 of 100,000 "
-                         f"{dashboard.bar(0.67304)} · its shard, games 65,001–70,000: 2,304 of "
-                         "5,000<br>")
-        self.assertEqual(gather, "🌾 **gather** on the owner's PC: game 1,320 of 2,000 "
-                         f"{dashboard.bar(0.66)} of v0.4.12d")
-        # An export larger than learn.yml's default: the game it is at, of no total.
+        text = self.top()
+        self.assertTrue(text.startswith(f"{dashboard.PROGRESS_START}\n```mermaid\n"
+                                        f"{dashboard.PROGRESS_CHART}\nxychart-beta horizontal\n"
+                                        "    title \"The owner's PC: how far its two local jobs "
+                                        "have played, %\"\n"))
+        self.assertIn('    x-axis ["learn: game 67,304 of 100,000", "its shard: 2,304 of 5,000", '
+                      '"gather: game 1,320 of 2,000"]\n    y-axis "% played" 0 --> 100\n'
+                      "    bar [100, 100, 100]\n    bar [67.3, 46.1, 66.0]\n```\n", text)
+        self.assertTrue(text.endswith("<sub>The shard plays games 65,001–70,000 · gather plays "
+                                      f"v0.4.12d · heard 21:59.</sub>\n{dashboard.PROGRESS_END}"))
+        # An export larger than learn.yml's default: its shard alone, and the game it is at.
         self.both_playing(learn={"kind": "selfplay", "games": 5000, "done": 10, "from": 100001})
-        self.assertIn("PC: game 100,010 · its shard, games 100,001–105,000: 10 of 5,000",
-                      self.top()[1])
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["its shard: 10 of 5,000", "gather: working, no '
+                         'games"]')
+        self.assertEqual(played, "    bar [0.2, 0.0]")
+        self.assertEqual(note, "<sub>Learn is at game 100,010, past learn.yml's 100,000 · the "
+                         "shard plays games 100,001–105,000 · gather is playing no games now (its "
+                         "build) · heard 21:59.</sub>")
         # Busy but playing no games: building, retraining, gating.
         self.both_playing()
-        _, learn, gather, _ = self.top()
-        self.assertIn("**learn** on the owner's PC: working, playing no games now (a build, the "
-                      "retrain, the screen or the gate)", learn)
-        self.assertEqual(gather, "🌾 **gather** on the owner's PC: working, playing no games now "
-                         "(its build)")
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["learn: working, no games", "gather: working, no '
+                         'games"]')
+        self.assertEqual(played, "    bar [0.0, 0.0]")
+        self.assertIn("<sub>Learn is playing no games now (a build, the retrain, the screen or "
+                      "the gate) · gather is playing no games now (its build)", note)
         # Jobs queued for runners the PC has not started (it is not quiet yet), then none at all.
         self.gather_going(status="queued")
         self.gh.runs["104"]["status"] = "queued"
         self.gh.jobs["104"] = [{"name": "plan", "status": "queued",
                                 "labels": [dashboard.LOCAL_LABEL]}]
         self.heartbeat(self.beat(runners=[]))
-        _, learn, gather, _ = self.top()
-        self.assertIn("**learn** on the owner's PC: waiting for the PC to start its runner", learn)
-        self.assertIn("**gather** on the owner's PC: waiting for the PC to start its runner", gather)
+        self.assertEqual(self.bars()[0], '    x-axis ["learn: waiting for its runner", '
+                         '"gather: waiting for its runner"]')
         self.gh.runs.clear()
-        self.assertIn("**gather** on the owner's PC: not playing now", self.top()[2])
-        # No heartbeat to trust: the lines say why.
+        self.assertEqual(self.bars()[0], '    x-axis ["learn: not playing", "gather: not '
+                         'playing"]')
+        # No heartbeat to trust: the line under the chart says why.
         self.heartbeat(self.beat(minutes_ago=30))
-        self.assertIn("**learn** on the owner's PC: not heard since 21:30<br>", self.top()[1])
+        labels, played, note = self.bars()
+        self.assertEqual(labels, '    x-axis ["learn: no heartbeat", "gather: no heartbeat"]')
+        self.assertEqual(note, "<sub>The owner's PC: not heard since 21:30.</sub>")
         self.heartbeat(None, gist="")
-        self.assertIn("PC: no heartbeat set up (JACKIOH_PC_GIST)", self.top()[2])
+        self.assertEqual(self.bars()[2], "<sub>The owner's PC: no heartbeat set up "
+                         "(JACKIOH_PC_GIST).</sub>")
 
     def test_the_export_size_is_learn_ymls_default(self):
         text = (ROOT / ".github" / "workflows" / "learn.yml").read_text(encoding="utf-8")
@@ -1233,8 +1253,8 @@ class RunnersTests(unittest.TestCase):
             f"{dashboard.RUNNERS_START}\nold runners\n{dashboard.RUNNERS_END}\nbottom")
         self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
         body = self.gh.threads[148]["body"]
-        self.assertTrue(body.startswith(f"date\n\n{dashboard.PROGRESS_START}\n🧠 **learn**"))
-        self.assertIn("game 67,304 of 100,000", body)
+        self.assertTrue(body.startswith(f"date\n\n{dashboard.PROGRESS_START}\n```mermaid\n"))
+        self.assertIn('"learn: game 67,304 of 100,000"', body)
         self.assertNotIn("old lines", body)
         self.assertNotIn("old runners", body)
         self.assertTrue(body.endswith(dashboard.RUNNERS_END + "\nbottom"))
