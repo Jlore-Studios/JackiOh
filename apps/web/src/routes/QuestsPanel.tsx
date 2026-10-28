@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState, type ReactElement } from "react";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getQuests, keptPaths, replaceQuest, type QuestsResponse } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
@@ -102,7 +103,7 @@ export function QuestsList({
     <div className="account-quests" data-testid={questsTestid.panel}>
       <h3 className="account-heading">{t("Quests")}</h3>
       {quests.quests.length === 0 ? (
-        <p>{t("No quests yet.")}</p>
+        <EmptyState text={t("No quests yet.")} />
       ) : (
         <ul className="account-quests__list">
           {quests.quests.map((quest) => {

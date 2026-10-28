@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
 import { getQuests, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
 
@@ -101,6 +102,7 @@ describe("QuestsList", () => {
     render(<QuestsList quests={book({ quests: [], nextDueAt: Date.now() + 60_000 })} />);
 
     expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("No quests yet.");
+    expectEmptyState(screen.getByText("No quests yet."));
     expect(screen.getByTestId(questsTestid.next)).toHaveTextContent(/^Next quest in /);
   });
 

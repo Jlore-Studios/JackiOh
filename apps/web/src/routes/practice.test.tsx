@@ -166,6 +166,8 @@ type HostOptions = {
   lethal?: boolean;
   /** R2102000: the started game's snapshot says the human has lethal, as an Easy free game's would. */
   lethalHint?: boolean;
+  /** R2208000: the worker's claim answer marks a decision this device's clock cut. */
+  clockCut?: boolean;
 };
 
 /** Fake definitions cost each card by its id's final digit. */
@@ -299,7 +301,12 @@ function routeHost(options: HostOptions = {}): RouteHost {
       if (body.type === "debug") return Promise.resolve({ id: mine, type: "debug", debug });
       if (body.type === "claim") {
         // R1303000: the conceded game's claim, as the worker answers it once the game is over.
-        return Promise.resolve({ id: mine, type: "claim", claim: { seed, result: "loss", log: [] } });
+        return Promise.resolve({
+          id: mine,
+          type: "claim",
+          claim: { seed, result: "loss", log: [] },
+          ...(options.clockCut === true ? { clockCut: true as const } : {}),
+        });
       }
       if (body.type === "catalog") {
         return Promise.resolve(
@@ -2224,6 +2231,37 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     await waitFor(() => {
       expect(screen.queryByTestId(T.result)).toBeNull();
     });
+  });
+
+  it("R2208000 an ai_mismatch refusal of a game this device's clock cut says the device ran out of time, and the server gets the claim alone", async () => {
+    const host = routeHost({ clockCut: true });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "refused");
+    });
+    expect(line).toHaveAttribute("data-reason", "ai_mismatch");
+    expect(line).toHaveTextContent("This game earned nothing (this device ran out of time on one of the AI's moves).");
+    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-1", result: "loss", log: [] });
+  });
+
+  it("R2208000 a refusal for another reason of a game this device's clock cut reads as before", async () => {
+    const host = routeHost({ clockCut: true });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "expired" }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "refused");
+    });
+    expect(line).toHaveAttribute("data-reason", "expired");
+    expect(line).toHaveTextContent("This game earned nothing (it came in too late to count).");
   });
 
   it("R1303000 a claim that fails shows that the server could not check it, and the dialog stays whole", async () => {
