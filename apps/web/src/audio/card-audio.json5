@@ -2866,6 +2866,177 @@
       attack: { voice: "sapi-synth", text: "Stripping parts." },
       death: { voice: "sapi-synth", text: "Salvage what remains." },
     },
+    "traininggrounds-001": { // Spikey Steven
+      play: { voice: "brute", text: "Spikey Steven, ready to poke!" },
+      attack: { voice: "brute", text: "Poke!" },
+      death: { voice: "brute", text: "Too sharp, too soft." },
+    },
+    "traininggrounds-002": { // Personal Trainer
+      play: { voice: "hero", text: "Drop and give me twenty!" },
+      attack: { voice: "hero", text: "Feel the burn!" },
+      death: { voice: "hero", text: "Skipped leg day." },
+    },
+    "traininggrounds-003": { // Group leader
+      play: { voice: "guard", text: "Everyone, on me!" },
+      attack: { voice: "guard", text: "Follow my lead!" },
+      death: { voice: "guard", text: "Someone else lead." },
+    },
+    "traininggrounds-004": { // Boulder Fist Ogre
+      play: { voice: "sapi-giant", text: "Ogre smash first, think never!" },
+      attack: { voice: "sapi-giant", text: "Boulder fist!" },
+      death: { voice: "sapi-giant", text: "Ogre... crumble." },
+    },
+    "traininggrounds-005": { // Midlane Menace
+      play: { voice: "zoomer", text: "Mid or feed, baby!" },
+      attack: { voice: "zoomer", text: "Mid diff!" },
+      death: { voice: "zoomer", text: "Gank. Typical." },
+    },
+    "traininggrounds-006": { // Chosen by the Sun
+      play: { voice: "sapi-heroine", text: "The sun shines on me!" },
+      attack: { voice: "sapi-heroine", text: "By the dawn!" },
+      death: { voice: "sapi-heroine", text: "Sunset." },
+    },
+    "traininggrounds-007": { // Chosen by the Moon
+      play: { voice: "sapi-mystic", text: "The moon keeps watch." },
+      attack: { voice: "sapi-mystic", text: "By moonlight!" },
+      death: { voice: "sapi-mystic", text: "Eclipsed." },
+    },
+    "traininggrounds-008": { // Clobberer
+      play: { voice: "brute", text: "Time to clobber!" },
+      attack: { voice: "brute", text: "Clobber!" },
+      death: { voice: "brute", text: "Got clobbered." },
+    },
+    "traininggrounds-009": { // Ravager
+      play: { voice: "sapi-villain", text: "Nothing will be left standing." },
+      attack: { voice: "sapi-villain", text: "Ravage!" },
+      death: { voice: "sapi-villain", text: "Ravaged at last." },
+    },
+    "traininggrounds-010": { // Fan of Knives
+      cast: { voice: "whisper", text: "Duck." },
+    },
+    "traininggrounds-011": { // Thwomp
+      cast: { voice: "sapi-giant", text: "Thwomp!" },
+    },
+    "traininggrounds-012": { // Fortify
+      cast: { voice: "guard", text: "Hold the line!" },
+    },
+    "traininggrounds-013": { // Explosive Runes
+      cast: { voice: "sapi-wizard", text: "The runes ignite!" },
+    },
+    "traininggrounds-014": { // Explosive Trap
+      cast: { voice: "goof", text: "Surprise! Kaboom!" },
+    },
+    "traininggrounds-015": { // In a hurry
+      cast: { voice: "hustler", text: "Go go go, no time!" },
+    },
+    "traininggrounds-016": { // Celestial Caller
+      play: { voice: "sapi-mystic", text: "Sun and moon, to my side!" },
+      attack: { voice: "sapi-mystic", text: "By the heavens!" },
+      death: { voice: "sapi-mystic", text: "The sky goes dark." },
+    },
+    "traininggrounds-017": { // Flaming Felinor
+      play: { voice: "cat", text: "Mrrrow! Everything burns!" },
+      attack: { voice: "cat", text: "Hiss!" },
+      death: { voice: "cat", text: "Burnt out." },
+    },
+    "traininggrounds-018": { // Knife Juggler
+      play: { voice: "goof", text: "Put this apple on your head." },
+      attack: { voice: "goof", text: "Catch!" },
+      death: { voice: "goof", text: "Dropped one." },
+    },
+    "traininggrounds-019": { // Extra Rations
+      cast: { voice: "sapi-cook", text: "Seconds, anyone?" },
+    },
+    "traininggrounds-020": { // Recruitment Posters
+      cast: { voice: "sapi-announcer", text: "We want you! Sign up today!" },
+    },
+    "traininggrounds-021": { // Flame Tongue Totem
+      play: { voice: "sapi-mystic", text: "Feel the fire beside you." },
+      attack: { voice: "sapi-mystic", text: "Burn!" },
+      death: { voice: "sapi-mystic", text: "The flame gutters." },
+    },
+    "traininggrounds-022": { // Right-Hand Felinor
+      play: { voice: "cat", text: "Mrrp! I've got your right!" },
+      attack: { voice: "cat", text: "Right behind you!" },
+      death: { voice: "cat", text: "Left behind." },
+    },
+    "traininggrounds-023": { // Quadrupling Felinors
+      play: { voice: "cat", text: "Mrrow! Mrrow! Mrrow! Mrrow!" },
+      attack: { voice: "cat", text: "All of us!" },
+      death: { voice: "cat", text: "One down, three to go." },
+    },
+    "traininggrounds-024": { // Goliath Situation
+      cast: { voice: "hustler", text: "Big guy? Big discount!" },
+    },
+    "traininggrounds-025": { // Trigor
+      play: { voice: "sapi-giant", text: "Three for one, one for more!" },
+      attack: { voice: "sapi-giant", text: "Trigor!" },
+      death: { voice: "sapi-giant", text: "I'll be back, bigger." },
+    },
+    "traininggrounds-026": { // Path of Exile
+      cast: { voice: "sapi-ghost", text: "Walk the path. Do not return." },
+    },
+    "traininggrounds-027": { // Hopeful Jelly Bean
+      cast: { voice: "kid", text: "Make a wish and shine!" },
+    },
+    "traininggrounds-028": { // Occidental
+      play: { voice: "hero", text: "Clear the right flank!" },
+      attack: { voice: "hero", text: "Westward!" },
+      death: { voice: "hero", text: "Sunset in the west." },
+    },
+    "traininggrounds-029": { // Oriental
+      play: { voice: "elder", text: "The left lane is mine." },
+      attack: { voice: "elder", text: "From the east!" },
+      death: { voice: "elder", text: "The east wind fades." },
+    },
+    "traininggrounds-030": { // Floodgates
+      play: { voice: "sapi-giant", text: "The gates hold." },
+      attack: { voice: "sapi-giant", text: "Hold!" },
+      death: { voice: "sapi-giant", text: "The flood comes." },
+    },
+    "traininggrounds-031": { // Level Up!
+      cast: { voice: "sapi-announcer", text: "Level up!" },
+    },
+    "traininggrounds-032": { // Selfless Protector
+      play: { voice: "sapi-heroine", text: "I'll protect you all." },
+      attack: { voice: "sapi-heroine", text: "For them!" },
+      death: { voice: "sapi-heroine", text: "Stay safe." },
+    },
+    "traininggrounds-033": { // Guerilla Felinor
+      play: { voice: "cat", text: "Mrrow! From the bushes!" },
+      attack: { voice: "cat", text: "Ambush!" },
+      death: { voice: "cat", text: "Spotted." },
+    },
+    "traininggrounds-034": { // Dino-size
+      cast: { voice: "sapi-giant", text: "Rawr! Get big!" },
+    },
+    "traininggrounds-035": { // Corpse Recycler
+      cast: { voice: "digger", text: "Waste not, want not." },
+    },
+    "traininggrounds-036": { // Training Dummy
+      play: { voice: "goof", text: "Hit me! I can take it!" },
+      attack: { voice: "goof", text: "Boing!" },
+      death: { voice: "goof", text: "Lesson learned!" },
+    },
+    "traininggrounds-037": { // Seance
+      cast: { voice: "sapi-ghost", text: "Is anyone there? Come back to me." },
+    },
+    "traininggrounds-038": { // Tutorial Master
+      play: { voice: "sapi-teacher", text: "Lesson one: pay attention." },
+      attack: { voice: "sapi-teacher", text: "Pop quiz!" },
+      death: { voice: "sapi-teacher", text: "Class dismissed." },
+    },
+    "traininggrounds-039": { // Call to Chaos (Training-Grounds Edition)
+      cast: { voice: "announcer", text: "Class is chaos! Roll the dice!" },
+    },
+    "traininggrounds-039-1": { // Training-Grounds Golem
+      play: { voice: "brute-golem", text: "Training golem! Practice on you!" },
+      attack: { voice: "brute-golem", text: "Drill!" },
+      death: { voice: "brute-golem", text: "Training over." },
+    },
+    "traininggrounds-040": { // Goetzmann Game Design
+      cast: { voice: "prof", text: "Let me design you something." },
+    },
   },
   emotes: {
     vanilla: {

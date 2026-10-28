@@ -2875,6 +2875,17 @@ pub(crate) mod tests {
             assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
         }
 
+        /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
+        /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.
+        #[test]
+        fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
+            register_all();
+            let training_grounds = |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
+            assert!(!set_ships(jackioh_engine::SetName::TrainingGrounds), "held until its release, #2204");
+            assert!(FUZZ_POOL.iter().any(training_grounds));
+            assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
+        }
+
         #[test]
         fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
             // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).

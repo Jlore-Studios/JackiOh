@@ -99,9 +99,10 @@ crates/
   engine/      reduce, state, events, rng, combat, triggers, zones, view_for; wire/ (action, event and
                catalog types); validator.rs (deck, trio and queue rules D1–D5, T1–T3, L1–L6, shared by
                client and server)
-  cards/       catalog.json (572 cards + 138 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape),
-               patches/ (one snapshot per card patch), src/scripts/core/, classic/, classic_plus/, meditative/,
-               meditative_plus/, stinkyscape/: one file per card, its tests inside it
+  cards/       catalog.json (572 cards + 138 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape,
+               and the held Training Grounds set's entries, R2194000), patches/ (one snapshot per card patch),
+               src/scripts/core/, classic/, classic_plus/, meditative/, meditative_plus/, stinkyscape/,
+               training_grounds/: one file per card, its tests inside it
   ai/          the practice opponent
   wasm/        the engine, cards, AI and validator as WebAssembly for the client
   server/      API functions, match actor, matchmaking

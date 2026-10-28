@@ -6903,6 +6903,623 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
 ];
 
+/// R1420, R2194000: the Training Grounds set's rows, transcribed from docs/training-grounds-set.md
+/// TG5's header lines (issue #2194), in catalog order: #1 to #40 with the token #39.1 after #39, then
+/// the Core snapshots #41 to #60 (part 2, #2195), each with its Core card's name, cost, type, tags,
+/// rarity and stats. The set is held, so a row waits for its card until the set ships (#2204).
+const TRAINING_GROUNDS: &[SpecRow] = &[
+    row(
+        "1",
+        "Spikey Steven",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(5, 2),
+        st(15, 6),
+    ),
+    row(
+        "2",
+        "Personal Trainer",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(3, 2),
+        st(6, 4),
+    ),
+    row(
+        "3",
+        "Group leader",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 1),
+        st(8, 2),
+    ),
+    row(
+        "4",
+        "Boulder Fist Ogre",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(6, 7),
+        st(18, 21),
+    ),
+    row(
+        "5",
+        "Midlane Menace",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "6",
+        "Chosen by the Sun",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 3),
+        st(9, 9),
+    ),
+    row(
+        "7",
+        "Chosen by the Moon",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "8",
+        "Clobberer",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(14, 7),
+        st(42, 14),
+    ),
+    row(
+        "9",
+        "Ravager",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(7, 7),
+        st(14, 17),
+    ),
+    row(
+        "10",
+        "Fan of Knives",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11",
+        "Thwomp",
+        c(2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12",
+        "Fortify",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "13",
+        "Explosive Runes",
+        c(1),
+        T::Trap,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "14",
+        "Explosive Trap",
+        c(1),
+        T::Trap,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "15",
+        "In a hurry",
+        c(2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "16",
+        "Celestial Caller",
+        c(4),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "17",
+        "Flaming Felinor",
+        c(2),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(3, 6),
+        st(6, 12),
+    ),
+    row(
+        "18",
+        "Knife Juggler",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(3, 2),
+        st(6, 4),
+    ),
+    row(
+        "19",
+        "Extra Rations",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "20",
+        "Recruitment Posters",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "21",
+        "Flame Tongue Totem",
+        c(1),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "22",
+        "Right-Hand Felinor",
+        c(2),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "23",
+        "Quadrupling Felinors",
+        c(3),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(3, 4),
+        st(6, 8),
+    ),
+    row(
+        "24",
+        "Goliath Situation",
+        c(1),
+        T::FieldTrap,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "25",
+        "Trigor",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "26",
+        "Path of Exile",
+        c(4),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "27",
+        "Hopeful Jelly Bean",
+        c(4),
+        T::Spell,
+        &[G::JellyBean],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "28",
+        "Occidental",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(9, 5),
+        st(18, 10),
+    ),
+    row(
+        "29",
+        "Oriental",
+        c(3),
+        T::Unit,
+        &[G::Cn],
+        R::Epic,
+        st(5, 9),
+        st(10, 18),
+    ),
+    row(
+        "30",
+        "Floodgates",
+        c(3),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(0, 12),
+        st(0, 24),
+    ),
+    row(
+        "31",
+        "Level Up!",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "32",
+        "Selfless Protector",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "33",
+        "Guerilla Felinor",
+        c(3),
+        T::Unit,
+        &[G::Felinor],
+        R::Epic,
+        st(4, 6),
+        st(8, 12),
+    ),
+    row(
+        "34",
+        "Dino-size",
+        c(3),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "35",
+        "Corpse Recycler",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "36",
+        "Training Dummy",
+        c(1),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(0, 3),
+        st(0, 6),
+    ),
+    row(
+        "37",
+        "Seance",
+        c(2),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "38",
+        "Tutorial Master",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Legendary,
+        st(4, 16),
+        st(8, 32),
+    ),
+    row(
+        "39",
+        "Call to Chaos (Training-Grounds Edition)",
+        c(4),
+        T::Spell,
+        &[G::CallToChaos],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39.1",
+        "Training-Grounds Golem",
+        c(4),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row(
+        "40",
+        "Goetzmann Game Design",
+        c(0),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "41",
+        "Bigot",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 1),
+        st(8, 2),
+    ),
+    row(
+        "42",
+        "Stockpile",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "43",
+        "Mr. Vanilla",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 4),
+        st(12, 12),
+    ),
+    row(
+        "44",
+        "Duplicating Felinors",
+        c(2),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(3, 4),
+        st(6, 8),
+    ),
+    row(
+        "45",
+        "Jlockeed's Weapons",
+        c(4),
+        T::FieldSpell,
+        &[G::Jlockeed],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "46",
+        "Hit Job",
+        c(3),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "47",
+        "Midrange Menace",
+        c(3),
+        T::Unit,
+        &[],
+        R::Common,
+        st(9, 9),
+        st(18, 18),
+    ),
+    row(
+        "48",
+        "Jlockeed Shredder-10",
+        c(3),
+        T::Unit,
+        &[G::Jlockeed],
+        R::Common,
+        st(6, 10),
+        st(12, 20),
+    ),
+    row(
+        "49",
+        "Reoccurring Dream",
+        c(1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "50",
+        "Glowy Jelly Bean",
+        c(3),
+        T::Spell,
+        &[G::JellyBean],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "51",
+        "Big Felinor",
+        c(4),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(3, 10),
+        st(6, 20),
+    ),
+    row(
+        "52",
+        "Snom Bunny Mind Control",
+        c(4),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "53",
+        "Prejudiced Postdoc",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(2, 4),
+        st(4, 8),
+    ),
+    row(
+        "54",
+        "The Rock",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row(
+        "55",
+        "Reminisce",
+        c(1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "56",
+        "Corpse Eater",
+        c(4),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "57",
+        "Recycling Initiative",
+        c(0),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "58",
+        "True Strike",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "59",
+        "Fig of Life",
+        c(3),
+        T::Spell,
+        &[G::Fruit],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "60",
+        "Rush Token Farm",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
@@ -6910,6 +7527,7 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Meditative, MEDITATIVE),
     (SetName::MeditativePlus, MEDITATIVE_PLUS),
     (SetName::Stinkyscape, STINKYSCAPE),
+    (SetName::TrainingGrounds, TRAINING_GROUNDS),
 ];
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
@@ -7012,6 +7630,19 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
             ("Mythic", 12),
         ],
     ),
+    // R1420, R2194000: docs/training-grounds-set.md TG2's distribution over its 60 cards (#1 to #40
+    // by the designer's bands, the snapshots #41 to #60 at their Core rarities), a ceiling until the
+    // set ships.
+    (
+        "Training Grounds",
+        &[
+            ("Common", 26),
+            ("Rare", 19),
+            ("Epic", 11),
+            ("Legendary", 3),
+            ("Mythic", 1),
+        ],
+    ),
 ];
 
 /// B2.1: cards and tokens per set.
@@ -7065,6 +7696,14 @@ const SET_SIZES: &[SetSize] = &[
         cards: 175,
         named_cards: 1,
         tokens: 52,
+    },
+    // R1420, R2194000: docs/training-grounds-set.md TG2, a ceiling until the set ships: 60 cards (the
+    // snapshots #41 to #60 among them, part 2's) and the token #39.1.
+    SetSize {
+        set: "Training Grounds",
+        cards: 60,
+        named_cards: 0,
+        tokens: 1,
     },
 ];
 
@@ -7274,14 +7913,18 @@ fn landed(ids: &[&str]) -> Vec<String> {
         .collect()
 }
 
-/// B2.2: the set an id's segment spells, its name lowered with "+" written "plus" and "-" dropped
-/// (`classicplus-…` is Classic+'s, `stinkyscape-…` Stinkyscape's).
+/// B2.2: the set an id's segment spells, its name lowered with "+" written "plus" and "-" and " "
+/// dropped (`classicplus-…` is Classic+'s, `stinkyscape-…` Stinkyscape's, `traininggrounds-…`
+/// Training Grounds', the first set name with a space, R2194000).
 fn set_of_id(id: &str) -> Option<SetName> {
     let segment = id.split('-').next()?;
-    SetName::ALL
-        .iter()
-        .copied()
-        .find(|set| set.as_str().to_lowercase().replace('+', "plus").replace('-', "") == segment)
+    SetName::ALL.iter().copied().find(|set| {
+        set.as_str()
+            .to_lowercase()
+            .replace('+', "plus")
+            .replace(['-', ' '], "")
+            == segment
+    })
 }
 
 /// `/^\d+$/`.
@@ -7747,6 +8390,91 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
     }
 }
 
+mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_is_built {
+    use super::*;
+
+    #[test]
+    fn r2194000_every_training_grounds_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
+        assert_eq!(fixture_report(SetName::TrainingGrounds), "");
+        let by_key = by_key();
+        let missing: Vec<&str> = TRAINING_GROUNDS
+            .iter()
+            .filter(|row| !by_key.contains_key(&key_of("Training Grounds", row.index)))
+            .map(|row| row.name)
+            .collect();
+        if set_ships(SetName::TrainingGrounds) {
+            assert_eq!(
+                missing,
+                Vec::<&str>::new(),
+                "a shipped set holds every card it lists"
+            );
+        }
+        // Every entry of the set is `traininggrounds-…` (B2.2's segment, its name's space dropped),
+        // and until its release (#2204) the set is held.
+        for entry in entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::TrainingGrounds)
+        {
+            assert!(entry.id.starts_with("traininggrounds-"), "{}", entry.id);
+            assert_eq!(
+                set_of_id(&entry.id),
+                Some(SetName::TrainingGrounds),
+                "{}",
+                entry.id
+            );
+        }
+        assert!(
+            !set_ships(SetName::TrainingGrounds),
+            "the set is held until its release, #2204"
+        );
+    }
+
+    #[test]
+    fn r2194002_its_rows_are_1_to_60_and_the_one_token_39_1_with_the_designer_s_rarity_bands() {
+        let plain: Vec<usize> = TRAINING_GROUNDS
+            .iter()
+            .filter(|row| is_plain_index(row.index))
+            .filter_map(|row| row.index.parse().ok())
+            .collect();
+        assert_eq!(plain, (1..=60).collect::<Vec<usize>>());
+        let tokens: Vec<&str> = TRAINING_GROUNDS
+            .iter()
+            .filter(|row| !is_plain_index(row.index))
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(tokens, vec!["39.1"]);
+        // #1-#15 Common, #16-#27 Rare, #28-#36 Epic, #37-#39 Legendary, #40 Mythic; the snapshots
+        // keep their Core rarities, none Legendary or Mythic.
+        for row in TRAINING_GROUNDS.iter().filter(|row| is_plain_index(row.index)) {
+            let n: usize = row.index.parse().expect("a plain index");
+            let band = match n {
+                1..=15 => Some(Rarity::Common),
+                16..=27 => Some(Rarity::Rare),
+                28..=36 => Some(Rarity::Epic),
+                37..=39 => Some(Rarity::Legendary),
+                40 => Some(Rarity::Mythic),
+                _ => None,
+            };
+            match band {
+                Some(rarity) => assert_eq!(row.rarity, rarity, "#{n} {}", row.name),
+                None => assert!(
+                    !matches!(row.rarity, Rarity::Legendary | Rarity::Mythic),
+                    "#{n} {}",
+                    row.name
+                ),
+            }
+        }
+        let golem = TRAINING_GROUNDS
+            .iter()
+            .find(|row| row.index == "39.1")
+            .expect("#39.1");
+        assert_eq!(golem.rarity, Rarity::Token);
+        if let Some(entry) = CATALOG.get("traininggrounds-039-1") {
+            assert_eq!(entry.printed_rarity.map(|rarity| rarity.as_str()), Some("Legendary"));
+        }
+    }
+}
+
 mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     use super::*;
 
@@ -7929,7 +8657,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart:
         // their indices repeat Classic+ ones); every printed rarity is a Classic+ or a Meditative
         // token's, never a card's.
-        // The held Stinkyscape set prints its tokens' too (R1857000, its §7 rows).
+        // The Stinkyscape set prints its tokens' too (R1857000, its §7 rows), and the held Training
+        // Grounds set its #39.1 Training-Grounds Golem's, the designer's Legendary (R2194000).
         assert!(
             entries()
                 .into_iter()
@@ -7938,7 +8667,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                     && (entry.set == SetName::ClassicPlus
                         || entry.set == SetName::Meditative
                         || entry.set == SetName::MeditativePlus
-                        || entry.set == SetName::Stinkyscape))
+                        || entry.set == SetName::Stinkyscape
+                        || entry.set == SetName::TrainingGrounds))
         );
     }
 

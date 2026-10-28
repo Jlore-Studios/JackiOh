@@ -4,7 +4,7 @@
 the foundation (#2194)
 
 > **Status: the brief, and the plan of record.** SPEC is still the only source of rules (CLAUDE.md). The set-level
-> rules this brief decides go into SPEC with the foundation (the foundation's rulings, R2194000 onwards, [[§8]] and
+> rules this brief decides are in SPEC with the foundation ([[R2194000]] to [[R2194002]], [[§8.11]] and
 > [[§7]]); every card's row goes into §8.11 (its token's also into [[§7]]); each card's mechanics become SPEC when the
 > part that builds them lands, with its rulings. This file records, for every card and every new mechanic, what the
 > designer wrote (verbatim in the source note), what it means in this engine, every place the text is unclear with the
@@ -16,7 +16,9 @@ the foundation (#2194)
 > default the build uses).
 >
 > Every card was read against the engine on `main` at `9be40af` (2026-10-28), before Stinkyscape's release (#2178)
-> merged. File and line references are as of that commit; a part re-checks its own before it builds.
+> merged, and re-checked when the foundation merged the release (`f5c99a2`): Stinkyscape now ships, so the one held set
+> is Training Grounds, and no card's reading moved. File and line references are as of `9be40af` unless the
+> foundation's own change moved them; a part re-checks its own before it builds.
 
 ## Contents
 
@@ -84,7 +86,7 @@ The owner's decisions, from the tracker:
   labelled abilities on lines of their own (Cry:, Death:, Start of turn:, Aura:), "(N) Cost" for a cost as a noun and
   "costs (N)" as a verb, straight apostrophes, never "start of your turn" in a sentence. The designer's "Cry & Death:"
   is written as two labelled lines. The designer's "Training-grounds" and "Tutorial-Grounds" in a card's text are the set,
-  written "Training Grounds" (R2194001, TG4 D4); the two names that carry it keep his hyphen (#39, #39.1).
+  written "Training Grounds" ([[R2194001]], TG4 D4); the two names that carry it keep his hyphen (#39, #39.1).
 
 ## TG2. The set: ids, numbers, tags, rarity and the census
 
@@ -152,7 +154,7 @@ The foundation writes the rows of all 61 entries; #41–#60 wait for P2 (a held 
 The set is built on `main`, part by part, behind [[R1420]]'s gate, as Meditative+ ([[R1178000]]) and Stinkyscape
 ([[R1857000]]) were, until the release (P11, #2204) ships it. While it is held:
 
-- `SetName::TrainingGrounds` is in `CATALOG_SETS` (`crates/engine/src/wire/catalog_types.rs:299`), after Stinkyscape,
+- `SetName::TrainingGrounds` is in `CATALOG_SETS` (`crates/engine/src/wire/catalog_types.rs:303`), after Stinkyscape,
   and not in `SHIPPED_SETS` (`:287`).
 - A pool that names no set draws from the sets that ship (`crates/engine/src/catalog.rs:653-662`); one that names
   Training Grounds, or a card by id, reaches it. So TG #20, #36, #38 and #39 find the set's cards from the day they land,
@@ -198,7 +200,7 @@ or [[§10]] rows and its rulings. Read against the engine; the issue's first tab
 | System | What it is | Cards | Part |
 | --- | --- | --- | --- |
 | The held set | `SetName::TrainingGrounds` behind [[R1420]]; the census, the fixture, the stubs; the gate's tests | all | P1 #2194 |
-| The snapshots | NEW: one deck holds a Core card or its snapshot, not both: a pair table read by both validators (`state.rs:2213`, `validator.rs:367`, `:681`) and every dealer (`fuzz.rs:391`, the server's `deal_random_deck*` and duos `ai_deck`, `crates/ai/src/deck.rs:655` `build_ai_deck`, the deck builder). The name exception is in `r739_one_name_names_one_card` (`crates/cards/tests/cross/catalog.rs:7874`, *corrected*: not the Meditative+ test at 7561-7584), `r1303_names_are_unique` (`chinese.rs:385`) and R279's `named_by` (`references.rs:188`), with the Jlockeed (`catalog.rs:8262`) and Jelly Bean (`:8561`) pins | #41–#60 | P2 #2195 |
+| The snapshots | NEW: one deck holds a Core card or its snapshot, not both: a pair table read by both validators (`state.rs:2213`, `validator.rs:367`, `:681`) and every dealer (`fuzz.rs:391`, the server's `deal_random_deck*` and duos `ai_deck`, `crates/ai/src/deck.rs:655` `build_ai_deck`, the deck builder). The name exception is in `r739_one_name_names_one_card` (`crates/cards/tests/cross/catalog.rs`, *corrected*: not the Meditative+ test `r1178002_…`), `r1303_names_are_unique` (`chinese.rs:385`) and R279's `named_by` (`references.rs:188`), with the Jlockeed (`catalog.rs:8262`) and Jelly Bean (`:8561`) pins | #41–#60 | P2 #2195 |
 | An adjacency aura | `AuraEntry.applies` with `zones::slot_of`, `zones::adjacent` and `zones::is_adjacent_card`: a script, no engine change (*corrected*): `layers::aura_sources` (`layers.rs:223`) already takes only a pile's top and `layers.rs:489-494` give a dormant card no aura ([[R13]]). Its ruling and engine test are still owed (R1081000's standing Units) | #21 | P4 #2197 |
 | A terminator for a self-recursive Death | Cumulative growth, M #94 Shrinking Felinor's mirror (`base_stats_of` + `summon { statsOverride }`, [[R1181]]): each Trigor is strictly larger, so no fixed aura loops it (REVIEW A3.6) | #25 | P4 |
 | After you summon a Unit | S #23 Warp Disruptor's `arrival()` ([[R1875003]]) turned to its own side or both sides | #18, #30 | P4 |
@@ -216,7 +218,7 @@ Everything else maps onto a shipped card's pattern; TG5 names each one.
 
 **Decisions across the set** (these win over any entry in TG5 and over the part issues' tables):
 
-- **D1 The gate.** Training Grounds is held by [[R1420]] until P11 ships it (the foundation's ruling R2194000, as
+- **D1 The gate.** Training Grounds is held by [[R1420]] until P11 ships it ([[R2194000]], as
   [[R1857000]]); no part adds a pending fragment or moves a golden trace.
 - **D2 The newest set.** When it ships it is appended to `SHIPPED_SETS` last and becomes the newest set ([[R1371]]), the
   owner's choice.
@@ -224,7 +226,7 @@ Everything else maps onto a shipped card's pattern; TG5 names each one.
   they go past the band (TG6).
 - **D4 The set's name in a card's text.** The designer's "Training-grounds", "Training-Grounds" and "Tutorial-Grounds"
   (#36) are the set, written "Training Grounds" in the text; a pool that names the set (`{ "set": "Training Grounds" }`)
-  works while it is held and takes in the snapshots #41–#60 once P2 lands them (the foundation's ruling R2194001; the
+  works while it is held and takes in the snapshots #41–#60 once P2 lands them ([[R2194001]]; the
   owner's issue). It never holds a token unless it says so (#39.1 is in none).
 - **D5 Legendary and Mythic** are in every set-named pool in the normal game; only a tutorial lesson before the fifth
   holds them out (P8).
@@ -234,8 +236,8 @@ Everything else maps onto a shipped card's pattern; TG5 names each one.
 - **D9** The §8.11, §7, BUILD M13 and `docs/radiant-audit.md` rows are written by the foundation from this brief; a part
   corrects its own rows when its build decides otherwise, and says so.
 - **D10 A set name with a space.** Every place that turns a set name into an id segment drops the space as well as `+`
-  and `-`: the cards crate's fixture `set_of_id` (`crates/cards/tests/cross/catalog.rs:7280-7285`, which `landed()`
-  reads) in the foundation, `crates/server/tests/api/stats.rs:490` with the release.
+  and `-`: the cards crate's fixture `set_of_id` (`crates/cards/tests/cross/catalog.rs`, which `landed()` reads), fixed by the
+  foundation, `crates/server/tests/api/stats.rs:490` with the release.
 - **D11 New state stays out of shipped games' hashes.** A field the set adds to the state, an instance or a view is
   optional and skipped when absent, so a game that never uses it serializes, hashes and replays as before.
 
@@ -815,7 +817,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   `crates/server/src/duos/engine.rs:123` `ai_deck`, `crates/ai/src/deck.rs:655` `build_ai_deck`, and the web deck builder.
 - **TG-P2-4 Names.** The exception the owner asked for is not at `crates/cards/tests/cross/catalog.rs` 7561–7584 (that is
   `r1178002_names_its_17_dogpile…`, which compares Meditative+ names only and passes unchanged): it is
-  `r739_one_name_names_one_card` at **catalog.rs:7873–7886**, which walks every non-token entry of **every** set, held ones
+  `r739_one_name_names_one_card` in **`crates/cards/tests/cross/catalog.rs`**, which walks every non-token entry of **every** set, held ones
   included, so it fails the day the foundation lands the first snapshot entry. The exception must allow exactly: two
   non-token entries sharing a name when one is `core-NNN`, the other is `traininggrounds-0NN` with NN in 41…60, and the pair
   is the one the snapshot table names (#41↔core-002 … #60↔core-058). Anything else still fails: two snapshots sharing a name, a

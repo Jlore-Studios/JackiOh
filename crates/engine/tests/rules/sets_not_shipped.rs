@@ -12,6 +12,9 @@
 //! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
 //! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
 //! lean like Meditative+'s; its four tags name no tribe.
+//! R2194000: the Training Grounds set (issue #2193) is the fourth held set, after Stinkyscape in the
+//! catalog order, held until its release (#2204): its fixture cards here are in no pool that names no
+//! set and in no deck, while a pool that names it reaches them and a preview opens it.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -48,7 +51,8 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
 /// #16.1, and the AI generated helpers of M+ #1, #1.1 and #1.2), two Prime tokens and a KY and a Book
 /// card for the pools, and three cards and two tokens of the Stinkyscape set (shipped since its
 /// release, #1884, R1857000: a Drone Core, a Weapon and a Swarm Unit, a War Doctrine and an AI
-/// generated card).
+/// generated card), and two cards and a token of the held Training Grounds set (R2194000: a Human
+/// Unit, a Call to Chaos edition and the Golem it summons).
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -117,6 +121,27 @@ fn defs() -> CardDefs {
         &["AI"],
         true,
     ));
+    defs.push(card(
+        "traininggrounds-001",
+        "Training Grounds",
+        "1",
+        &["Human"],
+        false,
+    ));
+    defs.push(card(
+        "traininggrounds-039",
+        "Training Grounds",
+        "39",
+        &["Call to Chaos"],
+        false,
+    ));
+    defs.push(card(
+        "traininggrounds-039-1",
+        "Training Grounds",
+        "39.1",
+        &[],
+        true,
+    ));
     defs.into_iter().map(|def| (def.id.clone(), def)).collect()
 }
 
@@ -152,6 +177,14 @@ fn meditative_plus(ids: &[String]) -> Vec<String> {
 fn stinkyscape(ids: &[String]) -> Vec<String> {
     ids.iter()
         .filter(|id| id.starts_with("stinkyscape-"))
+        .cloned()
+        .collect()
+}
+
+/// The Training Grounds fixture's ids among `ids` (R2194000).
+fn training_grounds(ids: &[String]) -> Vec<String> {
+    ids.iter()
+        .filter(|id| id.starts_with("traininggrounds-"))
         .cloned()
         .collect()
 }
@@ -735,7 +768,6 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             at(SetName::Stinkyscape),
             at(SetName::MeditativePlus).map(|at| at + 1)
         );
-        assert_eq!(CATALOG_SETS.last(), Some(&SetName::Stinkyscape));
         // Shipped: it is open, it is the newest set, and a lean names it.
         assert!(set_ships(SetName::Stinkyscape));
         assert_eq!(SHIPPED_SETS.last(), Some(&SetName::Stinkyscape));
@@ -861,5 +893,134 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             .map(|error| error.message.as_str())
             .collect();
         assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
+    }
+}
+
+mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
+    use super::*;
+
+    #[test]
+    fn r2194000_training_grounds_follows_stinkyscape_and_is_held() {
+        assert_eq!(SetName::TrainingGrounds.as_str(), "Training Grounds");
+        assert_eq!(
+            json_as::<SetName>(json!("Training Grounds")),
+            SetName::TrainingGrounds
+        );
+        let at = |set: SetName| CATALOG_SETS.iter().position(|each| *each == set);
+        assert_eq!(
+            at(SetName::TrainingGrounds),
+            at(SetName::Stinkyscape).map(|at| at + 1)
+        );
+        assert_eq!(CATALOG_SETS.last(), Some(&SetName::TrainingGrounds));
+        // Held: not shipped, not open, never the newest set, and no lean names it.
+        assert!(!set_ships(SetName::TrainingGrounds));
+        assert!(!set_is_open(SetName::TrainingGrounds));
+        assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
+        assert_eq!(LeanPick::parse("Training Grounds"), None);
+        assert!(!LeanPick::choices().contains(&LeanPick::Set(SetName::TrainingGrounds)));
+        // A preview opens it on this thread without shipping it.
+        {
+            let _preview = preview_sets(&[SetName::TrainingGrounds]);
+            assert!(set_is_open(SetName::TrainingGrounds));
+            assert!(!set_ships(SetName::TrainingGrounds));
+            assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
+        }
+        {
+            let _preview = preview_every_set();
+            assert!(set_is_open(SetName::TrainingGrounds));
+        }
+        assert!(!set_is_open(SetName::TrainingGrounds));
+    }
+
+    #[test]
+    fn r2194000_r2194001_a_pool_that_names_no_set_never_reaches_it_one_that_names_it_does() {
+        setup();
+        // Whatever an unnamed pool asks for: its tribe, its tag, every token.
+        for args in [
+            json!({}),
+            json!({ "tags": ["Human"] }),
+            json!({ "tags": ["Call to Chaos"] }),
+            json!({ "withTokens": true }),
+        ] {
+            assert_eq!(training_grounds(&pool(args.clone())), Vec::<String>::new(), "{args}");
+        }
+        assert_eq!(
+            pool(json!({ "set": "Training Grounds" })),
+            vec!["traininggrounds-001", "traininggrounds-039"]
+        );
+        assert_eq!(
+            pool(json!({ "set": "Training Grounds", "withTokens": true })),
+            vec![
+                "traininggrounds-001",
+                "traininggrounds-039",
+                "traininggrounds-039-1"
+            ]
+        );
+        assert_eq!(
+            pool(json!({ "defId": ["traininggrounds-039-1"] })),
+            vec!["traininggrounds-039-1"]
+        );
+        // Previewed, it draws in its catalog place: after Stinkyscape, before the Boss set the order
+        // does not name.
+        let _preview = preview_sets(&[SetName::TrainingGrounds, SetName::Boss]);
+        let all = pool(json!({}));
+        assert_eq!(
+            &all[all.len() - 5..],
+            [
+                "stinkyscape-091",
+                "traininggrounds-001",
+                "traininggrounds-039",
+                "boss-001",
+                "boss-002"
+            ]
+        );
+    }
+
+    #[test]
+    fn r2194000_no_deck_holds_one_unless_previewed() {
+        setup();
+        let catalog = defs();
+        assert!(!deckable(&catalog["traininggrounds-001"]));
+        assert!(!deckable(&catalog["traininggrounds-039-1"]), "a Token never is");
+        let mut deck: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
+        deck.push("traininggrounds-001".to_string());
+        let refused = validate_deck(&deck, &catalog, "p1", 20).expect_err("refused");
+        assert!(
+            refused
+                .to_string()
+                .contains("Training Grounds, which has not shipped yet"),
+            "{refused}"
+        );
+
+        let collection: IndexMap<String, i32> = deck.iter().map(|id| (id.clone(), 1)).collect();
+        let result = jackioh_engine::validator::validate_deck(&jackioh_engine::validator::DeckInput {
+            deck: jackioh_engine::validator::LoadoutDeck {
+                cards: deck.clone(),
+                ..Default::default()
+            },
+            catalog: jackioh_engine::validator::CatalogSnapshot {
+                version: "test".to_string(),
+                cards: catalog.clone(),
+                banned: None,
+            },
+            collection,
+        });
+        let l3: Vec<&str> = result
+            .errors
+            .iter()
+            .filter(|error| error.rule == jackioh_engine::validator::LoadoutRule::L3)
+            .map(|error| error.message.as_str())
+            .collect();
+        assert_eq!(l3.len(), 1, "{:?}", result.errors);
+        assert!(
+            l3[0].contains("the Training Grounds set has not shipped yet"),
+            "{}",
+            l3[0]
+        );
+
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        assert!(deckable(&catalog["traininggrounds-001"]));
+        assert!(!deckable(&catalog["traininggrounds-039-1"]), "a Token never is");
+        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
     }
 }
