@@ -738,7 +738,7 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
     // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
-#[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the Easy tier's lethal hint; deadline_ms as ai_decide's
+#[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the practice AI's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;

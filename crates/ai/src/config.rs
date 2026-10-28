@@ -50,7 +50,7 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
-/// R2102000: the stream the Easy practice tier's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
+/// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
 

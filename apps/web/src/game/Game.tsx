@@ -188,7 +188,7 @@ export type GameProps = {
    */
   lesson?: boolean;
   /**
-   * R2102000: the human has a sure win this turn by what they can see, the Easy practice tier's
+   * R2102000: the human has a sure win this turn by what they can see, the practice AI's
    * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
    * Only the practice route sets it, and the board shows it once it shows the newest view, never on
    * a replay or once the game is over. Absent, off.

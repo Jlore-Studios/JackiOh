@@ -148,7 +148,7 @@
   outline-offset: 2px;
 }
 
-/* R2102000: the Easy practice tier's lethal hint (Game.tsx `lethalHint`): the enemy hero and End
+/* R2102000: the practice AI's lethal hint (Game.tsx `lethalHint`): the enemy hero and End
    turn's housing ringed. An outline, as the counted ring is, so the glows' box-shadows still show
    inside it. It never moves, so reduced motion needs nothing. */
 .game[data-lethal-hint="true"] .hero-opponent,
