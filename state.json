@@ -4564,9 +4564,9 @@
       "queued_at": "2026-10-27T18:27:18Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
-      "run_id": "40629838869",
+      "run_id": "pending:2575b0c7-1793180303",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-10-28T04:00:16Z",
+      "started_at": "2026-10-28T09:38:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1
@@ -5907,9 +5907,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T09:38:08Z",
+    "at": "2026-10-28T09:38:51Z",
     "url": "",
-    "what": "revise #2155 on claude-1"
+    "what": "build #2107 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T09:21:38Z",
