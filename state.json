@@ -5949,19 +5949,30 @@
     "2152": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-27T23:04:06Z",
       "issue": 2101,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new ruling's \u00a711 paragraph is appended to the end of spec/11-rulings.md and spec/INDEX.md is regenerated on the branch, which main's CLAUDE.md rule 3 and spec/README.md (Adding a ruling, step 4) now forbid: the paragraph belongs in spec/pending/2101.md, and no branch may run `cargo jackioh spec index`.",
+          "evidence": "The base 2a93d6092 contains 5168b0f63 (#2150), whose CLAUDE.md rule 3 says the paragraph 'goes in `spec/pending/<N>.md` \u2026 never at the end of `spec/11-rulings.md`, and no branch runs `cargo jackioh spec index`'. The branch merged only up to 505abf341, from before that change. Its diff adds the R2101000 paragraph at the end of 11-rulings.md and two INDEX.md hunks (R612's retitled row and a new R2101000 row). The builder's report says it ran `cargo jackioh spec index`. Fix: move the paragraph into spec/pending/2101.md and revert both INDEX.md hunks. The ruling note, R0612.md and \u00a79.12 edits stay.",
+          "severity": "blocking",
+          "where": "spec/11-rulings.md:701"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-10-28T01:02:57Z",
+      "queued_at": "2026-10-28T01:13:24Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40612770512",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-28T01:04:09Z",
       "stop_requested": false,
       "taken_asks": [],
