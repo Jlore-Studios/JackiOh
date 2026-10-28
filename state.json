@@ -6113,7 +6113,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-28T02:04:02Z",
+      "feedback_since": "2026-10-28T03:29:42Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2089,
@@ -6127,11 +6127,11 @@
       "run_id": "40627004828",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-28T03:29:42Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
