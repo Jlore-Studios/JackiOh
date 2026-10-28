@@ -19,12 +19,14 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact, c032_felinor_feelings,
-    c035_prep, c039_outbreak, c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
+    c008_pickle, c009_income_tax, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
+    c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit, c064_malzahars_recycler,
+    c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
-    c040_appropriations, c042_kys_test, c043_ai_slop, c062_kys_papaya, c071_book_of_buff, c078_claudes_datacenter,
+    c040_appropriations, c042_kys_test, c043_ai_slop, c062_kys_papaya, c071_book_of_buff,
+    c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
@@ -38,7 +40,9 @@ use crate::scripts::meditative::{
     c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor, c097_2_wishing_well,
     c097_8_prison, c102_catboy_maid_ssr,
 };
-use crate::scripts::meditative_plus::{c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves};
+use crate::scripts::meditative_plus::{
+    c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
+};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -250,22 +254,78 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.12c",
         c075_infinite_reserves::script_v0_4_12c,
     ),
-    (c048_tranquility::ID, "v0.4.12d", c048_tranquility::script_v0_4_12d),
-    (c045_knowledge_breaker::ID, "v0.4.12d", c045_knowledge_breaker::script_v0_4_12d),
-    (c030_felinor_fuser::ID, "v0.4.12d", c030_felinor_fuser::script_v0_4_12d),
-    (c083_transmogulate::ID, "v0.4.12d", c083_transmogulate::script_v0_4_12d),
-    (c023_devils_pact::ID, "v0.4.12d", c023_devils_pact::script_v0_4_12d),
+    (
+        c048_tranquility::ID,
+        "v0.4.12d",
+        c048_tranquility::script_v0_4_12d,
+    ),
+    (
+        c045_knowledge_breaker::ID,
+        "v0.4.12d",
+        c045_knowledge_breaker::script_v0_4_12d,
+    ),
+    (
+        c030_felinor_fuser::ID,
+        "v0.4.12d",
+        c030_felinor_fuser::script_v0_4_12d,
+    ),
+    (
+        c083_transmogulate::ID,
+        "v0.4.12d",
+        c083_transmogulate::script_v0_4_12d,
+    ),
+    (
+        c023_devils_pact::ID,
+        "v0.4.12d",
+        c023_devils_pact::script_v0_4_12d,
+    ),
     (c085_playtester::ID, "v0.4.12d", c085_playtester::script_v0_4_12d),
-    (c102_catboy_maid_ssr::ID, "v0.4.12d", c102_catboy_maid_ssr::script_v0_4_12d),
-    (c009_magic_amplifier::ID, "v0.4.12d", c009_magic_amplifier::script_v0_4_12d),
+    (
+        c102_catboy_maid_ssr::ID,
+        "v0.4.12d",
+        c102_catboy_maid_ssr::script_v0_4_12d,
+    ),
+    (
+        c009_magic_amplifier::ID,
+        "v0.4.12d",
+        c009_magic_amplifier::script_v0_4_12d,
+    ),
     (c035_prep::ID, "v0.4.12d", c035_prep::script_v0_4_12d),
-    (c011_anime_armor::ID, "v0.4.12d", c011_anime_armor::script_v0_4_12d),
-    (c023_dropshipping::ID, "v0.4.12d", c023_dropshipping::script_v0_4_12d),
-    (c020_the_power_to_punish::ID, "v0.4.12d", c020_the_power_to_punish::script_v0_4_12d),
-    (c032_spiritually_zhongguo::ID, "v0.4.12d", c032_spiritually_zhongguo::script_v0_4_12d),
-    (c081_radiant_saintess::ID, "v0.4.12d", c081_radiant_saintess::script_v0_4_12d),
-    (c071_book_of_buff::ID, "v0.4.12d", c071_book_of_buff::script_v0_4_12d),
-    (c078_claudes_datacenter::ID, "v0.4.12d", c078_claudes_datacenter::script_v0_4_12d),
+    (
+        c011_anime_armor::ID,
+        "v0.4.12d",
+        c011_anime_armor::script_v0_4_12d,
+    ),
+    (
+        c023_dropshipping::ID,
+        "v0.4.12d",
+        c023_dropshipping::script_v0_4_12d,
+    ),
+    (
+        c020_the_power_to_punish::ID,
+        "v0.4.12d",
+        c020_the_power_to_punish::script_v0_4_12d,
+    ),
+    (
+        c032_spiritually_zhongguo::ID,
+        "v0.4.12d",
+        c032_spiritually_zhongguo::script_v0_4_12d,
+    ),
+    (
+        c081_radiant_saintess::ID,
+        "v0.4.12d",
+        c081_radiant_saintess::script_v0_4_12d,
+    ),
+    (
+        c071_book_of_buff::ID,
+        "v0.4.12d",
+        c071_book_of_buff::script_v0_4_12d,
+    ),
+    (
+        c078_claudes_datacenter::ID,
+        "v0.4.12d",
+        c078_claudes_datacenter::script_v0_4_12d,
+    ),
     (c042_kys_test::ID, "v0.4.12d", c042_kys_test::script_v0_4_12d),
 ];
 

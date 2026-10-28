@@ -187,7 +187,8 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     }
 
     #[test]
-    fn r46_r2179000_an_indestructible_unit_is_never_in_defense_so_the_knock_down_finds_it_in_attack_position() {
+    fn r46_r2179000_an_indestructible_unit_is_never_in_defense_so_the_knock_down_finds_it_in_attack_position()
+    {
         // Set up in Defense Position, which an Indestructible unit may not be (R2179000): it stands in
         // Attack Position before anything is played, so the knock-down has no switch to make or report.
         let mut s = scenario(json!({
@@ -200,7 +201,11 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
         s.expect_in_zone(&rock, "field");
         assert_eq!(s.card(&rock).position, Some(Position::Atk));
-        assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::PositionSwitched { .. })));
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::PositionSwitched { .. }))
+        );
     }
 
     // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's

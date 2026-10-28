@@ -69,8 +69,14 @@ mod draw_m1_t7 {
         assert_eq!(state.counters.played, 0);
         assert_eq!(state.counters.drawn, 2);
         let played = events_json(&events, GameEventType::CardPlayed);
-        assert_eq!(played.first().map(|event| event["costPaid"].clone()), Some(json!(0)));
-        assert_eq!(played.first().map(|event| event["onDraw"].clone()), Some(json!(true)));
+        assert_eq!(
+            played.first().map(|event| event["costPaid"].clone()),
+            Some(json!(0))
+        );
+        assert_eq!(
+            played.first().map(|event| event["onDraw"].clone()),
+            Some(json!(true))
+        );
     }
 
     #[test]

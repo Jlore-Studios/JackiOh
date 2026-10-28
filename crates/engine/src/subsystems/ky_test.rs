@@ -81,10 +81,22 @@ pub fn four_digit_problem(rng: &mut Rng) -> KyTestProblem {
     let first = min + rng.int(max - min + 1);
     let second = min + rng.int(max - min + 1);
     let subtract = rng.coin();
-    let (a, b) = if subtract && second > first { (second, first) } else { (first, second) };
-    let (answer, sign, written) = if subtract { (a - b, "-", "−") } else { (a + b, "+", "+") };
+    let (a, b) = if subtract && second > first {
+        (second, first)
+    } else {
+        (first, second)
+    };
+    let (answer, sign, written) = if subtract {
+        (a - b, "-", "−")
+    } else {
+        (a + b, "+", "+")
+    };
     let wrong = (KY_TEST_OPTIONS - 1).max(0) as usize;
-    let misses: Vec<i32> = rng.shuffle(KY_TEST_FOUR_DIGIT_MISSES).into_iter().take(wrong).collect();
+    let misses: Vec<i32> = rng
+        .shuffle(KY_TEST_FOUR_DIGIT_MISSES)
+        .into_iter()
+        .take(wrong)
+        .collect();
     let mut options = vec![answer.to_string()];
     options.extend(misses.iter().map(|miss| (answer + miss).to_string()));
     KyTestProblem {

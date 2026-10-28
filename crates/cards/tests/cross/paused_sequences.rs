@@ -1800,7 +1800,12 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         assert!(sweep_drawn >= 0, "events: {}", types.join(", "));
         assert!(sweep_announced > sweep_drawn, "events: {}", types.join(", "));
         assert!(sweep_cast > sweep_announced, "events: {}", types.join(", "));
-        assert_eq!(type_index(&types, "trapFired"), -1, "events: {}", types.join(", "));
+        assert_eq!(
+            type_index(&types, "trapFired"),
+            -1,
+            "events: {}",
+            types.join(", ")
+        );
         let tokens: Vec<CardInstance> = [1, 2, 3, 4, 5]
             .into_iter()
             .filter_map(|lane| s.unit(P2, lane))

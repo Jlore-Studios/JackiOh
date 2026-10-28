@@ -1494,7 +1494,16 @@ const CLASSIC: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("35", "Prep", emb(0, 2), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
+    row(
+        "35",
+        "Prep",
+        emb(0, 2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
     row("36", "Burn", c(0), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
     row(
         "37",

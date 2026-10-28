@@ -268,7 +268,13 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
 pub fn cast_on_draw_event(event: &GameEvent) -> bool {
     matches!(
         event,
-        GameEvent::CardPlayed { on_draw: Some(true), .. } | GameEvent::CardResolved { on_draw: Some(true), .. }
+        GameEvent::CardPlayed {
+            on_draw: Some(true),
+            ..
+        } | GameEvent::CardResolved {
+            on_draw: Some(true),
+            ..
+        }
     )
 }
 

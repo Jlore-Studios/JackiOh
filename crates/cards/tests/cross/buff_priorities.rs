@@ -238,7 +238,12 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Damage { target_id, amount, absorbed, .. } if *target_id == armored => Some((*amount, *absorbed)),
+                GameEvent::Damage {
+                    target_id,
+                    amount,
+                    absorbed,
+                    ..
+                } if *target_id == armored => Some((*amount, *absorbed)),
                 _ => None,
             })
             .collect()

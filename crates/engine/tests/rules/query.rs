@@ -371,7 +371,14 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert_eq!(log, vec![stockpile.id.clone()]);
         assert_eq!(cards_played_this_turn(&state, P1), 1);
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&stockpile.id)), 0);
-        assert!(state.players.p1.graveyard.iter().any(|card| card.def_id == "fx-hinder"));
+        assert!(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.def_id == "fx-hinder")
+        );
     }
 
     #[test]

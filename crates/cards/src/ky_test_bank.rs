@@ -62,8 +62,18 @@ fn graduate() -> Vec<Problem> {
     vec![
         // Complex analysis.
         hard("g01", "∫₋∞^∞ dx/(1 + x⁴) = ?", "π/√2", &["π/2", "π/4", "π√2"]),
-        hard("g02", "The residue of e^(1/z) at z = 0 is?", "1", &["0", "e", "1/2"]),
-        hard("g03", "∮ dz/(z² + 1) around |z| = 2, counterclockwise, = ?", "0", &["2πi", "πi", "4πi"]),
+        hard(
+            "g02",
+            "The residue of e^(1/z) at z = 0 is?",
+            "1",
+            &["0", "e", "1/2"],
+        ),
+        hard(
+            "g03",
+            "∮ dz/(z² + 1) around |z| = 2, counterclockwise, = ?",
+            "0",
+            &["2πi", "πi", "4πi"],
+        ),
         hard(
             "g04",
             "By Rouché's theorem, the number of zeros of z⁵ + 3z + 1 in |z| < 1 is?",
@@ -73,8 +83,18 @@ fn graduate() -> Vec<Problem> {
         hard("g05", "ζ(−1) = ?", "−1/12", &["0", "1/12", "−1/2"]),
         // Real and harmonic analysis.
         hard("g06", "Σₙ₌₁^∞ 1/n⁴ = ?", "π⁴/90", &["π⁴/96", "π⁴/72", "π⁴/45"]),
-        hard("g07", "Σₙ₌₁^∞ (−1)ⁿ⁺¹/n² = ?", "π²/12", &["π²/6", "π²/8", "π²/24"]),
-        hard("g08", "The radius of convergence of Σ (n!/nⁿ) zⁿ is?", "e", &["1", "1/e", "∞"]),
+        hard(
+            "g07",
+            "Σₙ₌₁^∞ (−1)ⁿ⁺¹/n² = ?",
+            "π²/12",
+            &["π²/6", "π²/8", "π²/24"],
+        ),
+        hard(
+            "g08",
+            "The radius of convergence of Σ (n!/nⁿ) zⁿ is?",
+            "e",
+            &["1", "1/e", "∞"],
+        ),
         hard("g09", "∫₀^∞ (sin x)/x dx = ?", "π/2", &["π", "1", "π/4"]),
         hard(
             "g10",
@@ -95,7 +115,12 @@ fn graduate() -> Vec<Problem> {
             "1 ≤ p < 2",
             &["1 ≤ p ≤ 2", "p > 2", "every p ≥ 1"],
         ),
-        hard("g13", "The dual space of ℓ¹ is isometrically isomorphic to?", "ℓ^∞", &["ℓ¹", "c₀", "ℓ²"]),
+        hard(
+            "g13",
+            "The dual space of ℓ¹ is isometrically isomorphic to?",
+            "ℓ^∞",
+            &["ℓ¹", "c₀", "ℓ²"],
+        ),
         hard(
             "g14",
             "The spectrum of the unilateral right shift on ℓ²(ℕ) is?",
@@ -123,7 +148,12 @@ fn graduate() -> Vec<Problem> {
             &["−2", "−6", "4"],
         ),
         hard("g19", "π₃(S²) = ?", "ℤ", &["0", "ℤ/2", "ℤ²"]),
-        hard("g20", "The degree of the antipodal map of S⁴ is?", "−1", &["1", "0", "4"]),
+        hard(
+            "g20",
+            "The degree of the antipodal map of S⁴ is?",
+            "−1",
+            &["1", "0", "4"],
+        ),
         // Differential geometry, Lie theory and PDE.
         hard(
             "g21",
@@ -164,9 +194,19 @@ fn graduate() -> Vec<Problem> {
             "1, 1, 1, 1 and 2",
             &["1, 1, 2 and 2", "2 and 2", "1 eight times"],
         ),
-        hard("g29", "The number of units of ℤ/360ℤ is?", "96", &["72", "120", "144"]),
+        hard(
+            "g29",
+            "The number of units of ℤ/360ℤ is?",
+            "96",
+            &["72", "120", "144"],
+        ),
         // Fields, rings and number theory.
-        hard("g30", "The Galois group of x³ − 2 over ℚ is?", "S₃", &["ℤ/3", "ℤ/6", "ℤ/2"]),
+        hard(
+            "g30",
+            "The Galois group of x³ − 2 over ℚ is?",
+            "S₃",
+            &["ℤ/3", "ℤ/6", "ℤ/2"],
+        ),
         hard("g31", "[ℚ(√2, √3, √5) : ℚ] = ?", "8", &["6", "4", "3"]),
         hard(
             "g32",
@@ -174,12 +214,27 @@ fn graduate() -> Vec<Problem> {
             "10",
             &["5", "20", "25"],
         ),
-        hard("g33", "ℤ[i]/(3) is isomorphic to?", "the field 𝔽₉", &["𝔽₃ × 𝔽₃", "ℤ/9ℤ", "𝔽₃"]),
+        hard(
+            "g33",
+            "ℤ[i]/(3) is isomorphic to?",
+            "the field 𝔽₉",
+            &["𝔽₃ × 𝔽₃", "ℤ/9ℤ", "𝔽₃"],
+        ),
         hard("g34", "The class number of ℚ(√−5) is?", "2", &["1", "3", "4"]),
         hard("g35", "The Legendre symbol (3/101) = ?", "−1", &["1", "0", "3"]),
         // Algebraic geometry and commutative algebra.
-        hard("g36", "The Krull dimension of ℂ[x, y, z]/(xy − z²) is?", "2", &["1", "3", "0"]),
-        hard("g37", "The genus of a smooth plane curve of degree 4 is?", "3", &["1", "2", "6"]),
+        hard(
+            "g36",
+            "The Krull dimension of ℂ[x, y, z]/(xy − z²) is?",
+            "2",
+            &["1", "3", "0"],
+        ),
+        hard(
+            "g37",
+            "The genus of a smooth plane curve of degree 4 is?",
+            "3",
+            &["1", "2", "6"],
+        ),
         // Probability and combinatorics.
         hard(
             "g38",

@@ -162,7 +162,10 @@ mod r2179001_temporary_x {
     use super::*;
 
     fn give(state: &mut GameState, id: &str, keyword: Keyword) {
-        find_instance_mut(state, id).expect("the card").granted_keywords.push(keyword);
+        find_instance_mut(state, id)
+            .expect("the card")
+            .granted_keywords
+            .push(keyword);
     }
 
     fn temporary_of(state: &GameState, id: &str) -> Vec<Keyword> {
@@ -177,12 +180,18 @@ mod r2179001_temporary_x {
         let mut state = playing("temporary-2");
         let card = in_hand(&mut state, &plain.id, PlayerId::P1, 1)[0].clone();
         give(&mut state, &card.id, Keyword::Temporary { n: Some(2) });
-        assert_eq!(temporary_of(&state, &card.id), vec![Keyword::Temporary { n: Some(2) }]);
+        assert_eq!(
+            temporary_of(&state, &card.id),
+            vec![Keyword::Temporary { n: Some(2) }]
+        );
 
         let after_mine = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert!(ids(&after_mine.players.p1.hand).contains(&card.id));
         assert_eq!(live(&after_mine, &card.id).temporary, Some(1));
-        assert_eq!(temporary_of(&after_mine, &card.id), vec![Keyword::Temporary { n: Some(1) }]);
+        assert_eq!(
+            temporary_of(&after_mine, &card.id),
+            vec![Keyword::Temporary { n: Some(1) }]
+        );
 
         // The opponent's end of turn counts nothing down.
         let after_theirs = act(&after_mine, json!({ "type": "endTurn", "playerId": "p2" }));
@@ -190,7 +199,9 @@ mod r2179001_temporary_x {
         assert_eq!(live(&after_theirs, &card.id).temporary, Some(1));
 
         let ReduceResult {
-            state: after_next, events, ..
+            state: after_next,
+            events,
+            ..
         } = act_ok(&after_theirs, json!({ "type": "endTurn", "playerId": "p1" }));
         assert!(ids(&after_next.players.p1.graveyard).contains(&card.id));
         assert_eq!(
@@ -201,7 +212,10 @@ mod r2179001_temporary_x {
 
     #[test]
     fn r2179001_a_plain_temporary_is_temporary_1_written_without_a_number() {
-        assert_eq!(serde_json::to_value(Keyword::TEMPORARY).expect("json"), json!({ "kind": "Temporary" }));
+        assert_eq!(
+            serde_json::to_value(Keyword::TEMPORARY).expect("json"),
+            json!({ "kind": "Temporary" })
+        );
         assert_eq!(
             serde_json::from_value::<Keyword>(json!({ "kind": "Temporary" })).expect("a keyword"),
             Keyword::TEMPORARY
@@ -233,11 +247,20 @@ mod r2179001_temporary_x {
         let mut state = playing("temporary-merge");
         let card = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 1)[0].clone();
         give(&mut state, &card.id, Keyword::Temporary { n: Some(3) });
-        assert_eq!(temporary_of(&state, &card.id), vec![Keyword::Temporary { n: Some(3) }]);
+        assert_eq!(
+            temporary_of(&state, &card.id),
+            vec![Keyword::Temporary { n: Some(3) }]
+        );
 
         let once = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
-        assert_eq!(temporary_of(&once, &card.id), vec![Keyword::Temporary { n: Some(2) }]);
-        let twice = act(&act(&once, json!({ "type": "endTurn", "playerId": "p2" })), json!({ "type": "endTurn", "playerId": "p1" }));
+        assert_eq!(
+            temporary_of(&once, &card.id),
+            vec![Keyword::Temporary { n: Some(2) }]
+        );
+        let twice = act(
+            &act(&once, json!({ "type": "endTurn", "playerId": "p2" })),
+            json!({ "type": "endTurn", "playerId": "p1" }),
+        );
         assert_eq!(live(&twice, &card.id).temporary, Some(1));
         assert!(ids(&twice.players.p1.hand).contains(&card.id));
     }

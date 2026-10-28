@@ -348,7 +348,9 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
             &mut sink,
             DamageArgs {
                 source: None,
-                target: DamageTarget::Unit { instance: guard.clone() },
+                target: DamageTarget::Unit {
+                    instance: guard.clone(),
+                },
                 amount: 9,
                 flags: Some(json_as(json!({ "trample": true }))),
             },
@@ -357,13 +359,21 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
             &mut sink,
             DamageArgs {
                 source: None,
-                target: DamageTarget::Unit { instance: other.clone() },
+                target: DamageTarget::Unit {
+                    instance: other.clone(),
+                },
                 amount: 3,
                 flags: None,
             },
         );
-        assert_eq!(find_instance(sink.state, &guard.id).map(|card| card.damage), Some(1));
-        assert_eq!(find_instance(sink.state, &other.id).map(|card| card.damage), Some(3));
+        assert_eq!(
+            find_instance(sink.state, &guard.id).map(|card| card.damage),
+            Some(1)
+        );
+        assert_eq!(
+            find_instance(sink.state, &other.id).map(|card| card.damage),
+            Some(3)
+        );
         assert_eq!(sink.state.players[P2].hero.health, 30);
     }
 }

@@ -7,7 +7,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, in_hand, new_game, next_nonce, put, round_trip, set_library, sink_for, slot,
+    act, act_result, both, events_of_type, in_hand, new_game, next_nonce, put, round_trip, set_library,
+    sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
@@ -372,8 +373,14 @@ mod turn_loop_and_mana_m1_t6 {
         assert_eq!(state.counters.played, 1);
         let played = events_of_type(&events, GameEventType::CardPlayed);
         assert_eq!(played.len(), 1);
-        assert_eq!(field_of(&events, GameEventType::CardPlayed, "costPaid").first(), Some(&json!(0)));
-        assert_eq!(field_of(&events, GameEventType::CardPlayed, "onDraw").first(), Some(&Value::Null));
+        assert_eq!(
+            field_of(&events, GameEventType::CardPlayed, "costPaid").first(),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            field_of(&events, GameEventType::CardPlayed, "onDraw").first(),
+            Some(&Value::Null)
+        );
 
         // R2179002: the cast its draw makes of a cast-on-draw card is no play, though it pays nothing too.
         set_library(&mut state, PlayerId::P1, &[hinder().id, "fx-2".to_string()]);
@@ -384,8 +391,14 @@ mod turn_loop_and_mana_m1_t6 {
         };
         assert_eq!(state.players.p1.turn_log.cards_played, before + 1);
         assert_eq!(state.counters.played, 1);
-        assert_eq!(field_of(&events, GameEventType::CardPlayed, "costPaid").first(), Some(&json!(0)));
-        assert_eq!(field_of(&events, GameEventType::CardPlayed, "onDraw").first(), Some(&json!(true)));
+        assert_eq!(
+            field_of(&events, GameEventType::CardPlayed, "costPaid").first(),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            field_of(&events, GameEventType::CardPlayed, "onDraw").first(),
+            Some(&json!(true))
+        );
     }
 
     #[test]

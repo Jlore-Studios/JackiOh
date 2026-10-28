@@ -69,7 +69,8 @@ fn trample_excess(state: &GameState, source: &CardInstance, unit: &CardInstance,
         (amount - armor_of(&view.keywords)).max(0)
     };
     // Step 3: the unit's own cap (R2179005), before step 5 splits off the excess.
-    let after_armor = crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap));
+    let after_armor =
+        crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap));
     if after_armor <= 0 {
         return 0;
     }

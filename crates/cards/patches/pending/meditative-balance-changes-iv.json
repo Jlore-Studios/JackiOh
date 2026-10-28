@@ -1,7 +1,7 @@
 {
   "title": "Meditative balance changes IV",
   "sources": "#2179",
-  "notes": "Issue #2179's balance changes. Rules: an Indestructible unit is never in Defense Position (R2179000); Temporary takes a number, Temporary X (R2179001); a card cast on draw, like an Echo's repeat, is no play, so nothing that counts or answers plays sees it (R2179002); KY's Test's Easy problems are four-digit sums or differences, its old Hard problems Medium and its Hard ones new (R2179003); Playtester adds a random Book (R2179004); Anime Armor's cap guards the unit itself (R2179005). The other cards' changes are catalog data or kept v0.4.12d scripts (R767000). No win rates were measured for it.",
+  "notes": "Issue #2179's balance changes. Rules: an Indestructible unit is never in Defense Position (R2179000); Temporary takes a number, Temporary X (R2179001); a card cast on draw, like an Echo's repeat, is no play, so nothing that counts or answers plays sees it (R2179002); KY's Test's Easy problems are four-digit sums or differences, its old Hard problems Medium and its Hard ones new (R2179003); Playtester adds a random Book (R2179004); Anime Armor's cap guards the unit itself (R2179005). The other cards' changes are catalog data or kept v0.4.12d scripts (R767000). The golden traces were re-blessed: of 240, 2 are unchanged, 30 replay the same actions with new hashes and 208 play differently. The hotseat fixture is recorded again, since its p2 played Radiant Saintess at (1) on turn 2, and its hash moves from 7044d528 to 5b8b57a7; the practice claim fixture is recorded again for the same reason. No win rates were measured for it.",
   "player": {
     "title": "Meditative balance changes IV",
     "new": [],

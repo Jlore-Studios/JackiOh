@@ -137,7 +137,8 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     }
 
     #[test]
-    fn r2179002_gifted_program_passes_a_cast_on_draw_card_by_and_makes_the_first_card_played_radiant_10_5_step_3() {
+    fn r2179002_gifted_program_passes_a_cast_on_draw_card_by_and_makes_the_first_card_played_radiant_10_5_step_3()
+     {
         register_all();
         // Gifted Program: "The first card costing 1 or less you play each turn becomes Radiant as it is
         // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002; through
@@ -156,13 +157,19 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         let hinder = g.card(HINDER).clone();
         g.expect_in_zone(&hinder.id, "graveyard");
         assert!(!hinder.radiant);
-        let drawn = g.hand(P1).into_iter().find(|card| card.def_id == VANILLA).map(|card| card.id).expect("the drawn Mr. Vanilla");
+        let drawn = g
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .map(|card| card.id)
+            .expect("the drawn Mr. Vanilla");
         g.play(&drawn, json!({ "zone": 2 }));
         assert!(g.card(&drawn).radiant);
     }
 
     #[test]
-    fn r70_r2179002_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_that_is_no_play_10_5_step_5() {
+    fn r70_r2179002_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_that_is_no_play_10_5_step_5()
+     {
         register_all();
         // p1 plays /fullsend ("your cards gain 'Combo: draw 1'" this turn), then Mr. Vanilla, whose Combo
         // draws Hinder, which casts itself. Its granted Combo reads the 2 cards played earlier, so Hinder's
@@ -207,7 +214,12 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
 
         assert_eq!(g.state().active, P1);
         assert!(!g.pile(P1, "library").iter().any(|card| card.def_id == HINDER));
-        let drawn = g.hand(P1).into_iter().find(|card| card.def_id == VANILLA).map(|card| card.id).expect("the drawn Mr. Vanilla");
+        let drawn = g
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .map(|card| card.id)
+            .expect("the drawn Mr. Vanilla");
         let library = g.pile(P1, "library").len();
         g.play(&drawn, json!({ "zone": 2 }));
         assert_eq!(g.pile(P1, "library").len(), library + 3);
@@ -229,7 +241,11 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
 
         assert_eq!(g.state().active, P1);
         assert!(g.events().iter().any(|event| matches!(event, GameEvent::CardPlayed { def_id, on_draw: Some(true), .. } if def_id == HINDER)));
-        assert!(!g.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+        assert!(
+            !g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
         assert_eq!(g.card(HONEYPOT).face_up, Some(false));
     }
 }

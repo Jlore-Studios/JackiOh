@@ -2164,9 +2164,17 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // p1's next turn draws the Spell, which casts itself: 1 from the Spell and 4 from the watcher's
         // answer to its resolution, and nothing from the watcher's answer to plays.
-        state = reduce(&state, &action(json!({ "type": "endTurn", "playerId": "p1", "nonce": "r2179002-1" }))).state;
+        state = reduce(
+            &state,
+            &action(json!({ "type": "endTurn", "playerId": "p1", "nonce": "r2179002-1" })),
+        )
+        .state;
         let p2_before = state.players.p2.hero.health;
-        state = reduce(&state, &action(json!({ "type": "endTurn", "playerId": "p2", "nonce": "r2179002-2" }))).state;
+        state = reduce(
+            &state,
+            &action(json!({ "type": "endTurn", "playerId": "p2", "nonce": "r2179002-2" })),
+        )
+        .state;
         assert_eq!(state.active, P1);
         assert_eq!(p2_before, health_before);
         assert_eq!(state.players.p2.hero.health, health_before - 1 - 4);
@@ -2177,7 +2185,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let before = state.players.p2.hero.health;
         state = reduce(
             &state,
-            &action(json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-3" })),
+            &action(
+                json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-3" }),
+            ),
         )
         .state;
         assert_eq!(state.players.p2.hero.health, before - 2 - 2 - 4);
@@ -2188,11 +2198,16 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r2179002_an_echo_repeat_is_no_play_counted_or_answered_the_spell_is_played_once() {
         let mut state = playing("r2179002-echo");
         put(&mut state, PLAY_WATCHER, slot(P1, BACKROW, 1), json!({}));
-        let bolt = must(in_hand(&mut state, ECHO_BOLT, P1, 1).into_iter().next(), "an echo bolt");
+        let bolt = must(
+            in_hand(&mut state, ECHO_BOLT, P1, 1).into_iter().next(),
+            "an echo bolt",
+        );
         let before = state.players.p2.hero.health;
         let result = reduce(
             &state,
-            &action(json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-echo" })),
+            &action(
+                json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-echo" }),
+            ),
         );
         let state = result.state;
         // Two resolutions of 1, one play answered for 2 and one resolution for 4.

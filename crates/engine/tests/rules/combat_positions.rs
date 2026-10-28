@@ -721,7 +721,12 @@ mod r2179000_indestructible_never_in_defense {
     #[test]
     fn r2179000_no_switch_to_defense_by_an_action_or_an_effect_and_the_list_agrees() {
         let mut state = playing("indestructible-no-defense");
-        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), Default::default());
+        let unit = put(
+            &mut state,
+            &indestructible.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
 
         assert!(!has_switch_for(&state, P1, Some(&unit.id)));
@@ -738,7 +743,11 @@ mod r2179000_indestructible_never_in_defense {
                 .contains("cannot be in Defense Position")
         );
         let (events, error) = switch_by_effect(&mut state, &unit, Some(Position::Def));
-        assert!(error.unwrap_or_default().contains("cannot be in Defense Position"));
+        assert!(
+            error
+                .unwrap_or_default()
+                .contains("cannot be in Defense Position")
+        );
         assert!(events_of_type(&events, GameEventType::PositionSwitched).is_empty());
         let after = view_of(&state, &unit.id);
         assert_eq!(after.position, Position::Atk);
@@ -749,7 +758,12 @@ mod r2179000_indestructible_never_in_defense {
     #[test]
     fn r2179000_one_standing_in_defense_switches_to_attack_at_the_state_check_spending_no_exertion() {
         let mut state = playing("indestructible-leaves-defense");
-        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), Default::default());
+        let unit = put(
+            &mut state,
+            &indestructible.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let other = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         for id in [&unit.id, &other.id] {
             find_instance_mut(&mut state, id).expect("a unit").position = Some(Position::Def);
@@ -794,9 +808,16 @@ mod r2179000_indestructible_never_in_defense {
         assert_eq!(by_id(&state, &unit.id).position, Some(Position::Atk));
 
         // A Vanilla takes a printed Indestructible off (§6.3), and the switch is offered again.
-        let printed = put(&mut state, &indestructible.id, slot(P1, Row::Units, 2), Default::default());
+        let printed = put(
+            &mut state,
+            &indestructible.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
         assert!(!has_switch_for(&state, P1, Some(&printed.id)));
-        find_instance_mut(&mut state, &printed.id).expect("the printed one").vanilla = true;
+        find_instance_mut(&mut state, &printed.id)
+            .expect("the printed one")
+            .vanilla = true;
         assert!(has_switch_for(&state, P1, Some(&printed.id)));
     }
 }

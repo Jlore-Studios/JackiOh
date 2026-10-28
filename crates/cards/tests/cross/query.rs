@@ -493,7 +493,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
 
     #[test]
     fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_and_meditative_64_68()
-     {
+    {
         register();
         // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10, Classic+ #22 Blood Moon
         // (2) since #2179.

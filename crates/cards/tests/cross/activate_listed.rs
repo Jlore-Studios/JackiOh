@@ -785,11 +785,18 @@ mod c_plus_n78_claudes_datacenter {
         let mana = s.state().players.p1.mana.current;
         let before: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
         activate_listed(&mut s, CLAUDES_DATACENTER, any);
-        let added: Vec<CardInstance> =
-            s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
+        let added: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| !before.contains(&card.id))
+            .collect();
         assert_eq!(added.len(), 1);
         let def = jackioh_cards::card_def(&added[0].def_id);
-        assert!(def.token && def.tags.contains(&Tag::Ai), "{} is no AI generated card", added[0].def_id);
+        assert!(
+            def.token && def.tags.contains(&Tag::Ai),
+            "{} is no AI generated card",
+            added[0].def_id
+        );
         assert_eq!(added[0].radiant, radiant);
         assert_eq!(added[0].cost_override, Some(0));
         assert_eq!(s.state().players.p1.mana.current, mana);

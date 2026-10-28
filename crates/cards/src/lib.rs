@@ -294,11 +294,9 @@ pub(crate) fn under_kept_as<T>(
     if let Some(def) = defs.get_mut(id) {
         old(def);
     }
-    let shipped: &'static jackioh_engine::ShippedCatalog = Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
-        "kept",
-        defs,
-        IndexMap::from([(id.to_string(), scripts)]),
-    )));
+    let shipped: &'static jackioh_engine::ShippedCatalog = Box::leak(Box::new(
+        jackioh_engine::ShippedCatalog::new("kept", defs, IndexMap::from([(id.to_string(), scripts)])),
+    ));
     jackioh_engine::with_shipped(Some(shipped), run)
 }
 

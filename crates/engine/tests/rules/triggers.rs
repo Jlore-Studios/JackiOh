@@ -742,7 +742,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     }
 
     #[test]
-    fn r70_r2179002_fires_the_cry_for_a_cast_too_a_cast_on_draw_counts_as_no_play_a_call_to_chaos_cast_does() {
+    fn r70_r2179002_fires_the_cry_for_a_cast_too_a_cast_on_draw_counts_as_no_play_a_call_to_chaos_cast_does()
+    {
         let mut state = playing("r70-casts");
         let mut sink = sink_for(&state);
 

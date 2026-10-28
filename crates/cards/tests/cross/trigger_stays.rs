@@ -633,9 +633,9 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
         // step 4, R83) before the Spell's loop dispatched that `cardResolved` to the traps.
         let cast = must(
             s.events().iter().find_map(|event| match event {
-                GameEvent::CardResolved { instance_id, def_id, .. } if def_id == "edge-r10-cast-reborn-unit" => {
-                    find_instance(s.state(), instance_id).cloned()
-                }
+                GameEvent::CardResolved {
+                    instance_id, def_id, ..
+                } if def_id == "edge-r10-cast-reborn-unit" => find_instance(s.state(), instance_id).cloned(),
                 _ => None,
             }),
             "the cast Unit",

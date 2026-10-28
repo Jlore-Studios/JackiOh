@@ -176,18 +176,24 @@ mod c_42_kys_test_the_four_digit_generator_r2179003 {
     use super::*;
 
     #[test]
-    fn r2179003_a_four_digit_sum_or_difference_never_negative_and_three_wrong_answers_each_moved_by_a_different_slip() {
+    fn r2179003_a_four_digit_sum_or_difference_never_negative_and_three_wrong_answers_each_moved_by_a_different_slip()
+     {
         let (mut sums, mut differences) = (0, 0);
         for n in 0..300 {
             let problem = four_digit_problem(&mut Rng::new(&format!("four-{n}"), 0));
             let (a, b, subtract) = four_digit_statement(&problem.statement).expect("a four-digit statement");
             for operand in [a, b] {
-                assert!((KY_TEST_FOUR_DIGIT_OPERANDS.min..=KY_TEST_FOUR_DIGIT_OPERANDS.max).contains(&operand));
+                assert!(
+                    (KY_TEST_FOUR_DIGIT_OPERANDS.min..=KY_TEST_FOUR_DIGIT_OPERANDS.max).contains(&operand)
+                );
             }
             let answer = if subtract { a - b } else { a + b };
             assert!(answer >= 0);
             assert_eq!(problem.answer, answer.to_string());
-            assert_eq!(problem.id, format!("easy:{a}{}{b}", if subtract { "-" } else { "+" }));
+            assert_eq!(
+                problem.id,
+                format!("easy:{a}{}{b}", if subtract { "-" } else { "+" })
+            );
             assert_eq!(problem.difficulty, KyTestDifficulty::Easy);
             assert_eq!(problem.options.len(), 4);
             assert_eq!(problem.options.iter().collect::<IndexSet<_>>().len(), 4);
@@ -304,7 +310,11 @@ mod c_42_kys_test_the_two_prompts_r420 {
         let mut state = offered("kt-easy", false);
         answer_keys(&mut state, &["mode:Easy"]);
         let pending = open_as(&state, PromptKind::Answer, P1);
-        assert!(four_digit_statement(&pending.prompt).is_some(), "{}", pending.prompt);
+        assert!(
+            four_digit_statement(&pending.prompt).is_some(),
+            "{}",
+            pending.prompt
+        );
         assert!(!is_easy_statement(&pending.prompt));
         assert!(
             pending
