@@ -38,6 +38,7 @@ from harness import gates as gates_mod
 from harness import human as human_mod
 from harness import journal as journal_mod
 from harness import prompts, review_rule, verdicts
+from harness import resolve as resolve_mod
 from harness import split as split_mod
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
@@ -50,6 +51,7 @@ from harness.queue import NO_PRIORITY, PRIORITY_TIERS
 from harness.providers import hosted
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
+from harness.threads import no_feedback
 from harness.verdicts import Finding
 
 BUILDER_TOOLS = (
@@ -304,6 +306,8 @@ class Worker:
         self.put_back: list[str] = []
         #: The last cut-off revision's work this run starts from (`bot/wip/<pr>`), if any.
         self.wip_used = ""
+        #: The conflicts of the merge of `main` the harness resolved itself (`_resolve`).
+        self.resolved: list[resolve_mod.Resolution] = []
         #: For a conflict revision of a cleared change: what its builder and its reviewer are told
         #: (`_cleared_notes`).
         self.carry_build = ""
@@ -799,7 +803,48 @@ class Worker:
             self.result["infra_scope"] = "repository"  # not the subscription's fault
             raise Interrupt(f"dependency install failed on untouched main (exit "
                             f"{installed.exit_code}): {installed.tail[-1500:]}", "infra")
+        if conflicts:
+            conflicts = self._resolve(conflicts, commands=installed.ok)
         return conflicts
+
+    def _resolve(self, conflicts: list[str], *, commands: bool) -> list[str]:
+        """The conflicts the merge of `main` left that the harness settles itself (`resolve.py`,
+        `resolvers` in the config); the rest are the builder's. Returns those."""
+        assert self.wt is not None
+        if not self.cfg.resolvers:
+            return conflicts
+        started = datetime.now()
+        # A command must leave the run time for a review of what it made (`resolve.MIN_SECONDS`).
+        left, done = resolve_mod.resolve(
+            self.wt, conflicts, self.cfg.resolvers, self.env, self.seconds_left,
+            commands=commands, reserve_seconds=self.cfg.min_minutes_for_a_call * 60,
+            base=self.base_ref.removeprefix("origin/"))
+        if not done:
+            return conflicts
+        self.resolved = [r for r in done if r.ok]
+        self.result["resolved"] = [r.to_dict() for r in done]
+        self._step("resolve", "the conflicts the harness settles itself",
+                   minutes=round((datetime.now() - started).total_seconds() / 60, 1),
+                   outcome=resolve_mod.summary(done, left))
+        return left
+
+    def _resolved_note(self) -> str:
+        """What the builder is told of the files the harness resolved ("" when none)."""
+        if not self.resolved:
+            return ""
+        return ("\n\nThe harness resolved these conflicts itself; leave them as they are:\n"
+                + "\n".join(f"- `{r.path}`: {r.how}" for r in self.resolved))
+
+    def _resolved_review_note(self) -> str:
+        """What every reviewer of the run is told of the files the harness resolved ("" when
+        none): by a rule, so the branch's side of each is gone on purpose."""
+        if not self.resolved:
+            return ""
+        return ("The harness resolved these conflicts of the merge of `main` itself, by a rule in "
+                "its config: a file it took from `main` keeps `main`'s version on purpose (a job on "
+                "`main` rewrites it), and a file it regenerated is the tool's output from the "
+                "merged tree. Judge them by that rule, not as a builder's resolution:\n"
+                + "\n".join(f"- `{r.path}`: {r.how}" for r in self.resolved))
 
     def _wip_start(self, number: int, start: str) -> str:
         """Where a revision's worktree starts: the last cut-off revision's work on
@@ -1059,10 +1104,14 @@ class Worker:
         plan = self.plan
         number = plan["number"]
         if plan["action"] == "revise":
-            conflict_text = (
-                data("\n".join(conflicts), "Files merged with conflict markers")
-                if conflicts else "The merge of `main` into the branch was clean."
-            ) + self.carry_build
+            if conflicts:
+                merged = data("\n".join(conflicts), "Files merged with conflict markers")
+            elif self.resolved:
+                merged = ("Merging `main` left conflicts, and the harness resolved every one (below). "
+                          "The merge is staged, not committed: the harness commits it after you.")
+            else:
+                merged = "The merge of `main` into the branch was clean."
+            conflict_text = merged + self._resolved_note() + self.carry_build
             prompt = self.render(
                 "revise",
                 number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
@@ -1093,6 +1142,7 @@ class Worker:
             previous += ("\n\n`main` moved since then; merging it left conflict markers in: "
                          + ", ".join(f"`{c}`" for c in conflicts)
                          + ". Resolve them, keeping both sides' meaning. Do not commit.")
+        previous += self._resolved_note()
         if self.plan_text:
             previous += ("\n\nA planner wrote the plan below for this change before you started; "
                          f"it is also at the top of `{NOTES_FILE}`. Follow it unless the code "
@@ -1136,15 +1186,19 @@ class Worker:
                  "review run. If making it correct takes more (say `main` renamed something the "
                  "change uses), make that change anyway and say so in your report: it then goes "
                  "back to a review run.")
-        what = ("the builder resolved the conflicts in " + ", ".join(f"`{c}`" for c in conflicts)
-                if conflicts else "the merge was clean")
+        parts = [f"the harness resolved `{r.path}` itself ({r.how})" for r in self.resolved]
+        if conflicts:
+            parts.append("the builder resolved the conflicts in "
+                         + ", ".join(f"`{c}`" for c in conflicts))
+        what = ", and ".join(parts) if parts else "the merge was clean"
         review = (f"This revision resolves a conflict on a change the review rule had already "
                   f"cleared {cleared_at}: `main` moved and the branch no longer merged, so the "
                   f"harness merged `main` into it and {what}. If you approve and the revision "
                   "changed nothing beyond those files, it merges with no further review: yours "
                   "is the only review of the resolution, so judge it hardest. In each conflicted "
-                  "file both `main`'s change and the branch's change must survive with their "
-                  "meaning, nothing `main` brought may be dropped or reverted, and the merged "
+                  "file the builder resolved, both `main`'s change and the branch's change must "
+                  "survive with their meaning (the files the harness resolved follow its rule, "
+                  "below), nothing `main` brought may be dropped or reverted, and the merged "
                   "whole must still be correct. `git log --merges -1` finds the merge commit, and "
                   "`git show --remerge-diff <it>` shows how each conflict was resolved.")
         return build, review
@@ -1160,7 +1214,7 @@ class Worker:
             gate_failures=(data(failures, "Checks this change turned red") if failures
                            else "Every check passed or was already red on main."),
             gate_list=self._gate_list(),
-        )
+        ) + self._resolved_note()
 
     def _commit(self, message: str) -> bool:
         assert self.wt is not None
@@ -1502,6 +1556,50 @@ class Worker:
         self._checkpoint()
         return report, entry
 
+    def _merge_only(self, conflicts: list[str]) -> bool:
+        """A conflict revision with nothing left for a builder: the harness resolved every
+        conflict the merge of `main` left (`_resolve`), and nothing else was asked of it (no new
+        trusted feedback, no earlier findings, no cut-off work to pick up). Its checks and its
+        reviewer judge the merge as it stands, so no builder session is spent on it; findings the
+        review sends back go to the builder as on any round."""
+        plan = self.plan
+        return (plan.get("action") == "revise" and plan.get("source") == "conflict"
+                and bool(self.resolved) and not conflicts and not self.wip_used
+                and not plan.get("previous_findings")
+                and no_feedback(str(plan.get("feedback") or ""), int(plan["number"])))
+
+    def _merge_pass(self, cycle: int) -> tuple[Any, dict[str, Any]]:
+        """Round one of a `_merge_only` revision: commit the merge as the harness resolved it,
+        with no builder session. Returns the report the pull request shows in the builder's place
+        and the round's record, shaped as `_build_pass`'s."""
+        assert self.wt is not None
+        before = self.wt.head()
+        paths = ", ".join(r.path for r in self.resolved)
+        message = (f"{COMMIT_PREFIX}: merge {self.cfg.default_branch} for #{self.plan['number']}; "
+                   f"the harness resolved {paths}")
+        if not self._commit(message) and self.wt.merge_in_progress():
+            # The merged tree is the branch's own (`main` brought nothing else): the merge commit
+            # still records `main`, or the pull request would stay in conflict.
+            self.wt.run("commit", "--quiet", "--no-verify", "--allow-empty", "-m", message,
+                        extra_env={"GIT_AUTHOR_NAME": self.who.name,
+                                   "GIT_AUTHOR_EMAIL": self.who.email,
+                                   "GIT_COMMITTER_NAME": self.who.name,
+                                   "GIT_COMMITTER_EMAIL": self.who.email})
+        changed = self.wt.head() != before
+        self._step("commit", "the merge as the harness resolved it; no builder session",
+                   outcome=f"committed `{self.wt.head()[:12]}`" if changed else "changed nothing")
+        body = ("## What changed\n\n`main` moved and the branch no longer merged. The harness "
+                "merged it and resolved every conflict itself, so no builder ran:\n\n"
+                + "\n".join(f"- `{r.path}`: {r.how}" for r in self.resolved))
+        entry: dict[str, Any] = {
+            "n": cycle,
+            "builder": {"role": "merge", "ok": True, "turns": 0, "minutes": 0.0, "status": "done",
+                        "error": "", "timed_out": False, "model": "the harness", "tier": "",
+                        "changed": changed},
+        }
+        self._checkpoint()
+        return verdicts.BuildReport("done", "", "", body), entry
+
     def _self_check_loop(self, cycle: int, entry: dict[str, Any], report: Any,
                          results: list[gates_mod.GateResult],
                          guard: list[Finding]) -> tuple[Any, list[gates_mod.GateResult],
@@ -1585,6 +1683,7 @@ class Worker:
         lane_verdicts = 0
         self.result["round_tier"] = owner_tier
         self.result["verdict_rounds"] = used
+        merge_only = self._merge_only(conflicts)
         cycle = 0
         while True:
             cycle += 1
@@ -1593,14 +1692,18 @@ class Worker:
                 model, asked_in = self.asked
                 self.asked = None
                 self._switch(model, "the builder asked for it", asked_in)
-            if cycle == 1:
-                role, prompt = self._first_prompt(conflicts)
-                why = self._first_why(role, conflicts)
-            else:
-                role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
-                why = _fix_why(f"round {cycle - 1}'s review", findings)
             built_on = self.build_seat
-            built, entry = self._build_pass(cycle, role, prompt, why)
+            harness_round = merge_only and cycle == 1
+            if harness_round:
+                built, entry = self._merge_pass(cycle)
+            else:
+                if cycle == 1:
+                    role, prompt = self._first_prompt(conflicts)
+                    why = self._first_why(role, conflicts)
+                else:
+                    role, prompt = "fix", self._fix_prompt(cycle, findings, failures)
+                    why = _fix_why(f"round {cycle - 1}'s review", findings)
+                built, entry = self._build_pass(cycle, role, prompt, why)
             self.result["cycles"].append(entry)
             if built is None:
                 return
@@ -1611,7 +1714,7 @@ class Worker:
             self.check()
             results = self._checks()
             entry["gates"] = [{**r.to_dict(), "tail": r.tail[-1500:]} for r in results]
-            if self.self_check:
+            if self.self_check and not harness_round:
                 checked, results, guard, open_self_check = self._self_check_loop(
                     cycle, entry, report, results, guard)
                 if checked is None:
@@ -1645,6 +1748,9 @@ class Worker:
             if self.carry_review:
                 earlier = context or (self._findings_text(findings) if findings else "")
                 context = (earlier + "\n\n" if earlier else "") + self.carry_review
+            if self.resolved:
+                earlier = context or (self._findings_text(findings) if findings else "")
+                context = (earlier + "\n\n" if earlier else "") + self._resolved_review_note()
             if self._catch_up():
                 # `main` moved and merged cleanly: the checks and the review judge the merged head.
                 results = self._checks()
@@ -1668,7 +1774,8 @@ class Worker:
             if not findings and failures:
                 findings = [Finding("blocking", "checks", "Checks this change turned red must "
                                     "pass.", "the harness's gate run")]
-            self._sent_back(cycle, built_on)
+            if not harness_round:
+                self._sent_back(cycle, built_on)  # a rejected harness merge is no builder's round
             if lane_verdicts + used >= self._cycles_cap():
                 status, reason = self._rounds_out(lane_verdicts + used)
                 self.result.update(status=status, reason=reason)

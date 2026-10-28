@@ -65,6 +65,16 @@ def pull_text(pull: dict[str, Any]) -> str:
     return data(_clip(text), f"Pull request #{pull.get('number')}")
 
 
+#: What `pull_feedback` says when no trusted person wrote anything new (`work.Worker._merge_only`).
+NO_FEEDBACK = "(no new comments from trusted people)"
+
+
+def no_feedback(text: str, number: int) -> bool:
+    """`text` is what `pull_feedback` gives #`number` when nobody trusted wrote anything new (or
+    nothing at all): equal to it, never merely holding its words, which a comment could quote."""
+    return not text.strip() or text.strip() == data(NO_FEEDBACK, f"Feedback on #{number}").strip()
+
+
 def pull_feedback(gh: Any, trust: Trust, number: int, bot_login: str, since: str | None,
                   issue: int | None = None) -> str:
     """Trusted comments, reviews and line comments on a PR newer than `since`, and trusted
@@ -112,6 +122,6 @@ def pull_feedback(gh: Any, trust: Trust, number: int, bot_login: str, since: str
                         f"Line comment by @{who} on {where}:\n\n{line.get('body') or ''}"))
     entries.sort(key=lambda pair: pair[0])
     if not entries:
-        return data("(no new comments from trusted people)", f"Feedback on #{number}")
+        return data(NO_FEEDBACK, f"Feedback on #{number}")
     text = "\n\n---\n\n".join(body for _, body in entries)
     return data(_clip(text), f"Feedback on #{number}")
