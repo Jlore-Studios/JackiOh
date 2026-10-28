@@ -843,6 +843,32 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(setMark(catalogFace("meditative-027")).querySelector("img")?.getAttribute("src")).toBe(mark.src);
   });
 
+  it("R1883000 the Stinkyscape mark is a ringed green planet in deep space under stink lines, not the diamond", () => {
+    const mark = setMarkOf("Stinkyscape");
+    expect(mark.kind).toBe("stinkyscape");
+    expect(mark.label).toBe("Stinkyscape set");
+    const others = ["Core", "Classic", "Classic+", "Meditative", "Boss"].map((set) => setMarkOf(set).src);
+    expect(others).not.toContain(mark.src);
+    const svg = decodeURIComponent(mark.src);
+    // The deep-space disc, the green planet, its tilted ring (its far half drawn before the planet,
+    // its near half after) and the three stink lines.
+    expect(svg).toContain("fill='#1c1446'");
+    const far = svg.indexOf("M2.6 14.2A8 2.2");
+    const planet = svg.indexOf("fill='#7fd23e'");
+    const near = svg.indexOf("M18.6 14.2A8 2.2");
+    expect(far).toBeGreaterThan(-1);
+    expect(planet).toBeGreaterThan(far);
+    expect(near).toBeGreaterThan(planet);
+    expect(svg.match(/M[\d.]+ [\d.]+Q/g)).toHaveLength(3);
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    const face = setMark(catalogFace("stinkyscape-017"));
+    expect(face.getAttribute("data-set")).toBe("Stinkyscape");
+    expect(face.getAttribute("data-set-mark")).toBe("stinkyscape");
+    expect(face.getAttribute("aria-label")).toBe("Stinkyscape set");
+    expect(face.querySelector("img")?.getAttribute("src")).toBe(mark.src);
+  });
+
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
     const boss: CardDef = { ...def("core-002"), set: "Boss" };
     const mark = setMark(renderFace({ defId: boss.id, def: boss, radiant: false }));
