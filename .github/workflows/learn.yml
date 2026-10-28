@@ -6,7 +6,9 @@
 # (training/learn.md, Running unattended):
 #
 #   plan      names the export's seed base (`learned-<catalog>-<date>-<run>`, never a gate's or the dev
-#             set's, R1006002). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
+#             set's, R1006002) from main as it is when the run starts, so the export plays the newest
+#             patch however long the run waited; a new set stops an export still on the one before
+#             (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
 #             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
 #             checks are green or running is left to merge, and the export goes ahead beside it: by the
 #             time this run gates, about 40 hours on, it has merged (and when it has not, this run's
@@ -116,8 +118,14 @@ jobs:
     outputs:
       run: ${{ steps.plan.outputs.run }}
       seed: ${{ steps.plan.outputs.seed }}
+      sha: ${{ steps.plan.outputs.sha }}
     steps:
+      # Main as it is when the run starts, not as it was when the run was queued: a run waits behind
+      # the one before it for up to two days, and the export plays the patch shipped meanwhile. The
+      # export's build checks out the same commit (`sha`).
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -160,8 +168,11 @@ jobs:
           fi
           # The '-' goes last: between '_' and '\n' it would be a range, which tr refuses.
           catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._\n-' '_')
-          echo "seed=learned-$catalog-$(date -u +%Y%m%d)-$RUN" >> "$GITHUB_OUTPUT"
-          echo "run=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "seed=learned-$catalog-$(date -u +%Y%m%d)-$RUN"
+            echo "sha=$(git rev-parse HEAD)"
+            echo "run=true"
+          } >> "$GITHUB_OUTPUT"
 
   export:
     needs: plan
@@ -170,6 +181,7 @@ jobs:
     with:
       games: ${{ inputs.games || '100000' }}
       seed: ${{ needs.plan.outputs.seed }}
+      ref: ${{ needs.plan.outputs.sha }}
       shards: ${{ inputs.shards || '20' }}
       runner: jackioh-selfplay-local
       retention: "30"
