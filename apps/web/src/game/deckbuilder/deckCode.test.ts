@@ -631,3 +631,114 @@ describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, is
     expect(expectOk(decodeDeckCode(rawCode("Old", [1, 4001], [], v1), fiveSets, null)).dropped.unknown).toEqual([4001]);
   });
 });
+
+describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #1884)", () => {
+  function setDef(id: string, set: CardDef["set"], index: string): CardDef {
+    return { ...unitDef(id, index, false), set };
+  }
+  const CLASSIC_43 = "classic-043";
+  const PLUS_78 = "classicplus-078";
+  const MEDITATIVE_102 = "meditative-102";
+  const MEDITATIVE_PLUS_26 = "meditativeplus-026";
+  const STINKYSCAPE_1 = "stinkyscape-001";
+  const STINKYSCAPE_175 = "stinkyscape-175";
+  const STINKYSCAPE_TOKEN = "stinkyscape-004-1";
+  const STINKYSCAPE_SHARED = "stinkyscape-t-drone-interceptor";
+  const sixSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      [CLASSIC_43]: setDef(CLASSIC_43, "Classic", "43"),
+      [PLUS_78]: setDef(PLUS_78, "Classic+", "78"),
+      [MEDITATIVE_102]: setDef(MEDITATIVE_102, "Meditative", "102"),
+      [MEDITATIVE_PLUS_26]: setDef(MEDITATIVE_PLUS_26, "Meditative+", "26"),
+      [STINKYSCAPE_1]: setDef(STINKYSCAPE_1, "Stinkyscape", "1"),
+      [STINKYSCAPE_175]: setDef(STINKYSCAPE_175, "Stinkyscape", "175"),
+      [STINKYSCAPE_TOKEN]: {
+        ...setDef(STINKYSCAPE_TOKEN, "Stinkyscape", "4.1"),
+        token: true,
+        tags: ["Terminus", "Token"],
+        rarity: "Token",
+      },
+      [STINKYSCAPE_SHARED]: {
+        ...setDef(STINKYSCAPE_SHARED, "Stinkyscape", "T-drone-interceptor"),
+        token: true,
+        tags: ["Token"],
+        rarity: "Token",
+      },
+    },
+  };
+  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(sixSets.cards).filter(([, def]) => def.set !== "Stinkyscape")),
+  };
+
+  /**
+   * A version 2 code of Core, Classic, Classic+, Meditative and Meditative+ cards, exactly as this
+   * client wrote it before the Stinkyscape set had an offset (encoded before the release and pinned here).
+   */
+  const MINTED_BEFORE = "PIN_ME";
+  const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_26, fixtureCardId(1)];
+
+  it("R1410 numbers a Stinkyscape card 5000 + n, after Meditative+'s 4000, and moves no other set's offset", () => {
+    expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({
+      Core: 0,
+      Classic: 1000,
+      "Classic+": 2000,
+      Meditative: 3000,
+      "Meditative+": 4000,
+      Stinkyscape: 5000,
+    });
+    expect(catalogNumberOf({ set: "Stinkyscape", index: "1" })).toBe(5001);
+    expect(catalogNumberOf({ set: "Stinkyscape", index: "175" })).toBe(5175);
+    // Its tokens carry "N.k" or "T-…" indices, so no code can name one, as for every set.
+    expect(catalogNumberOf({ set: "Stinkyscape", index: "4.1" })).toBeUndefined();
+    expect(catalogNumberOf({ set: "Stinkyscape", index: "T-drone-interceptor" })).toBeUndefined();
+    // The other sets' numbers are the ones every earlier code carries.
+    expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
+    expect(catalogNumberOf({ set: "Meditative", index: "102" })).toBe(3102);
+    expect(catalogNumberOf({ set: "Meditative+", index: "26" })).toBe(4026);
+  });
+
+  it("R1410 a code minted before the Stinkyscape set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeDeckCode("Before Stinkyscape", MINTED_CARDS, sixSets)).toBe(MINTED_BEFORE);
+    for (const cards of [sixSets, withoutSet]) {
+      const decoded = expectOk(decodeDeckCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Stinkyscape");
+      expect(decoded.cards).toEqual(MINTED_CARDS);
+      expect(decoded.dropped).toEqual({ unknown: [], tokens: [], duplicates: [], overflow: [] });
+    }
+  });
+
+  it("R1410 writes the six sets' cards as six sets' numbers, LEB128, and reads each back to its own set", () => {
+    const cards = [fixtureCardId(1), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_26, STINKYSCAPE_1, STINKYSCAPE_175];
+    const code = encodeDeckCode("Six sets", [...cards, STINKYSCAPE_TOKEN, STINKYSCAPE_SHARED], sixSets);
+    expect(code.startsWith(`${DECK_CODE_PREFIX}2.`)).toBe(true);
+    const bytes = bodyBytes(code);
+    const nameLength = bytes[0] ?? 0;
+    // [count 7] [1] [1043] [2078] [3102] [4026] [5001: 0x89 0x27] [5175: 0xb7 0x28]; the tokens have no number.
+    expect(bytes.slice(1 + nameLength, bytes.length - 2)).toEqual([
+      7,
+      1,
+      ...varint(1043),
+      ...varint(2078),
+      ...varint(3102),
+      ...varint(4026),
+      ...varint(5001),
+      ...varint(5175),
+    ]);
+    expect(varint(5001)).toEqual([0x89, 0x27]);
+    expect(expectOk(decodeDeckCode(code, sixSets, null)).cards).toEqual(cards);
+  });
+
+  it("R1410 a catalog that does not hold the set (one from before the release, R1420) drops its numbers as unknown", () => {
+    const code = encodeDeckCode("Too soon", [fixtureCardId(1), STINKYSCAPE_1, MEDITATIVE_PLUS_26, STINKYSCAPE_175], sixSets);
+    const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
+    expect(decoded.cards).toEqual([fixtureCardId(1), MEDITATIVE_PLUS_26]);
+    expect(decoded.dropped.unknown).toEqual([5001, 5175]);
+    // A version 1 code's numbers are Core's, so 5001 there was never a Stinkyscape card.
+    const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
+    expect(expectOk(decodeDeckCode(rawCode("Old", [1, 5001], [], v1), sixSets, null)).dropped.unknown).toEqual([5001]);
+  });
+});

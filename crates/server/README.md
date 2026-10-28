@@ -940,6 +940,13 @@ from the ladder code so the index is not partial. `tests/sql/01_schema_invariant
 it with sequential scans off, and fails when the Mythic range is filtered rather than read through
 the index.
 
+Migration 0065 ships the Stinkyscape set (#1884) and only widens the `cards` tag check again, as 0043
+did with Potion: it admits the four family tags the set's foundation added, Drone Core, Weapon, War
+Doctrine and Swarm (R1857000), so `seed-catalog` can write the set's 175 cards, its Dormant Starship
+and its 52 tokens the day `SHIPPED_SETS` lists it (R1420). No row is rewritten; the seed writes each
+card's tags as the catalog holds them, and 0016's grant hands every active account the cards the new
+catalog version adds (R481).
+
 ## Tests
 
 ```

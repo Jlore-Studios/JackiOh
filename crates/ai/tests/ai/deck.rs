@@ -1284,9 +1284,10 @@ mod r1390_the_ai_decks_soft_gate {
     #[test]
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
-        // Issue #732 measured the AI on the Meditative set and emptied the list (R1390): the AI's own
-        // decks are dealt from every set that ships, and a lean on Meditative is a lean on Meditative.
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
+        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative. The list holds
+        // the Stinkyscape set alone since its release (#1884).
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1312,6 +1313,47 @@ mod r1390_the_ai_decks_soft_gate {
                 "{seed}: {leaning:?}"
             );
         }
+    }
+
+    /// The Stinkyscape set ships with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
+    /// D8): the gate holds it, so no AI deck at any tier holds one of its cards, a lean on it leans on
+    /// Meditative+, the newest set that ships and is not gated, and a player's random deck from the
+    /// same stream is dealt from it.
+    #[test]
+    fn r1390_the_gate_holds_the_stinkyscape_set_from_its_release() {
+        register_cards();
+        assert!(SHIPPED_SETS.contains(&SetName::Stinkyscape));
+        assert!(AI_DECK_GATED_SETS.contains(&SetName::Stinkyscape));
+        assert_eq!(
+            ungated_lean(Some(SetName::Stinkyscape), AI_DECK_GATED_SETS),
+            Some(SetName::MeditativePlus)
+        );
+        let mut player_stinkyscape = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r1390:stinkyscape:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(deck.len(), size as usize, "{seed}");
+                assert_eq!(of_set(&deck, SetName::Stinkyscape), 0, "{seed}: {deck:?}");
+                let player = build_ai_deck(
+                    &mut create_rng(&seed, 0),
+                    size,
+                    &options(json!({ "manaCap": base["manaCap"], "banned": [], "gatedSets": [] })),
+                );
+                player_stinkyscape += of_set(&player, SetName::Stinkyscape);
+            }
+        }
+        assert!(player_stinkyscape > 0, "no player's deck held a Stinkyscape card");
+        let leaning = build_ai_deck(
+            &mut create_rng("r1390:stinkyscape:lean", 0),
+            DECK_SIZE,
+            &options(json!({ "leanSet": "Stinkyscape" })),
+        );
+        assert_eq!(of_set(&leaning, SetName::Stinkyscape), 0, "{leaning:?}");
+        assert!(
+            of_set(&leaning, SetName::MeditativePlus) >= lean_floor(DECK_SIZE).min(26),
+            "{leaning:?}"
+        );
     }
 }
 

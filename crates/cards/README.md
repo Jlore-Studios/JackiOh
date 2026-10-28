@@ -1,13 +1,13 @@
 # `jackioh-cards`
 
-482 catalog entries in the five shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+710 catalog entries in the six shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8) and Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187), 396 cards
-and 86 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496 built
-it, Meditative+ while issue #1173 did (R1178000), and Stinkyscape is while issue #1836 builds it (175 cards,
-the Dormant Starship and 52 tokens, spec §8.10, R1857000), is in no pool that names no set, no deck and no
-random deck until the patch that lists it in `SHIPPED_SETS` (R1420), counts toward none of the totals above,
-and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
+spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187) and
+Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000), 572
+cards and 138 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496
+built it, Meditative+ while issue #1173 did (R1178000), and Stinkyscape while issue #1836 did, is in no
+pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
+(R1420), counts toward none of the totals above, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
