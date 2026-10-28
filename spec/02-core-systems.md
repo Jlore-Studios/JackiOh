@@ -70,6 +70,7 @@ This is the only turn sequence; [[§6.2]] and [[§10.3]] follow it ([[R62]]). Th
 | Two players holding a win at the same point | Draw |
 | A player whose vote tally is full at that point (Stinkyscape #18's Brains) | That player loses (`voted-out`), read before any held win ([[R1843000]], [[R1843001]]) |
 | Both players' tallies full at the same point | Draw (`both-voted-out`) ([[R1843001]]) |
+| Any of the above against a seat whose handicap sets `heroFloor` (a tutorial lesson's human, [[§9.10]]) | Nothing: its hero never falls below the floor (each hit is capped at what it has above it, life loss and set health stop there), the other player's held win, win by effect and full vote tally are not read, and the other player's flight leaves it a draw. Its own wins, and the other player's losses, stand ([[R2201000]]) |
 | A player who fled, at that point (Stinkyscape #148.1) | That player wins and the other player draws (`fled`), or loses when the fleer chose so (`fled-decisive`); two fleers draw (`fled`) ([[R1843002]], [[R1843004]]) |
 | Hard match ceiling reached (120 minutes) | Draw ([[R79]]) |
 | A Glitch voids the match ([[§7]]) | No result: the match never happened ([[R679]]) |
