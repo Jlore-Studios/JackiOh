@@ -2678,6 +2678,9 @@ pub const QUEST_JLORE_MAX: i32 = 100;
 /// SPEC §14.9: the XP of each Jlore a quest pays (#1333's table: 50), so a quest's XP weighs
 /// like a few games'.
 pub const QUEST_XP_PER_JLORE: i32 = 50;
+/// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
+/// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
+pub const QUEST_REPLACES_PER_DAY: i64 = 1;
 
 // ---- Economy (SPEC §14, #1299) ----
 

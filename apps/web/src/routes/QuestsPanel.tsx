@@ -8,13 +8,17 @@
 // `QUEST_MAX_HELD` or the economy is off (R1304002). This only counts that moment down on the clock
 // (`auth/cooldown.ts`), so a background tab's frozen timers never put it wrong. A quest's title is the
 // pool's English, looked up as the server's sentences are.
+//
+// R2210000: each held quest offers Replace, behind a confirm, while the answer's `replacesLeft` is above
+// 0 and the caller can send one. The server counts the day's replaces and draws the new quest; this
+// only asks and then shows the quests it answers, or reads them again when it refused.
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import { getQuests, keptPaths, type QuestsResponse } from "../net/api.ts";
+import { getQuests, keptPaths, replaceQuest, type QuestsResponse } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 
@@ -34,6 +38,12 @@ export const questsTestid = {
   loading: "quests-loading",
   /** #1568: a failed read offers Try again beside the alert. */
   retry: "quests-retry",
+  /** R2210000: a held quest's Replace, and its confirm's two buttons. */
+  replace: "quests-replace",
+  replaceConfirm: "quests-replace-confirm",
+  replaceCancel: "quests-replace-cancel",
+  /** R2210000: why the server refused a replace. */
+  replaceError: "quests-replace-error",
 } as const;
 
 /** Whole seconds as a clock reads them, `H:MM:SS`, the hours running past a day: 3725 is "1:02:05". */
@@ -61,18 +71,33 @@ function nextWords(quests: QuestsResponse, left: number, rereads: boolean): stri
 export function QuestsList({
   quests,
   onArrived,
+  onReplace,
 }: {
   quests: QuestsResponse;
   onArrived?: () => void;
+  /** R2210000: replaces a held quest; answers why it was refused, or null once it is done. */
+  onReplace?: (questId: string) => Promise<string | null>;
 }): ReactElement | null {
   const left = useSecondsUntil(quests.nextDueAt);
   const arrived = quests.nextDueAt !== null && left === 0;
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [replaceError, setReplaceError] = useState<string | null>(null);
   // R2035000: a caller that can read again does, once per due time, instead of asking for a reopen.
   useEffect(() => {
     if (arrived && onArrived !== undefined) onArrived();
   }, [arrived, quests.nextDueAt, onArrived]);
   if (quests.quests.length === 0 && quests.nextDueAt === null) return null;
   const next = nextWords(quests, left, onArrived !== undefined);
+  const canReplace = onReplace !== undefined && (quests.replacesLeft ?? 0) > 0;
+  const confirmReplace = async (questId: string): Promise<void> => {
+    if (onReplace === undefined) return;
+    setBusy(true);
+    const failure = await onReplace(questId);
+    setBusy(false);
+    setConfirming(null);
+    setReplaceError(failure);
+  };
   return (
     <div className="account-quests" data-testid={questsTestid.panel}>
       <h3 className="account-heading">{t("Quests")}</h3>
@@ -100,11 +125,57 @@ export function QuestsList({
                 <span className="account-quests__reward">
                   {t("{jlore} Jlore · {xp} XP", { jlore: formatNumber(quest.jlore), xp: formatNumber(quest.xp) })}
                 </span>
+                {canReplace ? (
+                  confirming === quest.questId ? (
+                    <div className="row" role="alertdialog" aria-label={t("Replace this quest?")}>
+                      <p>{t("You lose its progress and get a different quest.")}</p>
+                      <button
+                        type="button"
+                        data-testid={questsTestid.replaceConfirm}
+                        disabled={busy}
+                        onClick={() => {
+                          void confirmReplace(quest.questId);
+                        }}
+                      >
+                        {t("Replace it")}
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        data-testid={questsTestid.replaceCancel}
+                        onClick={() => {
+                          setConfirming(null);
+                        }}
+                      >
+                        {t("Keep it")}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="link-button"
+                      data-testid={questsTestid.replace}
+                      aria-label={t("Replace {quest}", { quest: title })}
+                      disabled={busy}
+                      onClick={() => {
+                        setReplaceError(null);
+                        setConfirming(quest.questId);
+                      }}
+                    >
+                      {t("Replace")}
+                    </button>
+                  )
+                ) : null}
               </li>
             );
           })}
         </ul>
       )}
+      {replaceError !== null ? (
+        <p className="notice" role="alert" data-testid={questsTestid.replaceError}>
+          {t(replaceError)}
+        </p>
+      ) : null}
       {next !== null ? <p data-testid={questsTestid.next}>{next}</p> : null}
     </div>
   );
@@ -119,6 +190,7 @@ export function useQuests(token: string): {
   quests: QuestsResponse | null;
   error: string | null;
   reread: () => void;
+  replace: (questId: string) => Promise<string | null>;
 } {
   const [quests, setQuests] = useState<QuestsResponse | null>(
     () => cachedRead<QuestsResponse>(token, keptPaths.quests) ?? null,
@@ -147,7 +219,22 @@ export function useQuests(token: string): {
     setError(null);
     setAttempt((before) => before + 1);
   }, []);
-  return { quests, error, reread };
+
+  // R2210000: the quests the server answers replace the ones shown; a refusal says why and reads the
+  // quests again, since the day's replaces or the held quests are not what the panel showed.
+  const replace = useCallback(
+    async (questId: string): Promise<string | null> => {
+      try {
+        setQuests(await replaceQuest(token, questId));
+        return null;
+      } catch (cause: unknown) {
+        setAttempt((before) => before + 1);
+        return cause instanceof Error ? cause.message : String(cause);
+      }
+    },
+    [token],
+  );
+  return { quests, error, reread, replace };
 }
 
 /**
@@ -160,11 +247,13 @@ export function QuestsView({
   error,
   onRetry,
   onArrived,
+  onReplace,
 }: {
   quests: QuestsResponse | null;
   error: string | null;
   onRetry: () => void;
   onArrived?: () => void;
+  onReplace?: (questId: string) => Promise<string | null>;
 }): ReactElement | null {
   if (error !== null) {
     return (
@@ -190,10 +279,10 @@ export function QuestsView({
       </div>
     );
   }
-  return <QuestsList quests={quests} onArrived={onArrived} />;
+  return <QuestsList quests={quests} onArrived={onArrived} onReplace={onReplace} />;
 }
 
 export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
-  const { quests, error, reread } = useQuests(token);
-  return <QuestsView quests={quests} error={error} onRetry={reread} />;
+  const { quests, error, reread, replace } = useQuests(token);
+  return <QuestsView quests={quests} error={error} onRetry={reread} onReplace={replace} />;
 }

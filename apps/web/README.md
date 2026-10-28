@@ -324,7 +324,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; moved from /account (#1307). The landing's bookmark
+                        reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
+                        a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next

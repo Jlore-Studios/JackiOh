@@ -95,6 +95,7 @@ export const QUEST_INTERVAL_HOURS = 5;
 export const QUEST_JLORE_MAX = 100;
 export const QUEST_JLORE_MIN = 50;
 export const QUEST_MAX_HELD = 3;
+export const QUEST_REPLACES_PER_DAY = 1;
 export const QUEST_XP_PER_JLORE = 50;
 export const QUEUE_ENDED_AFTER_READS = 2;
 export const RANK_STREAK_FLAME_LENGTH = 3;
