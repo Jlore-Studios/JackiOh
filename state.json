@@ -3019,7 +3019,9 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
+      "pr": 2217,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-26T22:55:52Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
@@ -3031,7 +3033,7 @@
       "taken_asks": [
         "c:6429272516"
       ],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2024": {
       "action": "build",
