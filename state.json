@@ -12572,17 +12572,21 @@
         {
           "at": "2026-10-28T07:48:39Z",
           "minutes": 50.0
+        },
+        {
+          "at": "2026-10-28T08:40:26Z",
+          "minutes": 283.4
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-28T11:39:00Z",
-          "utilization": 0.05
+          "utilization": 0.08
         },
-        "observed_at": "2026-10-28T07:48:39Z",
+        "observed_at": "2026-10-28T08:40:26Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.2
+          "utilization": 0.22
         },
         "status": "allowed"
       }
