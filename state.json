@@ -12956,9 +12956,9 @@
     ],
     "idle_since": "2026-10-28T08:50:08Z",
     "last_run": "2026-10-28T08:32:09Z",
-    "provider": "claude-8",
+    "provider": null,
     "requested": false,
-    "run_id": "40657495123",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
