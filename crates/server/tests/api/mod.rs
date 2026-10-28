@@ -21,6 +21,7 @@ pub mod cosmetics;
 pub mod custom_cards;
 pub mod decks;
 pub mod dev;
+pub mod duos_again;
 pub mod duos_rooms;
 pub mod e2e;
 pub mod env_deployed_commit;
