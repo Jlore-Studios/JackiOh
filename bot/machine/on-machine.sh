@@ -41,13 +41,14 @@ if [ "$state" != running ]; then
 fi
 
 # The script travels with the scripts beside it (setup.sh installs clean.sh), as a base64
-# tarball, and its arguments shell-quoted.
+# tarball, and its arguments shell-quoted. A Mac's tar packs its own extended attributes
+# (com.apple.provenance), which GNU tar on the machine would warn about once a file.
 body="$(COPYFILE_DISABLE=1 tar czf - -C "$(dirname "$script")" --exclude='*.md' --exclude='*.py' --exclude=__pycache__ . \
   | base64 | tr -d '\n')"
 quoted=""
 for arg in "$@"; do quoted+=" $(printf '%q' "$arg")"; done
 name="$(printf '%q' "$(basename "$script")")"
-command="rm -rf /root/on-machine && mkdir -p /root/on-machine && echo $body | base64 -d | tar xzf - -C /root/on-machine && bash /root/on-machine/$name$quoted; status=\$?; rm -rf /root/on-machine; exit \$status"
+command="rm -rf /root/on-machine && mkdir -p /root/on-machine && echo $body | base64 -d | tar xzf - --warning=no-unknown-keyword -C /root/on-machine && bash /root/on-machine/$name$quoted; status=\$?; rm -rf /root/on-machine; exit \$status"
 params="$(jq -cn --arg c "$command" '{commands: [$c], executionTimeout: ["3600"]}')"
 id="$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name AWS-RunShellScript \
   --comment "$(basename "$script")" --timeout-seconds 600 --parameters "$params" \
