@@ -721,13 +721,11 @@
     },
     "1859": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T01:13:33Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -735,26 +733,21 @@
       "planned_tier": "strong",
       "pr": 2084,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40517042900",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T14:00:04Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 4
     },
     "1860": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:00:40Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -762,25 +755,20 @@
       "planned_tier": "medium",
       "pr": 2039,
       "provider": "muse",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40413955474",
       "started_at": "2026-10-26T22:38:09Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1861": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T01:25:07Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -788,26 +776,21 @@
       "planned_tier": "strong",
       "pr": 2059,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40458216317",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T05:56:54Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1862": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T01:59:04Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -815,26 +798,21 @@
       "planned_tier": "strong",
       "pr": 2060,
       "provider": "claude-7",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40459685051",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T06:12:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1863": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-26T22:57:20Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -842,15 +820,12 @@
       "planned_tier": "strong",
       "pr": 2063,
       "provider": "claude-2",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40481887071",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T09:34:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1864": {
@@ -877,13 +852,11 @@
     },
     "1865": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T02:53:22Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -891,26 +864,21 @@
       "planned_tier": "strong",
       "pr": 2062,
       "provider": "claude-1",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40473037089",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T08:22:19Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1866": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T02:27:18Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -918,15 +886,12 @@
       "planned_tier": "strong",
       "pr": 2066,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40491718288",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T10:51:27Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1867": {
@@ -954,13 +919,11 @@
     },
     "1868": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T03:15:10Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -968,26 +931,21 @@
       "planned_tier": "strong",
       "pr": 2064,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40476649836",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T08:53:03Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1869": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:00:06Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -995,26 +953,21 @@
       "planned_tier": "strong",
       "pr": 2065,
       "provider": "claude-8",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40477788300",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T09:02:22Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1870": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:16:58Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -1022,26 +975,21 @@
       "planned_tier": "strong",
       "pr": 2086,
       "provider": "claude-8",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40534318824",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T15:46:27Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1871": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T03:59:39Z",
       "planned_by": "`claude-5` (claude, `opus`, strong)",
@@ -1049,26 +997,21 @@
       "planned_tier": "strong",
       "pr": 2077,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40504187628",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T12:29:39Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1874": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T13:21:50Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -1076,15 +1019,12 @@
       "planned_tier": "strong",
       "pr": 2087,
       "provider": "claude-5",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40517349049",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T14:02:08Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1889": {
@@ -2918,7 +2858,6 @@
     },
     "2021": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T04:16:00Z",
@@ -2931,7 +2870,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:16:02Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -2939,7 +2877,6 @@
       "planned_tier": "strong",
       "pr": 2057,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-26T22:54:58Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -2947,15 +2884,12 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T06:13:37Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2022": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T03:50:37Z",
@@ -2968,7 +2902,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T03:50:39Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -2976,7 +2909,6 @@
       "planned_tier": "strong",
       "pr": 2091,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-26T22:55:22Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
@@ -2984,10 +2916,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T16:41:35Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2023": {
@@ -3027,7 +2957,6 @@
     },
     "2024": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T04:37:40Z",
@@ -3040,7 +2969,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:37:43Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -3048,7 +2976,6 @@
       "planned_tier": "strong",
       "pr": 2216,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-26T22:56:08Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
@@ -3056,10 +2983,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T07:34:44Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2025": {
@@ -3142,13 +3067,11 @@
     },
     "2035": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T04:16:30Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -3156,7 +3079,6 @@
       "planned_tier": "strong",
       "pr": 2061,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T00:09:26Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3164,9 +3086,7 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-27T05:07:18Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2037": {
@@ -3213,7 +3133,6 @@
     },
     "2039": {
       "action": "revise",
-      "asks": [],
       "closed_at": "2026-10-27T23:00:40Z",
       "died": 0,
       "difficulty": "medium",
@@ -3223,41 +3142,19 @@
       "interruptions": 0,
       "issue": 1860,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T17:59:03Z",
       "round_tier": "medium",
       "run_id": "40555744364",
       "runs_on": "night-vm-muse",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-27T17:59:28Z",
       "stop_requested": true,
       "stopped_at": "2026-10-27T22:22:53Z",
       "stopped_by": "squishy-squooby",
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40502627575",
-            "tier": "medium"
-          }
-        ],
-        "sha": "a09b6a0658e86d56a443751dcb4880453b5baa5b",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2041": {
       "action": "review",
@@ -3317,7 +3214,6 @@
     },
     "2045": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T13:21:08Z",
@@ -3330,7 +3226,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T13:21:11Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -3338,7 +3233,6 @@
       "planned_tier": "strong",
       "pr": 2081,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-27T12:50:22Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3346,10 +3240,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T13:38:00Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2047": {
@@ -3389,7 +3281,6 @@
     },
     "2048": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T13:55:36Z",
@@ -3402,7 +3293,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T13:55:39Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -3410,7 +3300,6 @@
       "planned_tier": "strong",
       "pr": 2082,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T12:48:52Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3418,10 +3307,8 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T14:15:05Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2050": {
@@ -3461,7 +3348,6 @@
     },
     "2051": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T14:55:03Z",
@@ -3474,7 +3360,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T14:55:05Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -3482,7 +3367,6 @@
       "planned_tier": "medium",
       "pr": 2075,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T12:47:18Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3490,15 +3374,12 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T12:49:05Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2053": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T13:05:43Z",
@@ -3511,7 +3392,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T13:05:45Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -3519,7 +3399,6 @@
       "planned_tier": "strong",
       "pr": 2080,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-27T12:46:06Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3527,15 +3406,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T13:39:07Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2054": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-27T14:11:38Z",
@@ -3548,7 +3424,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T14:11:40Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -3556,7 +3431,6 @@
       "planned_tier": "medium",
       "pr": 2071,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T12:45:45Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -3564,10 +3438,8 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T12:47:58Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2055": {
@@ -3618,7 +3490,6 @@
     },
     "2057": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-28T08:00:48Z",
@@ -3635,41 +3506,19 @@
       "interruptions": 0,
       "issue": 2021,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-5",
-      "question": "",
       "queued_at": "2026-10-27T18:33:35Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40646338581",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T06:50:37Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40646338581",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b6a3351c7c07f06e71fc7d34949d5e6dd2101850",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2058": {
       "action": "revise",
@@ -3703,7 +3552,6 @@
     },
     "2059": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T23:46:50Z",
         "by": "`claude` (strong)",
@@ -3717,66 +3565,25 @@
       "failures": 0,
       "feedback_since": "2026-10-27T22:45:54Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-28T00:49:40Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# #2059 (issue #1861) notes\n\n## State\n\n- Build approved earlier (22 scripts, engine A/B/C, rulings R1861000\u2013R1861002, rows); runs 6\u201318 resolved\n  earlier `main` merges, last approved at 54093c5c6.\n- Run 19 (`conflict`): `main` brought #2143 (S20 Anomalies, R1860xxx, R1877xxx, R1879xxx). Conflicted:\n  spec/08-catalog.md (rows 75\u201377, the token rows), spec/INDEX.md. No R-number collision (ours: 1861 block).\n- Run 19 DONE, nothing left: spec/08 = our rows 75, 76 and six Resource tokens + main's row 77 (Yuma) and\n  T-anomaly-found; INDEX by `spec index` (main's + our 3 rows). spec check, fmt, catalog, patches, clippy,\n  workspace tests (15761 passed, 0 failed), wire clean, fuzz 200, export_api (no diff), no markers.\n  Merge left for the harness.\n\n## Log\n\n- run 19: started; 2 conflicted files (spec/08, spec/INDEX). spec/08 resolved (both sides' rows verified by diff\n  against HEAD and MERGE_HEAD). Running spec index/check.\n- run 19: spec index (main's + our 3 rows), spec check, fmt, catalog, patches ok. Running clippy.\n- run 19: clippy ok. Running workspace tests (/tmp/m2059/ws.log) and fuzz 200 (/tmp/m2059/fuzz.log).\n- run 19: fuzz 200 FUZZ_EXIT=0. Waiting on workspace tests.\n- run 19: workspace tests TEST_EXIT=0 (15761 passed, 0 failed, 14 ignored); wire clean; export_api no diff;\n  only spec/08 and spec/INDEX differ from the staged merge; no markers. Done.\n",
-        "provider": "claude-7",
-        "reason": "stopped by @squishy-squooby",
-        "trail": "\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; for i in 0 1 2 3 4 5 6; do a=$((783+i)); b=$((791+i)); if ! cmp -s <(sed -n \\\"${a}p\\\" spec/08-catalog.md) <(sed -n \\\"${b}p\\\" spec/08-catalog.md\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cp spec/08-catalog.md /tmp/m2059/08-conflicted.md; awk 'NR==658||NR==661||NR==662||NR==663||NR==664||NR==666||NR==782||NR==789||NR==790||(NR>=7\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2059/.bot-notes.md\", \"content\": \"# #2059 (issue #1861) notes\\n\\n## State\\n\\n- Build approved earlier (22 scripts, engine A/B/C, rulings R1861000\\u2013\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; ls spec/rulings | grep -E 'R186[01]' ; cargo jackioh spec index 2>&1 | tail -5; grep -c -E '^(<<<<<<<|=======|>>>>>>>)' spec/INDEX.md; git show\u2026\n- said: `spec/INDEX.md` came out as `main`'s index plus our three R1861 rows. Now I'll check whether `main`'s merge touched any file this branch also changes, and run spec check, fmt, catalog and patches.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; mb=$(git merge-base HEAD MERGE_HEAD); comm -12 <(git diff --name-only $mb MERGE_HEAD | sort) <(git diff --name-only 89890508813cfbfbe2048d5e517\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; mb=$(git merge-base HEAD MERGE_HEAD); comm -12 <(git diff --name-only $mb MERGE_HEAD | sort) <(git diff --name-only $mb HEAD | sort)\", \"descrip\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cargo jackioh spec check 2>&1 | tail -3; cargo fmt --check && echo FMT_OK; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches ch\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cargo jackioh catalog check >/dev/null 2>&1; echo CATALOG_EXIT=$?; echo \\\"- run 19: spec index (main's + our 3 rows), spec check, fmt, catalog,\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cargo clippy --workspace --all-targets -- -D warnings > /tmp/m2059/clippy.log 2>&1; echo CLIPPY_EXIT=$?; tail -3 /tmp/m2059/clippy.log\", \"descr\u2026\n- said: Clippy is clean. Now I'll run the workspace tests and 200 fuzz seeds side by side.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; echo \\\"- run 19: clippy ok. Running workspace tests (/tmp/m2059/ws.log) and fuzz 200 (/tmp/m2059/fuzz.log).\\\" >> .bot-notes.md; cargo test --wo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cargo jackioh fuzz --seeds 200 > /tmp/m2059/fuzz.log 2>&1; echo FUZZ_EXIT=$? >> /tmp/m2059/fuzz.log\", \"description\": \"Run 200 fuzz seeds in the\u2026\n- said: While those run, I'll check the files git merged on its own for leftover markers and make sure both sides' text is in `spec/11`.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; git grep -n -E '^(<<<<<<<|=======|>>>>>>>)( |$)' -- spec BUILD.md docs apps/web/README.md crates/cards/catalog.json crates/cards/luau/jackioh.l\u2026\n- said: No markers are left, and `spec/11` has both `main`'s new paragraphs and ours. Waiting on the tests and fuzz.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"fuzz 200 and workspace tests finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q 'FUZZ_EXIT' /tmp/m2059/fuzz.log 2>/dev/null && grep -q 'TEST_EXIT' /tmp/m2059/ws.log 2>/dev/n\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q 'FUZZ_EXIT' /tmp/m2059/fuzz.log, grep -q 'TEST_EXIT' /tmp/m2059/ws.log, grep -h -E 'FUZZ_EXIT|TEST_EXIT' \u2026\n- Bash: {\"command\": \"tail -3 /tmp/m2059/fuzz.log; grep -c 'test result' /tmp/m2059/ws.log; grep -E 'FAILED|panicked' /tmp/m2059/ws.log | head\", \"description\": \"Check test and fuzz progress\"}\n- said: The tests are still compiling and fuzz is running. I'll wait for them to finish.\n- Bash: {\"command\": \"until grep -q FUZZ_EXIT /tmp/m2059/fuzz.log; do sleep 10; done; tail -4 /tmp/m2059/fuzz.log\", \"description\": \"Wait for fuzz to finish\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"until grep -q TEST_EXIT /tmp/m2059/ws.log; do sleep 15; done; grep TEST_EXIT /tmp/m2059/ws.log\", \"description\": \"Wait for the workspace tests to finish\", \"timeout\": 3600000, \"run_in_back\u2026\n- said: Both waits are in the background. I'll pick up again when they report.\n- Bash: {\"command\": \"tail -4 /tmp/m2059/fuzz.log; cd /home/runner/work/_temp/work/item-2059 && echo \\\"- run 19: fuzz 200 done (see FUZZ_EXIT). Waiting on workspace tests.\\\" >> .bot-notes.md\", \"description\": \u2026\n- said: Fuzz passed on all 200 seeds (exit 0). Still waiting on the workspace tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; grep TEST_EXIT /tmp/m2059/ws.log; grep 'test result' /tmp/m2059/ws.log | awk '{p+=$4; f+=$6; i+=$8} END {print \\\"passed\\\", p, \\\"failed\\\", f, \\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2059; cargo test -p jackioh-luau --features ts --test export_api > /tmp/m2059/export.log 2>&1; echo EXPORT_EXIT=$?; git diff --stat -- crates/cards/l\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2059/.bot-notes.md\", \"content\": \"# #2059 (issue #1861) notes\\n\\n## State\\n\\n- Build approved earlier (22 scripts, engine A/B/C, rulings R1861000\\u2013\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2059/.bot-notes.md\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2059/.bot-notes.md\", \"content\": \"# #2059 (issue #1861) notes\\n\\n## State\\n\\n- Build approved earlier (22 scripts, engine A/B/C, rulings R1861000\\u2013\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Stinkyscape S04, the Resources and the asteroids\"} --> ## Revision: merge conflict with `main` I resolved the conflicts from merging `main` and changed nothing else. The only edited files are the two that held markers, `spec/08-catalog.md` and `spec/IND\u2026"
-      },
       "interruptions": 0,
       "issue": 1861,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-27T23:48:37Z",
       "round_tier": "strong",
       "run_id": "40604697600",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-27T23:49:05Z",
       "stop_requested": true,
       "stopped_at": "2026-10-28T00:34:22Z",
       "stopped_by": "squishy-squooby",
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/10-engine-guide.md",
-            "spec/11-rulings.md"
-          ],
-          "from": "c69cf413f678ce929460caebbadee1fe5ac1a349",
-          "main": "8888797378ae75536b8e92f2bbea7e2afe8ff971"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40597279901",
-            "tier": "strong"
-          }
-        ],
-        "sha": "54093c5c6f4f54abd2da2110b8178c4c028b30b9",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2060": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T10:15:49Z",
         "by": "`claude` (strong)",
@@ -3793,53 +3600,20 @@
       "interruptions": 0,
       "issue": 1862,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-27T09:24:19Z",
       "round_tier": "strong",
       "run_id": "40480620242",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T09:25:03Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/08-catalog.md",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "44d7e5c294c240e8cb6216b8185972d7ec362aa8",
-          "main": "e98716ea4f0744460a0fe84cad366e2e8b84b6ab"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40480620242",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6340ece113343a4890004f2401f12600a45e7873",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2061": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T16:04:38Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -3857,53 +3631,22 @@
       "interruptions": 0,
       "issue": 2035,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T15:25:24Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "40531621719",
       "runs_on": "night-vm-muse",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T15:30:10Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "carried": {
-          "by": "`muse` (medium), `claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md"
-          ],
-          "from": "13f251e5addfd0fb44fbf512bc1407367c2eb442",
-          "main": "b6018e34115a1492ce24540dcc0a3251639d52a1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40531621719",
-            "tier": "medium"
-          }
-        ],
-        "sha": "3e9aa3a8c13a6f21009736e71aee08a6bbfc56c3",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 3
     },
     "2062": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T11:36:43Z",
         "by": "`claude` (strong)",
@@ -3920,52 +3663,20 @@
       "interruptions": 0,
       "issue": 1865,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-27T10:26:45Z",
       "round_tier": "strong",
       "run_id": "40488620931",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T10:27:27Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "f105461782e7cf629164f246118f20981c1b8ca8",
-          "main": "65fc8df7ec3df333c7e55f4025173b2ce3233184"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40488620931",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f950f8785e601d1f5ac71cfe00c6e738322b7f2c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2063": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T12:27:12Z",
         "by": "`claude` (strong)",
@@ -3982,51 +3693,20 @@
       "interruptions": 0,
       "issue": 1863,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-27T10:49:46Z",
       "round_tier": "strong",
       "run_id": "40491589874",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T10:50:28Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "fe4a72b21661bcccfe166c2018f3af3eaf7cb52a",
-          "main": "65fc8df7ec3df333c7e55f4025173b2ce3233184"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40491589874",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8fee0d90dc01aeabd230b18b22548c75ea7343ca",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2064": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T12:02:02Z",
         "by": "`claude` (strong)",
@@ -4043,51 +3723,20 @@
       "interruptions": 0,
       "issue": 1868,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-27T11:01:12Z",
       "round_tier": "strong",
       "run_id": "40493070589",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T11:02:00Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/10-engine-guide.md"
-          ],
-          "from": "6edf2763c6dcccbf86640ca9c5744d3379688d85",
-          "main": "65fc8df7ec3df333c7e55f4025173b2ce3233184"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40493070589",
-            "tier": "strong"
-          }
-        ],
-        "sha": "13019152f5b7fb763d0c13badf603600e31e9723",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2065": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T17:29:47Z",
         "by": "`claude` (strong)",
@@ -4104,51 +3753,20 @@
       "interruptions": 0,
       "issue": 1869,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-27T16:26:27Z",
       "round_tier": "strong",
       "run_id": "40541020967",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T16:26:57Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 4,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md"
-          ],
-          "from": "757802c4b761b2f046bd55dfff073bdda6ae8317",
-          "main": "8a5e2bb5fb40208c33b469d5874832639c8a8497"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40541020967",
-            "tier": "strong"
-          }
-        ],
-        "sha": "881668313421ec85025c3ac1d5dfbf2e102b4764",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 4
     },
     "2066": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T13:57:22Z",
         "by": "`claude` (strong)",
@@ -4165,48 +3783,17 @@
       "interruptions": 0,
       "issue": 1866,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-27T12:27:56Z",
       "round_tier": "strong",
       "run_id": "40504057069",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T12:28:40Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "12511db2769e3e3d03f4a43138b1db6f3f4d1b5b",
-          "main": "e4412b898441e62c6c518fd8839f8e34b3adb826"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40504057069",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3803b9ac25776c74a9a38063619c3b9060cb1782",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2067": {
       "action": "build",
@@ -4246,7 +3833,6 @@
     },
     "2071": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T15:21:44Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -4270,39 +3856,11 @@
       "review_notes": "",
       "run_id": "40528004465",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-27T15:08:20Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40506635488",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40528004465",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d4e27be9115381ad16f3f1c9161d2e4d21fab960",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2075": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T15:35:12Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -4326,39 +3884,11 @@
       "review_notes": "",
       "run_id": "40530940591",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-27T15:26:05Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40506782231",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40530940591",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f18e5f13ba9a44d08be9aa9aa975577e63d6c8f5",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2077": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T16:38:58Z",
         "by": "`claude` (strong)",
@@ -4375,47 +3905,17 @@
       "interruptions": 0,
       "issue": 1871,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-27T15:05:41Z",
       "round_tier": "strong",
       "run_id": "40531270126",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-27T15:28:03Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/tools/src/fuzz.rs"
-          ],
-          "from": "2060cab0aaffd14cc884183a7039ea9b3f6f6926",
-          "main": "b6018e34115a1492ce24540dcc0a3251639d52a1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40531270126",
-            "tier": "strong"
-          }
-        ],
-        "sha": "1b8681b4eed3af8ebf164970d503f0a3d6a5128a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2080": {
       "cleared": {
@@ -4429,26 +3929,7 @@
       "feedback_since": "2026-10-27T13:39:07Z",
       "issue": 2053,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40513926868",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3e6caabb3a80a10c1e56497ee8f439e3d673b357",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2081": {
       "cleared": {
@@ -4462,30 +3943,10 @@
       "feedback_since": "2026-10-27T13:38:00Z",
       "issue": 2045,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40513762484",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3e2d514880395f26fbdd8e533a58a38c7aed6939",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2082": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T15:45:22Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -4509,35 +3970,8 @@
       "review_notes": "",
       "run_id": "40532782205",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-27T15:37:11Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40519337564",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40532782205",
-            "tier": "strong"
-          }
-        ],
-        "sha": "144794e5a4cc65b8cd752fdfcb60bee9f22e3fb3",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2084": {
       "cleared": {
@@ -4551,26 +3985,7 @@
       "feedback_since": "2026-10-27T14:00:04Z",
       "issue": 1859,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40517042900",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ac954bcd16c72bdd8fb5978aba8db998edf995d3",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2085": {
       "action": "revise",
@@ -4623,7 +4038,6 @@
     },
     "2086": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T20:23:06Z",
         "by": "`claude` (strong)",
@@ -4637,59 +4051,20 @@
       "failures": 0,
       "feedback_since": "2026-10-27T19:20:27Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-27T23:09:06Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Notes for #2086 (issue #1870, Stinkyscape S22 Terminus)\n\n## State\n\n- Build done, approved at 827d05a74. Two conflict revisions since. The latest (main at 5e130b133, #2138 S24 bundles)\n  merged clean: main touched only its own card scripts, catalog loc lines, 08/11 spec and R1880000-002, none of ours.\n  `spec index` rewrites INDEX unchanged; every harness check passes on the merged tree. No file edits were needed.\n- Earlier conflict: main split the rules tests (#2090); `pub mod terminus;` lives in `crates/engine/tests/rules/mod_2.rs`.\n- Ruling numbers: ours R1870000-007 never collided (main's are R1866/R1869/R1872/R1873/R1878/R1880 blocks).\n- Nothing is left unless review or CI asks for more.\n\n## Log\n\n- 2026-10-27 revise (conflict): resolved mod.rs; running spec index next.\n- clippy + full cargo test running (background)\n- cargo test: exit 0, 15437 passed, 0 failed, 14 ignored; terminus tests run in rules_2. Next: web tests.\n- web tests pass (236 files). No markers left. Done.\n- 2026-10-27 revise (conflict, after #2138): merge clean; checking overlap files catalog.json, 08, 11, INDEX\n- spec index unchanged, spec/catalog/patches check ok, loc values match; running fmt+clippy+full cargo test\n- clippy exit 0; cargo test still running (/tmp/cargo-test-2086.log)\n- cargo test exit 0 (15459 passed, 0 failed, 14 ignored), wire clean; running web tests\n- web tests: 236 files, 4545 passed, 1 skipped. No markers. Done (no edits this run).\n",
-        "provider": "claude-8",
-        "reason": "#2086 was closed",
-        "trail": ">&1 | tail -3; git statu\u2026\n- Bash: {\"command\": \"git diff 5e130b133 HEAD -- spec/11-rulings.md spec/08-catalog.md | head -120\", \"description\": \"Show branch's diff vs main in spec files\"}\n- Bash: {\"command\": \"git diff -U0 5e130b133 HEAD -- spec/11-rulings.md | cut -c1-300; echo; git diff -U0 5e130b133 HEAD -- spec/08-catalog.md | grep -E '^@@' \", \"description\": \"Show compact diffs of spec rul\u2026\n- Bash: {\"command\": \"grep -n -o -E '^\\\\*\\\\*\\\\[\\\\[R18[0-9]+\\\\]\\\\][^(]{0,40}' spec/11-rulings.md | tail -8; tail -c 300 spec/11-rulings.md | cat -A | tail -4\", \"description\": \"List the order of recent ruling p\u2026\n- Bash: {\"command\": \"git diff -U0 5e130b133 HEAD -- crates/cards/catalog.json | grep -E '^[+-] ' ; cargo jackioh catalog check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1; for f in crates/card\u2026\n- Bash: {\"command\": \"git diff --stat e954706565945f1eaf0f1289f5356ac2a45ca8f4 5e130b133 | tail -25\", \"description\": \"Show main's own changes since the merge base\"}\n- Bash: {\"command\": \"echo \\\"- spec index unchanged, spec/catalog/patches check ok, loc values match; running fmt+clippy+full cargo test\\\" >> .bot-notes.md; cargo fmt --check && echo FMT_OK; (cargo clippy --w\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-2086/3f13397e-d5a0-4153-9f75-42f3acecafbe/tasks/bk300is1j.output; tail -2 /tmp/clippy-2086.log 2>/dev/null\", \"description\": \"Check \u2026\n- tool error: Exit code 1\n- said: I'll wait for the background run to finish.\n- Bash: {\"command\": \"ls -la /tmp/clippy-2086.log /tmp/cargo-test-2086.log 2>&1; cargo fmt --check; echo fmt_rc=$?\", \"description\": \"Check log files exist and re-run fmt check\"}\n- said: fmt passes; clippy and the tests are still running.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"command\": \"until grep -q '^exit=' /tmp/cargo-test-2086.log 2>/dev/null || grep -q 'clippy_exit=[1-9]' /tmp/clippy-2086.log 2>/dev/null; do sleep 15; done; grep -E 'clippy_exit=' /tmp/clippy-2086.lo\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q '^exit=' /tmp/cargo-test-2086.log || grep -q 'clippy_exit=[1-9]' /tmp/clippy-2086.log ; do sleep 15\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/cargo-test-2086.log 2>/dev/null || grep -q 'clippy_exit=[1-9]' /tmp/clippy-2086.log 2>/dev/null; do sleep 15; done; grep -E 'clippy_exit=' /tmp/clippy-2086.lo\u2026\n- Bash: {\"command\": \"cat /tmp/clippy-2086.log | tail -3; tail -3 /tmp/cargo-test-2086.log 2>/dev/null\", \"description\": \"Peek at clippy and test logs\"}\n- said: Clippy exits 0. The tests are still compiling, and the background wait will tell me when they finish.\n- Bash: {\"command\": \"echo \\\"- clippy exit 0; cargo test still running (/tmp/cargo-test-2086.log)\\\" >> .bot-notes.md\", \"description\": \"Log clippy result in notes\"}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-2086/3f13397e-d5a0-4153-9f75-42f3acecafbe/tasks/b1dz8ihaz.output\"}\n- said: The tests are still running. I'll wait for the completion notice.\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/cargo-test-2086.log 2>/dev/null; do sleep 20; done; grep -E '^exit=|test result: FAILED|panicked' /tmp/cargo-test-2086.log | head -20\", \"description\": \"Wait f\u2026\n- Bash: {\"command\": \"grep -c 'test result:' /tmp/cargo-test-2086.log; grep -E 'test result: FAILED|panicked|^exit=' /tmp/cargo-test-2086.log | head; tail -2 /tmp/cargo-test-2086.log | cut -c1-200\", \"descript\u2026\n- said: 19 test binaries have finished so far with no failures. Still waiting.\n- Bash: {\"command\": \"grep -E 'test result:' /tmp/cargo-test-2086.log | grep -v ' 0 failed' ; grep -E 'Running' /tmp/cargo-test-2086.log | grep -E 'cards|rules' | cut -c1-150\", \"description\": \"List any failin\u2026\n- said: The cards crate and both rules binaries pass. The server tests are still running.\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/cargo-test-2086.log 2>/dev/null; do sleep 20; done; grep -E '^exit=|test result: FAILED|panicked' /tmp/cargo-test-2086.log | grep -v ' ok$' | head -20\", \"desc\u2026\n- Bash: {\"command\": \"grep -E 'test result:' /tmp/cargo-test-2086.log | awk '{p+=$4; f+=$6; i+=$8} END {print \\\"passed\\\",p,\\\"failed\\\",f,\\\"ignored\\\",i}'; grep -cE '(terminus|r18700[0-7]).* ok$' /tmp/cargo-test\u2026\n- said: The cargo tests exit 0: 15,459 passed, 0 failed, 14 ignored, and the generated wire files are unchanged. Next is the harness's web check.\n- Bash: {\"command\": \"echo \\\"- cargo test exit 0 (15459 passed, 0 failed, 14 ignored), wire clean; running web tests\\\" >> .bot-notes.md; (sh scripts/build-wasm.sh && pnpm exec vitest run --project web --chang\u2026\n- said: The web check is running in the background. Waiting for it.\n- Bash: {\"command\": \"until grep -qE 'Test Files|ERR|error' /tmp/web-2086.log 2>/dev/null && ! pgrep -f 'vitest run' >/dev/null && ! pgrep -f build-wasm >/dev/null; do sleep 15; done; grep -E 'Test Files|Test\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-2086/3f13397e-d5a0-4153-9f75-42f3acecafbe/tasks/birio566a.output; grep -E 'Test Files|Tests |FAIL' /tmp/web-2086.log | tail -6\", \"d\u2026\n- said: The web tests pass. Last, a final marker check and a notes update.\n- Bash: {\"command\": \"git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec crates apps e2e docs; echo markers_rc=$?; git status --porcelain; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nhead,log=s.s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Stinkyscape S22, Terminus\"} --> ## Revision: conflict with `main` `main` moved to 5e130b133, which is #2138, the Stinkyscape S24 bundles. Merging it into the branch was clean and needed no edits. The merged tree passes every check the harness runs. **Wh\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Stinkyscape S22, Terminus\"} --> The task that was stopped was only a helper loop waiting for the web tests to finish. The web tests had already finished before it was stopped: they exited 0, with 236 files, 4,545 tests passed and 1 skipped. Nothing else\u2026"
-      },
       "interruptions": 1,
       "issue": 1870,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-27T20:25:03Z",
       "round_tier": "strong",
       "run_id": "40592053116",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-27T22:05:20Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "97a80c4e8876053d85c02c368dbcc009578807b7",
-          "main": "e03ef72ffeded4c61c613fa9d3d577d6faa23c27"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40568219394",
-            "tier": "strong"
-          }
-        ],
-        "sha": "827d05a748e4be8fc328a03a77b6bd2b1d5f7b33",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2087": {
       "cleared": {
@@ -4703,26 +4078,7 @@
       "feedback_since": "2026-10-27T14:02:08Z",
       "issue": 1874,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40517349049",
-            "tier": "strong"
-          }
-        ],
-        "sha": "12a3e21a3287976f12b7f535f989ec4b12cdb271",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2088": {
       "action": "revise",
@@ -4775,13 +4131,11 @@
     },
     "2089": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T18:06:55Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -4789,7 +4143,6 @@
       "planned_tier": "strong",
       "pr": 2158,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-27T17:29:32Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -4797,32 +4150,18 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T23:24:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2090": {
       "action": "plan",
-      "asks": [],
-      "handoff": {
-        "at": "2026-10-27T18:56:15Z",
-        "draft": "# Draft plan, issue #2090 (CI: `rust (test engine rules)` 7m11s)\n\n## Found so far\n- `.github/workflows/ci.yml` lines 246-249: group `engine rules`, scope `engine_rules`, cache `engine-rules`,\n  test `-p jackioh-engine --features jackioh-engine/testkit --test rules`. One binary, 254 modules,\n  151k lines (crates/engine/tests/rules/), 3475 tests, built at Cargo.toml's opt-level 2.\n- `engine` group's `binaries: jackioh-engine export_config golden rules` checks the engine's test targets\n  against cargo metadata, so a new [[test]] binary needs a ci.yml change in the same PR.\n- No test parses ci.yml's matrix; acceptance.rs RUST_GROUPS and ci-scope.test.ts hold only the scope lines.\n  A new group that reuses scope `engine_rules` needs no ci-scope.sh change.\n- CI builds with the default test debuginfo (full); this box sets CARGO_PROFILE_TEST_DEBUG=0.\n\n## Measurements (local, 4 cores, CARGO_INCREMENTAL=0, cold workspace crates)\n| config | wall | rules bin | engine lib | cards |\n|---|---|---|---|---|\n| opt2, debug full (CI's) | 7m10s | 260.9s | 143.9s | 131.9s |\n| opt2, line-tables-only  | 5m58s | 213.1s | 122.1s | 106.5s |\n| opt2, debug 0           | 5m25s | 191.5s | 112.1s | 94.9s |\nCritical path: engine rmeta -> cards rlib -> rules bin (test target waits for full rlibs).\nRun at opt2: 77s wall on 4 threads, 188 CPU-s. Long pole\n`replay_steps::r768_every_step_is_view_for_after_a_fresh_fold_of_its_prefix` 43.7s (3 seeds x 2 seats,\nfresh fold per step and per seat: the fold is repeated per seat). Next: replay::replay_m1_gate 20.4s,\nduos::b25_fuzz 18s, hotseat_smoke 13.8s, replay_steps r767000_* 10.5/8.9/7.2/6.6s.\nCI ~0.8x this box (431s CI vs ~507s local compile+run).\n\n| opt0 engine+cards, debug full | 1m38s | 50.9s | 39.0s | 15.4s |\nopt0 run: 555.9s wall, 1355 CPU-s (7x opt2). Tests > 10 s at opt0 (all game folds): r768 every_step 309,\nreplay_m1 100 games 176, duos b25 122, hotseat_smoke 102, replay_scripted 89+73, r767000 x4 69/60/31/30,\ngame_summary r376 52, play_pipeline_b r452 50, r768 page 28, generation_replay 15, r768 rejected 12,\ninstance_data r386 12. Everything else: ~125 CPU-s at opt0.\n\n- next: opt1 build+run.",
-        "family": "claude",
-        "kind": "draft",
-        "notes": "",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "tes/engine/tests/rules/fixtures/*.rs | tail -1\",\u2026\n- Bash: {\"command\": \"until grep -qE \\\"^real|error(\\\\[|:)\\\" /tmp/rules-build-lt.log; do sleep 5; done; tail -4 /tmp/rules-build-lt.log; f=$(ls -t /tmp/tgt-lt/cargo-timings/cargo-timing-2*.html | head -1); sed\u2026\n- said: line-tables-only builds in 5m58s, against 7m10s with full debuginfo and 5m25s with none. Next, opt-level 0 for the engine and cards with CI's debuginfo, then its test run time.\n- Bash: {\"command\": \"(time env -u CARGO_PROFILE_TEST_DEBUG -u CARGO_PROFILE_DEV_DEBUG CARGO_TARGET_DIR=/tmp/tgt-o0 cargo test -p jackioh-engine --features jackioh-engine/testkit --test rules --no-run --timin\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2090/.bot-plan.md\", \"content\": \"# Draft plan, issue #2090 (CI: `rust (test engine rules)` 7m11s)\\n\\n## Found so far\\n- `.github/workflows/ci.yml` line\u2026\n- said: While the opt-0 build runs, checking how the other slow tests are built, in case they can be split without losing coverage.\n- Bash: {\"command\": \"grep -n \\\"fn folds_100_recorded_games_to_the_same_state_hash\\\" -B5 -A30 crates/engine/tests/rules/replay.rs | head -60\", \"description\": \"Read the replay m1 gate 100-games test\"}\n- Bash: {\"command\": \"grep -n \\\"fn b25_random_policy_games_finish_and_fold_to_their_live_hashes\\\" -B15 -A30 crates/engine/tests/rules/duos.rs | head -70\", \"description\": \"Read the duos b25 fuzz test\"}\n- Bash: {\"command\": \"until grep -qE \\\"^real|error(\\\\[|:)\\\" /tmp/rules-build-o0.log; do sleep 5; done; tail -4 /tmp/rules-build-o0.log; f=$(ls -t /tmp/tgt-o0/cargo-timings/cargo-timing-2*.html | head -1); sed\u2026\n- said: At opt-level 0 the whole build takes 1m38s, against 7m10s at opt-level 2. Now timing the test run at opt-level 0.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2090/crates/engine && b=$(ls -t /tmp/tgt-o0/debug/deps/rules-* | grep -v '\\\\.d$' | head -1); echo $b; (time RUSTC_BOOTSTRAP=1 $b -Z unstable-options \u2026\n- Bash: {\"command\": \"until grep -qE \\\"^real\\\" /tmp/rules-times-o0.log; do sleep 5; done; tail -5 /tmp/rules-times-o0.log\", \"description\": \"Wait for opt-0 test run to finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"sed -nE 's/^test (.*) \\\\.\\\\.\\\\. ok <([0-9.]+)s>$/\\\\2 \\\\1/p' /tmp/rules-times-o0.log | sort -rn > /tmp/rules-sorted-o0.txt; head -25 /tmp/rules-sorted-o0.txt | cut -c1-160; awk '{s+=$1} E\u2026\n- said: At opt-level 0 the tests take 1355 CPU-seconds, about 7x slower than at opt-level 2 (9m16s wall), so a plain opt-0 group won't work. Measuring opt-level 1 next.\n- Bash: {\"command\": \"(time env -u CARGO_PROFILE_TEST_DEBUG -u CARGO_PROFILE_DEV_DEBUG CARGO_TARGET_DIR=/tmp/tgt-o1 cargo test -p jackioh-engine --features jackioh-engine/testkit --test rules --no-run --timin\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2090/.bot-plan.md\", \"old_string\": \"- next: opt0 build+run, opt1 build+run.\", \"new_string\": \"| opt0 engine+cards, debug full | 1m\u2026\n- said: While the opt-1 build runs: checking how the fixtures module avoids dead-code warnings, which decides whether a second test binary can share it.\n- Bash: {\"command\": \"head -40 crates/engine/tests/rules/fixtures/mod.rs; grep -rn \\\"allow(dead_code\\\\|allow(unused\\\" crates/engine/tests/ | head\", \"description\": \"Inspect fixtures module and lint allowances\"}\n- Bash: {\"command\": \"mkdir -p /tmp/dc && cd /tmp/dc && printf 'pub mod a { pub fn unused() {} }\\\\nmod b { pub fn unused2() {} }\\\\nfn main() {}\\\\n' > m.rs && rustc --edition 2021 m.rs -o /tmp/dc/m 2>&1 | grep\u2026\n- Bash: {\"command\": \"until grep -qE \\\"^real|error(\\\\[|:)\\\" /tmp/rules-build-o1.log; do sleep 5; done; tail -4 /tmp/rules-build-o1.log; f=$(ls -t /tmp/tgt-o1/cargo-timings/cargo-timing-2*.html | head -1); sed\u2026\n- said: opt-level 1 compiles in 4m18s. Now its run time:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2090/crates/engine && b=$(ls -t /tmp/tgt-o1/debug/deps/rules-* | grep -v '\\\\.d$' | head -1); (time RUSTC_BOOTSTRAP=1 $b -Z unstable-options --report-\u2026\n- Bash: {\"command\": \"sed -nE 's/^test rules::([a-z0-9_]+)::.* \\\\.\\\\.\\\\. ok <([0-9.]+)s>$/\\\\1 \\\\2/p' /tmp/rules-times-o0.log | awk '{s[$1]+=$2; n[$1]++} END {for (m in s) printf \\\"%8.1f %4d %s\\\\n\\\", s[m], n[m\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2090/crates/engine/tests/rules && for m in replay_steps replay replay_scripted duos hotseat_smoke game_summary play_pipeline_b_replay generation_repl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2090/crates/engine/tests/rules/fixtures && for f in harness scripts catalog play_pipeline_b generation combat instance_data; do echo \\\"== $f $(wc -l \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2090 && grep -rn -- \\\"--test rules\\\\|tests/rules\\\\.rs\\\\|rules/mod\\\\.rs\\\\|test binary\\\\b.*rules\\\\|\\\\`rules\\\\` binary\\\\|integration-test binary\\\" --inc\u2026\n- said: There's a precedent: the AI's tests were split into `ai` and `ai_slow` binaries (#873). Reading how that was built:\n- Bash: {\"command\": \"cat crates/ai/tests/ai_slow.rs; head -30 crates/ai/tests/ai.rs; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 -B6 crates/ai/Cargo.toml; ls crates/ai/tests/\", \"description\": \"Read the ai_slow split pr\u2026\n- Bash: {\"command\": \"head -20 crates/server/tests/server_store.rs; sed -n 185,215p crates/engine/README.md\", \"description\": \"Read server_store precedent and engine README test section\"}\n- Bash: {\"command\": \"rm -rf /tmp/split && mkdir /tmp/split && git archive HEAD | tar -x -C /tmp/split && ls /tmp/split | head -30\", \"description\": \"Export a scratch copy of the repo to /tmp/split\"}\n- Bash: {\"command\": \"cd /tmp/split/crates/engine && python3 - <<'EOF'\\nimport re\\np='tests/rules/mod.rs'\\ns=open(p).read()\\nmoved=['duos','game_summary','generation_replay','hotseat_smoke','instance_data','p\u2026\n- Bash: {\"command\": \"cd /tmp/split && CARGO_TARGET_DIR=/tmp/tgt-split cargo test -p jackioh-engine --features jackioh-engine/testkit --test rules --test rules_games --no-run --config profile.test.package.jac\u2026\n- said: You've hit your session limit \u00b7 resets 8:50pm (UTC)"
-      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
       "run_id": "40557253522",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-27T18:09:03Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2091": {
       "cleared": {
@@ -4836,36 +4175,15 @@
       "feedback_since": "2026-10-27T16:41:35Z",
       "issue": 2022,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40543417599",
-            "tier": "strong"
-          }
-        ],
-        "sha": "269d28edb7db0146170482eae578c68a6842b456",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2092": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T20:41:35Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -4873,7 +4191,6 @@
       "planned_tier": "medium",
       "pr": 2135,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:12:35Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -4881,20 +4198,16 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-27T18:19:33Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2093": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-28T02:36:28Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4902,7 +4215,6 @@
       "planned_tier": "strong",
       "pr": 2180,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:13:15Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -4910,20 +4222,16 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-28T02:58:28Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2094": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T20:11:50Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -4931,7 +4239,6 @@
       "planned_tier": "medium",
       "pr": 2131,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:13:38Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -4939,20 +4246,16 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T18:20:14Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2095": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T20:23:49Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -4960,7 +4263,6 @@
       "planned_tier": "medium",
       "pr": 2132,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:14:30Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -4968,20 +4270,16 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T18:20:55Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "2096": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T18:52:28Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -4989,7 +4287,6 @@
       "planned_tier": "strong",
       "pr": 2146,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:16:29Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -4997,9 +4294,7 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-27T19:21:41Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2097": {
@@ -5035,13 +4330,11 @@
     },
     "2098": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T19:02:12Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -5049,7 +4342,6 @@
       "planned_tier": "strong",
       "pr": 2145,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:16:51Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -5057,20 +4349,16 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T21:50:07Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2099": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T19:29:04Z",
       "planned_by": "`claude-5` (claude, `opus`, strong)",
@@ -5078,7 +4366,6 @@
       "planned_tier": "strong",
       "pr": 2149,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:18:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -5086,9 +4373,7 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T22:36:16Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2100": {
@@ -5120,13 +4405,11 @@
     },
     "2101": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T19:16:47Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5134,7 +4417,6 @@
       "planned_tier": "strong",
       "pr": 2152,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:19:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -5142,9 +4424,7 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-27T23:04:06Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2102": {
@@ -5176,13 +4456,11 @@
     },
     "2103": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T19:17:13Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -5190,7 +4468,6 @@
       "planned_tier": "strong",
       "pr": 2166,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:19:54Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -5198,20 +4475,16 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-27T23:58:41Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2105": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T19:49:08Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5219,7 +4492,6 @@
       "planned_tier": "strong",
       "pr": 2164,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T18:27:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -5227,9 +4499,7 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-28T01:04:57Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2106": {
@@ -5463,13 +4733,11 @@
     },
     "2119": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T21:09:38Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5477,7 +4745,6 @@
       "planned_tier": "strong",
       "pr": 2187,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-27T20:00:52Z",
       "requested_by": "squishy-squooby",
       "round_tier": "strong",
@@ -5485,20 +4752,16 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T02:37:07Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "2120": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T21:59:21Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5506,7 +4769,6 @@
       "planned_tier": "strong",
       "pr": 2191,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-27T20:00:49Z",
       "requested_by": "squishy-squooby",
       "round_tier": "medium",
@@ -5514,20 +4776,16 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T04:47:35Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2121": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T22:33:07Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5535,7 +4793,6 @@
       "planned_tier": "strong",
       "pr": 2190,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-27T20:01:03Z",
       "requested_by": "squishy-squooby",
       "round_tier": "medium",
@@ -5543,9 +4800,7 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-28T05:05:09Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2122": {
@@ -5580,13 +4835,11 @@
     },
     "2123": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-27T22:32:30Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -5594,7 +4847,6 @@
       "planned_tier": "strong",
       "pr": 2188,
       "provider": "claude-5",
-      "question": "",
       "queued_at": "2026-10-27T20:01:34Z",
       "requested_by": "squishy-squooby",
       "round_tier": "medium",
@@ -5602,9 +4854,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T05:26:55Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2124": {
@@ -5666,7 +4916,6 @@
     },
     "2131": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-28T02:25:09Z",
@@ -5683,45 +4932,22 @@
       "interruptions": 0,
       "issue": 2094,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-28T01:31:09Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40615556177",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T01:31:24Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40615556177",
-            "tier": "strong"
-          }
-        ],
-        "sha": "47f7584f11ad3d76071858f51ac73280927474a4",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 3
     },
     "2132": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "ci_fixed_head": "d0aaebf2ffeb69485dcef66db30d29888d3d1877",
       "ci_fixes": 1,
@@ -5747,11 +4973,9 @@
       "interruptions": 0,
       "issue": 2095,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-28T06:21:20Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
@@ -5759,43 +4983,13 @@
       "round_tier": "strong",
       "run_id": "40643393287",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T06:21:49Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/duos/DuosBoard.test.tsx",
-            "apps/web/src/duos/DuosBoard.tsx"
-          ],
-          "from": "4a22b75959cccb46ec5c601bedf5e9d008edd696",
-          "main": "17d45db8cd6d75d6f48086e4e862cad7a5f04467"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40643393287",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ede64c3bb52b80b792d031bac1f74b2bebc3e7c1",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 3
     },
     "2135": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-28T02:01:49Z",
@@ -5812,45 +5006,22 @@
       "interruptions": 0,
       "issue": 2092,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-5",
-      "question": "",
       "queued_at": "2026-10-28T00:22:41Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40608483047",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T00:23:39Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40608483047",
-            "tier": "strong"
-          }
-        ],
-        "sha": "a7fff35ce994928439d8bee37e4f83d739d13f36",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2145": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-28T06:47:35Z",
@@ -5867,45 +5038,22 @@
       "interruptions": 0,
       "issue": 2098,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-28T04:12:41Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40633640401",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T04:40:20Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40633640401",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6b29e271907b7cfe8955330a3941aecbc2c4bf29",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2146": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-27T23:12:43Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -5929,39 +5077,11 @@
       "review_notes": "",
       "run_id": "40599293337",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-27T23:02:35Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40568404691",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40599293337",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3d6e6aaf12765496955817c83ff251c278c39b82",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2149": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T02:14:33Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -5977,52 +5097,22 @@
       "interruptions": 0,
       "issue": 2099,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-28T01:51:04Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "40618686582",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T02:03:34Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40604785470",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40618686582",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c56e33965185d14652ef29fa06c671d2a4b89e01",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2152": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-28T02:25:33Z",
@@ -6039,41 +5129,19 @@
       "interruptions": 0,
       "issue": 2101,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-28T01:13:24Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40614031432",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T01:16:20Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40614031432",
-            "tier": "strong"
-          }
-        ],
-        "sha": "5c21a2f791f40647a7f319a6b7bfa6829c4b5070",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2155": {
       "action": "revise",
@@ -6121,7 +5189,6 @@
     },
     "2158": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T04:37:45Z",
         "by": "`claude` (strong)",
@@ -6138,47 +5205,17 @@
       "interruptions": 0,
       "issue": 2089,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-28T03:27:31Z",
       "round_tier": "strong",
       "run_id": "40627004828",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-28T03:29:42Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/i18n/zh-CN.json"
-          ],
-          "from": "51b5adec900a57cfa602660220b618e7a777c4a3",
-          "main": "225b8a0c8544cac803e04c8847370ab1555c540a"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40627004828",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2191f5eee7482d0fe4dab36a38ff4ce5d576ef84",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2163": {
       "action": "revise",
@@ -6246,7 +5283,6 @@
     },
     "2164": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T03:08:30Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6270,39 +5306,11 @@
       "review_notes": "",
       "run_id": "40623974075",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-28T02:58:01Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40612851905",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40623974075",
-            "tier": "strong"
-          }
-        ],
-        "sha": "84ef77e84c335dacdde3daf6e088f9e9e8dc9e80",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2166": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T03:24:31Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6326,35 +5334,8 @@
       "review_notes": "",
       "run_id": "40625090858",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-28T03:09:40Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40605741820",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40625090858",
-            "tier": "strong"
-          }
-        ],
-        "sha": "857f2189f142151ac0cade26d8d3ae3cf5c28c8c",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2168": {
       "action": "revise",
@@ -6478,7 +5459,6 @@
     },
     "2180": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T05:14:26Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6502,39 +5482,11 @@
       "review_notes": "",
       "run_id": "40635849913",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-28T05:04:20Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40624015031",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40635849913",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3906f4d46e0250b1931b956587cee2a18e4390ae",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2181": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-28T06:03:15Z",
@@ -6547,7 +5499,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-28T06:03:18Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -6555,15 +5506,12 @@
       "planned_tier": "strong",
       "pr": 2192,
       "provider": "muse",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40644746067",
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-28T06:35:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2186": {
@@ -6637,26 +5585,7 @@
       "feedback_since": "2026-10-28T02:37:07Z",
       "issue": 2119,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40621997460",
-            "tier": "strong"
-          }
-        ],
-        "sha": "0a0493d09ef035ef5369b4dde12ff3a2c8fc91e3",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2188": {
       "cleared": {
@@ -6670,26 +5599,7 @@
       "feedback_since": "2026-10-28T05:26:55Z",
       "issue": 2123,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40638068860",
-            "tier": "strong"
-          }
-        ],
-        "sha": "88dbdd796e77b4a53b988e1b509c8a0fd9bbdf1d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2189": {
       "action": "revise",
@@ -6761,7 +5671,6 @@
     },
     "2190": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T07:06:11Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6785,35 +5694,8 @@
       "review_notes": "",
       "run_id": "40646151840",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-28T06:48:49Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40635928611",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40646151840",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c035d5aa2899d184b92ecbc00d60963fdecc5c4e",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2191": {
       "ci_reruns": {
@@ -6830,30 +5712,10 @@
       "feedback_since": "2026-10-28T04:47:35Z",
       "issue": 2120,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40634312452",
-            "tier": "strong"
-          }
-        ],
-        "sha": "0a7c6ce44c70a5c5f52c961d3ccf6b4a64d35daa",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2192": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-28T07:19:14Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6877,35 +5739,8 @@
       "review_notes": "",
       "run_id": "40648267377",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "started_at": "2026-10-28T07:09:23Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40644746067",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40648267377",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9e1eb7f2ee06604aad0f686e72e17a14b04ffc19",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "2207": {
       "action": "revise",
@@ -6980,26 +5815,7 @@
       "feedback_since": "2026-10-28T07:34:44Z",
       "issue": 2024,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40650992886",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c76481e00cb9e01137339077a7edb107e22f6d09",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2217": {
       "cleared": {
@@ -12800,9 +11616,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-27T09:15:34Z",
+    "at": "2026-10-28T09:25:47Z",
     "dropped": 0,
-    "shed": 59
+    "shed": 75
   },
   "rate_limited_until": null,
   "runners_explained": {
