@@ -262,6 +262,16 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
     }
 }
 
+/// R2179002: whether a `cardPlayed` or a `cardResolved` reports a card cast on draw, a cast that is no
+/// play, which a card answering a play ("after you play", "when your opponent plays") passes by. Any
+/// other event: false.
+pub fn cast_on_draw_event(event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::CardPlayed { on_draw: Some(true), .. } | GameEvent::CardResolved { on_draw: Some(true), .. }
+    )
+}
+
 /// What the card running a script remembers under `key` (§10.1: #22 Carnivorous Cube's meal), read
 /// the way `effects/memory::remember` wrote it. On a fused card each ingredient remembers apart (R102),
 /// so an ingredient reads its own and nothing else — two Cubes crafted into one card copy two meals —

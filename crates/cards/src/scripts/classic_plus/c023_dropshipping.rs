@@ -1,5 +1,6 @@
 //! C+ #23 Dropshipping (SPEC §8.7 row 23): add {cards} random cards from every card and token but this
-//! (R382, R387), each given Brittle {brittle} (R385); Radiant: each costs (1).
+//! (R382, R387), each given Temporary {temporary} (R2179001, issue #2179); Radiant: each costs (1).
+//! Through v0.4.12d each was given Brittle {brittle} (R385), which `script_v0_4_12d` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -21,19 +22,38 @@ fn added_by_this_list(ctx: &mut EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
+/// The add, `cards` random cards of every card and token but this, at `setCost` on the Radiant face.
+fn the_add(ctx: &EffectContext<'_>, radiant: bool) -> Value {
+    let mut add = json!({
+        "query": { "withTokens": true, "excludeDefId": ID },
+        "count": param(ctx, "cards"),
+    });
+    if radiant {
+        add["costOverride"] = json!(param(ctx, "setCost"));
+    }
+    add
+}
+
 fn dropship(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
+            // R2179001: "Give each Temporary {temporary}", a keyword each takes as it reaches the hand, so
+            // a card the hand cap burns takes none.
+            let mut add = the_add(ctx, radiant);
+            add["keywords"] = json!([{ "kind": "Temporary", "n": param(&*ctx, "temporary") }]);
+            vec![add_random_from_catalog(json_as(add))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// v0.4.12d's face: each card given Brittle {brittle} (R385) once it is in the hand.
+fn dropship_v0_4_12d(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
             let n = param(&*ctx, "brittle");
-            let mut add = json!({
-                "query": { "withTokens": true, "excludeDefId": ID },
-                "count": param(&*ctx, "cards"),
-            });
-            if radiant {
-                add["costOverride"] = json!(param(&*ctx, "setCost"));
-            }
             vec![
-                add_random_from_catalog(json_as(add)),
+                add_random_from_catalog(json_as(the_add(ctx, radiant))),
                 for_each_card(ForEachCardArgs {
                     cards: Arc::new(added_by_this_list),
                     each: Arc::new(move |instance_id: &str| {
@@ -53,14 +73,23 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: through v0.4.12d each card was given Brittle {brittle}; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: dropship_v0_4_12d(false),
+        radiant: dropship_v0_4_12d(true),
+    }
+}
+
 // C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23: "Adds 3 random cards drawn from
 // every card and token of every set but Dropshipping (R382, R387; repeats allowed, R60), so a Grape, a
 // Loser, an AI generated card or a unit-token card (R11) can arrive, each at its printed cost and
-// given Brittle 2 (R385): held in your hand, where it does not tick (R638), and started as the card enters
-// the field, where it ticks to 1 at the start of your turn t + 2 and crumbles at t + 4 (an ordinary
-// destroy that Indestructible ignores, the count staying 0); the count rides the card from hand to
-// field; the owner sees the counts, the opponent sees three cards added under the sentinel (R97); a full hand burns
-// the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
+// given Temporary 2 (R2179001): at the end of your turn it counts down to 1 in your hand, and at the end
+// of your next it is discarded unless played; the owner sees the counts, the opponent sees three cards
+// added under the sentinel (R97); a full hand burns the rest; card count and Temporary read through
+// `param()`; radiant they cost (1) (`costOverride` 1)".
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,7 +132,21 @@ mod tests {
         }
     }
 
-    /// The Brittle counts the owner sees on the cards `ids` names, in hand order.
+    /// The Temporary counts the owner sees on the cards `ids` names, in hand order.
+    fn temporaries_of(s: &Scenario, ids: &[String]) -> Vec<Option<i32>> {
+        own_hand(s)
+            .into_iter()
+            .filter(|card| ids.contains(&card.instance_id))
+            .map(|card| {
+                card.keywords.iter().flatten().find_map(|keyword| match keyword {
+                    Keyword::Temporary { n } => Some(n.unwrap_or(1)),
+                    _ => None,
+                })
+            })
+            .collect()
+    }
+
+    /// The Brittle counts the owner sees on the cards `ids` names, in hand order (v0.4.12d's).
     fn brittles_of(s: &Scenario, ids: &[String]) -> Vec<Option<i32>> {
         own_hand(s)
             .into_iter()
@@ -156,7 +199,7 @@ mod tests {
             }
 
             #[test]
-            fn adds_three_cards_to_the_hand_each_at_its_printed_cost_with_brittle_2_the_owner_sees() {
+            fn adds_three_cards_to_the_hand_each_at_its_printed_cost_with_temporary_2_the_owner_sees() {
                 let mut s = shop("drop-1", false, &[FILLER]);
                 s.play(DROP, json!({}));
                 let ids = added(&s);
@@ -170,8 +213,9 @@ mod tests {
                     assert_eq!(card.cost_override, None);
                     assert!(!card.radiant);
                     assert_ne!(card.def_id, DROP);
+                    assert_eq!(card.brittle, None);
                 }
-                assert_eq!(views.iter().map(|card| card.brittle).collect::<Vec<_>>(), vec![Some(2), Some(2), Some(2)]);
+                assert_eq!(temporaries_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
             }
 
             #[test]
@@ -278,27 +322,32 @@ mod tests {
             }
 
             #[test]
-            fn r385_r638_the_cards_hold_brittle_2_in_the_hand_it_never_ticks_there_and_nothing_crumbles_however_long_they_wait(
-            ) {
+            fn r2179001_the_cards_stand_at_temporary_1_after_your_end_of_turn_and_go_at_your_next() {
                 let mut s = shop("drop-hold", false, &[FILLER]);
                 s.play(DROP, json!({}));
                 let ids = added(&s);
-                let turn = s.state().turn;
-                next_own_turn(&mut s);
-                next_own_turn(&mut s);
-                assert_eq!(s.state().turn, turn + 4);
-                assert_eq!(brittles_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
-                assert!(!s.events().iter().any(|event| matches!(
-                    event.event_type(),
-                    GameEventType::Crumbled | GameEventType::Discarded
-                )));
+                s.end_turn();
+                assert_eq!(temporaries_of(&s, &ids), vec![Some(1), Some(1), Some(1)]);
                 for id in &ids {
                     s.expect_in_zone(id, "hand");
                 }
+                // The opponent's end of turn counts nothing down; the end of p1's next turn discards them.
+                s.end_turn();
+                assert_eq!(temporaries_of(&s, &ids), vec![Some(1), Some(1), Some(1)]);
+                s.end_turn();
+                for id in &ids {
+                    assert!(!s.hand(P1).iter().any(|card| card.id == *id), "{id} is still in hand");
+                }
+                let discarded = s
+                    .events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::Discarded { instance_id, .. } if ids.contains(instance_id)))
+                    .count();
+                assert_eq!(discarded, 3);
             }
 
             #[test]
-            fn r385_the_count_rides_the_card_onto_the_field_and_there_it_is_an_ordinary_destroy_indestructible_ignores() {
+            fn r2179001_a_card_played_before_its_count_runs_out_escapes_it() {
                 for seed in 1..=200 {
                     let mut s = shop(&format!("drop-field-{seed}"), false, &[FILLER]);
                     s.play(DROP, json!({}));
@@ -316,41 +365,19 @@ mod tests {
                     let played = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         s.play(&unit, json!({}));
                     }));
-                    if played.is_err() {
+                    if played.is_err() || s.card(&unit).zone.z() != ZoneName::Field {
                         continue;
                     }
-                    let lane = match s.card(&unit).zone {
-                        Zone::Field { lane, .. } => lane,
-                        _ => continue,
-                    };
-                    let at = usize::try_from(lane - 1).expect("a lane");
-                    // The Brittle count came with it, and shows on the board to both players.
-                    assert_eq!(
-                        s.view(P2).opponent.units.get(at).and_then(|view| view.as_ref()).and_then(|view| view.brittle),
-                        Some(2)
-                    );
-                    s.card_mut(&unit).granted_keywords.push(Keyword::Indestructible);
                     next_own_turn(&mut s);
                     next_own_turn(&mut s);
-                    // Indestructible ignores the destroy, and the count stays at 0.
                     assert_eq!(s.card(&unit).zone.z(), ZoneName::Field);
-                    assert_eq!(
-                        s.view(P1)
-                            .you
-                            .units
-                            .get(at)
-                            .and_then(|view| view.as_ref())
-                            .and_then(|view| view.brittle)
-                            .unwrap_or(0),
-                        0
-                    );
                     return;
                 }
                 panic!("no seed handed out a playable Unit");
             }
 
             #[test]
-            fn s2_4_r317_a_full_hand_burns_what_doesn_t_fit_and_a_burned_card_takes_no_count() {
+            fn s2_4_r317_a_full_hand_burns_what_doesn_t_fit_and_a_burned_card_takes_no_temporary() {
                 let cap = usize::try_from(HAND_CAP).expect("a hand cap");
                 let fillers = vec![FILLER; cap - 1];
                 let mut s = shop("drop-full", false, &fillers);
@@ -370,7 +397,7 @@ mod tests {
                     match find_instance(s.state(), id) {
                         Some(card) => {
                             assert!(matches!(card.zone.z(), ZoneName::Graveyard | ZoneName::Gone));
-                            assert_eq!(card.brittle, None);
+                            assert!(!card.granted_keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Temporary));
                         }
                         // A burned unit token ceases to exist (R11): it is in no pile, so nothing holds a
                         // count. Re-pinned for v0.3.5: the Meditative set joins the pool, and this seed
@@ -385,14 +412,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_card_count_and_the_brittle_read_through_param() {
+            fn r386_the_card_count_and_the_temporary_read_through_param() {
                 let mut s = shop("drop-tuned", false, &[FILLER]);
                 step_param(s.card_mut(DROP), "cards", 1);
-                step_param(s.card_mut(DROP), "brittle", 1);
+                step_param(s.card_mut(DROP), "temporary", 1);
                 s.play(DROP, json!({}));
                 let ids = added(&s);
                 assert_eq!(ids.len(), 4);
-                assert_eq!(brittles_of(&s, &ids), vec![Some(3), Some(3), Some(3), Some(3)]);
+                assert_eq!(temporaries_of(&s, &ids), vec![Some(3), Some(3), Some(3), Some(3)]);
             }
         }
 
@@ -400,7 +427,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn the_three_cost_1_costoverride_1_still_brittle_2() {
+            fn the_three_cost_1_costoverride_1_still_temporary_2() {
                 let mut s = shop("drop-radiant", true, &[FILLER]);
                 s.play(DROP, json!({}));
                 let ids = added(&s);
@@ -408,7 +435,34 @@ mod tests {
                 for id in &ids {
                     assert_eq!(s.card(id).cost_override, Some(1));
                 }
-                assert_eq!(brittles_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
+                assert_eq!(temporaries_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, which gave Brittle 2 (R385).
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_r385_a_game_on_v0_4_12d_gives_each_card_brittle_2_and_no_temporary() {
+                crate::under_kept_as(
+                    DROP,
+                    script_v0_4_12d(),
+                    |def| {
+                        for entry in def.params.iter_mut().flatten() {
+                            if entry.key == "temporary" {
+                                entry.key = "brittle".to_string();
+                            }
+                        }
+                    },
+                    || {
+                        let mut s = shop("drop-kept", false, &[FILLER]);
+                        s.play(DROP, json!({}));
+                        let ids = added(&s);
+                        assert_eq!(brittles_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
+                        assert_eq!(temporaries_of(&s, &ids), vec![None, None, None]);
+                    },
+                );
             }
         }
 

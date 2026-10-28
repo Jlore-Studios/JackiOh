@@ -216,7 +216,8 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
         }));
 
-        s.play(TRANSMOGULATE, json!({}));
+        // Embiggened, the one face that reaches the board since #2179.
+        s.play(TRANSMOGULATE, json!({ "embiggen": true }));
 
         // p1's view: the three library replacements are hidden. p2's view: those three, the trap, and
         // the Stockpile in p1's hand, which Transmogulate replaces too (R365).
@@ -540,12 +541,13 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         // Trap joining the pool moves it: search for a seed where it is #85 Unlicensed Experimentation.
         let seed = seed_where("hunt-r3-transmog-trap", |seed| {
             let (mut s, _) = setup(seed);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, json!({ "embiggen": true }));
             s.backrow("p1", 1).is_some_and(|card| card.def_id == UNLICENSED)
         });
         let (mut s, sheep) = setup(&seed);
 
-        s.play(TRANSMOGULATE, json!({}));
+        // Embiggened, the one face that reaches the board since #2179.
+        s.play(TRANSMOGULATE, json!({ "embiggen": true }));
         s.expect_in_zone(&sheep, "gone");
         let replacement = must(s.backrow("p1", 1), "the replacement trap");
         assert_eq!(replacement.def_id, UNLICENSED);

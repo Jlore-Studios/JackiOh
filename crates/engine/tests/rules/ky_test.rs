@@ -4,7 +4,7 @@
 //!
 //! Port of `packages/engine/test/kyTest.test.ts`.
 
-use jackioh_engine::subsystems::ky_test::easy_problem;
+use jackioh_engine::subsystems::ky_test::{easy_problem, four_digit_problem};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
@@ -106,6 +106,23 @@ fn is_easy_statement(text: &str) -> bool {
         && &b[7..] == b" = ?"
 }
 
+/// R2179003: `/^(\d{4}) ([+−]) (\d{4}) = \?$/` read by hand: the two operands and whether it subtracts.
+fn four_digit_statement(text: &str) -> Option<(i32, i32, bool)> {
+    let body = text.strip_suffix(" = ?")?;
+    let (a, b, subtract) = match body.split_once(" + ") {
+        Some((a, b)) => (a, b, false),
+        None => {
+            let (a, b) = body.split_once(" − ")?;
+            (a, b, true)
+        }
+    };
+    let four = |part: &str| part.len() == 4 && part.bytes().all(|byte| byte.is_ascii_digit());
+    if !four(a) || !four(b) {
+        return None;
+    }
+    Some((a.parse().ok()?, b.parse().ok()?, subtract))
+}
+
 /// `/^easy:\d\d\+\d\d$/`, by hand.
 fn is_easy_id(text: &str) -> bool {
     text.strip_prefix("easy:").is_some_and(|rest| {
@@ -152,6 +169,45 @@ mod c_42_kys_test_the_easy_generator_r580 {
                 assert!(KY_TEST_EASY_MISSES.contains(miss));
             }
         }
+    }
+}
+
+mod c_42_kys_test_the_four_digit_generator_r2179003 {
+    use super::*;
+
+    #[test]
+    fn r2179003_a_four_digit_sum_or_difference_never_negative_and_three_wrong_answers_each_moved_by_a_different_slip() {
+        let (mut sums, mut differences) = (0, 0);
+        for n in 0..300 {
+            let problem = four_digit_problem(&mut Rng::new(&format!("four-{n}"), 0));
+            let (a, b, subtract) = four_digit_statement(&problem.statement).expect("a four-digit statement");
+            for operand in [a, b] {
+                assert!((KY_TEST_FOUR_DIGIT_OPERANDS.min..=KY_TEST_FOUR_DIGIT_OPERANDS.max).contains(&operand));
+            }
+            let answer = if subtract { a - b } else { a + b };
+            assert!(answer >= 0);
+            assert_eq!(problem.answer, answer.to_string());
+            assert_eq!(problem.id, format!("easy:{a}{}{b}", if subtract { "-" } else { "+" }));
+            assert_eq!(problem.difficulty, KyTestDifficulty::Easy);
+            assert_eq!(problem.options.len(), 4);
+            assert_eq!(problem.options.iter().collect::<IndexSet<_>>().len(), 4);
+            let misses: Vec<i32> = problem
+                .options
+                .iter()
+                .filter(|option| **option != problem.answer)
+                .map(|option| option.parse::<i32>().expect("a number") - answer)
+                .collect();
+            assert_eq!(misses.iter().collect::<IndexSet<_>>().len(), 3);
+            for miss in &misses {
+                assert!(KY_TEST_FOUR_DIGIT_MISSES.contains(miss));
+            }
+            if subtract {
+                differences += 1;
+            } else {
+                sums += 1;
+            }
+        }
+        assert!(sums > 0 && differences > 0);
     }
 }
 
@@ -244,18 +300,19 @@ mod c_42_kys_test_the_two_prompts_r420 {
     }
 
     #[test]
-    fn r420_an_easy_choice_asks_a_generated_a_b_r580() {
+    fn r420_r2179003_an_easy_choice_asks_a_generated_four_digit_problem() {
         let mut state = offered("kt-easy", false);
         answer_keys(&mut state, &["mode:Easy"]);
         let pending = open_as(&state, PromptKind::Answer, P1);
-        assert!(is_easy_statement(&pending.prompt));
+        assert!(four_digit_statement(&pending.prompt).is_some(), "{}", pending.prompt);
+        assert!(!is_easy_statement(&pending.prompt));
         assert!(
             pending
                 .resume
                 .data
                 .get("kyTestProblem")
                 .and_then(Value::as_str)
-                .is_some_and(is_easy_id)
+                .is_some_and(|id| id.starts_with("easy:") && !is_easy_id(id))
         );
     }
 

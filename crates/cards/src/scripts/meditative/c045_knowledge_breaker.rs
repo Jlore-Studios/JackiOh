@@ -1,15 +1,16 @@
 //! M #45 Knowledge Breaker (SPEC §8.8 row 45): (1) Unit, CN, KY, Catalyst, Legendary, 1/3 → 2/6.
 //!
-//! Base:    "Cry: Nerf all other CN and KY cards on the field, in hands and decks.
+//! Base:    "Cry: Nerf all other CN and KY cards on the field and in hands.
 //!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Knowledge Breaker Prime into your deck."
 //! Radiant: "Divine Shield
-//!           Cry: Nerf all other CN and KY cards on the field, in hands and decks {times|time|times}.
+//!           Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.
 //!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
-//! - Cry: `degrade` over every other CN or KY card on fields, hands and decks, `times`; a card in
-//!   Chinese is CN (R1176000).
+//! - Cry: `degrade` over every other CN or KY card on fields and in hands, `times`; a card in
+//!   Chinese is CN (R1176000). Through v0.4.12d it reached the decks too, which `script_v0_4_12d`
+//!   keeps for those replays (R767000, issue #2179).
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
 //! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040);
 //!   until patch v0.3.7 it was ME-ALTPLAY's face-down play permission.
@@ -21,14 +22,19 @@ pub const ID: &str = "meditative-045";
 
 const PRIME: &str = "meditative-045-1";
 
-fn breaker(radiant: bool) -> Script {
+/// The zones the Cry Nerfs in: the fields and the hands since #2179.
+const NERFED_ZONES: &[&str] = &["field", "hand"];
+/// Through v0.4.12d: the decks too.
+const NERFED_ZONES_V0_4_12D: &[&str] = &["field", "hand", "library"];
+
+fn breaker(radiant: bool, zones: &'static [&'static str]) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let times = param(&*ctx, "times");
             vec![degrade(json_as(json!({
                 "scope": {
                     "side": "any",
-                    "zones": ["field", "hand", "library"],
+                    "zones": zones,
                     "tags": ["CN", "KY"],
                     "excludeSelf": true,
                 },
@@ -49,8 +55,16 @@ fn breaker(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: breaker(false),
-        radiant: breaker(true),
+        base: breaker(false, NERFED_ZONES),
+        radiant: breaker(true, NERFED_ZONES),
+    }
+}
+
+/// R767000: through v0.4.12d the Cry Nerfed the decks too; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: breaker(false, NERFED_ZONES_V0_4_12D),
+        radiant: breaker(true, NERFED_ZONES_V0_4_12D),
     }
 }
 
@@ -194,8 +208,23 @@ mod tests {
     mod base {
         use super::*;
 
+        /// Every H1B Printer of a side outside its deck.
+        fn cnky_outside_decks(s: &Scenario, player: PlayerId) -> Vec<String> {
+            let library: Vec<String> = s.state().players[player].library.iter().map(|card| card.id.clone()).collect();
+            cnky_ids(s, player).into_iter().filter(|id| !library.contains(id)).collect()
+        }
+
+        fn deck_cnky(s: &Scenario, player: PlayerId) -> Vec<String> {
+            s.state().players[player]
+                .library
+                .iter()
+                .filter(|card| card.def_id == CNKY)
+                .map(|card| card.id.clone())
+                .collect()
+        }
+
         #[test]
-        fn r1042_cry_nerfs_every_other_cn_or_ky_card_on_fields_hands_decks() {
+        fn r1042_cry_nerfs_every_other_cn_or_ky_card_on_fields_and_hands_and_none_in_a_deck() {
             let mut s = spread_board("breaker-cry", false);
             let breaker = s
                 .hand(P1)
@@ -203,28 +232,35 @@ mod tests {
                 .find(|card| card.def_id == BREAKER)
                 .cloned()
                 .unwrap();
-            let before_p1 = cnky_ids(&s, P1);
-            let before_p2 = cnky_ids(&s, P2);
-            assert_eq!(before_p1.len(), 3);
-            assert_eq!(before_p2.len(), 3);
+            let before_p1 = cnky_outside_decks(&s, P1);
+            let before_p2 = cnky_outside_decks(&s, P2);
+            let decks: Vec<String> = deck_cnky(&s, P1).into_iter().chain(deck_cnky(&s, P2)).collect();
+            assert_eq!(before_p1.len(), 2);
+            assert_eq!(before_p2.len(), 2);
+            assert_eq!(decks.len(), 2);
             s.play(&breaker.id, json!({ "zone": 2 }));
             let degraded = degraded_ids(&s);
-            // Every other CN or KY card exactly once, on fields, hands and decks alike.
+            // Every other CN or KY card exactly once, on fields and in hands alike.
             for id in before_p1.iter().chain(before_p2.iter()) {
                 assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 1, "{id}");
             }
-            // Itself is excluded, and the vanilla controls are untouched: the two in p1's hidden
-            // hand and deck are only cued (R440), the one on p2's field gets no event at all.
+            // Issue #2179: a deck is no longer in its scope, so no card in one is Nerfed or cued.
+            for id in &decks {
+                assert!(!s.events().iter().any(|event| {
+                    matches!(event, GameEvent::Degraded { instance_id, .. } if instance_id == id)
+                }), "{id} in a deck was touched");
+            }
+            // Itself is excluded, and the vanilla controls are untouched: the one in p1's hidden
+            // hand is only cued (R440), the one on p2's field gets no event at all.
             assert!(!degraded.contains(&breaker.id));
             let state = s.state();
             let hidden_vanillas: Vec<String> = state.players[P1]
                 .hand
                 .iter()
-                .chain(state.players[P1].library.iter())
                 .filter(|card| card.def_id == VANILLA)
                 .map(|card| card.id.clone())
                 .collect();
-            assert_eq!(hidden_vanillas.len(), 2);
+            assert_eq!(hidden_vanillas.len(), 1);
             let cued = cued_ids(&s);
             for id in &hidden_vanillas {
                 assert!(!degraded.contains(id), "{id} was Nerfed");
@@ -234,6 +270,20 @@ mod tests {
             assert!(!s.events().iter().any(|event| {
                 matches!(event, GameEvent::Degraded { instance_id, .. } if *instance_id == field_vanilla)
             }));
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, whose Cry reached the decks.
+        #[test]
+        fn r767000_a_game_on_v0_4_12d_nerfs_the_decks_too() {
+            crate::under_kept(BREAKER, crate::scripts::meditative::c045_knowledge_breaker::script_v0_4_12d(), || {
+                let mut s = spread_board("breaker-cry-kept", false);
+                let decks: Vec<String> = deck_cnky(&s, P1).into_iter().chain(deck_cnky(&s, P2)).collect();
+                s.play(BREAKER, json!({ "zone": 2 }));
+                let degraded = degraded_ids(&s);
+                for id in &decks {
+                    assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 1, "{id}");
+                }
+            });
         }
 
         #[test]
@@ -315,9 +365,9 @@ mod tests {
         }
 
         #[test]
-        fn r1176000_cry_nerfs_a_translated_card_on_a_field_in_a_hand_and_in_a_deck() {
+        fn r1176000_cry_nerfs_a_translated_card_on_a_field_and_in_a_hand_never_one_in_a_deck() {
             // A Vanilla in Chinese is CN (R1176000), wherever it is: the Cry Nerfs the translated
-            // ones on p1's field, in p2's hand and in p2's deck, and changes no English Vanilla.
+            // ones on p1's field and in p2's hand, and changes no English Vanilla and none in a deck.
             let mut s = scenario(json!({
                 "seed": "breaker-translated",
                 "p1": {
@@ -328,17 +378,15 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA, VANILLA], "library": [VANILLA, VANILLA] },
             }));
-            let translated = vec![
-                s.unit(P1, 1).expect("p1's Vanilla").id,
-                s.hand(P2)[0].id.clone(),
-                s.pile(P2, "library")[0].id.clone(),
-            ];
+            let translated = vec![s.unit(P1, 1).expect("p1's Vanilla").id, s.hand(P2)[0].id.clone()];
+            let in_deck = s.pile(P2, "library")[0].id.clone();
             let english = vec![
                 s.unit(P1, 3).expect("p1's other Vanilla").id,
                 s.hand(P2)[1].id.clone(),
                 s.pile(P2, "library")[1].id.clone(),
+                in_deck.clone(),
             ];
-            for id in &translated {
+            for id in translated.iter().chain(std::iter::once(&in_deck)) {
                 s.card_mut(id).chinese = Some(true);
             }
             s.play(BREAKER, json!({ "zone": 2 }));
@@ -523,7 +571,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1042_radiant_nerfs_twice_with_divine_shield() {
+        fn r1042_radiant_nerfs_twice_with_divine_shield_on_fields_and_in_hands() {
             // The Radiant face carries Divine Shield.
             let def = crate::card_def(BREAKER);
             assert!(def.radiant.keywords.contains(&Keyword::DivineShield));
@@ -534,17 +582,28 @@ mod tests {
                 .find(|card| card.def_id == BREAKER)
                 .cloned()
                 .unwrap();
-            let before_p1 = cnky_ids(&s, P1);
-            let before_p2 = cnky_ids(&s, P2);
+            let decks: Vec<String> = [P1, P2]
+                .into_iter()
+                .flat_map(|player| s.state().players[player].library.iter().map(|card| card.id.clone()).collect::<Vec<_>>())
+                .collect();
+            let reached: Vec<String> = cnky_ids(&s, P1)
+                .into_iter()
+                .chain(cnky_ids(&s, P2))
+                .filter(|id| !decks.contains(id))
+                .collect();
+            assert_eq!(reached.len(), 4);
             // Each Printer at (2), as before patch v0.3.10 made it (3): a Nerf that lifts the cost has
             // two steps left under the cap of (4), so both Nerfs change something.
-            for id in before_p1.iter().chain(before_p2.iter()) {
+            for id in &reached {
                 s.card_mut(id.as_str()).cost_mod = -1;
             }
             s.play(&breaker.id, json!({ "zone": 2 }));
             let degraded = degraded_ids(&s);
-            for id in before_p1.iter().chain(before_p2.iter()) {
+            for id in &reached {
                 assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 2, "{id}");
+            }
+            for id in &decks {
+                assert!(!degraded.contains(id), "{id} in a deck was Nerfed");
             }
             assert!(!degraded.contains(&breaker.id));
         }

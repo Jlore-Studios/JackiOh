@@ -2,7 +2,8 @@
 //!
 //! Base:    "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
 //! Radiant: "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
-//! Engine: a trigger on `cardPlayed` by the opponent (§10.5 step 4: a cast is a play, R70; a Trap set
+//! Engine: a trigger on `cardPlayed` by the opponent (§10.5 step 4: a cast is a play, R70, a cast on draw
+//! none, R2179002; a Trap set
 //! face-down is a play too; a countered card was never played, §6.3 Counter), exiling the top cards of
 //! its controller's library by C+ #12.6 Frozen Wastes' pattern: `for_each_card` over the library's top
 //! (index 0) and `exile` of each. A short deck exiles what it has; an empty one exiles nothing and causes
@@ -130,16 +131,17 @@ mod tests {
         }
 
         #[test]
-        fn r70_an_opponents_cast_counts() {
-            // Hinder is on top of p2's deck: p1 ends its turn, p2 draws it and it is cast on the draw.
+        fn r2179002_an_opponents_cast_on_draw_is_no_play_and_exiles_nothing() {
+            // Hinder is on top of p2's deck: p1 ends its turn, p2 draws it and it is cast on the draw,
+            // which through v0.4.12d was a play and exiled 3 (R70).
             let mut s = crate::scenario(json!({
                 "p1": { "field": [ID], "hand": [FILLER], "library": DECK.to_vec() },
                 "p2": { "hand": [FILLER], "library": [HINDER, VANILLA, VANILLA] },
             }));
             s.end_turn();
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER)));
-            assert_eq!(exiled_events(&s, P1), 3);
-            assert_eq!(s.pile(P1, "exile").len(), 3);
+            assert_eq!(exiled_events(&s, P1), 0);
+            assert!(s.pile(P1, "exile").is_empty());
         }
 
         #[test]

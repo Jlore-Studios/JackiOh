@@ -1,6 +1,8 @@
-//! M+ #9 Magic Amplifier (SPEC §8.9 row 9, BUILD M11 row M+ 9): (1) Field Spell, Common.
-//!   Base:    "Aura: Both players have Spell Damage +{spellDamage}." (2)
-//!   Radiant: "Aura: Both players have Spell Damage +{spellDamage}." (4)
+//! M+ #9 Magic Amplifier (SPEC §8.9 row 9, BUILD M11 row M+ 9): (1, Embiggened 2) Field Spell, Common.
+//!   Base:    "Aura: Both players have Spell Damage +{spellDamage}.
+//!             Embiggened (2): This also has "Cry: Add a random Spell or Field Spell that deals
+//!             damage to your hand."" (2)
+//!   Radiant: "… a random Radiant Spell or Field Spell that deals damage …" (4)
 //!
 //! Spell Damage beyond Units (R1180000): the engine's `spellDamageAura` static flag, for both players.
 //! While the Amplifier acts on the field — face-up, in its controller's backrow — each player's Spell
@@ -9,6 +11,11 @@
 //! Spell's or a Trap's hit is not a Spell's and is never raised; face-down or gone it gives nothing.
 //! The number is the declared `spellDamage`, read through `params::declared_or` as each hit lands, so
 //! a Nerf or a Buff moves it (R386). Tunes: spellDamage 2 ↑ (Radiant 4).
+//!
+//! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): its Embiggened version also has a Cry
+//! (R1), one random non-token Spell or Field Spell of every set that deals damage (`dealsDamage`,
+//! R1748001, R380), repeats allowed (R60), Radiant on the Radiant face; the hand cap burns it (§2.4).
+//! Through v0.4.12d it had no Cry, which `script_v0_4_12d` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -27,7 +34,15 @@ fn declared_spell_damage(radiant: bool) -> i32 {
     }
 }
 
-fn amplifier(radiant: bool) -> Script {
+/// The Embiggened Cry's pool: "a random Spell or Field Spell that deals damage" (R1748001).
+fn damage_dealers() -> Value {
+    json!({ "type": ["Spell", "Field Spell"], "dealsDamage": true })
+}
+
+/// The printed "a random": one card per Cry.
+const CARDS: i32 = 1;
+
+fn amplifier(radiant: bool, embiggened_cry: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             spell_damage_aura: Some(SpellDamageAura {
@@ -36,14 +51,34 @@ fn amplifier(radiant: bool) -> Script {
             }),
             ..StaticFlags::default()
         }),
+        cry: embiggened_cry.then(|| {
+            hook(move |ctx| {
+                if !ctx.embiggened {
+                    return vec![];
+                }
+                let mut args = json!({ "query": damage_dealers(), "count": CARDS });
+                if radiant {
+                    args["radiant"] = json!(true);
+                }
+                vec![add_random_from_catalog(json_as(args))]
+            })
+        }),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: amplifier(false),
-        radiant: amplifier(true),
+        base: amplifier(false, true),
+        radiant: amplifier(true, true),
+    }
+}
+
+/// R767000: through v0.4.12d it had one price and no Cry; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: amplifier(false, false),
+        radiant: amplifier(true, false),
     }
 }
 
@@ -212,5 +247,75 @@ mod tests {
         assert_eq!(spell_damage_of(s.state(), P2), 4);
         s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
         assert_eq!(health(&s, P2), 22);
+    }
+
+    /// The cards the play added to p1's hand.
+    fn added(s: &Scenario) -> Vec<CardInstance> {
+        let ids: Vec<String> = s
+            .events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::AddedToHand { player: PlayerId::P1, instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        ids.iter().map(|id| s.card(id.as_str()).clone()).collect()
+    }
+
+    fn deals_damage(card: &CardInstance) -> bool {
+        let def = crate::card_def(&card.def_id);
+        def.deals_damage == Some(true) && matches!(def.type_, CardType::Spell | CardType::FieldSpell) && !def.token
+    }
+
+    #[test]
+    fn r81_played_at_1_it_adds_nothing() {
+        let mut s = game("m+009-plain", json!({ "hand": [ID, FILLER] }), json!({}));
+        s.play(ID, json!({}));
+        assert!(added(&s).is_empty());
+        assert_eq!(spell_damage_of(s.state(), P1), 2);
+    }
+
+    #[test]
+    fn r81_r1748001_embiggened_its_cry_adds_one_random_spell_or_field_spell_that_deals_damage() {
+        let mut types: Vec<CardType> = Vec::new();
+        for n in 0..30 {
+            let mut s = game(&format!("m+009-embiggened-{n}"), json!({ "hand": [ID, FILLER] }), json!({}));
+            s.play(ID, json!({ "embiggen": true }));
+            let made = added(&s);
+            assert_eq!(made.len(), 1);
+            assert!(deals_damage(&made[0]), "{}", made[0].def_id);
+            assert!(!made[0].radiant);
+            assert_eq!(spell_damage_of(s.state(), P1), 2);
+            let type_ = crate::card_def(&made[0].def_id).type_;
+            if !types.contains(&type_) {
+                types.push(type_);
+            }
+        }
+        assert!(types.contains(&CardType::Spell), "{types:?}");
+    }
+
+    #[test]
+    fn r81_radiant_embiggened_the_card_is_radiant() {
+        let mut s = game(
+            "m+009-radiant-embiggened",
+            json!({ "hand": [{ "def": ID, "radiant": true }, FILLER] }),
+            json!({}),
+        );
+        s.play(ID, json!({ "embiggen": true }));
+        let made = added(&s);
+        assert_eq!(made.len(), 1);
+        assert!(made[0].radiant);
+        assert!(deals_damage(&made[0]));
+        assert_eq!(spell_damage_of(s.state(), P1), 4);
+    }
+
+    /// R767000: the script kept for the replays of v0.4.12d and before, which had no Cry.
+    #[test]
+    fn r767000_a_game_on_v0_4_12d_adds_nothing_played_at_either_price() {
+        crate::under_kept(ID, super::script_v0_4_12d(), || {
+            let mut s = game("m+009-kept", json!({ "hand": [ID, FILLER] }), json!({}));
+            s.play(ID, json!({ "embiggen": true }));
+            assert!(added(&s).is_empty());
+        });
     }
 }

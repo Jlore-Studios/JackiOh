@@ -1,28 +1,41 @@
-//! #83 Transmogulate (SPEC §8.4 row 83): Spell, cost 2, Legendary.
-//!   Base:    "Replace every card in your hand, deck, board, graveyard and exile with a random
-//!            Legendary."
-//!   Radiant: "... with a random Radiant Legendary." — the same five zones with `radiant: true` on
-//!            every replacement (§8 Conventions).
+//! #83 Transmogulate (SPEC §8.4 row 83): Spell, cost 2 (Embiggened 4), Legendary.
+//!   Base:    "Replace every card in your hand and deck with a random Legendary.
+//!            Embiggened (4): Your hand, deck and board instead."
+//!   Radiant: "... with a random Radiant Legendary." — the same zones with `radiant: true` on every
+//!            replacement (§8 Conventions).
 //!
 //! R35 is the whole card; the hand is an "other zone" like the rest (R365). The pool is §5.1's one
 //! query with this card's index excluded, never listed by hand. A board card takes a same-type
 //! Legendary in place (Field Trap counts as Trap, so it becomes #85); Immutable cards stay (R23).
 //! Cards under a Stack are dormant, so "your board" is each pile's top (R13, §3.2). The pool holds no
-//! tokens, and a unit token cannot sit in a graveyard or exile (R11), so no replacement vanishes on
-//! arrival and thins a zone. Picks draw from `ctx.rng` while the list is built (CLAUDE.md rule 4,
-//! §9.3): deterministic, since the hook runs once and opens no prompt.
+//! tokens, so no replacement vanishes on arrival and thins a zone. Picks draw from `ctx.rng` while the
+//! list is built (CLAUDE.md rule 4, §9.3): deterministic, since the hook runs once and opens no prompt.
+//!
+//! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): played at (2) it replaces the hand and
+//! the deck, Embiggened at (4) the board too, and neither touches the graveyard or the exile pile.
+//! Through v0.4.12d it replaced all five at (2), which `script_v0_4_12d` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-083";
 
-/// R35's "other zones", in the order this card walks them; the hand is one of them (R365).
-const OFF_FIELD_ZONES: [OffFieldZone; 4] = [
+/// R35's "other zones" since #2179, in the order this card walks them; the hand is one of them (R365).
+const OFF_FIELD_ZONES: &[OffFieldZone] = &[OffFieldZone::Hand, OffFieldZone::Library];
+
+/// Through v0.4.12d: the graveyard and the exile pile too.
+const OFF_FIELD_ZONES_V0_4_12D: &[OffFieldZone] = &[
     OffFieldZone::Hand,
     OffFieldZone::Library,
     OffFieldZone::Graveyard,
     OffFieldZone::Exile,
 ];
+
+/// When the board is replaced: on the Embiggened version since #2179, always through v0.4.12d.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Board {
+    Embiggened,
+    Always,
+}
 
 /// R35's pool: every non-token Legendary but this card (R387), of every set (R380); in Core #52, #85,
 /// #87, #92, #93, #95, never listed here.
@@ -95,20 +108,23 @@ fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static Ca
 }
 
 /// The faces differ only in whether the cards that arrive are Radiant (§5.2, R74).
-fn transmogulate(radiant_result: bool) -> Script {
+fn transmogulate(radiant_result: bool, piles: &'static [OffFieldZone], board: Board) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
             let mut effects: Vec<Effect> = Vec::new();
             // The board first, each card by its own type (R35); lane order, so the rng draws are fixed.
-            for card in board_cards(ctx) {
-                let type_ = def_of(Some(&*ctx.state), &card.def_id).type_;
-                let pool = same_type_legendaries(type_);
-                effects.extend(replace(ctx, &card, &pool, radiant_result));
+            // Since #2179 only the Embiggened version reaches it (R81: `instance.embiggened`).
+            if board == Board::Always || ctx.embiggened {
+                for card in board_cards(ctx) {
+                    let type_ = def_of(Some(&*ctx.state), &card.def_id).type_;
+                    let pool = same_type_legendaries(type_);
+                    effects.extend(replace(ctx, &card, &pool, radiant_result));
+                }
             }
-            // Then hand (R365), library (in `pile_cards` order, R223), graveyard and exile: "any card
-            // from the pool, same counts".
-            for zone in OFF_FIELD_ZONES {
+            // Then hand (R365) and library (in `pile_cards` order, R223), and through v0.4.12d the
+            // graveyard and exile: "any card from the pool, same counts".
+            for &zone in piles {
                 for card in pile_cards(ctx, zone) {
                     let pool = legendaries(None);
                     effects.extend(replace(ctx, &card, &pool, radiant_result));
@@ -121,10 +137,19 @@ fn transmogulate(radiant_result: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = transmogulate(false);
-    // "Random Radiant Legendaries": the same five zones, every replacement Radiant.
-    let radiant = transmogulate(true);
+    let base = transmogulate(false, OFF_FIELD_ZONES, Board::Embiggened);
+    // "Random Radiant Legendaries": the same zones, every replacement Radiant.
+    let radiant = transmogulate(true, OFF_FIELD_ZONES, Board::Embiggened);
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.4.12d it replaced the hand, deck, board, graveyard and exile at its one price;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: transmogulate(false, OFF_FIELD_ZONES_V0_4_12D, Board::Always),
+        radiant: transmogulate(true, OFF_FIELD_ZONES_V0_4_12D, Board::Always),
+    }
 }
 
 // #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365, R380). BUILD M4-T4's row: zone counts kept,
@@ -205,6 +230,11 @@ mod tests {
         s
     }
 
+    /// The Embiggened version (4), which reaches the board too (#2179).
+    fn embiggened() -> Value {
+        json!({ "embiggen": true })
+    }
+
     /// The def id of the unit acting in a lane, or "" for an empty lane.
     fn unit_def(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.def_id.clone()).unwrap_or_default()
@@ -222,7 +252,7 @@ mod tests {
         fn r35_board_cards_are_replaced_in_place_by_a_legendary_of_the_same_type() {
             crate::register_all();
             let mut s = board(false);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             // A Unit becomes a Legendary Unit, in its own lane.
             assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
@@ -236,7 +266,7 @@ mod tests {
         fn r35_field_trap_counts_as_trap_a_field_trap_becomes_unlicensed_experimentation() {
             crate::register_all();
             let mut s = board(false);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert_eq!(backrow_def(&s, P1, 3), LEGENDARY_TRAP);
         }
@@ -246,31 +276,55 @@ mod tests {
             crate::register_all();
             let mut s = board(false);
             let immutable = s.card(IMMUTABLE).id.clone();
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert_eq!(s.unit(P1, 2).map(|card| card.id.clone()), Some(immutable));
             assert_eq!(unit_def(&s, P1, 2), IMMUTABLE);
         }
 
         #[test]
-        fn r35_r365_same_counts_per_zone_in_hand_library_graveyard_and_exile() {
+        fn r35_r365_same_counts_in_hand_and_library_the_graveyard_and_exile_untouched() {
             crate::register_all();
             let mut s = board(false);
             let hand = s.hand(Some(P1)).len() - 1;
             let library = s.pile(P1, "library").len();
-            let graveyard = s.pile(P1, "graveyard").len();
-            let exile = s.pile(P1, "exile").len();
+            let graveyard = def_ids(&s.pile(P1, "graveyard"));
+            let exile: Vec<String> = s.pile(P1, "exile").into_iter().map(|card| card.id).collect();
+            let unit = s.unit(P1, 1).map(|card| card.id.clone());
             s.play(TRANSMOGULATE, json!({}));
 
             assert_eq!(s.hand(Some(P1)).len(), hand);
             assert_eq!(s.pile(P1, "library").len(), library);
-            assert_eq!(s.pile(P1, "exile").len(), exile);
-            // Plus Transmogulate itself, which was resolving while the replacements happened.
-            assert_eq!(s.pile(P1, "graveyard").len(), graveyard + 1);
-            assert!(s
-                .pile(P1, "graveyard")
-                .iter()
-                .any(|card| card.def_id == TRANSMOGULATE));
+            // Issue #2179: the exile pile and the graveyard are no longer replaced; the graveyard ends
+            // one larger, Transmogulate itself, which was resolving while the replacements happened.
+            assert_eq!(s.pile(P1, "exile").into_iter().map(|card| card.id).collect::<Vec<_>>(), exile);
+            let mut want = graveyard.clone();
+            want.push(TRANSMOGULATE.to_string());
+            assert_eq!(def_ids(&s.pile(P1, "graveyard")), want);
+            // At (2) the board is not reached either.
+            assert_eq!(s.unit(P1, 1).map(|card| card.id.clone()), unit);
+            assert_eq!(backrow_def(&s, P1, 1), "core-073");
+            assert!(!s.events().iter().any(|event| matches!(
+                event,
+                GameEvent::Transformed { instance_id, .. } if Some(instance_id.clone()) == unit
+            )));
+        }
+
+        #[test]
+        fn r81_embiggened_it_reaches_the_board_and_still_not_the_graveyard_or_exile() {
+            crate::register_all();
+            let mut s = board(false);
+            let graveyard = def_ids(&s.pile(P1, "graveyard"));
+            let exile: Vec<String> = s.pile(P1, "exile").into_iter().map(|card| card.id).collect();
+            let unit = s.unit(P1, 1).map(|card| card.id.clone());
+            s.play(TRANSMOGULATE, embiggened());
+
+            assert_ne!(s.unit(P1, 1).map(|card| card.id.clone()), unit);
+            assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
+            assert_eq!(s.pile(P1, "exile").into_iter().map(|card| card.id).collect::<Vec<_>>(), exile);
+            let mut want = graveyard.clone();
+            want.push(TRANSMOGULATE.to_string());
+            assert_eq!(def_ids(&s.pile(P1, "graveyard")), want);
         }
 
         #[test]
@@ -284,14 +338,11 @@ mod tests {
             assert!(!pool.contains(&TRANSMOGULATE.to_string()));
             assert!(pool.iter().any(|id| id.starts_with("classic")));
             let mut s = board(false);
-            let spell = s.card(TRANSMOGULATE).id.clone();
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             let mut replaced: Vec<CardInstance> = Vec::new();
             replaced.extend(s.hand(Some(P1)));
             replaced.extend(s.pile(P1, "library"));
-            replaced.extend(s.pile(P1, "exile"));
-            replaced.extend(s.pile(P1, "graveyard").into_iter().filter(|card| card.id != spell));
             for lane in 1..=5 {
                 if let Some(unit) = s.unit(P1, lane) {
                     replaced.push(unit.clone());
@@ -317,11 +368,15 @@ mod tests {
             let old_unit = s.card("core-011").id.clone();
             let old_library: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.id).collect();
             let old_graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             s.expect_in_zone(old_unit.as_str(), "gone");
-            for id in old_library.iter().chain(old_graveyard.iter()) {
+            for id in &old_library {
                 s.expect_in_zone(id.as_str(), "gone");
+            }
+            // The graveyard is no longer replaced (#2179).
+            for id in &old_graveyard {
+                s.expect_in_zone(id.as_str(), "graveyard");
             }
         }
 
@@ -364,7 +419,7 @@ mod tests {
         fn s8_your_library_and_board_the_opponent_keeps_everything() {
             crate::register_all();
             let mut s = board(false);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert_eq!(unit_def(&s, P2, 1), "core-011");
             assert_eq!(
@@ -377,7 +432,7 @@ mod tests {
         fn base_gives_non_radiant_cards() {
             crate::register_all();
             let mut s = board(false);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert_eq!(
                 s.pile(P1, "library").into_iter().map(|card| card.radiant).collect::<Vec<_>>(),
@@ -408,7 +463,7 @@ mod tests {
                 "the Fiender is on top of lane 1"
             );
 
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             // The acting top card was replaced in place by a Legendary Unit.
             let transformed: Vec<String> = s
@@ -432,11 +487,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn random_radiant_legendaries_every_replacement_is_radiant_in_every_zone() {
+        fn random_radiant_legendaries_every_replacement_is_radiant_in_every_zone_it_reaches() {
             crate::register_all();
             let mut s = board(true);
             let spell = s.card(TRANSMOGULATE).id.clone();
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert_eq!(s.unit(P1, 1).map(|card| card.radiant), Some(true));
             assert_eq!(s.backrow(P1, 1).map(|card| card.radiant), Some(true));
@@ -447,20 +502,32 @@ mod tests {
                 vec![true, true]
             );
             assert_eq!(
-                s.pile(P1, "exile").into_iter().map(|card| card.radiant).collect::<Vec<_>>(),
-                vec![true]
-            );
-            assert_eq!(
                 s.hand(Some(P1)).into_iter().map(|card| card.radiant).collect::<Vec<_>>(),
                 vec![true]
             );
+            // The exile pile and the graveyard keep what they held (#2179).
+            assert_eq!(def_ids(&s.pile(P1, "exile")), vec!["core-011".to_string()]);
             assert_eq!(
                 s.pile(P1, "graveyard")
                     .into_iter()
                     .filter(|card| card.id != spell)
-                    .map(|card| card.radiant)
+                    .map(|card| (card.def_id, card.radiant))
                     .collect::<Vec<_>>(),
-                vec![true]
+                vec![("core-056".to_string(), false)]
+            );
+        }
+
+        #[test]
+        fn at_2_the_radiant_face_replaces_the_hand_and_deck_and_leaves_the_board() {
+            crate::register_all();
+            let mut s = board(true);
+            s.play(TRANSMOGULATE, json!({}));
+
+            assert_eq!(unit_def(&s, P1, 1), "core-011");
+            assert_eq!(s.unit(P1, 1).map(|card| card.radiant), Some(false));
+            assert_eq!(
+                s.pile(P1, "library").into_iter().map(|card| card.radiant).collect::<Vec<_>>(),
+                vec![true, true]
             );
         }
 
@@ -468,7 +535,7 @@ mod tests {
         fn the_radiant_face_keeps_r35_s_pool_and_its_same_type_board_rule() {
             crate::register_all();
             let mut s = board(true);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
             assert!(legendary_field_spells().contains(&backrow_def(&s, P1, 1)));
@@ -483,12 +550,31 @@ mod tests {
         fn r23_an_immutable_board_card_still_stays_on_the_radiant_face() {
             crate::register_all();
             let mut s = board(true);
-            s.play(TRANSMOGULATE, json!({}));
+            s.play(TRANSMOGULATE, embiggened());
 
             let immutable = s.unit(P1, 2);
             assert_eq!(immutable.as_ref().map(|card| card.def_id.as_str()), Some(IMMUTABLE));
             // A refused Transform changes nothing about the card: it is the Menace it was.
             assert_eq!(immutable.map(|card| card.radiant), Some(true));
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.4.12d and before, which replaced all five zones.
+    mod n83_transmogulate_v0_4_12d {
+        use super::*;
+
+        #[test]
+        fn r767000_a_game_on_v0_4_12d_replaces_the_board_graveyard_and_exile_at_its_one_price() {
+            crate::under_kept(TRANSMOGULATE, script_v0_4_12d(), || {
+                let mut s = board(false);
+                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
+                let exile: Vec<String> = s.pile(P1, "exile").into_iter().map(|card| card.id).collect();
+                s.play(TRANSMOGULATE, json!({}));
+                assert!(legendary_units().contains(&unit_def(&s, P1, 1)));
+                for id in graveyard.iter().chain(exile.iter()) {
+                    s.expect_in_zone(id.as_str(), "gone");
+                }
+            });
         }
     }
 

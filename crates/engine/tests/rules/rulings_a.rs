@@ -75,6 +75,11 @@ const BREAD: &str = "ra-bread";
 const BOLT: &str = "ra-bolt";
 /// #21 Hinder / #90.1 CN-Virus: cast on draw (R40).
 const CAST_ON_DRAW_SPELL: &str = "ra-cast-on-draw";
+/// R2179002: a Field Spell that answers its controller's plays and their resolutions, by two
+/// different hits on the enemy hero, so a test can tell which of the two answered.
+const PLAY_WATCHER: &str = "ra-play-watcher";
+/// R2179002: a Spell with Echo 1 that hits the enemy hero once each time it resolves.
+const ECHO_BOLT: &str = "ra-echo-bolt";
 /// #80 Zao Gao: the discard is the player's choice (R16).
 const DISCARDER: &str = "ra-discarder";
 /// A Spell, which can never replace a permanent on the board (R35).
@@ -196,6 +201,8 @@ fn defs() -> Vec<CardDef> {
     );
     let bolt = ra_card(n, "bolt", "Spell", json!({}));
     let cast_on_draw_spell = ra_card(n, "cast-on-draw", "Spell", json!({}));
+    let play_watcher = ra_card(n, "play-watcher", "Field Spell", json!({}));
+    let echo_bolt = ra_card(n, "echo-bolt", "Spell", json!({}));
     let discarder = ra_card(n, "discarder", "Spell", json!({}));
     let plain_spell = ra_card(n, "plain-spell", "Spell", json!({}));
     let spell_token = ra_card(n, "spell-token", "Spell", token_fields(json!({})));
@@ -238,6 +245,8 @@ fn defs() -> Vec<CardDef> {
         bread,
         bolt,
         cast_on_draw_spell,
+        play_watcher,
+        echo_bolt,
         discarder,
         plain_spell,
         spell_token,
@@ -331,6 +340,42 @@ fn scripts() -> IndexMap<String, CardScripts> {
         both(Script {
             static_flags: Some(StaticFlags {
                 cast_on_draw: Some(true),
+                ..StaticFlags::default()
+            }),
+            cry: Some(ping_enemy_hero(1)),
+            ..Script::default()
+        }),
+    );
+    // R2179002: its controller's `cardPlayed` hits the enemy hero for 2, their `cardResolved` for 4.
+    scripts.insert(
+        PLAY_WATCHER.into(),
+        both(Script {
+            triggers: vec![
+                TriggerDef::new("ra-watch-played", &[GameEventType::CardPlayed], |_ctx, _event| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
+                    ))]
+                })
+                .with_when(|ctx, event| {
+                    matches!(event, GameEvent::CardPlayed { player, .. } if *player == ctx.controller)
+                }),
+                TriggerDef::new("ra-watch-resolved", &[GameEventType::CardResolved], |_ctx, _event| {
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 4 }),
+                    ))]
+                })
+                .with_when(|ctx, event| {
+                    matches!(event, GameEvent::CardResolved { player, .. } if *player == ctx.controller)
+                }),
+            ],
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        ECHO_BOLT.into(),
+        both(Script {
+            static_flags: Some(StaticFlags {
+                echo: Some(1),
                 ..StaticFlags::default()
             }),
             cry: Some(ping_enemy_hero(1)),
@@ -2075,7 +2120,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r40_counts_a_cast_on_draw_cast_as_a_card_played_this_turn_at_cost_0() {
+    fn r40_r2179002_a_cast_on_draw_is_a_free_cast_that_counts_as_no_card_played_this_turn() {
         let mut state = playing("r40");
         let castable = set_library(&mut state, P1, &[CAST_ON_DRAW_SPELL, BODY])
             .into_iter()
@@ -2091,17 +2136,70 @@ mod spec_11_rulings_r1_r42_m3_gate {
             sink.events.clone()
         };
 
-        assert_eq!(state.players.p1.turn_log.cards_played, played_before + 1);
-        assert!(state.players.p1.turn_log.played_ids.contains(&spell.id));
-        assert_eq!(state.counters.played, counter_before + 1);
+        // R2179002: no count of plays takes it (through v0.4.12d it counted as one, R40).
+        assert_eq!(state.players.p1.turn_log.cards_played, played_before);
+        assert!(!state.players.p1.turn_log.played_ids.contains(&spell.id));
+        assert_eq!(state.counters.played, counter_before);
+        assert!(state.players.p1.turn_log.played_by_type.is_none());
+        assert!(state.last_spell.is_none());
+        // Its `cardPlayed` still goes out, free and saying it was cast on draw.
         let played = events_json(&events, GameEventType::CardPlayed)
             .into_iter()
             .find(|event| event["instanceId"] == spell.id.as_str());
-        assert_eq!(played.map(|event| event["costPaid"].clone()), Some(json!(0)));
+        let played = must(played, "the cast's cardPlayed");
+        assert_eq!(played["costPaid"], json!(0));
+        assert_eq!(played["onDraw"], json!(true));
         assert_eq!(state.players.p1.mana.current, mana_before);
         // The script ran and the spell reached the graveyard (R70).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == spell.id));
+    }
+
+    #[test]
+    fn r2179002_no_trigger_answers_a_cast_on_draws_card_played_while_its_card_resolved_is_answered() {
+        let mut state = playing("r2179002-watch");
+        put(&mut state, PLAY_WATCHER, slot(P1, BACKROW, 1), json!({}));
+        set_library(&mut state, P1, &[CAST_ON_DRAW_SPELL, BODY, BODY]);
+        let health_before = state.players.p2.hero.health;
+
+        // p1's next turn draws the Spell, which casts itself: 1 from the Spell and 4 from the watcher's
+        // answer to its resolution, and nothing from the watcher's answer to plays.
+        state = reduce(&state, &action(json!({ "type": "endTurn", "playerId": "p1", "nonce": "r2179002-1" }))).state;
+        let p2_before = state.players.p2.hero.health;
+        state = reduce(&state, &action(json!({ "type": "endTurn", "playerId": "p2", "nonce": "r2179002-2" }))).state;
+        assert_eq!(state.active, P1);
+        assert_eq!(p2_before, health_before);
+        assert_eq!(state.players.p2.hero.health, health_before - 1 - 4);
+        assert_eq!(state.players.p1.turn_log.cards_played, 0);
+
+        // A card played from the hand is answered by both.
+        let bolt = must(in_hand(&mut state, BOLT, P1, 1).into_iter().next(), "a bolt");
+        let before = state.players.p2.hero.health;
+        state = reduce(
+            &state,
+            &action(json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-3" })),
+        )
+        .state;
+        assert_eq!(state.players.p2.hero.health, before - 2 - 2 - 4);
+        assert_eq!(state.players.p1.turn_log.cards_played, 1);
+    }
+
+    #[test]
+    fn r2179002_an_echo_repeat_is_no_play_counted_or_answered_the_spell_is_played_once() {
+        let mut state = playing("r2179002-echo");
+        put(&mut state, PLAY_WATCHER, slot(P1, BACKROW, 1), json!({}));
+        let bolt = must(in_hand(&mut state, ECHO_BOLT, P1, 1).into_iter().next(), "an echo bolt");
+        let before = state.players.p2.hero.health;
+        let result = reduce(
+            &state,
+            &action(json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1", "nonce": "r2179002-echo" })),
+        );
+        let state = result.state;
+        // Two resolutions of 1, one play answered for 2 and one resolution for 4.
+        assert_eq!(state.players.p2.hero.health, before - 1 - 1 - 2 - 4);
+        assert_eq!(state.players.p1.turn_log.cards_played, 1);
+        assert_eq!(state.counters.played, 1);
+        assert_eq!(events_json(&result.events, GameEventType::CardPlayed).len(), 1);
     }
 
     #[test]

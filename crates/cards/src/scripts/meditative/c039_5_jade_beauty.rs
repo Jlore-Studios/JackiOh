@@ -144,11 +144,9 @@ mod tests {
             .filter(|event| matches!(event, GameEvent::Destroyed { .. }))
             .count();
         assert!(destroyed >= 3, "all three marked Units are destroyed");
-        // The Saintess's Death fired: her Radiant face turns every card in p2's hand Radiant.
-        assert!(
-            s.hand(P2).iter().all(|card| card.radiant),
-            "the Saintess's Death fired"
-        );
+        // The Radiant Saintess's Death reaches no hand since #2179, and her Reborn brings her back.
+        assert!(!s.hand(P2).iter().any(|card| card.radiant), "no hand card made Radiant");
+        assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(SAINTESS.to_string()));
         // The Defender's Reborn brought it back at 1 health (§4.5 step 4), before the Saintess's
         // Death resolved, so her "your other Units" made it Radiant too: a 2/2 at 1 health.
         let reborn = s.unit(P2, 2).expect("the Defender's Reborn body");

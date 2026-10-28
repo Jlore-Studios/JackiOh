@@ -187,19 +187,20 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     }
 
     #[test]
-    fn r46_on_an_indestructible_unit_in_defense_position_still_switches_it_and_says_so() {
+    fn r46_r2179000_an_indestructible_unit_is_never_in_defense_so_the_knock_down_finds_it_in_attack_position() {
+        // Set up in Defense Position, which an Indestructible unit may not be (R2179000): it stands in
+        // Attack Position before anything is played, so the knock-down has no switch to make or report.
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }], "library": LIBRARY },
         }));
         let rock = s.card(ROCK).clone();
+        assert_eq!(rock.position, Some(Position::Atk));
         s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
 
+        s.expect_in_zone(&rock, "field");
         assert_eq!(s.card(&rock).position, Some(Position::Atk));
-        assert!(s.last_events().contains(&GameEvent::PositionSwitched {
-            instance_id: rock.id.clone(),
-            position: Position::Atk
-        }));
+        assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::PositionSwitched { .. })));
     }
 
     // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's

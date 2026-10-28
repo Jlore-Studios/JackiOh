@@ -10,7 +10,8 @@
 //! flag), played that once: a card played again later in the turn is the turn's first card no more.
 //! The copy is a fresh card of the definition the event names (R71), so a fused card copies its
 //! transient definition (R77) and a card that has ceased to exist since (Core #41 Sheepish) still
-//! copies. A cast is a play (R70); a countered card never reached the log (R448). Double Header does
+//! copies. A cast is a play (R70), a cast on draw none (R2179002); a countered card never reached the
+//! log (R448). Double Header does
 //! not answer its own play (R119), so the turn it lands copies nothing (R826).
 
 use jackioh_engine::effects::add_to_hand;
@@ -184,7 +185,7 @@ mod tests {
         }
 
         #[test]
-        fn r826_a_cast_on_draw_first_card_counts() {
+        fn r826_r2179002_a_cast_on_draw_card_is_no_play_so_the_first_card_played_after_it_is_copied() {
             let mut s = scenario(json!({
                 "p1": side(json!({
                     "backrow": [ID],
@@ -194,17 +195,17 @@ mod tests {
                 })),
                 "p2": side(json!({})),
             }));
-            // The draw casts the Jelly Bean free (R70): the turn's first card, though never in hand.
-            // Its id is taken first: by its definition the copy in hand would answer.
+            // The draw casts the Jelly Bean free, no play (through v0.4.12d the turn's first card, R70).
             let jelly = s.card(JELLY).id.clone();
             s.start_turn();
             s.expect_in_zone(&jelly, "graveyard");
             s.expect_health(P1, 23);
+            assert!(copies(&s, P1).is_empty());
+            s.play(VANILLA, json!({ "zone": 1 }));
             let copies = copies(&s, P1);
             assert_eq!(copies.len(), 1);
-            assert_eq!(copies[0].def_id, JELLY);
+            assert_eq!(copies[0].def_id, VANILLA);
             assert_eq!(copies[0].cost_override, Some(0));
-            assert!(!copies[0].radiant);
         }
 
         #[test]

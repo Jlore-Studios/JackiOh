@@ -295,10 +295,12 @@ pub fn why_cannot_switch_in(
         return Err(EngineError::new("that unit has already acted this turn"));
     }
     // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect, nor can
-    // any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor).
+    // any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor an
+    // Indestructible one, whatever made it so (R2179000).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
-            || crate::restrictions::defense_barred(auras.state()))
+            || crate::restrictions::defense_barred(auras.state())
+            || auras.unit_has(unit, KeywordKind::Indestructible))
     {
         return Err(EngineError::new("that unit cannot be in Defense Position"));
     }

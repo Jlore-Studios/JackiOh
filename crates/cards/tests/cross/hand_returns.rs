@@ -332,7 +332,8 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
         // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther (5/4)
         // attack it; the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top card is a
         // cast-on-draw Spell with #23 Reoccurring Dream's "End of turn: returns from the GY to your hand"
-        // (the flag R155 writes), so p1 casts it on p2's turn (§2.4, R70).
+        // (the flag R155 writes), so p1 casts it on p2's turn (§2.4, R70). A cast on draw is no play
+        // (R2179002), so cleanup finds its flag in the graveyard rather than in a turn log.
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },

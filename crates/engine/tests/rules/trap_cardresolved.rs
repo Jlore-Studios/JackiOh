@@ -365,6 +365,7 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             from: None,
             arrived_during: None,
             exits_from: None,
+            on_draw: None,
         };
         assert!(traps_watching(&state, &play).is_empty());
         let mut answered = sink_for(&state);

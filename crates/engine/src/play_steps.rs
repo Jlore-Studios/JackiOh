@@ -1221,6 +1221,11 @@ fn feng_shui_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 /// only ran now could not tell it. Setting the flag is §6.3's Make Radiant: in hand the card's stats
 /// and text swap on the next read (§5.2, R74), and the event says so.
 fn gifted_program_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    // R2179002: a cast on draw is no card played, so it is not the first one (and is not recorded as
+    // one, so the first card played is still to come) and spends no "next card you play".
+    if cast_on_draw(run) {
+        return;
+    }
     let Some(card) = snapshot(sink.state, &run.instance_id) else {
         return;
     };
@@ -1564,6 +1569,12 @@ fn claim_win_on_play(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &
     sink.state.players[player].won_by_effect = Some(true);
 }
 
+/// R2179002: whether this run is a cast on draw — the cast §2.4's draw makes of the card it drew
+/// (`PlayRun.drawn_as`), which is a cast and no play: it is counted as none and answered as none.
+pub(crate) fn cast_on_draw(run: &PlayRun) -> bool {
+    run.drawn_as.is_some()
+}
+
 fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, former_id: Option<String>) {
     // R119: what has already arrived on the field during the play — a tributed unit's Death at step 2
     // (#22's copies of a Sheepish) — does not answer it, which the step-4 pair names, as step 7's does.
@@ -1593,6 +1604,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         },
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
+        on_draw: cast_on_draw(run).then_some(true),
     });
     if let Some(zone) = run.zone {
         sink.events.push(GameEvent::Summoned {
@@ -1847,18 +1859,21 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         run.standing_from = Some(exit_mark(sink.state));
     }
 
-    {
-        let side = &mut sink.state.players[run.player];
-        side.turn_log.played_ids.push(card.id.clone());
-        side.turn_log.cards_played += 1;
-        // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
-        let mut costs = side.turn_log.costs_paid.clone().unwrap_or_default();
-        costs.push(run.cost_paid);
-        side.turn_log.costs_paid = Some(costs);
+    // R2179002: a cast on draw is a cast and no play, so none of a play's counts and records takes it.
+    if !cast_on_draw(run) {
+        {
+            let side = &mut sink.state.players[run.player];
+            side.turn_log.played_ids.push(card.id.clone());
+            side.turn_log.cards_played += 1;
+            // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
+            let mut costs = side.turn_log.costs_paid.clone().unwrap_or_default();
+            costs.push(run.cost_paid);
+            side.turn_log.costs_paid = Some(costs);
+        }
+        sink.state.counters.played += 1;
+        // R429: a card that counts its own plays counts this one here, with every other count of it.
+        crate::times_played::count_play(sink.state, &card);
     }
-    sink.state.counters.played += 1;
-    // R429: a card that counts its own plays counts this one here, with every other count of it.
-    crate::times_played::count_play(sink.state, &card);
     let card = live(sink.state, &card);
     // R673: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
     if run.cast != Some(true) {
@@ -1866,7 +1881,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     }
     run.radiant = Some(card.radiant);
     // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.
-    record_play(sink.state, run.player, &card);
+    if !cast_on_draw(run) {
+        record_play(sink.state, run.player, &card);
+    }
 
     played_events(sink, run, &card, former_id);
     // R1870000: a card carrying the win wins its player the game as it is played, a cast too (R70); the
@@ -2883,6 +2900,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             placed_from: run.placed_from,
             arrived_during: Some(arrived),
             targeted,
+            on_draw: cast_on_draw(run),
         },
     );
     if landing {

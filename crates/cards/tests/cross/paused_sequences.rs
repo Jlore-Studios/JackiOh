@@ -1703,7 +1703,7 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
     use super::*;
 
     #[test]
-    fn r122_the_cast_on_draw_card_under_a_cast_that_asked_for_its_target_is_drawn_and_cast_before_bear_honeypot_answers_the_first_cast_r113_r70_2_4()
+    fn r122_r2179002_the_cast_on_draw_card_under_a_cast_that_asked_for_its_target_is_drawn_and_cast_in_the_same_draw_and_bear_honeypot_answers_neither_r113_r70_2_4()
      {
         register_all();
         let mut s = scenario(json!({
@@ -1780,10 +1780,9 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
 
         // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
         // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
-        // not with the resolution loop. The traps meet the first cast's resolution at the sweep's own
-        // announce (§10.5 step 3a), the first window a cast opens, as a play's does (R70, R448): every
-        // event so far reaches the traps there, before the sweep moves or resolves. So Bear Honeypot's
-        // tokens arrive before the sweep's 1 damage to each enemy unit, and it hits them.
+        // not with the resolution loop. A cast on draw is no play (R2179002), so p2's Bear Honeypot
+        // answers neither cast (through v0.4.12d it met the first at the sweep's announce and its
+        // tokens took the sweep's 1 damage).
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let types = types_of(&events);
         let sweep_drawn = find_index(
@@ -1798,20 +1797,16 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
             &events,
             |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == second.id),
         );
-        let trap_fired = type_index(&types, "trapFired");
         assert!(sweep_drawn >= 0, "events: {}", types.join(", "));
         assert!(sweep_announced > sweep_drawn, "events: {}", types.join(", "));
-        assert!(trap_fired > sweep_announced, "events: {}", types.join(", "));
-        assert!(sweep_cast > trap_fired, "events: {}", types.join(", "));
+        assert!(sweep_cast > sweep_announced, "events: {}", types.join(", "));
+        assert_eq!(type_index(&types, "trapFired"), -1, "events: {}", types.join(", "));
         let tokens: Vec<CardInstance> = [1, 2, 3, 4, 5]
             .into_iter()
             .filter_map(|lane| s.unit(P2, lane))
             .filter(|unit| unit.def_id == RUSH_TOKEN)
             .collect();
-        assert_eq!(tokens.len(), 2);
-        for token in &tokens {
-            assert_eq!(token.damage, 1);
-        }
+        assert!(tokens.is_empty());
     }
 }
 
@@ -3196,7 +3191,7 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
     use super::*;
 
     #[test]
-    fn r70_a_cast_s_step_4_window_inside_a_spell_s_draw_does_not_offer_the_spell_s_own_play_to_the_triggers_a_second_time_10_3()
+    fn r70_r2179002_a_cast_s_step_4_window_inside_a_spell_s_draw_does_not_offer_the_spell_s_own_play_to_the_triggers_a_second_time_10_3()
      {
         register_all();
         // The cast runs inside #5 Stockpile's "draw 2", whose context is the only sink its step 4 has.
@@ -3238,7 +3233,8 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
 
         g.play("core-005", json!({}));
 
-        // Two plays — Stockpile and the cast Unit (R70) — so two hits, not three.
+        // One play, Stockpile: the cast Unit is logged (`cardPlayed`) but is no play and wakes no trigger
+        // (R2179002; through v0.4.12d it was the second, R70). So one hit, not two.
         let played: Vec<String> = g
             .events()
             .iter()
@@ -3248,7 +3244,7 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
             })
             .collect();
         assert!(played.contains(&cod.id));
-        g.expect_health(P2, 28);
+        g.expect_health(P2, 29);
     }
 }
 

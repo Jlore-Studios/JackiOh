@@ -8,8 +8,8 @@
 //!
 //! THE COST (R55, R65, §10.9): the `cost` hook returns the printed 100 (`query_cost`, never
 //! restated) minus `state.counters`' four counts (§10.1), floored at 0, recomputed on every read;
-//! `costMod`, discounts and #77's clamp are `effectiveCost`'s. The engine counts plays, casts (R70)
-//! and exiles (R11); playing it counts after the cost is paid (§10.5 steps 2 and 4).
+//! `costMod`, discounts and #77's clamp are `effectiveCost`'s. The engine counts plays, casts (R70, not a
+//! cast on draw, R2179002) and exiles (R11); playing it counts after the cost is paid (§10.5 steps 2 and 4).
 
 use jackioh_engine::prelude::*;
 
@@ -91,7 +91,7 @@ mod tests {
     /// #36 Magic Jammed destroys a chosen backrow card; #72 Reminisce exiles itself on resolving.
     const JAMMED: &str = "core-036";
     const REMINISCE: &str = "core-072";
-    /// #21 Hinder casts itself on the draw (R40, R70), so it counts as a play nobody played.
+    /// #21 Hinder casts itself on the draw (R40, R70), which is no play (R2179002).
     const HINDER: &str = "core-021";
 
     /// R55's four game counters.
@@ -391,16 +391,17 @@ mod tests {
         }
 
         #[test]
-        fn r70_a_cast_counts_as_a_play_so_a_card_nobody_played_still_makes_the_void_cheaper() {
+        fn r2179002_a_cast_on_draw_is_no_play_so_only_its_draw_makes_the_void_cheaper() {
             crate::register_all();
-            // #21 Hinder casts itself on the draw. R70: "counts as a play for every rule that counts or
-            // reacts to plays … (Ceaseless Void)".
+            // #21 Hinder casts itself on the draw: through v0.4.12d that counted as a play (R70), now as
+            // none (R2179002).
             let mut s = scenario(json!({
                 "seed": "void-cast",
                 // The Radiant face discards nothing (R431), so the cast asks no question.
                 "p1": { "hand": [VOID, SPARE], "library": [{ "def": HINDER, "radiant": true }, SPARE, SPARE], "mana": 4 },
                 "p2": { "hand": [SPARE] },
             }));
+            let played = s.state().counters.played;
             s.start_turn();
 
             assert!(
@@ -408,8 +409,7 @@ mod tests {
                     .iter()
                     .any(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER))
             );
-            assert!(s.state().counters.played >= 1);
-            // …and no `play` action was ever sent: the counter moved on a cast alone.
+            assert_eq!(s.state().counters.played, played);
             assert_eq!(
                 effective_cost(s.state(), &held(&s), Default::default()),
                 PRINTED - total_of(&s.state().counters)

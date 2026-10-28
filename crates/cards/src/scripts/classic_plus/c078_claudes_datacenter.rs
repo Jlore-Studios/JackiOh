@@ -1,14 +1,18 @@
 //! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (3) Field Spell, Legendary.
-//!   Base:    "End of Turn: Add a random AI generated card to your hand. It costs (0)."
+//!   Base:    "Activate: Add a random AI generated card to your hand. It costs ({setCost})."
 //!   Radiant: "… random Radiant AI generated card …"
-//!   Engine:  "Its controller's end of turn (R62). The pool is the AI generated cards (T-AI-1 to
-//!            T-AI-10, and M+ #1.1 to #1.4 since Meditative+ shipped and #1563, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
-//!            it (§2.4). Tunes: setCost 0 ↓ (R1748003); the count is fixed at one (balance patch 1)."
+//!   Engine:  "Activate (§6.2, R384): once per turn, its controller's, in their main phase, and no play.
+//!            The pool is the AI generated cards (T-AI-1 to T-AI-10, and M+ #1.1 to #1.4 since
+//!            Meditative+ shipped and #1563, §7), named by the text, so tokens reach it; `costOverride`
+//!            setCost; the hand cap burns it (§2.4). Tunes: setCost 0 ↓ (R1748003); the count is fixed
+//!            at one (balance patch 1)."
 //!
-//! An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
-//! §6.3's Add to hand, so a full hand burns it, and the opponent sees the sentinel (R97).
+//! Each card is its own pick (R60) through §6.3's Add to hand, so a full hand burns it, and the opponent
+//! sees the sentinel (R97).
 //!
-//! Through v0.4.4b the (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
+//! Issue #2179 made it an Activate; through v0.4.12d it added the card at its controller's end of turn
+//! (R62), which `script_v0_4_12d` keeps, and through v0.4.4b that end of turn's (0) was printed, not
+//! declared, which `script_v0_4_4b` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -23,43 +27,79 @@ fn ai_pool() -> Value {
 /// §8.7: "It costs (0)", as v0.4.4b printed it before it was the declared `setCost` (R1748003).
 const FREE: i32 = 0;
 
-/// The printed "a random AI generated card": one card per end of turn.
+/// The printed "a random AI generated card": one card per Activate (per end of turn through v0.4.12d).
 const CARDS: i32 = 1;
 
-/// One face; the card's price is the declared `setCost`, or the printed (0) when `declared` is off.
-fn datacenter(radiant: bool, declared: bool) -> Script {
+/// The add; the card's price is the declared `setCost`, or the printed (0) when `declared` is off.
+fn add_ai_card(ctx: &EffectContext<'_>, radiant: bool, declared: bool) -> Vec<Effect> {
+    let cost = if declared { param(ctx, "setCost") } else { FREE };
+    let mut args = json!({ "query": ai_pool(), "count": CARDS, "costOverride": cost });
+    if radiant {
+        args["radiant"] = json!(radiant);
+    }
+    vec![add_random_from_catalog(json_as(args))]
+}
+
+/// One face since #2179: the add is its Activate, once per turn (R384).
+fn datacenter(radiant: bool) -> Script {
     Script {
-        end_of_turn: Some(hook(move |ctx| {
-            let cost = if declared { param(&*ctx, "setCost") } else { FREE };
-            let mut args = json!({ "query": ai_pool(), "count": CARDS, "costOverride": cost });
-            if radiant {
-                args["radiant"] = json!(radiant);
-            }
-            vec![add_random_from_catalog(json_as(args))]
-        })),
+        activations: vec![ActivationDecl {
+            id: "datacenter".to_string(),
+            label: if radiant {
+                "Add a random Radiant AI generated card to your hand".to_string()
+            } else {
+                "Add a random AI generated card to your hand".to_string()
+            },
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![],
+            can_activate: None,
+            has: None,
+            run: hook(move |ctx| add_ai_card(ctx, radiant, true)),
+        }],
+        ..Script::default()
+    }
+}
+
+/// One face through v0.4.12d: the add at its controller's end of turn (R62).
+fn datacenter_at_end_of_turn(radiant: bool, declared: bool) -> Script {
+    Script {
+        end_of_turn: Some(hook(move |ctx| add_ai_card(ctx, radiant, declared))),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: datacenter(false, true),
-        radiant: datacenter(true, true),
+        base: datacenter(false),
+        radiant: datacenter(true),
+    }
+}
+
+/// R767000: through v0.4.12d it added its card at the end of its controller's turn; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: datacenter_at_end_of_turn(false, true),
+        radiant: datacenter_at_end_of_turn(true, true),
     }
 }
 
 /// R767000: through v0.4.4b its card's (0) was printed; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_4_4b() -> CardScripts {
     CardScripts {
-        base: datacenter(false, false),
-        radiant: datacenter(true, false),
+        base: datacenter_at_end_of_turn(false, false),
+        radiant: datacenter_at_end_of_turn(true, false),
     }
 }
 
-// C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: at each end
-// of your turn adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 to #1.4, the pool its text names) that costs
-// (0) to your hand; nothing at the opponent's end; a full hand burns it; hidden from the opponent (R97);
-// the count is fixed at 1 with no tunable (balance patch 1); radiant the card is Radiant".
+// C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: its Activate,
+// once per turn, adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 to #1.4, the pool its
+// text names) that costs (0) to your hand; nothing at either end of turn; a full hand burns it; hidden
+// from the opponent (R97); the count is fixed at 1 with no tunable (balance patch 1); radiant the card is
+// Radiant".
+
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -116,6 +156,11 @@ mod tests {
         serde_json::to_string(&s.view(player)).expect("serialises")
     }
 
+    /// Its Activate (R384).
+    fn activate(s: &mut Scenario) -> &mut Scenario {
+        s.activate(DATACENTER, json!({}))
+    }
+
     mod c_n78_claudes_datacenter {
         use super::*;
 
@@ -139,7 +184,7 @@ mod tests {
             // Nerf raises it.
             assert!(!crate::can_upgrade_number(&s, DATACENTER, "setCost"));
             assert_eq!(crate::degrade_number(&mut s, DATACENTER, "setCost"), 1);
-            s.end_turn();
+            activate(&mut s);
             let added = ai_cards_in(&s);
             assert_eq!(added.len(), 1);
             assert_eq!(added[0].cost_override, Some(1));
@@ -175,9 +220,9 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r62_at_the_end_of_your_turn_adds_a_random_ai_generated_card_that_costs_0() {
+            fn r384_its_activate_adds_a_random_ai_generated_card_that_costs_0() {
                 let mut s = setup(false, 1, None);
-                s.end_turn();
+                activate(&mut s);
                 let added = ai_cards_in(&s);
                 assert_eq!(added.len(), 1);
                 assert_eq!(added[0].cost_override, Some(0));
@@ -195,7 +240,7 @@ mod tests {
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");
                     let mut s = setup(false, 1, Some(&seed));
-                    s.end_turn();
+                    activate(&mut s);
                     let added = ai_cards_in(&s);
                     assert_eq!(added.len(), 1);
                     seen.insert(added.first().map(|card| card.def_id.clone()).unwrap_or_default());
@@ -204,29 +249,25 @@ mod tests {
             }
 
             #[test]
-            fn s6_2_nothing_at_the_opponents_end_of_turn() {
+            fn r384_once_per_turn_and_never_at_an_end_of_turn() {
                 let mut s = setup(false, 1, None);
-                s.end_turn();
+                activate(&mut s);
+                s.expect_refused(|s| s.activate(DATACENTER, json!({})));
                 assert_eq!(ai_cards_in(&s).len(), 1);
-                s.end_turn();
+                // Neither end of turn adds one; it is back on p1's next turn.
+                s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
-                // p2's end of turn added nothing; p1 drew one Timmy at the start of its turn.
                 assert_eq!(ai_cards_in(&s).len(), 1);
+                activate(&mut s);
+                assert_eq!(ai_cards_in(&s).len(), 2);
                 let ai = ai_ids();
                 assert!(!s.hand(P2).iter().any(|card| ai.contains(&card.def_id)));
             }
 
             #[test]
-            fn adds_again_at_each_end_of_your_turn() {
-                let mut s = setup(false, 1, None);
-                s.end_turn().end_turn().end_turn();
-                assert_eq!(ai_cards_in(&s).len(), 2);
-            }
-
-            #[test]
             fn s2_4_a_full_hand_burns_it() {
                 let mut s = setup(false, 10, None);
-                s.end_turn();
+                activate(&mut s);
                 assert!(ai_cards_in(&s).is_empty());
                 let burned: Vec<&GameEvent> =
                     s.events().iter().filter(|event| event.event_type() == GameEventType::Burned).collect();
@@ -241,7 +282,7 @@ mod tests {
             #[test]
             fn r97_hidden_from_the_opponent_their_view_never_names_the_card() {
                 let mut s = setup(false, 1, None);
-                s.end_turn();
+                activate(&mut s);
                 let added = ai_cards_in(&s).into_iter().next();
                 let theirs = view_text(&s, P2);
                 assert!(!theirs.contains(added.as_ref().map(|card| card.id.as_str()).unwrap_or("?")));
@@ -252,7 +293,7 @@ mod tests {
             fn r386_the_count_is_fixed_at_1_an_upgrade_still_adds_exactly_one_card() {
                 let mut s = setup(false, 1, None);
                 step_param(s.card_mut(DATACENTER), "cards", 1);
-                s.end_turn();
+                activate(&mut s);
                 assert_eq!(ai_cards_in(&s).len(), 1);
                 assert!(ai_cards_in(&s).iter().all(|card| card.cost_override == Some(0)));
             }
@@ -262,9 +303,9 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r62_the_card_it_adds_is_radiant_and_costs_0() {
+            fn r384_the_card_it_adds_is_radiant_and_costs_0() {
                 let mut s = setup(true, 1, None);
-                s.end_turn();
+                activate(&mut s);
                 let added = ai_cards_in(&s);
                 assert_eq!(added.len(), 1);
                 assert!(added[0].radiant);
@@ -274,9 +315,28 @@ mod tests {
             #[test]
             fn r97_hidden_from_the_opponent() {
                 let mut s = setup(true, 1, None);
-                s.end_turn();
+                activate(&mut s);
                 let added = ai_cards_in(&s).into_iter().next().map(|card| card.id).unwrap_or_else(|| "?".to_string());
                 assert!(!view_text(&s, P2).contains(&added));
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, which added at its controller's
+        /// end of turn.
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_r62_a_game_on_v0_4_12d_adds_at_the_end_of_your_turn_only() {
+                crate::under_kept(DATACENTER, super::super::super::script_v0_4_12d(), || {
+                    let mut s = setup(false, 1, None);
+                    s.end_turn();
+                    assert_eq!(ai_cards_in(&s).len(), 1);
+                    s.end_turn();
+                    assert_eq!(ai_cards_in(&s).len(), 1);
+                    s.end_turn();
+                    assert_eq!(ai_cards_in(&s).len(), 2);
+                });
             }
         }
     }

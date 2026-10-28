@@ -1,6 +1,7 @@
-//! C #35 Prep (SPEC §8.6 row 35). (0) Spell, Common.
-//!   Base:    "Your next Spell this turn costs ({discount}) less." — discount 2
-//!   Radiant: "Your next Spell this turn costs ({discount}) less." — discount 4
+//! C #35 Prep (SPEC §8.6 row 35). (0) Spell, Common; Embiggened (2) since issue #2179.
+//!   Base:    "Your next Spell this turn costs ({discount}) less.
+//!             Embiggened (2): Also draw the highest cost Spell from your deck." — discount 2
+//!   Radiant: the same — discount 4
 //!   Engine:  "#35 Lunar Eclipse's modifier (`costDiscount`, `onlyType: "Spell"`, this turn, consumed
 //!            on use or at cleanup; Cost, §6.3, R65). Tunes: discount 2 ↑."
 //!
@@ -9,32 +10,78 @@
 //! priced) and `{ until: "thisTurn" }` (§2.2's cleanup takes it unused). R65 floors the price at (0).
 //! R70: a cast pays nothing and never uses a discount, so it is left for the next Spell played.
 //! The amount is the declared `discount` (R386), read through `param`; both faces run this script.
+//!
+//! The Embiggened version (§6.3 Embiggen, R81: `instance.embiggened`) then draws the Spell (the card
+//! type, not a Field Spell) of the highest current cost in its controller's library, as #30 Archivist
+//! draws its highest card (R24: R65's costs, ties to the card nearest the top), by §6.3's
+//! `drawFromLibrary`, so it is a draw: R55's counter, the hand cap, the cast-on-draw path. A library
+//! with no Spell draws nothing. Through v0.4.12d it had one price and no draw, which `script_v0_4_12d`
+//! keeps (R767000).
 
+use jackioh_engine::effects::{add_player_modifier, draw_from_library};
 use jackioh_engine::prelude::*;
-use jackioh_engine::effects::add_player_modifier;
 
 pub const ID: &str = "classic-035";
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|ctx| {
-            vec![add_player_modifier(json_as(json!({
-                "player": "self",
-                "mod": {
-                    "kind": "costDiscount",
-                    "amount": param(ctx, "discount"),
-                    // "your next Spell": Spells only, and only the first one.
-                    "onlyType": "Spell",
-                    "oncePerTurn": true,
-                    // "this turn": §2.2's cleanup takes it if unused.
-                    "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
-                },
-            })))]
+/// "Your next Spell this turn costs ({discount}) less."
+fn discount(ctx: &EffectContext<'_>) -> Effect {
+    add_player_modifier(json_as(json!({
+        "player": "self",
+        "mod": {
+            "kind": "costDiscount",
+            "amount": param(ctx, "discount"),
+            // "your next Spell": Spells only, and only the first one.
+            "onlyType": "Spell",
+            "oncePerTurn": true,
+            // "this turn": §2.2's cleanup takes it if unused.
+            "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+        },
+    })))
+}
+
+/// R24: the library Spell with the highest current cost (R65), ties going to the card nearest the top.
+fn highest_spell(ctx: &EffectContext<'_>) -> Option<CardInstance> {
+    let mut best: Option<CardInstance> = None;
+    let mut best_cost = 0;
+    for card in zone_cards(ctx.state, ctx.controller, OffFieldZone::Library) {
+        if card_type_of(ctx.state, &card) != CardType::Spell {
+            continue;
+        }
+        let cost = effective_cost(ctx.state, &card, Default::default());
+        // Strict, and top down, so a tie keeps the card already held — the one nearer the top (R24).
+        if best.is_none() || cost > best_cost {
+            best = Some(card.clone());
+            best_cost = cost;
+        }
+    }
+    best
+}
+
+fn prep(draws: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut effects = vec![discount(ctx)];
+            if draws
+                && ctx.embiggened
+                && let Some(card) = highest_spell(ctx)
+            {
+                effects.push(draw_from_library(json_as(json!({ "instanceId": card.id }))));
+            }
+            effects
         })),
         ..Script::default()
-    };
+    }
+}
 
+pub fn script() -> CardScripts {
     // The same script: the Radiant face's 4 is its declared `discount`, which `param` reads off the running face.
+    let base = prep(true);
+    CardScripts { radiant: base.clone(), base }
+}
+
+/// R767000: through v0.4.12d it had one price and drew nothing; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    let base = prep(false);
     CardScripts { radiant: base.clone(), base }
 }
 
@@ -280,6 +327,95 @@ mod tests {
 
                 assert_eq!(paid_for(&s, FLOOD), vec![1]);
             }
+        }
+    }
+
+    /// Issue #2179's Embiggened version: the discount, and the highest cost Spell from the deck (R24).
+    mod c_35_prep_embiggened {
+        use super::*;
+
+        fn drawn(s: &Scenario) -> Vec<String> {
+            s.events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Drawn { player: PlayerId::P1, instance_id, .. } => Some(instance_id.clone()),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        #[test]
+        fn r81_r24_embiggened_it_draws_the_highest_cost_spell_and_the_discount_still_applies() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            let flood = s.card(FLOOD).id.clone();
+
+            s.play(PREP, json!({ "embiggen": true }));
+            assert_eq!(drawn(&s), vec![flood.clone()]);
+            s.expect_in_zone(flood.as_str(), "hand");
+            // The (4) Flood is the next Spell: it costs (2) less.
+            s.play(flood.as_str(), json!({}));
+            assert_eq!(paid_for(&s, FLOOD), vec![2]);
+        }
+
+        #[test]
+        fn r24_a_tie_goes_to_the_spell_nearest_the_top() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [PREP, ANCHOR], "library": [STOCKPILE, FLOOD, FLOOD], "mana": 6 },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            let top = s.pile(PlayerId::P1, "library")[1].id.clone();
+            s.play(PREP, json!({ "embiggen": true }));
+            assert_eq!(drawn(&s), vec![top]);
+        }
+
+        #[test]
+        fn a_deck_with_no_spell_draws_nothing_and_the_plain_version_never_draws() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, MENACE, ARMOR], "mana": 6 },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            s.play(PREP, json!({ "embiggen": true }));
+            assert!(drawn(&s).is_empty());
+
+            let mut plain = scenario(json!({
+                "p1": { "hand": [PREP, ANCHOR], "library": [FLOOD, STOCKPILE], "mana": 6 },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            plain.play(PREP, json!({}));
+            assert!(drawn(&plain).is_empty());
+        }
+
+        #[test]
+        fn r81_radiant_embiggened_it_draws_the_spell_which_costs_4_less() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [STOCKPILE, FLOOD], "mana": 6 },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            let flood = s.card(FLOOD).id.clone();
+            s.play(PREP, json!({ "embiggen": true }));
+            assert_eq!(drawn(&s), vec![flood.clone()]);
+            s.play(flood.as_str(), json!({}));
+            assert_eq!(paid_for(&s, FLOOD), vec![0]);
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, which drew nothing.
+        #[test]
+        fn r767000_a_game_on_v0_4_12d_draws_nothing() {
+            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_4_12d(), || {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [PREP, ANCHOR], "library": [STOCKPILE, FLOOD], "mana": 6 },
+                    "p2": { "hand": [ANCHOR] },
+                }));
+                s.play(PREP, json!({ "embiggen": true }));
+                assert!(drawn(&s).is_empty());
+            });
         }
     }
 }

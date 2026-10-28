@@ -97,6 +97,12 @@ tuning?: Tuning,
  */
 brittle?: BrittleCounter, 
 /**
+ * R2179001: what is left of the card's Temporary X once its first end of turn in a hand has
+ * counted it down (`temporary.rs`); before that the keyword's own number is the count. Kept in
+ * every zone like Brittle's count, though it counts only in a hand; a copy never inherits it (R57).
+ */
+temporary?: number, 
+/**
  * B5 E39: lasting instructions riding the card through every zone (`enchantments.rs`).
  */
 enchantments?: Array<Enchantment>, 

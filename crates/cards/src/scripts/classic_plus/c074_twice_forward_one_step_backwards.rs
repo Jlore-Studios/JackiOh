@@ -6,7 +6,8 @@
 //!   Engine:  A Field Trap (R425), so it is not consumed when it fires. No Brittle while unrevealed
 //!            (R687); it turns face-up at its first activation (R33), its play count read by its
 //!            controller alone until then (a card destroyed unrevealed reads public, R97). It counts the
-//!            opponent's plays since it was set (casts count, R70; a countered card never played). On
+//!            opponent's plays since it was set (casts count, R70, a cast on draw not, R2179002; a
+//!            countered card never played). On
 //!            each even count, once that card resolves (§10.5 step 7), a copy of its definition is fused
 //!            into this (Fuse, §6.3, R77, R102; a Radiant copy on the Radiant face): this is the kept
 //!            instance and stays a Field Trap, and the opponent's card is never consumed, wherever it
@@ -324,18 +325,22 @@ mod tests {
             }
 
             #[test]
-            fn r70_a_cast_is_a_play_the_cast_on_draw_card_their_turns_draw_casts_is_their_1st_so_the_next_play_is_fused() {
+            fn r2179002_the_cast_on_draw_card_their_turns_draw_casts_is_no_play_so_their_2nd_play_is_fused() {
                 let mut library = vec![json!({ "def": HINDER, "radiant": true })];
                 library.extend(deck(6, TIMMY));
                 let mut s = set_then_their_turn(
                     false,
                     json!({}),
-                    json!({ "hand": [STOCKPILE, VANILLA], "library": library }),
+                    json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                assert_eq!(plays_of(&s), 1);
+                // Through v0.4.12d the Hinder was their 1st play (R70).
+                assert_eq!(plays_of(&s), 0);
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
+                s.play(RAPID, json!({}));
+                assert_eq!(plays_of(&s), 1);
+                assert_eq!(fused_events(&s), 0);
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(plays_of(&s), 2);
                 let fused: Vec<String> = s
@@ -354,14 +359,14 @@ mod tests {
             }
 
             #[test]
-            fn r70_r425_a_card_their_play_casts_is_the_later_play_the_hinder_stockpile_draws_is_their_2nd_fused_once_it_resolves()
+            fn r2179002_r425_the_hinder_their_play_draws_casts_is_no_play_their_next_card_is_the_2nd_fused_once_it_resolves()
              {
                 let mut library = vec![json!(TIMMY), json!({ "def": HINDER, "radiant": true })];
                 library.extend(deck(6, TIMMY));
                 let mut s = set_then_their_turn(
                     false,
                     json!({}),
-                    json!({ "hand": [STOCKPILE, VANILLA], "library": library }),
+                    json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
                 assert_eq!(plays_of(&s), 0);
@@ -374,15 +379,19 @@ mod tests {
                         _ => None,
                     })
                     .collect();
+                // The Hinder is logged as cast (`onDraw`), but it is no play: through v0.4.12d it was the 2nd (R70).
                 assert_eq!(played, vec![STOCKPILE, HINDER]);
+                assert_eq!(plays_of(&s), 1);
+                assert_eq!(fused_events(&s), 0);
+                s.play(RAPID, json!({}));
                 assert_eq!(plays_of(&s), 2);
                 assert_eq!(
                     ingredient_ids(&s, &trap_of(&s).def_id),
-                    Some(vec![HINDER.to_string(), FORWARD.to_string()])
+                    Some(vec![RAPID.to_string(), FORWARD.to_string()])
                 );
-                // Both rest in p2's graveyard: a copy of the Hinder was fused in, never the card.
+                // The Hinder and the Stockpile rest in p2's graveyard: nothing of theirs was consumed.
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
-                assert_eq!(graveyard, vec![HINDER, STOCKPILE]);
+                assert!(graveyard.contains(&HINDER.to_string()) && graveyard.contains(&STOCKPILE.to_string()));
             }
 
             #[test]

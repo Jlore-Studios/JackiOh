@@ -3,7 +3,7 @@
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
 //! A hand and deck trigger (B5 E26) on the resolution of the play that is the threshold-th non-Unit play
-//! of the turn (casts count, R70); `summonThis` puts it in the leftmost open unit zone with no Cry, or
+//! of the turn (casts count, R70, but a cast on draw is no play, R2179002); `summonThis` puts it in the leftmost open unit zone with no Cry, or
 //! leaves it where it is. The end of turn casts fresh copies by definition and face (E12, R87), skipping
 //! played cards that no longer exist (R86).
 
@@ -137,7 +137,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1) once 3rd non-Unit resolves (casts count, R70).
+// C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1) once 3rd non-Unit resolves (casts count, R70; not a cast on draw, R2179002).
 // At end of turn casts a copy of a played non-Unit; a Trap copy stays hidden (R33, R97).
 // `conditionMet` in hand answers whether next play summons it (R195).
 #[cfg(test)]
@@ -286,13 +286,16 @@ mod tests {
         }
 
         #[test]
-        fn r70_casts_count_a_bone_storm_cast_on_draw_is_one_of_the_three() {
+        fn r2179002_a_bone_storm_cast_on_draw_is_no_play_so_it_is_not_one_of_the_three() {
             let mut s = scenario(json!({
                 "p1": { "hand": [WARDRUM, REPLENISH, REPLENISH, STOCKPILE], "library": [BONE_STORM, FILLER, FILLER, FILLER], "mana": 4 },
                 "p2": { "hand": [FILLER] },
             }));
             play_from_hand(&mut s, REPLENISH, json!({}));
-            play_from_hand(&mut s, STOCKPILE, json!({})); // draws the Bone Storm: it casts itself (the 3rd), then draws again.
+            // Draws the Bone Storm: it casts itself, no play (through v0.4.12d the 3rd, R70), then draws again.
+            play_from_hand(&mut s, STOCKPILE, json!({}));
+            assert_eq!(wardrum_in(&s), ZoneName::Hand);
+            play_from_hand(&mut s, REPLENISH, json!({})); // the 3rd
             assert_eq!(wardrum_in(&s), ZoneName::Field);
         }
 
@@ -305,7 +308,7 @@ mod tests {
             play_from_hand(&mut s, REPLENISH, json!({}));
             play_from_hand(&mut s, REPLENISH, json!({}));
             let stockpile = hand(&s, STOCKPILE);
-            s.play(&stockpile, json!({})); // its draw casts the Bone Storm (the 4th) before the Stockpile (the 3rd) resolves
+            s.play(&stockpile, json!({})); // its draw casts the Bone Storm (no play, R2179002) before the Stockpile (the 3rd) resolves
             assert_eq!(wardrum_in(&s), ZoneName::Field);
             let order: Vec<String> = events_json(&s)
                 .iter()

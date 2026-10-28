@@ -17,8 +17,7 @@ const LIVING_BOMB: &str = "classic-062"; // (1) Field Spell, no numbers.
 const PLANTATION: &str = "classic-074"; // Corpse Plantation: (2) Field Spell, `usesPlague`.
 const ECLIPSE: &str = "core-035"; // Lunar Eclipse: (1) Spell, deals 3 damage, `dealsDamage`.
 const FIELD_OF_DREAMS: &str = "core-076"; // (2) Spell that deals no damage.
-const PUNISH: &str = "classic-020"; // The Power to Punish: (2) Field Spell, Activate deals 2, `dealsDamage`.
-const PUNISH_DAMAGE: &str = "deal damage"; // Its Activate's damage mode.
+const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell: End of turn ... deal 2 damage to each enemy, `dealsDamage`.
 const ARMORED: &str = "core-025"; // A 7/7 Unit with Armor 7.
 const FILLER: &str = "core-005";
 
@@ -221,35 +220,40 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
-    let punish_at_armored = |pierce: bool| {
+    // Introspection's end of turn deals 2 to each enemy. (The Power to Punish, which this test used, deals
+    // Pierce damage of its own since #2179.)
+    let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({
-            "p1": { "hand": [FILLER], "backrow": [{ "def": PUNISH, "faceUp": true }] },
-            "p2": { "hand": [FILLER], "field": [ARMORED] },
+            "p1": { "hand": [FILLER], "library": [FILLER, FILLER], "backrow": [{ "def": INTROSPECTION, "faceUp": true }] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "field": [ARMORED] },
         }));
         if pierce {
-            give_pierce(&mut s, PUNISH);
+            give_pierce(&mut s, INTROSPECTION);
         }
-        let target = s.card(ARMORED).id.clone();
-        s.activate(
-            PUNISH,
-            json!({
-                "modes": [PUNISH_DAMAGE],
-                "targets": [{ "pick": "instance", "instanceId": target }],
-            }),
-        );
+        s.end_turn();
         s
+    };
+    let unit_hits = |s: &Scenario| -> Vec<(i32, i32)> {
+        let armored = s.card(ARMORED).id.clone();
+        s.events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Damage { target_id, amount, absorbed, .. } if *target_id == armored => Some((*amount, *absorbed)),
+                _ => None,
+            })
+            .collect()
     };
 
     // Unbuffed, the Unit's Armor 7 takes the whole of its 2 damage.
-    let s = punish_at_armored(false);
+    let s = introspection_at_armored(false);
     assert_eq!(s.stats(ARMORED).health, 7);
-    assert!(hits(&s).is_empty());
+    assert!(unit_hits(&s).is_empty());
     assert_eq!(count(&s, GameEventType::DamageAbsorbed), 1);
 
     // Given Pierce, both land and the Armor takes nothing.
-    let s = punish_at_armored(true);
+    let s = introspection_at_armored(true);
     assert_eq!(s.stats(ARMORED).health, 5);
-    assert_eq!(hits(&s), [(2, 0)]);
+    assert_eq!(unit_hits(&s), [(2, 0)]);
     assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
 }
 

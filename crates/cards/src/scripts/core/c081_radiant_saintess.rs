@@ -1,11 +1,14 @@
-//! #81 Radiant Saintess (SPEC §8.4 row 81; R22, R78, R177, R275, R276): Unit, Human, cost 1, Epic,
-//! 2/2 → 4/4.
+//! #81 Radiant Saintess (SPEC §8.4 row 81; R22, R78, R177, R275, R276): Unit, Human, cost 2 (1 through
+//! v0.4.12d), Epic, 2/2 → 4/4.
 //!   Base:    "Death: Make your other Units Radiant."
-//!   Radiant: "Death: Make your other Units and every card in your hand Radiant."
+//!   Radiant: "Reborn
+//!             Death: Make your other Units Radiant."
 //!
-//! The Radiant face widens the scope (R275): her Death also radiates your hand, one `setRadiant` per
-//! card named by id, as #29 does. A hand is its owner's alone (§9.1), so R177 has `setRadiant` report
-//! a `radiantSet` for a named hidden card whether or not the flag changed, and the cue tells nothing.
+//! Since issue #2179 the Radiant face's upgrade is Reborn (catalog data), so she dies twice and her
+//! Death radiates the board each time; through v0.4.12d it widened the scope to your hand instead,
+//! one `setRadiant` per card named by id, as #29 does, which `script_v0_4_12d` keeps (R767000). A hand
+//! is its owner's alone (§9.1), so R177 had `setRadiant` report a `radiantSet` for a named hidden card
+//! whether or not the flag changed, and the cue told nothing.
 //! R22: `setRadiant` sets the `radiant` flag and nothing else, so §10.4's printed-stat layer swaps on
 //! the next read while buffs and damage stay, and no Cry re-fires. R78: Death runs off a snapshot of
 //! her after she left the field, so it never names `self`; "all your units" is `activeUnitsOf` (top of
@@ -44,10 +47,10 @@ fn death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     radiate_your_units(ctx, false)
 }
 
-/// "…and every card in your hand": the controller's hand, read through `zoneCards` (a copy) and named
-/// card by card, as #29 does. Every card, so no rng is drawn (§9.3), and a card already Radiant is
-/// still named — `setRadiant` cues it without changing it (R177), which is what hides the hand's
-/// faces from the opponent.
+/// "…and every card in your hand", v0.4.12d's Radiant face: the controller's hand, read through
+/// `zoneCards` (a copy) and named card by card, as #29 does. Every card, so no rng is drawn (§9.3),
+/// and a card already Radiant is still named — `setRadiant` cues it without changing it (R177), which
+/// is what hides the hand's faces from the opponent.
 fn radiate_your_hand(ctx: &EffectContext<'_>) -> Vec<Effect> {
     zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
         .iter()
@@ -55,29 +58,44 @@ fn radiate_your_hand(ctx: &EffectContext<'_>) -> Vec<Effect> {
         .collect()
 }
 
-/// Radiant Death: the board first, in the order the text names it, then the hand.
-fn radiant_death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// v0.4.12d's Radiant Death: the board first, in the order the text names it, then the hand.
+fn radiant_death_v0_4_12d(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let mut effects = radiate_your_units(ctx, false);
     effects.extend(radiate_your_hand(ctx));
     effects
 }
 
 pub fn script() -> CardScripts {
+    // Both faces' Death is the board's; the Radiant face's Reborn is catalog data.
+    let base = Script {
+        death: Some(hook(death)),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
+
+/// R767000: through v0.4.12d the Radiant face's Death radiated the hand too; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
     CardScripts {
         base: Script {
             death: Some(hook(death)),
             ..Script::default()
         },
         radiant: Script {
-            death: Some(hook(radiant_death)),
+            death: Some(hook(radiant_death_v0_4_12d)),
             ..Script::default()
         },
     }
 }
 
-// BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn, so she
-// dies once; radiant also every card in your hand, hidden from the opponent (R177)". Her Cry is cut
-// (§8's row) and neither face has Reborn, so she dies once (R8's second Death never comes); R64 and R83 are the engine's, not this file's.
+// BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn on the base
+// face, so she dies once; radiant she has Reborn and dies twice, each Death radiating the board, and
+// never the hand (issue #2179; through v0.4.12d her Radiant Death radiated the hand, hidden from the
+// opponent, R177)". Her Cry is cut (§8's row); R64 and R83 are the engine's, not this file's.
 //
 // Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
 // swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. A Saintess
@@ -100,9 +118,6 @@ mod tests {
     /// #5 Stockpile and #2 Bigot: two more hand cards to watch the radiant Death reach.
     const STOCKPILE: &str = "core-005";
     const BIGOT: &str = "core-002";
-    /// #15 Me and Mr Token: a Unit whose Cry makes fresh base-face Rush Tokens (3 on its radiant face).
-    const ME_AND_MR_TOKEN: &str = "core-015";
-    const RUSH_TOKEN: &str = "core-t-rush";
     /// #92 Felinor Fiender, the Stack unit: on top of a pile, the card under it lies dormant (§3.2).
     const FIENDER: &str = "core-092";
 
@@ -333,7 +348,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn the_radiant_face_is_a_4_4_with_no_reborn_and_it_radiates_nothing_on_arrival_either() {
+        fn the_radiant_face_is_a_4_4_with_reborn_and_it_radiates_nothing_on_arrival_either() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess",
@@ -342,14 +357,14 @@ mod tests {
             s.play(SAINTESS, json!({ "zone": 2 }));
 
             s.expect_stats(SAINTESS, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
-            assert_eq!(keywords_of(s.state(), s.card(SAINTESS)), Vec::<Keyword>::new());
+            assert_eq!(keywords_of(s.state(), s.card(SAINTESS)), vec![Keyword::Reborn]);
             // Her script is Death alone, so neither the ally nor the hand moves until she dies.
             assert_eq!(s.unit(P1, 1).map(|unit| unit.radiant), Some(false));
             assert_eq!(s.hand(P1).iter().map(|card| card.radiant).collect::<Vec<_>>(), vec![false]);
         }
 
         #[test]
-        fn r275_death_every_other_unit_and_every_card_in_your_hand_become_radiant() {
+        fn death_every_other_unit_becomes_radiant_the_hand_keeps_its_faces_and_reborn_brings_her_back() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess-radiant-hand",
@@ -365,22 +380,38 @@ mod tests {
             assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
             let timmy = s.unit(P1, 2);
             expect_stats_or(&mut s, timmy, TIMMY, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
-            // Every card left in the hand (True Strike was resolving, so it is not one of them).
-            assert_eq!(
-                def_ids(&s.hand(P1)),
-                vec![TIMMY, STOCKPILE, BIGOT]
-            );
-            assert!(s.hand(P1).iter().all(|card| card.radiant));
-            // A Radiant hand card reads its radiant face: Timmy is a 6/6 in hand now.
-            let hand_timmy = s.hand(P1).into_iter().find(|card| card.def_id == TIMMY);
-            expect_stats_or(&mut s, hand_timmy, TIMMY, json!({ "attack": 6, "maxHealth": 6 }));
+            // The hand is no longer hers to change (#2179).
+            assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, BIGOT]);
+            assert!(s.hand(P1).iter().all(|card| !card.radiant));
             // "your": the opponent's board and hand are untouched.
             assert_eq!(s.unit(P2, 1).map(|unit| unit.radiant), Some(false));
             assert!(!s.hand(P2).iter().any(|card| card.radiant));
-            // R78: she is not one of "your other Units"; with no Reborn she stays in the graveyard, still
-            // Radiant (the flag persists in every zone).
+            // Reborn brings her back at 1 health, still Radiant (§4.5 step 4).
+            let back = s.unit(P1, 1).expect("the Reborn body");
+            assert_eq!(back.def_id, SAINTESS);
+            assert!(back.radiant);
+            s.expect_stats(&back, json!({ "health": 1 }));
+        }
+
+        #[test]
+        fn her_second_death_radiates_the_units_that_arrived_since() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "saintess-twice",
+                "p1": {
+                    "field": [{ "def": SAINTESS, "radiant": true }],
+                    "hand": [TRUE_STRIKE, TIMMY, TRUE_STRIKE],
+                    "mana": 6
+                },
+                "p2": { "hand": [STOCKPILE] }
+            }));
+            strike_saintess(&mut s);
+            s.expect_in_zone(SAINTESS, "field");
+            s.play(TIMMY, json!({ "zone": 2 }));
+            assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(false));
+            strike_saintess(&mut s);
             s.expect_in_zone(SAINTESS, "graveyard");
-            assert!(s.card(SAINTESS).radiant);
+            assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
         }
 
         #[test]
@@ -388,88 +419,67 @@ mod tests {
             crate::register_all();
             expect_stack_spared(true);
         }
+    }
+
+    /// R767000: the script kept for the replays of v0.4.12d and before, whose Radiant Death radiated the
+    /// hand too.
+    mod n81_radiant_saintess_v0_4_12d {
+        use super::*;
 
         #[test]
-        fn r275_an_empty_hand_leaves_the_death_to_the_board_alone() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "saintess-radiant-empty-hand",
-                "p1": { "field": [{ "def": SAINTESS, "radiant": true }, TIMMY], "hand": [TRUE_STRIKE] },
-                "p2": { "hand": [STOCKPILE] }
-            }));
-            strike_saintess(&mut s);
-
-            assert_eq!(s.hand(P1).len(), 0);
-            assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
-        }
-
-        #[test]
-        fn r177_the_opponent_s_view_does_not_learn_which_of_her_owner_s_hand_cards_were_base_face() {
-            crate::register_all();
-            // Two games that differ only in the face p1's hand Timmy had while p2 could not read it. After
-            // her Death both hands are wholly Radiant; a cue only for the cards that changed would count,
-            // for p2, how many were Radiant before.
-            let game = |timmy_radiant: bool| -> Scenario {
+        fn r767000_r275_a_game_on_v0_4_12d_radiates_every_other_unit_and_every_card_in_your_hand() {
+            crate::under_kept(SAINTESS, script_v0_4_12d(), || {
                 let mut s = scenario(json!({
-                    "seed": "saintess-r177",
+                    "seed": "saintess-radiant-hand",
                     "p1": {
-                        "field": [{ "def": SAINTESS, "radiant": true }],
-                        "hand": [TRUE_STRIKE, { "def": TIMMY, "radiant": timmy_radiant }, STOCKPILE],
-                        "library": [BIGOT]
+                        "field": [{ "def": SAINTESS, "radiant": true }, TIMMY],
+                        "hand": [TRUE_STRIKE, TIMMY, STOCKPILE, BIGOT]
                     },
-                    "p2": { "hand": [STOCKPILE], "library": [BIGOT] }
+                    "p2": { "field": [TIMMY], "hand": [STOCKPILE, BIGOT] }
                 }));
                 strike_saintess(&mut s);
-                s
-            };
-            let was_base = game(false);
-            let was_radiant = game(true);
-
-            for s in [&was_base, &was_radiant] {
+                assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
+                assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, BIGOT]);
                 assert!(s.hand(P1).iter().all(|card| card.radiant));
-                // One cue per hand card in both games, named or not changed (R177).
-                let cues = s
-                    .view(P2)
-                    .events
-                    .iter()
-                    .filter(|event| event.event_type() == GameEventType::RadiantSet)
-                    .count();
-                assert_eq!(cues, 2);
-            }
-            assert_eq!(
-                was_radiant.view(P2).events.iter().map(GameEvent::event_type).collect::<Vec<_>>(),
-                was_base.view(P2).events.iter().map(GameEvent::event_type).collect::<Vec<_>>()
-            );
-            assert_eq!(was_radiant.view(P2), was_base.view(P2));
+                assert!(!s.hand(P2).iter().any(|card| card.radiant));
+            });
         }
 
         #[test]
-        fn patch_v0_1_1_radiant_she_dies_once_too_and_a_later_arrival_is_never_turned_up() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "saintess",
-                "p1": { "hand": [{ "def": SAINTESS, "radiant": true }, TRUE_STRIKE, ME_AND_MR_TOKEN, STOCKPILE] }
-            }));
-            s.play(SAINTESS, json!({ "zone": 1 }));
+        fn r767000_r177_the_opponent_s_view_does_not_learn_which_of_her_owner_s_hand_cards_were_base_face() {
+            crate::under_kept(SAINTESS, script_v0_4_12d(), || {
+                // Two games that differ only in the face p1's hand Timmy had while p2 could not read it.
+                // After her Death both hands are wholly Radiant; a cue only for the cards that changed
+                // would count, for p2, how many were Radiant before.
+                let game = |timmy_radiant: bool| -> Scenario {
+                    let mut s = scenario(json!({
+                        "seed": "saintess-r177",
+                        "p1": {
+                            "field": [{ "def": SAINTESS, "radiant": true }],
+                            "hand": [TRUE_STRIKE, { "def": TIMMY, "radiant": timmy_radiant }, STOCKPILE],
+                            "library": [BIGOT]
+                        },
+                        "p2": { "hand": [STOCKPILE], "library": [BIGOT] }
+                    }));
+                    strike_saintess(&mut s);
+                    s
+                };
+                let was_base = game(false);
+                let was_radiant = game(true);
 
-            let saintess = s.card(SAINTESS).clone();
-            s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "instance", "instanceId": saintess.id }] }));
-            s.expect_in_zone(&saintess, "graveyard");
-            // Her one Death reached the hand.
-            assert!(s.card(ME_AND_MR_TOKEN).radiant);
-
-            // The tokens its radiant Cry makes arrive after that Death, and no second one comes.
-            s.play(ME_AND_MR_TOKEN, json!({ "zone": 2 }));
-            // Her lane is free again, so the three tokens take lanes 1, 3 and 4 (R64).
-            let tokens: Vec<Option<CardInstance>> = [1, 3, 4].into_iter().map(|lane| s.unit(P1, lane)).collect();
-            assert_eq!(
-                tokens.iter().map(|token| token.as_ref().map(|t| t.def_id.clone())).collect::<Vec<_>>(),
-                vec![Some(RUSH_TOKEN.to_string()); 3]
-            );
-            assert_eq!(
-                tokens.iter().map(|token| token.as_ref().map(|t| t.radiant)).collect::<Vec<_>>(),
-                vec![Some(false); 3]
-            );
+                for s in [&was_base, &was_radiant] {
+                    assert!(s.hand(P1).iter().all(|card| card.radiant));
+                    // One cue per hand card in both games, named or not changed (R177).
+                    let cues = s
+                        .view(P2)
+                        .events
+                        .iter()
+                        .filter(|event| event.event_type() == GameEventType::RadiantSet)
+                        .count();
+                    assert_eq!(cues, 2);
+                }
+                assert_eq!(was_radiant.view(P2), was_base.view(P2));
+            });
         }
     }
 }

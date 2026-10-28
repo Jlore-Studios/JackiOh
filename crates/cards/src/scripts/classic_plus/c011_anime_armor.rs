@@ -1,15 +1,24 @@
-//! C+ #11 Anime Armor (SPEC §8.7 row 11). (2) Unit, Rare, 4/4 → 8/8 (Radiant: Reborn).
-//! Aura: while it acts on the field its controller's hero takes at most {cap} from each damage instance
-//! (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside Anti-oneshot Armor's). Lose health (R18)
-//! and Set health are not damage and are not capped.
+//! C+ #11 Anime Armor (SPEC §8.7 row 11). (2) Unit, Rare, 3/3 → 6/6 (Radiant: Reborn).
+//! Aura: while it acts on the field its controller's hero, and since issue #2179 this Unit itself, takes
+//! at most {cap} from each damage instance (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside
+//! Anti-oneshot Armor's; on this Unit the cap is its guard's `guardsSelf`, R2179005). Lose health (R18)
+//! and Set health are not damage and are not capped. Through v0.4.12d it guarded the hero alone, which
+//! `script_v0_4_12d` keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-011";
 
-pub fn script() -> CardScripts {
+/// One script for both faces; `guards_self` is #2179's "and this".
+fn anime_armor(guards_self: bool) -> CardScripts {
     let base = Script {
-        hero_guard: Some(read_hook(|args| vec![HeroGuard { cap: Some(param(&args, "cap")), divisor: None }])),
+        hero_guard: Some(read_hook(move |args| {
+            vec![HeroGuard {
+                cap: Some(param(&args, "cap")),
+                divisor: None,
+                guards_self: guards_self.then_some(true),
+            }]
+        })),
         ..Script::default()
     };
     // The Radiant face adds Reborn and doubles the stats: catalog data only.
@@ -17,12 +26,23 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+pub fn script() -> CardScripts {
+    anime_armor(true)
+}
+
+/// R767000: through v0.4.12d the cap guarded its controller's hero alone; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    anime_armor(false)
+}
+
 // C+ #11 Anime Armor — SPEC §8.7 row 11, BUILD M9 Classic+ row C+ 11: "While it is on the field its
 // controller's hero takes at most 1 from each damage instance (§4.4 step 3): combat, Spells, Pierce hits
 // and fatigue alike, each Trample excess and each split hit its own capped instance; the lowest cap wins
 // beside Anti-oneshot Armor's 5 or 3; lose health (R18) and Set health are not damage and are not
 // capped; the opponent's hero is unaffected; the cap lifts when it leaves; the cap reads through
-// `param()` and never drops below 1; radiant 8/8 with Reborn, the cap returning with it".
+// `param()` and never drops below 1; radiant 6/6 with Reborn, the cap returning with it". Since #2179
+// each hit on Anime Armor itself is capped the same way (R2179005).
 //
 // Anime Armor stands in p1's unit lane 1 unless a test says otherwise.
 #[cfg(test)]
@@ -244,6 +264,80 @@ mod tests {
             assert_eq!(hero_hits(&s, P1), vec![3]);
         }
 
+        fn unit_hits(s: &Scenario, id: &str) -> Vec<i32> {
+            s.events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Damage { target_id, amount, .. } if target_id == id => Some(*amount),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        #[test]
+        fn s8_7_it_is_3_3() {
+            crate::register_all();
+            let mut s = under_fire(json!({}), json!({}), false);
+            let anime = s.card(ANIME).clone();
+            s.expect_stats(&anime, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
+        }
+
+        #[test]
+        fn r2179005_a_spell_s_hit_on_this_takes_1_a_pierce_hit_too() {
+            crate::register_all();
+            let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, TRUE_STRIKE, FILLER] }), false);
+            let anime = s.card(ANIME).id.clone();
+
+            s.play(LUNAR, json!({ "targets": pick::id(&anime) }));
+            s.play(TRUE_STRIKE, json!({ "targets": pick::id(&anime) }));
+
+            assert_eq!(unit_hits(&s, &anime), vec![1, 1]);
+            s.expect_stats(&anime, json!({ "health": 1, "maxHealth": 3 }));
+            s.expect_in_zone(ANIME, "field");
+        }
+
+        #[test]
+        fn r2179005_a_combat_hit_on_this_takes_1_and_a_trample_has_no_excess_past_it() {
+            crate::register_all();
+            let mut s = under_fire(json!({}), json!({ "field": [MENACE, BIG_MAX] }), false);
+            let anime = s.card(ANIME).id.clone();
+
+            s.attack(MENACE, &anime);
+            assert_eq!(unit_hits(&s, &anime), vec![1]);
+            // Big Max's 13 meets the cap at step 3, before step 5 splits off an excess: none reaches the hero.
+            s.attack(BIG_MAX, &anime);
+            assert_eq!(unit_hits(&s, &anime), vec![1, 1]);
+            assert_eq!(hero_hits(&s, P1), Vec::<i32>::new());
+            s.expect_stats(&anime, json!({ "health": 1 }));
+        }
+
+        #[test]
+        fn r2179005_another_unit_of_yours_is_not_capped() {
+            crate::register_all();
+            let mut s = under_fire(
+                json!({ "field": [{ "def": ANIME, "lane": 1 }, { "def": VANILLA, "lane": 2 }] }),
+                json!({ "hand": [LUNAR, FILLER] }),
+                false,
+            );
+            let vanilla = s.unit(P1, 2).expect("the Vanilla").id;
+            s.play(LUNAR, json!({ "targets": pick::id(&vanilla) }));
+            assert_eq!(unit_hits(&s, &vanilla), vec![3]);
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, whose cap guarded the hero alone.
+        #[test]
+        fn r767000_a_game_on_v0_4_12d_caps_the_hero_and_not_the_unit() {
+            crate::under_kept(ANIME, crate::scripts::classic_plus::c011_anime_armor::script_v0_4_12d(), || {
+                let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, LUNAR, FILLER] }), false);
+                let anime = s.card(ANIME).id.clone();
+                s.play(LUNAR, json!({ "targets": hero_p1() }));
+                assert_eq!(hero_hits(&s, P1), vec![1]);
+                // Uncapped, the 3 lands whole (and kills the 3/3).
+                s.play(LUNAR, json!({ "targets": pick::id(&anime) }));
+                assert_eq!(unit_hits(&s, &anime), vec![3]);
+            });
+        }
+
         #[test]
         fn r386_the_cap_reads_through_param_a_degrade_lets_2_through_and_an_upgrade_never_takes_it_below_1() {
             crate::register_all();
@@ -263,11 +357,20 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_8_8_with_reborn_and_the_cap_comes_back_with_the_reborn_body() {
+        fn r2179005_radiant_a_hit_on_this_takes_1() {
+            crate::register_all();
+            let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, FILLER] }), true);
+            let anime = s.card(ANIME).id.clone();
+            s.play(LUNAR, json!({ "targets": pick::id(&anime) }));
+            s.expect_stats(&anime, json!({ "health": 5, "maxHealth": 6 }));
+        }
+
+        #[test]
+        fn is_6_6_with_reborn_and_the_cap_comes_back_with_the_reborn_body() {
             crate::register_all();
             let mut s = under_fire(json!({}), json!({ "hand": [HIT_JOB, LUNAR, FILLER] }), true);
             let anime = s.card(ANIME).clone();
-            s.expect_stats(&anime, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&anime, json!({ "attack": 6, "health": 6 }));
 
             s.play(HIT_JOB, json!({ "targets": pick::id(&anime.id) }));
             let back = s.unit(P1, 1).expect("the Reborn body");

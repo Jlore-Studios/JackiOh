@@ -1,7 +1,7 @@
 //! C+ #36.1 Bone Storm (SPEC §8.7 row 36.1): (1) Spell, Token (printed Rare), from C+ #36.
 //!   Base:    "Cast on draw: Deal {damage} damage to each enemy."
 //!   Radiant: "Echo 1" plus the same: it resolves a second time.
-//! Cast on draw is §6.2's static flag (R58, R70); "each enemy" is one hit on every enemy unit and
+//! Cast on draw is §6.2's static flag (R58, R70), a cast that is no play (R2179002); "each enemy" is one hit on every enemy unit and
 //! the enemy hero, all landing before the state check (R59). Echo is the `echo` flag (R51's repeat).
 
 use jackioh_engine::effects::damage_all;
@@ -81,7 +81,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r70_drawn_it_casts_itself_for_free_1_to_the_enemy_hero_and_1_to_each_enemy_unit_then_you_draw_again() {
+        fn r2179002_drawn_it_casts_itself_for_free_1_to_the_enemy_hero_and_1_to_each_enemy_unit_then_you_draw_again() {
             let mut s = draw_storm(vec![storm(false), json!(FILLER), json!(FILLER)], None, None);
             s.expect_health(P2, HERO_HEALTH - 1).expect_health(P1, HERO_HEALTH);
             s.expect_stats(MENACE, json!({ "health": 8 }));
@@ -90,9 +90,9 @@ mod tests {
             // Then you draw again: the next card arrived in hand.
             assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, FILLER]);
             assert_eq!(s.pile(P1, "library").len(), 1);
-            // It counts as played and paid nothing (R70).
+            // It is no play and paid nothing (R2179002; through v0.4.12d it was a play, R70).
             let id = s.card(BONE_STORM).id.clone();
-            assert!(s.state().players.p1.turn_log.played_ids.contains(&id));
+            assert!(!s.state().players.p1.turn_log.played_ids.contains(&id));
             s.expect_mana(P1, 4);
         }
 

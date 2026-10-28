@@ -106,9 +106,9 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
         && !card
             .granted_keywords
             .iter()
-            .any(|keyword| matches!(keyword, Keyword::Temporary))
+            .any(|keyword| matches!(keyword, Keyword::Temporary { .. }))
     {
-        card.granted_keywords.push(Keyword::Temporary);
+        card.granted_keywords.push(Keyword::TEMPORARY);
     }
     // R1438: given Lucky is the card's own from the hand on, so it goes on with the prices, once it is
     // there (a burned card gets none), and adds to any Lucky the card has: Lucky sums (§6.1). The view

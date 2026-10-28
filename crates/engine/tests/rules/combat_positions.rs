@@ -8,7 +8,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{
-    armoured, big_dfender, deft_duelist, plain, spikey_pillow, stacker, taunter, windfurier,
+    armoured, big_dfender, deft_duelist, indestructible, plain, spikey_pillow, stacker, taunter, windfurier,
 };
 use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
@@ -710,5 +710,93 @@ mod positions_and_exertion_m2_t1 {
         assert!(switch_agrees(&state, &rider.id));
         assert!(!switch_agrees(&state, &dormant.id));
         assert!(switch_agrees(&state, &top.id));
+    }
+}
+
+/// R2179000: an Indestructible Unit can't be in Defense Position (§6.1 Indestructible), as Spikey
+/// Pillow can't (§4.1), and it still never has Taunt (R347).
+mod r2179000_indestructible_never_in_defense {
+    use super::*;
+
+    #[test]
+    fn r2179000_no_switch_to_defense_by_an_action_or_an_effect_and_the_list_agrees() {
+        let mut state = playing("indestructible-no-defense");
+        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
+
+        assert!(!has_switch_for(&state, P1, Some(&unit.id)));
+        assert!(has_switch_for(&state, P1, None));
+        assert!(!switch_agrees(&state, &unit.id));
+        let refused = act_result(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })),
+        );
+        assert!(
+            refused
+                .error
+                .unwrap_or_default()
+                .contains("cannot be in Defense Position")
+        );
+        let (events, error) = switch_by_effect(&mut state, &unit, Some(Position::Def));
+        assert!(error.unwrap_or_default().contains("cannot be in Defense Position"));
+        assert!(events_of_type(&events, GameEventType::PositionSwitched).is_empty());
+        let after = view_of(&state, &unit.id);
+        assert_eq!(after.position, Position::Atk);
+        assert!(!has_keyword(&after.keywords, KeywordKind::Taunt));
+        assert_eq!(by_id(&state, &unit.id).exertion, exertion(false, false));
+    }
+
+    #[test]
+    fn r2179000_one_standing_in_defense_switches_to_attack_at_the_state_check_spending_no_exertion() {
+        let mut state = playing("indestructible-leaves-defense");
+        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), Default::default());
+        let other = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
+        for id in [&unit.id, &other.id] {
+            find_instance_mut(&mut state, id).expect("a unit").position = Some(Position::Def);
+        }
+        let mut sink = sink_for(&mut state);
+        state_check(&mut sink);
+        let events = sink.events.clone();
+        drop(sink);
+
+        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Atk));
+        assert!(!by_id(&state, &unit.id).exertion.switched);
+        assert_eq!(by_id(&state, &other.id).position, Some(Position::Def));
+        let switched: Vec<String> = events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::PositionSwitched {
+                    instance_id,
+                    position: Position::Atk,
+                } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(switched, vec![unit.id.clone()]);
+    }
+
+    #[test]
+    fn r2179000_a_unit_given_indestructible_in_defense_leaves_it_and_one_that_loses_it_may_switch_again() {
+        let mut state = playing("indestructible-given");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        state = act(
+            &state,
+            input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })),
+        );
+        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Def));
+        find_instance_mut(&mut state, &unit.id)
+            .expect("the unit")
+            .granted_keywords
+            .push(Keyword::Indestructible);
+        let mut sink = sink_for(&mut state);
+        state_check(&mut sink);
+        drop(sink);
+        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Atk));
+
+        // A Vanilla takes a printed Indestructible off (§6.3), and the switch is offered again.
+        let printed = put(&mut state, &indestructible.id, slot(P1, Row::Units, 2), Default::default());
+        assert!(!has_switch_for(&state, P1, Some(&printed.id)));
+        find_instance_mut(&mut state, &printed.id).expect("the printed one").vanilla = true;
+        assert!(has_switch_for(&state, P1, Some(&printed.id)));
     }
 }

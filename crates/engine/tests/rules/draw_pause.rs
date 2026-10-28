@@ -385,8 +385,10 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(hand_of(&done.state), vec![plain().id]);
         assert_eq!(done.state.pending, None);
         assert_eq!(done.state.work, Vec::<WorkItem>::new());
-        // R70: each of the three cast cards counted as a play exactly once, across the pause.
-        assert_eq!(done.state.counters.played, 3);
+        // R2179002: a cast on draw is no play, so none of the three cast cards counted as one, across
+        // the pause (through v0.4.12d each counted exactly once, R70).
+        assert_eq!(done.state.counters.played, 0);
+        assert_eq!(done.state.players.p1.turn_log.cards_played, 0);
     }
 
     #[test]

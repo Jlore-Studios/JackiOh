@@ -1,6 +1,6 @@
 //! C+ #72 Book of Nerf (SPEC §8.7 row 72, R386; BUILD M9 row C+ 72). (1) Spell, Book, Epic.
-//!   Base:    "Nerf a permanent {times|time|times}." — times 5
-//!   Radiant: "Nerf a card {times|time|times}. It may be a card in your hand." — times 10
+//!   Base:    "Nerf a permanent {times|time|times}." — times 4 (5 through v0.4.12d)
+//!   Radiant: "Nerf a card {times|time|times}. It may be a card in your hand." — times 8 (10 through v0.4.12d)
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
 //! hand (a broader scope, R275). `times` separate Degrades, each its own draw (R386): attack floors at
@@ -30,9 +30,9 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #72 Book of Nerf — SPEC §8.7 row 72, BUILD M9 row C+ 72: Degrades a target permanent on either
-// side 5 times, each its own draw (R386): attack floors at 0, current health never below 1 (it never
+// side 4 times, each its own draw (R386): attack floors at 0, current health never below 1 (it never
 // kills), cost never above (4), no harmful keyword removed, what the floors refuse lost; an Immutable
-// target is unchanged; the count reads through `param()`; radiant 10 times on a permanent or a card in
+// target is unchanged; the count reads through `param()`; radiant 8 times on a permanent or a card in
 // your hand (the hand clause is the Radiant face's alone).
 #[cfg(test)]
 mod tests {
@@ -103,13 +103,13 @@ mod tests {
         }
 
         #[test]
-        fn r386_degrades_a_unit_5_times_each_its_own_draw() {
+        fn r386_degrades_a_unit_4_times_each_its_own_draw() {
             crate::register_all();
             let mut s = book(false, None);
             let unit = s.unit(P2, 2).expect("p2's unit");
             s.play(BOOK, json!({ "targets": pick::id(&unit.id) }));
             let events = degrades(s.events());
-            assert_eq!(events.len(), 5);
+            assert_eq!(events.len(), 4);
             assert!(events.iter().all(|event| event["instanceId"] == json!(unit.id)));
         }
 
@@ -145,11 +145,11 @@ mod tests {
             let mut own = book(false, None);
             let target = own.unit(P1, 1).expect("p1's unit").id;
             own.play(BOOK, json!({ "targets": pick::id(&target) }));
-            assert_eq!(degrades(own.events()).len(), 5);
+            assert_eq!(degrades(own.events()).len(), 4);
             let mut trap = book(false, None);
             let set = trap.backrow(P2, 1).expect("p2's trap");
             trap.play(BOOK, json!({ "targets": pick::id(&set.id) }));
-            assert_eq!(degrades(trap.events()).len(), 5);
+            assert_eq!(degrades(trap.events()).len(), 4);
             assert!(degrades(&trap.view(P1).events).iter().all(|event| event["instanceId"] == json!(hidden_id)));
         }
 
@@ -164,9 +164,9 @@ mod tests {
         }
 
         #[test]
-        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_6_a_degrade_4() {
+        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_5_a_degrade_3() {
             crate::register_all();
-            for (steps, count) in [(1, 6), (-1, 4)] {
+            for (steps, count) in [(1, 5), (-1, 3)] {
                 let mut s = book(false, None);
                 step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P2, 2).expect("p2's unit").id;
@@ -189,25 +189,25 @@ mod tests {
         }
 
         #[test]
-        fn r386_r97_degrades_a_hand_card_10_times_which_the_opponent_reads_only_as_a_card_of_your_hand_changing() {
+        fn r386_r97_degrades_a_hand_card_8_times_which_the_opponent_reads_only_as_a_card_of_your_hand_changing() {
             crate::register_all();
             let hidden_id = jackioh_engine::view_for::HIDDEN_ID;
             let mut s = book(true, None);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
             s.play(BOOK, json!({ "targets": pick::id(&held.id) }));
-            assert_eq!(degrades(s.events()).len(), 10);
+            assert_eq!(degrades(s.events()).len(), 8);
             assert!(degrades(&s.view(P2).events).iter().all(|event| event["instanceId"] == json!(hidden_id)));
             // Cost never above (4): Mr. Vanilla costs (1).
             assert!(s.card(&held.id).cost_mod <= 3);
         }
 
         #[test]
-        fn r386_r440_degrades_a_permanent_10_times_an_enemy_face_down_trap_is_cued_each_time() {
+        fn r386_r440_degrades_a_permanent_8_times_an_enemy_face_down_trap_is_cued_each_time() {
             crate::register_all();
             let mut s = book(true, None);
             let trap = s.backrow(P2, 1).expect("p2's trap");
             s.play(BOOK, json!({ "targets": pick::id(&trap.id) }));
-            assert_eq!(degrades(s.events()).len(), 10);
+            assert_eq!(degrades(s.events()).len(), 8);
         }
 
         #[test]

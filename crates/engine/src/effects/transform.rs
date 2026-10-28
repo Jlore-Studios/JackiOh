@@ -648,8 +648,9 @@ pub struct SwapBookArgs {
 /// becomes the Radiant face of the Book) and its place in the hand, and carries the swap on as the
 /// `swapsBook` enchantment, so it changes again at its owner's next end of turn. It is otherwise a new
 /// card, as any Transform result is (its cost changes and its other enchantments stay behind), except
-/// that a Temporary card's new Book is Temporary too (R637): the swap comes before cleanup, and a
-/// Temporary card must not leave the turn as a card that stays.
+/// that a Temporary card's new Book is Temporary too (R637), with the count the old card had left
+/// (R2179001): the swap comes before cleanup, and a Temporary card must not leave the turn as a card
+/// that stays.
 pub fn swap_book(args: SwapBookArgs) -> Effect {
     Effect::new("swapBook", move |ctx| {
         let Some(old) = instance_on_its_stay(ctx, &args.instance_id) else {
@@ -666,7 +667,10 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
         let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
             return;
         };
-        let temporary = is_temporary_card(ctx.state, &old);
+        // R2179001: the new Book keeps the old card's Temporary as it stands, its count included.
+        let temporary = is_temporary_card(ctx.state, &old)
+            .then(|| crate::temporary::temporary_number(&crate::layers::card_keywords(ctx.state, &old)))
+            .flatten();
         let Some(replacement) = replace_card(ctx, &old, def, old.radiant) else {
             return;
         };
@@ -677,8 +681,10 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
                     from: args.from.clone(),
                 },
             );
-            if temporary {
-                live.granted_keywords.push(Keyword::Temporary);
+            if let Some(count) = temporary {
+                live.granted_keywords.push(Keyword::Temporary {
+                    n: (count > 1).then_some(count),
+                });
             }
         }
     })

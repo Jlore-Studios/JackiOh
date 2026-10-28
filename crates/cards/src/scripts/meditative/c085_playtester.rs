@@ -1,13 +1,15 @@
 //! M #85 Playtester (SPEC §8.8 row 85): (2) Unit, Rare, 4/5 → 8/10.
 //!
-//! Base:    "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of
+//! Base:    "Start of turn: At random, add {books|Book of Buff|Books of Buff} or {books|Book of
 //!          Nerf|Books of Nerf} to your hand."
-//! Radiant: "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or
+//! Radiant: "Start of turn: At random, add {books|Radiant Book of Buff|Radiant Books of Buff} or
 //!          {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
-//! Engine: at its controller's start of turn (R62), `choose_mode` with two modes, then `add_to_hand`
-//! of C+ #71 `classicplus-071` or C+ #72 `classicplus-072` (Radiant: `radiant: true`). Both are real
-//! cards, named, so no pool and no R387. The prompt is the controller's; a timeout answers it with
-//! the AI policy (R79); the opponent sees a prompt open and a hidden card arrive.
+//! Engine: at its controller's start of turn (R62), one uniform pick of C+ #71 `classicplus-071` or
+//! C+ #72 `classicplus-072` by the match rng (R2179004, issue #2179), then `add_to_hand` of {books}
+//! copies of the one picked (Radiant: `radiant: true`). Both are real cards, named, so no pool and no
+//! R387. No prompt opens; the opponent sees a hidden card arrive.
+//! Through v0.4.12d its controller chose the Book by a mode prompt (R1161), which `script_v0_4_12d`
+//! keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -18,14 +20,39 @@ const BUFF_BOOK: &str = "classicplus-071";
 /// C+ #72 Book of Nerf, the second mode.
 const NERF_BOOK: &str = "classicplus-072";
 
-/// The two modes, worded as the faces print them. The same labels on both faces.
+/// R2179004: the two Books one pick is made among, in the order the text names them.
+const BOOKS: [&str; 2] = [BUFF_BOOK, NERF_BOOK];
+
+/// The two modes of v0.4.12d's prompt, worded as the faces printed them. The same labels on both faces.
 const BUFF: &str = "Book of Buff";
 const NERF: &str = "Book of Nerf";
 
-/// The resume step the mode prompt re-enters (§10.6).
+/// The resume step v0.4.12d's mode prompt re-entered (§10.6).
 const STEP_BOOK: &str = "book";
 
+/// {books} copies of the Book `id`, Radiant on the Radiant face.
+fn add_books(ctx: &EffectContext<'_>, id: &str, radiant: bool) -> Vec<Effect> {
+    let n = param(ctx, "books").max(0) as usize;
+    (0..n)
+        .map(|_| add_to_hand(json_as(json!({ "defId": id, "radiant": radiant }))))
+        .collect()
+}
+
 fn playtester(radiant: bool) -> Script {
+    Script {
+        // R2179004: one pick of the two by the match rng, then {books} copies of it.
+        start_of_turn: Some(hook(move |ctx| {
+            let Some(id) = ctx.rng.pick(&BOOKS).copied() else {
+                return vec![];
+            };
+            add_books(ctx, id, radiant)
+        })),
+        ..Script::default()
+    }
+}
+
+/// v0.4.12d's face: a mode prompt for its controller (R1161), then the Book chosen.
+fn playtester_v0_4_12d(radiant: bool) -> Script {
     Script {
         start_of_turn: Some(hook(|_ctx| {
             vec![choose_mode(json_as(json!({
@@ -42,10 +69,7 @@ fn playtester(radiant: bool) -> Script {
                     Some(NERF) => NERF_BOOK,
                     _ => BUFF_BOOK,
                 };
-                let n = param(&*ctx, "books").max(0) as usize;
-                (0..n)
-                    .map(|_| add_to_hand(json_as(json!({ "defId": id, "radiant": radiant }))))
-                    .collect()
+                add_books(ctx, id, radiant)
             }),
         )]),
         ..Script::default()
@@ -53,17 +77,24 @@ fn playtester(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The Radiant face's Book is Radiant; the option labels are the same on both faces.
+    // The Radiant face's Book is Radiant.
     CardScripts { base: playtester(false), radiant: playtester(true) }
 }
 
-// M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85: "At your start of turn only, a mode
-// prompt for its controller: Book of Buff (C+ 71) or Book of Nerf (C+ 72) to hand (MD-E8), hidden
-// from the opponent, who sees the prompt; a timeout answers by the AI policy (R79); the hand cap
-// burns it; books reads through `param()`; radiant 8/10 and the Book is Radiant".
+/// R767000: through v0.4.12d its controller chose the Book; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts { base: playtester_v0_4_12d(false), radiant: playtester_v0_4_12d(true) }
+}
+
+// M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85: "At your start of turn only, Book of Buff
+// (C+ 71) or Book of Nerf (C+ 72) at random to hand (R2179004), hidden from the opponent; no prompt; the
+// hand cap burns it; books reads through `param()` and adds that many of the one picked; radiant 8/10
+// and the Book is Radiant".
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::filler;
     use crate::js;
     use jackioh_engine::testkit::*;
@@ -89,20 +120,24 @@ mod tests {
         }))
     }
 
+    /// The Books p1's start of turn added: the hand cards that are neither `before` nor the turn's draw.
+    fn books_added(s: &Scenario, before: &[String]) -> Vec<CardInstance> {
+        s.hand(P1)
+            .into_iter()
+            .filter(|card| !before.contains(&card.id) && BOOKS.contains(&card.def_id.as_str()))
+            .collect()
+    }
+
+    fn ids(s: &Scenario) -> Vec<String> {
+        s.hand(P1).iter().map(|card| card.id.clone()).collect()
+    }
+
     fn option_labels(s: &Scenario) -> Vec<String> {
         s.state()
             .pending
             .as_ref()
             .map(|pending| pending.options.iter().map(|option| option.label.clone()).collect())
             .unwrap_or_default()
-    }
-
-    fn reduce_json(state: &GameState, action: Value) -> ReduceResult {
-        reduce(state, &json_as::<Action>(action))
-    }
-
-    fn must_pending(state: &GameState) -> PendingChoice {
-        state.pending.clone().expect("a prompt is open")
     }
 
     mod m85_playtester {
@@ -112,60 +147,46 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1161_your_start_of_turn_opens_a_mode_prompt_for_you() {
+            fn r2179004_your_start_of_turn_adds_one_book_at_random_and_opens_no_prompt() {
                 let mut s = standing("playtester", false);
+                let before = ids(&s);
                 s.start_turn();
-                let pending = must_pending(s.state());
-                assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(pending.player_id, P1);
-                assert_eq!(option_labels(&s), [BUFF.to_string(), NERF.to_string()]);
-                s.expect_events(json!(["turnStarted", "promptOpened"]));
+                assert!(s.state().pending.is_none());
+                let made = books_added(&s, &before);
+                assert_eq!(made.len(), 1);
+                assert!(!made[0].radiant);
+                // The turn draw plus the Book.
+                assert_eq!(s.hand(P1).len(), before.len() + 2);
+                // Hidden from the opponent: a count, never the card.
+                let view: Value = js(&s.view(P2));
+                assert_eq!(view["opponent"]["hand"], json!({ "count": s.hand(P1).len() }));
+                assert!(!serde_json::to_string(&view["events"]).expect("events").contains(&made[0].def_id));
             }
 
             #[test]
-            fn r1161_the_answer_adds_that_book_hidden_from_the_opponent() {
-                for (option, id) in [(BUFF, BUFF_BOOK), (NERF, NERF_BOOK)] {
-                    let mut s = standing("playtester-answer", false);
-                    let before: Vec<String> =
-                        s.hand(P1).iter().map(|card| card.id.clone()).collect();
+            fn r2179004_across_seeds_both_books_come_and_the_same_seed_adds_the_same_one() {
+                let mut seen: IndexSet<String> = IndexSet::new();
+                for n in 0..16 {
+                    let mut s = standing(&format!("playtester-{n}"), false);
+                    let before = ids(&s);
                     s.start_turn();
-                    s.answer(json!(option));
-                    let hand = s.hand(P1);
-                    // The turn draw plus the Book.
-                    assert_eq!(hand.len(), before.len() + 2);
-                    let made: Vec<&CardInstance> =
-                        hand.iter().filter(|card| !before.contains(&card.id)).collect();
-                    assert_eq!(made.len(), 2);
-                    let book =
-                        made.into_iter().find(|card| card.def_id == id).expect("the Book");
-                    assert!(!book.radiant);
-                    // Hidden from the opponent: a count, never the card.
-                    let view: Value = js(&s.view(P2));
-                    assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
-                    assert!(!serde_json::to_string(&view["events"]).expect("events").contains(id));
+                    let made = books_added(&s, &before);
+                    let mut again = standing(&format!("playtester-{n}"), false);
+                    let again_before = ids(&again);
+                    again.start_turn();
+                    assert_eq!(def_ids(&made), def_ids(&books_added(&again, &again_before)));
+                    seen.extend(def_ids(&made));
                 }
+                assert_eq!(seen.len(), 2, "{seen:?}");
             }
 
             #[test]
-            fn no_prompt_at_the_opponents_start_of_turn() {
+            fn nothing_at_the_opponents_start_of_turn() {
                 let mut s = standing("playtester-foe", false);
+                let before = ids(&s);
                 s.end_turn();
                 assert!(s.state().pending.is_none());
-            }
-
-            #[test]
-            fn r79_a_timeout_answers_by_the_ai_policy() {
-                crate::register_all();
-                let mut s = standing("playtester-timeout", false);
-                s.start_turn();
-                let open = must_pending(s.state());
-                let result =
-                    reduce_json(s.state(), json!({ "type": "timeout", "playerId": "p1", "nonce": "playtester-timeout" }));
-                assert!(result.error.is_none());
-                assert!(result.state.pending.is_none(), "the prompt {} is answered", open.id);
-                // A Book arrived in p1's hand.
-                let hand = result.state.players.p1.hand.clone();
-                assert!(hand.iter().any(|card| card.def_id == BUFF_BOOK || card.def_id == NERF_BOOK));
+                assert!(books_added(&s, &before).is_empty());
             }
 
             #[test]
@@ -181,25 +202,22 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 s.start_turn();
-                s.answer(json!(BUFF));
                 assert!(s.events().iter().any(|event| matches!(event, GameEvent::Burned { .. })));
-                assert!(!s.hand(P1).iter().any(|card| card.def_id == BUFF_BOOK));
+                assert!(!s.hand(P1).iter().any(|card| BOOKS.contains(&card.def_id.as_str())));
             }
 
             #[test]
-            fn r386_books_reads_through_param() {
+            fn r2179004_r386_books_reads_through_param_and_adds_that_many_of_the_one_picked() {
                 crate::register_all();
                 let mut s = standing("playtester-param", false);
                 crate::upgrade_number(&mut s, PLAYTESTER, "books");
-                let before = s.hand(P1).len();
+                let before = ids(&s);
                 s.start_turn();
-                s.answer(json!(NERF));
-                // The turn draw plus two Books.
-                assert_eq!(s.hand(P1).len(), before + 3);
-                assert_eq!(
-                    s.hand(P1).iter().filter(|card| card.def_id == NERF_BOOK).count(),
-                    2
-                );
+                // The turn draw plus two Books, both the same one.
+                assert_eq!(s.hand(P1).len(), before.len() + 3);
+                let made = books_added(&s, &before);
+                assert_eq!(made.len(), 2);
+                assert_eq!(made[0].def_id, made[1].def_id);
             }
         }
 
@@ -207,19 +225,33 @@ mod tests {
             use super::*;
 
             #[test]
-            fn radiant_the_book_is_radiant() {
+            fn r2179004_radiant_the_book_is_radiant() {
                 let mut s = standing("playtester-radiant", true);
-                let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
-                // The option labels are the same on both faces.
+                let before = ids(&s);
                 s.start_turn();
-                assert_eq!(option_labels(&s), [BUFF.to_string(), NERF.to_string()]);
-                s.answer(json!(BUFF));
-                let hand = s.hand(P1);
-                let made: Vec<&CardInstance> =
-                    hand.iter().filter(|card| !before.contains(&card.id)).collect();
-                let book =
-                    made.into_iter().find(|card| card.def_id == BUFF_BOOK).expect("the Book");
-                assert!(book.radiant);
+                assert!(s.state().pending.is_none());
+                let made = books_added(&s, &before);
+                assert_eq!(made.len(), 1);
+                assert!(made[0].radiant);
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, whose controller chose the Book.
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_r1161_a_game_on_v0_4_12d_asks_its_controller_and_adds_the_book_chosen() {
+                crate::under_kept(PLAYTESTER, script_v0_4_12d(), || {
+                    let mut s = standing("playtester-kept", false);
+                    let before = ids(&s);
+                    s.start_turn();
+                    let pending = s.state().pending.clone().expect("a prompt is open");
+                    assert_eq!(pending.kind, PromptKind::Mode);
+                    assert_eq!(option_labels(&s), [BUFF.to_string(), NERF.to_string()]);
+                    s.answer(json!(NERF));
+                    assert_eq!(def_ids(&books_added(&s, &before)), vec![NERF_BOOK.to_string()]);
+                });
             }
         }
     }

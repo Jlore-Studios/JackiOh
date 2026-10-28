@@ -742,7 +742,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     }
 
     #[test]
-    fn r70_fires_the_cry_for_a_cast_too_a_cast_on_draw_and_a_call_to_chaos_cast_both_count_as_plays() {
+    fn r70_r2179002_fires_the_cry_for_a_cast_too_a_cast_on_draw_counts_as_no_play_a_call_to_chaos_cast_does() {
         let mut state = playing("r70-casts");
         let mut sink = sink_for(&state);
 
@@ -755,7 +755,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
             apply_effects(&[effects::draw(json_as(json!({ "count": 1 })))], &mut ctx);
         }
         assert_eq!(notes(&state), strings(&["cry:onDraw"]));
-        assert_eq!(state.counters.played, before + 1);
+        // R2179002: a cast on draw is a cast and no play.
+        assert_eq!(state.counters.played, before);
         assert!(
             !state
                 .players
@@ -770,7 +771,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         let chaos = hand_card(&mut state, &chaos_spell().id, PlayerId::P1);
         cast_card(&mut sink.on(&mut state), &chaos, CastOptions::default());
         assert_eq!(notes(&state), strings(&["cry:onDraw", "cry:cast"]));
-        assert_eq!(state.counters.played, before + 2);
+        assert_eq!(state.counters.played, before + 1);
         assert_eq!(cost_paid_of_plays(&sink.events), vec![0, 0]);
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == chaos.id));
     }

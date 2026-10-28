@@ -45,7 +45,13 @@ arrivedDuring?: Array<string>,
  * response the loop hands this event later judges the played card's stay from the moment the
  * event happened. Engine bookkeeping: a view never forwards it.
  */
-exitsFrom?: number, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
+exitsFrom?: number, 
+/**
+ * R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
+ * nothing that counts plays counted it, and no trigger answers this event. Public, as the
+ * cast is. Only ever `Some(true)`.
+ */
+onDraw?: true, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
 /**
  * R119: the permanents that arrived on the field while this play resolved, whatever put them
  * there — a Recruit by its Cry (#98), #95's backrow, a Reborn body its own Cry brought back, a

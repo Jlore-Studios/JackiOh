@@ -1,11 +1,14 @@
 //! C+ #30 Felinor Fuser (SPEC §8.7 row 30; §6.3 Discover and Fuse, R77, R102, R179, R352, R380,
-//! R387, R405). (3) Unit, Felinor, Epic, 1/1 → 2/2 (3/3 → 6/6 before issue #1828).
-//!   Base:    "Cry: Discover a Felinor Unit, then another. Fuse both into this."
-//!   Radiant: "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
+//! R387, R405). (4) Unit, Felinor, Epic, 3/3 → 6/6 since issue #2179 (1/1 → 2/2 from issue #1828).
+//!   Base:    "Cry: Discover a (2) Cost or less Felinor Unit, then another. Fuse both into this."
+//!   Radiant: "Cry: Discover a Radiant (3) Cost or less Felinor Unit, then another. Fuse both into
+//!            this."
 //!
 //! Two chained Discovers, the shape #98 Heroic Power's Stitching makes them (R352): the first answer
-//! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit. Each Discover offers three different
-//! non-token Felinor-tagged Units of every set (R380, R405), never Felinor Fuser itself (R387).
+//! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit.
+//! Each Discover offers three different non-token Felinor-tagged Units of every set (R380, R405) whose
+//! printed cost (R65) is (2) or less, (3) or less on the Radiant face, never Felinor Fuser itself (R387).
+//! Through v0.4.12d the pool had no cost limit, which `script_v0_4_12d` keeps (R767000).
 //!
 //! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,
 //! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
@@ -19,15 +22,31 @@ pub const ID: &str = "classicplus-030";
 /// R352's two Discovers: "Discover a Felinor Unit, then another".
 const PICKS: usize = 2;
 
+/// The printed "(2) Cost or less" (base) and "(3) Cost or less" (Radiant) since #2179.
+const MAX_COST: i32 = 2;
+const MAX_COST_RADIANT: i32 = 3;
+
 /// The resume step each Discover's answer re-enters (§10.6).
 const PICKED: &str = "picked";
 
 /// The data key the picks so far travel in, from the first prompt to the second.
 const PICKS_KEY: &str = "picks";
 
-/// R405, R380: a Felinor-tagged Unit of any set; `query` leaves tokens out (§5.1).
-fn felinor_units() -> Value {
-    json!({ "tags": ["Felinor"], "type": "Unit" })
+/// One face's Discover: the most a Felinor Unit it offers may cost, and its prompt.
+#[derive(Clone, Copy)]
+struct Offer {
+    max_cost: Option<i32>,
+    prompt: &'static str,
+}
+
+/// R405, R380: a Felinor-tagged Unit of any set, at most `max_cost` printed; `query` leaves tokens out
+/// (§5.1).
+fn felinor_units(max_cost: Option<i32>) -> Value {
+    let mut query = json!({ "tags": ["Felinor"], "type": "Unit" });
+    if let Some(max) = max_cost {
+        query["costRange"] = json!({ "max": max });
+    }
+    query
 }
 
 /// The picks a paused Cry has made so far, read back out of the prompt's data.
@@ -39,20 +58,20 @@ fn picks_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
 }
 
 /// One Discover of a Felinor Unit, the picks so far in its data.
-fn discover(radiant: bool, picks: &[String]) -> Effect {
+fn discover(offer: Offer, picks: &[String]) -> Effect {
     let mut args = json!({
         "step": PICKED,
-        "query": felinor_units(),
-        "prompt": if radiant { "Discover a Radiant Felinor Unit" } else { "Discover a Felinor Unit" },
+        "query": felinor_units(offer.max_cost),
+        "prompt": offer.prompt,
         "data": {},
     });
     args["data"][PICKS_KEY] = json!(picks);
     discover_from_catalog(json_as(args))
 }
 
-fn felinor_fuser(radiant: bool) -> Script {
+fn felinor_fuser(radiant: bool, offer: Offer) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| vec![discover(radiant, &[])])),
+        cry: Some(hook(move |_ctx| vec![discover(offer, &[])])),
         resume: IndexMap::from([(
             PICKED,
             hook(move |ctx| {
@@ -64,7 +83,7 @@ fn felinor_fuser(radiant: bool) -> Script {
                 let mut picks = picks_so_far(ctx);
                 picks.push(picked);
                 if picks.len() < PICKS {
-                    return vec![discover(radiant, &picks)];
+                    return vec![discover(offer, &picks)];
                 }
                 // The unit fused onto is this one, while it still stands on the field (R77).
                 let Some(self_) = ctx.self_.as_ref() else {
@@ -83,8 +102,41 @@ fn felinor_fuser(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: felinor_fuser(false),
-        radiant: felinor_fuser(true),
+        base: felinor_fuser(
+            false,
+            Offer {
+                max_cost: Some(MAX_COST),
+                prompt: "Discover a (2) Cost or less Felinor Unit",
+            },
+        ),
+        radiant: felinor_fuser(
+            true,
+            Offer {
+                max_cost: Some(MAX_COST_RADIANT),
+                prompt: "Discover a Radiant (3) Cost or less Felinor Unit",
+            },
+        ),
+    }
+}
+
+/// R767000: through v0.4.12d its Discovers offered a Felinor Unit of any cost; `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: felinor_fuser(
+            false,
+            Offer {
+                max_cost: None,
+                prompt: "Discover a Felinor Unit",
+            },
+        ),
+        radiant: felinor_fuser(
+            true,
+            Offer {
+                max_cost: None,
+                prompt: "Discover a Radiant Felinor Unit",
+            },
+        ),
     }
 }
 
@@ -101,7 +153,8 @@ mod tests {
     const FUSER: &str = "classicplus-030";
     /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool.
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool. #43 and #94 cost (4), so since issue
+    /// #2179 neither face offers them (`CHEAP_ENOUGH` leaves them out); none of them costs (3).
     const FELINOR_UNITS: [&str; 12] = [
         "core-012",
         "core-043",
@@ -116,6 +169,8 @@ mod tests {
         "meditative-094",
         "meditative-102",
     ];
+    /// The two of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
+    const COSTING_4: [&str; 2] = ["core-043", "meditative-094"];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
     const FILLER: &str = "core-005";
@@ -142,6 +197,11 @@ mod tests {
 
     fn is_felinor_unit(id: &str) -> bool {
         FELINOR_UNITS.contains(&id)
+    }
+
+    /// #2179: one of `FELINOR_UNITS` a face's Discover may offer, costing (3) or less.
+    fn cheap_enough(id: &str) -> bool {
+        is_felinor_unit(id) && !COSTING_4.contains(&id)
     }
 
     /// Play the Fuser into lane 2 and answer both Discovers with their first option.
@@ -179,8 +239,25 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s8_7_it_is_1_1() {
-                stands_at(false, 1);
+            fn s8_7_it_is_3_3() {
+                stands_at(false, 3);
+            }
+
+            #[test]
+            fn r65_its_discovers_never_offer_a_felinor_that_costs_more_than_2_across_seeds() {
+                crate::register_all();
+                let mut seen: IndexSet<String> = IndexSet::new();
+                for n in 0..30 {
+                    let mut s = scenario(json!({ "seed": format!("fuser-cheap-{n}"), "p1": { "hand": [FUSER, FILLER] } }));
+                    s.play(FUSER, json!({}));
+                    for id in offered(&open(&s)) {
+                        assert!(cheap_enough(&id), "{id}");
+                        assert!(query_cost(&crate::card_def(&id)) <= 2, "{id}");
+                        seen.insert(id);
+                    }
+                }
+                // Across the seeds the pool's (1) and (2) Cost Felinors all come up.
+                assert!(seen.len() >= 8, "{seen:?}");
             }
 
             #[test]
@@ -195,13 +272,13 @@ mod tests {
                 assert_eq!(ids.len(), 3);
                 assert_eq!(ids.iter().cloned().collect::<IndexSet<String>>().len(), 3);
                 for id in &ids {
-                    assert!(is_felinor_unit(id));
+                    assert!(cheap_enough(id));
                 }
                 s.answer(json!(ids.first().cloned().unwrap_or_default()));
                 let second = offered(&open(&s));
                 assert_eq!(second.len(), 3);
                 for id in &second {
-                    assert!(is_felinor_unit(id));
+                    assert!(cheap_enough(id));
                 }
             }
 
@@ -265,36 +342,29 @@ mod tests {
             #[test]
             fn r77_the_fused_in_cries_never_run_the_fuser_is_on_the_field_already() {
                 crate::register_all();
-                // A seed whose first Discover offers #43 Big Felinor, whose Cry would destroy the enemy Timmy;
-                // the second picks #12 Duplicating Felinors when offered, whose Cry would summon a copy.
-                const BIG_FELINOR: &str = "core-043";
+                // A seed whose first Discover offers #12 Duplicating Felinors, whose Cry would summon a copy.
                 const DUPLICATING: &str = "core-012";
                 let mut found: Option<Scenario> = None;
                 let mut at = 0;
-                while at < 40 && found.is_none() {
+                while at < 60 && found.is_none() {
                     let mut tried = scenario(json!({
                         "seed": format!("fuser-cries-{at}"),
                         "p1": { "hand": [FUSER, FILLER] },
                         "p2": { "hand": [FILLER], "field": [TIMMY] },
                     }));
                     tried.play(FUSER, json!({ "zone": 2 }));
-                    if offered(&open(&tried)).iter().any(|id| id == BIG_FELINOR) {
+                    if offered(&open(&tried)).iter().any(|id| id == DUPLICATING) {
                         found = Some(tried);
                     }
                     at += 1;
                 }
-                let mut s = found.expect("no seed offers Big Felinor first");
-                s.answer(json!(BIG_FELINOR));
-                let second = offered(&open(&s));
-                let pick = if second.iter().any(|id| id == DUPLICATING) {
-                    DUPLICATING.to_string()
-                } else {
-                    second.first().cloned().unwrap_or_default()
-                };
+                let mut s = found.expect("no seed offers Duplicating Felinors first");
+                s.answer(json!(DUPLICATING));
+                let pick = offered(&open(&s)).first().cloned().unwrap_or_default();
                 s.answer(json!(pick));
                 let fused_id = s.unit(P1, 2).map(|unit| unit.def_id).unwrap_or_default();
                 let parts = fused_id_parts(Some(s.state()), &fused_id).unwrap_or_default();
-                assert!(parts.iter().any(|id| id == BIG_FELINOR));
+                assert!(parts.iter().any(|id| id == DUPLICATING));
                 s.expect_in_zone(TIMMY, "field");
                 let summoned = s.events().iter().filter(|event| matches!(event, GameEvent::Summoned { .. })).count();
                 assert_eq!(summoned, 1);
@@ -341,12 +411,12 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s8_7_it_is_2_2() {
-                stands_at(true, 2);
+            fn s8_7_it_is_6_6() {
+                stands_at(true, 6);
             }
 
             #[test]
-            fn r77_discovers_radiant_felinor_units_each_goes_in_on_its_radiant_face_and_the_2_2_sums_the_radiant_faces() {
+            fn r77_discovers_radiant_felinor_units_each_goes_in_on_its_radiant_face_and_the_6_6_sums_the_radiant_faces() {
                 crate::register_all();
                 let (s, picks) = fused(true, None);
                 let kept = s.unit(P1, 2).expect("the Fuser left its zone");
@@ -367,13 +437,39 @@ mod tests {
             }
 
             #[test]
-            fn r387_the_radiant_discovers_never_offer_the_fuser_either() {
+            fn r387_r65_the_radiant_discovers_never_offer_the_fuser_nor_a_felinor_costing_more_than_3() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [{ "def": FUSER, "radiant": true }, FILLER] } }));
-                s.play(FUSER, json!({}));
-                for id in offered(&open(&s)) {
-                    assert!(is_felinor_unit(&id));
+                for n in 0..20 {
+                    let mut s = scenario(json!({
+                        "seed": format!("fuser-radiant-cheap-{n}"),
+                        "p1": { "hand": [{ "def": FUSER, "radiant": true }, FILLER] },
+                    }));
+                    s.play(FUSER, json!({}));
+                    for id in offered(&open(&s)) {
+                        assert!(cheap_enough(&id), "{id}");
+                        assert!(query_cost(&crate::card_def(&id)) <= 3, "{id}");
+                    }
                 }
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, whose Discovers had no cost limit.
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_4_12d_may_offer_a_felinor_that_costs_4() {
+                crate::under_kept(FUSER, crate::scripts::classic_plus::c030_felinor_fuser::script_v0_4_12d(), || {
+                    let mut costly = false;
+                    for n in 0..30 {
+                        let mut s = scenario(json!({ "seed": format!("fuser-kept-{n}"), "p1": { "hand": [FUSER, FILLER] } }));
+                        s.play(FUSER, json!({}));
+                        let ids = offered(&open(&s));
+                        assert!(ids.iter().all(|id| is_felinor_unit(id)));
+                        costly |= ids.iter().any(|id| COSTING_4.contains(&id.as_str()));
+                    }
+                    assert!(costly, "no seed offered a (4) Cost Felinor");
+                });
             }
         }
     }

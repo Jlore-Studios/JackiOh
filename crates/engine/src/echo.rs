@@ -316,6 +316,8 @@ pub struct ResolvedCard {
     /// R1180005: the enemies the Spell targeted as it resolved, in order, taken off the card before it
     /// lands (`targeted::take_spell_targets`). Empty for anything that noted none.
     pub targeted: Vec<Selection>,
+    /// R2179002: the card was cast on draw, a cast that is no play, which `cardResolved` reports.
+    pub on_draw: bool,
 }
 
 // §10.5 step 7, both halves, for a play and for a cast (R70) alike.
@@ -409,5 +411,6 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
         arrived_during,
         exits_from: Some(exits_from),
         answer,
+        on_draw: resolved.on_draw.then_some(true),
     });
 }

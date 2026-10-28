@@ -2,8 +2,8 @@
 //!   Base:    "Activates when your opponent plays their 3rd card in a turn: After it resolves, their
 //!            turn ends."
 //!   Radiant: "… their 2nd card …"
-//!   Engine:  "Counts the opponent's plays that turn (casts included, R70; a countered card is never
-//!            played) and fires as the 3rd (Radiant 2nd) is played (`cardPlayed`, §10.5 step 4), on that
+//!   Engine:  "Counts the opponent's plays that turn (casts included, R70, but not a cast on draw,
+//!            R2179002; a countered card is never played) and fires as the 3rd (Radiant 2nd) is played (`cardPlayed`, §10.5 step 4), on that
 //!            play only, to the graveyard (§3.2). The play resolves first (§10.5 step 7); then End the turn
 //!            (§6.3): the turn ends as if they had pressed End turn, every end-of-turn step running."
 //!
@@ -53,7 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: their 3rd play (casts count, R70)
+// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: their 3rd play (casts count, R70; not on draw, R2179002)
 // fires it and their turn then ends (`endTurnAfter`, §6.3); hidden until it fires (R33, R97); radiant 2nd.
 //
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
@@ -174,17 +174,21 @@ mod tests {
             }
 
             #[test]
-            fn r70_a_cast_is_a_play_a_cast_on_draw_card_their_2nd_play_draws_is_their_3rd_play() {
+            fn r2179002_a_cast_on_draw_card_their_2nd_play_draws_is_no_play_their_next_card_is_their_3rd() {
                 let mut s = setup(
                     json!({}),
                     json!({ "library": [{ "def": HINDER, "radiant": true }, VANILLA, VANILLA, VANILLA] }),
                     false,
                 );
                 s.play(VANILLA, json!({ "zone": 1 })).play(STOCKPILE, json!({}));
+                // Through v0.4.12d the Hinder was their 3rd play and ended the turn (R70).
+                s.expect_in_zone(RATE_LIMIT, "field");
+                assert_eq!(s.state().active, P2);
+                // Stockpile's whole list resolved: both draws (the cast one and its replacement) and the heal.
+                s.expect_health(P2, 32);
+                s.play(VANILLA, json!({ "zone": 2 }));
                 s.expect_in_zone(RATE_LIMIT, "graveyard");
                 assert_eq!(s.state().active, P1);
-                // Stockpile's whole list still resolved: both draws (the cast one and its replacement) and the heal.
-                s.expect_health(P2, 32);
             }
 
             #[test]

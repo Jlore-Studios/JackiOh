@@ -964,6 +964,10 @@ pub struct HeroGuard {
     pub cap: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub divisor: Option<i32>,
+    /// R2179005: the cap holds on each hit on the guarding Unit itself too, at §4.4 step 3 after its
+    /// Armor ("Your hero and this can't take more than (1) damage at a time", C+ #11 Anime Armor).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guards_self: Option<bool>,
 }
 
 /// B5 E6: what this card does to hits on its controller's hero while it acts on the field.

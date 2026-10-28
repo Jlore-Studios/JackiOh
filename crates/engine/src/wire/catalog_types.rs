@@ -516,7 +516,14 @@ pub enum Keyword {
     /// R636: a Unit may attack twice each turn.
     Windfury,
     /// R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3).
-    Temporary,
+    /// R2179001: Temporary X counts down by 1 at each end of its owner's turn it spends in their hand,
+    /// and the card is discarded at 0. A plain Temporary (no number) is Temporary 1, written without
+    /// one, so the catalogs and logs from before the number read and hash as they did.
+    Temporary {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        n: Option<i32>,
+    },
     /// A Unit may attack and switch position in the same turn (R49).
     Deft,
     /// R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing.
@@ -637,7 +644,7 @@ impl Keyword {
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
             Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
             Keyword::Windfury => KeywordKind::Windfury,
-            Keyword::Temporary => KeywordKind::Temporary,
+            Keyword::Temporary { .. } => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
             Keyword::Untributable => KeywordKind::Untributable,
             Keyword::Equip => KeywordKind::Equip,
@@ -652,13 +659,18 @@ impl Keyword {
         }
     }
 
-    /// `"n" in keyword ? keyword.n : undefined`: the number a numbered keyword carries.
+    /// R2179001: a plain Temporary, Temporary 1 with no number written.
+    pub const TEMPORARY: Keyword = Keyword::Temporary { n: None };
+
+    /// `"n" in keyword ? keyword.n : undefined`: the number a numbered keyword carries. A Temporary
+    /// carries one only where it prints or is given one (R2179001).
     pub fn n(&self) -> Option<i32> {
         match *self {
             Keyword::Armor { n }
             | Keyword::Lucky { n }
             | Keyword::Brittle { n }
             | Keyword::SpellDamage { n } => Some(n),
+            Keyword::Temporary { n } => n,
             _ => None,
         }
     }
@@ -691,7 +703,7 @@ impl Keyword {
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
             KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
-            KeywordKind::Temporary => Keyword::Temporary,
+            KeywordKind::Temporary => Keyword::TEMPORARY,
             KeywordKind::Deft => Keyword::Deft,
             KeywordKind::Untributable => Keyword::Untributable,
             KeywordKind::Equip => Keyword::Equip,

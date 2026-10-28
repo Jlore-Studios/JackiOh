@@ -492,10 +492,11 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     }
 
     #[test]
-    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_classic_plus_22_blood_moon_and_meditative_64_68()
+    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_and_meditative_64_68()
      {
         register();
-        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10.
+        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10, Classic+ #22 Blood Moon
+        // (2) since #2179.
         assert_eq!(
             ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -505,7 +506,6 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-071",
                 "core-096",
                 "classic-063",
-                "classicplus-022",
                 "meditative-064",
                 "meditative-068",
             ])
@@ -967,8 +967,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "classic-033",
         "classic-082",
         "classicplus-006",
-        // C+ #30 Felinor Fuser, a 1/1 since issue #1828.
-        "classicplus-030",
+        // C+ #30 Felinor Fuser was a 1/1 from issue #1828 to #2179, which made it a 3/3.
         "classicplus-076",
     ];
 

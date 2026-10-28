@@ -39,8 +39,9 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
     else {
         return None;
     };
-    // §8: "the opponent plays". A trap never answers its own controller's play.
-    if *player == ctx.controller {
+    // §8: "the opponent plays". A trap never answers its own controller's play, and a card cast on
+    // draw is no play (R2179002).
+    if *player == ctx.controller || cast_on_draw_event(event) {
         return None;
     }
     // R61: "played permanents only". Step 7 read this as it landed, so no board check is needed: a

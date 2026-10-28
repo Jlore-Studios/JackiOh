@@ -891,6 +891,11 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     {
         return Vec::new();
     }
+    // R2179002: a cast on draw is a cast and no play, so nothing that answers or counts plays answers
+    // its `cardPlayed`: no quest, no trap and no trigger. Its other events are answered as ever.
+    if matches!(event, GameEvent::CardPlayed { on_draw: Some(true), .. }) {
+        return Vec::new();
+    }
     // B5 E33, R404: a quest counts the events the loop reaches, in the order they happened, before
     // anything answers this one — so a quest that opened later in the stream never counts it.
     crate::subsystems::quests::observe_quest_event(sink, event, &|seen: &EngineSink<'_>| {

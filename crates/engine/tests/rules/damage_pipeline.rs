@@ -12,7 +12,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::damage_combat::{
     anime_armor, argus, bolt, grunt, hidden_argus, hidden_lens, lance, lens, playing, recorder, replays_to,
-    solar, sweep, wall,
+    self_guard, solar, sweep, wall,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
@@ -328,5 +328,42 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         let mut unguarded = playing("dc-projection-plain");
         put(&mut unguarded, &argus.id, slot(P2, Row::Backrow, 1), json!({}));
         assert_eq!(projected_hero_damage(&unguarded, P2, 9, false), 5);
+    }
+
+    /// R2179005: a guard that guards itself caps each hit on its own Unit at §4.4 step 3, after Armor
+    /// and before a Trample's excess is split off; the hero's cap is unchanged, and another guard's is
+    /// the hero's alone.
+    #[test]
+    fn r2179005_a_guard_that_guards_itself_caps_each_hit_on_its_unit_and_nothing_tramples_past_it() {
+        let mut state = playing("dc-self-guard");
+        let guard = put(&mut state, &self_guard.id, slot(P2, Row::Units, 1), json!({}));
+        let other = put(&mut state, &anime_armor.id, slot(P2, Row::Units, 2), json!({}));
+        assert_eq!(unit_damage_cap(&state, &guard), Some(1));
+        assert_eq!(unit_damage_cap(&state, &other), None);
+        assert_eq!(hero_damage_cap(&state, P2), Some(1));
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
+        deal_damage(
+            &mut sink,
+            DamageArgs {
+                source: None,
+                target: DamageTarget::Unit { instance: guard.clone() },
+                amount: 9,
+                flags: Some(json_as(json!({ "trample": true }))),
+            },
+        );
+        deal_damage(
+            &mut sink,
+            DamageArgs {
+                source: None,
+                target: DamageTarget::Unit { instance: other.clone() },
+                amount: 3,
+                flags: None,
+            },
+        );
+        assert_eq!(find_instance(sink.state, &guard.id).map(|card| card.damage), Some(1));
+        assert_eq!(find_instance(sink.state, &other.id).map(|card| card.damage), Some(3));
+        assert_eq!(sink.state.players[P2].hero.health, 30);
     }
 }

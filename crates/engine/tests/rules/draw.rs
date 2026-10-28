@@ -64,15 +64,13 @@ mod draw_m1_t7 {
         assert_eq!(state.players.p2.mana.next_turn_mod, -1);
         assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-2"]));
         assert_eq!(def_ids(&state.players.p1.graveyard), vec![hinder().id]);
-        assert_eq!(state.players.p1.turn_log.cards_played, 1);
-        assert_eq!(state.counters.played, 1);
+        // R2179002: a cast on draw is no play, so neither count takes it.
+        assert_eq!(state.players.p1.turn_log.cards_played, 0);
+        assert_eq!(state.counters.played, 0);
         assert_eq!(state.counters.drawn, 2);
-        assert_eq!(
-            events_json(&events, GameEventType::CardPlayed)
-                .first()
-                .map(|event| event["costPaid"].clone()),
-            Some(json!(0))
-        );
+        let played = events_json(&events, GameEventType::CardPlayed);
+        assert_eq!(played.first().map(|event| event["costPaid"].clone()), Some(json!(0)));
+        assert_eq!(played.first().map(|event| event["onDraw"].clone()), Some(json!(true)));
     }
 
     #[test]

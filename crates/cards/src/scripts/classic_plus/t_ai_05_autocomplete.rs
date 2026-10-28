@@ -5,7 +5,8 @@
 //!            play overwrites and nothing clears) and adds a copy of its definition and face. Traps and
 //!            Field Traps are set face-down, so they never count and nothing hidden is copied; the record
 //!            never takes an AI generated card (the AI tag, a fused one included), so two Autocompletes
-//!            can't feed each other forever. Casts count (R70); a countered card was never played.
+//!            can't feed each other forever. Casts count (R70), a cast on draw not (R2179002); a
+//!            countered card was never played.
 //!            Nothing played yet: nothing. Tunes: none."
 //!
 //! The record is E4's (`last_face_up_played`, R451), which already passes over Traps and the AI tag
@@ -49,7 +50,7 @@ pub fn script() -> CardScripts {
 }
 
 // T-AI-5 Autocomplete — SPEC §8.7 row T-AI-5, BUILD M9 Classic+ row T-AI-5: "Adds a copy, by definition
-// and face, of the last Unit, Spell or Field Spell your opponent played face-up (a cast counts, R70),
+// and face, of the last Unit, Spell or Field Spell your opponent played face-up (a cast counts, R70; not on draw, R2179002),
 // skipping AI generated cards so two Autocompletes never feed each other; Traps and Field Traps never
 // count, being set face-down, so nothing hidden is copied; nothing played yet, nothing; the record
 // outlives the card leaving play; the copy reaches your hand under the sentinel for the opponent (R97);
@@ -265,7 +266,7 @@ mod tests {
             }
 
             #[test]
-            fn r70_a_cast_is_a_play_their_cast_on_draw_card_is_the_last_one() {
+            fn r2179002_their_cast_on_draw_card_is_no_play_so_the_play_that_drew_it_is_the_last_one() {
                 let mut s = after_their_turn(
                     &[(STOCKPILE, None)],
                     json!({}),
@@ -273,8 +274,9 @@ mod tests {
                     false,
                 );
                 s.play(AUTOCOMPLETE, json!({}));
-                assert_eq!(copies_in(&s, HINDER), 1);
-                assert_eq!(copy_of(&s, HINDER).map(|card| card.radiant), Some(true));
+                // Through v0.4.12d the Hinder was the last play and copied (R70).
+                assert_eq!(copies_in(&s, HINDER), 0);
+                assert_eq!(copies_in(&s, STOCKPILE), 1);
             }
 
             #[test]

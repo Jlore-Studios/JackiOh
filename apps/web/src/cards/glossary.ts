@@ -203,7 +203,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Trample: keyword("Trample", "Excess damage to a unit hits its hero; a unit tramples only when it attacks"),
   Cleave: keyword("Cleave", "Also damages units adjacent to the target"),
   Pierce: keyword("Pierce", "Its damage ignores Armor"),
-  Indestructible: keyword("Indestructible", "Can't be destroyed or damaged; can be exiled or tributed"),
+  // R2179000: Indestructible is also never in Defense Position and never has Taunt (R347).
+  Indestructible: keyword(
+    "Indestructible",
+    "Can't be destroyed or damaged, can't be in Defense Position and never has Taunt; can be exiled or tributed",
+  ),
   Immutable: keyword(
     "Immutable",
     "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it",
@@ -232,7 +236,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
   // R636, R637: the keyword rules patch (§6.1).
   Windfury: keyword("Windfury", "Can attack twice each turn"),
-  Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
+  // R2179001: Temporary X counts down at each end of its owner's turn; a plain Temporary is Temporary 1.
+  Temporary: keyword(
+    "Temporary",
+    "At the end of its owner's turn the count drops by 1; at 0 it is discarded from their hand. Temporary alone is Temporary 1",
+    { row: "Temporary X" },
+  ),
   // Patch v0.2.4 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
   Deft: keyword("Deft", "Can attack and switch position in the same turn"),
   // R1220: Untributable, Meditative #80 Aluneth's keyword.

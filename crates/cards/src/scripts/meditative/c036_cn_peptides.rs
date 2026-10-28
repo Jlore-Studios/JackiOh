@@ -84,7 +84,7 @@ mod tests {
 
     const PEPTIDES: &str = "meditative-036";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, the target.
-    const WALL: &str = "classic-041"; // 3/3 Indestructible, which tails cannot kill.
+    const WALL: &str = "core-066"; // The Rock, 10/10 Indestructible, which tails cannot kill.
     const FILLER: &str = "core-005";
 
     /// p1 holds Peptides (base unless `radiant_face`); the victim stands in `lane` of `side`'s
@@ -187,7 +187,7 @@ mod tests {
                 assert!(destroyed(s.events()).is_empty());
                 let wall_id = wall.id.clone();
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(wall_id));
-                s.expect_stats(&wall, json!({ "attack": 3, "health": 3 }));
+                s.expect_stats(&wall, json!({ "attack": 10, "health": 10 }));
             }
 
             #[test]

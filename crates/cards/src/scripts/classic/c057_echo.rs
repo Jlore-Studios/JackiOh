@@ -3,8 +3,8 @@
 //!   Radiant: "Echo 1 / This has the text of the last Spell either player played."
 //!
 //! The card is a flag and a record; the text it has is B5 E14's subsystem, with its own engine tests
-//! through fixture cards. `lastSpell` (§10.1) is overwritten by every Spell play and cast (R70) and
-//! never cleared; a countered Spell was never played. In hand the view carries that face under Echo's
+//! through fixture cards. `lastSpell` (§10.1) is overwritten by every Spell play and cast (R70), never
+//! by a cast on draw, which is no play (R2179002), and never cleared; a countered Spell was never played. In hand the view carries that face under Echo's
 //! name, as R243 does for a fused card.
 //!   - `copiesLastSpell` makes the running text the last Spell's face (R399): targets, modes, X (R545:
 //!     up to the mana left once Echo's own (1) is paid), resolution with Echo as "this", prompts, `preview`
@@ -170,15 +170,15 @@ mod tests {
             }
 
             #[test]
-            fn r399_r70_a_cast_is_a_play_a_spell_cast_on_draw_is_the_last_spell() {
+            fn r399_r2179002_a_spell_cast_on_draw_is_no_play_so_never_the_last_spell() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [CN_VIRUS, VANILLA, VANILLA] } }));
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": CN_VIRUS, "radiant": false }));
+                // Through v0.4.12d the CN-Virus its draw cast was the last Spell (R70).
+                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": STOCKPILE, "radiant": false }));
                 assert_eq!(
-                    own_view(&s, PlayerId::P1).map(|card| card["copies"].clone()),
-                    // The copy's view carries CN-Virus's declared numbers, so its text fills (R386).
-                    Some(json!({ "defId": CN_VIRUS, "radiant": false, "params": { "copies": 2, "damage": 1 } })),
+                    own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
+                    Some(json!(STOCKPILE)),
                 );
             }
 
@@ -396,12 +396,15 @@ mod tests {
             #[test]
             fn r547_an_echo_drawn_while_the_last_spell_casts_on_draw_is_cast_and_the_draw_repeats() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, VANILLA], "library": [CN_VIRUS, ECHO, MENACE, VANILLA] } }));
-                s.play(STOCKPILE, json!({}));
-                // CN-Virus is cast (1 damage), the draw repeats into Echo, which copies it and is cast too (1).
-                assert_eq!(hits(s.last_events(), "hero-p1"), vec![1, 1]);
+                let mut s = scenario(json!({ "p1": { "hand": [VANILLA], "library": [ECHO, MENACE, VANILLA] } }));
+                // A cast on draw is no play (R2179002), so the record a CN-Virus played from hand leaves.
+                s.state_mut().last_spell = Some(PlayRecord { def_id: CN_VIRUS.to_string(), radiant: false });
+                s.start_turn();
+                // The draw is Echo, which copies CN-Virus and is cast (1 damage); the draw repeats.
+                assert_eq!(hits(s.last_events(), "hero-p1"), vec![1]);
                 s.expect_in_zone(ECHO, "graveyard");
                 assert!(s.last_events().iter().map(js).any(|event| event["type"] == "cardPlayed" && event["defId"] == ECHO));
+                assert!(s.hand(PlayerId::P1).iter().any(|card| card.def_id == MENACE));
             }
 
             #[test]

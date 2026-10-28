@@ -8,7 +8,7 @@
 //! §10.3 and traps.rs own `trapFired`, the state check and consuming it (R17, R61). The condition is a
 //! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): a play over the
 //! threshold, by R56's cost actually paid (read off the event, R89), leaves it armed; a cast pays 0
-//! (R70), so it always qualifies. R53 is the forced attack (§4.2 steps 1-3 skipped,
+//! (R70), so it always qualifies, but a card cast on draw is no play and never sets it off (R2179002). R53 is the forced attack (§4.2 steps 1-3 skipped,
 //! `force_attacks_on`). It answers `cardResolved` (§10.5 step 7, R17), not `cardPlayed`: the unit is
 //! on the field with its Cry resolved, the moment #41 Sheepish shares since R427, the two answering
 //! in lane order (R68). R662: the glow, both faces.
@@ -46,8 +46,9 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
     else {
         return None;
     };
-    // "the opponent plays": the trap's own controller setting off their own trap is not the trigger.
-    if *player == ctx.controller {
+    // "the opponent plays": the trap's own controller setting off their own trap is not the trigger,
+    // and a card cast on draw is no play (R2179002).
+    if *player == ctx.controller || cast_on_draw_event(event) {
         return None;
     }
     // R56 and R70: the cost actually paid, so a cast (0) is always "1 or less".
@@ -232,20 +233,21 @@ mod tests {
         }
 
         #[test]
-        fn r70_a_cast_pays_0_so_a_cast_card_is_costing_1_or_less() {
+        fn r2179002_a_card_cast_on_draw_is_no_play_so_it_never_sets_it_off() {
             crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                // #21 Hinder is cost 0 and cast on draw: drawing it casts it (§2.4, R58). Its Radiant face
+                // #21 Hinder is cast on draw: drawing it casts it (§2.4, R58), for 0, and the cast is no
+                // play (R2179002; through v0.4.12d it was, R70, and set the trap off). Its Radiant face
                 // discards nothing (R431), so the cast asks no question.
                 "p2": { "hand": ["core-005"], "library": [{ "def": "core-021", "radiant": true }, "core-011"] },
             }));
 
             g.start_turn();
 
-            g.expect_events(json!(["drawn", "cardPlayed", "trapFired", "summoned"]));
-            assert_eq!(units_of(&g, P1), ["core-t-rush", "core-t-rush"]);
+            assert!(!g.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
+            assert!(units_of(&g, P1).is_empty());
         }
 
         #[test]

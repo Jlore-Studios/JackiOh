@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
 
 // C+ #36 Conjure Bones — SPEC §8.7 row 36, BUILD M9 Classic+ row C+ 36: "Shuffles 7 Bone Storms
 // (C+ #36.1) into your deck, each at a uniformly random position; the embiggen price (4) chosen with
-// the play (R81) shuffles 17; a deck at `LIBRARY_CAP` (60) turns the rest away with `libraryOverflow`
+// the play (R81) shuffles 14 (17 through v0.4.12d); a deck at `LIBRARY_CAP` (60) turns the rest away with `libraryOverflow`
 // (R80); your library list shows them (R311) and `shuffledIn` positions are blank for both players
 // (R97); count and paid count read through `param()` (steps 2 and 4); radiant the Bone Storms are
 // Radiant".
@@ -107,9 +107,9 @@ mod tests {
         }
 
         #[test]
-        fn r81_the_embiggen_price_4_is_chosen_with_the_play_and_shuffles_17() {
+        fn r81_the_embiggen_price_4_is_chosen_with_the_play_and_shuffles_14() {
             let mut s = cast(false, true, None);
-            assert_eq!(bones_in(&s, P1), 17);
+            assert_eq!(bones_in(&s, P1), 14);
             s.expect_mana(P1, 0);
         }
 
@@ -168,7 +168,7 @@ mod tests {
             let mut paid = scenario(json!({ "p1": { "hand": [BONES, FILLER], "library": [FILLER], "mana": 4 }, "p2": { "hand": [FILLER] } }));
             step_param(paid.card_mut(BONES), "paidCount", -1);
             paid.play(BONES, json!({ "embiggen": true }));
-            assert_eq!(bones_in(&paid, P1), 13);
+            assert_eq!(bones_in(&paid, P1), 10);
         }
     }
 
@@ -188,11 +188,11 @@ mod tests {
         }
 
         #[test]
-        fn paid_4_17_radiant_bone_storms() {
+        fn paid_4_14_radiant_bone_storms() {
             let s = cast(true, true, None);
             let storms: Vec<CardInstance> =
                 s.pile(P1, "library").into_iter().filter(|card| card.def_id == BONE_STORM).collect();
-            assert_eq!(storms.len(), 17);
+            assert_eq!(storms.len(), 14);
             assert!(storms.iter().all(|card| card.radiant));
         }
     }

@@ -181,12 +181,12 @@ mod tests {
             let books = added_cards(&s);
             assert_eq!(books.len(), 2);
             for card in &books {
-                assert_eq!(card.granted_keywords, vec![Keyword::Temporary]);
+                assert_eq!(card.granted_keywords, vec![Keyword::TEMPORARY]);
             }
             let view = own_hand(&s);
             assert!(books.iter().all(|card| view.iter().any(|entry| {
                 entry.instance_id == card.id
-                    && entry.keywords.as_ref().is_some_and(|keywords| keywords.contains(&Keyword::Temporary))
+                    && entry.keywords.as_ref().is_some_and(|keywords| keywords.contains(&Keyword::TEMPORARY))
             })));
 
             s.end_turn();
@@ -257,7 +257,7 @@ mod tests {
             let books = added_cards(&s);
             assert_eq!(books.len(), 2);
             for card in &books {
-                assert_eq!(card.granted_keywords, vec![Keyword::Temporary]);
+                assert_eq!(card.granted_keywords, vec![Keyword::TEMPORARY]);
             }
 
             s.end_turn();

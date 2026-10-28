@@ -1,30 +1,50 @@
 //! M #48 Tranquility (SPEC §8.8 row 48): (2) Spell, Epic.
 //!
-//! Base:    "End the turn. Your hero is immune to damage until your next turn begins."
-//! Radiant: "Your hero is immune to damage until your next turn begins."
+//! Base:    "End the turn. Your hero is immune to damage until your next turn begins. Exile this."
+//! Radiant: "Your hero is immune to damage until your next turn begins. Exile this."
 //! Engine: the end of the turn is E10's `end_turn` (§6.3, R456) — the rest of the list resolves
 //! first, then every end-of-turn step runs; on the opponent's turn a cast has no turn of theirs to
 //! end. The immunity is ME-HERO-IMMUNE (MD-C21): a player modifier read as a cap of 0 at §4.4 step
 //! 3, expiring at the cleanup that ends the opponent's next turn (R757's Armor Up expiry), so it is
-//! gone as your next turn begins.
+//! gone as your next turn begins. "Exile this" (issue #2179) is the Spell's landing, as True
+//! Strike's is (§5.1, R178); through v0.4.12d it went to the graveyard, which `script_v0_4_12d`
+//! keeps for those replays (R767000).
 
 use jackioh_engine::effects::{end_turn, make_hero_immune};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-048";
 
+/// One face: the turn's end on the base face only, then the immunity, then "Exile this" since #2179.
+fn tranquility(ends_turn: bool, exiles: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            let mut effects = Vec::new();
+            if ends_turn {
+                effects.push(end_turn(json_as(json!({}))));
+            }
+            effects.push(make_hero_immune(json_as(json!({}))));
+            if exiles {
+                effects.push(exile(json_as(json!({ "target": { "of": "self" } }))));
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
-        base: Script {
-            cry: Some(hook(|_ctx| {
-                vec![end_turn(json_as(json!({}))), make_hero_immune(json_as(json!({})))]
-            })),
-            ..Script::default()
-        },
-        radiant: Script {
-            cry: Some(hook(|_ctx| vec![make_hero_immune(json_as(json!({})))])),
-            ..Script::default()
-        },
+        base: tranquility(true, true),
+        radiant: tranquility(false, true),
+    }
+}
+
+/// R767000: through v0.4.12d it went to the graveyard; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: tranquility(true, false),
+        radiant: tranquility(false, false),
     }
 }
 
@@ -290,6 +310,13 @@ mod tests {
             }
 
             #[test]
+            fn s5_1_exile_this_the_spell_lands_in_exile_not_the_graveyard() {
+                let mut s = cast("tranquility-exile", false);
+                s.expect_in_zone(TRANQUILITY, "exile");
+                assert!(s.state().players.p1.graveyard.iter().all(|card| card.def_id != TRANQUILITY));
+            }
+
+            #[test]
             fn r1021_until_your_next_turn_every_hit_to_your_hero_is_0() {
                 let s = cast("tranquility-immune", false);
                 assert_eq!(
@@ -309,11 +336,32 @@ mod tests {
             use super::*;
 
             #[test]
+            fn s5_1_exile_this_radiant_the_spell_lands_in_exile() {
+                let mut s = cast("tranquility-radiant-exile", true);
+                s.expect_in_zone(TRANQUILITY, "exile");
+                assert!(s.state().players.p1.graveyard.iter().all(|card| card.def_id != TRANQUILITY));
+            }
+
+            #[test]
             fn r1021_radiant_the_immunity_without_ending_the_turn() {
                 let s = cast("tranquility-radiant", true);
                 // The turn goes on with the hero still immune.
                 assert_eq!(s.state().active, P1);
                 assert_eq!(jackioh_engine::damage::hero_damage_cap(s.state(), P1), Some(0));
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.12d and before, which went to the graveyard.
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_4_12d_lands_it_in_the_graveyard() {
+                crate::under_kept(TRANQUILITY, super::super::super::script_v0_4_12d(), || {
+                    let mut s = cast("tranquility-kept", false);
+                    assert_eq!(s.state().active, P2);
+                    s.expect_in_zone(TRANQUILITY, "graveyard");
+                });
             }
         }
     }

@@ -20,7 +20,8 @@ fn catnip() -> Script {
                 let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
                     return false;
                 };
-                if *player == ctx.controller {
+                // R2179002: a card cast on draw is no play.
+                if *player == ctx.controller || cast_on_draw_event(event) {
                     return false;
                 }
                 if card_type_of_face(ctx.state, def_id, radiant.unwrap_or(false)) != CardType::Spell {

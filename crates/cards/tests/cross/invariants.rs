@@ -919,7 +919,9 @@ mod r1126_the_canes_pareto_animation {
     fn r1126_r1062_the_cane_animating_on_the_other_players_turn_enters_and_i4_stays_clean() {
         let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
         let mut g = scenario(json!({
-            "p1": { "mana": 10, "hand": [PARETO], "library": [VANILLA, VANILLA, VANILLA] },
+            // p1's (0) Spell, never played, keeps its turn from ending by itself (R82) once the Cane, which
+            // may not switch to Defense (R2179000), is all it has on the field.
+            "p1": { "mana": 10, "hand": [PARETO, "core-010"], "library": [VANILLA, VANILLA, VANILLA] },
             "p2": { "mana": 10, "hand": [VANILLA, BAD], "field": ["core-007"], "library": [VANILLA, VANILLA] },
         }));
         let mut monitor = create_invariant_monitor(g.state());

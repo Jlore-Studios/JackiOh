@@ -1,8 +1,11 @@
-//! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 2, Rare.
-//!   Base:    "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
+//! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 3 (2 through v0.4.12d), Rare.
+//!   Base:    "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards};
 //!             or choose a Unit, which is destroyed at the start of your next turn."
-//!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
+//!   Radiant: "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards};
 //!             or all enemy Units are destroyed at the start of your next turn."
+//!
+//! Issue #2179: the damage is Pierce (R346: Armor is skipped at §4.4 step 2); through v0.4.12d it was
+//! not, which `script_v0_4_12d` keeps (R767000).
 //!
 //! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`
 //! action (R81), each target bound to its mode (`forModes`, R90). The discard is random (R682), so no
@@ -36,11 +39,15 @@ fn doom_target() -> TargetDecl {
     json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "of": ["unit"] }, "forModes": [DOOM_MODE] }))
 }
 
-fn punish(ctx: &EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+fn punish(ctx: &EffectContext<'_>, radiant: bool, pierce: bool) -> Vec<Effect> {
     match ctx.modes.first().map(String::as_str) {
-        Some(DAMAGE_MODE) => vec![damage(json_as(
-            json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") }),
-        ))],
+        Some(DAMAGE_MODE) => {
+            let mut hit = json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") });
+            if pierce {
+                hit["ignoreArmor"] = json!(true);
+            }
+            vec![damage(json_as(hit))]
+        }
         Some(DISCARD_MODE) => vec![discard_random(json_as(
             json!({ "count": param(ctx, "discards"), "player": "enemy" }),
         ))],
@@ -69,7 +76,7 @@ fn punish(ctx: &EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     }
 }
 
-fn face(radiant: bool) -> Script {
+fn face(radiant: bool, pierce: bool) -> Script {
     let ability = ActivationDecl {
         id: "punish".to_string(),
         label: "Choose one".to_string(),
@@ -90,7 +97,7 @@ fn face(radiant: bool) -> Script {
         }],
         can_activate: None,
         has: None,
-        run: hook(move |ctx| punish(ctx, radiant)),
+        run: hook(move |ctx| punish(ctx, radiant, pierce)),
     };
     Script {
         activations: vec![ability],
@@ -100,8 +107,16 @@ fn face(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, true),
+        radiant: face(true, true),
+    }
+}
+
+/// R767000: through v0.4.12d its damage did not pierce; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: face(false, false),
+        radiant: face(true, false),
     }
 }
 
@@ -247,6 +262,28 @@ mod tests {
                     }
                     other => panic!("no damage event: {other:?}"),
                 }
+            }
+
+            #[test]
+            fn r346_the_damage_pierces_armor_7_takes_none_of_it() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({ "field": [BIG] }), false);
+                let big = s.card(BIG).clone();
+
+                activate_punish(&mut s, DAMAGE, Some(pick::instance(&big)));
+
+                s.expect_stats(&big, json!({ "health": 5, "maxHealth": 7 }));
+            }
+
+            /// R767000: the script kept for the replays of v0.4.12d and before, whose damage met Armor.
+            #[test]
+            fn r767000_a_game_on_v0_4_12d_deals_damage_armor_takes() {
+                crate::under_kept(PUNISH, script_v0_4_12d(), || {
+                    let mut s = setup(json!({}), json!({ "field": [BIG] }), false);
+                    let big = s.card(BIG).clone();
+                    activate_punish(&mut s, DAMAGE, Some(pick::instance(&big)));
+                    s.expect_stats(&big, json!({ "health": 7 }));
+                });
             }
 
             #[test]
@@ -504,6 +541,17 @@ mod tests {
                 activate_punish(&mut s, DAMAGE, Some(at_p2()));
 
                 s.expect_health(P2, 26);
+            }
+
+            #[test]
+            fn r346_radiant_the_4_pierces_armor_too() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({ "field": [BIG] }), true);
+                let big = s.card(BIG).clone();
+
+                activate_punish(&mut s, DAMAGE, Some(pick::instance(&big)));
+
+                s.expect_stats(&big, json!({ "health": 3, "maxHealth": 7 }));
             }
 
             #[test]

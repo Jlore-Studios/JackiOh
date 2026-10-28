@@ -221,14 +221,16 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor),
 /// every Unit on either side in Defense Position switches to Attack Position, active player's first
 /// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
-/// exertion is spent; `positionSwitched` reports it.
+/// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
+/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it.
 fn leave_defense(sink: &mut EngineSink<'_>) {
-    if !crate::restrictions::defense_barred(sink.state) {
-        return;
-    }
+    let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
         for unit in units_of(sink.state, player) {
             if unit.position != Some(Position::Def) {
+                continue;
+            }
+            if !barred && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible) {
                 continue;
             }
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {

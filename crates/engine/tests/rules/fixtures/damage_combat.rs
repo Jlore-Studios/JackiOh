@@ -192,6 +192,8 @@ pub static argus: LazyLock<CardDef> = LazyLock::new(|| def("argus", 4711, "Field
 pub static hidden_argus: LazyLock<CardDef> = LazyLock::new(|| def("hidden-argus", 4712, "Trap", json!({})));
 /// Classic+ #11's shape: the hero takes at most 1 per hit.
 pub static anime_armor: LazyLock<CardDef> = LazyLock::new(|| plain_unit("anime-armor", 4713, 4, 4));
+/// Classic+ #11's shape since issue #2179: its hero and this Unit take at most 1 per hit (R2179005).
+pub static self_guard: LazyLock<CardDef> = LazyLock::new(|| plain_unit("self-guard", 4790, 4, 4));
 /// Classic+ #38's shape: Spell Damage +2 (Radiant +5).
 pub static solar: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -377,6 +379,7 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         argus.clone(),
         hidden_argus.clone(),
         anime_armor.clone(),
+        self_guard.clone(),
         solar.clone(),
         lens.clone(),
         hidden_lens.clone(),
@@ -678,10 +681,12 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                 hero_guard(HeroGuard {
                     cap: None,
                     divisor: Some(2),
+                    guards_self: None,
                 }),
                 hero_guard(HeroGuard {
                     cap: None,
                     divisor: Some(4),
+                    guards_self: None,
                 }),
             ),
         ),
@@ -690,6 +695,7 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(hero_guard(HeroGuard {
                 cap: None,
                 divisor: Some(2),
+                guards_self: None,
             })),
         ),
         (
@@ -697,6 +703,15 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(hero_guard(HeroGuard {
                 cap: Some(1),
                 divisor: None,
+                guards_self: None,
+            })),
+        ),
+        (
+            self_guard.id.clone(),
+            both(hero_guard(HeroGuard {
+                cap: Some(1),
+                divisor: None,
+                guards_self: Some(true),
             })),
         ),
         (

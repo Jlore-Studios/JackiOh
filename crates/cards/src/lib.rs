@@ -276,6 +276,28 @@ pub(crate) fn under_kept<T>(id: &str, scripts: CardScripts, run: impl FnOnce() -
     jackioh_engine::with_shipped(Some(shipped), run)
 }
 
+/// `under_kept` with the kept version's own definition of `id`: `old` rewrites the build's into it (a
+/// declared number renamed since, which the kept script reads by its old name).
+#[cfg(test)]
+pub(crate) fn under_kept_as<T>(
+    id: &str,
+    scripts: CardScripts,
+    old: impl FnOnce(&mut CardDef),
+    run: impl FnOnce() -> T,
+) -> T {
+    register_all();
+    let mut defs = CATALOG.clone();
+    if let Some(def) = defs.get_mut(id) {
+        old(def);
+    }
+    let shipped: &'static jackioh_engine::ShippedCatalog = Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+        "kept",
+        defs,
+        IndexMap::from([(id.to_string(), scripts)]),
+    )));
+    jackioh_engine::with_shipped(Some(shipped), run)
+}
+
 /// R1081000: move the Unit `id`, set up in a unit zone, to stand in its controller's backrow zone `lane`,
 /// as a Flying Unit played there stands. No catalog card prints Flying (a random keyword's), and a Unit
 /// standing there stays standing whatever its text says, so a card test sets one up so.

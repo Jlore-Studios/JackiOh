@@ -84,8 +84,8 @@ fn prison_trigger(read_lucky: LuckyOf) -> TriggerDef {
         else {
             return false;
         };
-        // §8: "your opponent".
-        if *player == ctx.controller {
+        // §8: "your opponent", and a play (a card cast on draw is none, R2179002).
+        if *player == ctx.controller || cast_on_draw_event(event) {
             return false;
         }
         // §5.1: a Unit.

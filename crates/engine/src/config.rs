@@ -652,6 +652,12 @@ pub struct IntRange {
 pub const KY_TEST_EASY_ADDENDS: IntRange = IntRange { min: 10, max: 99 };
 /// R420: an Easy problem's three wrong sums are a + b moved by three different ones of these.
 pub const KY_TEST_EASY_MISSES: &[i32] = &[1, -1, 2, -2, 10, -10];
+/// R2179003: since issue #2179 an Easy problem is a + b or a − b with each operand four digits, in
+/// this range, inclusive (`KY_TEST_EASY_ADDENDS` and `KY_TEST_EASY_MISSES` stay v0.4.12d's).
+pub const KY_TEST_FOUR_DIGIT_OPERANDS: IntRange = IntRange { min: 1000, max: 9999 };
+/// R2179003: its three wrong answers are the answer moved by three different ones of these, a slip in
+/// one column of a four-digit sum or difference.
+pub const KY_TEST_FOUR_DIGIT_MISSES: &[i32] = &[1, -1, 10, -10, 100, -100];
 
 // Meditative+ #20 KY's Competition's question sequence (SPEC §8.9 row 20, R1184000).
 

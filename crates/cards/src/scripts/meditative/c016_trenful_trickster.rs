@@ -1,4 +1,5 @@
-//! M #16 Trenful Trickster (SPEC §8.8 row 16, R33, R60, R64, R129, R351, R386): (2) Unit, Rare, 1/5 → 2/10.
+//! M #16 Trenful Trickster (SPEC §8.8 row 16, R33, R60, R64, R129, R351, R386): (2) Unit, Rare, 1/4 → 2/8
+//! (1/5 → 2/10 through v0.4.12d, issue #2179).
 //!
 //! Base:    "End of turn: Summon {traps|random Trap|random Traps}."
 //! Radiant: the same, traps 2.
@@ -200,10 +201,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_2_10_and_sets_two_traps_in_the_two_leftmost_open_zones() {
+        fn is_2_8_and_sets_two_traps_in_the_two_leftmost_open_zones() {
             let pool = trap_pool();
             let mut s = board("trickster-radiant", true, 1, false);
-            s.expect_stats(ID, json!({ "attack": 2, "health": 10, "maxHealth": 10 }));
+            s.expect_stats(ID, json!({ "attack": 2, "health": 8, "maxHealth": 8 }));
             s.end_turn();
             let set = picks(&s);
             assert_eq!(set.iter().map(|(_, lane)| *lane).collect::<Vec<_>>(), vec![2, 3]);

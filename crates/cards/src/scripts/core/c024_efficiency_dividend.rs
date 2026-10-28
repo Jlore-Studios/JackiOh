@@ -1,7 +1,8 @@
 //! #24 Efficiency Dividend (SPEC §8.2, R65, R81, R68, §5.1).
 //!
-//! Base: "Choose one: Deal X damage, heal a target 4X, or gain X mana next turn. End of turn: Return
-//! this to hand". Radiant: "Deal 2X damage, heal a target 8X, or gain X+1 mana next turn", the modes,
+//! Base: "Choose one: Deal X damage, heal a target 3X, or gain X mana next turn. End of turn: Return
+//! this to hand". Radiant: "Deal 2X damage, heal a target 6X, or gain X+1 mana next turn" (4X and 8X
+//! through v0.4.12d, declared numbers, so no script is kept, issue #2179), the modes,
 //! target and return to hand kept (§8 Conventions). Patch v0.3.14 (#1220) dropped the +1s that v0.3.10
 //! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65).
 //!
@@ -43,8 +44,8 @@ fn targets() -> Vec<TargetDecl> {
 /// The Radiant mana mode's +1, a constant of the card.
 const DIVIDEND_RADIANT_MANA: i32 = 1;
 
-/// The damage and heal modes' multiples are the declared numbers `damage` and `heal` (R386): X and 4X,
-/// 2X and 8X on the Radiant face, where `damage` is tuned alone (R749: the base face's "Deal X
+/// The damage and heal modes' multiples are the declared numbers `damage` and `heal` (R386): X and 3X,
+/// 2X and 6X on the Radiant face, where `damage` is tuned alone (R749: the base face's "Deal X
 /// damage" prints no multiple and is always 1X). `bonus_mana` is the mana mode's Radiant difference.
 fn dividend(bonus_mana: i32) -> Script {
     Script {
@@ -93,7 +94,7 @@ pub fn script() -> CardScripts {
 }
 
 // #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
-// mana (R81); three modes; next-turn mana +X; returns to hand". Radiant (R275) deals 2X, heals 8X and
+// mana (R81); three modes; next-turn mana +X; returns to hand". Radiant (R275) deals 2X, heals 6X and
 // gains X+1, still for X paid; each radiant mode is checked at an odd and an even X, and X = 0 is
 // refused (R348).
 // Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so
@@ -207,13 +208,13 @@ mod tests {
             }
 
             #[test]
-            fn r19_the_heal_mode_heals_the_chosen_target_4x() {
+            fn r19_the_heal_mode_heals_the_chosen_target_3x() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-heal", false, Some(20));
                 s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
 
-                // §3: a hero has no maximum health, so the heal is a flat 4X.
-                s.expect_health(P1, 28);
+                // §3: a hero has no maximum health, so the heal is a flat 3X.
+                s.expect_health(P1, 26);
             }
 
             #[test]
@@ -303,21 +304,21 @@ mod tests {
             }
 
             #[test]
-            fn r275_the_heal_mode_heals_8x_x_2_heals_16() {
+            fn r275_the_heal_mode_heals_6x_x_2_heals_12() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-heal", true, Some(20));
                 s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
 
-                s.expect_health(P1, 36);
+                s.expect_health(P1, 32);
             }
 
             #[test]
-            fn r275_the_heal_mode_at_an_odd_x_x_3_heals_24() {
+            fn r275_the_heal_mode_at_an_odd_x_x_3_heals_18() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-heal-odd", true, Some(10));
                 s.play(DIVIDEND, json!({ "x": 3, "modes": ["heal"], "targets": at_hero("p1") }));
 
-                s.expect_health(P1, 34);
+                s.expect_health(P1, 28);
             }
 
             #[test]
@@ -406,8 +407,8 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_heals_5x_and_a_radiant_degrade_7x() {
-            for (radiant, upgrade, per_x) in [(false, true, 5), (true, false, 7)] {
+        fn r386_an_upgrade_heals_4x_and_a_radiant_degrade_5x() {
+            for (radiant, upgrade, per_x) in [(false, true, 4), (true, false, 5)] {
                 crate::register_all();
                 let mut s = dividend_in("dividend-heal-tuned", radiant, Some(10));
                 let moved = if upgrade {

@@ -1,6 +1,6 @@
 //! M #61 Joon Jorker (SPEC §8.8 row 61): (3) Unit, Human, Common, 7/5 → 14/10.
-//!   Both faces: "End of turn: Buff the Unit to the right of this {times|time|times}." — times 5
-//!   (Radiant 10).
+//!   Both faces: "End of turn: Buff the Unit to the right of this {times|time|times}." — times 4
+//!   (Radiant 8; 5 and 10 through v0.4.12d).
 //! Engine: at its controller's end of turn, separate Buffs (Upgrade, R386) on the acting Unit in the
 //!   next lane on its own side (MD-D16, R1060); none or Immutable neighbour: nothing (R129).
 
@@ -66,7 +66,7 @@ mod tests {
     }
 
     #[test]
-    fn r1060_at_your_end_of_turn_five_upgrades_on_the_unit_in_the_next_lane() {
+    fn r1060_at_your_end_of_turn_four_upgrades_on_the_unit_in_the_next_lane() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }, { "def": VANILLA, "lane": 1 }], "hand": [FILLER] },
@@ -78,7 +78,7 @@ mod tests {
         s.end_turn();
         let _ = before;
         let lane3 = upgraded_for(s.events(), &right);
-        assert_eq!(lane3, 5);
+        assert_eq!(lane3, 4);
         assert_eq!(upgraded_for(s.events(), &left), 0);
     }
 
@@ -148,11 +148,11 @@ mod tests {
         let right = s.unit(PlayerId::P1, 3).expect("the neighbour").id.clone();
         step_param(s.card_mut(JOON), "times", 1);
         s.end_turn();
-        assert_eq!(upgraded_for(s.events(), &right), 6);
+        assert_eq!(upgraded_for(s.events(), &right), 5);
     }
 
     #[test]
-    fn radiant_ten_upgrades() {
+    fn radiant_eight_upgrades() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 2, "radiant": true }, { "def": VANILLA, "lane": 3 }], "hand": [FILLER] },
@@ -160,7 +160,7 @@ mod tests {
         }));
         let right = s.unit(PlayerId::P1, 3).expect("the neighbour").id.clone();
         s.end_turn();
-        assert_eq!(upgraded_for(s.events(), &right), 10);
+        assert_eq!(upgraded_for(s.events(), &right), 8);
     }
 
     /// R1081000: standing in the backrow, the Unit to its right is the one standing in the next backrow
@@ -180,7 +180,7 @@ mod tests {
         crate::stand_in_backrow(&mut s, &joon, 2);
         crate::stand_in_backrow(&mut s, &right, 3);
         s.end_turn();
-        assert_eq!(upgraded_for(s.events(), &right), 5);
+        assert_eq!(upgraded_for(s.events(), &right), 4);
 
         let mut beside_a_spell = scenario(json!({
             "p1": {

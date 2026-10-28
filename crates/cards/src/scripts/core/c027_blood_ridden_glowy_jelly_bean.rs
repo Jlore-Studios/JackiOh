@@ -5,7 +5,8 @@
 //! kept (§8 Conventions). `staticFlags` are read through `scriptOf`, which returns the radiant script
 //! once the instance is Radiant, so the radiant face carries `castOnDraw` too or a Radiant copy would
 //! go to hand uncast. `drawOne` casts the card the moment it is drawn, even with a full hand, and
-//! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and feeds Combo (R40, R70).
+//! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and no card played, so it
+//! feeds no Combo (R40, R2179002; through v0.4.12d it was one, R70).
 //!
 //! R60's pick: `setRadiantRandom` pools only non-Radiant cards, takes `count` different ones (all when
 //! fewer exist, none when none do); the resolving card never picks itself. "You lose 7 health" is
@@ -84,7 +85,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r40_r70_casts_itself_on_the_draw_free_counted_as_a_play_and_never_enters_the_hand() {
+        fn r40_r2179002_casts_itself_on_the_draw_free_counted_as_no_play_and_never_enters_the_hand() {
             crate::register_all();
             let mut s = drawing(json!(["core-005", "core-016"]), false, None);
 
@@ -92,7 +93,7 @@ mod tests {
 
             s.expect_in_zone("core-027", "graveyard");
             assert!(!s.state().players.p1.hand.iter().any(|card| card.def_id == "core-027"));
-            // R70: a cast is free and counts as a play — which is what feeds Combo (R40).
+            // R2179002: a cast on draw is free and no play, so it feeds no Combo (R40).
             let played: Vec<&GameEvent> = s
                 .last_events()
                 .iter()
@@ -101,9 +102,9 @@ mod tests {
             assert_eq!(played.len(), 1);
             assert!(matches_object(
                 &serde_json::to_value(played[0]).unwrap(),
-                &json!({ "defId": "core-027", "costPaid": 0 })
+                &json!({ "defId": "core-027", "costPaid": 0, "onDraw": true })
             ));
-            assert_eq!(s.state().players.p1.turn_log.cards_played, 1);
+            assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
             // R58: the draw repeats after the cast, so the card under it reaches the hand.
             assert_eq!(
                 s.state().players.p1.hand.iter().filter(|card| card.def_id == "core-005").count(),

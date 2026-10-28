@@ -86,7 +86,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
     use super::*;
 
     #[test]
-    fn r213_a_gifted_program_stolen_after_it_fired_for_its_owner_this_turn_still_makes_the_thiefs_first_cheap_card_radiant_8_conventions_r171()
+    fn r213_r2179002_a_gifted_program_stolen_after_its_owners_cast_on_draw_this_turn_makes_the_thiefs_first_cheap_card_radiant_8_conventions_r171()
      {
         jackioh_cards::register_all();
         // p1's turn begins. p1 holds #9 Moths to the Flame, worn down to 4 health; p2 holds Gifted
@@ -109,7 +109,8 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
 
         // p1's start of turn: Moths makes p2's Panther attack it; the Panther destroys it and survives,
         // so p2 draws 2 — on p1's turn (R426: a forced attack is an attack). The first draw is Hinder,
-        // cast as it is drawn: p2's play costing 0 (R70), made Radiant by p2's Gifted Program.
+        // cast as it is drawn for 0: no play (R2179002), so p2's Gifted Program passes it by (through
+        // v0.4.12d it was a play, R70, and made it Radiant).
         g.start_turn();
         let hinder = g
             .events()
@@ -125,7 +126,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
             }
             other => panic!("expected p2's Hinder to be played, found {other:?}"),
         }
-        assert_eq!(g.state().players.p1.mana.next_turn_mod, -2); // the radiant face ran: "2 lower"
+        assert_eq!(g.state().players.p1.mana.next_turn_mod, -1); // the base face ran: "1 lower"
 
         // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: an Activate
         // plays no card. Stockpile is p1's first cheap card, so it resolves its radiant text.

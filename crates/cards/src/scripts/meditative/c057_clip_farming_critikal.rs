@@ -3,7 +3,7 @@
 //! Base:    "Combo: Return the card you played before this to hand."
 //! Radiant: "Combo: Return the card you played before this to hand. Make it Radiant."
 //! Engine: Combo 1 as its Cry. "The previous card" is `played_ids_this_turn` at the index just
-//! before this play (`played_earlier`), casts counted (R70), found wherever it is (R98): from your
+//! before this play (`played_earlier`), casts counted (R70) but not a cast on draw (R2179002), found wherever it is (R98): from your
 //! graveyard or exile it moves to your hand (R746); a permanent you control is Bounced (R692,
 //! R747), a unit token vanishing; anywhere else nothing happens. A full hand burns it. Radiant:
 //! then `set_radiant` on it, in hand — before the Bounce, so the Bounce carries it home.
@@ -136,10 +136,11 @@ mod tests {
             }
 
             #[test]
-            fn r1081_r70_a_cast_counts_as_the_previous_play() {
+            fn r1081_r2179002_a_cast_on_draw_is_no_previous_play() {
                 crate::register_all();
-                // The Love Bomb on top of the library casts on the opening draw: a cast is a play
-                // (R70), so Critikal returns the Bomb from the graveyard.
+                // The Love Bomb on top of the library casts on the opening draw: a cast on draw is no
+                // play (R2179002), so Critikal is the turn's first card and returns nothing (through
+                // v0.4.12d it was a play, R70, and the Bomb came back).
                 let mut s = scenario(json!({
                     "seed": "critikal-cast",
                     "p1": {
@@ -151,7 +152,8 @@ mod tests {
                 s.start_turn();
                 s.play(CRITIKAL, json!({}));
 
-                assert!(def_ids(&s.hand(P1)).contains(&BOMB.to_string()));
+                assert!(!def_ids(&s.hand(P1)).contains(&BOMB.to_string()));
+                assert!(def_ids(&s.pile(P1, "graveyard")).contains(&BOMB.to_string()));
             }
 
             #[test]

@@ -656,7 +656,7 @@ mod tests {
         }
 
         #[test]
-        fn r70_every_cast_counts_as_a_card_played_so_the_turn_log_sees_the_whole_chain() {
+        fn r70_r2179002_no_cast_on_draw_counts_as_a_card_played_so_the_turn_log_sees_none_of_the_chain() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-chain-played",
@@ -666,8 +666,9 @@ mod tests {
 
             s.start_turn();
 
-            assert_eq!(s.state().players[P1].turn_log.cards_played, CHAIN_CAP as i32);
-            assert_eq!(s.state().players[P1].turn_log.played_ids.len(), CHAIN_CAP);
+            // Through v0.4.12d each cast of the chain counted (R70).
+            assert_eq!(s.state().players[P1].turn_log.cards_played, 0);
+            assert!(s.state().players[P1].turn_log.played_ids.is_empty());
             // A cast is free (R70): the mana the start of turn refreshed is untouched.
             s.expect_mana(P1, 4);
         }

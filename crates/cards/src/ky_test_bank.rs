@@ -1,9 +1,14 @@
 //! C+ #42 KY's Test's question bank (SPEC §8.7 row 42, R420): its Medium and Hard problems. Easy ones
-//! are generated from the rng (`subsystems.easyProblem`, R580). Card data like `catalog.json`: public,
-//! shipped in the client bundle, and versioned with the catalog (R388), so changing a problem is a patch.
-//! Each entry has four different options, one of them its `answer` (test/classic-plus/042-kys-test.test.ts
-//! proves the floor of `KY_TEST_MIN_PROBLEMS` per difficulty). Plain text with Unicode maths. Patch
-//! v0.3.10 (#831) made each Hard problem one step harder in its own topic, its id kept.
+//! are generated from the rng (`subsystems::ky_test`, R580, R2179003). Card data like `catalog.json`:
+//! public, shipped in the client bundle, and versioned with the catalog (R388), so changing a problem is
+//! a patch. Each entry has four different options, one of them its `answer` (the card's tests prove the
+//! floor of `KY_TEST_MIN_PROBLEMS` per difficulty). Plain text with Unicode maths. Patch v0.3.10 (#831)
+//! made each Hard problem one step harder in its own topic, its id kept.
+//!
+//! Issue #2179 (R2179003) moved every problem of v0.4.12d's bank, Hard ones included, into Medium, ids
+//! kept, and made the Hard bank graduate mathematics: qualifying-exam problems in analysis, algebra,
+//! topology, geometry, number theory, probability and combinatorics (`GRADUATE`, ids `g01` on).
+//! `KY_TEST_BANK_V0_4_12D` is v0.4.12d's bank, which its kept script asks from (R767000).
 //!
 //! Port of `packages/cards/src/kyTestBank.ts`. TS's `KY_TEST_BANK` array of objects cannot be a `const`
 //! (a problem holds `String`s), so it is a read-only `LazyLock`, built once on first use like the
@@ -36,8 +41,171 @@ fn hard(id: &str, statement: &str, answer: &str, wrong: &[&str]) -> Problem {
     problem(KyTestDifficulty::Hard, id, statement, answer, wrong)
 }
 
-/// The Medium and Hard problems, in the TS file's order (C+ #42's draw reads this order, R420).
+/// R2179003: the bank since issue #2179, in the order C+ #42's draw reads (R420): v0.4.12d's problems,
+/// every one now Medium, then the graduate Hard ones.
 pub static KY_TEST_BANK: LazyLock<Vec<Problem>> = LazyLock::new(|| {
+    let mut bank: Vec<Problem> = KY_TEST_BANK_V0_4_12D
+        .iter()
+        .cloned()
+        .map(|problem| Problem {
+            difficulty: KyTestDifficulty::Medium,
+            ..problem
+        })
+        .collect();
+    bank.extend(graduate());
+    bank
+});
+
+/// The Hard problems since #2179: graduate mathematics, each with one answer a qualifying exam would
+/// accept and three a careless reading would reach.
+fn graduate() -> Vec<Problem> {
+    vec![
+        // Complex analysis.
+        hard("g01", "∫₋∞^∞ dx/(1 + x⁴) = ?", "π/√2", &["π/2", "π/4", "π√2"]),
+        hard("g02", "The residue of e^(1/z) at z = 0 is?", "1", &["0", "e", "1/2"]),
+        hard("g03", "∮ dz/(z² + 1) around |z| = 2, counterclockwise, = ?", "0", &["2πi", "πi", "4πi"]),
+        hard(
+            "g04",
+            "By Rouché's theorem, the number of zeros of z⁵ + 3z + 1 in |z| < 1 is?",
+            "1",
+            &["0", "3", "5"],
+        ),
+        hard("g05", "ζ(−1) = ?", "−1/12", &["0", "1/12", "−1/2"]),
+        // Real and harmonic analysis.
+        hard("g06", "Σₙ₌₁^∞ 1/n⁴ = ?", "π⁴/90", &["π⁴/96", "π⁴/72", "π⁴/45"]),
+        hard("g07", "Σₙ₌₁^∞ (−1)ⁿ⁺¹/n² = ?", "π²/12", &["π²/6", "π²/8", "π²/24"]),
+        hard("g08", "The radius of convergence of Σ (n!/nⁿ) zⁿ is?", "e", &["1", "1/e", "∞"]),
+        hard("g09", "∫₀^∞ (sin x)/x dx = ?", "π/2", &["π", "1", "π/4"]),
+        hard(
+            "g10",
+            "With f̂(ξ) = ∫ f(x) e^(−2πixξ) dx, the Fourier transform of e^(−πx²) is?",
+            "e^(−πξ²)",
+            &["e^(−ξ²/4)", "√π e^(−π²ξ²)", "e^(−2πξ²)"],
+        ),
+        // Measure theory and functional analysis.
+        hard(
+            "g11",
+            "The Hausdorff dimension of the middle-thirds Cantor set is?",
+            "log 2 / log 3",
+            &["1/2", "2/3", "log 3 / log 2"],
+        ),
+        hard(
+            "g12",
+            "For which p ≥ 1 is f(x) = x^(−1/2) on (0, 1) in Lᵖ?",
+            "1 ≤ p < 2",
+            &["1 ≤ p ≤ 2", "p > 2", "every p ≥ 1"],
+        ),
+        hard("g13", "The dual space of ℓ¹ is isometrically isomorphic to?", "ℓ^∞", &["ℓ¹", "c₀", "ℓ²"]),
+        hard(
+            "g14",
+            "The spectrum of the unilateral right shift on ℓ²(ℕ) is?",
+            "the closed unit disc",
+            &["the unit circle", "{0}", "{1}"],
+        ),
+        hard(
+            "g15",
+            "The cardinality of the set of continuous functions ℝ → ℝ is?",
+            "𝔠 = 2^ℵ₀",
+            &["ℵ₀", "2^𝔠", "uncountable but less than 𝔠"],
+        ),
+        // Topology.
+        hard(
+            "g16",
+            "The fundamental group of the Klein bottle is?",
+            "⟨a, b | abab⁻¹⟩",
+            &["ℤ × ℤ", "ℤ/2", "ℤ * ℤ"],
+        ),
+        hard("g17", "H₁(ℝP²; ℤ) = ?", "ℤ/2", &["0", "ℤ", "ℤ²"]),
+        hard(
+            "g18",
+            "The Euler characteristic of a closed orientable surface of genus 3 is?",
+            "−4",
+            &["−2", "−6", "4"],
+        ),
+        hard("g19", "π₃(S²) = ?", "ℤ", &["0", "ℤ/2", "ℤ²"]),
+        hard("g20", "The degree of the antipodal map of S⁴ is?", "−1", &["1", "0", "4"]),
+        // Differential geometry, Lie theory and PDE.
+        hard(
+            "g21",
+            "By Gauss–Bonnet, ∬ K dA over a closed orientable surface of genus 2 = ?",
+            "−4π",
+            &["0", "−2π", "4π"],
+        ),
+        hard("g22", "dim 𝔰𝔬(5) = ?", "10", &["5", "15", "25"]),
+        hard(
+            "g23",
+            "Which Φ on ℝ³ ∖ {0} solves −ΔΦ = δ₀?",
+            "1/(4π|x|)",
+            &["−(1/2π) log|x|", "1/(2π|x|)", "1/(4π|x|²)"],
+        ),
+        // Group theory and representations.
+        hard(
+            "g24",
+            "The number of Sylow 5-subgroups of the simple group A₅ is?",
+            "6",
+            &["1", "4", "12"],
+        ),
+        hard(
+            "g25",
+            "The number of abelian groups of order 72, up to isomorphism, is?",
+            "6",
+            &["4", "5", "9"],
+        ),
+        hard("g26", "|GL₂(𝔽₃)| = ?", "48", &["24", "72", "36"]),
+        hard(
+            "g27",
+            "The number of irreducible complex representations of S₄ is?",
+            "5",
+            &["4", "24", "3"],
+        ),
+        hard(
+            "g28",
+            "The dimensions of the irreducible complex representations of the quaternion group Q₈ are?",
+            "1, 1, 1, 1 and 2",
+            &["1, 1, 2 and 2", "2 and 2", "1 eight times"],
+        ),
+        hard("g29", "The number of units of ℤ/360ℤ is?", "96", &["72", "120", "144"]),
+        // Fields, rings and number theory.
+        hard("g30", "The Galois group of x³ − 2 over ℚ is?", "S₃", &["ℤ/3", "ℤ/6", "ℤ/2"]),
+        hard("g31", "[ℚ(√2, √3, √5) : ℚ] = ?", "8", &["6", "4", "3"]),
+        hard(
+            "g32",
+            "The number of monic irreducible polynomials of degree 2 over 𝔽₅ is?",
+            "10",
+            &["5", "20", "25"],
+        ),
+        hard("g33", "ℤ[i]/(3) is isomorphic to?", "the field 𝔽₉", &["𝔽₃ × 𝔽₃", "ℤ/9ℤ", "𝔽₃"]),
+        hard("g34", "The class number of ℚ(√−5) is?", "2", &["1", "3", "4"]),
+        hard("g35", "The Legendre symbol (3/101) = ?", "−1", &["1", "0", "3"]),
+        // Algebraic geometry and commutative algebra.
+        hard("g36", "The Krull dimension of ℂ[x, y, z]/(xy − z²) is?", "2", &["1", "3", "0"]),
+        hard("g37", "The genus of a smooth plane curve of degree 4 is?", "3", &["1", "2", "6"]),
+        // Probability and combinatorics.
+        hard(
+            "g38",
+            "A standard Brownian motion starts at 0. The expected time it first leaves (−1, 2) is?",
+            "2",
+            &["1", "3", "4"],
+        ),
+        hard(
+            "g39",
+            "The simple symmetric random walk on ℤ³ is?",
+            "transient",
+            &["recurrent", "null recurrent", "positive recurrent"],
+        ),
+        hard(
+            "g40",
+            "The number of labelled trees on 6 vertices is?",
+            "1296",
+            &["720", "7776", "216"],
+        ),
+        hard("g41", "The Ramsey number R(3, 4) = ?", "9", &["6", "10", "18"]),
+    ]
+}
+
+/// v0.4.12d's Medium and Hard problems, in the TS file's order (C+ #42's draw reads this order, R420),
+/// which its kept script asks from (R767000).
+pub static KY_TEST_BANK_V0_4_12D: LazyLock<Vec<Problem>> = LazyLock::new(|| {
     vec![
         // Medium: double integrals.
         medium("m01", "∫₀¹ ∫₀¹ (x + y) dy dx = ?", "1", &["1/2", "2", "3/2"]),

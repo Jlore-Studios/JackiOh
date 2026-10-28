@@ -2,8 +2,9 @@
 //!   Base:    "Indestructible, Spell Damage +1
 //!             Cry: Discard {discards|random card|random cards}.
 //!             Activate: This turn, each card you play is replaced by a Book of Flame."
-//!   Radiant: Spell Damage +2, and a Radiant Book of Flame. Discards: 666 base (the whole hand, the
-//!            joke), 6 Radiant.
+//!   Radiant: Spell Damage +2, and the same Book of Flame (a Radiant one through v0.4.12d,
+//!            `script_v0_4_12d`, R767000, issue #2179). Discards: 666 base (the whole hand, the joke),
+//!            6 Radiant.
 //!
 //! Indestructible and Spell Damage are catalog keywords (#1563): Indestructible keeps it on the field
 //! through a destroy, as it keeps any Field Spell (§6.1), and its Spell Damage is its controller's,
@@ -38,12 +39,13 @@ fn discard_cards(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![discard_random(json_as(json!({ "count": count })))]
 }
 
-fn pact(radiant: bool) -> Script {
+/// One face; `radiant_book` makes its Book of Flame Radiant, as the Radiant face did through v0.4.12d.
+fn pact(radiant_book: bool) -> Script {
     Script {
         cry: Some(hook(discard_cards)),
         activations: vec![ActivationDecl {
             id: "pact".to_string(),
-            label: if radiant {
+            label: if radiant_book {
                 "This turn, each card you play is replaced by a Radiant Book of Flame".to_string()
             } else {
                 "This turn, each card you play is replaced by a Book of Flame".to_string()
@@ -59,7 +61,7 @@ fn pact(radiant: bool) -> Script {
                     "mod": {
                         "kind": "replacePlays",
                         "defId": BOOK_OF_FLAME,
-                        "radiant": radiant,
+                        "radiant": radiant_book,
                         "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
                     },
                 })))]
@@ -70,6 +72,17 @@ fn pact(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    // Issue #2179: both faces' Book of Flame is the base one; the Radiant face keeps its Spell Damage +2
+    // and its 6 discards.
+    CardScripts {
+        base: pact(false),
+        radiant: pact(false),
+    }
+}
+
+/// R767000: through v0.4.12d the Radiant face's Book of Flame was Radiant; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_4_12d() -> CardScripts {
     CardScripts {
         base: pact(false),
         radiant: pact(true),
@@ -366,7 +379,7 @@ mod tests {
             }
 
             #[test]
-            fn r449_r454_two_live_pacts_replace_a_graveyard_play_in_turn_the_radiant_one_s_book_of_flame_resolves() {
+            fn r449_r454_two_live_pacts_replace_a_graveyard_play_once_the_second_finds_its_book_already_there() {
                 crate::register_all();
                 let mut s = on_field(
                     json!({
@@ -396,11 +409,14 @@ mod tests {
                 let play = play_of(&s, &vanilla.id).expect("Second Wind offers no graveyard play");
 
                 let played = reduce(s.state(), &Action::new(play, P1, "pacts-graveyard-play"));
-                assert_eq!(count(&played.events, GameEventType::Transformed), 2);
+                // Since #2179 both faces name a base Book of Flame, so the second Pact finds its card already
+                // played and does not replace it by itself (R449; through v0.4.12d the Radiant one did, 2).
+                assert_eq!(count(&played.events, GameEventType::Transformed), 1);
                 let answered = reduce(&played.state, &answer_at_p2(&played.state, "pacts-graveyard-answer"));
 
                 assert!(answered.error.is_none());
-                assert_eq!(hero_of(&answered.state, P2).health, 19);
+                // The Book of Flame resolves: a base one, 4 and Spell Damage +1 +2.
+                assert_eq!(hero_of(&answered.state, P2).health, 23);
                 // The Book came from no graveyard: its play does not say it did.
                 match answered.events.iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { from, .. }) => assert!(from.is_none()),
@@ -556,18 +572,31 @@ mod tests {
             }
 
             #[test]
-            fn r1563002_each_replacement_is_a_radiant_book_of_flame_8_damage_and_spell_damage_2_makes_10() {
+            fn r1563002_each_replacement_is_a_base_book_of_flame_4_damage_and_spell_damage_2_makes_6() {
                 crate::register_all();
                 let mut s = on_field(json!({}), true, json!({}));
 
                 s.activate(PACT, json!({}));
                 s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
 
-                s.expect_health(P2, 20);
+                s.expect_health(P2, 24);
                 match s.events().iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { def_id, .. }) => assert_eq!(def_id, BOOK),
                     other => panic!("no cardPlayed: {other:?}"),
                 }
+                assert!(!s.state().players[P1].graveyard.iter().any(|card| card.def_id == BOOK && card.radiant));
+            }
+
+            /// R767000: the script kept for the replays of v0.4.12d and before, whose Radiant face's Book of
+            /// Flame was Radiant.
+            #[test]
+            fn r767000_a_game_on_v0_4_12d_replaces_each_play_with_a_radiant_book_of_flame() {
+                crate::under_kept(PACT, script_v0_4_12d(), || {
+                    let mut s = on_field(json!({}), true, json!({}));
+                    s.activate(PACT, json!({}));
+                    s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
+                    s.expect_health(P2, 20);
+                });
             }
 
             #[test]

@@ -1,5 +1,5 @@
 //! M+ #10 Medina Grifter (SPEC §8.9 row 10, BUILD M11 row M+ 10): (1) Unit, Human,
-//! Common, 4/1 → 8/2.
+//! Common, 3/1 → 6/2 (4/1 → 8/2 through v0.4.12d, issue #2179).
 //!   Base:    "Cry: Steal {cards|random card|random cards} from your opponent's hand." (1)
 //!   Radiant: the same, plus "It costs (0)."
 //!
@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
 // M+ #10 Medina Grifter — SPEC §8.9 row 10, BUILD M11 row M+ 10: "Cry (played or cast): one
 // random card of the opponent's hand moves to yours, owned by you, the opponent seeing only that
 // one left; an empty hand takes nothing and draws no random number; a full hand burns it into
-// your graveyard; cards reads through `param()`; radiant 8/2 and the card costs (0)".
+// your graveyard; cards reads through `param()`; radiant 6/2 and the card costs (0)".
 #[cfg(test)]
 mod tests {
     use super::*;

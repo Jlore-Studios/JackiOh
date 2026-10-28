@@ -1,11 +1,13 @@
-//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (3) Spell, CN, Epic.
+//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (4) Spell, CN, Epic ((3) through v0.4.12d).
 //!
-//! Base:    "One random effect: Get ready to learn Chinese; transform every card in your hand into
-//!           the same random CN card, which cost (0); summon {units} random CN Units."
-//! Radiant: printed in Chinese (no English form exists).
+//! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
+//!           card, which costs (0). Summon {units} random CN Units."
+//! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units." Printed in
+//!           English since issue #2179 (in Chinese before, MD-B13).
 //! Engine:
-//! - **The pick:** one uniform pick of the three effects by the match rng as the Spell resolves
-//!   (MD-B9, R920), whatever each would do then — Call to Chaos's single-effect shape.
+//! - **All three, in order** since #2179: the learning, then the hand, then the summon. Through
+//!   v0.4.12d one uniform pick of the three by the match rng as the Spell resolved (MD-B9, R920),
+//!   Call to Chaos's single-effect shape, which `script_v0_4_12d` keeps (R767000).
 //! - **Get ready to learn Chinese** (ME-CN) sets `chinese` on every card in both hands and both
 //!   libraries, silently (R440); on the Radiant face only the opponent's. As the designer asked,
 //!   the printed text never says what it does.
@@ -20,45 +22,60 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-032";
 
-/// The three effects the match rng picks among as the Spell resolves (MD-B9, R920).
+/// The three effects, in the order the text prints them; v0.4.12d's match rng picked among them as
+/// the Spell resolved (MD-B9, R920).
 const EFFECTS: i32 = 3;
+
+/// One of the three: 0 the learning, 1 the hand, 2 the summon.
+fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32) -> Vec<Effect> {
+    match which {
+        // Get ready to learn Chinese: the flag on every card of both hands and both libraries (the
+        // Radiant face: the opponent's only), silently (R440).
+        0 => vec![translate(json_as(json!({
+            "scope": {
+                "side": if radiant { "enemy" } else { "any" },
+                "zones": ["hand", "library"],
+            },
+        })))],
+        // Transform the hand into the same random CN card, each costing (0).
+        1 => {
+            let mut args = json!({
+                "scope": { "side": "self", "zones": ["hand"] },
+                "same": true,
+                "query": { "tags": ["CN"] },
+                "costOverride": 0,
+            });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![transform_random(json_as(args))]
+        }
+        // Summon `units` random CN Units, Radiant on the Radiant face.
+        _ => (0..param(&*ctx, "units"))
+            .map(|_| {
+                let mut args = json!({ "query": { "type": "Unit", "tags": ["CN"] } });
+                if radiant {
+                    args["radiant"] = json!(true);
+                }
+                summon_random(json_as(args))
+            })
+            .collect(),
+    }
+}
 
 fn spiritually(radiant: bool) -> Script {
     Script {
+        cry: Some(hook(move |ctx| (0..EFFECTS).flat_map(|which| effect(ctx, radiant, which)).collect())),
+        ..Script::default()
+    }
+}
+
+/// v0.4.12d's face: one random effect of the three (MD-B9, R920).
+fn spiritually_v0_4_12d(radiant: bool) -> Script {
+    Script {
         cry: Some(hook(move |ctx| {
-            match ctx.rng.int(EFFECTS) {
-                // Get ready to learn Chinese: the flag on every card of both hands and both
-                // libraries (the Radiant face: the opponent's only), silently (R440).
-                0 => vec![translate(json_as(json!({
-                    "scope": {
-                        "side": if radiant { "enemy" } else { "any" },
-                        "zones": ["hand", "library"],
-                    },
-                })))],
-                // Transform the hand into the same random CN card, each costing (0).
-                1 => {
-                    let mut args = json!({
-                        "scope": { "side": "self", "zones": ["hand"] },
-                        "same": true,
-                        "query": { "tags": ["CN"] },
-                        "costOverride": 0,
-                    });
-                    if radiant {
-                        args["radiant"] = json!(true);
-                    }
-                    vec![transform_random(json_as(args))]
-                }
-                // Summon `units` random CN Units, Radiant on the Radiant face.
-                _ => (0..param(&*ctx, "units"))
-                    .map(|_| {
-                        let mut args = json!({ "query": { "type": "Unit", "tags": ["CN"] } });
-                        if radiant {
-                            args["radiant"] = json!(true);
-                        }
-                        summon_random(json_as(args))
-                    })
-                    .collect(),
-            }
+            let which = ctx.rng.int(EFFECTS);
+            effect(ctx, radiant, which)
         })),
         ..Script::default()
     }
@@ -72,14 +89,23 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32: "One of three by one uniform roll
-// as it resolves (MD-B9), whatever the board: (1) every card of both hands and both decks gains the
-// `chinese` flag, silently in hands and decks (R440); (2) one random non-token CN definition (never
-// this card, R387) replaces every card in your hand in place, Immutable ones too, each costing (0),
-// each a generated card for R673's roll (MD-B10); (3) 5 random CN Units summoned per R64, a full row
-// taking fewer and drawing nothing for the rest (R129); units reads through `param()`; radiant its
-// face is printed in Chinese (MD-B13), the learning reaches only the opponent's hand and deck, and
-// the new hand cards and the Units are Radiant".
+/// R767000: through v0.4.12d it did one of the three at random; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_12d() -> CardScripts {
+    CardScripts {
+        base: spiritually_v0_4_12d(false),
+        radiant: spiritually_v0_4_12d(true),
+    }
+}
+
+// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32: "All three in order as it resolves:
+// (1) every card of both hands and both decks gains the `chinese` flag, silently in hands and decks
+// (R440); (2) one random non-token CN definition (never this card, R387) replaces every card in your
+// hand in place, Immutable ones too, each costing (0), each a generated card for R673's roll (MD-B10);
+// (3) 5 random CN Units summoned per R64, a full row taking fewer and drawing nothing for the rest
+// (R129); units reads through `param()`; radiant the learning reaches only the opponent's hand and
+// deck, and the new hand cards and the Units are Radiant".
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,23 +163,16 @@ mod tests {
         }))
     }
 
-    /// The roll the match rng would make for a scenario built but not yet played: the cry's first
-    /// draw, as c036 predicts its coins.
+    /// The roll the match rng would make for a scenario built but not yet played: the kept script's
+    /// first draw, as c036 predicts its coins.
     fn roll(s: &Scenario) -> i32 {
         let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
         rng.int(EFFECTS)
     }
 
-    /// Find a seed whose roll is `wanted` (at most 64 tries), with the scenario built.
-    fn with_roll(wanted: i32, radiant_face: bool) -> (String, Scenario) {
-        for n in 0..64 {
-            let seed = format!("spiritually-{wanted}-{n}");
-            let s = casting(&seed, radiant_face);
-            if roll(&s) == wanted {
-                return (seed, s);
-            }
-        }
-        panic!("no roll of {wanted} over 64 seeds");
+    /// The units p1 has, lane by lane.
+    fn units_of(s: &Scenario) -> Vec<CardInstance> {
+        (1..=5).filter_map(|lane| s.unit(P1, lane)).collect()
     }
 
     mod m32_spiritually_zhongguo {
@@ -163,131 +182,91 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r920_each_effect_occurs_by_one_roll() {
-                let mut saw = [false; 3];
-                for n in 0..32 {
-                    let seed = format!("spiritually-rolls-{n}");
-                    let mut s = casting(&seed, false);
-                    let effect = roll(&s);
-                    saw[effect as usize] = true;
-                    s.play(SPIRITUALLY, json!({}));
-                    match effect {
-                        // The learning: every card of both hands and both decks is Chinese.
-                        0 => {
-                            for player in [P1, P2] {
-                                for card in s.hand(player) {
-                                    assert_eq!(card.chinese, Some(true), "{seed}");
-                                }
-                            }
-                        }
-                        // The transform: one CN definition for the whole hand, each costing (0).
-                        1 => {
-                            let defs = def_ids(&s.hand(P1));
-                            assert_eq!(defs.len(), 2, "{seed}");
-                            assert!(defs.iter().all(|def| *def == defs[0]), "{seed}");
-                            assert!(CN_IDS.contains(&defs[0].as_str()), "{seed}");
-                            for card in s.hand(P1) {
-                                assert_eq!(card.cost_override, Some(0), "{seed}");
-                                assert!(!card.radiant, "{seed}");
-                            }
-                        }
-                        // The summon: 5 CN Units take the empty row.
-                        _ => {
-                            for lane in 1..=5 {
-                                let unit = s.unit(P1, lane).expect("a summoned unit");
-                                let def = crate::card_def(&unit.def_id);
-                                assert_eq!(def.type_, CardType::Unit, "{seed}");
-                                assert!(def.tags.contains(&Tag::Cn), "{seed}");
-                                assert!(!unit.radiant, "{seed}");
-                            }
-                        }
-                    }
-                }
-                assert!(saw.iter().all(|seen| *seen), "all three effects occur over 32 seeds");
-            }
-
-            #[test]
-            fn r920_learning_translates_both_hands_and_decks() {
-                let (seed, mut s) = with_roll(0, false);
+            fn all_three_in_order_the_learning_the_hand_and_five_cn_units() {
+                let mut s = casting("spiritually-all", false);
                 s.play(SPIRITUALLY, json!({}));
+                // The learning: the opponent's hand and both decks are Chinese.
+                for card in s.hand(P2) {
+                    assert_eq!(card.chinese, Some(true));
+                }
                 for player in [P1, P2] {
-                    assert!(!s.hand(player).is_empty(), "{seed}");
-                    for card in s.hand(player) {
-                        assert_eq!(card.chinese, Some(true), "{seed}");
-                    }
                     let library = &s.state().players[player].library;
-                    assert!(!library.is_empty(), "{seed}");
+                    assert!(!library.is_empty());
                     for card in library {
-                        assert_eq!(card.chinese, Some(true), "{seed} {}", card.id);
+                        assert_eq!(card.chinese, Some(true), "{}", card.id);
                     }
                 }
+                // The hand: one CN definition, each costing (0).
+                let defs = def_ids(&s.hand(P1));
+                assert_eq!(defs.len(), 2);
+                assert!(defs.iter().all(|def| *def == defs[0]));
+                assert!(CN_IDS.contains(&defs[0].as_str()));
+                // The summon: 5 CN Units take the empty row.
+                let units = units_of(&s);
+                assert_eq!(units.len(), 5);
+                for unit in &units {
+                    let def = crate::card_def(&unit.def_id);
+                    assert_eq!(def.type_, CardType::Unit);
+                    assert!(def.tags.contains(&Tag::Cn));
+                    assert!(!unit.radiant);
+                }
+                // In the text's order: the translation, then the transform, then the summons.
+                let order: Vec<GameEventType> = s
+                    .events()
+                    .iter()
+                    .map(GameEvent::event_type)
+                    .filter(|kind| {
+                        matches!(kind, GameEventType::Translated | GameEventType::Transformed | GameEventType::Summoned)
+                    })
+                    .collect();
+                let first_transform = order.iter().position(|kind| *kind == GameEventType::Transformed);
+                let first_summon = order.iter().position(|kind| *kind == GameEventType::Summoned);
+                assert!(first_transform < first_summon, "{order:?}");
             }
 
             #[test]
             fn r921_one_cn_definition_replaces_the_hand_in_place_at_0() {
-                let (seed, mut s) = with_roll(1, false);
+                let mut s = casting("spiritually-hand", false);
                 let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.play(SPIRITUALLY, json!({}));
                 let defs = def_ids(&s.hand(P1));
                 // The played Spell left; the other two were replaced in place by one definition.
-                assert_eq!(defs.len(), 2, "{seed}");
-                assert!(defs.iter().all(|def| *def == defs[0]), "{seed}");
-                assert!(CN_IDS.contains(&defs[0].as_str()), "{seed}");
+                assert_eq!(defs.len(), 2);
+                assert!(defs.iter().all(|def| *def == defs[0]));
+                assert!(CN_IDS.contains(&defs[0].as_str()));
                 for card in s.hand(P1) {
-                    assert!(!before.contains(&card.id), "{seed}");
-                    assert_eq!(card.cost_override, Some(0), "{seed}");
+                    assert!(!before.contains(&card.id));
+                    assert_eq!(card.cost_override, Some(0));
+                    assert!(!card.radiant);
                 }
             }
 
             #[test]
-            fn summons_cn_units_and_a_full_row_takes_fewer() {
-                let (seed, mut s) = with_roll(2, false);
-                s.play(SPIRITUALLY, json!({}));
-                let units: Vec<CardInstance> =
-                    (1..=5).filter_map(|lane| s.unit(P1, lane)).collect();
-                assert_eq!(units.len(), 5, "{seed}");
-                for unit in &units {
-                    let def = crate::card_def(&unit.def_id);
-                    assert!(def.tags.contains(&Tag::Cn), "{seed}");
-                }
-
-                // Three zones taken: only two Units arrive.
-                let mut full = None;
-                for n in 0..64 {
-                    crate::register_all();
-                    let candidate = scenario(json!({
-                        "seed": format!("{seed}-full-{n}"),
-                        "p1": {
-                            "hand": [{ "def": SPIRITUALLY }, FILLER],
-                            "field": [
-                                { "def": "core-008", "lane": 1 },
-                                { "def": "core-008", "lane": 2 },
-                                { "def": "core-008", "lane": 3 },
-                            ],
-                            "library": filler(4),
-                        },
-                        "p2": { "hand": [FILLER], "library": filler(4) },
-                    }));
-                    if roll(&candidate) == 2 {
-                        full = Some(candidate);
-                        break;
-                    }
-                }
-                let mut full = full.expect("a summon roll over 64 seeds");
+            fn r129_a_full_row_takes_fewer_units() {
+                crate::register_all();
+                let mut full = scenario(json!({
+                    "seed": "spiritually-full",
+                    "p1": {
+                        "hand": [{ "def": SPIRITUALLY }, FILLER],
+                        "field": [
+                            { "def": "core-008", "lane": 1 },
+                            { "def": "core-008", "lane": 2 },
+                            { "def": "core-008", "lane": 3 },
+                        ],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
                 full.play(SPIRITUALLY, json!({}));
-                let units: Vec<CardInstance> =
-                    (1..=5).filter_map(|lane| full.unit(P1, lane)).collect();
-                assert_eq!(units.len(), 5, "three stood and two arrive");
+                assert_eq!(units_of(&full).len(), 5, "three stood and two arrive");
             }
 
             #[test]
             fn units_reads_through_param() {
-                let (seed, mut s) = with_roll(2, false);
+                let mut s = casting("spiritually-param", false);
                 set_param(s.card_mut(SPIRITUALLY), "units", 2);
                 s.play(SPIRITUALLY, json!({}));
-                let units: Vec<CardInstance> =
-                    (1..=5).filter_map(|lane| s.unit(P1, lane)).collect();
-                assert_eq!(units.len(), 2, "{seed}");
+                assert_eq!(units_of(&s).len(), 2);
             }
         }
 
@@ -295,34 +274,58 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r920_learning_reaches_only_the_opponent() {
-                let (seed, mut s) = with_roll(0, true);
+            fn r920_learning_reaches_only_the_opponent_and_the_hand_cards_and_units_are_radiant() {
+                let mut s = casting("spiritually-radiant", true);
                 s.play(SPIRITUALLY, json!({}));
-                for card in s.hand(P1) {
-                    assert_eq!(card.chinese, None, "{seed}");
-                }
-                assert!(!s.hand(P2).is_empty(), "{seed}");
+                assert!(!s.hand(P2).is_empty());
                 for card in s.hand(P2) {
-                    assert_eq!(card.chinese, Some(true), "{seed}");
+                    assert_eq!(card.chinese, Some(true));
+                }
+                for card in &s.state().players[P1].library {
+                    assert_eq!(card.chinese, None);
+                }
+                assert_eq!(def_ids(&s.hand(P1)).len(), 2);
+                for card in s.hand(P1) {
+                    assert!(card.radiant);
+                    assert_eq!(card.cost_override, Some(0));
+                }
+                let units = units_of(&s);
+                assert_eq!(units.len(), 5);
+                for unit in &units {
+                    assert!(unit.radiant);
                 }
             }
 
             #[test]
-            fn r921_hand_cards_and_units_are_radiant() {
-                let (seed, mut s) = with_roll(1, true);
-                s.play(SPIRITUALLY, json!({}));
-                assert_eq!(def_ids(&s.hand(P1)).len(), 2, "{seed}");
-                for card in s.hand(P1) {
-                    assert!(card.radiant, "{seed}");
-                    assert_eq!(card.cost_override, Some(0), "{seed}");
-                }
+            fn its_radiant_face_is_printed_in_english() {
+                let def = crate::card_def(SPIRITUALLY);
+                assert!(def.radiant.text.starts_with("Get ready to learn Chinese!"));
+                assert!(def.radiant.text.contains("Radiant CN"));
+            }
+        }
 
-                let (seed, mut s) = with_roll(2, true);
-                s.play(SPIRITUALLY, json!({}));
-                for lane in 1..=5 {
-                    let unit = s.unit(P1, lane).expect("a summoned unit");
-                    assert!(unit.radiant, "{seed}");
-                }
+        /// R767000: the script kept for the replays of v0.4.12d and before, which did one of the three
+        /// at random (MD-B9, R920).
+        mod v0_4_12d {
+            use super::*;
+
+            #[test]
+            fn r767000_r920_a_game_on_v0_4_12d_does_one_effect_by_one_roll() {
+                crate::under_kept(SPIRITUALLY, script_v0_4_12d(), || {
+                    let mut saw = [false; 3];
+                    for n in 0..32 {
+                        let seed = format!("spiritually-rolls-{n}");
+                        let mut s = casting(&seed, false);
+                        let effect = roll(&s);
+                        saw[effect as usize] = true;
+                        s.play(SPIRITUALLY, json!({}));
+                        let transformed = s.events().iter().any(|event| event.event_type() == GameEventType::Transformed);
+                        let summoned = !units_of(&s).is_empty();
+                        let learned = s.hand(P2).iter().all(|card| card.chinese == Some(true));
+                        assert_eq!((learned, transformed, summoned), (effect == 0, effect == 1, effect == 2), "{seed}");
+                    }
+                    assert!(saw.iter().all(|seen| *seen), "all three effects occur over 32 seeds");
+                });
             }
         }
     }

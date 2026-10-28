@@ -5,7 +5,7 @@
 //!                enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //!
 //! R395: face-down only the reveal condition is live. It answers the `cardPlayed` that takes its
-//! controller's per-turn count (only its controller's plays since patch v0.3.10, #831; any player's before) (already counting the play under way; a cast counts, R70; a countered card was never played,
+//! controller's per-turn count (only its controller's plays since patch v0.3.10, #831; any player's before) (already counting the play under way; a cast counts, R70, but not a cast on draw, R2179002; a countered card was never played,
 //! R448) to {plays}, then animates (Animated, B3.1, R383) in Attack Position into its own lane, else the
 //! leftmost open, unlocked, unreserved zone (R64), summoning sick; with none it stays face-up in the backrow.
 //! From its controller's next play on (a permanent never answers its own arrival, R119) every one of their
@@ -253,7 +253,7 @@ mod tests {
             }
 
             #[test]
-            fn r70_a_cast_counts_as_a_play_a_cast_on_draw_card_can_be_the_3rd() {
+            fn r2179002_a_cast_on_draw_is_no_play_it_is_never_the_3rd_and_the_next_card_played_is() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "hand": [FILLER, STOCKPILE, VANILLA], "library": [{ "def": HINDER, "radiant": true }, VANILLA] }),
@@ -263,11 +263,41 @@ mod tests {
 
                 let first = fillers(&s, P1).first().map(|card| card.id.clone()).unwrap_or_else(|| FILLER.to_string());
                 s.play(&first, json!({}));
-                // Stockpile is the 2nd play; its first draw casts Hinder, the 3rd.
+                // Stockpile is the 2nd play; its first draw casts Hinder, which is no play (through
+                // v0.4.12d it was, R70, and the 3rd).
                 s.play(STOCKPILE, json!({}));
+                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.card(AUCTION).face_up, Some(false));
+                assert_eq!(s.state().players[P1].turn_log.cards_played, 2);
 
-                assert!(count(s.events(), "trapFired") >= 1);
+                let vanilla = s.hand(P1).into_iter().find(|card| card.def_id == VANILLA).map(|card| card.id).expect("a Vanilla");
+                s.play(&vanilla, json!({ "zone": 1 }));
+                assert_eq!(count(s.events(), "trapFired"), 1);
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
+            }
+
+            #[test]
+            fn r2179002_once_it_has_revealed_a_cast_on_draw_sells_nothing() {
+                crate::register_all();
+                let mut s = setup(
+                    json!({ "hand": [FILLER, FILLER, FILLER, STOCKPILE], "library": [HINDER, VANILLA, TIMMY, TIMMY, TIMMY] }),
+                    json!({}),
+                    false,
+                );
+                play_fillers(&mut s, 3, P1);
+                assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
+                let auction = s.card(AUCTION).id.clone();
+                let before = s.events().len();
+
+                // The 4th play sells once; the Hinder cast on draw by it, or by the sale's own draw, never.
+                s.play(STOCKPILE, json!({}));
+                let sales = s.events()[before..]
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::Damage { source_id: Some(source), target_id, .. }
+                        if *source == auction && target_id == "hero-p2"))
+                    .count();
+                assert_eq!(sales, 1);
+                assert!(s.events()[before..].iter().any(|event| matches!(event, GameEvent::CardPlayed { def_id, on_draw: Some(true), .. } if def_id == HINDER)));
             }
 
             #[test]

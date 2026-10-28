@@ -339,7 +339,7 @@ function numberOf(kind: KeywordKind, keywords: readonly Keyword[], source: Keywo
   if (kind === "Armor") return source.armor;
   if (kind === "Brittle" && source.brittle !== undefined) return source.brittle;
   // Lucky X stacks and the view keeps each entry for the sum (layers.ts); the others are one entry.
-  return keywords.reduce((sum, keyword) => (keyword.kind === kind && "n" in keyword ? sum + keyword.n : sum), 0);
+  return keywords.reduce((sum, keyword) => (keyword.kind === kind && "n" in keyword ? sum + (keyword.n ?? 0) : sum), 0);
 }
 
 /** R385's cracks: one at BRITTLE_CRACK_STAGES or more, the full web at 1. */

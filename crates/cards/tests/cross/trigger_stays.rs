@@ -334,8 +334,9 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             },
         }));
         let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
-        // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Draw a card, then take
-        // control of the enemy's backrow card in lane 2."
+        // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Cast a Hinder, then take
+        // control of the enemy's backrow card in lane 2." (It drew a cast-on-draw Hinder through v0.4.12d;
+        // a cast on draw is no play since #2179, R2179002, so no trap answers it.)
         costed_fixture(
             &mut s,
             "edge-r8-draw-then-lift",
@@ -343,7 +344,11 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             Script {
                 cry: Some(hook(|ctx| {
                     let enemy = enemy_backrow_lane2(ctx);
-                    let mut list = vec![effects::draw(json_as(json!({ "count": 1 })))];
+                    let mut list = vec![effects::cast_new(effects::CastNewArgs {
+                        def: effects::CastNewDef::Id(HINDER.to_string()),
+                        radiant: Some(true),
+                        how: effects::CastHow::default(),
+                    })];
                     if let Some(enemy) = enemy {
                         list.push(effects::steal(json_as(json!({ "instanceId": enemy.id }))));
                     }
@@ -357,8 +362,8 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
 
         s.play(&spell.id, json!({}));
 
-        // The draw cast Hinder (§2.4, R70: a play, paid 0) while the Honeypot was still p2's, and only
-        // then did the Spell take the Honeypot.
+        // The Spell cast Hinder (R70: a play, paid 0) while the Honeypot was still p2's, and only then did
+        // it take the Honeypot.
         let cast: Vec<GameEvent> = s
             .events()
             .iter()
@@ -587,17 +592,13 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             "p1": { "hand": [RENO], "library": [RENO, RENO, RENO] },
             "p2": { "backrow": [{ "def": HONEYPOT, "lane": 1 }], "hand": [RENO], "library": [RENO, RENO] },
         }));
-        // A cast-on-draw Unit with Reborn, and a 2-cost Spell whose list draws and then destroys every unit.
+        // A Unit with Reborn, and a 2-cost Spell whose list casts one (E12, R453) and then destroys every
+        // unit. (It drew a cast-on-draw one through v0.4.12d; a cast on draw is no play since #2179,
+        // R2179002, so no trap answers it.)
         unit_fixture(
             &mut s,
             "edge-r10-cast-reborn-unit",
-            Script {
-                static_flags: Some(StaticFlags {
-                    cast_on_draw: Some(true),
-                    ..Default::default()
-                }),
-                ..Script::default()
-            },
+            Script::default(),
             UnitOpts {
                 keywords: Some(vec![Keyword::Reborn]),
                 cost: Some(1),
@@ -611,7 +612,11 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             Script {
                 cry: Some(hook(|_ctx| {
                     vec![
-                        effects::draw(json_as(json!({ "count": 1 }))),
+                        effects::cast_new(effects::CastNewArgs {
+                            def: effects::CastNewDef::Id("edge-r10-cast-reborn-unit".to_string()),
+                            radiant: None,
+                            how: effects::CastHow::default(),
+                        }),
                         effects::destroy_all(json_as(json!({ "side": "any" }))),
                     ]
                 })),
@@ -619,20 +624,22 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             },
             Some(2),
         );
-        let cast = new_instance(
-            s.state_mut(),
-            "edge-r10-cast-reborn-unit",
-            PlayerId::P1,
-            Zone::Library { player: PlayerId::P1 },
-        );
-        s.state_mut().players.p1.library.insert(0, cast.clone());
         let spell = in_hand(&mut s, "edge-r10-draw-then-sweep", PlayerId::P1);
 
         s.play(&spell.id, json!({}));
 
-        // The draw cast the Unit (a play, R70, cost paid 0), whose step 7 emitted `cardResolved` with the
+        // The Spell cast the Unit (a play, R70, cost paid 0), whose step 7 emitted `cardResolved` with the
         // Unit in play; then the Spell's own sweep destroyed it, and Reborn brought a new body back (§4.5
         // step 4, R83) before the Spell's loop dispatched that `cardResolved` to the traps.
+        let cast = must(
+            s.events().iter().find_map(|event| match event {
+                GameEvent::CardResolved { instance_id, def_id, .. } if def_id == "edge-r10-cast-reborn-unit" => {
+                    find_instance(s.state(), instance_id).cloned()
+                }
+                _ => None,
+            }),
+            "the cast Unit",
+        );
         let resolved_at = find_index(
             s.events(),
             |event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == cast.id),

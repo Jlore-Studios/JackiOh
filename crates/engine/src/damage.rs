@@ -242,6 +242,23 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     caps.into_iter().min()
 }
 
+/// R2179005: the smallest per-hit cap a Unit's own guards set on it (`HeroGuard.guards_self`, C+ #11
+/// Anime Armor's "Your hero and this"), or `None` when none does. Read like the hero's caps, after
+/// Armor at §4.4 step 3, and before a Trample's excess is split off at step 5.
+pub fn unit_damage_cap(state: &GameState, unit: &CardInstance) -> Option<i32> {
+    let script = crate::scripts::script_of(state, unit);
+    let guard = script.hero_guard.as_ref()?;
+    guard(HookArgs {
+        state,
+        self_: unit,
+        radiant: unit.radiant,
+    })
+    .iter()
+    .filter(|guard| guard.guards_self == Some(true))
+    .filter_map(|guard| guard.cap.map(|cap| cap.max(0)))
+    .min()
+}
+
 /// E6: what a hit on this player's hero is divided by after Armor — the product of every divisor its
 /// cards set (Classic #75 Argusland's 2, 4 on its Radiant face), so several multiply. 1 when none does.
 pub fn hero_damage_divisor(state: &GameState, player: PlayerId) -> i32 {
@@ -544,6 +561,10 @@ fn land(
             if !pierces(sink.state, source, flags) {
                 amount = (amount - armor_of(&crate::layers::unit_view(sink.state, live).keywords)).max(0);
                 absorbed = (amount_in - amount).max(0);
+            }
+            // Step 3 on a Unit: the caps its own guards set on it (R2179005).
+            if let Some(cap) = unit_damage_cap(sink.state, live) {
+                amount = amount.min(cap);
             }
         }
         (DamageTarget::Unit { .. }, None) => {}

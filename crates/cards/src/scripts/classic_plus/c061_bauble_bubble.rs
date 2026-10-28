@@ -200,7 +200,8 @@ mod tests {
         fn s6_2_a_transform_adds_nothing_transmogulate_replaces_it() {
             let mut s = bubble(false, json!([TRANSMOGULATE, FILLER]), None, json!([]));
             let id = s.card(BAUBLE).id.clone();
-            s.play(TRANSMOGULATE, json!({}));
+            // Since #2179 only the Embiggened Transmogulate reaches the board.
+            s.play(TRANSMOGULATE, json!({ "embiggen": true }));
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::Transformed { .. })));
             assert!(!any_stockpile_added(&s));
             s.expect_in_zone(&id, "gone");

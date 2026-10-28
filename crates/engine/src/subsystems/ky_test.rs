@@ -7,9 +7,10 @@
 //!
 //!   cry    one reward rolled per difficulty (`KY_TEST_REWARDS`; Hard has one entry, so no draw, R129),
 //!          then a `mode` prompt of the three difficulties, each labelled "<difficulty>: <reward>".
-//!   ask    a problem of the chosen difficulty — generated for Easy (R580), drawn from the bank
-//!          otherwise — as an `answer` prompt (R465): the statement and the options in an rng-shuffled
-//!          order, the right letter in the resume data where no view reaches (§10.8).
+//!   ask    a problem of the chosen difficulty — generated for Easy (R580; since issue #2179 a
+//!          four-digit sum or difference, R2179003, `KyTestEasy`), drawn from the bank otherwise — as
+//!          an `answer` prompt (R465): the statement and the options in an rng-shuffled order, the
+//!          right letter in the resume data where no view reaches (§10.8).
 //!   grade  a right answer gains that difficulty's rolled reward (every card Radiant on the Radiant
 //!          face); a wrong one nothing. Pools are non-token cards of every set (R380) through
 //!          `addRandomFromCatalog`, which never offers the running card (R387); the hand cap burns.
@@ -24,8 +25,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::config::{
-    KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_OPTIONS, KY_TEST_REWARDS,
-    KyTestRewardCount,
+    KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_FOUR_DIGIT_MISSES,
+    KY_TEST_FOUR_DIGIT_OPERANDS, KY_TEST_OPTIONS, KY_TEST_REWARDS, KyTestRewardCount,
 };
 use crate::prelude::json_as;
 use crate::rng::Rng;
@@ -69,6 +70,50 @@ pub fn easy_problem(rng: &mut Rng) -> KyTestProblem {
     }
 }
 
+/// R2179003: a + b or a − b, by one coin, with each operand drawn from `KY_TEST_FOUR_DIGIT_OPERANDS`
+/// and a difference taken the larger less the smaller, so no answer is negative; its three wrong
+/// answers are the answer moved by three different entries of `KY_TEST_FOUR_DIGIT_MISSES`, so the
+/// four options always differ. The problem rides the prompt by its operands (`easy:<a>+<b>`,
+/// `easy:<a>-<b>`).
+pub fn four_digit_problem(rng: &mut Rng) -> KyTestProblem {
+    let min = KY_TEST_FOUR_DIGIT_OPERANDS.min;
+    let max = KY_TEST_FOUR_DIGIT_OPERANDS.max;
+    let first = min + rng.int(max - min + 1);
+    let second = min + rng.int(max - min + 1);
+    let subtract = rng.coin();
+    let (a, b) = if subtract && second > first { (second, first) } else { (first, second) };
+    let (answer, sign, written) = if subtract { (a - b, "-", "−") } else { (a + b, "+", "+") };
+    let wrong = (KY_TEST_OPTIONS - 1).max(0) as usize;
+    let misses: Vec<i32> = rng.shuffle(KY_TEST_FOUR_DIGIT_MISSES).into_iter().take(wrong).collect();
+    let mut options = vec![answer.to_string()];
+    options.extend(misses.iter().map(|miss| (answer + miss).to_string()));
+    KyTestProblem {
+        id: format!("easy:{a}{sign}{b}"),
+        difficulty: KyTestDifficulty::Easy,
+        statement: format!("{a} {written} {b} = ?"),
+        options,
+        answer: answer.to_string(),
+    }
+}
+
+/// R2179003: which Easy problems a KY's Test generates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KyTestEasy {
+    /// R580, through v0.4.12d: a + b with two-digit addends (`easy_problem`).
+    Sums,
+    /// R2179003, since issue #2179: a four-digit sum or difference (`four_digit_problem`).
+    FourDigits,
+}
+
+impl KyTestEasy {
+    fn problem(self, rng: &mut Rng) -> KyTestProblem {
+        match self {
+            KyTestEasy::Sums => easy_problem(rng),
+            KyTestEasy::FourDigits => four_digit_problem(rng),
+        }
+    }
+}
+
 /// TS `isDifficulty(value)`: the difficulty a string names, when it is one of `KY_TEST_DIFFICULTIES`.
 fn is_difficulty(value: &str) -> Option<KyTestDifficulty> {
     let difficulty = value.parse::<KyTestDifficulty>().ok()?;
@@ -99,8 +144,14 @@ fn pool_query(pool: Option<crate::config::KyTestRewardPool>) -> Value {
     Value::Object(query)
 }
 
-/// The whole card: its Cry and the two steps its prompts re-enter. `bank` holds the Medium and Hard problems.
+/// The whole card: its Cry and the two steps its prompts re-enter. `bank` holds the Medium and Hard
+/// problems; the Easy ones are four-digit sums and differences (R2179003).
 pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
+    ky_test_script_with(bank, KyTestEasy::FourDigits)
+}
+
+/// `ky_test_script` with the Easy problems `easy` names: v0.4.12d's kept script asks two-digit sums.
+pub fn ky_test_script_with(bank: &[KyTestProblem], easy: KyTestEasy) -> KyTestScript {
     let bank: Arc<Vec<KyTestProblem>> = Arc::new(bank.to_vec());
 
     let offer = Effect::new("kyTestOffer", |ctx| {
@@ -155,7 +206,7 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
                 .filter(|problem| problem.difficulty == difficulty)
                 .collect();
             let problem: Option<KyTestProblem> = if difficulty == KyTestDifficulty::Easy {
-                Some(easy_problem(&mut *ctx.sink.rng))
+                Some(easy.problem(&mut *ctx.sink.rng))
             } else if problems.len() == 1 {
                 problems.first().map(|problem| (*problem).clone())
             } else {

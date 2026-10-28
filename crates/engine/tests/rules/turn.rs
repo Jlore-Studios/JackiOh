@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, new_game, next_nonce, put, round_trip, set_library, sink_for, slot,
+    act, act_result, both, events_of_type, in_hand, new_game, next_nonce, put, round_trip, set_library, sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
@@ -357,25 +357,35 @@ mod turn_loop_and_mana_m1_t6 {
     }
 
     #[test]
-    fn r70_a_cast_counts_as_a_play_and_pays_nothing() {
+    fn r70_r2179002_a_cast_counts_as_a_play_and_pays_nothing_a_cast_on_draw_counts_as_none() {
         let mut state = playing("r70", None);
         let before = state.players.p1.turn_log.cards_played;
+        // An effect's cast of a card from the hand: a play at cost 0 (R70).
+        let card = in_hand(&mut state, &hinder().id, PlayerId::P1, 1)[0].clone();
+        let events = {
+            let mut sink = sink_for(&mut state);
+            cast_card(&mut sink, &card, CastOptions::default());
+            sink.events.clone()
+        };
+        assert_eq!(state.players.p1.turn_log.cards_played, before + 1);
+        assert_eq!(state.players.p1.turn_log.played_ids.len() as i32, before + 1);
+        assert_eq!(state.counters.played, 1);
+        let played = events_of_type(&events, GameEventType::CardPlayed);
+        assert_eq!(played.len(), 1);
+        assert_eq!(field_of(&events, GameEventType::CardPlayed, "costPaid").first(), Some(&json!(0)));
+        assert_eq!(field_of(&events, GameEventType::CardPlayed, "onDraw").first(), Some(&Value::Null));
+
+        // R2179002: the cast its draw makes of a cast-on-draw card is no play, though it pays nothing too.
         set_library(&mut state, PlayerId::P1, &[hinder().id, "fx-2".to_string()]);
         let events = {
             let mut sink = sink_for(&mut state);
             jackioh_engine::draw::draw(&mut sink, PlayerId::P1, 1);
             sink.events.clone()
         };
-
         assert_eq!(state.players.p1.turn_log.cards_played, before + 1);
-        assert_eq!(state.players.p1.turn_log.played_ids.len() as i32, before + 1);
         assert_eq!(state.counters.played, 1);
-        let played = events_of_type(&events, GameEventType::CardPlayed);
-        assert_eq!(played.len(), 1);
-        assert_eq!(
-            field_of(&events, GameEventType::CardPlayed, "costPaid").first(),
-            Some(&json!(0))
-        );
+        assert_eq!(field_of(&events, GameEventType::CardPlayed, "costPaid").first(), Some(&json!(0)));
+        assert_eq!(field_of(&events, GameEventType::CardPlayed, "onDraw").first(), Some(&json!(true)));
     }
 
     #[test]

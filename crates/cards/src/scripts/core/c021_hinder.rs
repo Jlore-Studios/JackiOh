@@ -3,8 +3,8 @@
 //! Tunes: mana 1 ↑ (Radiant 2); discards 1 ↓, on the base face only (R1431, R1748003).
 //!
 //! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The
-//! engine casts it, repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58) and counts the free cast as a
-//! card played (R40, R70). The floor is not this card's either: `nextTurnMana` moves
+//! engine casts it and repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the free cast is no card
+//! played (R40, R2179002; through v0.4.12d it counted as one, R70). The floor is not this card's either: `nextTurnMana` moves
 //! `mana.nextTurnMod`, which the refresh adds to §2.3's max, floors at 0 and clears; max mana is untouched.
 //!
 //! THE DISCARD (R431, R682, R70). "Discard 1" names no "of your choice", so it is random from the
@@ -72,7 +72,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 }
 
 // #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: auto-casts on draw and draws again; the opponent's next
-// refresh −1 floored at 0; counts as played (R40, R70); radiant −2. The base face's caster discards 1
+// refresh −1 floored at 0; no card played (R40, R2179002); radiant −2. The base face's caster discards 1
 // at random with no prompt, nothing with an empty hand (R431, R682); the Radiant face discards nothing.
 // R635 keeps it out of the opening deal and the mulligan, so the "real game" below proves the deal.
 //
@@ -213,7 +213,7 @@ mod tests {
             }
 
             #[test]
-            fn r40_r70_counts_as_a_card_played_this_turn_at_cost_0() {
+            fn r40_r2179002_its_cast_on_draw_is_logged_at_cost_0_and_is_no_card_played_this_turn() {
                 crate::register_all();
                 let s = draw_hinder(hinder_on_top("hinder-played", false, None, &[P1_FILLER]));
 
@@ -225,11 +225,12 @@ mod tests {
                 assert_eq!(played.len(), 1);
                 assert!(matches_object(
                     &serde_json::to_value(played[0]).unwrap(),
-                    &json!({ "player": "p1", "costPaid": 0 })
+                    &json!({ "player": "p1", "costPaid": 0, "onDraw": true })
                 ));
-                // R40: the cast is in the turn log every Combo card counts.
+                // R2179002: the cast is not in the turn log any Combo card counts.
                 let hinder_id = s.card(HINDER).id.clone();
-                assert!(s.state().players.p1.turn_log.played_ids.contains(&hinder_id));
+                assert!(!s.state().players.p1.turn_log.played_ids.contains(&hinder_id));
+                assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
             }
 
             #[test]

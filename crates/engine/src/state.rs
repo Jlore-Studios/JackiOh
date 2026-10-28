@@ -315,6 +315,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<BrittleCounter>,
+    /// R2179001: what is left of the card's Temporary X once its first end of turn in a hand has
+    /// counted it down (`temporary.rs`); before that the keyword's own number is the count. Kept in
+    /// every zone like Brittle's count, though it counts only in a hand; a copy never inherits it (R57).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub temporary: Option<i32>,
     /// B5 E39: lasting instructions riding the card through every zone (`enchantments.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -2380,6 +2386,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         known_as: None,
         tuning: None,
         brittle: None,
+        temporary: None,
         enchantments: None,
         berserk: None,
         frozen: None,

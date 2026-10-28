@@ -34,6 +34,7 @@ const THE_HOUSE: &str = "classicplus-007";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
 const KYS_GIFT: &str = "classicplus-042-1";
+const CLAUDES_DATACENTER: &str = "classicplus-078";
 const BROTHER_PING: &str = "classicplus-076-1";
 const WISHING_WELL: &str = "meditative-097-2";
 const SCHOOL: &str = "meditative-097-3";
@@ -51,7 +52,7 @@ const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 31] = [
+const ACTIVATE_CARDS: [&str; 32] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -68,6 +69,7 @@ const ACTIVATE_CARDS: [&str; 31] = [
     FUSION_LAB,
     DOCTORS_ORDERS,
     KYS_GIFT,
+    CLAUDES_DATACENTER,
     BROTHER_PING,
     WISHING_WELL,
     SCHOOL,
@@ -508,11 +510,12 @@ mod c_n23_devils_pact {
     }
 
     #[test]
-    fn r449_radiant_each_card_played_this_turn_is_a_radiant_book_of_flame() {
+    fn r449_radiant_each_card_played_this_turn_is_a_base_book_of_flame() {
         let mut s = pact(true);
         activate_listed(&mut s, DEVILS_PACT, any);
         play_vanilla_as_a_book(&mut s);
-        s.expect_health(P2, 20); // 8, raised by its Spell Damage +2 (R1563002).
+        // A base Book since #2179 (a Radiant one's 8 before): 4, raised by its Spell Damage +2 (R1563002).
+        s.expect_health(P2, 24);
     }
 }
 
@@ -766,6 +769,43 @@ mod c_plus_n7_the_house {
         let s = house(false, 0);
         let id = s.card(THE_HOUSE).id.clone();
         assert!(listed(&s, &id).is_empty(), "the Activate spends a Plague Counter");
+    }
+}
+
+mod c_plus_n78_claudes_datacenter {
+    use super::*;
+
+    /// Its controller uses the listed `activate` (an Activate since #2179, R384): free, one AI generated
+    /// card into p1's hand costing (0), Radiant on the Radiant face, the Datacenter staying, once a turn.
+    fn adds_an_ai_card(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(CLAUDES_DATACENTER, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        let before: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
+        activate_listed(&mut s, CLAUDES_DATACENTER, any);
+        let added: Vec<CardInstance> =
+            s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
+        assert_eq!(added.len(), 1);
+        let def = jackioh_cards::card_def(&added[0].def_id);
+        assert!(def.token && def.tags.contains(&Tag::Ai), "{} is no AI generated card", added[0].def_id);
+        assert_eq!(added[0].radiant, radiant);
+        assert_eq!(added[0].cost_override, Some(0));
+        assert_eq!(s.state().players.p1.mana.current, mana);
+        s.expect_in_zone(CLAUDES_DATACENTER, "field");
+        let id = s.card(CLAUDES_DATACENTER).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_base_adds_an_ai_generated_card_costing_0_once_a_turn() {
+        adds_an_ai_card(false);
+    }
+
+    #[test]
+    fn r384_radiant_adds_a_radiant_ai_generated_card_costing_0_once_a_turn() {
+        adds_an_ai_card(true);
     }
 }
 

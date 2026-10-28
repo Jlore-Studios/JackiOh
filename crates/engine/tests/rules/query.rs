@@ -352,7 +352,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     }
 
     #[test]
-    fn r70_played_earlier_does_not_count_a_card_cast_while_the_play_resolved_which_is_played_after_it() {
+    fn r2179002_a_card_cast_on_draw_while_a_play_resolved_is_logged_as_no_play() {
         let mut state = playing("played-earlier-cast");
         // Stockpile draws 2, and the top of p1's library is Hinder, which casts on draw (§2.4).
         set_library(&mut state, P1, &["fx-hinder", "fx-5", "fx-6"]);
@@ -366,15 +366,12 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
             input(json!({ "type": "play", "instanceId": stockpile.id, "playerId": "p1" })),
         );
 
-        // The cast counts as a play (R70), logged after the play whose draw made it.
+        // The cast is no play (R2179002; through v0.4.12d it was one, R70, logged after Stockpile).
         let log = played_ids_this_turn(&state, P1);
-        assert_eq!(log.first(), Some(&stockpile.id));
-        assert_eq!(log.len(), 2);
-        assert_eq!(cards_played_this_turn(&state, P1), 2);
-        // So the play that cast it still has nothing before it, and the cast has the play before it.
+        assert_eq!(log, vec![stockpile.id.clone()]);
+        assert_eq!(cards_played_this_turn(&state, P1), 1);
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&stockpile.id)), 0);
-        let cast = must(log.get(1).cloned(), "the cast");
-        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&cast)), 1);
+        assert!(state.players.p1.graveyard.iter().any(|card| card.def_id == "fx-hinder"));
     }
 
     #[test]
