@@ -479,3 +479,53 @@ describe("R1410 a trio's decks carry the Stinkyscape set's numbers, 5000 + n (th
     expect(before.slots[1]?.dropped.unknown).toEqual([5148, 5001]);
   });
 });
+
+describe("R1410 a trio's decks carry the Training Grounds set's numbers, 6000 + n (the release, issue #2204)", () => {
+  const base = catalog.cards[fixtureCardId(1)] as CardDef;
+  const inSet = (id: string, set: CardDef["set"], index: string): CardDef => ({ ...base, id, index, name: id, set });
+  const sevenSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      "stinkyscape-148": inSet("stinkyscape-148", "Stinkyscape", "148"),
+      "traininggrounds-001": inSet("traininggrounds-001", "Training Grounds", "1"),
+      "traininggrounds-041": inSet("traininggrounds-041", "Training Grounds", "41"),
+    },
+  };
+  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(sevenSets.cards).filter(([, def]) => def.set !== "Training Grounds")),
+  };
+
+  /**
+   * A version 2 trio code of Core and Stinkyscape cards in its first slot, exactly as this client
+   * wrote it before the Training Grounds set had an offset (pinned here).
+   */
+  const MINTED_BEFORE = "PIN";
+  const MINTED_SLOTS: readonly TrioCodeSlot[] = [{ name: "Bob", cards: ["stinkyscape-148", fixtureCardId(43)] }, null, null];
+
+  it("R1410 a trio code minted before the Training Grounds set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeTrioCode("Before Training Grounds", MINTED_SLOTS, sevenSets)).toBe(MINTED_BEFORE);
+    for (const cards of [sevenSets, withoutSet]) {
+      const decoded = expectOk(decodeTrioCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Training Grounds");
+      expect(decoded.slots.map((slot) => slot?.cards ?? null)).toEqual(MINTED_SLOTS.map((slot) => slot?.cards ?? null));
+    }
+  });
+
+  it("R1410 writes a Training Grounds card in a trio's deck and reads it back from its own set", () => {
+    const slots: readonly TrioCodeSlot[] = [
+      null,
+      { name: "Yard", cards: ["traininggrounds-041", fixtureCardId(1), "stinkyscape-148", "traininggrounds-001"] },
+      null,
+    ];
+    const code = encodeTrioCode("Training Grounds", slots, sevenSets);
+    const decoded = expectOk(decodeTrioCode(code, sevenSets, null));
+    expect(decoded.slots[1]?.cards).toEqual(["traininggrounds-041", fixtureCardId(1), "stinkyscape-148", "traininggrounds-001"]);
+    // A catalog without the set (one from before the release, R1420) drops both as unknown.
+    const before = expectOk(decodeTrioCode(code, withoutSet, null));
+    expect(before.slots[1]?.cards).toEqual([fixtureCardId(1), "stinkyscape-148"]);
+    expect(before.slots[1]?.dropped.unknown).toEqual([6041, 6001]);
+  });
+});

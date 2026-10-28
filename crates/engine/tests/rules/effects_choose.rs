@@ -803,6 +803,56 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         );
     }
 
+    /// R2204001: a pool keeps a Core card and its Training Grounds snapshot both, but one offer shows
+    /// at most one of the pair: the shuffle draws as before and the other of a pair is passed over.
+    #[test]
+    fn r2204001_one_discover_never_offers_both_cards_of_a_snapshot_pair() {
+        let snapshot = def(
+            "fruit-a-snapshot",
+            "Unit",
+            1307,
+            json!({
+                "id": "traininggrounds-fruit-a",
+                "set": "Training Grounds",
+                "name": fruit_a().name,
+                "tags": ["Fruit"],
+                "snapshotOf": fruit_a().id,
+                "base": { "attack": 1, "health": 1, "keywords": [], "text": "fruit-a" },
+                "radiant": { "attack": 2, "health": 2, "keywords": [], "text": "fruit-a" },
+            }),
+        );
+        let (mut core_seen, mut snapshot_seen) = (false, false);
+        for n in 0..40 {
+            let mut state = game(&format!("r2204001-{n}"));
+            let mut catalog = registered_catalog().clone();
+            catalog.insert(snapshot.id.clone(), snapshot.clone());
+            register_catalog(catalog);
+            let self_card = put(
+                &mut state,
+                &fruit_generator().id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
+            run(
+                &mut state,
+                Some(&self_card),
+                vec![discover_from_catalog(json_as(
+                    json!({ "step": "chosen", "query": { "tags": ["Fruit"] } }),
+                ))],
+            );
+            let offered = mode_options(&state);
+            // Four in the pool, three pairs: always three options, never both of the pair.
+            assert_eq!(offered.len(), 3, "seed {n}: {offered:?}");
+            let core = offered.contains(&fruit_a().id);
+            let copy = offered.contains(&snapshot.id);
+            assert!(!(core && copy), "seed {n} offered both: {offered:?}");
+            assert!(core || copy, "seed {n}: one of the pair always fits: {offered:?}");
+            core_seen |= core;
+            snapshot_seen |= copy;
+        }
+        assert!(core_seen && snapshot_seen, "the pool keeps both cards of the pair");
+    }
+
     #[test]
     fn discover_offers_three_from_the_pool_it_names_never_the_card_that_generated_it_s5_1() {
         // §6.3.

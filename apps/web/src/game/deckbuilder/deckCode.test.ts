@@ -742,3 +742,91 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
     expect(expectOk(decodeDeckCode(rawCode("Old", [1, 5001], [], v1), sixSets, null)).dropped.unknown).toEqual([5001]);
   });
 });
+
+describe("R1410 the Training Grounds set's numbers: 6000 + n (the release, issue #2204)", () => {
+  function setDef(id: string, set: CardDef["set"], index: string): CardDef {
+    return { ...unitDef(id, index, false), set };
+  }
+  const MEDITATIVE_PLUS_26 = "meditativeplus-026";
+  const STINKYSCAPE_175 = "stinkyscape-175";
+  const TRAINING_1 = "traininggrounds-001";
+  const TRAINING_40 = "traininggrounds-040";
+  const TRAINING_SNAPSHOT = "traininggrounds-060";
+  const TRAINING_TOKEN = "traininggrounds-039-1";
+  const sevenSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      [MEDITATIVE_PLUS_26]: setDef(MEDITATIVE_PLUS_26, "Meditative+", "26"),
+      [STINKYSCAPE_175]: setDef(STINKYSCAPE_175, "Stinkyscape", "175"),
+      [TRAINING_1]: setDef(TRAINING_1, "Training Grounds", "1"),
+      [TRAINING_40]: setDef(TRAINING_40, "Training Grounds", "40"),
+      [TRAINING_SNAPSHOT]: setDef(TRAINING_SNAPSHOT, "Training Grounds", "60"),
+      [TRAINING_TOKEN]: {
+        ...setDef(TRAINING_TOKEN, "Training Grounds", "39.1"),
+        token: true,
+        tags: ["Token"],
+        rarity: "Token",
+      },
+    },
+  };
+  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(sevenSets.cards).filter(([, def]) => def.set !== "Training Grounds")),
+  };
+
+  /**
+   * A version 2 code of Core, Meditative+ and Stinkyscape cards, exactly as this client wrote it
+   * before the Training Grounds set had an offset (encoded before the release and pinned here).
+   */
+  const MINTED_BEFORE = "PIN";
+  const MINTED_CARDS: readonly string[] = [fixtureCardId(43), MEDITATIVE_PLUS_26, STINKYSCAPE_175, fixtureCardId(1)];
+
+  it("R1410 numbers a Training Grounds card 6000 + n, after Stinkyscape's 5000, and moves no other set's offset", () => {
+    expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({
+      Core: 0,
+      Classic: 1000,
+      "Classic+": 2000,
+      Meditative: 3000,
+      "Meditative+": 4000,
+      Stinkyscape: 5000,
+      "Training Grounds": 6000,
+    });
+    expect(catalogNumberOf({ set: "Training Grounds", index: "1" })).toBe(6001);
+    expect(catalogNumberOf({ set: "Training Grounds", index: "40" })).toBe(6040);
+    // A snapshot (#41–#60) is a card of the set like any other.
+    expect(catalogNumberOf({ set: "Training Grounds", index: "60" })).toBe(6060);
+    // Its token carries an "N.k" index, so no code can name it, as for every set.
+    expect(catalogNumberOf({ set: "Training Grounds", index: "39.1" })).toBeUndefined();
+    expect(catalogNumberOf({ set: "Stinkyscape", index: "175" })).toBe(5175);
+  });
+
+  it("R1410 a code minted before the Training Grounds set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeDeckCode("Before Training Grounds", MINTED_CARDS, sevenSets)).toBe(MINTED_BEFORE);
+    for (const cards of [sevenSets, withoutSet]) {
+      const decoded = expectOk(decodeDeckCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Training Grounds");
+      expect(decoded.cards).toEqual(MINTED_CARDS);
+      expect(decoded.dropped).toEqual({ unknown: [], tokens: [], duplicates: [], overflow: [] });
+    }
+  });
+
+  it("R1410 writes the Training Grounds cards as 6000 + n, LEB128, and reads each back to its own set", () => {
+    const cards = [fixtureCardId(1), STINKYSCAPE_175, TRAINING_1, TRAINING_40, TRAINING_SNAPSHOT];
+    const code = encodeDeckCode("Seven sets", [...cards, TRAINING_TOKEN], sevenSets);
+    const bytes = bodyBytes(code);
+    const nameLength = bytes[0] ?? 0;
+    // [count 5] [1] [5175] [6001: 0xf1 0x2e] [6040] [6060]; the token has no number.
+    expect(bytes.slice(1 + nameLength, bytes.length - 2)).toEqual([5, 1, ...varint(5175), ...varint(6001), ...varint(6040), ...varint(6060)]);
+    expect(varint(6001)).toEqual([0xf1, 0x2e]);
+    expect(expectOk(decodeDeckCode(code, sevenSets, null)).cards).toEqual(cards);
+  });
+
+  it("R1410 a catalog that does not hold the set (one from before the release, R1420) drops its numbers as unknown", () => {
+    const code = encodeDeckCode("Too soon", [fixtureCardId(1), TRAINING_1, STINKYSCAPE_175, TRAINING_SNAPSHOT], sevenSets);
+    const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
+    expect(decoded.cards).toEqual([fixtureCardId(1), STINKYSCAPE_175]);
+    expect(decoded.dropped.unknown).toEqual([6001, 6060]);
+  });
+});

@@ -801,7 +801,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(huge_status, 400);
     }
 
-    /// R1142000: PUT /api/stats/player accepts a body under PLAYER_STATS_BYTES_MAX (65536)
+    /// R1142000: PUT /api/stats/player accepts a body under PLAYER_STATS_BYTES_MAX (131072)
     /// and summarises it on GET /api/stats/players; a body exceeding it returns 400.
     #[tokio::test]
     async fn r1142000_put_player_stats_accepts_body_under_new_cap_and_refuses_past_it() {

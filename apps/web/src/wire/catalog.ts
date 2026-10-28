@@ -61,8 +61,8 @@ export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
  * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15, issue
- * #1187, R1178000) and Stinkyscape (issue #1836, R1857000; released by #1884) ship; Training Grounds
- * (issue #2193) is held until its release (#2204, R2194000); Boss and Boss-X are reserved.
+ * #1187, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and Training Grounds
+ * (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are reserved.
  */
 export type SetName =
   | "Core"
@@ -80,9 +80,10 @@ export type SetName =
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
  * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
  * until it is (R1420). Meditative+ is listed from v0.3.15, the patch that ships it (R1178000), and
- * Stinkyscape from its release (issue #1884, R1857000).
+ * Stinkyscape from its release (issue #1884, R1857000), and Training Grounds from its (issue #2204,
+ * R2194000).
  */
-export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"] as const satisfies readonly SetName[];
+export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] as const satisfies readonly SetName[];
 
 /** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {
@@ -90,8 +91,8 @@ export function setShips(set: SetName): boolean {
 }
 
 /**
- * R1371: the newest set that ships, the last entry of `SHIPPED_SETS`: Stinkyscape since its release
- * (issue #1884, R1857000), Meditative+ from v0.3.15 (R1178000), Meditative before it. The engine's `newest_shipped_set`, mirrored, so "More cards
+ * R1371: the newest set that ships, the last entry of `SHIPPED_SETS`: Training Grounds since its
+ * release (issue #2204), Stinkyscape from its own (issue #1884, R1857000), Meditative+ from v0.3.15 (R1178000), Meditative before it. The engine's `newest_shipped_set`, mirrored, so "More cards
  * from the newest set" names the set it leans on (R1372, R1373) without ever writing one down.
  * Which set a deck leans on is still the dealer's to resolve: the server's for All Random, the
  * practice worker's for its random deck.
