@@ -5846,6 +5846,8 @@
       "provider": "claude-6",
       "question": "",
       "queued_at": "2026-10-28T03:58:44Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "40629772494",
       "runs_on": "ubuntu-latest",
