@@ -7100,19 +7100,48 @@
     "2262": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T15:37:33Z",
       "issue": 2109,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The dying card's burn front was flattened to one translucent orange, so the existing test B45 in fx/css.test.ts fails and the burn-away effect is gone.",
+          "evidence": "apps/web/src/fx/css.test.ts:542 asserts `front.get(\"background\")` matches /linear-gradient\\(\\s*to top/ for `[data-testid^=\"card-\"][data-animating=\"destroyed\"]::before`. That rule (the only one with this selector) now reads `background: color-mix(in srgb, var(--pal-orange-400) 40%, transparent);`. Before, it was a 'to top' gradient whose opaque --bg-sunken lower 36% ate the card as jk-burn-climb raised it. Now the whole card just gets a 40% orange wipe, which contradicts the rule's own comment ('burns away from the bottom up').",
+          "severity": "blocking",
+          "where": "apps/web/src/game/animations.css:494"
+        },
+        {
+          "claim": "The result overlay's z-index is now `var(--z-showcase)`, so the existing test B50 that pins it to the literal 39 fails.",
+          "evidence": "apps/web/src/fx/css.test.ts:489: `expect(overlay.get(\"z-index\")).toBe(\"39\")` for `[data-testid=\"result-overlay\"]`. The diff changes that rule's `z-index: 39` to `z-index: var(--z-showcase)`, and the test file was not updated.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/animations.css:1556"
+        },
+        {
+          "claim": "The R318 notices now use `var(--z-overflow)`, so the existing R318 test that requires a numeric z-index fails.",
+          "evidence": "apps/web/src/game/overflow.test.tsx:534 asserts `expect(rule).toMatch(/z-index:\\s*\\d+/)` for both `.pile > .pile-notice` and `.hand > .burn-notice`. Both rules now hold `z-index: var(--z-overflow)` (overflow.css:38 and the .burn-notice block at :140).",
+          "severity": "blocking",
+          "where": "apps/web/src/game/overflow.css:38"
+        },
+        {
+          "claim": "The giga and MASSIVE-slam edge vignettes became a full-screen tint at 38% and 42% with no mask, although the PR says they keep their fade shape through mask-image.",
+          "evidence": "board.css:1493 (and the slam ::after near :1528) is now `background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);` with no mask-image in either rule. grep shows mask-image in board.css only on the centre line and the log. giga-vignette-flash takes opacity to 1, so the middle of the board now flashes red, where the old radial was transparent inside 48%/52%. The comment at :1500 still says it 'flashes the edges of the screen'. The PR's decision list states the opposite of the code.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/board.css:1493"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-10-28T17:29:52Z",
+      "queued_at": "2026-10-28T17:50:56Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40736824322",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-28T17:33:16Z",
       "stop_requested": false,
       "taken_asks": [],
