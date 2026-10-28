@@ -5163,6 +5163,8 @@
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-28T09:24:21Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "40664418981",
       "runs_on": "ubuntu-latest",
