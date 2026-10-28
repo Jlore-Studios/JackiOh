@@ -560,4 +560,3 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
         );
     }
 }
-
