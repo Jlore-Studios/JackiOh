@@ -175,6 +175,28 @@ button:disabled {
   color: var(--text-dim);
 }
 
+/* --- headlines and prose (#2123) -----------------------------------------------------------
+   A paragraph's last line is not left a lone word, and a heading, a dialog's or a toast's title
+   and the result's word share their words evenly between their lines. Only `text-wrap-style`:
+   the `text-wrap` shorthand would also set `text-wrap-mode: wrap` and undo a `white-space: nowrap`
+   the element inherits. The titles come second, so a title that is a <p> still balances. Card
+   faces are left alone: `cards/fit.ts` measures their text, and a different wrap would change
+   the size it fits. */
+p {
+  text-wrap-style: pretty;
+}
+
+h1,
+h2,
+h3,
+.prompt-title,
+.hero-inspect-title,
+.challenge-toast__text,
+.draw-toast__line,
+.result-overlay__word {
+  text-wrap-style: balance;
+}
+
 /* ---------------------------------------------------------------------------------------------
    The shell chrome: /, /login, /invite, /decks, /play and the header of /match/<id>.
    Nothing here is a game element — the board brings its own layout in game/board.css.
