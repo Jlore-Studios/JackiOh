@@ -6092,6 +6092,13 @@
     "2215": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-28T13:07:28Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "\"about 40 files or more\": 49 files change (44 test files holding a copy, 3 new, setup.ts, the README), so it is hard by count though each edit is mechanical"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
