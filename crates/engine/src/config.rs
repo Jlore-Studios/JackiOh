@@ -988,6 +988,34 @@ pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
 /// moves (R1853005).
 pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 
+// Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, issue #2200): its
+// table's numbers, as printed.
+/// §8.11 row 39 entry 1: "Summon 3 Rush Tokens", base faces.
+pub const CHAOS_TG_RUSH_TOKENS: i32 = 3;
+/// §8.11 row 39 entry 2: "refresh 4 mana" (§6.3 Refresh, R364).
+pub const CHAOS_TG_REFRESH: i32 = 4;
+/// §8.11 row 39 entry 3: "add 4 random Training Grounds cards to your hand" (R2200000).
+pub const CHAOS_TG_CARDS: i32 = 4;
+/// §8.11 row 39 entry 4: "gain 8 mana", which may pass max (§2.3).
+pub const CHAOS_TG_MANA: i32 = 8;
+/// §8.11 row 39 entry 4: "and draw 2 cards".
+pub const CHAOS_TG_DRAW: i32 = 2;
+/// §8.11 row 39 entry 5: "summon 6 random Training Grounds permanents" (R2200000).
+pub const CHAOS_TG_PERMANENTS: i32 = 6;
+/// §8.11 row 39 entry 6: "add 2 random Radiant Training Grounds cards to your hand".
+pub const CHAOS_TG_RADIANT_CARDS: i32 = 2;
+/// §8.11 row 39 entry 7: "summon 5 Rush Tokens", base faces.
+pub const CHAOS_TG_ARMY_TOKENS: i32 = 5;
+/// §8.11 row 39 entries 3, 6 and 9: the cards "cost (0)" (`costOverride`).
+pub const CHAOS_TG_COST: i32 = 0;
+/// §8.11 row 39 entry 9, R2200002: "every second turn of yours": the entry adds on the caster's own
+/// turns whose count since the entry resolved is a multiple of this.
+pub const CHAOS_TG_EVERY: i32 = 2;
+/// §8.11 row 39 entry 9, R2200002: the most rest-of-game every-second-turn adds one player holds, its
+/// terminator (REVIEW A3.6), bounded as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at
+/// the cap resolves into nothing, the "now" add included.
+pub const CHAOS_TG_ALTERNATE_CAP: i32 = 3;
+
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /// T-AI-4: the repeats after the first draw, a termination bound: five draws at most.
 pub const CHAIN_OF_THOUGHT_REPEATS: i32 = 4;

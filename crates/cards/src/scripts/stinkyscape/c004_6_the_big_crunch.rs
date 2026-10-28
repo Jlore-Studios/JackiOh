@@ -4,8 +4,8 @@
 //!   Base:    "Cast one of each Call to Chaos."
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
-//! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, then the set's own two, named by id while the set is held (R1420). Each is a play for every
+//! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`editions()`): Core #95, C+ #73,
+//! M #95, the set's own two, then TG #39 once its set ships (R2200004). Each is a play for every
 //! rule, its choices its caster's (R70), rolling and naming its own effects to both players (R436),
 //! its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP` (R452); each
 //! lands in its caster's graveyard after it resolves (R87). The Radiant face casts each Radiant, three
@@ -24,9 +24,24 @@ pub const EDITIONS: [&str; 5] = [
     "stinkyscape-151",
 ];
 
+/// R2200004: the editions of sets still held (R1420), each cast after `EDITIONS` once the Call to Chaos
+/// pool holds it, i.e. once its set ships: Training Grounds #39.
+pub const HELD_EDITIONS: [&str; 1] = ["traininggrounds-039"];
+
+/// `EDITIONS`, then each of `HELD_EDITIONS` the Call to Chaos pool holds now.
+pub fn editions() -> Vec<&'static str> {
+    let pool = jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })));
+    let shipped = |def_id: &&str| pool.iter().any(|def| def.id == *def_id);
+    EDITIONS
+        .iter()
+        .copied()
+        .chain(HELD_EDITIONS.iter().copied().filter(shipped))
+        .collect()
+}
+
 fn crunch(radiant: bool) -> Hook {
     hook(move |_ctx| {
-        EDITIONS
+        editions()
             .iter()
             .map(|def_id| {
                 cast_new(CastNewArgs {
@@ -144,6 +159,15 @@ mod tests {
             let s = played(seed, radiant);
             s.state().pending.is_none() && s.state().result.is_none() && chaos_plays(&s).len() == EDITIONS.len()
         })
+    }
+
+    #[test]
+    fn r2200004_while_training_grounds_is_held_the_crunch_casts_the_five_editions_only() {
+        crate::register_all();
+        assert_eq!(super::editions(), EDITIONS.to_vec());
+        for def_id in super::HELD_EDITIONS {
+            assert!(!set_ships(crate::card_def(def_id).set), "{def_id} is held");
+        }
     }
 
     mod r1870006_the_big_crunch {

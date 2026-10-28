@@ -643,6 +643,10 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
         return Some(crate::subsystems::eternal_step());
     }
+    // R2200002: Training Grounds #39's every-second-turn add, the same.
+    if resume.hook == crate::subsystems::CHAOS_TG_ALTERNATE_HOOK {
+        return Some(crate::subsystems::alternate_step());
+    }
     // R1882004: Stinkyscape #150's death watcher, the same.
     if resume.hook == crate::subsystems::CHAOS_DEATH_WATCH_HOOK {
         return Some(crate::subsystems::death_watch_step());
