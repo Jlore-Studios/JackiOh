@@ -678,7 +678,7 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
    * A version 2 code of Core, Classic, Classic+, Meditative and Meditative+ cards, exactly as this
    * client wrote it before the Stinkyscape set had an offset (encoded before the release and pinned here).
    */
-  const MINTED_BEFORE = "PIN_ME";
+  const MINTED_BEFORE = "JKO2.EkJlZm9yZSBTdGlua3lzY2FwZQYrkwieEJ4Yuh8BTLs";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_26, fixtureCardId(1)];
 
   it("R1410 numbers a Stinkyscape card 5000 + n, after Meditative+'s 4000, and moves no other set's offset", () => {

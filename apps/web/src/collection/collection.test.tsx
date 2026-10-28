@@ -94,6 +94,7 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       [0, 0],
       [0, 0],
+      [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
       ["core-001", true],

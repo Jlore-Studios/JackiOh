@@ -836,11 +836,10 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
-    // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
-    // R1839000: and Dormant is a §6.1 status no card prints until Stinkyscape's cards ship.
-    // R1857000: the held Stinkyscape set's faces print both, so the list reads the sets that ship.
-    const unprinted: readonly GlossaryTermId[] = ["Frozen", "Dormant"];
+    // R1174000: Frozen was a §6.1 status no card printed (M+ #24 Bob, #1185, prints the verb, Freeze)
+    // until the Stinkyscape set shipped (#1884, R1857000), whose faces print it, so it left this list.
+    // R1839000: and Dormant likewise, the Stinkyscape set's faces printing both. No status is left unprinted.
+    const unprinted: readonly GlossaryTermId[] = [];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",

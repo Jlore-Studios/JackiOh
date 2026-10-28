@@ -448,7 +448,7 @@ describe("R1410 a trio's decks carry the Stinkyscape set's numbers, 5000 + n (th
    * A version 2 trio code of Core, Classic, Meditative and Meditative+ cards in its first two slots,
    * exactly as this client wrote it before the Stinkyscape set had an offset (pinned here).
    */
-  const MINTED_BEFORE = "PIN_ME";
+  const MINTED_BEFORE = "JKT2.EkJlZm9yZSBTdGlua3lzY2FwZQMDQm9iA7gfK5kYB0NsYXNzaWMBkwj_Pg";
   const MINTED_SLOTS: readonly TrioCodeSlot[] = [
     { name: "Bob", cards: ["meditativeplus-024", fixtureCardId(43), "meditative-097"] },
     { name: "Classic", cards: ["classic-043"] },

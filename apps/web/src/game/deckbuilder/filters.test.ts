@@ -674,6 +674,10 @@ describe("the Jlockeed tag (R278)", () => {
     // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
     // set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
+    // And for the Stinkyscape release (#1884): its #124 to #130, Jlockeed's space program.
+    const stinkyscape = setShips("Stinkyscape")
+      ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
+      : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -683,6 +687,7 @@ describe("the Jlockeed tag (R278)", () => {
       "core-014",
       ...meditative,
       ...meditativePlus,
+      ...stinkyscape,
     ]);
   });
 });
@@ -809,21 +814,19 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...shippedTags(["Human", "Potion"], [fixture("c-1", "Core", ["Potion"])])]).toEqual(["Potion"]);
   });
 
-  it("R1857000 the Stinkyscape set has no chip and lends no tag, its four own included, until it ships", () => {
-    // The third held set (issue #1836), sixth in the catalog order, until its release (#1884).
-    expect(setShips("Stinkyscape")).toBe(false);
-    expect(FILTER_SETS.includes("Stinkyscape")).toBe(setShips("Stinkyscape"));
+  it("R1857000 the Stinkyscape set has a chip and lends its tags, its four own included, once it ships", () => {
+    // The third held set (issue #1836), sixth in the catalog order, shipped by its release (#1884).
+    expect(setShips("Stinkyscape")).toBe(true);
+    expect(FILTER_SETS.includes("Stinkyscape")).toBe(true);
     expect(filterSetId("Stinkyscape")).toBe("db-filter-set-stinkyscape");
     const four: Tag[] = ["Drone Core", "Weapon", "War Doctrine", "Swarm"];
     const drone = fixture("s-27", "Stinkyscape", ["Drone Core", "Human"]);
-    expect([...shippedTags(["Human", ...four], [drone])]).toEqual(setShips("Stinkyscape") ? ["Human", "Drone Core"] : []);
-    // A shipped card's would lend their chips: the four are tags like any other.
+    expect([...shippedTags(["Human", ...four], [drone])]).toEqual(["Human", "Drone Core"]);
     expect([...shippedTags(["Human", ...four], [fixture("c-1", "Core", four)])]).toEqual(four);
-    // So no chip of the bundled catalog's is one of them while the set is held, whatever has landed.
-    for (const tag of four) {
-      expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(false);
-      expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(false);
-    }
+    // The bundled catalog's shipped cards carry them, so their chips show: the deck builder's three
+    // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
+    for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
+    for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {
