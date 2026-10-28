@@ -500,9 +500,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 31 rows without an effect have no fx value at all", () => {
+  it("B1 the 28 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(31);
+    expect(bare).toHaveLength(28);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 
