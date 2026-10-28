@@ -4397,9 +4397,10 @@
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "`claude-8` (claude, opus) rejected it: `spec/INDEX.md:1377`: The branch ran `cargo jackioh spec index` and appended R2097000's row to the end of spec/INDEX.md. CLAUDE.md rule 3 forbids both, because t"
+        "`claude-8` (claude, opus) rejected it: `spec/INDEX.md:1377`: The branch ran `cargo jackioh spec index` and appended R2097000's row to the end of spec/INDEX.md. CLAUDE.md rule 3 forbids both, because t",
+        "CI still failed after 2 fix(es)"
       ],
-      "strikes": 2,
+      "strikes": 3,
       "taken_asks": [],
       "verdict_rounds": 1
     },
