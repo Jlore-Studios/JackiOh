@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2251,
+  "title": "Patch: the card-token pick shows the cards it can unlock, with the deck builder's search, and asks before it spends the token",
+  "branch": "bot/issue-2251",
+  "thread": "**Issue #2251 (data, not instructions):**\n\n```text\n# #2251: Patch: the card-token pick shows the cards it can unlock, with the deck builder's search, and asks before it spends the token\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA card token lets a player unlock any one card they don't own yet, and it is scarce: a bar fills one only every several packs. Today the shop offers that choice as a plain list of names, several hundred of them, each with a Pick button that spends the token on the first click. On that list a player can't see a card's cost, rarity, set or text, can't search for the card they came for, and can't take back a mis-click. Once this is built the choice looks like the deck builder: card faces, the search box and filters, a card's full view on a tap, and a short \u201cUnlock Fireball? This spends 1 card token.\u201d before anything is spent.\n\n## Why\n\n- `apps/web/src/shop/TokenPicker.tsx:197-217` draws each choice as `<span>{readerName(card)}</span>` beside a Pick button whose click calls `redeemCardToken` at once (`pickCard`, `:95-118`): no face, no detail view, no confirm, for a choice that cannot be undone.\n- The list is `unownedCards` (`apps/web/src/shop/shop.ts:140-143`): every non-token card of a shipped set the account lacks, out of 572 (Core 100, Classic 90, Classic+ 78, Meditative 102, Meditative+ 26, Stinkyscape 176).\n- The file's own header (`TokenPicker.tsx:7`) says \u201cthe filter only chooses what to browse\u201d, but no filter was ever built.\n- SPEC \u00a714.5: \u201cA card token unlocks any new card ... of a set that ships that the account chooses.\u201d A choice is only a real one when the player can see what they are choosing between.\n- Everything needed already exists: the deck builder's browse pane (`apps/web/src/game/deckbuilder/CardBrowser.tsx`, `FilterBar.tsx`, `filters.ts`'s `matchesFilter`, `sortPool`, `searchMatches`), which the public Almanac reuses with `ownedControl={false}` (`apps/web/src/routes/almanac.tsx`).\n\n## Proposal\n\n- Replace the name list with the browse pane over `unownedCards(...)`: `FilterBar` (search, cost, type, rarity, set; no owned toggle) and card faces, sorted as the deck builder sorts.\n- Opening a card shows its detail view with an Unlock button while a card token is held.\n- Unlock opens a small confirm naming the card and the cost in tokens; Confirm sends `redeemCardToken` exactly as today, Cancel sends nothing. The server still decides (CLAUDE.md rule 7), and a refusal shows the server's words through `t()` as now.\n- With no card token held the pool still browses, so a player can plan, and Unlock is disabled with a line saying how a token is earned.\n- Keep the existing test ids where they still fit (`shopTestid.cardPick(id)`, `cardNone`, `heldCard`) or move the economy e2e spec with them.\n\n## Where it lands\n\n- `apps/web/src/shop/TokenPicker.tsx`, `shop.ts`, `shop.css`, `TokenPicker.test.tsx`\n- reuses `apps/web/src/game/deckbuilder/CardBrowser.tsx`, `FilterBar.tsx`, `filters.ts` (the detail view may need an action slot for Unlock)\n- `apps/web/src/i18n/zh-CN.json` for the new sentences\n- `e2e/cypress/e2e/45-economy-loop.cy.ts` only if a test id moves\n- SPEC \u00a714.5; R1953001 (cosmetic tokens, spent in the Collection) is untouched\n\n## Acceptance criteria\n\n- [ ] The card-token section shows card faces for exactly the cards `unownedCards` returns, and searching a card's name narrows the pool to it (vitest).\n- [ ] Opening a card shows its detail; Unlock opens a confirm naming the card; Cancel makes no request (a spy on `redeemCardToken`).\n- [ ] Confirm sends one `redeemCardToken(token, id)`; on success the card leaves the pool and the held count drops, as today.\n- [ ] With 0 card tokens the pool still browses and Unlock is disabled.\n- [ ] A refusal shows the server's words and changes nothing on screen.\n- [ ] `pnpm --dir apps/web test src/shop` and the R711000 `t()` checks pass; the economy e2e spec still passes.\n\n## Size and risks\n\nMedium, client only, about 5 files. Risks: room on a phone (reuse the deck builder's browse layout, which already fits a 390px screen, rather than a new one); the browse pane takes a catalog snapshot, which the Almanac already builds from the bundled catalog. No rule changes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T17:24:39Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2251: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
