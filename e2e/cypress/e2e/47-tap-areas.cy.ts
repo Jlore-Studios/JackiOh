@@ -6,8 +6,10 @@
 //
 // Each test opens one screen at 390x844 and runs `expectHitAreas`. Every shown control spans
 // `HIT_MIN_PX` each way: its own box, its absolutely placed `::before` and `::after` where its own
-// overflow does not clip them, and, for a checkbox or a radio, its labels. Where a neighbour is
-// nearer, the hit area reaches halfway to it instead, and no hit area covers another control.
+// overflow does not clip them and they have both a width and a height, and, for a checkbox or a
+// radio, its labels. Where a neighbour is nearer, the hit area reaches halfway to it instead, and no
+// hit area covers another control. Two tests check the spec itself: index.css's `--hit-min` is
+// `HIT_MIN_PX`, and a probe narrower than the minimum, its band of no height, fails.
 //
 // Exempt: a link in a paragraph's or a label's sentence, a card, and controls outside the topmost
 // `aria-modal="true"`. A control scrolled out of its region, or one with `pointer-events: none`,
@@ -64,8 +66,17 @@ const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
+/**
+ * The account the signed-in screens are drawn for: p2, not 46's p1. The smoke shard runs 46 and then
+ * 47 on one server, and both specs' menus inside one minute are more than R109's allowance for one
+ * account: a local run in that order had p1's reads refused (429) by 47's deck builder.
+ */
+const SIGNED_IN = accounts.p2;
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
+/** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
+const PROBE_PX = 14;
+const PROBE_TESTID = "tap-probe";
 
 type Box = { left: number; top: number; right: number; bottom: number };
 type Control = { el: Element; name: string; own: Box; shown: Box; hit: Box; exempt: boolean };
@@ -84,7 +95,10 @@ function labelsOf(el: Element): Element[] {
   return el.tagName === "INPUT" && (input.type === "checkbox" || input.type === "radio") && input.labels !== null ? Array.from(input.labels) : [];
 }
 
-/** `el`'s own box with each absolutely placed ::before and ::after that takes taps, in each dimension its overflow leaves open, and its labels'. */
+/**
+ * `el`'s own box with each absolutely placed ::before and ::after that takes taps, in each dimension its overflow leaves
+ * open, and its labels'. A pseudo-element with no width or no height takes none, however far it reaches the other way.
+ */
 function hitBox(win: Window, el: Element): Box {
   const style = win.getComputedStyle(el);
   let hit = boxOf(el);
@@ -95,7 +109,7 @@ function hitBox(win: Window, el: Element): Box {
     // A centring translate (inspectable.css's pile band) shifts the box; the rest of a transform is ignored.
     const shift = new DOMMatrixReadOnly(p.transform === "none" ? undefined : p.transform);
     const [x, y, w, h] = [parseFloat(p.left) + shift.e, parseFloat(p.top) + shift.f, parseFloat(p.width), parseFloat(p.height)];
-    if (![x, y, w, h].every(Number.isFinite) || style.clipPath !== "none") continue;
+    if (![x, y, w, h].every(Number.isFinite) || w <= SLACK_PX || h <= SLACK_PX || style.clipPath !== "none") continue;
     if (style.overflowX === "visible") hit = { ...hit, left: Math.min(hit.left, origin.x + x), right: Math.max(hit.right, origin.x + x + w) };
     if (style.overflowY === "visible") hit = { ...hit, top: Math.min(hit.top, origin.y + y), bottom: Math.max(hit.bottom, origin.y + y + h) };
   }
@@ -181,10 +195,11 @@ function expectHitAreas(): void {
 }
 
 /**
- * The code screen and the consent screen as a pending account meets them, drawn for p1. Spec 10
- * redeems the pending fixture, which stays active until the server restarts (R144), and the daily run
- * can put both specs in one shard; so p1's own read of the account is made to say pending (no match,
- * no series), and `owes` adds what it owes. The screens draw only from that read (CLAUDE.md rule 7).
+ * The code screen and the consent screen as a pending account meets them, drawn for `SIGNED_IN`.
+ * Spec 10 redeems the pending fixture, which stays active until the server restarts (R144), and the
+ * daily run can put both specs in one shard; so the account's own read of itself is made to say
+ * pending (no match, no series), and `owes` adds what it owes. The screens draw only from that read
+ * (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
   cy.intercept("GET", "**/api/auth/me", (req) => {
@@ -256,6 +271,22 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
       cy.visit("/no-such-menu");
       cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
       cy.document().should((doc) => expect(getComputedStyle(doc.documentElement).getPropertyValue("--hit-min").trim(), "index.css's --hit-min").to.eq(`${String(HIT_MIN_PX)}px`));
+    });
+
+    it("R2122000 a band with no height widens nothing: a control narrower than the minimum fails, however tall", () => {
+      cy.visit("/no-such-menu");
+      cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
+      cy.document().then((doc) => {
+        const band = doc.createElement("style");
+        band.textContent = `[data-testid="${PROBE_TESTID}"]::before { content: ""; position: absolute; top: 50%; bottom: 50%; left: -${String(PROBE_PX)}px; right: -${String(PROBE_PX)}px; }`;
+        const probe = doc.createElement("button");
+        probe.dataset.testid = PROBE_TESTID;
+        Object.assign(probe.style, { position: "fixed", top: "50%", left: "50%", padding: "0", width: `${String(HIT_MIN_PX - PROBE_PX)}px`, height: `${String(HIT_MIN_PX + PROBE_PX)}px` });
+        doc.head.append(band);
+        doc.body.append(probe);
+      });
+      const size = `${(HIT_MIN_PX - PROBE_PX).toFixed(PX_DIGITS)}x${(HIT_MIN_PX + PROBE_PX).toFixed(PX_DIGITS)} px`;
+      cy.window().should((win) => expect(hitAreaProblems(win), "what the measure says of the probe").to.include(`${PROBE_TESTID}: its hit area is ${size}, short of ${String(HIT_MIN_PX)} px across`));
     });
 
     it("R2122000 the board, a practice game: the mulligan, then the first turn", () => {
@@ -356,17 +387,17 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
 
   describe("signed in", () => {
     before(() => {
-      cy.freeAccount(accounts.p1());
+      cy.freeAccount(SIGNED_IN());
     });
 
     it("R2122000 /play", () => {
-      cy.visitAs(accounts.p1(), routes.play());
+      cy.visitAs(SIGNED_IN(), routes.play());
       cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /decks", () => {
-      cy.visitAs(accounts.p1(), routes.deckbuilder());
+      cy.visitAs(SIGNED_IN(), routes.deckbuilder());
       cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
@@ -374,9 +405,9 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
     it("R2122000 /decks, a deck open", () => {
       // One full deck, whatever specs ran before this one saved: the open deck's pool is the big
       // list this menu holds.
-      cy.clearDecks(accounts.p1());
-      cy.saveDeck(accounts.p1(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
-        cy.visitAs(accounts.p1(), routes.deckbuilder());
+      cy.clearDecks(SIGNED_IN());
+      cy.saveDeck(SIGNED_IN(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+        cy.visitAs(SIGNED_IN(), routes.deckbuilder());
         cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
         // A phone shows the list alone until a deck is opened (a desktop opens it already).
         cy.get(ts(deckRowId(deckId))).click();
@@ -386,76 +417,76 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
     });
 
     it("R2122000 /account", () => {
-      cy.visitAs(accounts.p1(), "/account");
+      cy.visitAs(SIGNED_IN(), "/account");
       cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /leaderboard", () => {
-      cy.visitAs(accounts.p1(), "/leaderboard");
+      cy.visitAs(SIGNED_IN(), "/leaderboard");
       cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /creator", () => {
-      cy.visitAs(accounts.p1(), routes.creator());
+      cy.visitAs(SIGNED_IN(), routes.creator());
       cy.get(ts(CREATOR_SCREEN), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /replays", () => {
-      cy.visitAs(accounts.p1(), routes.replays());
+      cy.visitAs(SIGNED_IN(), routes.replays());
       cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
       expectHitAreas();
     });
 
     it("R2122000 /together", () => {
-      cy.visitAs(accounts.p1(), "/together");
+      cy.visitAs(SIGNED_IN(), "/together");
       cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /collection", () => {
-      cy.visitAs(accounts.p1(), routes.collection());
+      cy.visitAs(SIGNED_IN(), routes.collection());
       cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /collection, Cards", () => {
-      cy.visitAs(accounts.p1(), routes.collectionCards());
+      cy.visitAs(SIGNED_IN(), routes.collectionCards());
       cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /collection, Cosmetics", () => {
-      cy.visitAs(accounts.p1(), `${routes.collection()}?section=cosmetics`);
+      cy.visitAs(SIGNED_IN(), `${routes.collection()}?section=cosmetics`);
       cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /shop", () => {
-      cy.visitAs(accounts.p1(), routes.shop());
+      cy.visitAs(SIGNED_IN(), routes.shop());
       cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /series, choosing a deck", () => {
       cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-      cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
+      cy.visitAs(SIGNED_IN(), routes.series(SERIES_ID));
       cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /invite, the code screen", () => {
       asPending();
-      cy.visitAs(accounts.p1(), routes.invite());
+      cy.visitAs(SIGNED_IN(), routes.invite());
       cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });
 
     it("R2122000 /invite, the consent screen", () => {
       asPending({ ageCheckOwed: true, termsOwed: true });
-      cy.visitAs(accounts.p1(), routes.invite());
+      cy.visitAs(SIGNED_IN(), routes.invite());
       cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
       expectHitAreas();
     });

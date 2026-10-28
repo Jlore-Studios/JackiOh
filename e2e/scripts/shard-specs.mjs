@@ -31,7 +31,7 @@ export const SMOKE = ["01", "06", "10", "13", "19", "46", "47"];
  * widen after the rated game before it. Specs 29-36 and 40 are estimates (29-32 from the turns
  * they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
  * minutes in Chromium on a loaded machine; 40 from the creator, a deck save, the Luau module's
- * load and up to a dozen practice turns); 47 from a local run, 29 tests in about 30 s; once they
+ * load and up to a dozen practice turns); 47 from a local run, 30 tests in about 30 s; once they
  * have run, replace them with measured times (#79).
  */
 const WEIGHTS = {

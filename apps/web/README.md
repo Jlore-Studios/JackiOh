@@ -47,12 +47,13 @@ sizes and fails when the page is taller or wider than its allowance.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
-`tabindex="0"` shorter than that a transparent `::before` centred on it. The rule has zero
-specificity, so a control's own `::before` or `position` wins: the switch draws none, and a
-browsable pile's band is its `::after`. An input or a select draws no `::before`, so a small one
-takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a radio is tapped through
-its labels. Neighbours nearer than that split the gap. e2e spec `47` measures the board and every
-menu of `46` at 390x844.
+`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
+what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
+switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
+`::before`, so a small one takes `min-height: var(--hit-min)` in its own stylesheet. A checkbox or a
+radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
+measures the board and every menu of `46` at 390x844.
 
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks

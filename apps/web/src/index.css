@@ -426,13 +426,15 @@ h3,
 }
 
 /* The hit area (#2122, R2122000): on a phone or under a finger, a control shorter than --hit-min
-   takes a tap across --hit-min round its centre through a transparent ::before, so nothing in the
-   layout moves. Top and bottom are half the shortfall while the box is shorter than --hit-min and
-   50% (no box at all) once it is as tall, the clamp's middle term (the shortfall times a thousand)
-   choosing; left and right reach out only by what the width falls short. Zero specificity, so a
-   control's own ::before or position wins where it has one. Not here: a link in running text
-   (exempt), a table row (its ::before would be a cell), and inputs and selects, which draw no
-   ::before and take --hit-min as their height where they are small. */
+   takes a tap across --hit-min each way round its centre through a transparent ::before, so nothing
+   in the layout moves: top and bottom reach out by half the shortfall, and left and right by half
+   what the width falls short, if it does. A control as tall as --hit-min gets no band from here: top
+   and bottom meet at 50%, the clamp's middle term (the shortfall times a thousand) choosing, since a
+   band over a tall control's box would take the taps of what it holds, and an inset cannot see the
+   width from the height. One as tall but narrower takes its band in its own stylesheet (spec 47
+   finds it). Zero specificity, so a control's own ::before or position wins where it has one. Not
+   here: a link in running text (exempt), a table row (its ::before would be a cell), and inputs and
+   selects, which draw no ::before and take --hit-min as their height where they are small. */
 @media (pointer: coarse), (max-width: 600px) {
   :where(button, a[href], [role="button"], [tabindex="0"]):where(:not(:is(p, label) a, tr)) {
     position: relative;
