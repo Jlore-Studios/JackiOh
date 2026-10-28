@@ -39,6 +39,10 @@
   --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
   --primary-ink: var(--pal-brass-950);
   --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  /* The same button in green once nothing else is left (B15, highlights.css). */
+  --primary-face-ready: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
+  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
+  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-green-900);
 
   --card-w: 82px;
   --card-h: 112px;
