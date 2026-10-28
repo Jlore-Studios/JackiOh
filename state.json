@@ -5999,6 +5999,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-28T13:20:22Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
