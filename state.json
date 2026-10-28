@@ -4326,9 +4326,10 @@
       "started_at": "2026-10-27T22:35:33Z",
       "stop_requested": false,
       "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
+        "`claude-8` (claude, opus) rejected it: `spec/INDEX.md:1377`: The branch ran `cargo jackioh spec index` and appended R2097000's row to the end of spec/INDEX.md. CLAUDE.md rule 3 forbids both, because t"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 1
     },
