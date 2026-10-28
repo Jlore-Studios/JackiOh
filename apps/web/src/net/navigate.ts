@@ -2,8 +2,13 @@
 // M5's pathname switch and M6's screens share URL changes; §9.4 redirects pending accounts and room claims.
 // `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
 // A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and the browser's Back wait for it.
+// A move between two menu screens cross-fades in the browser's view transition (`showMove`, R2117000).
 
 import { useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
+
+import { testid } from "../game/contract.ts";
+import { reducedMotionNow } from "../settings/motion.ts";
 
 const NAVIGATED = "jackioh:navigated";
 
@@ -42,12 +47,52 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
   };
 }
 
+/** R2117000: a board on screen; `Board.tsx` draws one for every game and every replay. */
+const BOARD_ON_SCREEN = `[data-testid="${testid.board}"]`;
+
+/** R2117000: the pathname the screens were last told of; by a `popstate` the address has moved on. */
+let shown = "/";
+
+/** R2117000: every `usePathname` and `useSearch` reader, so one `popstate` tells them all in one transition. */
+const readers = new Set<() => void>();
+
+/**
+ * R2117000: a move cross-fades only between two menu screens: the pathname changes (a query or
+ * fragment alone is the same screen), neither end is a board's route, no board is on screen (a
+ * replay plays in place), Reduce motion is off and the browser has view transitions.
+ */
+function crossFades(from: string, to: string): boolean {
+  if (from === to || isBoardPath(from) || isBoardPath(to)) return false;
+  if (document.querySelector(BOARD_ON_SCREEN) !== null) return false;
+  return !reducedMotionNow() && typeof document.startViewTransition === "function";
+}
+
+/**
+ * R2117000: `update` tells the screens of a move from `from` to the address now. A move that
+ * cross-fades runs it inside the browser's view transition, flushed at once so the browser
+ * captures the new screen; any other runs it at once, as before.
+ */
+function showMove(from: string, update: () => void): void {
+  const to = currentPath();
+  shown = to;
+  if (!crossFades(from, to)) {
+    update();
+    return;
+  }
+  document.startViewTransition(() => {
+    flushSync(update);
+  });
+}
+
 function go(path: string, replace: boolean): void {
   const from = currentPath();
   if (replace) window.history.replaceState(null, "", path);
   else window.history.pushState(null, "", path);
-  if (currentPath() !== from) window.scrollTo(0, 0);
-  window.dispatchEvent(new Event(NAVIGATED));
+  const moved = currentPath() !== from;
+  showMove(from, () => {
+    if (moved) window.scrollTo(0, 0);
+    window.dispatchEvent(new Event(NAVIGATED));
+  });
 }
 
 /**
@@ -115,15 +160,26 @@ function heldPop(): boolean {
   return true;
 }
 
+function tellReaders(): void {
+  for (const onChange of [...readers]) onChange();
+}
+
+/** One `popstate` listener for every reader: a held one tells none (R1754000), any other is one move (R2117000). */
+function onPop(): void {
+  if (!heldPop()) showMove(shown, tellReaders);
+}
+
 function subscribe(onChange: () => void): () => void {
-  const onPop = (): void => {
-    if (!heldPop()) onChange();
-  };
-  window.addEventListener("popstate", onPop);
+  if (readers.size === 0) {
+    shown = currentPath();
+    window.addEventListener("popstate", onPop);
+  }
+  readers.add(onChange);
   window.addEventListener(NAVIGATED, onChange);
   return () => {
-    window.removeEventListener("popstate", onPop);
     window.removeEventListener(NAVIGATED, onChange);
+    readers.delete(onChange);
+    if (readers.size === 0) window.removeEventListener("popstate", onPop);
   };
 }
 
@@ -239,6 +295,22 @@ export function watchIdOf(path: string): string | null {
 /** #936: the match id of a `/duos/:matchId` path, or null. */
 export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
+}
+
+/**
+ * R2117000: the routes that are a board, whose moves the animation queue owns: a match, a watched
+ * game, a co-op match, practice (its setup and its game share the path) and the two development
+ * hotseats. No move into or out of one cross-fades.
+ */
+function isBoardPath(path: string): boolean {
+  return (
+    matchIdOf(path) !== null ||
+    watchIdOf(path) !== null ||
+    duosIdOf(path) !== null ||
+    path === paths.practice ||
+    path === paths.hotseat ||
+    path === paths.duosDev
+  );
 }
 
 // Sign-in screen entry states.

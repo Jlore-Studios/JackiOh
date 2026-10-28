@@ -29,6 +29,7 @@ import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
 import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
+import { prefersReducedMotion } from "../settings/motion.ts";
 
 /* ------------------------------------------------------------------------------------------- *
  * Testids this table needs that `contract.ts` does not define
@@ -983,36 +984,12 @@ export function animationRow(type: string): AnimationRow | undefined {
  * Durations and reduced motion
  * ------------------------------------------------------------------------------------------- */
 
-export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+// settings/motion.ts holds these three so the router can read them (R2117000); this file's importers keep them.
+export { REDUCED_MOTION_QUERY, prefersReducedMotion, reducedMotionNow } from "../settings/motion.ts";
 
 /** `prefers-reduced-motion` collapses every duration to 0 (BUILD M5-T4); an unknown type has none (issue #769). */
 export function durationFor(type: GameEventType, reducedMotion: boolean): number {
   return reducedMotion ? 0 : (animationRow(type)?.durationMs ?? 0);
-}
-
-/** Reads the media query, tolerating a non-browser host and a host without `matchMedia`. */
-export function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  const mm = (window as Window & { matchMedia?: (q: string) => MediaQueryList }).matchMedia;
-  if (typeof mm !== "function") return false;
-  try {
-    return mm.call(window, REDUCED_MOTION_QUERY).matches === true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * `prefersReducedMotion()` OR the settings panel's "Reduce motion" switch (settings/store.ts) OR the
- * effects store's `motion: "reduce"` (`settings` defaults to `getFxSettings()`). Either setting
- * behaves exactly like the media query (R200, R201).
- */
-export function reducedMotionNow(settings?: Pick<FxSettings, "motion">): boolean {
-  return (
-    prefersReducedMotion() ||
-    readPanelSettings().reduceMotion ||
-    (settings ?? getFxSettings()).motion === "reduce"
-  );
 }
 
 /** Resolves one event's element against a view, without the caller narrowing the union itself. */

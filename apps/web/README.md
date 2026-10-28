@@ -45,6 +45,8 @@ scrolls as it did. The deck builder and the almanac do the same on a phone (`dec
 The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
 sizes and fails when the page is taller or wider than its allowance.
 
+A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
