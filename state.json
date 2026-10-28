@@ -5182,34 +5182,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T07:10:16Z",
+      "feedback_since": "2026-10-28T09:38:08Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2097,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The branch ran `cargo jackioh spec index` and appended R2097000's row to the end of spec/INDEX.md. CLAUDE.md rule 3 forbids both, because that file is where every ruling branch conflicts; the daily `spec fold` on main writes it.",
-          "evidence": "`git diff main HEAD -- spec/INDEX.md` adds one row at the end. The PR body says 'cargo jackioh spec index + spec check ok'. crates/tools/src/spec.rs rule 6 says a branch writes its paragraph in spec/pending/ and 'never spec/11-rulings.md's end or spec/INDEX.md'. Other pending rulings (spec/pending/2089.md, 2092.md, 2094.md, 2095.md) have no rows in INDEX.md. The fix is to restore spec/INDEX.md to main's version; spec check no longer checks the index on a branch.",
-          "severity": "blocking",
-          "where": "spec/INDEX.md:1377"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-10-28T09:36:28Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "40665788830",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-28T09:38:08Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
