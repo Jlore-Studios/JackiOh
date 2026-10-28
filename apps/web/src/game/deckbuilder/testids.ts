@@ -43,6 +43,20 @@ export function deckRowId(deckId: string): string {
  */
 export const DECK_PRACTICE_ONLY = "deck-practice-only";
 
+/**
+ * R2097000's badge, on a deck's row (beside its button, never inside it) and in its editor;
+ * `data-deck`, `data-count`, `data-version`, `aria-expanded`.
+ */
+export const DECK_PATCH_BADGE = "deck-patch-badge";
+
+/** R2097000's list of the cards the newest patch changed of a deck. */
+export const DECK_PATCH_CARDS = "deck-patch-cards";
+
+/** R2097000: one card the newest patch changed of a deck, `data-card` its id. */
+export function deckPatchCardId(cardId: string): string {
+  return `deck-patch-card-${cardId}`;
+}
+
 /** #920: beside the set chips, the way to the card creator (`paths.creator`). */
 export const DECKS_OPEN_CREATOR = "decks-open-creator";
 

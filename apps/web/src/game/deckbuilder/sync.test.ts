@@ -1022,3 +1022,65 @@ describe("the deck's portrait (R641)", () => {
     expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
   });
 });
+
+describe("the catalog a deck was last saved under (R2097000)", () => {
+  it("R2097000 a server deck keeps the catalog version it was saved under", () => {
+    const store = open({
+      api: fakeServer().api,
+      server: response([{ ...savedDeck("d1", "Aggro", [fixtureCardId(1)], 1), catalogVersion: "older" }]),
+    });
+    expect(store.getSnapshot().decks[0]?.catalogVersion).toBe("older");
+  });
+
+  it("R2097000 a deck made or edited here carries this build's catalog version", () => {
+    const server = fakeServer();
+    const store = open({
+      api: server.api,
+      server: response([{ ...savedDeck("d1", "Aggro", [fixtureCardId(1)], 1), catalogVersion: "older" }]),
+    });
+    const id = store.createDeck({ name: "Fresh" });
+    expect(store.getSnapshot().decks.find((deck) => deck.id === id)?.catalogVersion).toBe(CATALOG_VERSION);
+    store.updateDeck("d1", { name: "Aggro v2" });
+    expect(store.getSnapshot().decks.find((deck) => deck.id === "d1")?.catalogVersion).toBe(CATALOG_VERSION);
+  });
+
+  it("R2097000 the mirror keeps an unsaved deck's catalog version", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          {
+            item: { id: "d1", name: "Old deck", cards: [fixtureCardId(1)], catalogVersion: "older", createdAt: 1, updatedAt: 1 },
+            dirty: true,
+          },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    expect(mirrored?.decks[0]?.item.catalogVersion).toBe("older");
+
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          {
+            item: { id: "d1", name: "Old deck", cards: [fixtureCardId(1)], createdAt: 1, updatedAt: 1 },
+            dirty: true,
+          },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const bare = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    expect(bare?.decks[0]?.item).toBeDefined();
+    expect("catalogVersion" in (bare?.decks[0]?.item ?? {})).toBe(false);
+  });
+});

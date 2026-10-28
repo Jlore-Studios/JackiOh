@@ -15,8 +15,10 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
+import DeckPatchBadge, { useNewestChanges } from "./DeckPatchBadge.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import ImportPanel from "./ImportPanel.tsx";
@@ -126,10 +128,12 @@ type RailProps = {
   onOpen: (next: WorkshopOpen) => void;
   onNewDeck: () => void;
   onNewTrio: () => void;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
 };
 
 function Rail(props: RailProps): ReactElement {
-  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onNewTrio } = props;
+  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onNewTrio, patch } = props;
   const { decks, trios, limits, unsynced } = snapshot;
   const decksAtCap = decks.length >= limits.decks;
   const triosAtCap = trios.length >= limits.trios;
@@ -187,6 +191,7 @@ function Rail(props: RailProps): ReactElement {
               nameLength={limits.nameLength}
               current={open?.kind === "deck" && open.id === deck.id}
               unsynced={unsynced.has(deck.id)}
+              patch={patch}
               onOpen={() => {
                 onOpen({ kind: "deck", id: deck.id });
               }}
@@ -266,10 +271,12 @@ type DeckRowProps = {
   nameLength: number;
   current: boolean;
   unsynced: boolean;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
   onOpen: () => void;
 };
 
-function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onOpen }: DeckRowProps): ReactElement {
+function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, patch, onOpen }: DeckRowProps): ReactElement {
   const verdict = deckVerdict(deck, catalog, collection, nameLength);
   const status = deckStatus(verdict, collection !== null);
   // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
@@ -315,6 +322,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
       </button>
+      {patch === null ? null : <DeckPatchBadge deckId={deck.id} cards={deckChanges(deck, patch)} version={patch.version} />}
     </li>
   );
 }
@@ -386,6 +394,7 @@ function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | nu
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
   useLocale();
+  const patch = useNewestChanges(catalog.version);
 
   const [store] = useState<DeckStore>(() =>
     createDeckStore({
@@ -489,6 +498,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         saved={!unsynced.has(openDeck.id)}
         refusal={refused.get(openDeck.id) ?? null}
         practicePath={practicePathOf(snapshot, openDeck)}
+        patch={patch}
         filter={filter}
         onFilter={setFilter}
         sort={sort}
@@ -615,6 +625,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           onOpen={openItem}
           onNewDeck={newDeck}
           onNewTrio={newTrio}
+          patch={patch}
         />
         <main ref={mainRef} className="ws-main">
           {main}

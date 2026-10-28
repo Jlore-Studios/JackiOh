@@ -92,6 +92,8 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "radiantFallback",
   "dealsDamage",
   "usesPlague",
+  // R1437000: display only and in no snapshot, so a change to it alone is no card change.
+  "flavor",
   "base",
   "radiant",
 ]);

@@ -39,8 +39,8 @@ import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmet
 
 // The shapes
 
-/** R1297000: a deck also carries its playmat, backdrop and card back picks, each absent or null where it has none. */
-export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; createdAt: number; updatedAt: number } & DeckCosmeticFields;
+/** R1297000: a deck also carries its playmat, backdrop and card back picks, each absent or null where it has none. R2097000: and the catalog version its latest save was made under: the server's stamp (R253), or this build's after an edit here; absent on a mirror entry from before #2097. */
+export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; catalogVersion?: string; createdAt: number; updatedAt: number } & DeckCosmeticFields;
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
 
 export type SyncState = "saved" | "saving" | "offline" | "error";
@@ -218,7 +218,8 @@ function deckFrom(value: unknown): DeckItem | null {
   // R641: the portrait rides the same row; an old mirror without it reads as `vanilla` (null).
   const portrait = "portrait" in value && typeof value.portrait === "string" ? value.portrait : null;
   // R1297000: the deck slots ride the same row; an old mirror without them reads as no pick.
-  return { id, name, cards: [...cards], portrait, ...pickedDeckCosmetics(value), createdAt, updatedAt };
+  const stamp = typeof value.catalogVersion === "string" ? { catalogVersion: value.catalogVersion } : {};
+  return { id, name, cards: [...cards], portrait, ...pickedDeckCosmetics(value), ...stamp, createdAt, updatedAt };
 }
 
 function slotsFrom(value: unknown): TrioSlots | null {
@@ -712,6 +713,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         // D5: an import carries no portrait; the deck reads `vanilla` until the player picks one.
         // R1297000: nor any playmat, backdrop or card back.
         portrait: null,
+        catalogVersion,
         createdAt: stamped,
         updatedAt: stamped,
       };
@@ -808,6 +810,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         cards: [...(init.cards ?? [])],
         portrait: init.portrait ?? null,
         ...pickedDeckCosmetics(init),
+        catalogVersion,
         createdAt: now,
         updatedAt: now,
       };
@@ -837,7 +840,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         picks.cardBackCosmetic === (entry.item.cardBackCosmetic ?? null);
       if (name === entry.item.name && sameList(cards, entry.item.cards) && portrait === entry.item.portrait && samePicks) return;
       const { tableCosmetic: _table, fieldCosmetic: _field, cardBackCosmetic: _cardBack, ...rest } = entry.item;
-      edited(entry, { ...rest, name, cards: [...cards], portrait, ...pickedDeckCosmetics(picks), updatedAt: clock.now() });
+      edited(entry, { ...rest, name, cards: [...cards], portrait, ...pickedDeckCosmetics(picks), catalogVersion, updatedAt: clock.now() });
     },
 
     deleteDeck(id) {

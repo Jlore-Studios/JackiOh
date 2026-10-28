@@ -24,8 +24,10 @@ import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { navigate, paths } from "../../net/navigate.ts";
 import { followInApp } from "../../routes/nav.tsx";
+import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
+import DeckPatchBadge from "./DeckPatchBadge.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import { FILTER_SETS, visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
@@ -95,6 +97,8 @@ export type DeckEditorProps = {
   refusal: string | null;
   /** #1991: where "Practice with this deck" goes (`practiceDeckPath`), or null to offer none. */
   practicePath: string | null;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
   filter: PoolFilter;
   onFilter: (next: PoolFilter) => void;
   sort: PoolSort;
@@ -122,7 +126,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 }
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
-  const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
+  const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath, patch } = props;
   const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
 
   useLocale();
@@ -397,7 +401,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           collection={collection}
           conflicts={conflicts}
           issues={cardIssues}
-          head={head}
+          head={
+            <>
+              {head}
+              {patch === null ? null : <DeckPatchBadge deckId={deck.id} cards={deckChanges(deck, patch)} version={patch.version} />}
+            </>
+          }
           onDropCard={drop}
           onRemove={remove}
           onInspect={openDetail}
