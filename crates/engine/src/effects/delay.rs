@@ -452,6 +452,31 @@ pub fn allure_enemy_units() -> Effect {
     })
 }
 
+/// R1876002 (Stinkyscape #37 Kwzka's Death): "Remove every Allure on the field" — every waiting
+/// Allure whose marked card is on the field, either side's and whoever made it, is withdrawn: its
+/// delayed steal is forgotten, so nothing is stolen, and its pink mark comes off at the next sweep
+/// (R437's `marked` event). An Allure aimed at a hand card (R1140) is not on the field and stays.
+pub fn remove_allures() -> Effect {
+    Effect::new("removeAllures", move |ctx| {
+        let state = &*ctx.state;
+        let withdrawn: Vec<String> = state
+            .marks
+            .iter()
+            .flatten()
+            .filter(|record| {
+                record.mark == ALLURE_MARK
+                    && find_instance(state, &record.instance_id)
+                        .is_some_and(|card| card.zone.z() == ZoneName::Field)
+            })
+            .map(|record| record.delayed_id.clone())
+            .collect();
+        if withdrawn.is_empty() {
+            return;
+        }
+        ctx.state.delayed.retain(|entry| !withdrawn.contains(&entry.id));
+    })
+}
+
 /// `duoRadiant`'s argument: the permanent to Duo with (the first chosen one by default).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
