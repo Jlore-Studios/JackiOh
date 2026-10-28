@@ -311,6 +311,7 @@ export function PracticeSetup({
                   aria-describedby={statsId}
                   data-testid={practiceTestid.difficulty(d)}
                 />
+                <span className="practice-tier__socket" aria-hidden="true" />
                 <span className="practice-tier__crest">
                   <TierCrest tier={d} />
                 </span>

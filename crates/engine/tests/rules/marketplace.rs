@@ -10,7 +10,7 @@ use jackioh_engine::effects::{add_market_lot, gain_market_credits, gain_resource
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
-use crate::rules::fixtures::harness::{new_game, next_nonce, run_effect, setup_catalog, spread};
+use crate::rules::fixtures::harness::{new_game, next_nonce, run_effect, setup_catalog, spread, types_of};
 use crate::rules::fixtures::marketplace::*;
 use crate::rules::fixtures::resources::*;
 
@@ -121,10 +121,6 @@ fn offer_view(state: &GameState, viewer: PlayerId, offer: i32) -> Option<MarketO
         .offers
         .into_iter()
         .find(|view| view.offer == offer)
-}
-
-fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
-    events.iter().map(GameEvent::event_type).collect()
 }
 
 fn tray_ids(state: &GameState, player: PlayerId) -> Vec<String> {

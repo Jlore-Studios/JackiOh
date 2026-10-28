@@ -75,7 +75,7 @@ fn take(state: &mut GameState, difficulty: &str, right: bool) {
     assert_eq!(answer_keys(state, &[&format!("mode:{pick}")]).error, None);
 }
 
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
+fn hand_def_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .hand
         .iter()
@@ -266,7 +266,10 @@ mod c_42_kys_test_the_two_prompts_r420 {
             take(&mut state, "Easy", right);
             assert!(state.pending.is_none());
             assert_eq!(
-                hand_ids(&state, P1).iter().filter(|id| **id == coin().id).count(),
+                hand_def_ids(&state, P1)
+                    .iter()
+                    .filter(|id| **id == coin().id)
+                    .count(),
                 if right { 3 } else { 0 }
             );
         }
@@ -341,7 +344,10 @@ mod c_42_kys_test_the_two_prompts_r420 {
         answer_keys(&mut second, &[&format!("mode:{key}")]);
         assert_eq!(hash_state(&second), hash_state(&state));
         assert_eq!(
-            hand_ids(&state, P1).iter().filter(|id| **id == book().id).count(),
+            hand_def_ids(&state, P1)
+                .iter()
+                .filter(|id| **id == book().id)
+                .count(),
             5
         );
     }
@@ -415,7 +421,7 @@ mod c_42_kys_test_the_two_prompts_r420 {
             &mut log,
         )
         .state;
-        assert!(hand_ids(&state, P1).contains(&gift().id));
+        assert!(hand_def_ids(&state, P1).contains(&gift().id));
         let folded = fold(&FoldArgs {
             seed: seed.into(),
             decks,
@@ -434,21 +440,21 @@ mod c_42_kys_test_the_rewards_r420 {
     fn r420_easy_3_the_coins() {
         let mut state = rolled("kt-coins", Easy, "coins", false);
         take(&mut state, "Easy", true);
-        assert_eq!(hand_ids(&state, P1), vec![coin().id; 3]);
+        assert_eq!(hand_def_ids(&state, P1), vec![coin().id; 3]);
     }
 
     #[test]
     fn r420_easy_a_random_2_cost_ky_card() {
         let mut state = rolled("kt-ky", Easy, "ky", false);
         take(&mut state, "Easy", true);
-        assert_eq!(hand_ids(&state, P1), vec![ky_two().id]);
+        assert_eq!(hand_def_ids(&state, P1), vec![ky_two().id]);
     }
 
     #[test]
     fn r420_r387_easy_a_random_legendary_card_which_costs_0_never_kys_test_itself() {
         let mut state = rolled("kt-legend", Easy, "legendary", false);
         take(&mut state, "Easy", true);
-        assert_eq!(hand_ids(&state, P1), vec![legend().id]);
+        assert_eq!(hand_def_ids(&state, P1), vec![legend().id]);
         assert_eq!(
             state.players.p1.hand.first().and_then(|card| card.cost_override),
             Some(0)
@@ -459,7 +465,7 @@ mod c_42_kys_test_the_rewards_r420 {
     fn r420_easy_2_random_books() {
         let mut state = rolled("kt-books2", Easy, "books", false);
         take(&mut state, "Easy", true);
-        assert_eq!(hand_ids(&state, P1), vec![book().id, book().id]);
+        assert_eq!(hand_def_ids(&state, P1), vec![book().id, book().id]);
     }
 
     #[test]
@@ -489,14 +495,14 @@ mod c_42_kys_test_the_rewards_r420 {
     fn r420_r387_medium_5_random_ky_cards_never_kys_test_itself() {
         let mut state = rolled("kt-ky5", Medium, "ky", false);
         take(&mut state, "Medium", true);
-        assert_eq!(hand_ids(&state, P1), vec![ky_two().id; 5]);
+        assert_eq!(hand_def_ids(&state, P1), vec![ky_two().id; 5]);
     }
 
     #[test]
     fn r420_medium_fill_your_hand_with_random_books_up_to_the_hand_cap() {
         let mut state = rolled("kt-fill", Medium, "fill", false);
         take(&mut state, "Medium", true);
-        assert_eq!(hand_ids(&state, P1), vec![book().id; 10]);
+        assert_eq!(hand_def_ids(&state, P1), vec![book().id; 10]);
     }
 
     #[test]
@@ -509,7 +515,7 @@ mod c_42_kys_test_the_rewards_r420 {
         let cursor = state.rng_cursor;
         answer_keys(&mut state, &[&format!("mode:{key}")]);
         assert_eq!(state.rng_cursor, cursor);
-        assert_eq!(hand_ids(&state, P1), vec![four().id; 10]);
+        assert_eq!(hand_def_ids(&state, P1), vec![four().id; 10]);
     }
 
     #[test]
@@ -517,7 +523,7 @@ mod c_42_kys_test_the_rewards_r420 {
         // Patch v0.3.10 (#831): the Gift costs (4) and arrives at it, no longer at (0).
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
-        assert_eq!(hand_ids(&state, P1), vec![gift().id]);
+        assert_eq!(hand_def_ids(&state, P1), vec![gift().id]);
         assert_eq!(
             state.players.p1.hand.first().and_then(|card| card.cost_override),
             None

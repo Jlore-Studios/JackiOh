@@ -8,20 +8,12 @@ use jackioh_engine::subsystems::twice_forward::{TWICE_FORWARD_PLAYS_KEY, twice_f
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    act, act_ok, events_of_type, in_hand, new_game, put, round_trip, slot,
+    act, act_ok, events_of_type, hand_ids, in_hand, new_game, put, round_trip, slot,
 };
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
     turner, twice_forward_catalog,
 };
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
-}
 
 struct OpponentsTurn {
     state: GameState,
