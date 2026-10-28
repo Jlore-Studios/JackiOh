@@ -6888,10 +6888,9 @@
     "what": "build #2214 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-28T15:44:34Z",
+    "at": "2026-10-28T15:47:21Z",
     "notes": [
-      "CI on #2189: #2189: queued a CI fix",
-      "delivered revise #2229 on claude-6 (run 40704953549): approved"
+      "CI on #2189: #2189: queued a CI fix"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -7597,7 +7596,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T15:44:34Z",
+  "loop_tick": "2026-10-28T15:47:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
