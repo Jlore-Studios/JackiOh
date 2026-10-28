@@ -53,6 +53,12 @@ attack?: number, health?: number,
  */
 power?: string, 
 /**
+ * R2247000: the word a card in its owner's hand shows in place of its text, which it holds in its
+ * memory (`effects::CARD_LABEL_KEY`): Anomaly Found!'s board code, "FO". Set on the viewer's own
+ * hand cards only. Absent otherwise.
+ */
+label?: string, 
+/**
  * R195, §10.8: Hearthstone's yellow glow. Present, and `true`, only on the viewer's own card
  * whose printed condition holds now. Absent otherwise: never `false`, never on the opponent's
  * cards. `UnitView` and the public `BackrowView` inherit it.
