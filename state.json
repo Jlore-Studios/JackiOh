@@ -7245,7 +7245,7 @@
       "taken_asks": []
     },
     "2267": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-10-28T18:07:54Z",
@@ -7259,15 +7259,15 @@
       "kind": "build",
       "pending_at": "2026-10-28T17:55:26Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "planned_at": "2026-10-28T18:19:51Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-3",
-      "run_id": "40740132858",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-28T17:54:25Z",
+      "provider": "muse",
+      "run_id": "pending:f997f67c-1793211661",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-10-28T18:21:22Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -7333,9 +7333,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T18:20:47Z",
+    "at": "2026-10-28T18:21:22Z",
     "url": "",
-    "what": "revise #2262 on claude-3"
+    "what": "build #2267 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T18:06:45Z",
