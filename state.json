@@ -6493,6 +6493,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-10-28T13:09:32Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40693988004",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
