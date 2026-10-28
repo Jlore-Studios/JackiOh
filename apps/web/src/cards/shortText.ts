@@ -24,6 +24,9 @@
 // Where a clamp would still cut a face at 270 px (#7 The Greatest Heist, #112 Job Application), or a
 // face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and #26
 // ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
+// The held Training Grounds set (R2194000) does the same: its Call to Chaos edition (#39) takes
+// "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
+// card's part (docs/training-grounds-set.md TG5) writes its own.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -110,7 +113,48 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-173": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-dormant-starship": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
+  // R2194000: the held Training Grounds set's rows.
+  "traininggrounds-016": { radiant: "clamp" },
+  "traininggrounds-038": { radiant: "clamp" },
+  "traininggrounds-039": { base: "colon", radiant: "colon" },
 };
+
+// R1017000: every catalog face whose printed text runs past TEXT_TIER_MAX.xl (260
+// characters), as "defId base|radiant". textLimit.test.ts pins this list on every pull
+// request; the B15 and MN09 component specs read it for their clamp diagnostics.
+export const LONG_FACES: readonly string[] = [
+  "meditative-008 base",
+  "meditative-008 radiant",
+  "meditative-022 base",
+  "meditative-022 radiant",
+  "meditative-022-1 base",
+  "meditative-022-1 radiant",
+  "meditative-049-1 base",
+  "meditative-049-1 radiant",
+  "meditative-095 base",
+  "meditative-095 radiant",
+  "core-093 base",
+  "core-093 radiant",
+  "core-095 base",
+  "core-095 radiant",
+  "core-098 base",
+  "core-098 radiant",
+  "classicplus-073 base",
+  "classicplus-073 radiant",
+  "stinkyscape-007 base",
+  "stinkyscape-007 radiant",
+  "stinkyscape-112 base",
+  "stinkyscape-112 radiant",
+  "stinkyscape-150 base",
+  "stinkyscape-150 radiant",
+  "stinkyscape-151 base",
+  "stinkyscape-151 radiant",
+  "stinkyscape-t-dormant-starship base",
+  "stinkyscape-t-dormant-starship radiant",
+  // R2202001: the held Training Grounds set's longest, its Call to Chaos edition's table.
+  "traininggrounds-039 base",
+  "traininggrounds-039 radiant",
+];
 
 /** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */
 export const MORE = "…";

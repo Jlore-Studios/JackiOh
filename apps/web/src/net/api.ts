@@ -555,10 +555,27 @@ export type QuestView = {
  * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
  * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
  */
-export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+export type QuestsResponse = {
+  quests: QuestView[];
+  nextDueAt: number | null;
+  /** R2210000: the replaces the account may still spend today; a server from before #2210 sends none, which reads as none left. */
+  replacesLeft?: number;
+};
 
 export function getQuests(token: string): Promise<QuestsResponse> {
   return keptGet<QuestsResponse>(keptPaths.quests, token);
+}
+
+/** R2210000: `POST /api/quests/:questId/replace`, a held quest swapped for another; answers the quests as `GET /api/quests` does. */
+export async function replaceQuest(token: string, questId: string): Promise<QuestsResponse> {
+  const answer = await apiRequest<QuestsResponse>(`/api/quests/${encodeURIComponent(questId)}/replace`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+  // R2125000: the next visit shows what this answer left.
+  rememberRead(token, keptPaths.quests, answer);
+  return answer;
 }
 
 // ---------------------------------------------------------------------------------------------

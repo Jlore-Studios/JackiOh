@@ -7,6 +7,12 @@
 //! `QUEST_MAX_HELD` waiting; while it is off nothing arrives ([[R1304002]]) and nothing is due.
 //! The rhythm and the payout are `economy::quests`'s.
 //!
+//! `POST /api/quests/:questId/replace` swaps a held quest for another, `QUEST_REPLACES_PER_DAY`
+//! times a UTC day, while the economy is live: 409 `conflict` when it is off, when the day's
+//! replaces are spent or when no other quest is left to draw, and 404 `not_found` for a quest the
+//! account does not hold, each writing nothing ([[R2210000]]). Both routes answer `replacesLeft`, how
+//! many replaces the account has left today, 0 while the economy is off.
+//!
 //! The dev tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`) give the caller
 //! a quest at once and complete one it holds, as rows marked `dev` (§14.10), so quests are tested
 //! without waiting. Like every dev tool they answer a dev account alone (`api::dev::dev_caller`,
@@ -22,7 +28,10 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::app::{App, now_ms};
 use crate::config::QUEST_MAX_HELD;
 use crate::db::store::Tx;
-use crate::economy::quests::{arrival, complete_quest, fresh_seed, quest_def, quest_xp, top_up_quests};
+use crate::economy::quests::{
+    ReplaceOutcome, arrival, complete_quest, fresh_seed, quest_def, quest_xp, replace_quest, replaces_left,
+    top_up_quests,
+};
 use crate::economy::store::{EconomyReason, HeldQuest, QuestBook};
 
 /// A held quest as the client reads it; `None` for an id the pool no longer has.
@@ -48,19 +57,69 @@ async fn quests_at(app: &App, tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Re
     })
 }
 
-/// `GET /api/quests` (`AuthLevel::Active`): `{ quests, nextDueAt }`, the held quests oldest first
-/// and when the next falls due; `nextDueAt` is `null` while the economy is off and while the
+/// The answer of both quest routes: `{ quests, nextDueAt, replacesLeft }`, the held quests oldest
+/// first and when the next falls due; `nextDueAt` is `null` while the economy is off and while the
 /// account holds `QUEST_MAX_HELD`, since none arrives then.
-pub async fn get_quests(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile = caller_profile(&req)?;
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
-    let book = quests_at(app, &mut tx, &profile.id, now_ms()).await?;
-    tx.commit().await?;
+fn quests_answer(app: &App, book: &QuestBook, replaces_left: i64) -> Value {
     let quests: Vec<Value> = book.held.iter().filter_map(quest_view).collect();
     let next_due_at = book
         .next_due_at
         .filter(|_| app.economy_live && book.held.len() < QUEST_MAX_HELD);
-    Ok(json(200, json!({ "quests": quests, "nextDueAt": next_due_at })))
+    json!({ "quests": quests, "nextDueAt": next_due_at, "replacesLeft": replaces_left })
+}
+
+/// `GET /api/quests` (`AuthLevel::Active`): the quests ([`quests_answer`]); `replacesLeft` is the
+/// replaces the account may still spend today ([[R2210000]]), 0 while the economy is off.
+pub async fn get_quests(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let now = now_ms();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let book = quests_at(app, &mut tx, &profile.id, now).await?;
+    let left = if app.economy_live {
+        replaces_left(&mut tx, &profile.id, now).await?
+    } else {
+        0
+    };
+    tx.commit().await?;
+    Ok(json(200, quests_answer(app, &book, left)))
+}
+
+/// `POST /api/quests/:questId/replace` (`AuthLevel::Active`): replaces a held quest with another
+/// ([`replace_quest`], [[R2210000]]) and answers what `GET /api/quests` answers after it. 409 while
+/// the economy is off, when today's replaces are spent and when no other quest is left to draw;
+/// 404 for a quest the account does not hold. A refusal writes nothing.
+pub async fn post_replace_quest(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    if !app.economy_live {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "Quests can't be replaced yet.",
+        ));
+    }
+    let not_held = || ApiError::new(ApiErrorCode::NotFound, "That quest is not held.");
+    let quest_id = req.params.get("questId").cloned().ok_or_else(not_held)?;
+    let now = now_ms();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    match replace_quest(&mut tx, &profile.id, &quest_id, now).await? {
+        ReplaceOutcome::Replaced(_) => {}
+        ReplaceOutcome::Spent => {
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "You've already replaced a quest today. You can replace another tomorrow.",
+            ));
+        }
+        ReplaceOutcome::NotHeld => return Err(not_held()),
+        ReplaceOutcome::NoneLeft => {
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "There's no other quest to swap in.",
+            ));
+        }
+    }
+    let book = tx.economy_quests_get(&profile.id).await?;
+    let left = replaces_left(&mut tx, &profile.id, now).await?;
+    tx.commit().await?;
+    Ok(json(200, quests_answer(app, &book, left)))
 }
 
 /// `POST /api/dev/quests` (`AuthLevel::Active`, the dev tools): a quest at once, drawn as an

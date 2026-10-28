@@ -2,9 +2,10 @@
 // printed card carries its expansion symbol. Core is a ringed orb, Classic a columned temple, and
 // Classic+ the same temple with a plus beside it, Meditative an ensō, a brushed open circle in
 // ink with a small red seal (R503), and Stinkyscape a green planet in deep space, its ring tilted, a
-// star beside it and three stink lines rising off it (R1883000); a set with no glyph of its own (the
-// reserved Boss sets, or one this client does not know yet) gets a plain diamond, so every card still
-// shows one.
+// star beside it and three stink lines rising off it (R1883000), and Training Grounds a straw
+// archery target, red rings on its face, over two crossed wooden practice swords (R2202000); a set
+// with no glyph of its own (the reserved Boss sets, or one this client does not know yet) gets a plain
+// diamond, so every card still shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no
@@ -12,7 +13,7 @@
 
 import { t } from "../i18n/i18n.ts";
 
-export type SetMarkKind = "core" | "classic" | "classic-plus" | "meditative" | "stinkyscape" | "unknown";
+export type SetMarkKind = "core" | "classic" | "classic-plus" | "meditative" | "stinkyscape" | "training-grounds" | "unknown";
 
 export type SetMark = {
   kind: SetMarkKind;
@@ -31,6 +32,18 @@ export const SET_MARK_MIN_FACE_PX = 100;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const BRONZE = "#e6b35c";
 const BRONZE_INK = "#2a1906";
+const WOOD = "#c58a48";
+const WOOD_INK = "#3a2210";
+const STRAW = "#f1dfa8";
+const TARGET_RED = "#d2452f";
+
+/** A wooden practice sword from the hilt at (x1, y1) to the tip at (x2, y2), outlined. */
+function woodenSword(x1: number, y1: number, x2: number, y2: number): string {
+  return (
+    `<path d='M${x1} ${y1}L${x2} ${y2}' stroke='${WOOD_INK}' stroke-width='3.6' stroke-linecap='round'/>` +
+    `<path d='M${x1} ${y1}L${x2} ${y2}' stroke='${WOOD}' stroke-width='2' stroke-linecap='round'/>`
+  );
+}
 
 /** A temple front: a pediment, three columns and a plinth. */
 const TEMPLE =
@@ -56,6 +69,13 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
     `<circle cx='10.6' cy='14.2' r='4.6' fill='#7fd23e' stroke='#16300a' stroke-width='1'/>` +
     `<path d='M18.6 14.2A8 2.2 0 0 1 2.6 14.2' transform='rotate(-18 10.6 14.2)' fill='none' stroke='#f1dc6b' stroke-width='1.2'/>` +
     `<path d='M18.4 4.6L19.1 6.7L21.2 7.4L19.1 8.1L18.4 10.2L17.7 8.1L15.6 7.4L17.7 6.7Z' fill='#fff6c8'/>`,
+  "training-grounds":
+    woodenSword(3, 21, 21.2, 2.8) +
+    woodenSword(21, 21, 2.8, 2.8) +
+    `<path d='M3.4 17.2L6.8 20.6M20.6 17.2L17.2 20.6' stroke='${WOOD_INK}' stroke-width='1.8' stroke-linecap='round'/>` +
+    `<circle cx='12' cy='12' r='7.6' fill='${STRAW}' stroke='${WOOD_INK}' stroke-width='1.2'/>` +
+    `<circle cx='12' cy='12' r='5.2' fill='${TARGET_RED}' stroke='${WOOD_INK}' stroke-width='0.6'/>` +
+    `<circle cx='12' cy='12' r='3' fill='${STRAW}'/><circle cx='12' cy='12' r='1.3' fill='${TARGET_RED}'/>`,
   unknown: `<path d='M12 1.6L22.4 12L12 22.4L1.6 12Z' fill='#bba8dc' stroke='#1d1530' stroke-width='1.6' stroke-linejoin='round'/><path d='M12 7.4L16.6 12L12 16.6L7.4 12Z' fill='#1d1530'/>`,
 };
 
@@ -69,6 +89,7 @@ const SRC: Readonly<Record<SetMarkKind, string>> = {
   "classic-plus": dataUri(GLYPHS["classic-plus"]),
   meditative: dataUri(GLYPHS.meditative),
   stinkyscape: dataUri(GLYPHS.stinkyscape),
+  "training-grounds": dataUri(GLYPHS["training-grounds"]),
   unknown: dataUri(GLYPHS.unknown),
 };
 
@@ -78,6 +99,7 @@ const KINDS: Readonly<Record<string, SetMarkKind>> = {
   "Classic+": "classic-plus",
   Meditative: "meditative",
   Stinkyscape: "stinkyscape",
+  "Training Grounds": "training-grounds",
 };
 
 /** The mark a card of `set` wears. A set name this client has no glyph for gets the diamond. */

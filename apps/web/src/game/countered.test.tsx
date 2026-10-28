@@ -5,17 +5,15 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CATALOG } from "@jackioh/cards";
 import type { PlayerView } from "@jackioh/shared";
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_CLOSE, INSPECT_HOVER, INSPECT_NOTE, INSPECT_SHEET, closeInspect, writeCardSettings } from "../cards/index.ts";
-import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import { COUNTERED_NOTE } from "./glow.ts";
+import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -25,7 +23,6 @@ afterEach(() => {
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
-const lookup = lookupFromDefs(CATALOG);
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
 /** p1's hand: a (2) the Chalice would counter, and a (1) it would not. */
@@ -39,14 +36,6 @@ function warnedView(): PlayerView {
       ],
     }),
   });
-}
-
-function renderBoard(view: PlayerView): void {
-  render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  );
 }
 
 describe("R667 the Plague Chalice warning on a hand card", () => {

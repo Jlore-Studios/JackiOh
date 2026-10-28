@@ -6,10 +6,12 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
-import { FACE_TEXT_LIMIT, PREVIEW_TEXT_LIMIT } from "./constants.ts";
+import { FACE_TEXT_LIMIT, PREVIEW_TEXT_LIMIT, TEXT_TIER_MAX } from "./constants.ts";
 import { faceModel } from "./model.ts";
 import {
+  LONG_FACES,
   MORE,
   SHORT_FORMS,
   SUMMIT_DEF_ID,
@@ -90,6 +92,46 @@ describe("R1017000 the face text limit", () => {
         }
       }
     }
+  });
+
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, five Stinkyscape rows and the held Training Grounds #39) each print a short form", () => {
+    const long = DEFS.flatMap((def) =>
+      FACES.filter((face) => printed(def.id, face).full.length > TEXT_TIER_MAX.xl).map(
+        (face) => `${def.id} ${face ? "radiant" : "base"}`,
+      ),
+    );
+    expect(TEXT_TIER_MAX.xl).toBe(260);
+    for (const entry of long) {
+      const [id, label] = entry.split(" ");
+      expect(shortFormOf(id ?? "", label === "radiant"), entry).not.toBeNull();
+    }
+    expect([...long].sort()).toEqual([...LONG_FACES].sort());
+  });
+
+  it("MN09 the premise: the set is in the catalog with a Chinese face for every card, and its longest faces are named", () => {
+    const MEDITATIVE = DEFS.filter((def) => def.set === "Meditative" && def.id !== GLITCH_DEF_ID);
+    const VARIANTS = [
+      { label: "base", radiant: false, chinese: false },
+      { label: "radiant", radiant: true, chinese: false },
+      { label: "Chinese base", radiant: false, chinese: true },
+      { label: "Chinese radiant", radiant: true, chinese: true },
+    ] as const;
+    expect(MEDITATIVE.length, "Meditative entries in the catalog").toBeGreaterThan(0);
+    for (const def of MEDITATIVE) {
+      const chinese = faceModel({ defId: def.id, def, radiant: false, chinese: true });
+      expect(chinese.chinese, `${def.id} has a Chinese face (#516)`).toBe(true);
+      expect(chinese.name, `${def.id}'s Chinese name`).not.toBe("");
+    }
+    // No Chinese face is among the longest: a Chinese face prints fewer characters for the
+    // same words, so the pinned list names only the underlying base and radiant faces.
+    const long = MEDITATIVE.flatMap((def) =>
+      VARIANTS.filter(
+        (face) =>
+          faceModel({ defId: def.id, def, radiant: face.radiant, ...(face.chinese ? { chinese: true } : {}) }).text.full
+            .length > TEXT_TIER_MAX.xl,
+      ).map((face) => `${def.id} ${face.label}`),
+    );
+    expect([...long].sort()).toEqual([...LONG_FACES.filter((entry) => entry.startsWith("meditative-"))].sort());
   });
 
   it("R1017000 a Summit in play prints its header and each next Ascent line within the hover preview's limit", () => {

@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import type { CardCost, CardDef, CardFace, CardType, Rarity, Tag } from "@jackioh/shared";
 import { validateDeck, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
 import {
@@ -292,29 +292,6 @@ function detailName(): string {
   return base.querySelector(".card-name")?.textContent ?? "";
 }
 
-/** Keeps `pointerType` on synthetic pointer events if the window's PointerEvent would drop it. */
-function ensurePointerEvent(): void {
-  const win = document.defaultView;
-  if (win === null) return;
-  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
-  if (probe !== null && probe.pointerType === "touch") return;
-
-  class TestPointerEvent extends win.MouseEvent {
-    readonly pointerType: string;
-    readonly pointerId: number;
-    readonly isPrimary: boolean;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerType = init.pointerType ?? "";
-      this.pointerId = init.pointerId ?? 1;
-      this.isPrimary = init.isPrimary ?? true;
-    }
-  }
-  for (const target of [win, globalThis]) {
-    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
-  }
-}
-
 function pointer(pointerType: "mouse" | "touch"): PointerEventInit {
   return { pointerType, clientX: 40, clientY: 40, pointerId: 1, isPrimary: true, button: 0 };
 }
@@ -336,10 +313,6 @@ function advance(ms: number): void {
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-
-beforeAll(() => {
-  ensurePointerEvent();
-});
 
 afterEach(() => {
   act(() => {

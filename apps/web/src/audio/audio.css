@@ -37,7 +37,10 @@
    sized and flowed like the gear (board.css names both wherever it places the gear), instead of a
    fixed corner button over whatever the page puts in its top-right corner. */
 .board .control-bar .audio-toggle {
-  position: static;
+  /* Relative, its corner offsets undone, so index.css's hit area (R2122000) is drawn round the button, not the bar. */
+  position: relative;
+  top: auto;
+  right: auto;
   z-index: auto;
   width: auto;
   height: auto;

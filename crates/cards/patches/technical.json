@@ -1908,5 +1908,574 @@
     "pr": 2072,
     "title": "no last hour for claude-2; claude-5's comes with its late week, which lifts it to 80% of a session and all of its week",
     "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "a9c8cc66cf69f590498cd1a360a2b51a1a0754c1",
+    "pr": 2073,
+    "title": "the e2e deck-fixture check runs with the rest of CI instead of never",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "fd3aa65615fdb2568bd873f793f20828072acb14",
+    "pr": 2070,
+    "title": "a twice-daily check opens an issue when the Supabase database nears its plan's cap",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0ee795ebd4eac54b2fe61552bf555fa2188914d7",
+    "pr": 2071,
+    "title": "the AI prices a Lifesteal strike under a public heal-to-damage conversion as the self-damage it is",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b6018e34115a1492ce24540dcc0a3251639d52a1",
+    "pr": 2079,
+    "title": "the status issue draws each AWS box as its slots, and every section folds away",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "cd17c64f580a36a9b8ef112bb0e5d1cca9dc5a25",
+    "pr": 2075,
+    "title": "the replays list reads a page in a few queries instead of ninety",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "6777a532963d5a2516a5a55f50c4cc7435e3b79f",
+    "pr": 2078,
+    "title": "patches log: 4c3b39a..0b87f86",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f8638c8a24b6ef646103087f9eea1e90b18e5622",
+    "pr": 2080,
+    "title": "the shop, pack and collection screens speak the reader's language — translated refusals and card names",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "890a35516bb65588fcc0b5f65383105e38524d28",
+    "pr": 2081,
+    "title": "the card-picks upload and the dev fill and clear take the account's economy lock, so two writes at once can't lose one",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5d325b13bf928ac616c2f15c26550108c11879fe",
+    "pr": 2082,
+    "title": "spec check holds every `(ruling)` and `Ruling:` marker in §2–§10 to a `[[R…]]` link",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8a5e2bb5fb40208c33b469d5874832639c8a8497",
+    "pr": 2061,
+    "title": "a quests bookmark on the landing's button box",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e741820db6ad2bda093f617c67c397dcfb0292ab",
+    "pr": 2077,
+    "title": "Stinkyscape S23, Alteran Reach",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "d5e1c2855caaa60a5cef9ce116fc89db1a5a16ca",
+    "pr": 2084,
+    "title": "Stinkyscape S02, the Starship cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b163a403b591f8e67fd2a1e551203dafaf479595",
+    "pr": 2087,
+    "title": "Stinkyscape S12, the AI at the wheel",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "87e6738a55d20ebee0080dabbbd7d78924acd7bb",
+    "pr": 2065,
+    "title": "Stinkyscape S16, auras and rule benders",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "04ed6019b7db49143b9623f996ff558fa0a518a4",
+    "title": "Merge pull request #2091 from Jlore-Studios/bot/issue-2022",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e03ef72ffeded4c61c613fa9d3d577d6faa23c27",
+    "pr": 2112,
+    "title": "claude-8 works three lanes, and the status issue lists every subscription's lanes and their limits",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "1c25f6bae3fa5496d8ffdba417874e0917e69174",
+    "pr": 2113,
+    "title": "the engine's rule tests in two binaries, side by side in CI",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "632440b2424fe405806a047024006dd2f6bc0f66",
+    "pr": 2104,
+    "title": "the status issue shows whether the owner's PC is working, and its CPU and memory as percentages",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "26202cd0b90c5fd92762df58a2c34ef369c9e9fa",
+    "pr": 2083,
+    "title": "Stinkyscape S19, S05 and S09, Jlockeed's space program, the Miners and The Greatest Heist",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b840480a6feec3f638925c20a3444a2e20eef842",
+    "pr": 2114,
+    "title": "the learn lane's schedule fires twice a day, so a broken chain restarts within 12 hours",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5075a6a597358b0ed7c59913d1c383c719c04545",
+    "pr": 2130,
+    "title": "a voided match's result offers no replay, and each co-op Try again names what it retries",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "70a8e2e31537130b745ee854e01a4d8f68ed0d39",
+    "pr": 2133,
+    "title": "the night bot drops Devin, and claude-8 works two lanes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "dc73deef5084ab81cd067a20fd4344085ac38c47",
+    "pr": 2136,
+    "title": "gather gets a runner of its own on the PC, so it no longer waits behind learn",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e954706565945f1eaf0f1289f5356ac2a45ca8f4",
+    "pr": 2137,
+    "title": "Radiant Tylannt's summoned Greatest Heist runs its Cry, a triggered Cry reaching a face-up Field Spell",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5e130b133512534dc2bce2be9d62ef77bbe7abf0",
+    "pr": 2138,
+    "title": "Stinkyscape S24, the bundles",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f767376f9544d09a1842b57cd46de59d0b382021",
+    "title": "Merge pull request #2086 from Jlore-Studios/bot/issue-1870",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "75a8fac2e5eb20a96f3cf0e9a34eb5a165b32f43",
+    "pr": 2141,
+    "title": "gather takes the PC's CPU ahead of the learn lane, at full size",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8888797378ae75536b8e92f2bbea7e2afe8ff971",
+    "pr": 2139,
+    "title": "Stinkyscape S15, traps and reactions",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "1e9075658b6edbc0968002f8283b453b8c4d1d3a",
+    "title": "Merge pull request #2039 from Jlore-Studios/bot/issue-1860",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "2590bc80297ed257879933690c96e23384694bc7",
+    "pr": 2147,
+    "title": "the supervisor's notes give gather's CPU weight as Docker sets it",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ab8948614f81e30cfbb5a9269b1c1b1c9653e17d",
+    "pr": 2146,
+    "title": "duplicate a deck to try a variant",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0e6e4250935a95cf1835c9fcb8c8a0115d21b072",
+    "pr": 2144,
+    "title": "Stinkyscape S18, outside data and hidden hands",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "89890508813cfbfbe2048d5e51771a88766188cb",
+    "pr": 2143,
+    "title": "Stinkyscape S20, the Anomalies and the Scanning Probes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "110cc948d8f37525824b83659e955a0dff6dccf3",
+    "pr": 2148,
+    "title": "Stinkyscape S26, the set's look and sound",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "505abf3419d5f35a98581a622b5f4a3937690880",
+    "pr": 2140,
+    "title": "Stinkyscape S17, the Acclaimed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5168b0f6375d8a19da8f8b9742e1518e3a84b280",
+    "pr": 2150,
+    "title": "a daily fold writes the §11 paragraphs and the rulings index, and the code audit opens every three days",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "2a93d6092501d018796d89ab7f20ee29d455f834",
+    "pr": 2151,
+    "title": "the status issue opens with how far the PC's learn shard and gather have played, and its timeline draws the PC's jobs in readable colours",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "32d123284856f35780b3505e39adfa337cb1ffd5",
+    "title": "Merge pull request #2059 from Jlore-Studios/bot/issue-1861",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8d85dc4617e8d9c2489434d2ccec829f6f3faa98",
+    "pr": 2153,
+    "title": "Stinkyscape S21, the Marketplace's table and its 10 AI cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "353b08eef5ea21eb8bf71853382e18dc5a46b762",
+    "pr": 2135,
+    "title": "Play again after a co-op game, the server's offers",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "580a463850f16d6c205ad701b1cc116e4a2e5cc5",
+    "pr": 2149,
+    "title": "undo and redo in the deck editor",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f757acf929207fcc3905f8e7a3eb03fd187335eb",
+    "pr": 2131,
+    "title": "a co-op invite is a link, and a room link in chat joins in one press",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "6f4671e54afd8081a16bfb08c814e5c023b84354",
+    "pr": 2152,
+    "title": "a ranked win streak shows as a flame on the profile and in the match intro",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5fbc4ae16eaf7db41be80f9209a11bb66a741704",
+    "pr": 2162,
+    "title": "the status issue's top charts the PC's learn and gather progress in Mermaid",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "4af3c468301a87fd7e224ad9f9f445c016454207",
+    "pr": 2164,
+    "title": "the board's colours come from one named palette",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "31bace98a27831c61404cfa52dffde80a75af55c",
+    "pr": 2159,
+    "title": "Stinkyscape S25, the two Calls to Chaos",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "df6b05c33559a711828a68158d72bbe30f418541",
+    "pr": 2161,
+    "title": "the #2142 audit's dead code, five merged duplicates and the doc drift it found; the code audit goes to the night bot",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "225b8a0c8544cac803e04c8847370ab1555c540a",
+    "title": "Merge pull request #2167 from Jlore-Studios/squishy/issue-2157",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "db6ea106cb3854e2586eb6373f149aa05fcd8a8b",
+    "pr": 2166,
+    "title": "the glove cursor curls its finger and taps down when it clicks",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "580ab96ff4d7adbda39f08c39a450470dc9dacab",
+    "title": "Merge pull request #2169 from Jlore-Studios/squishy/issue-2156",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5a16cba128d88704f6550b67a9520768ab52a124",
+    "pr": 2171,
+    "title": "Stinkyscape S26, the walkthrough's client fixes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "93c638c949a8ec4399a7872b419a2f13a838a202",
+    "pr": 2175,
+    "title": "the harness resolves the merge conflicts that need no judgment, and a revision with nothing else left spends no builder",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "3776f0cd990b046624f087adc06904c45039c750",
+    "pr": 2172,
+    "title": "the status issue keeps its statistics, leaving out the full status first for room",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f602c1f4a3cd7d047d8ffbe0e7412e4d9ecd0610",
+    "pr": 2174,
+    "title": "Stinkyscape S27, the set's own card art, drones, starships and weapons that look the part",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "2264874073ee866c96a721806d613ec5f1bec1c6",
+    "pr": 2158,
+    "title": "win rates for Created cards, apart from the deck's",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "17d45db8cd6d75d6f48086e4e862cad7a5f04467",
+    "pr": 2180,
+    "title": "Play again on the co-op result panel",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "760f7e8ce038d10e0e2370edb9b7c4f54a713400",
+    "pr": 2183,
+    "title": "the AI keeps a held or copied fused card's definition, and the shadow ban may hold Stinkyscape cards",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "005f36c823f200fcdb712129457546033a4d2090",
+    "pr": 2184,
+    "title": "each shipped version keeps its own BUSTED and complicated lists, and a script edit that moves a card across a threshold plays xxFreshJack and Shockwave447 differently",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "cc65d9569b1d9b610bd59598ecf6601c4041150b",
+    "pr": 2187,
+    "title": "undo toasts for deleting decks, trios and custom cards and removing friends",
+    "kind": "app",
+    "player": "Deleting a deck, a trio or a custom card, or removing a friend, now happens at once and shows a toast with an **Undo** button for 8 seconds, instead of asking first."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "bf84de3086ff423f5df37e9c2364ac9a2c0766a9",
+    "pr": 2188,
+    "title": "tabular numbers and balanced headlines across the menus",
+    "kind": "app",
+    "player": "The turn clock, prices, wallets, bars, ranks and stats no longer shift as their digits change, and headings break into even lines."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "9be40afae2cff476ddcddc3a312506c8fb4d84fd",
+    "pr": 2190,
+    "title": "swipe down to close the card and pile sheets",
+    "kind": "app",
+    "player": "On a phone, swipe a card's or a pile's sheet down to close it."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e653835b828e6b98998591be1fd40455a35929ad",
+    "pr": 2145,
+    "title": "hover or long-press a keyword in any card's text to read its rule",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "8784ff73dedd6fa0e73510ee6d8ae7914b5028a3",
+    "pr": 2182,
+    "title": "the M12 audit's Stinkyscape findings, Gatinsir's summoned Cry, the death watch's bound, the Tricknology and Jade Launcher pools, and the missing tests",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5aa132637c26a62ec2886adbcbc957fb2d02b775",
+    "pr": 2192,
+    "title": "refresh e2e smoke shard WEIGHTS for a 3-shard split (#2181)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "d96667141f7bb150f55045e442f834869a5de756",
+    "pr": 2191,
+    "title": "chat messages appear at once while they send",
+    "kind": "app",
+    "player": "Chat messages appear as soon as you send them; one that doesn't go through can be retried or discarded."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "19deae1ad37f0ed16d4c1517963c935c1f0f6ea2",
+    "pr": 2132,
+    "title": "the co-op board can show both duels at once",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "6b8c335e83219a613133c7831631711d1a984384",
+    "pr": 2057,
+    "title": "the AI's stand-down check counts only enemy units that could attack that unit on their next turn",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "55c1740a106201d873538a3fc746aa80778f009b",
+    "pr": 2216,
+    "title": "the rules tests' sink bench and their ids_of, types_of and hand_ids helpers come from the shared harness, and the check keeps it so",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "a89242e81ee9790e607e5196c09dc50b331c7584",
+    "pr": 2085,
+    "title": "classify counts a `use`-only change in a non-script Rust file as a code change",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "82bbea3064286061aab4db4c7279a15117a68dbc",
+    "pr": 2218,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "dc1ba6aa90bbc72263a23d083ec859bc44ae57b0",
+    "pr": 2207,
+    "title": "skeleton loaders for the menu screens",
+    "kind": "app",
+    "player": "Menus show the shape of what is loading instead of a line of text."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "401ab2f8924a2332a2d7f3be9c6db185ee6a72c1",
+    "pr": 2088,
+    "title": "spec check resolves the `§`, `R` and card references inside a ruling's `cards:` line",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e4eaa55cfb5511d892f07f5b88f3959f98be8ef4",
+    "pr": 2219,
+    "title": "the AI plays one card at most three times a turn, so a graveyard loop of a (0) Spell ends",
+    "kind": "ai",
+    "player": "The practice AI no longer loops forever on a free spell it can replay from its graveyard."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "fcb85bedc11187594a0e911fd03b58b3696b2761",
+    "pr": 2222,
+    "title": "spec check passes again, R2115000's cards line writes its issues as issues",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "5755ec268245b137298aaa3832a417a5a686bad4",
+    "pr": 2224,
+    "title": "menu screens show their last data at once and refresh it in the background",
+    "kind": "app",
+    "player": "Menus open at once on what you last saw and refresh behind it."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "109a33c7cd041a5befc0bf3652caf5d6d2dff121",
+    "pr": 2168,
+    "title": "player-facing text in one voice, with no developer jargon",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "d038c8d93303d8ea2870f026a88b4bfadc4f5b26",
+    "pr": 2225,
+    "title": "prefetch a screen's code and the engine on hover or focus",
+    "kind": "app",
+    "player": "Screens open faster: the game starts fetching a screen as you point at, focus or tap its link."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "11f526b8c1ffdedfc56bfc217df662be2d66a856",
+    "title": "Merge pull request #2177 from Jlore-Studios/bot/issue-2102",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0242b3b8cf4df577577003c9e72cb926be5e265d",
+    "pr": 2227,
+    "title": "the deck builder's pool starts on a phone's first screen again, and the Radiant glow check reads a palette shadow",
+    "kind": "app",
+    "player": "On a phone, the deck editor's Undo, Redo and cosmetics buttons sit beside Back, so the card pool starts on the first screen again."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "3c120a3ca6f7316980ec74eb7132f420447e6746",
+    "pr": 2185,
+    "title": "the status issue spends less of GitHub's limit on its body",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "651ac2e6645424cedfb0715bcda4f0e814ee759f",
+    "pr": 2230,
+    "title": "a replay shows what each of your own choices offered, read-only",
+    "kind": "app"
   }
 ]
