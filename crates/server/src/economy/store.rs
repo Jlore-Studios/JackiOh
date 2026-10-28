@@ -2,7 +2,7 @@
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
 //! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
 //! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`). So
-//! do migration 0065's idempotency keys (R2124000): a spend's key and the answer it committed,
+//! do migration 0067's idempotency keys (R2124000): a spend's key and the answer it committed,
 //! written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`.
 //!
 //! Same shape as `duos::store`: every store method is one method on `Tx`, named
@@ -275,7 +275,7 @@ pub struct PracticeSeed {
     pub claimed_at: Option<i64>,
 }
 
-/// One row of `public.idempotency_keys` (migration 0065, R2124000): a spend's key under its
+/// One row of `public.idempotency_keys` (migration 0067, R2124000): a spend's key under its
 /// account, the route and the keyed hash of the body it came with, and the answer it committed.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -425,7 +425,7 @@ pub struct EconomyTables {
     pub practice_seeds: Vec<PracticeSeed>,
     /// R1834000: migration 0061's per-card picks, one per profile and card.
     pub card_picks: Vec<(String, CardPicks)>,
-    /// R2124000: migration 0065's idempotency keys, one per profile and key.
+    /// R2124000: migration 0067's idempotency keys, one per profile and key.
     pub idempotency_keys: Vec<IdempotencyRow>,
 }
 
@@ -522,13 +522,13 @@ fn check_cosmetic(grant: &CosmeticGrant) -> Result<(), StoreError> {
     check_dev(grant.reason == EconomyReason::Dev, grant.dev)
 }
 
-/// Migration 0065's `status between 200 and 299`: only a success is kept.
+/// Migration 0067's `status between 200 and 299`: only a success is kept.
 const IDEMPOTENCY_STATUSES: std::ops::RangeInclusive<i64> = 200..=299;
 
-/// Migration 0065's `body_hash ~ '^[0-9a-f]{64}$'`: a SHA-256 in hex.
+/// Migration 0067's `body_hash ~ '^[0-9a-f]{64}$'`: a SHA-256 in hex.
 const IDEMPOTENCY_BODY_HASH_DIGITS: usize = 64;
 
-/// Migration 0065's checks: a 2xx status, and a body hash of 64 lower-case hex digits.
+/// Migration 0067's checks: a 2xx status, and a body hash of 64 lower-case hex digits.
 fn check_idempotency(row: &IdempotencyRow) -> Result<(), StoreError> {
     if !IDEMPOTENCY_STATUSES.contains(&row.status) {
         return Err(refused(format!(
@@ -676,6 +676,18 @@ impl Tx<'_> {
         next_due_at: Option<i64>,
     ) -> StoreResult<()> {
         economy_dispatch!(self, quests_set_next_due(profile_id, next_due_at))
+    }
+
+    /// R2210000: how many of the profile's quest rows are a `Removed` change with the quest reason
+    /// and `at` in `[from, until)` (milliseconds): the quests it replaced then. A replace reads it
+    /// under the account's economy lock.
+    pub async fn economy_quests_removed_count(
+        &mut self,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> StoreResult<i64> {
+        economy_dispatch!(self, quests_removed_count(profile_id, from, until))
     }
 
     /// §14.2: the cosmetics the account owns, per card (by card, then cosmetic) and on the account.
@@ -842,7 +854,8 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
+        EconomyReason, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant,
+        JloreReason,
         OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
         from_literal, literal, track_after,
     };
@@ -1315,6 +1328,29 @@ mod pg {
         Ok(())
     }
 
+    /// One aggregate over the profile's rows (`quest_grants_profile_idx` leads it).
+    pub async fn quests_removed_count(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<i64, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        Ok(sqlx::query_scalar(
+            "select count(*)::bigint from public.quest_grants
+              where profile_id = $1::uuid and change = $2::text and reason = $3::text
+                and at >= to_timestamp($4::double precision / 1000.0)
+                and at < to_timestamp($5::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(literal(&QuestChange::Removed)?)
+        .bind(literal(&EconomyReason::Quest)?)
+        .bind(from)
+        .bind(until)
+        .fetch_one(&mut **t)
+        .await?)
+    }
+
     pub async fn cosmetics_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<OwnedCosmetics, StoreError> {
         run_as(t, Some(profile_id)).await?;
         let cards = sqlx::query(
@@ -1781,7 +1817,7 @@ mod pg {
         Ok(())
     }
 
-    /// Migration 0065. `body` crosses as text cast to `jsonb`, and reads back as text.
+    /// Migration 0067. `body` crosses as text cast to `jsonb`, and reads back as text.
     pub async fn idempotency_get(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -1852,9 +1888,9 @@ mod pg {
 mod fake {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant,
-        JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
-        TrackGrant, count_after, literal, track_after,
+        EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
+        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange,
+        QuestGrant, SetTrack, TrackGrant, count_after, literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -2098,6 +2134,26 @@ mod fake {
             None => tables.quest_schedules.push((profile_id.to_string(), next_due_at)),
         }
         Ok(())
+    }
+
+    pub fn quests_removed_count(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<i64, StoreError> {
+        let tables = call(f, "economy.quests.removedCount")?;
+        let count = tables
+            .quest_grants
+            .iter()
+            .filter(|grant| {
+                grant.profile_id == profile_id
+                    && grant.change == QuestChange::Removed
+                    && grant.reason == EconomyReason::Quest
+                    && (from..until).contains(&grant.at)
+            })
+            .count();
+        Ok(i64::try_from(count).unwrap_or(i64::MAX))
     }
 
     pub fn cosmetics_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<OwnedCosmetics, StoreError> {

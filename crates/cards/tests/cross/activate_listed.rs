@@ -51,7 +51,7 @@ const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 31] = [
+const ACTIVATE_CARDS: [&str; 70] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -83,6 +83,45 @@ const ACTIVATE_CARDS: [&str; 31] = [
     LIVING_MANA_POTION,
     LIVING_ARMOR_POTION,
     LIVING_HEALTH_POTION,
+    "stinkyscape-018-1",
+    "stinkyscape-018-2",
+    "stinkyscape-018-3",
+    "stinkyscape-026",
+    "stinkyscape-039",
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
+    "stinkyscape-053",
+    "stinkyscape-054",
+    "stinkyscape-055",
+    "stinkyscape-056",
+    "stinkyscape-057",
+    "stinkyscape-058",
+    "stinkyscape-059",
+    "stinkyscape-060",
+    "stinkyscape-061",
+    "stinkyscape-062",
+    "stinkyscape-063",
+    "stinkyscape-064",
+    "stinkyscape-065",
+    "stinkyscape-066",
+    "stinkyscape-112",
+    "stinkyscape-116",
+    "stinkyscape-125",
+    "stinkyscape-140",
+    "stinkyscape-141",
+    "stinkyscape-142",
+    "stinkyscape-143",
+    "stinkyscape-148",
+    "stinkyscape-157",
+    "stinkyscape-169",
+    "stinkyscape-170",
+    "stinkyscape-171",
+    "stinkyscape-172",
+    "stinkyscape-173",
+    "stinkyscape-175",
+    "stinkyscape-t-dormant-starship",
+    "stinkyscape-t-propagation-layer",
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -204,6 +243,10 @@ fn units(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
 
+/// The Activates the engine gives a card rather than its script: the Dormant Starship's launch
+/// (R1852003) and Alteran Reach's travel (`subsystems::starscape_abilities`, R1847001).
+const ENGINE_ACTIVATES: [&str; 2] = ["stinkyscape-t-dormant-starship", "stinkyscape-148"];
+
 /// The census: the cards this file covers are exactly the cards whose text has an Activate, which are
 /// exactly the cards whose script declares one, among the sets that ship (a held set's join at its
 /// release, R1857000).
@@ -221,9 +264,11 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
         if def.base.text.contains("Activate") || def.radiant.text.contains("Activate") {
             by_text.push(id.clone());
         }
-        if scripts.get(id).is_some_and(|script| {
-            !script.base.activations.is_empty() || !script.radiant.activations.is_empty()
-        }) {
+        if ENGINE_ACTIVATES.contains(&id.as_str())
+            || scripts.get(id).is_some_and(|script| {
+                !script.base.activations.is_empty() || !script.radiant.activations.is_empty()
+            })
+        {
             by_script.push(id.clone());
         }
     }
@@ -1482,4 +1527,466 @@ mod m_plus_n13_living_health_potion {
     fn r384_radiant_stays_and_heals_your_hero_5() {
         activates(true);
     }
+}
+
+/// The Stinkyscape set's Activate cards, from its release (#1884, R1857000): each Activate is found in
+/// `legal_actions`, shown usable on its controller's view and sent through `reduce` as listed, on both
+/// faces. Their rules are the parts' (the card files hold them); this proves the client's path.
+mod stinkyscape {
+    use super::*;
+
+    /// A card's declared number on a face (R386), as the catalog prints it.
+    fn printed(def: &str, key: &str, radiant: bool) -> i32 {
+        let card = &jackioh_cards::CATALOG[def];
+        let param = card
+            .params
+            .iter()
+            .flatten()
+            .find(|param| param.key == key)
+            .unwrap_or_else(|| panic!("{def} declares {key}"));
+        if radiant { param.radiant } else { param.base }
+    }
+
+    /// Every `damage` event among `events` on `target`, its amounts in order.
+    fn hits_on(events: &[GameEvent], target: &str) -> Vec<i32> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Damage {
+                    target_id, amount, ..
+                } if target_id == target => Some(*amount),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The defs `events` summoned for p1.
+    fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned {
+                    player: PlayerId::P1,
+                    def_id,
+                    ..
+                } => Some(def_id.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// p1's weapon (or launcher, or module) on its own in lane 1, a spare in hand; p2's hero and a 9/9
+    /// Taunt to aim at.
+    fn armed(def: &str, radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(def, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "field": [MENACE], "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    /// The Activate of `def` aimed at p2's Menace.
+    fn at_the_menace(s: &Scenario) -> impl Fn(&ActionBody) -> bool + use<> {
+        let menace = s.card(MENACE).id.clone();
+        move |action: &ActionBody| targets_of(action) == vec![instance(&menace)]
+    }
+
+    /// R1862000: a weapon that hits one chosen enemy deals its declared damage to the Menace.
+    fn shoots_one(def: &str, radiant: bool) {
+        let mut s = armed(def, radiant);
+        let menace = s.card(MENACE).id.clone();
+        let pick = at_the_menace(&s);
+        let events = activate_listed(&mut s, def, pick);
+        let hits = hits_on(&events, &menace);
+        assert_eq!(
+            hits.first().copied(),
+            Some(printed(def, "damage", radiant)),
+            "{def}: {hits:?}"
+        );
+    }
+
+    /// R1862000: a Flak weapon hits every enemy, the hero among them, `times` times.
+    fn shoots_all(def: &str, radiant: bool, times: usize) {
+        let mut s = armed(def, radiant);
+        let events = activate_listed(&mut s, def, any);
+        let damage = printed(def, "damage", radiant);
+        assert_eq!(hits_on(&events, "hero-p2"), vec![damage; times], "{def}");
+        assert_eq!(hits_on(&events, &s.card(MENACE).id).len(), times, "{def}");
+    }
+
+    /// R1840000: a Miner gains its controller a Resource into their tray.
+    fn mines(def: &str, radiant: bool) {
+        let mut s = armed(def, radiant);
+        let before = s.state().players.p1.resource_tray.as_ref().map_or(0, Vec::len);
+        activate_listed(&mut s, def, any);
+        let tray = s.state().players.p1.resource_tray.clone().unwrap_or_default();
+        assert_eq!(tray.len(), before + 1, "{def}");
+        let gained = tray.last().expect("a Resource");
+        assert!(
+            jackioh_cards::CATALOG[&gained.def_id].resource.is_some(),
+            "{}",
+            gained.def_id
+        );
+        assert_eq!(gained.radiant, radiant, "{def}");
+    }
+
+    macro_rules! both_faces {
+        ($name:ident, $check:expr) => {
+            mod $name {
+                use super::*;
+
+                #[test]
+                fn r384_base_through_the_listed_activate() {
+                    ($check)(false);
+                }
+
+                #[test]
+                fn r384_radiant_through_the_listed_activate() {
+                    ($check)(true);
+                }
+            }
+        };
+    }
+
+    const MENACE: &str = "core-019";
+
+    both_faces!(s_n50_beam_v3, |radiant| shoots_one("stinkyscape-050", radiant));
+    both_faces!(s_n51_repeater_v3, |radiant| shoots_one(
+        "stinkyscape-051",
+        radiant
+    ));
+    both_faces!(s_n52_cannon_v3, |radiant| shoots_one("stinkyscape-052", radiant));
+    both_faces!(s_n53_flak_v3, |radiant| shoots_all("stinkyscape-053", radiant, 1));
+    both_faces!(s_n54_beam_v4, |radiant| shoots_one("stinkyscape-054", radiant));
+    both_faces!(s_n55_repeater_v4, |radiant| shoots_one(
+        "stinkyscape-055",
+        radiant
+    ));
+    both_faces!(s_n56_cannon_v4, |radiant| shoots_one("stinkyscape-056", radiant));
+    both_faces!(s_n57_flak_v4, |radiant| shoots_all("stinkyscape-057", radiant, 2));
+    both_faces!(s_n58_beam_v5, |radiant| shoots_one("stinkyscape-058", radiant));
+    both_faces!(s_n59_repeater_v5, |radiant| shoots_one(
+        "stinkyscape-059",
+        radiant
+    ));
+    both_faces!(s_n60_cannon_v5, |radiant| shoots_one("stinkyscape-060", radiant));
+    both_faces!(s_n61_flak_v5, |radiant| shoots_all("stinkyscape-061", radiant, 3));
+    both_faces!(s_n62_miner_v1, |radiant| mines("stinkyscape-062", radiant));
+    both_faces!(s_n63_miner_v2, |radiant| mines("stinkyscape-063", radiant));
+    both_faces!(s_n64_miner_v3, |radiant| mines("stinkyscape-064", radiant));
+    both_faces!(s_n65_miner_v4, |radiant| mines("stinkyscape-065", radiant));
+    both_faces!(s_n66_miner_v5, |radiant| mines("stinkyscape-066", radiant));
+    both_faces!(s_n142_jade_launcher, |radiant| shoots_one(
+        "stinkyscape-142",
+        radiant
+    ));
+
+    both_faces!(s_n140_rush_token_launcher, |radiant: bool| {
+        let mut s = armed("stinkyscape-140", radiant);
+        let events = activate_listed(&mut s, "stinkyscape-140", any);
+        assert_eq!(summoned_defs(&events), vec!["core-t-rush".to_string()]);
+        // It attacks the enemy Unit, the Taunt one first.
+        assert!(!hits_on(&events, &s.card(MENACE).id).is_empty());
+    });
+
+    both_faces!(s_n141_fruit_launcher, |radiant: bool| {
+        let mut s = armed("stinkyscape-141", radiant);
+        let events = activate_listed(&mut s, "stinkyscape-141", any);
+        let fruit: Vec<&String> = events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::CardPlayed { def_id, .. } => Some(def_id),
+                _ => None,
+            })
+            .filter(|def| jackioh_cards::CATALOG[def.as_str()].tags.contains(&Tag::Fruit))
+            .collect();
+        assert_eq!(fruit.len(), 1, "one random Fruit cast: {events:?}");
+    });
+
+    both_faces!(s_n143_book_launcher, |radiant: bool| {
+        let mut s = armed("stinkyscape-143", radiant);
+        let events = activate_listed(&mut s, "stinkyscape-143", any);
+        let books = events
+            .iter()
+            .filter(|event| {
+                matches!(event, GameEvent::CardPlayed { def_id, .. }
+                    if jackioh_cards::CATALOG[def_id.as_str()].tags.contains(&Tag::Book))
+            })
+            .count();
+        assert_eq!(books, 1, "one random Book cast: {events:?}");
+    });
+
+    both_faces!(s_n175_frost_module, |radiant: bool| {
+        let mut s = armed("stinkyscape-175", radiant);
+        let pick = at_the_menace(&s);
+        activate_listed(&mut s, "stinkyscape-175", pick);
+        assert!(s.card(MENACE).frozen.is_some(), "the Menace is Frozen");
+    });
+
+    both_faces!(s_n125_jlockeeds_spacerace_propaganda, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-125", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        activate_listed(&mut s, "stinkyscape-125", any);
+        let added: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id != STOCKPILE)
+            .collect();
+        assert_eq!(added.len(), 1);
+        let piece = &jackioh_cards::CATALOG[&added[0].def_id];
+        assert!(
+            piece
+                .base
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece),
+            "{} is a Starship Piece",
+            piece.id
+        );
+        assert_eq!(added[0].radiant, radiant);
+    });
+
+    both_faces!(s_t_propagation_layer, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "field": [on("stinkyscape-t-propagation-layer", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let events = activate_listed(&mut s, "stinkyscape-t-propagation-layer", |action| {
+            ability_of(action).is_some_and(|ability| ability.contains("corvette"))
+        });
+        assert_eq!(
+            summoned_defs(&events),
+            vec!["stinkyscape-t-drone-corvette".to_string()]
+        );
+    });
+
+    both_faces!(s_n18_1_melchior, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-018-1", radiant)], "field": [VANILLA], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let vanilla = s.card(VANILLA).id.clone();
+        activate_listed(&mut s, "stinkyscape-018-1", any);
+        if !radiant {
+            // A Discover of three combat keywords: the pick goes to each of p1's Units.
+            let options = s
+                .state()
+                .pending
+                .as_ref()
+                .map(|pending| pending.options.clone())
+                .unwrap_or_default();
+            assert_eq!(options.len(), 3);
+            s.answer(json!(options[0].key.clone()));
+        }
+        assert!(
+            !s.card(&vanilla).granted_keywords.is_empty(),
+            "the Vanilla gained a keyword"
+        );
+    });
+
+    both_faces!(s_n18_2_balthasar, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-018-2", radiant)], "hand": [STOCKPILE, STOCKPILE], "library": [X, X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        s.play(STOCKPILE, json!({}));
+        let hand = s.hand(P1).len();
+        activate_listed(&mut s, "stinkyscape-018-2", any);
+        assert_eq!(s.hand(P1).len(), hand + 1, "a copy of the last card played");
+        let copy = s.hand(P1).into_iter().last().expect("the copy");
+        assert_eq!(copy.def_id, STOCKPILE);
+        assert_eq!(copy.radiant, radiant);
+    });
+
+    both_faces!(s_n18_3_casper, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-018-3", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "field": [VANILLA], "hand": [VANILLA], "library": [X, X] },
+        }));
+        activate_listed(&mut s, "stinkyscape-018-3", any);
+        // R1866004: the Allure on the field is a delayed steal watching the enemy Vanilla.
+        let vanilla = s.unit(P2, 1).expect("the enemy Vanilla").id;
+        let watched: Vec<String> = s
+            .state()
+            .delayed
+            .iter()
+            .filter_map(|entry| entry.watch.clone())
+            .collect();
+        assert!(watched.contains(&vanilla), "{watched:?}");
+    });
+
+    both_faces!(s_n26_zolarketh, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "field": [on("stinkyscape-026", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let events = activate_listed(&mut s, "stinkyscape-026", |action| {
+            radiant || modes_of(action) == vec!["piece".to_string()]
+        });
+        let pieces = summoned_defs(&events);
+        assert_eq!(pieces.len(), 1, "{events:?}");
+        assert!(
+            jackioh_cards::CATALOG[&pieces[0]]
+                .base
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+        );
+    });
+
+    mod s_n157_the_gauntlet {
+        use super::*;
+
+        #[test]
+        fn r384_radiant_through_the_listed_activate() {
+            let mut s = scenario(json!({
+                "p1": { "backrow": [on("stinkyscape-157", true)], "hand": [STOCKPILE], "library": [X, X] },
+                "p2": { "hand": [FILLER], "library": [X, X] },
+            }));
+            let id = s.card("stinkyscape-157").id.clone();
+            activate_listed(&mut s, "stinkyscape-157", |action| {
+                modes_of(action).iter().any(|mode| mode.contains("Tribute"))
+            });
+            s.expect_in_zone(id.as_str(), "graveyard");
+        }
+
+        #[test]
+        fn r384_base_offers_no_activate() {
+            let s = scenario(json!({
+                "p1": { "backrow": [on("stinkyscape-157", false)], "hand": [STOCKPILE], "library": [X, X] },
+                "p2": { "hand": [FILLER], "library": [X, X] },
+            }));
+            assert!(listed(&s, &s.card("stinkyscape-157").id).is_empty());
+        }
+    }
+
+    both_faces!(s_n112_job_application, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-112", radiant)], "hand": [STOCKPILE, FILLER], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let hand = s.hand(P1).len();
+        // Stage 1: the resume, a card from the hand sent in (R1865000).
+        activate_listed(&mut s, "stinkyscape-112", any);
+        assert_eq!(s.hand(P1).len(), hand - 1, "the resume left the hand");
+    });
+
+    both_faces!(s_n148_alteran_reach, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-148", radiant)], "hand": [STOCKPILE], "library": [X, X], "mana": 4 },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        // A travel costs (1); the Radiant face's first each turn is free (R1847001).
+        activate_listed(&mut s, "stinkyscape-148", any);
+        assert_eq!(
+            s.state().players.p1.mana.current,
+            if radiant { mana } else { mana - 1 }
+        );
+    });
+
+    mod s_t_dormant_starship {
+        use super::*;
+
+        /// R1852003: a Starship Piece's death summons the Dormant Starship, whose launch is an Activate
+        /// the engine gives it (no script declares it), at (3).
+        #[test]
+        fn r384_its_launch_through_the_listed_activate() {
+            const HIT_JOB: &str = "core-016";
+            const STARTOS: &str = "stinkyscape-068";
+            let mut s = scenario(json!({
+                "p1": { "field": [{ "def": STARTOS, "lane": 2 }], "hand": [HIT_JOB, STOCKPILE], "library": [X, X], "mana": 10 },
+                "p2": { "hand": [FILLER], "library": [X, X] },
+            }));
+            let targets = pick::unit_at(&s, P1, 2);
+            s.play(HIT_JOB, json!({ "targets": targets }));
+            let ship = jackioh_engine::prelude::dormant_starship_of(s.state(), P1)
+                .expect("the piece's death summoned the Starship")
+                .id
+                .clone();
+            let mana = s.state().players.p1.mana.current;
+            activate_listed(&mut s, &ship, any);
+            assert_eq!(s.state().players.p1.mana.current, mana - 3);
+        }
+    }
+
+    /// R1840006: a mining node Tributes itself through its Activate, and its Death pays.
+    fn mined(def: &str, radiant: bool) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": { "field": [on(def, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let id = s.card(def).id.clone();
+        activate_listed(&mut s, def, any);
+        s.expect_in_zone(id.as_str(), "graveyard");
+        s
+    }
+
+    fn tray_len(s: &Scenario) -> usize {
+        s.state().players.p1.resource_tray.as_ref().map_or(0, Vec::len)
+    }
+
+    both_faces!(s_n169_tiny_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-169", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-169", "resources", radiant)
+        );
+    });
+    both_faces!(s_n170_medium_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-170", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-170", "resources", radiant)
+        );
+    });
+    both_faces!(s_n171_large_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-171", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-171", "resources", radiant)
+        );
+    });
+    both_faces!(s_n172_huge_asteroid, |radiant: bool| {
+        let s = mined("stinkyscape-172", radiant);
+        assert_eq!(
+            tray_len(&s) as i32,
+            printed("stinkyscape-172", "resources", radiant)
+        );
+    });
+    both_faces!(s_n173_abandoned_spice_tower, |radiant: bool| {
+        let s = mined("stinkyscape-173", radiant);
+        let spices = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == "stinkyscape-089")
+            .count();
+        assert_eq!(spices as i32, printed("stinkyscape-173", "spices", radiant));
+    });
+
+    both_faces!(s_n116_megabase, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "field": [on("stinkyscape-116", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        activate_listed(&mut s, "stinkyscape-116", any);
+        let credits = |player: PlayerId| s.state().players[player].market_credits.unwrap_or(0);
+        assert!(credits(P1) > 0, "its controller gains Credits");
+        assert_eq!(credits(P2), if radiant { credits(P1) - 5 } else { credits(P1) });
+    });
+
+    both_faces!(s_n39_the_narcor_project, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-039", radiant)], "hand": [STOCKPILE], "library": [X, X, X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X, X, X] },
+        }));
+        // Offered only while the tray holds a Narcor: its own end of turn gains one.
+        assert!(listed(&s, &s.card("stinkyscape-039").id).is_empty());
+        s.end_turn().end_turn();
+        let held = tray_len(&s);
+        assert!(held >= 1, "its end of turn gained a Narcor");
+        activate_listed(&mut s, "stinkyscape-039", any);
+        assert_eq!(tray_len(&s), held - 1, "a Narcor discarded");
+    });
 }

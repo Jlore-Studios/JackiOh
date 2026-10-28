@@ -25,19 +25,24 @@
 //! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed
 //! from it; here they share it through an `Rc`.
 
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::rc::Rc;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, KeywordKind, Phase, PlayerId,
+    ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, KeywordKind, Phase, PlayerId, Rng,
     active_units_of, attack_restriction, attacks_per_turn, can_attack, effective_life, find_instance,
     has_exertion, is_sick, legal_actions, unit_has, unit_view,
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::AI_SEARCH;
+use crate::config::{AI_SEARCH, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED};
+use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{damage_past_taunts, deft_in_defense};
-use crate::simulate::{LineStatus, create_sub_counter, line_status, search_signature, simulate};
+use crate::observe::redact;
+use crate::simulate::{
+    LineStatus, create_node_counter, create_sub_counter, line_status, search_signature, simulate,
+};
 use crate::types::{NodeCounter, StoppedBy};
 
 struct Frame {
@@ -453,4 +458,31 @@ pub fn trim_lethal(
         }
     }
     Some(line)
+}
+
+/// R2102000: whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's
+/// lethal hint (SPEC §9.9). Like `decide` (R185) it reads only `redact(state, seat)`: it fills that in
+/// as LETHAL_HINT_DETERMINIZATIONS worlds drawn from LETHAL_HINT_SEED's stream, its own, and asks
+/// `find_lethal` for a line that wins on every one of them within LETHAL_HINT_NODES nodes. So two
+/// states that differ only in what `seat` cannot see give one answer, and a face-down card that could
+/// be a trap which stops the line keeps it dark. False outside `seat`'s own main phase with no prompt
+/// open, once the game is over, when the search panics, and when `should_stop` (the browser's clock,
+/// as `AiOptions::should_stop` is the AI's) stops it before it proves a line. Only the page asks it;
+/// `decide` never does, so it changes no game.
+pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool {
+    let own_main = state.active == seat && state.phase == Phase::Main;
+    if state.result.is_some() || state.pending.is_some() || !own_main {
+        return false;
+    }
+    catch_unwind(AssertUnwindSafe(|| {
+        let public = redact(state, seat);
+        let ground = det_ground(&public, seat);
+        let mut rng = Rng::new(LETHAL_HINT_SEED, 0);
+        let worlds: Vec<GameState> = (0..LETHAL_HINT_DETERMINIZATIONS)
+            .map(|_| determinize_on(&public, seat, &mut rng, DeterminizeOptions::default(), &ground))
+            .collect();
+        let counter = create_node_counter(LETHAL_HINT_NODES, should_stop);
+        find_lethal(&worlds, seat, &counter, LETHAL_HINT_NODES).is_some()
+    }))
+    .unwrap_or(false)
 }

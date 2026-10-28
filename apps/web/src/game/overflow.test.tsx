@@ -7,12 +7,10 @@ import { resolve } from "node:path";
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView, SideView } from "@jackioh/shared";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID, MIN_ENTRY_MS, targetFor } from "./animations.ts";
 import Board from "./Board.tsx";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { animTestid } from "./animations.ts";
 import Game from "./Game.tsx";
 import Log from "./Log.tsx";
@@ -20,10 +18,10 @@ import { noticeTestid } from "./OverflowNotices.tsx";
 import { testid } from "./contract.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
 
-const lookup = lookupFromDefs(CATALOG);
 const PANTHER = "core-032";
 const SHEEPISH = "core-041";
 const VIRUS = "core-090-1";
@@ -46,10 +44,6 @@ function seatView(viewer: "p1" | "p2", events: GameEvent[] = [TURN]): PlayerView
     }),
     events,
   );
-}
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
 }
 
 function play(viewer: "p1" | "p2", events: GameEvent[]): void {

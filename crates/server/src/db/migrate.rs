@@ -275,8 +275,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0064_season_ranks_ladder_index.sql"),
     ),
     (
-        "0065_idempotency_keys.sql",
-        include_str!("../../migrations/0065_idempotency_keys.sql"),
+        "0065_stinkyscape_set.sql",
+        include_str!("../../migrations/0065_stinkyscape_set.sql"),
+    ),
+    (
+        "0067_idempotency_keys.sql",
+        include_str!("../../migrations/0067_idempotency_keys.sql"),
     ),
 ];
 

@@ -175,20 +175,34 @@ mod a_doctored_trace {
     }
 }
 
-/// R1846003: no card of a shipped set asks for a BUSTED or complicated pool (R1846000), so the
-/// recorded games replay to their recorded hashes whatever the lists hold: every card in both, or
-/// none. One shard's games under each, on this thread's override of the compiled metrics.
-mod r1846003_the_card_metrics_reach_no_recorded_game {
+/// R1846003, R2173000: the build's own games read the build's lists, and a game that plays neither
+/// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
+/// complicated pool, R1846001) replays to its recorded hashes whatever the lists hold: every card in
+/// both, or none. One shard's games under each, on this thread's override of the compiled metrics.
+/// The games that play a reader are the build's version's, and replay under its own lists in the
+/// shards above; a carried version's fold reads its own (`card_metrics`, R2173000).
+mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use super::*;
     use jackioh_engine::testkit::{clear_overrides, register_code_lines};
 
+    /// The cards that read the lists (R1846001), as `jackioh_cards::code_lines::reads_card_lists`
+    /// finds them.
+    const READERS: [&str; 2] = ["\"stinkyscape-109\"", "\"stinkyscape-111\""];
+
     #[test]
-    fn r1846003_a_shard_replays_alike_with_every_card_or_none_busted_and_complicated() {
+    fn r1846003_a_shard_without_a_reader_replays_alike_with_every_card_or_none_busted_and_complicated() {
         register_all();
         let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
+        let games: Vec<(usize, &str)> = golden_lines()
+            .into_iter()
+            .enumerate()
+            .step_by(GOLDEN_SHARDS)
+            .filter(|(_, line)| !READERS.iter().any(|reader| line.contains(reader)))
+            .collect();
+        assert!(!games.is_empty(), "the shard holds games with no reader");
         for lines in [every, Vec::new()] {
             register_code_lines(lines);
-            for (index, line) in golden_lines().into_iter().enumerate().step_by(GOLDEN_SHARDS) {
+            for &(index, line) in &games {
                 if let Err(mismatch) = replay_line(index, line) {
                     clear_overrides();
                     panic!("{}", mismatch.report());
