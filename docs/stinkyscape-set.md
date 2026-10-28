@@ -1201,7 +1201,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Copy the text of a Legendary or Mythic Unit on the field.
 - **Radiant:** Cry: Copy the Radiant text of a Legendary or Mythic Unit on the field.
 - **Engine:** Cry ([[R1]]): a declared target ([[R81]]), a Legendary or Mythic Unit on the field, either side, not itself; `copy_unit_text { target }` ([[R1850000]]): its keywords, aura, triggers, hooks, Death, Activates and numbers on this body until it leaves the field ([[R78]]), its own name, cost, type, tags, rarity and stats kept; the copied Cry does not run. Radiant: `radiant: true`, the target's Radiant text. No target, nothing.
-- **Rulings:** ST-S17-1: "Legendary or Mythic" is the target's rarity; a token's rarity is Token, whatever it printed. ST-S17-2: an Immutable target may be copied; an Immutable Tnack Trav copies nothing (R1850000). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-1: "Legendary or Mythic" is the target's rarity; a token's rarity is Token, whatever it printed. ST-S17-2: an Immutable target may be copied; an Immutable Tnack Trav copies nothing (R1850000). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both are [[R1876003]].
 - **Numbers:** none.
 - **Check:** ST9: Tnack Trav (#20) and Tmack Trav (#94) are two cards. "on the Field" is the field. R275: stats doubled and the Radiant text copied.
 - **Class:** C (M16's copy a Unit's text).
@@ -1279,7 +1279,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Choose one: summon a random Starship Piece, or Activate your Universities.
 - **Radiant:** Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Summon a random Radiant Starship Piece, then Activate your Universities.
 - **Engine:** Cry ([[R1]]): `summon { defId: meditative-097-6, radiant }`, a Radiant M #97.6 University ([[R64]]), whose own Activate is refused (a mark on it, NEW). Activate ([[R384]]): base, two modes ([[R81]]): a random non-token Starship Piece Unit summoned (a pool by keyword, [[R380]]), or each University of its controller's runs its Activate's effect (Buff each of its other permanents N times) as an ability of this card, spending none of its uses (NEW); Radiant: both, the piece Radiant.
-- **Rulings:** ST-S17-3: "Its Activate is locked" refuses the summoned University's own use of its Activate (no zone is Locked); this card's Activate still runs it. ST-S17-4: "Activate your Universities" runs every University of yours, the locked one included, and spends none of their uses. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-3: "Its Activate is locked" refuses the summoned University's own use of its Activate (no zone is Locked); this card's Activate still runs it. ST-S17-4: "Activate your Universities" runs every University of yours, the locked one included, and spends none of their uses. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): ST-S17-3 is [[R1876000]], ST-S17-4 [[R1876001]].
 - **Numbers:** none (a summon and two modes).
 - **Check:** D6: "Sinkyscape" is Stinkyscape. The base face's "or" is a choice of modes, the Radiant face's "then" both. R275: stats doubled, both modes each turn and a Radiant piece.
 - **Class:** B (a summon and modes), with a NEW Activate of another card.
@@ -1422,7 +1422,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Each enemy Unit played that costs less than this is Allured. / Death: Remove every Allure on the field.
 - **Radiant:** Divine Shield / Aura: Each enemy Unit played that costs less than this is Allured. / Death: Remove every Allure on the field.
 - **Engine:** While it acts on the field, each Unit its controller's opponent plays whose cost paid ([[R56]]) is less than this card's cost now is Allured as it arrives ([[R963]], [[R1045000]]: the `allure` mark, stolen at the start of its controller's next turn, destroyed with no room). Death ([[§6.2]]): NEW: every Allure mark on the field, both sides', comes off, its steal cancelled ([[R437]]'s mark withdrawn).
-- **Rulings:** ST-S17-5: "played" is played, not summoned; the cost compared is the cost paid against this card's cost now. ST-S17-6: "Remove all Allures" takes off its own Allures and the opponent's, so it steals nothing once it dies. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-5: "played" is played, not summoned; the cost compared is the cost paid against this card's cost now. ST-S17-6: "Remove all Allures" takes off its own Allures and the opponent's, so it steals nothing once it dies. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): ST-S17-5 is [[R1876004]], ST-S17-6 [[R1876002]].
 - **Numbers:** none.
 - **Check:** R275: stats doubled and Divine Shield added.
 - **Class:** B (an Allure watcher), with a NEW Allure removal.
@@ -2098,7 +2098,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Aura: Your Humans have Poisonous.
 - **Radiant:** Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots.
 - **Engine:** Aura ([[§10.4]]): every Human Unit its controller has on the field (granted tags read, [[R923]]), this one included, has Poisonous. Radiant: Cry ([[R1]]): Core #2 Bigots added while the hand has room ([[§2.4]], M+ #24's fill, [[R1185004]]).
-- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Bigots until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Bigots until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both need no ruling of their own (the aura's [[R923]], the fill's [[R1185004]]).
 - **Numbers:** none (the fill is the hand's room).
 - **Check:** R275: stats doubled and a hand of Bigots.
 - **Class:** B (an aura and a fill).
@@ -2384,7 +2384,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Duo with a permanent and make it Radiant next turn.
 - **Radiant:** Cry: Squad with all your permanents and make them Radiant next turn.
 - **Engine:** Cry ([[R1]]): `duo_radiant { target }` ([[R1850001]]): a declared permanent on either side, face-down or not, marked with the public gold `duo` mark ([[R437]]) and made Radiant at the start of its marker's next turn (`radiantSet`), not if it has left the field meanwhile ([[R174]]), even after this card has left ([[R76]]). Radiant: `squad_radiant`, every permanent its controller has on the field, unit tops in lane order then the backrow, a Radiant face-up card or a Dormant one passed by.
-- **Rulings:** ST-S17-9: "next turn" is the start of your next turn (R1850001). ST-S17-10: Squad does not mark iKwzki itself, which is Radiant already on that face. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-9: "next turn" is the start of your next turn (R1850001). ST-S17-10: Squad does not mark iKwzki itself, which is Radiant already on that face. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both are [[R1850001]]'s.
 - **Numbers:** none.
 - **Check:** The designer's "For AI" note (the Allure animation recoloured) is R1850001's gold mark. R275: stats doubled and every permanent of yours instead of one.
 - **Class:** C (M16's Duo and Squad).
@@ -2436,7 +2436,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 2 / Aura: All permanents that cost (2) or less are exiled.
 - **Radiant:** Tribute 2 / Aura: All enemy permanents that cost (2) or less are exiled.
 - **Engine:** Tribute 2, its play's cost ([[R101]]). An exile aura (`Script.exile_auras`, [[R1850002]]): both rows, `maxCost` 2, the cost each card has now ([[R66]]): at every state check each face-up card on the field it reaches is exiled, never this card, a face-down or a Dormant one; an arrival's Cry resolves first. Radiant: the enemy side only.
-- **Rulings:** ST-S17-11: "all Permanents" are both sides' Units and face-up backrow cards; the (2) is the aura's printed filter, no param. These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-11: "all Permanents" are both sides' Units and face-up backrow cards; the (2) is the aura's printed filter, no param. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R1850002]]'s.
 - **Numbers:** none (the (2) is the aura's printed filter, `maxCost`, static data).
 - **Check:** R275: stats doubled and your own side spared.
 - **Class:** C (M16's exile aura).
@@ -2449,7 +2449,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Cry: Fuse every card in your exile into this.
 - **Radiant:** Cry: Fuse every card in both exiles into this.
 - **Engine:** Cry ([[R1]]): `fuse_cards` ([[R77]], [[R102]]): every card in its controller's exile pile, oldest first, fused into this card in one Fuse, this card kept: summed stats, the union of keywords, the scripts concatenated, cost min(sum, 4); the exiled cards cease to exist. An empty exile, nothing. Radiant: both players' exiles.
-- **Rulings:** ST-S17-12: "your Exile" is your exile pile; the fused cards leave it (they cease to exist, R77), the exile counter unchanged (R55). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-12: "your Exile" is your exile pile; the fused cards leave it (they cease to exist, R77), the exile counter unchanged (R55). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R77]]'s; a Radiant Citadel sums every ingredient's Radiant stats.
 - **Numbers:** none.
 - **Check:** R275: stats doubled and both exiles instead of one.
 - **Class:** B (a Fuse from a pile).
@@ -2462,7 +2462,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Text:** Tribute 3 / Aura: Every Unit that is neither Human, a Starship Piece nor a Starship is exiled.
 - **Radiant:** Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a Starship is exiled.
 - **Engine:** Tribute 3, its play's cost ([[R101]]). An exile aura ([[R1850002]]): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece and Starship, read through the layers ([[§10.4]]), so a granted tag or keyword spares a Unit; exiled at each state check, never this card, a face-down or a Dormant one. Radiant: the enemy side only.
-- **Rulings:** ST-S17-13: Scornboi exiles Units only (ST9); a Dormant Starship is no Unit until it launches and is passed by (R1839000). These are proposals for S17, which takes R-numbers from its own block. No R-number here.
+- **Rulings:** ST-S17-13: Scornboi exiles Units only (ST9); a Dormant Starship is no Unit until it launches and is passed by (R1839000). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R1850002]]'s.
 - **Numbers:** none.
 - **Check:** ST9: Units. R275: stats doubled and your own side spared.
 - **Class:** C (M16's exile aura).
@@ -3241,8 +3241,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
 - **Radiant:** Lucky 1 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
-- **Engine:** #1855's Anomaly scan (pending): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Radiant: Lucky 1.
-- **Rulings:** ST-S20-1: the two chances are bands of one roll, 5% Radiant and 20% plain (25% in all); "future Scanning Probes" are its controller's later scans with either Probe, and a find keeps the count.
+- **Engine:** #1855's Anomaly scan ([[R1855003]]): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Radiant: Lucky 1.
+- **Rulings:** ST-S20-1: the two chances are bands of one roll, 5% Radiant and 20% plain (25% in all); "future Scanning Probes" are its controller's later scans with either Probe, and a find keeps the count. Built by S20 (#1879): ST-S20-1 is [[R1855003]]'s reading, no ruling of its own.
 - **Numbers:** none (the engine's chances).
 - **Check:** R275: Lucky 1, a second roll, about 1.75× the find (a rider).
 - **Class:** C (M08, the scan).
@@ -3254,7 +3254,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Lucky 1 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
 - **Radiant:** Lucky 3 / 5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and +4% to these chances.
-- **Engine:** #1855's Anomaly scan (pending): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Lucky 1, Radiant Lucky 3.
+- **Engine:** #1855's Anomaly scan ([[R1855003]]): one roll of 100 against its controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss of that player's adding 1 and 4 (a count per player, kept across both Probes); a find is added to the hand, a full hand burning it ([[§2.4]]); a miss is silent. Its Lucky, and its controller's Luck, roll again and keep the best: Radiant over plain over a miss ([[R1438]], [[R987]]). Lucky 1, Radiant Lucky 3.
 - **Rulings:** ST-S20-1, as S #166.
 - **Numbers:** none (Lucky is a keyword's count, the chances the engine's).
 - **Check:** ST8: Radiant "Luck 3" is Lucky 3 (Luck X is a player's). R275: Lucky 1 → 3 (3× the extra rolls).
@@ -3527,8 +3527,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Replace your side of the field with a random Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices.
 - **Radiant:** Replace your side of the field with a random rich Anomaly: exile every card on it, then lay that Anomaly's board in its place. Every Cry on the new board fires, with random targets and choices.
-- **Engine:** #1855's board swap (pending): its caster's side only (ST9 Q7); every card there the Spell can reach is exiled, a Dormant card staying ([[R1839000]]), then the board's preset is laid zone by zone, a summon each, and the Cry of every Unit it laid fires in list order, its caster's choices random ([[R452]]'s random mode). The board is drawn from the match rng: on the base face one of the seven (WH, BF, AL, AT, SP, MT, DH), on the Radiant face one of the three rich ones (AN, AA, FO), all S20's data; an asteroid's restricted Resource pool rides on its card (#1855's rider).
-- **Rulings:** ST-S20-2: the base face's boards are the seven the list leaves out of the Radiant three, each equally likely; the text names no board, since "Wormhole" or "Asteroid Field" would name a card ([[R279]]). ST-S20-3: the boards' "Small Asteroid" is S #169 Tiny Asteroid (ST8).
+- **Engine:** #1855's board swap (`replace_board`): its caster's side only (ST9 Q7); every card there the Spell can reach is exiled, a Dormant card staying ([[R1839000]]), then the board's preset is laid zone by zone, a summon each, and the Cry of every Unit it laid fires in list order, its caster's choices random ([[R452]]'s random mode). The board is drawn from the match rng: on the base face one of the seven (WH, BF, AL, AT, SP, MT, DH), on the Radiant face one of the three rich ones (AN, AA, FO), all S20's data; an asteroid's restricted Resource pool rides on its card (#1855's rider).
+- **Rulings:** ST-S20-2: the base face's boards are the seven the list leaves out of the Radiant three, each equally likely; the text names no board, since "Wormhole" or "Asteroid Field" would name a card ([[R279]]). ST-S20-3: the boards' "Small Asteroid" is S #169 Tiny Asteroid (ST8). Built by S20 (#1879): ST-S20-2 and ST-S20-3 as [[R1879000]]; two readings the boards needed, SP's backrow Drone Interceptors standing there by their Flying ([[R1879001]]) and BF's Drone Battleship laid as one pile, Shield on top ([[R1879002]]).
 - **Numbers:** none.
 - **Check:** ST8: "Small Asteroid" is Tiny Asteroid. R275: a rich board (two Narcor or Axnit fields, the Frontier Outpost) against an ordinary one (designer's).
 - **Class:** C (M08, the board swap).

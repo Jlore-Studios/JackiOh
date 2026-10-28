@@ -91,6 +91,19 @@ export const RELEASES: readonly Release[] = [
       "The economy is live: a new account starts with the 39 cards of the three practice decks and earns the rest from games, quests, set tracks, packs and tokens. Every card you own stays yours; the six full-art faces are earned like any Epic cosmetic.",
     ],
   },
+  {
+    id: "stinkyscape",
+    name: "Stinkyscape",
+    summary:
+      "The Stinkyscape set, 176 cards and 52 tokens, with four new tags: Drone Core, Weapon, War Doctrine and Swarm.",
+    technical: [
+      "Dormant cards wait on the field, out of reach, until they awaken.",
+      "The Starship: each Starship Piece that dies fuses into your Dormant Starship, and you launch it for (3).",
+      "An economy inside the match: Resources to mine and trade, Credits to spend, and the Marketplace to spend them at, with its own table of ten AI cards.",
+      "Anomalies swap your board for a preset one, and Alteran Reach opens a map of the starscape.",
+      "Every Stinkyscape card wears the set's mark, a ringed green planet, and every Legendary and Mythic of the set opens its play with a few bars of its own.",
+    ],
+  },
 ];
 
 /** The title the page shows for a patch: its player note's, or its record's when it has no note. */
