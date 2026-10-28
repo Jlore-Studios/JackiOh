@@ -1409,12 +1409,12 @@ fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
 /// both call a trigger "turn-end" stay two distinct conditions on the fused card — each running in its
 /// ingredient's place (R102), so a question it asks comes back to its own step — and its Activate
 /// abilities run in its place (R102, R384).
-fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
+fn script_record(script: &Script, def_id: &str, index: usize, trap_text: bool) -> Script {
     let namespaced = |list: &[TriggerDef]| -> Vec<TriggerDef> {
         list.iter()
             .map(|trigger| TriggerDef {
                 id: format!("{def_id}:{}", trigger.id),
-                run: in_trigger_ingredient(trigger, index),
+                run: in_trigger_ingredient(trigger, index, trap_text),
                 ..trigger.clone()
             })
             .collect()
@@ -1499,12 +1499,24 @@ fn as_ingredient_text(instance: &CardInstance, index: usize) -> CardInstance {
 }
 
 /// A trigger's list, built and applied in its ingredient's place (R102).
-fn in_trigger_ingredient(trigger: &TriggerDef, index: usize) -> TriggerRun {
+fn in_trigger_ingredient(trigger: &TriggerDef, index: usize, trap_text: bool) -> TriggerRun {
     let run = trigger.run.clone();
+    // R99, R102, R1884003: a trap's text keeps its condition on a fusion that is no trap, whose
+    // triggers are queued like any card's and never pass the traps' dispatch, which reads it.
+    let when = trigger.when.clone().filter(|_| trap_text);
     trigger_run(move |ctx, event| {
         let patch = part_data(&ctx.data, index);
         let effects = {
             let mut inner = in_place(ctx, &patch);
+            if let Some(when) = &when
+                && inner
+                    .self_
+                    .as_ref()
+                    .is_some_and(|card| !crate::traps::is_trap_type(inner.sink.state, card))
+                && !when(&mut inner, event)
+            {
+                return Vec::new();
+            }
             run(&mut inner, event)
         };
         effects
@@ -1823,7 +1835,11 @@ fn fused_script(
     let records: Vec<Script> = faces
         .iter()
         .enumerate()
-        .map(|(index, face)| script_record(&face.script, &face.def_id, index))
+        .map(|(index, face)| {
+            let type_ = crate::catalog::def_of(Some(state), &face.def_id).type_;
+            let trap_text = type_ == CardType::Trap || type_ == CardType::FieldTrap;
+            script_record(&face.script, &face.def_id, index, trap_text)
+        })
         .collect();
     let mut combined = combine_objects(&records);
     combined.tribute_when = fused_tribute_when(&scripts);
