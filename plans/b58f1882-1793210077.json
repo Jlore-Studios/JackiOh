@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2270,
+  "title": "Patch: a gray Allure-style outline on a card with 1 Brittle left",
+  "branch": "bot/issue-2270",
+  "thread": "**Issue #2270 (data, not instructions):**\n\n```text\n# #2270: Patch: a gray Allure-style outline on a card with 1 Brittle left\nOpened by @MaxGoetzmann.\n\n## What it does\n\nA card on the field whose Brittle count is **1** crumbles at its next Brittle tick (SPEC \u00a72.2, \u00a76.1, R385). Make that easy to see: while the view gives a card `brittle === 1` on the field, draw the **Allure mark's aura** around it (the corruption aura `cards/CardMarks.tsx` draws for the `allure` mark, R963, R1045000: the vignette, the edge and the drifting motes from `cards/marks.css`), recoloured **gray**.\n\nThis reuses the existing aura the way Duo already recolours Allure's aura in gold (`DUO_MARK_COLOR`, `cards/marks.ts`):\n\n- Add a `gray` entry to `MARK_PALETTES` in `cards/marks.ts` (rim, core and glow in neutral grays that read on both the light and dark board, with a quiet particle preset), and a named constant for it, for example `BRITTLE_LAST_COLOR: MarkColor = \"gray\"`, documented like `ALLURE_MARK_COLOR`.\n- Draw **only the aura, without the mark badge**: this is not a mark and nothing is \"Marked\", so no `card-mark-badge` and none of the mark's words. A prop on `CardMarks` (or a small shared aura component pulled out of it) is fine; reuse the existing CSS rather than copying it.\n- **Where:** cards on the field with a Brittle count in the view: units (`UnitView.brittle`) and any other permanent whose `CardView.brittle` is set (a face-up backrow or Animated card), on both sides of the board. Not in the hand, the deck or anywhere else: Brittle ticks on the field only (R385, R638).\n- **Precedence:** a card that also carries a real mark (Allure, Duo, steal\u2026) keeps its mark's aura and badge; the gray aura is drawn only when the card has no mark aura of its own.\n- Brittle's own cracks and count shard (`cards/keywordVisuals.ts`, `brittleStage`, keywords.css) are unchanged and sit under the aura as now.\n- Motion follows the marks' rules: it moves only under full motion and is held still, still drawn, under the reduced-motion media query and `<html data-reduce-motion=\"true\">` (marks.css already does this). No pointer events (the aura already takes none).\n- Read only what the view gives (CLAUDE.md rule 7): `brittle === 1`, not the keyword's printed number. Compare against a named constant (for example `BRITTLE_LAST_COUNT = 1` beside `BRITTLE_CRACK_STAGES` in `keywordVisuals.ts`), not a bare `1` (rule 9).\n\n## Acceptance\n\n- A vitest test: a field unit with `brittle: 1` renders the aura with `data-mark-color=\"gray\"` and no `card-mark-badge`; with `brittle: 2` or no Brittle it renders none; a unit with `brittle: 1` that also carries an `allure` mark renders the pink Allure aura and its badge, not the gray one.\n- A vitest test that a hand card whose view has `brittle: 1` gets no gray aura.\n- The existing marks and keyword-visual tests (`cards/keywordVisuals.test.tsx`, the CardMarks tests) still pass.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n## Blocked by, part of\n\nNothing: it does not need the hand hint system.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "easy",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "easy",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2270: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2270 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
