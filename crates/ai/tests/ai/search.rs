@@ -1947,7 +1947,7 @@ fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
     .clone();
     let unit = active_units_of(&state, AI)[0].id.clone();
     assert!(
-        !is_sick(&state, &active_units_of(&state, AI)[0]),
+        !is_sick(&state, active_units_of(&state, AI)[0]),
         "the board's unit is ready"
     );
     let mut sick = state.clone();
@@ -1955,7 +1955,7 @@ fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
     find_instance_mut(&mut sick, &unit)
         .expect("the unit")
         .summoned_turn = Some(turn);
-    assert!(is_sick(&sick, &active_units_of(&sick, AI)[0]));
+    assert!(is_sick(&sick, active_units_of(&sick, AI)[0]));
     assert_ne!(search_signature(&state, AI), search_signature(&sick, AI));
     // An earlier turn's entry is no sickness, and signs as the ready board does.
     let mut earlier = state.clone();

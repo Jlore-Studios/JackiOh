@@ -23762,6 +23762,9 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
+    "refs": [
+      "stinkyscape-t-dormant-starship"
+    ],
     "loc": 46,
     "base": {
       "attack": 9,
