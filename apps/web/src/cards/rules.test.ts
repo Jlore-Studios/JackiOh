@@ -99,6 +99,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
     "When one of your Units is attacked",
     "Chance to reveal",
+    // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
+    "After one of your Units attacks",
     // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
     "When this attacks",
     "After this attacks",

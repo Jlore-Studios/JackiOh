@@ -26405,7 +26405,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 3,
       "health": 2,
@@ -26442,7 +26442,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 4,
       "health": 1,
@@ -26513,7 +26513,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 3,
       "health": 3,
@@ -26813,7 +26813,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks your hero: Deal {damage} damage to all enemies."
@@ -26848,7 +26848,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [
         {
@@ -26918,7 +26918,7 @@
       "traininggrounds-006",
       "traininggrounds-007"
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 3,
       "health": 3,
@@ -26978,7 +26978,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 3,
       "health": 6,
@@ -27067,7 +27067,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Start of turn: Draw {draw|card|cards}."
@@ -27088,7 +27088,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Start of turn: Add a random Training Grounds card to your hand."
@@ -27157,7 +27157,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 3,
       "health": 3,
@@ -27195,7 +27195,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 3,
       "health": 4,
@@ -27239,7 +27239,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Cards in your hand that cost less than that Unit cost ({setCost})."
@@ -27364,7 +27364,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 9,
       "health": 5,
@@ -27391,7 +27391,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 5,
       "health": 9,
@@ -27471,7 +27471,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."
@@ -27532,7 +27532,7 @@
         "cry": true
       }
     ],
-    "loc": 6,
+    "loc": 11,
     "base": {
       "attack": 4,
       "health": 6,
@@ -27585,7 +27585,7 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "After a non-Token Unit dies, summon a Rush Token for its controller."
@@ -27731,7 +27731,7 @@
       "traininggrounds-040",
       "core-t-rush"
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8 mana and draw 2 cards; summon 6 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (0); summon 5 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; add a random Call to Chaos to your hand, which costs (0), now and at the start of every second turn of yours for the rest of the game; cast a random Call to Chaos."

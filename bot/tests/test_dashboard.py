@@ -180,6 +180,11 @@ class LearnLaneTests(unittest.TestCase):
         self.assertEqual(outcome([took("plan"), {"name": "retrain, screen, gate",
                                                  "conclusion": "skipped"}], "cancelled"),
                          "⏹️ cancelled")
+        # Stopped in its export, by a person or a new set (learn-set.yml): cancelled, not lost.
+        stopped = [took("plan"), took("export / round 1 / shard from 1"),
+                   took("export / round 1 / shard from 5001", "cancelled"),
+                   never("export / round 1 / shard from 10001")]
+        self.assertEqual(outcome(stopped, "cancelled"), "⏹️ cancelled")
 
     def test_the_next_scheduled_run_is_the_next_0623_or_1823_utc(self):
         """Each run starts the next as it ends (#1976); the schedule, twice a day, starts the lane

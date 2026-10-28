@@ -420,6 +420,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 extra_opening_cards: 0,
                 extra_draws_per_turn: 0,
                 hero_health: None,
+                hero_floor: None,
+                pool_hold: None,
             }
         );
         assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
@@ -432,6 +434,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 extra_opening_cards: 1,
                 extra_draws_per_turn: 0,
                 hero_health: None,
+                hero_floor: None,
+                pool_hold: None,
             }
         );
         assert_eq!(
@@ -443,6 +447,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 extra_opening_cards: 1,
                 extra_draws_per_turn: 1,
                 hero_health: None,
+                hero_floor: None,
+                pool_hold: None,
             }
         );
         assert_eq!(
@@ -1574,6 +1580,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 extra_opening_cards: 0,
                 extra_draws_per_turn: 0,
                 hero_health: Some(20),
+                hero_floor: None,
+                pool_hold: None,
             }
         );
         assert_eq!(tutorial_health(), 20);
@@ -2212,6 +2220,8 @@ mod r1705005_a_lessons_human_seat_under_tutorial_human {
             TUTORIAL_HUMAN,
             Handicap {
                 deck_size: EARLIER_DECK_SIZE,
+                // R2201000: a lesson cannot be lost.
+                hero_floor: Some(TUTORIAL_HERO_FLOOR),
                 ..HUMAN_HANDICAP
             }
         );
