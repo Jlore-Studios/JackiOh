@@ -26,6 +26,9 @@ export const statsTestid = {
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
   cardsGrid: "stats-cards-grid",
+  /** R2089000: the Created cards' section, below the cards table, and its table. */
+  createdPanel: "stats-created-panel",
+  createdTable: "stats-created-table",
   viewTable: "stats-view-table",
   viewGrid: "stats-view-grid",
   sortSelect: "stats-sort-select",

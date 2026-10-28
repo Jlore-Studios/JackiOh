@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { cosmeticsOf } from "../../cards/cosmetics.ts";
+import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";
@@ -35,6 +36,7 @@ import {
   DECK_CODE_OUTPUT,
   DECK_COMPARE_SELECT,
   DECK_CONFLICTS,
+  DB_SEARCH,
   DECK_COPY_CODE,
   DECK_COSMETICS_BUTTON,
   DECK_COUNT,
@@ -52,8 +54,10 @@ import {
   DECK_IMPORT_SUBMIT,
   DECK_NAME_INPUT,
   DECK_NEW,
+  DECK_REDO,
   DECK_SAVE_ERROR,
   DECK_STATUS,
+  DECK_UNDO,
   DECK_TO_PRACTICE,
   DECK_VERDICT,
   SYNC_STATUS,
@@ -974,6 +978,140 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     // Escape closes the picker again.
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+  });
+});
+
+describe("issue #2099 undo and redo", () => {
+  function undoButton(): HTMLElement {
+    return screen.getByTestId(DECK_UNDO);
+  }
+
+  function redoButton(): HTMLElement {
+    return screen.getByTestId(DECK_REDO);
+  }
+
+  function count(): string {
+    return screen.getByTestId(DECK_COUNT).getAttribute("data-count") ?? "";
+  }
+
+  it("issue #2099 Undo takes back an add and a removal and Redo puts them back; each button is off with nothing to move, and an undo saves like any edit", async () => {
+    const { server, tick } = mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(undoButton()).toBeDisabled();
+    expect(redoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(screen.getByTestId(deckCardId(fixtureCardId(1))));
+    expect(count()).toBe("1");
+    fireEvent.click(undoButton());
+    expect(count()).toBe("2");
+    expect(screen.getByTestId(deckCardId(fixtureCardId(1)))).toBeInTheDocument();
+    expect(redoButton()).toBeEnabled();
+    fireEvent.click(undoButton());
+    fireEvent.click(undoButton());
+    expect(count()).toBe("0");
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(redoButton());
+    expect(count()).toBe("1");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")?.cards).toEqual([fixtureCardId(1)]);
+  });
+
+  it("issue #2099 a rename is one step however many keys it takes", async () => {
+    const { server, tick } = mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    const input = screen.getByTestId(DECK_NAME_INPUT);
+    fireEvent.change(input, { target: { value: "Aggr" } });
+    fireEvent.change(input, { target: { value: "Aggro Rush" } });
+    fireEvent.blur(input);
+    fireEvent.change(input, { target: { value: "Tempo" } });
+    fireEvent.blur(input);
+    fireEvent.click(undoButton());
+    expect(input).toHaveValue("Aggro Rush");
+    fireEvent.click(undoButton());
+    expect(input).toHaveValue("Aggro");
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(redoButton());
+    expect(input).toHaveValue("Aggro Rush");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")?.name).toBe("Aggro Rush");
+  });
+
+  it("issue #2099 a portrait pick and a cosmetic pick are a step each", () => {
+    mount({ decks: [savedDeck("a", "Aggro", ONE, 1)], initialOpen: { kind: "deck", id: "a" } });
+    const first = screen.getByTestId("portrait-current").getAttribute("title") ?? "";
+    fireEvent.click(screen.getByTestId("portrait-current"));
+    fireEvent.click(screen.getByTestId("portrait-pick-shredder"));
+    fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
+    fireEvent.change(screen.getByTestId("deck-cosmetic-field"), { target: { value: "field-rain" } });
+    fireEvent.click(undoButton());
+    expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("");
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    fireEvent.click(undoButton());
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", first);
+    fireEvent.click(redoButton());
+    fireEvent.click(redoButton());
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("field-rain");
+  });
+
+  it("issue #2099 a new edit after Undo empties Redo", () => {
+    mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(undoButton());
+    expect(redoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(3))));
+    expect(redoButton()).toBeDisabled();
+    fireEvent.click(undoButton());
+    expect(screen.queryByTestId(deckCardId(fixtureCardId(3)))).toBeNull();
+    expect(count()).toBe("1");
+  });
+
+  it("issue #2099 Ctrl/Cmd+Z undoes and Ctrl/Cmd+Shift+Z redoes, and neither does anything in a text field", () => {
+    mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    expect(fireEvent.keyDown(document.body, { key: "z", ctrlKey: true })).toBe(false);
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(document.body, { key: "Z", ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(count()).toBe("1");
+    expect(fireEvent.keyDown(document.body, { key: "z", metaKey: true })).toBe(false);
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(document.body, { key: "z", metaKey: true, shiftKey: true })).toBe(false);
+    expect(count()).toBe("1");
+    expect(fireEvent.keyDown(screen.getByTestId(DECK_NAME_INPUT), { key: "z", ctrlKey: true })).toBe(true);
+    expect(fireEvent.keyDown(screen.getByTestId(DB_SEARCH), { key: "z", metaKey: true })).toBe(true);
+    expect(count()).toBe("1");
+    fireEvent.click(undoButton());
+    expect(count()).toBe("0");
+    expect(fireEvent.keyDown(screen.getByTestId(DB_SEARCH), { key: "z", ctrlKey: true, shiftKey: true })).toBe(true);
+    expect(count()).toBe("0");
+  });
+
+  it("issue #2099 opening another deck starts a fresh history, and so does closing the editor", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", [], 1), savedDeck("b", "Tempo", [], 2)],
+      trios: [savedTrio("t", "Ladder", [null, null, null], 3)],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(1))));
+    expect(undoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "b");
+    expect(undoButton()).toBeDisabled();
+    expect(redoButton()).toBeDisabled();
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    expect(screen.getByTestId(deckRowId("a"))).toHaveAttribute("data-count", "1");
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(2))));
+    fireEvent.click(screen.getByTestId(trioRowId("t")));
+    expect(screen.queryByTestId(DECK_UNDO)).toBeNull();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(addPoolId(fixtureCardId(3))));
+    expect(undoButton()).toBeEnabled();
+    fireEvent.click(screen.getByTestId(WORKSHOP_BACK));
+    expect(undoButton()).toBeDisabled();
+    fireEvent.click(screen.getByTestId(deckRowId("b")));
+    expect(undoButton()).toBeDisabled();
+    expect(screen.getByTestId(deckRowId("b"))).toHaveAttribute("data-count", "2");
   });
 });
 

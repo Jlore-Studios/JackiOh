@@ -2,9 +2,12 @@
 `bot-status` loop rewrites every five minutes with what the night bot is doing and what it has
 done.
 
-It opens with a headline (what runs, what waits and on what, which subscriptions can start work),
-then draws the same facts as `/harness status` (`status.py`) for a glance: what each lane is doing
-and a timeline of the runs going now; every subscription as a box with what it is doing or why it
+It opens with its date, then a bar chart of how far the owner's PC's two local jobs have played (the
+learn lane's export of `LEARN_GAMES` with its shard, and gather's games of its patch, from the PC's
+heartbeat: `progress`), then a headline (what runs, what waits and on what, which subscriptions can
+start work), then draws the same facts as `/harness status` (`status.py`) for a glance: what each
+lane is doing and a timeline of the runs going now, the PC's jobs among them; every subscription
+as a box with what it is doing or why it
 is not, and its usage, always; every subscription's lanes, held and open, Squishy's too, with the
 totals and the limits on them (`lanes_table`); the queue, each item with the tier its difficulty needs and what it
 waits for (`waiting.py`, the planner's own rules on the lanes held now: never "free" for a
@@ -12,7 +15,8 @@ subscription the planner would give no work, never "starts next" for an item it 
 each subscription's usage as bars and charts against its caps; the last runs; the statistics
 (`stats.py`: the last six hours, day, week and all time, counted every 30 minutes and kept in the
 issue between counts, with which set's cards win most, `cardsets.py`, read from production once a
-day); and the full status text folded underneath. Times are clock times, which
+day); and the full status text folded underneath (left out first when the issue would
+pass GitHub's limit, `fit`: `/harness status` gives it). Times are clock times, which
 stay true between rewrites; hovering one shows how long it had been running when the issue was
 written. Editing an issue's body notifies nobody, so the rewrites stay quiet. The issue's number
 is kept in the state file; when it is missing or the issue was closed, an open issue with the
@@ -23,7 +27,8 @@ Every runner has a section too, low in the issue (`runners_section`): each job a
 the step it is on and what it is for, and the jobs queued for one, as boxes the way the
 subscriptions are drawn and as a table, each folding away. The owner's PC's group carries its load
 and the gather workflow, from a heartbeat its supervisor writes to a gist (`read_runners`). Between
-rewrites the loop redraws that section alone every two minutes (`refresh_runners`). What each runner
+rewrites the loop redraws that section and the progress chart alone every two minutes
+(`refresh_runners`). What each runner
 and each workflow is for changes only with the pool or the workflows, so it is a comment on the issue
 (`explain`), which the section links.
 
@@ -201,33 +206,53 @@ def _tick(span: timedelta) -> str:
     return "2hour"
 
 
-def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:
+#: The timeline's bars carry their own colours, as the boxes do (`BOX_STYLES`): dark blue on light
+#: blue in a bar. A bar too short for its name draws it beside the bar, on the page itself (Mermaid
+#: draws every section's band at a fifth of its colour), so that text is GitHub's muted grey, which
+#: reads on its light page and its dark one alike (4.5:1 and 3.9:1). Bars are plain tasks, not
+#: `active` ones: Mermaid gives an active bar's name one colour inside the bar and beside it, and
+#: GitHub's dark theme made it dark, unreadable beside a short bar.
+TIMELINE_STYLE = ('%%{init: {"themeVariables": {"taskBkgColor": "#ddf4ff", "taskBorderColor": '
+                  '"#54aeff", "taskTextColor": "#0a3069", "taskTextOutsideColor": "#6e7781"}}}%%')
+
+
+def timeline(ctx: Context, state: dict[str, Any], live: dict[int, str],
+             found: Found | None = None) -> list[str]:
     """A Mermaid timeline of the runs going now: GitHub's runners, then the machine, the
-    longest-running first, each bar named by its subscription, what it does and for how long.
-    (A gantt chart reads `#` as a comment, so items are named without it.)"""
-    if not live:
+    longest-running first, each bar named by its subscription, what it does and for how long;
+    then, with the runners `found`, the jobs on the owner's PC (the learn lane's, gather's), each
+    named by its workflow and job. (A gantt chart reads `#` as a comment, so items are named
+    without it.)"""
+    pc_jobs = [(run, job) for run, job in (found.busy if found else []) if _where(job)[0] == 3]
+    if not live and not pc_jobs:
         return ["Nothing is running right now."]
     pool = ctx.cfg.pool
     now = _local(ctx, ctx.now())
     fmt = "%Y-%m-%d %H:%M"
-    rows: dict[str, list[str]] = {"hosted": [], "night": []}
+    rows: dict[str, list[str]] = {"hosted": [], "night": [], "pc": []}
     earliest = now
-    for number, provider_id in _by_start(ctx, state, live):
-        doing, item, since = _doing(state, number)
+
+    def add(where: str, name: str, since: datetime | None) -> None:
+        nonlocal earliest
         start = _local(ctx, since) if since else now
         earliest = min(earliest, start)
         end = max(now, start + timedelta(minutes=1))  # a run that just started still shows
         took = human_delta(now - start)
-        name = (f"{provider_id} · {doing} {item.lstrip('#')} · "
-                f"{'just started' if took == 'now' else took}")
-        where = "night" if pool.on_machine(provider_id) else "hosted"
-        rows[where].append(
-            f"    {name.replace(':', ' ')} :active, {start.strftime(fmt)}, {end.strftime(fmt)}")
-    lines = ["```mermaid", "gantt",
+        name += f" · {'just started' if took == 'now' else took}"
+        rows[where].append(f"    {name.replace(':', ' ').replace('#', '')} :{start.strftime(fmt)}, "
+                           f"{end.strftime(fmt)}")
+    for number, provider_id in _by_start(ctx, state, live):
+        doing, item, since = _doing(state, number)
+        add("night" if pool.on_machine(provider_id) else "hosted",
+            f"{provider_id} · {doing} {item.lstrip('#')}", since)
+    for run, job in pc_jobs:
+        add("pc", _job_name(run, job), parse_iso(job.get("started_at")))
+    lines = ["```mermaid", TIMELINE_STYLE, "gantt",
              f"    title Runs going now, as of {now.strftime('%H:%M')} (Central time)",
              "    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M",
              f"    tickInterval {_tick(now - earliest)}", "    todayMarker off"]
-    for where, section_name in (("hosted", "GitHub's runners"), ("night", "The night box")):
+    for where, section_name in (("hosted", "GitHub's runners"), ("night", "The night box"),
+                                ("pc", "The owner's PC")):
         if rows[where]:
             lines += [f"    section {section_name}"] + rows[where]
     return lines + ["```"]
@@ -1045,6 +1070,7 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
                        "Central",
+    "code-audit.yml": "every three days: the code audit's issue for the night bot",
     "db-size.yml": "twice a day: an issue once production's database nears its Supabase plan's cap",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
@@ -1057,6 +1083,7 @@ WORKFLOWS = {
     "promote-production.yml": "merges main into production once a day",
     "selfplay-shards.yml": "one round of a self-play export's shards",
     "selfplay.yml": "a self-play export, on the owner's PC unless asked otherwise",
+    "spec-fold.yml": "folds the pending §11 paragraphs and rewrites the rulings index once a day",
     "squishy-commands.yml": "Squishy's ears and its sweep",
     "squishy-run.yml": "Squishy: gate, plan, `work` on its own Claude account, deliver",
     "super.yml": "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
@@ -1460,6 +1487,100 @@ def _gather_box(ctx: Context, found: Found, beat: dict[str, Any] | None) -> tupl
     return [title, f"❌ its last run: {_text(last.get('conclusion'), 12)}", when], "broken"
 
 
+#: learn.yml's `games` default: the export a scheduled learn run plays, in shards whose ranges the
+#: heartbeat names, so a shard's games read as the export's (`progress`).
+LEARN_GAMES = 100_000
+#: The top of the issue after its date: how far the PC's two local jobs have played, between
+#: these markers, so the runners' redraw keeps them as fresh as the heartbeat (`refresh_runners`).
+PROGRESS_START = "<!-- jackioh-bot:progress -->"
+PROGRESS_END = "<!-- /jackioh-bot:progress -->"
+
+
+def _played(runner: dict[str, Any], kind: str) -> dict[str, int | str] | None:
+    """A heartbeat runner's `progress` (bot/machine/local/supervisor.ps1, `Get-Progress`) when it
+    is playing games with `jackioh <kind>`: the games it plays, those done, and its --from and
+    --patch."""
+    progress = runner.get("progress")
+    if not isinstance(progress, dict) or progress.get("kind") != kind:
+        return None
+    try:
+        games, done = int(progress["games"]), int(progress["done"])
+        start = int(progress.get("from") or 1)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if games <= 0 or done < 0:
+        return None
+    return {"games": games, "done": min(done, games), "from": start,
+            "patch": str(progress.get("patch") or "")}
+
+
+#: The progress chart's colours, the usage charts' (`USAGE_CHART`): a grey bar to 100% behind, the
+#: games played in green over it; and its height, low enough to sit at the top of the issue.
+PROGRESS_CHART = ('%%{init: {"xyChart": {"height": 220}, "themeVariables": {"xyChart": '
+                  '{"plotColorPalette": "#d0d7de, #1f883d"}}}}%%')
+
+
+def progress(ctx: Context, found: Found | None = None) -> str:
+    """The top of the issue, between `PROGRESS_START` and `PROGRESS_END`: how far the owner's
+    PC's two local jobs have played, as a Mermaid bar chart in percent, with a line under it. The
+    learn lane's export is the game it is at of `LEARN_GAMES`, then its shard's games; gather is
+    its games of its patch. Each comes from the games its `jackioh` has written so far (the
+    heartbeat's `progress`); a job playing none has a bar at 0 that says why. Without `found` it
+    reads the heartbeat alone."""
+    if found is None:
+        found = Found([], [])
+        found.pc, found.pc_note = _heartbeat(ctx)
+    beat = _fresh(ctx, found)
+    runners = _pc_runners(beat)
+    bars: list[tuple[str, float]] = []
+    notes: list[str] = []
+    if beat is None:
+        at = parse_iso((found.pc or {}).get("at"))
+        why = (f"not heard since {_clock(ctx, at)}" if at is not None
+               else found.pc_note or "no heartbeat")
+        bars = [("learn: no heartbeat", 0.0), ("gather: no heartbeat", 0.0)]
+        notes = [f"The owner's PC: {why}"]
+    else:
+        queued = {"selfplay": any(LOCAL_LABEL in (job.get("labels") or [])
+                                  for _, job in found.queued),
+                  "stats": any(_is_gather(run) for run, _ in found.queued)}
+        for name, label, kind, between in (
+                ("learn", LOCAL_LABEL, "selfplay", "a build, the retrain, the screen or the gate"),
+                ("gather", GATHER_LABEL, "stats", "its build")):
+            busy = [r for r in runners if r.get("label") == label and r.get("busy")]
+            played = next((p for p in (_played(r, kind) for r in busy) if p), None)
+            if played is None:
+                state = ("working, no games" if busy else
+                         "waiting for its runner" if queued[kind] else "not playing")
+                bars.append((f"{name}: {state}", 0.0))
+                if busy:
+                    notes.append(f"{name} is playing no games now ({between})")
+                continue
+            games, done, first = int(played["games"]), int(played["done"]), int(played["from"])
+            if kind == "stats":
+                bars.append((f"gather: game {done:,} of {games:,}", done / games))
+                if played["patch"]:
+                    notes.append(f"gather plays {played['patch']}")
+                continue
+            at, last = first - 1 + done, first + games - 1
+            if last <= LEARN_GAMES:
+                bars.append((f"learn: game {at:,} of {LEARN_GAMES:,}", at / LEARN_GAMES))
+            else:
+                notes.append(f"learn is at game {at:,}, past learn.yml's {LEARN_GAMES:,}")
+            bars.append((f"its shard: {done:,} of {games:,}", done / games))
+            notes.append(f"the shard plays games {first:,}–{last:,}")
+        notes.append(f"heard {_clock(ctx, parse_iso(beat.get('at')))}")
+    labels = ", ".join(f'"{_text(label, 40)}"' for label, _ in bars)
+    chart = ["```mermaid", PROGRESS_CHART, "xychart-beta horizontal",
+             "    title \"The owner's PC: how far its two local jobs have played, %\"",
+             f"    x-axis [{labels}]", '    y-axis "% played" 0 --> 100',
+             f"    bar [{', '.join('100' for _ in bars)}]",
+             f"    bar [{', '.join(f'{min(max(v, 0.0), 1.0) * 100:.1f}' for _, v in bars)}]", "```"]
+    note = " · ".join(notes)
+    return "\n".join([PROGRESS_START, *chart, f"<sub>{note[:1].upper()}{note[1:]}.</sub>",
+                      PROGRESS_END])
+
+
 #: Each AWS box as its slots, as register-runners.sh lays the runners out (its header, and
 #: bot/machine/README.md, The Muse box; #2069): the place `_where` names it, the subscription whose
 #: lane each slot is, and the subscriptions whose runners there take no slot of their own (none
@@ -1691,8 +1812,9 @@ def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = N
 
 
 def refresh_runners(ctx: Context) -> str:
-    """Redraw the status issue's runners section alone, between the loop's rewrites: the rest of
-    the issue stays as the last rewrite left it, and the table lists what room it leaves."""
+    """Redraw the status issue's runners section alone, between the loop's rewrites, and the
+    PC's progress chart at its top (`progress`): the rest of the issue stays as the last rewrite
+    left it, and the table lists what room it leaves."""
     state = ctx.store.load()
     number = (state.get("dashboard") or {}).get("issue")
     if not number:
@@ -1702,8 +1824,13 @@ def refresh_runners(ctx: Context) -> str:
     start, end = body.find(RUNNERS_START), body.find(RUNNERS_END)
     if issue.get("state") != "open" or start < 0 or end < start:
         return f"#{number} has no runners section to redraw: the next rewrite draws it"
+    found = read_runners(ctx)
+    top, bottom = body.find(PROGRESS_START), body.find(PROGRESS_END)
+    if 0 <= top < bottom < start:
+        body = body[:top] + progress(ctx, found) + body[bottom + len(PROGRESS_END):]
+        start, end = body.find(RUNNERS_START), body.find(RUNNERS_END)
     rest = len(body) - (end + len(RUNNERS_END) - start)
-    fresh = (body[:start] + runners_section(ctx, state, room=MAX_BODY - rest)
+    fresh = (body[:start] + runners_section(ctx, state, found, room=MAX_BODY - rest)
              + body[end + len(RUNNERS_END):])
     if len(fresh) > MAX_BODY:
         return f"#{number} would pass GitHub's limit: the next rewrite makes room"
@@ -1782,15 +1909,18 @@ def fold(summary: str, lines: list[str]) -> list[str]:
 
 
 def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
-           view: View | None = None) -> str:
+           view: View | None = None, *, full: bool = True) -> str:
     """The whole issue: the headline, the night bot's facts, its statistics, then each other
-    bot's section (`extra`), then the full status folded."""
+    bot's section (`extra`), then the full status folded (without `full`, a line saying where to
+    read it instead: it is the same facts as the sections above, `fit`)."""
     view = view or look(ctx)
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
     updated = _local(ctx, ctx.now()).strftime("%Y-%m-%d %H:%M %Z")
-    # The first line, so a glance at the issue says how fresh it is.
-    lines = [f"**Last updated at {updated}**", "", f"# 🤖 {TITLE}", ""]
+    # The first line, so a glance at the issue says how fresh it is; then how far the PC's two
+    # local jobs have played.
+    lines = [f"**Last updated at {updated}**", "", progress(ctx, view.found), "",
+             f"# 🤖 {TITLE}", ""]
     if halted:
         lines += ["> [!WARNING]", f"> 🛑 **Halted**: {halted}. Nothing starts until it is lifted.",
                   ""]
@@ -1803,7 +1933,8 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
               "## ⚡ Running now", ""]
     running = running_table(ctx, state, live, issues)
     lines += fold("What each lane is doing, the runs going on a timeline, and every subscription",
-                  (running + [""] if running else []) + timeline(ctx, state, live) + [""]
+                  (running + [""] if running else []) + timeline(ctx, state, live, view.found)
+                  + [""]
                   + lanes_boxes(ctx, state, live, explained.now))
     lines += ["## 🛣️ Lanes", ""] + fold(
         "How many lanes each subscription has, how many its runs hold and how many are open, "
@@ -1831,20 +1962,34 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     # least read at a glance.
     lines += ["---", "", view.runners if view.runners is not None else runners_section(ctx, state),
               ""]
-    lines += ["<details><summary>The full status</summary>", "",
-              view.report, "", "</details>", "", MARKER]
+    if full:
+        lines += ["<details><summary>The full status</summary>", "", view.report, "",
+                  "</details>"]
+    else:
+        lines += [f"<sub>{FULL_LEFT_OUT}</sub>"]
+    lines += ["", MARKER]
     return "\n".join(lines)
 
 
+#: What stands at the foot of the issue when the full status is left out for room (`fit`).
+FULL_LEFT_OUT = (f"The full status is left out to keep this issue under GitHub's limit: "
+                 f"`{SLASH} status` gives it.")
+
+
 def fit(ctx: Context, view: View, extra: tuple[str, ...], draw: Callable[[int], str]) -> str:
-    """The body, listing fewer merged pull requests in the statistics (`draw(shown)`) while it
-    would pass GitHub's limit on an issue's body, then fewer busy runners (`_room`), and leaving
-    the statistics out last of all."""
+    """The body, while it would pass GitHub's limit on an issue's body: without the full status
+    (the same facts as the sections above, and `/harness status` gives it), then listing fewer
+    merged pull requests in the statistics (`draw(shown)`), then fewer busy runners (`_room`), and
+    leaving the statistics out last of all."""
+    body = render(ctx, extra, draw(SHOWN_STEPS[0]), view)
+    if len(body) <= MAX_BODY:
+        return body
     for shown in SHOWN_STEPS:
-        body = render(ctx, extra, draw(shown), view)
+        body = render(ctx, extra, draw(shown), view, full=False)
         if len(body) <= MAX_BODY:
             return body
-    body = _room(ctx, view, body, lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view))
+    body = _room(ctx, view, body,
+                 lambda: render(ctx, extra, draw(SHOWN_STEPS[-1]), view, full=False))
     return body if len(body) <= MAX_BODY else render(ctx, extra, "", view)
 
 
@@ -1892,7 +2037,8 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     `STATS_EVERY` has passed (or `force_stats`, or the issue has none yet, or the kept block no
     longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
     the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds.
-    A count reads which set's cards win most from production through `read_cards` once a day
+    Without `stats` (bot-commands.yml's rewrite after a sweep) nothing is counted, and the block
+    the issue holds is kept too, while it fits. A count reads which set's cards win most from production through `read_cards` once a day
     (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
     view.found = read_runners(ctx)
@@ -1902,7 +2048,7 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     if issue is not None:
         explain(ctx, int(issue["number"]), state)
     view.runners = runners_section(ctx, state, view.found)
-    body_now = issue.get("body") if (stats and issue is not None) else None
+    body_now = issue.get("body") if issue is not None else None
     kept = stats_mod.kept(body_now)
     note = ""
 
@@ -1913,10 +2059,13 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
         body, note = count()
     elif kept is not None:
         body = render(ctx, extra, kept, view)
-        # More runners busy than at the last count: fewer listed, rather than a count again.
-        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view))
+        # Without the full status, then fewer runners listed, as `fit` makes room, rather than a
+        # count again.
         if len(body) > MAX_BODY:
-            body, note = count()
+            body = render(ctx, extra, kept, view, full=False)
+        body = _room(ctx, view, body, lambda: render(ctx, extra, kept, view, full=False))
+        if len(body) > MAX_BODY:
+            body, note = count() if stats else (render(ctx, extra, "", view), "")
     else:
         body = render(ctx, extra, "", view)
     if issue is None:

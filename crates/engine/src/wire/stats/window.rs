@@ -26,8 +26,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot, PilotFilter,
-    RecordsKey, SourceFilter, StatsTotals, add_stats, card_stats_of, game_figures,
+    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot,
+    PilotFilter, RecordsKey, SourceFilter, StatsTotals, add_created, add_stats, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -308,6 +308,18 @@ pub struct WindowedReport {
     pub decks: i64,
     /// Every card a counted deck held, in catalog-id order.
     pub cards: Vec<WindowedCard>,
+    /// R2089000: every card a counted seat made a Created copy of, in catalog-id order, each over its
+    /// own window as a deck card is.
+    #[serde(default)]
+    pub created: Vec<WindowedCreated>,
+}
+
+/// R2089000: one Created card's figures over its window.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowedCreated {
+    pub window: CardWindow,
+    pub stats: CreatedStats,
 }
 
 impl WindowedReport {
@@ -322,6 +334,7 @@ struct Part {
     games: i64,
     decks: i64,
     cards: IndexMap<String, CardStats>,
+    created: IndexMap<String, CreatedStats>,
 }
 
 /// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
@@ -372,6 +385,11 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             decks: i64::from(report.decks),
             cards: report
                 .cards
+                .into_iter()
+                .map(|stats| (stats.card.clone(), stats))
+                .collect(),
+            created: report
+                .created
                 .into_iter()
                 .map(|stats| (stats.card.clone(), stats))
                 .collect(),
@@ -435,12 +453,40 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             });
         }
     }
+    // R2089000: the Created cards, each over its family's window as above.
+    let mut ids: Vec<&str> = parts
+        .values()
+        .flat_map(|part| part.created.keys().map(String::as_str))
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut created: Vec<WindowedCreated> = Vec::new();
+    for id in ids {
+        let family = card_family(id);
+        let window = windows
+            .entry(family)
+            .or_insert_with(|| window_in(&history, at, Some(family), query.request, &live_games))
+            .clone();
+        let mut stats: Option<CreatedStats> = None;
+        for part in counted_parts(&window) {
+            if let Some(card) = part.created.get(id) {
+                match stats.as_mut() {
+                    None => stats = Some(card.clone()),
+                    Some(held) => add_created(held, card),
+                }
+            }
+        }
+        if let Some(stats) = stats {
+            created.push(WindowedCreated { window, stats });
+        }
+    }
     WindowedReport {
         at: query.at.to_string(),
         patch,
         games,
         decks,
         cards,
+        created,
     }
 }
 
@@ -522,7 +568,7 @@ mod tests {
     use super::*;
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
-    use crate::wire::stats::{GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
+    use crate::wire::stats::{CreatedUse, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
 
     const A: &str = "core-001";
     const B: &str = "core-002";
@@ -760,6 +806,57 @@ mod tests {
         assert_eq!(a.stats.in_deck.games, 2);
         // The window every card shares holds v1's 999 and v2's one, and clears.
         assert_eq!(report.patch.source, WindowSource::Live);
+    }
+
+    #[test]
+    fn r2089000_windowed_card_stats_reads_each_created_card_over_its_own_window() {
+        // A's token is of A's family, which v2 touched; B is a deck card that is made in play too.
+        const TOKEN: &str = "core-001-1";
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Micro, &[A]),
+        ];
+        let made = |id: &str, patch: &str| {
+            let mut record = game(id, GameSource::Live, patch, &[B]);
+            record.game.seats.p1.created_used = Some(vec![
+                CreatedUse {
+                    card: TOKEN.to_string(),
+                    turn: 2,
+                    radiant: false,
+                },
+                CreatedUse {
+                    card: B.to_string(),
+                    turn: 3,
+                    radiant: true,
+                },
+            ]);
+            record
+        };
+        let mut totals = StatsTotals::default();
+        totals.fold(&made("m1", "v1"), false);
+        totals.fold(&made("m2", "v2"), false);
+        add_live(&mut totals, "v1", PUBLIC_STATS_MIN_LIVE_GAMES);
+        add_live(&mut totals, "v2", PUBLIC_STATS_MIN_LIVE_GAMES);
+
+        let report = windowed_card_stats(&totals, &query(&history, "v2"));
+        let ids: Vec<&str> = report.created.iter().map(|row| row.stats.card.as_str()).collect();
+        assert_eq!(ids, [TOKEN, B]);
+        let token = &report.created[0];
+        assert_eq!(versions(&token.window), ["v2"]);
+        assert_eq!(
+            (token.stats.created_played.games, token.stats.created_played.wins),
+            (1, 1)
+        );
+        assert_eq!(token.stats.created_played_normal.games, 1);
+        let b = &report.created[1];
+        assert_eq!(versions(&b.window), ["v1", "v2"]);
+        assert_eq!(b.stats.created_played.games, 2);
+        assert_eq!(b.stats.created_played_radiant.games, 2);
+        // B's deck row is its dealt copies' alone, and the token, which no deck held, has none.
+        let deck_b = report.card(B).expect("B is held");
+        assert_eq!(deck_b.stats.in_deck.games, 2);
+        assert_eq!(deck_b.stats.created_played.games, 0);
+        assert!(report.card(TOKEN).is_none());
     }
 
     #[test]

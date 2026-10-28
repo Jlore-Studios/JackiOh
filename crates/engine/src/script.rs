@@ -478,6 +478,9 @@ pub struct StaticFlags {
     /// Starts in the opening hand instead of a draw (§6.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickdraw: Option<bool>,
+    /// R1861000: sells from its owner's hand at an open Marketplace, as a tray Resource sells.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hand_sale: Option<bool>,
     /// Replaces an empty-library draw with a Rush Token card (#75).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infinite_reserves: Option<bool>,

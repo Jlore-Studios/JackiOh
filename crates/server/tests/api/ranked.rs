@@ -969,8 +969,8 @@ mod r612_what_the_client_reads {
             json!({
                 "ranked": true,
                 "seats": {
-                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "you": true },
-                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "you": false },
+                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "streak": 0, "you": true },
+                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "streak": 0, "you": false },
                 },
             })
         );
@@ -985,6 +985,34 @@ mod r612_what_the_client_reads {
                 .status,
             404
         );
+    }
+
+    /// R2101000: both seats carry their season row's win streak, the opponent's included.
+    #[tokio::test(start_paused = true)]
+    async fn r2101000_get_api_matches_id_ranks_carries_each_seat_s_win_streak() {
+        let Routed { app, token_a, .. } = routed().await;
+        put_rank(
+            &app,
+            merged(
+                json_of(&fresh_rank(&season(), A, 0)),
+                json!({ "games": 4, "wins": 4, "streak": 4 }),
+            ),
+        )
+        .await;
+        put_rank(
+            &app,
+            merged(
+                json_of(&fresh_rank(&season(), B, 0)),
+                json!({ "games": 3, "wins": 2, "losses": 1, "streak": 0 }),
+            ),
+        )
+        .await;
+        q!(app, matches_create(&live_match("match-1", "s", true)));
+        let got = get(&app, "/api/matches/match-1/ranks", &token_a).await;
+        assert_eq!(got.status, 200);
+        assert_eq!(got.body["seats"]["p1"]["streak"], json!(4));
+        assert_eq!(got.body["seats"]["p2"]["streak"], json!(0));
+        mentions_none(&got.text, &["rating", "\"tag\""]);
     }
 
     /// R1436: the ladder names nobody; it joins each username in from `profiles`, so a rename shows

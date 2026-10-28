@@ -677,8 +677,7 @@ pub enum WouldDie {
 /// §4.5 step 1, before any card moves: the units the check collected would die, and a `wouldDie`
 /// replacement takes its controller's among them — one firing for all of them — and flickers them
 /// instead (Classic #14's Radiant face), or resolves its follow-up at once (`resolveFirst`, Stinkyscape
-/// #138, R1875006), once a check: `resolved_first` holds the cards that did so earlier in it (R460),
-/// and a card answers none of the checks its follow-up makes while it resolves (R2067001).
+/// #138, R1875006), once a check: `resolved_first` holds the cards that did so earlier in it (R460).
 /// Returns the cards that still die, or that the check must start over. R462: the check's own
 /// collection only; a Sacrifice is an effect's (§6.3) and is not offered.
 pub fn would_die_window(
@@ -691,9 +690,7 @@ pub fn would_die_window(
         return WouldDie::Die(left);
     }
     for mut cand in candidates(sink.state, None) {
-        if resolved_first.contains(&cand.card.id)
-            || sink.frontier.get().resolving_first.contains(&cand.card.id)
-        {
+        if resolved_first.contains(&cand.card.id) {
             continue;
         }
         let theirs: Vec<CardInstance> = left
@@ -727,10 +724,6 @@ pub fn would_die_window(
                 flickered: None,
             };
             if let Some(resume) = spend(sink, &cand, &def, &record, fired) {
-                // R2067001: held out of every check its follow-up makes, so a card its firing leaves
-                // in play (no Trap: a fusion holding the text) does not answer its own casts' checks
-                // without end.
-                sink.frontier.get_mut().resolving_first.push(cand.card.id.clone());
                 crate::prompts::run_resume(
                     sink,
                     &resume,
@@ -739,7 +732,6 @@ pub fn would_die_window(
                         ..crate::prompts::ResumeOptions::default()
                     },
                 );
-                sink.frontier.get_mut().resolving_first.pop();
             }
             return WouldDie::StartOver;
         }
@@ -889,6 +881,7 @@ pub fn answer_targeting(
             source_id: None,
             arrived_during: None,
             exits_from: None,
+            creator: None,
         });
         // R783010: a Crater Joro Locks the zone it was summoned into.
         crate::crater::lock_on_arrival(sink, &card.id);

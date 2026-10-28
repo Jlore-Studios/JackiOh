@@ -636,8 +636,8 @@ function draw() {
  *     where music-cards.json gives one, else the first of its tags the card art reads (its tribe),
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
- *     celesta, Meditative a kalimba, Meditative+ a music box), and a Mythic adds a prismatic shimmer
- *     over a soft choir.
+ *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal), and a Mythic
+ *     adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
  * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
@@ -660,19 +660,28 @@ const INTRO_SPAN_S = [3, 5];
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
-const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+"];
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
  * kalimba, a plucked run that rings like the set's East-Asian colours (compose.mjs's GM table names no
- * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up.
+ * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up; the
+ * Stinkyscape set's is a crystal, a glassy synth bell like a star's glint (R1883000).
  */
-const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox };
+const INTRO_SET_GLINT = {
+  Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox, Stinkyscape: GM.crystal,
+};
 
-/** The first tag that names a family wins, in the card art's order, then the tags it draws none for. */
+/**
+ * The first tag that names a family wins, in the card art's order, then the tags it draws none for:
+ * Jlockeed and Acclaimed, then the Stinkyscape set's (R1883000): its Drone Cores, its Weapons, #137's
+ * War Doctrines and #4's Terminus. No shipped card's row below carries any of the four (Terminus came
+ * to Core #100 and Classic #90 after their intros were written), so no shipped intro moves.
+ */
 const INTRO_TAG_FAMILIES = [
   ["Call to Chaos", "chaos"], ["AI", "ai"], ["CN", "cn"], ["KY", "ky"], ["Book", "book"], ["Felinor", "felinor"],
   ["Pancake", "pancake"], ["Fruit", "fruit"], ["Quickdraw", "quickdraw"], ["Human", "human"],
   ["Jlockeed", "jlockeed"], ["Acclaimed", "acclaimed"],
+  ["Drone Core", "drone"], ["Weapon", "weapon"], ["War Doctrine", "doctrine"], ["Terminus", "terminus"],
 ];
 const INTRO_TYPE_FAMILIES = { Unit: "unit", Spell: "spell", "Field Spell": "field-spell", Trap: "trap", "Field Trap": "field-trap" };
 
@@ -697,6 +706,12 @@ const INTRO_PALETTES = {
   quickdraw: { lead: GM.whistle, second: GM.steel, bass: GM.acBass, color: GM.banjo, style: "gallop", modes: ["mixolydian", "dorian"], feel: "fast", center: 76 },
   jlockeed: { lead: GM.synthBrass, second: GM.strings, bass: GM.contrabass, color: GM.bells, style: "march", modes: ["minor", "dorian"], feel: "mid", center: 65 },
   acclaimed: { lead: GM.trumpet, second: GM.brass, bass: GM.contrabass, color: GM.orchHit, style: "boom", modes: ["minor", "harmonic"], feel: "mid", center: 67 },
+  // R1883000, the Stinkyscape set's: a drone's saw over synth strings, a weapon's brass and orchestra
+  // hits, a doctrine's march, and the end of everything on an organ under a choir.
+  drone: { lead: GM.saw, second: GM.synthStrings, bass: GM.synthBass1, color: GM.crystal, style: "synth", modes: ["minor", "phrygian"], feel: "fast", center: 65 },
+  weapon: { lead: GM.synthBrass, second: GM.brass, bass: GM.contrabass, color: GM.orchHit, style: "boom", modes: ["minor", "harmonic"], feel: "mid", center: 62 },
+  doctrine: { lead: GM.trumpet, second: GM.horn, bass: GM.tuba, color: GM.bells, style: "march", modes: ["dorian", "minor"], feel: "mid", center: 64 },
+  terminus: { lead: GM.organ, second: GM.choirPad, bass: GM.contrabass, color: GM.bells, style: "swell", modes: ["minor", "phrygian"], feel: "slow", center: 62 },
   tavern: { lead: GM.fiddle, second: GM.nylon, bass: GM.acBass, color: GM.harp, style: "bounce", modes: ["major", "mixolydian"], feel: "fast", center: 72 },
   edm: { lead: GM.saw, second: GM.warmPad, bass: GM.synthBass2, color: GM.square, style: "synth", modes: ["minor"], feel: "fast", center: 67 },
   lofi: { lead: GM.vibes, second: GM.ep1, bass: GM.fingerBass, color: GM.cleanGuitar, style: "chime", modes: ["major", "dorian"], feel: "slow", center: 69 },
@@ -1691,7 +1706,72 @@ const INTRO_CARDS = [
       tonic: "E", mode: "major", bpm: 112, prog: ["I", ["V", "I"]],
       melody: [[7, 0.5], [8, 0.5], [11, 1.5], [9, 0.5], [8, 0.5], [7, 0.5], [10, 0.5], [9, 0.5], [8, 1], [7, 2]],
     },
-  },
+  },  // ---- Stinkyscape (R1883000): derived, its families the set's own where its tags name one ----
+  { card: "stinkyscape-004", name: "Olivian Expanse", set: "Stinkyscape", type: "Spell", tags: [], rarity: "Mythic" },
+  { card: "stinkyscape-004-1", name: "Farewell", set: "Stinkyscape", type: "Spell", tags: ["Terminus",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-004-2", name: "KY's Last Exam", set: "Stinkyscape", type: "Spell", tags: ["Terminus",  "KY",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-004-3", name: "Event Horizon", set: "Stinkyscape", type: "Spell", tags: ["Terminus",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-004-4", name: "Last Word", set: "Stinkyscape", type: "Trap", tags: ["Terminus",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-004-5", name: "1v1 Final Destination", set: "Stinkyscape", type: "Trap", tags: ["Terminus",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-004-6", name: "The Big Crunch", set: "Stinkyscape", type: "Spell", tags: ["Terminus",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-006", name: "Tylannt", set: "Stinkyscape", type: "Unit", tags: ["Acclaimed",  "Human"], rarity: "Mythic" },
+  { card: "stinkyscape-007", name: "The Greatest Heist", set: "Stinkyscape", type: "Field Spell", tags: ["Quest"], rarity: "Legendary" },
+  { card: "stinkyscape-016", name: "Rod of Ages", set: "Stinkyscape", type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic" },
+  { card: "stinkyscape-018", name: "Imitated Instrumentality", set: "Stinkyscape", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-018-1", name: "MELCHIOR", set: "Stinkyscape", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-018-2", name: "BALTHASAR", set: "Stinkyscape", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-018-3", name: "CASPER", set: "Stinkyscape", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-026", name: "ZolarKeth", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Legendary" },
+  { card: "stinkyscape-034", name: "Drone Core VIII", set: "Stinkyscape", type: "Spell", tags: ["Drone Core"], rarity: "Legendary" },
+  { card: "stinkyscape-035", name: "Drone Core IX", set: "Stinkyscape", type: "Spell", tags: ["Drone Core"], rarity: "Legendary" },
+  { card: "stinkyscape-036", name: "Drone Core X", set: "Stinkyscape", type: "Spell", tags: ["Drone Core"], rarity: "Mythic" },
+  { card: "stinkyscape-037", name: "Kwzka", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Legendary" },
+  { card: "stinkyscape-039", name: "The Narcor Project", set: "Stinkyscape", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-044", name: "Great Replacement Theory", set: "Stinkyscape", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic" },
+  { card: "stinkyscape-058", name: "Beam v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
+  { card: "stinkyscape-059", name: "Repeater v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
+  { card: "stinkyscape-060", name: "Cannon v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
+  { card: "stinkyscape-061", name: "Flak v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
+  { card: "stinkyscape-066", name: "Miner v5", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-070", name: "Z'Zoth", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-071", name: "A'Zoth", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-073", name: "Paragon Mk2", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-074", name: "Paragon-X", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Mythic" },
+  { card: "stinkyscape-080", name: "Galaxy", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-085", name: "Prototype-X1", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-086", name: "Prototype-X2", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Mythic" },
+  { card: "stinkyscape-087", name: "Siva 1", set: "Stinkyscape", type: "Unit", tags: ["Felinor",  "Acclaimed"], rarity: "Legendary" },
+  { card: "stinkyscape-088", name: "Siva 2", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Legendary" },
+  { card: "stinkyscape-109", name: "xxFreshJack", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Mythic" },
+  { card: "stinkyscape-110", name: "iKwzki", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Mythic" },
+  { card: "stinkyscape-111", name: "Shockwave447", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Mythic" },
+  { card: "stinkyscape-112", name: "Job Application", set: "Stinkyscape", type: "Field Spell", tags: ["Quest"], rarity: "Legendary" },
+  { card: "stinkyscape-112-1", name: "Paycheck", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-115", name: "Scornboi", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Legendary" },
+  { card: "stinkyscape-116", name: "Megabase", set: "Stinkyscape", type: "Field Spell", tags: ["Quickdraw"], rarity: "Legendary" },
+  { card: "stinkyscape-137-1", name: "Land Doctrine", set: "Stinkyscape", type: "Spell", tags: ["War Doctrine",  "Token"], rarity: "Legendary" },
+  { card: "stinkyscape-137-2", name: "Sea Doctrine", set: "Stinkyscape", type: "Spell", tags: ["War Doctrine",  "Token"], rarity: "Legendary" },
+  { card: "stinkyscape-137-3", name: "Air Doctrine", set: "Stinkyscape", type: "Spell", tags: ["War Doctrine",  "Token"], rarity: "Legendary" },
+  { card: "stinkyscape-137-4", name: "Space Doctrine", set: "Stinkyscape", type: "Spell", tags: ["War Doctrine",  "Token"], rarity: "Legendary" },
+  { card: "stinkyscape-147", name: "IN33DH3", set: "Stinkyscape", type: "Unit", tags: ["Catalyst",  "Human"], rarity: "Legendary" },
+  { card: "stinkyscape-147-1", name: "IN33DH3 Prime", set: "Stinkyscape", type: "Unit", tags: ["Prime",  "Human",  "Token"], rarity: "Legendary" },
+  { card: "stinkyscape-147-2", name: "Wardrum Blob", set: "Stinkyscape", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-148", name: "Alteran Reach", set: "Stinkyscape", type: "Field Spell", tags: ["Wincon",  "Quickdraw"], rarity: "Mythic" },
+  { card: "stinkyscape-148-1", name: "Edge of the Universe", set: "Stinkyscape", type: "Spell", tags: ["Wincon",  "Token"], rarity: "Mythic" },
+  { card: "stinkyscape-149", name: "Wildar", set: "Stinkyscape", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-150", name: "Call to Chaos (Stinky Edition)", set: "Stinkyscape", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary" },
+  { card: "stinkyscape-150-1", name: "Stinkyscape Golem", set: "Stinkyscape", type: "Unit", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-151", name: "Call to Chaos (Scape Edition)", set: "Stinkyscape", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary" },
+  { card: "stinkyscape-152", name: "Sanctum", set: "Stinkyscape", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-153", name: "Stimmycheck", set: "Stinkyscape", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-154", name: "Dice of Doom", set: "Stinkyscape", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic" },
+  { card: "stinkyscape-t-dormant-starship", name: "Dormant Starship", set: "Stinkyscape", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "stinkyscape-t-shield-layer", name: "Drone Battleship (Shield Layer)", set: "Stinkyscape", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "stinkyscape-t-propagation-layer", name: "Drone Battleship (Propagation Layer)", set: "Stinkyscape", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "stinkyscape-t-meltdown-layer", name: "Drone Battleship (Meltdown Layer)", set: "Stinkyscape", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "stinkyscape-t-narcor", name: "Narcor", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "stinkyscape-t-red-narcor", name: "Red Narcor", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Mythic" },
+  { card: "stinkyscape-t-anomaly-found", name: "Anomaly Found!", set: "Stinkyscape", type: "Spell", tags: ["Token"], rarity: "Mythic" },
 ];
 
 /* ------------------------------------------------------------------------------------------- *

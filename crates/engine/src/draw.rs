@@ -118,6 +118,7 @@ pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToH
         player: instance.owner,
         instance_id: instance.id.clone(),
         def_id: instance.def_id.clone(),
+        creator: None,
     });
     // R151: it has arrived somewhere it can be looked at, so a start-of-game clause runs now.
     run_arrival_hooks(sink, instance);
@@ -258,6 +259,7 @@ fn into_library(
         instance_id: instance.id.clone(),
         def_id: instance.def_id.clone(),
         position,
+        creator: None,
     });
     // R151: R43 names a library as well as a hand, so a card shuffled back rolls the same way.
     run_arrival_hooks(sink, instance);

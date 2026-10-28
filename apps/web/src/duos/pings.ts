@@ -5,6 +5,7 @@
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import { LANES } from "../game/contract.ts";
 import { PING_KINDS, type PingKind, type PingTarget } from "../net/duos.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** The glyph a ping wears on the wheel and on its marker. */
 export const PING_GLYPH: Readonly<Record<PingKind, string>> = {
@@ -25,10 +26,6 @@ export const PING_LABEL: Readonly<Record<PingKind, string>> = {
 };
 
 const SEATS: readonly string[] = ["a1", "a2", "b1", "b2"];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isWholeIn(value: unknown, below: number): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < below;

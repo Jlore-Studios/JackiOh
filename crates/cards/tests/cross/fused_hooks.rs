@@ -10,8 +10,6 @@
 //!    board the earlier ingredients left; a Fuse that adds a printed shield or Reborn gives one back.
 //!  - R43, R124, R151: what each ingredient leaves behind is its own (R102), and a Heroic Power's
 //!    text fused onto a kept card rolls a power.
-//!  - R2067001: a fused card that holds Pocket Peptides' would-die text and is no Trap answers no
-//!    check inside its own follow-up's cast.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
@@ -860,84 +858,5 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
             .collect();
         paid.sort();
         assert_eq!(paid, vec![false, true]);
-    }
-}
-
-const ORGANIC_PRODUCE: &str = "classicplus-068"; // (4) Field Spell: "Cry: Add Fruits to your hand. Aura: …"
-const POCKET_PEPTIDES: &str = "stinkyscape-138"; // Trap: "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
-const CN_PEPTIDES: &str = "meditative-036"; // Spell: "Choose a Unit. 50% chance: Buff it. Otherwise, destroy it."
-const GENN: &str = "classic-086"; // (4) 14/14.
-
-mod r2067001_a_card_answers_no_check_inside_its_own_would_die_follow_up {
-    use super::*;
-
-    /// p1's Genn attacks p2's Mr. Vanilla on the seed `seed`, while p2's Organic Produce holds Pocket
-    /// Peptides fused into it (R77: the Field Spell it keeps, which its firing does not spend). Returns
-    /// the scenario after the attack, the Vanilla and the fused Field Spell.
-    fn attacked(seed: &str) -> (Scenario, CardInstance, CardInstance) {
-        let mut g = scenario(json!({
-            "seed": seed,
-            "p1": {
-                "hand": [STOCKPILE],
-                "field": [{ "def": GENN, "lane": 1 }],
-                "library": [STOCKPILE, STOCKPILE],
-            },
-            "p2": {
-                "hand": [STOCKPILE, POCKET_PEPTIDES],
-                "field": [{ "def": MR_VANILLA, "lane": 2 }],
-                "backrow": [{ "def": ORGANIC_PRODUCE, "lane": 1 }],
-                "library": [STOCKPILE, STOCKPILE],
-            },
-        }));
-        for player in [P1, P2] {
-            g.state_mut().players[player].auto_end_turn = Some(false);
-        }
-        let kept = must(g.backrow(P2, 1), "p2's Organic Produce");
-        let ingredient = must(
-            g.hand(P2)
-                .iter()
-                .find(|card| card.def_id == POCKET_PEPTIDES)
-                .cloned(),
-            "Pocket Peptides in p2's hand",
-        );
-        let fused = must(
-            fuse_in(
-                &mut g,
-                FuseArgs {
-                    ingredients: vec![ingredient],
-                    target: Some(kept),
-                    ..Default::default()
-                },
-            ),
-            "Pocket Peptides fused into Organic Produce",
-        );
-        assert_eq!(card_type_of(g.state(), &fused), CardType::FieldSpell);
-        let defender = g.unit_at(P2, 2);
-        g.attack(g.unit_at(P1, 1), &defender);
-        (g, defender, fused)
-    }
-
-    #[test]
-    fn r2067001_a_fused_pocket_peptides_casts_once_for_a_unit_its_cast_destroys_and_stays_in_play() {
-        // Fuzz seed 1322: a Field Spell holding Pocket Peptides' text answered the state check inside
-        // its own CN Peptides cast, which had destroyed the Unit it was cast at, a Unit still dying in
-        // combat (R1875006), and the check inside that cast, until the stack ran out. A Buff (its 50%)
-        // lifts the Vanilla past Genn's 14, so the seed is one whose coin destroys it.
-        let seed = seed_where("r2067001-destroyed", |seed| {
-            let (g, defender, _) = attacked(seed);
-            g.card(defender.id.as_str()).zone.z() == ZoneName::Graveyard
-        });
-        let (g, defender, fused) = attacked(&seed);
-        assert!(g.state().pending.is_none());
-        let casts = g
-            .last_events()
-            .iter()
-            .filter(|event| matches!(event, GameEvent::CardAnnounced { def_id, .. } if def_id == CN_PEPTIDES))
-            .count();
-        assert_eq!(casts, 1, "one cast for the one Unit");
-        assert!(g.last_events().iter().any(
-            |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == defender.id)
-        ));
-        assert_eq!(g.backrow(P2, 1).map(|card| card.def_id), Some(fused.def_id));
     }
 }

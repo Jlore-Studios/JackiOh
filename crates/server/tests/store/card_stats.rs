@@ -399,6 +399,73 @@ mod stats_cards_report {
             serde_json::to_value(&report).expect("a report serialises")
         );
     }
+
+    /// R2089000: `stats-cards` prints the Created cards' table after the deck's and `--card` filters
+    /// both alike.
+    #[tokio::test]
+    async fn r2089000_stats_cards_prints_and_filters_the_created_table() {
+        let db = Db::fake();
+        // p1 wins the first game having used a Rush Token, and loses the second having made one it
+        // never used.
+        let mut lost = game_record_json("x", json!({}))["game"].clone();
+        lost["winner"] = json!("p2");
+        lost["seats"]["p1"]["createdUnused"] = json!(["core-t-rush"]);
+        let mut won = game_record_json("x", json!({}))["game"].clone();
+        won["seats"]["p1"]["createdUsed"] = json!([{ "card": "core-t-rush", "turn": 2, "radiant": false }]);
+        let records = [
+            game_record("live-made-1", json!({ "game": won })),
+            game_record("live-made-2", json!({ "game": lost })),
+        ];
+        let mut tx = db.begin(None).await.expect("a transaction");
+        for record in &records {
+            tx.game_records_insert(record)
+                .await
+                .expect("the record is written");
+        }
+        tx.commit().await.expect("the records commit");
+
+        let every = options(&[]);
+        let report = card_stats_report(&db, &every).await.expect("a report");
+        assert_eq!(cards_of(&report), ["core-001", "core-002"]);
+        let created: Vec<&str> = report.created.iter().map(|stats| stats.card.as_str()).collect();
+        assert_eq!(created, ["core-t-rush"]);
+        let names = |card: &str| (card == "core-t-rush").then(|| "Rush Token".to_owned());
+        let text = render_card_stats(&report, &every, &names);
+        let row = text
+            .split('\n')
+            .find(|line| line.starts_with("core-t-rush Rush Token"))
+            .expect("the Rush Token's row");
+        // Used, not used, used Radiant, used normal, and the Created delta.
+        assert_eq!(
+            split_wide(row)[1..].to_vec(),
+            vec!["100.0% (1)", "0.0% (1)", "— (0)", "100.0% (1)", "+100.0"]
+        );
+
+        let one = options(&["--card=core-t-rush"]);
+        let only = card_stats_report(&db, &one).await.expect("a report");
+        assert!(only.cards.is_empty());
+        assert_eq!(only.created.len(), 1);
+        let text = render_card_stats(&only, &one, &names);
+        assert!(text.contains("core-t-rush Rush Token"));
+        assert!(!text.contains("No deck the filter counts held"));
+        let deck_only = options(&["--card=core-001"]);
+        assert!(
+            card_stats_report(&db, &deck_only)
+                .await
+                .expect("a report")
+                .created
+                .is_empty()
+        );
+
+        let as_json = options(&["--json"]);
+        let parsed: Value =
+            serde_json::from_str(&render_card_stats(&report, &as_json, &names)).expect("--json prints JSON");
+        assert_eq!(parsed["created"][0]["card"], json!("core-t-rush"));
+        assert_eq!(
+            parsed["created"][0]["createdNotPlayed"],
+            json!({ "games": 1, "wins": 0, "draws": 0 })
+        );
+    }
 }
 
 mod stats_import {

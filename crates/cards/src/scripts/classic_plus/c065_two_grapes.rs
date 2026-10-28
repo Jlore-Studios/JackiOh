@@ -86,6 +86,7 @@ mod tests {
                     player: PlayerId::P1,
                     instance_id,
                     def_id,
+                    ..
                 } => Some(Added {
                     instance_id: instance_id.clone(),
                     def_id: def_id.clone(),
