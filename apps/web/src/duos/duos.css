@@ -521,6 +521,15 @@
   color: var(--text-dim);
 }
 
+/* R2122000 on a phone or under a finger: a select or a field draws no ::before, so the co-op
+   panel's own are --hit-min tall themselves. */
+@media (pointer: coarse), (max-width: 600px) {
+  .coop-panel__row select,
+  .coop-panel__row input {
+    min-height: var(--hit-min);
+  }
+}
+
 @media (width <= 560px) {
   .duos-life__bar {
     width: 40px;
