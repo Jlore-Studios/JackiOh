@@ -76,7 +76,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the Almanac with the Meditative set previewed", () => {
+/**
+ * The grid renders every shipped card and token, 710 since the Stinkyscape release (#1884), past
+ * vitest's 5 s default under a loaded jsdom run, as almanac.test.tsx's grid tests are.
+ */
+const SLOW_GRID = { timeout: 30_000 } as const;
+
+describe("the Almanac with the Meditative set previewed", SLOW_GRID, () => {
   it("R1380 with the set shipped the almanac shows its cards and its chip keeps exactly them", () => {
     expect(MEDITATIVE.length).toBeGreaterThan(0);
     render(<AlmanacRoute />);

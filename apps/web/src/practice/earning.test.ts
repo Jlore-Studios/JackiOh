@@ -66,7 +66,7 @@ describe("what the result dialog says of a claim", () => {
     expect(earningText({ kind: "pending" })).toBe("Checking this game on the server…");
     expect(earningText({ kind: "paid", jlore: 10, xp: 42, jloreCapped: false })).toBe("+10 Jlore, +42 XP");
     expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe(
-      "This game earned nothing (the AI chose another move on the server).",
+      "This game earned nothing (the AI's moves didn't check out).",
     );
     expect(earningText({ kind: "refused", reason: "a_reason_from_a_newer_server" })).toBe(
       "This game earned nothing (a_reason_from_a_newer_server).",

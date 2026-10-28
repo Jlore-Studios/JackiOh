@@ -6,6 +6,7 @@
 import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import type { Session } from "../net/session.ts";
+import { tokenClaim } from "./claims.ts";
 
 export type SessionLinkType = "signup" | "invite" | "magiclink" | "email_change";
 
@@ -57,24 +58,6 @@ function positiveNumber(raw: string | null): number | null {
   if (raw === null || raw.trim().length === 0) return null;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function tokenClaim(token: string, name: "email" | "sub" | "session_id"): string | null {
-  const parts = token.split(".");
-  const payload = parts[1];
-  if (payload === undefined || payload.length === 0) return null;
-  try {
-    const base64 = payload.replace(/-/gu, "+").replace(/_/gu, "/");
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    if (typeof claims !== "object" || claims === null) return null;
-    const value = (claims as Record<string, unknown>)[name];
-    return typeof value === "string" && value.length > 0 ? value : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Decodes an unverified email claim; `/login` acts only after server acceptance. */

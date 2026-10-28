@@ -182,10 +182,24 @@ export type GameProps = {
    */
   lesson?: boolean;
   /**
+   * R2102000: the human has a sure win this turn by what they can see, the Easy practice tier's
+   * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
+   * Only the practice route sets it, and the board shows it once it shows the newest view, never on
+   * a replay or once the game is over. Absent, off.
+   */
+  lethalHint?: boolean;
+  /**
    * R1838000: the board's own Trade bar over a Tradable hand card. The Duos board turns it off and
    * puts the Trade button in its card bar beside the pass control instead. Absent, on.
    */
   tradeBar?: boolean;
+  /**
+   * R2095000: the board feeds no audio and draws no effects layer or showcase. The Duos both-boards
+   * view sets it on the teammate's read-only board: the audio hook and the effects find their anchors
+   * on the whole page (the first `[data-testid="board"]`, the first hand), so a second board would
+   * play the other duel's cues and shake, spark and mark the own board. Absent, off.
+   */
+  silent?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -230,7 +244,9 @@ export default function Game({
   aim,
   replay = false,
   lesson = false,
+  lethalHint = false,
   tradeBar = true,
+  silent = false,
 }: GameProps): ReactElement {
   useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -396,7 +412,7 @@ export default function Game({
   }
   const runner = queue.current;
   useGameStats(view, trackStats);
-  useGameAudio(runner, view); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
+  useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9); hotseat and online play simply carry it.
   const speaking = useVoiceSpeaking();
@@ -491,6 +507,8 @@ export default function Game({
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
+  // R2102000: and so does the lethal hint, which is the newest view's too.
+  const lethalShown = lethalHint && !replay && shown === view && shown.result === null;
 
   const dispatch = useCallback(
     (body: ActionBody) => {
@@ -647,6 +665,7 @@ export default function Game({
       ref={attach}
       data-testid="game"
       data-replay={replay ? "true" : undefined}
+      data-lethal-hint={lethalShown ? "true" : undefined}
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
       data-impact-tier={impactTier}
@@ -703,6 +722,11 @@ export default function Game({
               </p>
             ) : null}
             {boardNotice}
+            {lethalShown ? (
+              <p className="lethal-hint" data-testid={testid.lethalHint} role="status">
+                {t("You have lethal")}
+              </p>
+            ) : null}
             {/* R915004: a custom card's script that failed, from the newest view; a replay's log says it. */}
             {replay ? null : <ScriptFailedNotice view={view} />}
             {/* `view` is newest for this notice: it changes no board position, and its actions use
@@ -722,10 +746,10 @@ export default function Game({
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
-      <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
+      {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
-      <CardShowcase view={view} queue={runner} />
+      {silent ? null : <CardShowcase view={view} queue={runner} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {replay || promptOver(shown, burst, inFlight) ? null : (

@@ -29,6 +29,7 @@ import { scaleForSpeed } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import { ReplayToolbar, isTyping, replayTestid } from "./ReplayToolbar.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "./source.ts";
@@ -269,9 +270,7 @@ export default function ReplayPlayer({
     return (
       <div className="app-shell">
         {back}
-        <p className="notice" role="status" data-testid={replayTestid.loading}>
-          {t("Loading the replay…")}
-        </p>
+        <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
       </div>
     );
   }

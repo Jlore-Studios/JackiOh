@@ -6,7 +6,7 @@ use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, act_result, events_json, matches_object, put, slot};
+use crate::rules::fixtures::harness::{Bench, act, act_result, events_json, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
     only, pb_playing, plantation, plays_of, quest_card, round_trip, second_wind, three_spell, titan,
@@ -50,25 +50,6 @@ fn no_card_in_hand(text: &str, player: &str) -> bool {
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
-}
-
-/// A sink lent with the state to one engine call.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 fn add_modifier_to(state: &mut GameState, player: PlayerId, expiry: ModifierExpiry, kind: ModifierKind) {

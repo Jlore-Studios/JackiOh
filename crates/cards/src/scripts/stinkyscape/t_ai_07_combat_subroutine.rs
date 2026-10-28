@@ -1,8 +1,8 @@
 //! S T-AI-7 Combat Subroutine (SPEC §7, §8.10 row T-AI-7; R1, R21, R78, R347, R482, R1839000, R1881004):
 //! (2) Unit, AI, Token (no printed rarity), 2/2 → 4/4, an AI generated token of the held Stinkyscape set
 //! (R1420), built by S21.
-//!   Base:    "Cry: Give each of your other Units a random Combat Keyword."
-//!   Radiant: "Cry: Give each of your other Units 2 random Combat Keywords."
+//!   Base:    "Cry: Give each of your other Units a random combat keyword."
+//!   Radiant: "Cry: Give each of your other Units 2 random combat keywords."
 //! Engine: Cry (R1): for each other Unit acting for its controller (`active_units_of`, so a Dormant card is
 //!   passed by, R1839000), in their order, a `grant_random_keywords` of its own (R1881004): R21's draws from
 //!   the combat keyword pool, never one it has, no Taunt beside Indestructible (R347), granted, so gone with
@@ -12,7 +12,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-t-ai-07";
 
-/// "a random Combat Keyword", "2 random Combat Keywords".
+/// "a random combat keyword", "2 random combat keywords".
 const KEYWORDS: i32 = 1;
 const RADIANT_KEYWORDS: i32 = 2;
 
@@ -104,5 +104,24 @@ mod tests {
             assert_eq!(keywords.len(), 2, "{keywords:?}");
             assert_ne!(keywords[0].kind(), keywords[1].kind());
         }
+    }
+
+    #[test]
+    fn r1881004_a_dormant_card_is_passed_by() {
+        const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+        let (mut s, ship) = crate::built_starship(
+            "subroutine-dormant",
+            json!([{ "def": STARTOS, "lane": 2 }]),
+            json!({ "hand": [SUBROUTINE, FILLER], "field": [{ "def": VANILLA, "lane": 1 }] }),
+            json!({}),
+        );
+        let ship_keywords = keywords_of(s.state(), s.card(ship.as_str()));
+        s.play(SUBROUTINE, json!({ "zone": 3 }));
+        assert_eq!(keywords_at(&s, P1, 1).len(), 1, "the Vanilla gains one");
+        assert!(
+            s.card(ship.as_str()).granted_keywords.is_empty(),
+            "the Dormant Starship none"
+        );
+        assert_eq!(keywords_of(s.state(), s.card(ship.as_str())), ship_keywords);
     }
 }

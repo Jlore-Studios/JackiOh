@@ -666,7 +666,7 @@ face doubling a number or adding a rider ([[R275]]).
 | T-AI-4 | Predictive Shield | Trap (1) | Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker. | Also when it attacks you | It saw the attack coming, and the next one |
 | T-AI-5 | Launch Sequencer | Spell (1) | Your Starship launch costs (1). Draw 1. | (0); draw 2 | A cantrip that makes the launch cheap |
 | T-AI-6 | Probe Relay | Spell (1) | Add 2 Scanning Probe Mk1s to your hand. They cost (0). | 2 Scanning Probe Mk2s | Two free scans toward an Anomaly |
-| T-AI-7 | Combat Subroutine | Unit (2), 2/2 | Cry: Give each of your other Units a random Combat Keyword. | 4/4; 2 each | A team upgrade from the combat keyword pool |
+| T-AI-7 | Combat Subroutine | Unit (2), 2/2 | Cry: Give each of your other Units a random combat keyword. | 4/4; 2 each | A team upgrade from the combat keyword pool |
 | T-AI-8 | Drone Uplink | Field Spell (2) | End of turn: Summon a Drone Interceptor. It gains Starship Piece. | A Radiant one | Drones that build the ship as they die |
 | T-AI-9 | Honeypot | Trap (1) | Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt. | 2 of them | A decoy that draws the attack |
 | T-AI-10 | Salvage Protocol | Unit (1), 1/2 Starship Piece | Death: Add a random Starship Piece to your hand. | 2/4; a Radiant one | A piece that salvages another as it fuses |
@@ -2758,8 +2758,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (4) Firststrike Capability, Common, Unit, Stinkyscape, #137 · [9/9] / First strike / Cry: If you are building a ship Launch it and activate *{discover}* a War doctrine ~~~ [18/18] / First strike / Cry: If you are building a ship Launch it and activate *{discover}* a Radiant War doctrine
 
-- **Text:** First Strike / Cry: If you are building a ship, launch it, then Discover a War Doctrine and cast it.
-- **Radiant:** First Strike / Cry: If you are building a ship, launch it, then Discover a Radiant War Doctrine and cast it.
+- **Text:** First Strike / Cry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it.
+- **Radiant:** First Strike / Cry: If you have a Dormant Starship, launch it, then Discover a Radiant War Doctrine and cast it.
 - **Engine:** Cry ([[R1]]): if `building_a_ship` ([[R1852005]]), `awaken` its controller's Dormant Starship, which launches it for nothing, its fused Cries and When launched included, spending no launch price ([[R1852003]], [[R1852006]]); then a Discover ([[§6.3]]) of the four War Doctrines, S #137.1 to S #137.4 (by id, or `{ tags: [War Doctrine], withTokens: true }`, the pool [[R1857002]] names), Radiant on the Radiant face, and a `cast` of the pick, free and counted as played ([[R70]]), its Starship line reaching the Starship just launched. With no Dormant Starship, nothing.
 - **Rulings:** ST-S02-6: "activate {discover} a War doctrine" is a Discover of one of the four (three offered) and a cast of it, free; both halves only while you are building a ship, and the launch first, so the Doctrine's Starship line finds the ship. "Launch it" spends no "launch costs (N)" price. These are proposals for the S02 part, which takes R-numbers from its own block.
 - **Numbers:** none (no number is printed).
@@ -3616,8 +3616,8 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (the designer's "Create 10 AI Stinkyscape cards and always offer one of those"; the build designs them, ST9 Q8: defined by this brief, ST15)
 
-- **Text:** Cry: Give each of your other Units a random Combat Keyword.
-- **Radiant:** Cry: Give each of your other Units 2 random Combat Keywords.
+- **Text:** Cry: Give each of your other Units a random combat keyword.
+- **Radiant:** Cry: Give each of your other Units 2 random combat keywords.
 - **Engine:** Cry ([[R1]]): each other Unit its controller has on the field gains one random Combat Keyword (Radiant: two), each drawn on its own from [[R21]]'s pool ([[§6.1]] Combat keyword), never one it has, an Indestructible one never offered Taunt ([[R347]]); granted, so gone with [[R78]]'s reset. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
 - **Rulings:** ST-S21-6: each Unit draws its own keyword; a Dormant card is passed by ([[R1839000]]). Built by S21 (#1881) as [[R1881004]].
 - **Numbers:** none ([[R482]]).

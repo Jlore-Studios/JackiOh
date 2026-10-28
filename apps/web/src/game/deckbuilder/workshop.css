@@ -942,16 +942,42 @@
 @media (max-width: 560px) {
   .workshop .db-header {
     column-gap: 10px;
+    row-gap: 2px;
+  }
+
+  /* #2099: an open deck's Undo, Redo and cosmetics buttons join Back and the gear on the first row,
+     and the title moves down to the save status's row, so the header keeps two rows and the pool's
+     first row stays on the first screen (BUILD M5-T1). Undo and Redo stay 44 px tall and 40 wide. */
+  .workshop .db-header .db-title {
+    order: 1;
+  }
+
+  .workshop .db-header .ws-sync {
+    order: 2;
+  }
+
+  .ws-history {
+    gap: 4px;
+  }
+
+  .deckbuilder.app-shell .ws-history-button,
+  .deckbuilder.app-shell .ws-cosmetics-button {
+    padding-inline: 0;
+  }
+
+  /* Past the touch-sizing block's 44 px width below; 40 still clears axe's 24 px target size. */
+  .deckbuilder.app-shell .db-header .ws-history-button {
+    min-width: 40px;
   }
 
   /* #2096: Practice, Copy code, Duplicate and Delete deck stay on one row in a 390 px phone's
-     sidebar (344 px inside), so the pool's first row stays on the first screen (BUILD M5-T1). */
+     sidebar: 344 px inside, or 329 px when the pool's scrollbar takes its 15 px. */
   .ws-actions {
-    gap: 6px;
+    gap: 4px;
   }
 
   .deckbuilder.app-shell .ws-actions .ws-action {
-    padding-inline: 8px;
+    padding-inline: 5px;
   }
 }
 

@@ -5,21 +5,7 @@ use jackioh_engine::effects::heal::heal;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, plain};
-use crate::rules::fixtures::harness::{events_of_type, live, live_mut, new_game, put, slot};
-
-/// The events and rng of a sink over `state`, the rng starting at the state's cursor as `reduce`
-/// does. The state is lent to it call by call, so a test reads the state between runs.
-struct Sink {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-fn sink_for(state: &GameState) -> Sink {
-    Sink {
-        events: Vec::new(),
-        rng: Rng::new(&state.seed, state.rng_cursor),
-    }
-}
+use crate::rules::fixtures::harness::{Bench, events_of_type, live, live_mut, new_game, put, slot};
 
 /// `self_` is the card under this id as it stands when the run starts; the rest go to
 /// `make_context` as they are.
@@ -30,7 +16,7 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-fn run(sink: &mut Sink, state: &mut GameState, effect: Effect, options: RunOptions) {
+fn run(sink: &mut Bench, state: &mut GameState, effect: Effect, options: RunOptions) {
     let self_: Option<CardInstance> = options.self_.as_ref().map(|id| {
         find_instance(&*state, id)
             .expect("the card is in the state")
@@ -80,11 +66,11 @@ fn health_of(state: &GameState, id: &str) -> i32 {
     unit_view(state, &live(state, id)).health
 }
 
-fn healed(sink: &Sink) -> Value {
+fn healed(sink: &Bench) -> Value {
     serde_json::to_value(events_of_type(&sink.events, GameEventType::Healed)).expect("events serialise")
 }
 
-fn healed_count(sink: &Sink) -> usize {
+fn healed_count(sink: &Bench) -> usize {
     events_of_type(&sink.events, GameEventType::Healed).len()
 }
 
@@ -105,7 +91,7 @@ mod heal_x_r19_m3_t1 {
             json!({}),
         ); // 5/10
         live_mut(&mut state, &unit.id).damage = 6;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -155,7 +141,7 @@ mod heal_x_r19_m3_t1 {
         ); // 5/10
         live_mut(&mut state, &unit.id).buffs = AttackHealth { attack: 0, health: 5 }; // layer 4: max health 15
         live_mut(&mut state, &unit.id).damage = 12;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -175,7 +161,7 @@ mod heal_x_r19_m3_t1 {
     #[test]
     fn r19_heal_x_gives_a_hero_health_with_no_cap_on_either_side_5_47() {
         let mut state = new_game("heal-hero", None);
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -228,7 +214,7 @@ mod heal_x_r19_m3_t1 {
             json!({}),
         );
         live_mut(&mut state, &unit.id).damage = 3;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -274,7 +260,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
             json!({}),
         ); // 5/10
         live_mut(&mut state, &unit.id).damage = 9;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -304,7 +290,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
     fn a_hero_has_no_maximum_health_so_heal_to_full_leaves_it_alone() {
         let mut state = new_game("heal-full-hero", None);
         state.players[PlayerId::P1].hero.health = 4;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -321,7 +307,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
     fn heal_up_to_n_raises_a_hero_to_n_and_never_lowers_one_already_above_it() {
         let mut state = new_game("heal-upto-hero", None);
         state.players[PlayerId::P1].hero.health = 12;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,
@@ -371,7 +357,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
             json!({}),
         ); // 3/3
         live_mut(&mut state, &other.id).damage = 2;
-        let mut sink = sink_for(&state);
+        let mut sink = Bench::new(&state);
 
         run(
             &mut sink,

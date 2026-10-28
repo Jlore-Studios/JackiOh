@@ -5,7 +5,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot, spread};
+use crate::rules::fixtures::harness::{act_result, both, hand_ids, in_hand, new_game, put, slot, spread};
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let mut card = json!({
@@ -294,14 +294,6 @@ fn defs() -> Vec<CardDef> {
         trap_card(),
         field_spell_card(),
     ]
-}
-
-fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    state.players[player]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the fixtures registered and 4 mana.

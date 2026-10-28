@@ -104,18 +104,22 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1867007_adds_an_other_origins_token_each_of_c_32_1_to_32_3_seen_over_the_seeds() {
+        fn r1867007_adds_an_other_origins_token_each_of_c_32_1_to_32_3_and_the_sets_nine_seen_over_the_seeds() {
+            // Since the release (#1884) the set's own nine join C+ #32.1 to #32.3.
             let mut seen: IndexSet<String> = IndexSet::new();
-            for seed in 0..40 {
+            for seed in 0..200 {
                 let def = added_def(&format!("moonberry-{seed}"), false);
                 assert!(
-                    SHIPPED_TOKENS.contains(&def.as_str()),
-                    "only a shipped Other-Origins token: {def}"
+                    SHIPPED_TOKENS.contains(&def.as_str()) || STINKYSCAPE_TOKENS.contains(&def.as_str()),
+                    "only an Other-Origins token of a set that ships: {def}"
                 );
                 seen.insert(def);
             }
-            let expected: IndexSet<String> =
-                SHIPPED_TOKENS.into_iter().map(str::to_string).collect();
+            let expected: IndexSet<String> = SHIPPED_TOKENS
+                .into_iter()
+                .chain(STINKYSCAPE_TOKENS)
+                .map(str::to_string)
+                .collect();
             assert_eq!(seen, expected);
         }
 
@@ -227,6 +231,24 @@ mod tests {
             }
             // A (0) card stays (0): the pool's zeroes came up and priced at 0.
             assert!(zeros > 0, "a (0) card stays (0)");
+        }
+
+        #[test]
+        fn discount_reads_through_param() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "moonberry-param",
+                "p1": { "hand": [{ "def": MOONBERRY, "radiant": true }, FILLER] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let discount = crate::upgrade_number(&mut s, MOONBERRY, "discount");
+            s.play(MOONBERRY, json!({}));
+            let added = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id != FILLER)
+                .expect("a card added");
+            assert_eq!(added.cost_mod, -discount);
         }
     }
 }

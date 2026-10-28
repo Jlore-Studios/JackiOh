@@ -17,6 +17,8 @@ import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { ODDS_RARITIES, PITY_RARITIES, percent, tierPercents } from "../packs/packs.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
+import type { SkeletonVariant } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -87,20 +89,18 @@ function Answered<T>({
   read,
   place,
   loading,
+  skeleton,
   children,
 }: {
   read: Read<T>;
   place: PurchasesPlace;
   loading: string;
+  skeleton: SkeletonVariant;
   children: (value: T) => ReactElement;
 }): ReactElement {
   switch (read.kind) {
     case "loading":
-      return (
-        <p className="notice" role="status" data-testid={purchasesTestid.loading(place)}>
-          {loading}
-        </p>
-      );
+      return <Skeleton variant={skeleton} label={loading} testId={purchasesTestid.loading(place)} />;
     case "failed":
       return (
         <AccountError
@@ -216,7 +216,7 @@ function Published({ token }: { token: string }): ReactElement {
     <>
       <section aria-labelledby="purchases-card-packs-title" data-testid={purchasesTestid.cardPacks}>
         <h3 id="purchases-card-packs-title">{t("Card packs")}</h3>
-        <Answered read={packs} place="card-packs" loading={t("Loading your packs…")}>
+        <Answered read={packs} place="card-packs" loading={t("Loading your packs…")} skeleton="table">
           {({ odds }) => (
             <>
               <SlotOdds odds={odds} />
@@ -227,13 +227,13 @@ function Published({ token }: { token: string }): ReactElement {
       </section>
       <section aria-labelledby="purchases-cosmetic-packs-title" data-testid={purchasesTestid.cosmeticPacks}>
         <h3 id="purchases-cosmetic-packs-title">{t("Cosmetic packs")}</h3>
-        <Answered read={cosmetic} place="cosmetic-packs" loading={t("Loading your cosmetic packs…")}>
+        <Answered read={cosmetic} place="cosmetic-packs" loading={t("Loading your cosmetic packs…")} skeleton="panel">
           {({ odds }) => <CosmeticOdds odds={odds} />}
         </Answered>
       </section>
       <section aria-labelledby="purchases-pity-title">
         <h3 id="purchases-pity-title">{t("Pity")}</h3>
-        <Answered read={packs} place="pity" loading={t("Loading your packs…")}>
+        <Answered read={packs} place="pity" loading={t("Loading your packs…")} skeleton="rows">
           {(info) => <Pity info={info} />}
         </Answered>
       </section>
@@ -257,7 +257,7 @@ export default function PurchasesRoute(): ReactElement {
         <h2>{t("Purchases")}</h2>
         <p data-testid={purchasesTestid.disclaimer}>
           {t(
-            "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server\u2019s seeded, logged roll, and every figure on this page is the server\u2019s.",
+            "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server's seeded, logged roll, and every figure on this page is the server's.",
           )}
         </p>
         {token === null ? (
