@@ -70,9 +70,8 @@ mod tests {
     const FILLER: &str = "core-005";
 
     /// p1's launched Starship holding a Startos, a Radiant After Burner and an Ultralight Chassis, in
-    /// that order; p1's hand the Doctrine (Radiant if `radiant`) and `fillers` fillers. The hand after
-    /// the Doctrine.
-    fn cast(seed: &str, radiant: bool, fillers: usize, launch: bool) -> (Scenario, Vec<CardInstance>) {
+    /// that order; p1's hand the Doctrine (Radiant if `radiant`) and `fillers` fillers, not yet cast.
+    fn board(seed: &str, radiant: bool, fillers: usize, launch: bool) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend(vec![json!(FILLER); fillers]);
         let (mut s, ship) = built_starship(
@@ -89,6 +88,12 @@ mod tests {
             launch_starship(&mut s, &ship);
         }
         s.state_mut().players.p1.mana.current = 10;
+        s
+    }
+
+    /// `board`, then the Doctrine cast; the hand after it.
+    fn cast(seed: &str, radiant: bool, fillers: usize, launch: bool) -> (Scenario, Vec<CardInstance>) {
+        let mut s = board(seed, radiant, fillers, launch);
         s.play(ID, json!({}));
         let hand = s.state().players.p1.hand.clone();
         (s, hand)
@@ -127,6 +132,17 @@ mod tests {
         assert_eq!(def_ids(&hand), vec![STARTOS, BURNER, CHASSIS]);
         assert!(hand.iter().all(|card| play_cost(s.state(), card) == 1));
         assert_eq!(hand[1].cost_override, Some(1), "Burner's (2) set to (1)");
+    }
+
+    #[test]
+    fn set_cost_reads_through_param() {
+        let mut s = board("space-param", true, 0, true);
+        let set_cost = crate::upgrade_number(&mut s, ID, "setCost");
+        s.play(ID, json!({}));
+        let hand = s.state().players.p1.hand.clone();
+        assert_eq!(def_ids(&hand), vec![STARTOS, BURNER, CHASSIS]);
+        assert!(hand.iter().all(|card| card.cost_override == Some(set_cost)));
+        assert!(hand.iter().all(|card| play_cost(s.state(), card) == set_cost));
     }
 
     #[test]

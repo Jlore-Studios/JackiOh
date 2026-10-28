@@ -20,6 +20,8 @@ export type Call = {
   body: unknown;
   /** Lower-cased header names. */
   headers: Record<string, string>;
+  /** R2119000: sent as `fetch`'s `keepalive`, to outlive the page. */
+  keepalive: boolean;
 };
 
 export type Reply = { status: number; body?: unknown };
@@ -84,7 +86,14 @@ export function stubServer(handler: Handler): StubServer {
       const url = urlOf(input);
       const requestMethod = (input as { method?: unknown } | null)?.method;
       const method = (init?.method ?? (typeof requestMethod === "string" ? requestMethod : "GET")).toUpperCase();
-      const call: Call = { method, path: url.pathname, query: url.searchParams, body: bodyOf(init), headers: headersOf(init) };
+      const call: Call = {
+        method,
+        path: url.pathname,
+        query: url.searchParams,
+        body: bodyOf(init),
+        headers: headersOf(init),
+        keepalive: init?.keepalive === true,
+      };
       calls.push(call);
       const reply = handler(call) ?? refusal(404, "not_found", `no stub for ${method} ${url.pathname}`);
       return Promise.resolve(jsonResponse(reply.status, reply.body));

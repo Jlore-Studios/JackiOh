@@ -73,6 +73,11 @@ mod tests {
     const GREASER: &str = "meditative-100"; // (2) Unit 7/7.
     const GENN: &str = "classic-086"; // (4) Unit 14/14.
     const FILLER: &str = "core-005";
+    /// C+ T-AI-2 Scaling Law, a 2/2 unit token with +1/+1 for each AI card its controller has played:
+    /// the play of an AI-tagged No-No Words raises it at §10.5 step 4, before the Spell resolves.
+    const SCALING_LAW: &str = "classicplus-t-ai-02";
+    /// Enough mana for any X a test asks.
+    const MANA: i32 = 10;
 
     /// The X of each play of p1's No-No Words `legalActions` lists, with its picks.
     fn plays(s: &Scenario) -> Vec<(Option<i32>, Vec<Selection>)> {
@@ -138,6 +143,64 @@ mod tests {
 
             s.expect_refused(|s| s.play(NONO, json!({ "x": 0, "targets": pick::instance(&zero) })));
             s.expect_in_zone(&zero, "field");
+        }
+
+        #[test]
+        fn r703_with_no_unit_on_the_field_it_is_no_play() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [NONO, FILLER], "mana": MANA },
+                "p2": { "hand": [FILLER] },
+            }));
+            assert!(plays(&s).is_empty(), "{:?}", plays(&s));
+            s.expect_refused_with(|s| s.play(NONO, json!({ "x": 1 })), "cannot be played without");
+            s.expect_in_zone(NONO, "hand");
+        }
+
+        #[test]
+        fn r703_an_x_no_unit_is_below_is_not_offered_and_is_refused() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [NONO, FILLER], "mana": MANA },
+                "p2": { "hand": [FILLER], "field": [GENN] },
+            }));
+            let genn = s.unit_at(P2, 1);
+            // 14 Attack: below 4 × 4, never below 4 × 3 or less.
+            let offered = plays(&s);
+            assert!(
+                offered.iter().all(|(x, _)| x.is_some_and(|x| x >= 4)),
+                "{offered:?}"
+            );
+            assert!(offered.iter().any(|(x, _)| *x == Some(4)), "{offered:?}");
+            s.expect_refused_with(|s| s.play(NONO, json!({ "x": 3 })), "cannot be played without");
+            s.expect_refused(|s| s.play(NONO, json!({ "x": 3, "targets": pick::instance(&genn) })));
+            s.expect_in_zone(NONO, "hand");
+            s.play(NONO, json!({ "x": 4, "targets": pick::instance(&genn) }));
+            s.expect_in_zone(&genn, "graveyard");
+        }
+
+        #[test]
+        fn r1868000_a_target_raised_past_it_after_the_pick_still_dies() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [NONO, FILLER], "field": [SCALING_LAW], "mana": MANA },
+                "p2": { "hand": [FILLER] },
+            }));
+            let law = s.unit_at(P1, 1);
+            // 3 Attack as it is picked: below 4 × 1.
+            s.card_mut(&law).buffs.attack = 1;
+            s.expect_stats(&law, json!({ "attack": 3 }));
+            s.card_mut(NONO)
+                .granted_tags
+                .get_or_insert_with(Vec::new)
+                .push(Tag::Ai);
+
+            s.play(NONO, json!({ "x": 1, "targets": pick::instance(&law) }));
+
+            // §10.5 step 4 counted the AI card's play, raising the pick to 4 before the Spell resolved.
+            assert_eq!(played_this_game_with_tag(s.state(), P1, Tag::Ai), 1);
+            assert!(s.unit(P1, 1).is_none(), "the raised Unit still died");
+            assert!(s.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Destroyed { instance_id, .. } if *instance_id == law.id
+            )));
         }
 
         #[test]

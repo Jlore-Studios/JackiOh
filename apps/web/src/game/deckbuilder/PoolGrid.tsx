@@ -39,7 +39,7 @@ import { useContext, useMemo, type DragEvent, type ReactElement, type ReactNode 
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardFace, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
+import { CardFace, TermTips, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
 import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
 import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
@@ -222,8 +222,11 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
       >
         {/* `data-skippable` (fit.ts SKIPPABLE_ATTRIBUTE): deckbuilder.css lets the browser skip the
             face's layout off screen, and its text fit waits until it is near (#263). */}
+        {/* R2098000: its terms show their rule on hover and long press; they take no focus inside this button, whose face is aria-hidden. */}
         <span className="db-card-face" aria-hidden="true" data-skippable="">
-          <CardFace face={face} layout="full" lazyArt worn={worn} />
+          <TermTips>
+            <CardFace face={face} layout="full" lazyArt worn={worn} />
+          </TermTips>
         </span>
         {fresh ? (
           <span className="db-new" data-new-set={def.set} aria-hidden="true">

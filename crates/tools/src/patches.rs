@@ -52,8 +52,9 @@
 //!   appends the patch with the fragment's player note, its `tier` and `plays` (the families that
 //!   play differently), dated by the commit that added the fragment, writes `win_rates/<version>.json`,
 //!   the win-rate table the version ships with (`data/win_rates.json` from the fragment that claims
-//!   it on, the patch before it's until then; R1329000), records `{ version, commit, blob,
-//!   winRatesBlob }` in `shipped.json`, deletes the fragment, regenerates the derived files and bumps
+//!   it on, the patch before it's until then; R1329000), writes `card_metrics/<version>.json`, the
+//!   BUSTED and complicated lists the scripts make, for a version that holds a card reading them
+//!   (R2173000), records `{ version, commit, blob, winRatesBlob, cardMetricsBlob }` in `shipped.json`, deletes the fragment, regenerates the derived files and bumps
 //!   `CATALOG_VERSION`. Every snapshot, tier and name is computed before anything is written.
 //!   Running it twice is running it once.
 //!   It needs full history (`fetch-depth: 0`) for the commits' order and dates, and it ships whenever
@@ -85,6 +86,7 @@ use self::patches_io::{
     same_win_rates, snapshot_path, win_rates_path, write_json,
 };
 use self::versions::name_by_tier;
+use crate::card_lists;
 use crate::classify::{self, Tier};
 use jackioh_engine::wire::{SetName, set_ships};
 
@@ -1175,6 +1177,10 @@ pub mod patches_io {
         /// as every one before v0.3.15.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub win_rates_blob: Option<String>,
+        /// R2173000: the git blob of `card_metrics/<version>.json`; none on a patch with no lists
+        /// file, as every one shipped before the first card that reads them.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub card_metrics_blob: Option<String>,
     }
 
     /// R1366000: the longest slug a fragment's file name takes from its title.
@@ -1828,6 +1834,12 @@ pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
         if let Some(shipped) = shipped {
             let (_, table) = read_win_rates(&win_rates_path(version, &paths.dir)?)?;
             problems.extend(carried_table_problem(version, &table, shipped.win_rates()));
+            let lists = card_lists::read_lists(&card_lists::lists_path(version, &paths.dir)?)?;
+            problems.extend(carried_lists_problem(
+                version,
+                lists.as_ref(),
+                shipped.card_lists(),
+            ));
         }
     }
     Ok(problems)
@@ -1843,6 +1855,24 @@ fn carried_table_problem(
     (!same_win_rates(shipped, carried)).then(|| {
         format!(
             "{version}: its win-rate table is carried unlike patches/win_rates/{version}.json (no rows when there is no file) (R1329000)"
+        )
+    })
+}
+
+/// R2173000: how `carried`, the lists a build folds `version`'s games against, are not `shipped`, the
+/// ones its `card_metrics/<version>.json` holds (none with no file, when its folds read the build's).
+fn carried_lists_problem(
+    version: &str,
+    shipped: Option<&card_lists::CardLists>,
+    carried: Option<&jackioh_engine::CardLists>,
+) -> Option<String> {
+    let carried = carried.map(|lists| card_lists::CardLists {
+        busted: lists.busted.iter().map(|id| (*id).to_string()).collect(),
+        complicated: lists.complicated.iter().map(|id| (*id).to_string()).collect(),
+    });
+    (shipped != carried.as_ref()).then(|| {
+        format!(
+            "{version}: its BUSTED and complicated lists are carried unlike patches/card_metrics/{version}.json (none when there is no file): rebuild jackioh (R2173000)"
         )
     })
 }
@@ -1981,6 +2011,8 @@ struct Proved {
     plays: Vec<String>,
     raw: String,
     table: String,
+    /// R2173000: the version's BUSTED and complicated lists, once it holds a card that reads them.
+    lists: Option<String>,
 }
 
 /// R1366000: the sets a snapshot's cards belong to, the sets that ship as of it.
@@ -2003,14 +2035,8 @@ pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
 /// base build by the pull request's `classify` check, so they count as stage 2's. A patch that
 /// changes no card (the win-rate table alone, R1329000) is a micro: every patch bumps the version.
 fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>) {
-    let before = classify::Side {
-        catalog: previous.clone(),
-        sets: sets_of(previous),
-    };
-    let after = classify::Side {
-        catalog: snapshot.clone(),
-        sets: sets_of(snapshot),
-    };
+    let before = classify::Side::of_catalog(previous.clone(), sets_of(previous));
+    let after = classify::Side::of_catalog(snapshot.clone(), sets_of(snapshot));
     let diff = classify::read_diff(&before, &after, &[]);
     let checked = classify::Checked {
         scripts: fragment.plays.iter().map(|id| classify::family(id)).collect(),
@@ -2138,6 +2164,12 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let (working_text, working) = read_win_rates(&paths.win_rates)?;
     let (mut previous_text, mut previous_table) =
         read_win_rates(&win_rates_path(&newest.version, &paths.dir)?)?;
+    // R2173000: a version that holds a card reading the BUSTED or complicated lists ships the lists
+    // the scripts make as they stand, as the build compiles them; one that holds none keeps none.
+    let full: Catalog = serde_json::from_str(&file)
+        .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
+    let scripts = card_lists::working(repo_root, &full)?;
+    let lists_text = format!("{}\n", js::stringify_pretty(&scripts.lists()));
     // Every snapshot, tier and name is computed before anything is written (R1366000): a name comes
     // from the tier, the tier from the snapshot, so an unnameable fragment fails before the first
     // write, never mid-promotion.
@@ -2195,6 +2227,11 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             }
             table_text = working_text.clone();
         }
+        let lists = scripts
+            .readers
+            .iter()
+            .any(|id| snapshot.contains_key(id))
+            .then(|| lists_text.clone());
         let (tier, plays) = tier_of(&previous, &snapshot, &fragment);
         let version = next_ship_name(
             &taken,
@@ -2213,6 +2250,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             plays,
             raw,
             table: table_text,
+            lists,
         });
     }
     let Some(last) = proved.last() else {
@@ -2234,6 +2272,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         plays,
         raw,
         table,
+        lists,
     } in proved
     {
         let path = snapshot_path(&version, &paths.dir)?;
@@ -2263,11 +2302,23 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
         let written_table = fs::read_to_string(&table_path)
             .with_context(|| format!("{} cannot be read", table_path.display()))?;
+        let card_metrics_blob = match lists {
+            Some(lists) => {
+                let lists_path = card_lists::lists_path(&version, &paths.dir)?;
+                fs::create_dir_all(paths.dir.join(card_lists::LISTS_DIR))
+                    .with_context(|| format!("{} cannot be created", lists_path.display()))?;
+                fs::write(&lists_path, &lists)
+                    .with_context(|| format!("{} cannot be written", lists_path.display()))?;
+                Some(git_blob_hash(&lists))
+            }
+            None => None,
+        };
         shipped.push(ShippedEntry {
             version: version.clone(),
             commit,
             blob: git_blob_hash(&written),
             win_rates_blob: Some(git_blob_hash(&written_table)),
+            card_metrics_blob,
         });
         remove_file(&paths.pending_dir.join(&name));
         names.push(version);
@@ -3046,6 +3097,7 @@ mod tests {
                     commit: "0".repeat(40),
                     blob: "0".repeat(40),
                     win_rates_blob: None,
+                    card_metrics_blob: None,
                 }]
             }
 
@@ -3349,6 +3401,7 @@ mod tests {
                             commit: c0,
                             blob: git_blob_hash(&read(&dir.join("v0.1.1.json"))),
                             win_rates_blob: None,
+                            card_metrics_blob: None,
                         }]),
                     )],
                 );
@@ -3468,6 +3521,7 @@ mod tests {
                         commit: c1.clone(),
                         blob: git_blob_hash(&read(&dir.join("v0.1.1b.json"))),
                         win_rates_blob: Some(git_blob_hash(&read(&dir.join("win_rates/v0.1.1b.json")))),
+                        card_metrics_blob: None,
                     }
                 );
                 assert_eq!(shipped[2].commit, c2);
@@ -4191,6 +4245,73 @@ mod tests {
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
+            // R2173000: v0.1.1b changes a card while no card reads the lists, so it keeps no lists file;
+            // v0.1.1c adds `rrr`, whose script reads them, so it ships the lists the working scripts
+            // make, with its blob in shipped.json, and the file reads back as those lists.
+            #[test]
+            fn r2173000_ships_a_versions_lists_once_it_holds_a_card_that_reads_them() {
+                use crate::card_lists::tests::script;
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-ship-lists-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                write_files(
+                    root,
+                    &[
+                        (
+                            "crates/engine/src/config.rs",
+                            "pub const BUSTED_CODE_LINES: usize = 100;\npub const COMPLICATED_CODE_LINES: usize = 60;\n"
+                                .to_string(),
+                        ),
+                        ("crates/cards/src/scripts/core/aaa.rs", script("aaa", 120, false)),
+                        ("crates/cards/src/scripts/core/bbb.rs", script("bbb", 70, false)),
+                        ("crates/cards/src/scripts/core/rrr.rs", script("rrr", 20, true)),
+                        (
+                            "crates/cards/catalog.json",
+                            json(&base_with(&base, vec![card("aaa", 2)])),
+                        ),
+                    ],
+                );
+                write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
+                commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/catalog.json",
+                        json(&base_with(&base, vec![card("aaa", 2), card("rrr", 3)])),
+                    )],
+                );
+                write_fragment(root, &fragment_args("t2", "s", "n", Some(&["rrr"][..]))).unwrap();
+                commit_at(root, "fragment t2", "2026-10-02T12:00:00+00:00");
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+
+                let shipped_names = ship_patches(root).unwrap().shipped;
+                assert_eq!(shipped_names.len(), 2, "{shipped_names:?}");
+                let (first, second) = (&shipped_names[0], &shipped_names[1]);
+                let lists_of = |version: &str| {
+                    crate::card_lists::read_lists(&crate::card_lists::lists_path(version, &dir).unwrap())
+                        .unwrap()
+                };
+                assert_eq!(lists_of(first), None, "no card of {first} reads the lists");
+                let kept = lists_of(second).expect("rrr reads the lists, so its version keeps them");
+                assert_eq!(
+                    kept,
+                    crate::card_lists::CardLists {
+                        busted: strings(&["aaa"]),
+                        complicated: strings(&["aaa", "bbb"]),
+                    }
+                );
+                let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
+                assert_eq!(shipped[1].card_metrics_blob, None);
+                assert_eq!(
+                    shipped[2].card_metrics_blob,
+                    Some(git_blob_hash(&read(
+                        &crate::card_lists::lists_path(second, &dir).unwrap()
+                    )))
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
             // R1329000: a table no fragment claims stops the promotion before anything is written.
             #[test]
             fn r1329000_ships_nothing_while_no_fragment_claims_a_changed_table() {
@@ -4622,6 +4743,17 @@ mod tests {
                             entry.version
                         ),
                         None => assert!(!table.exists(), "win_rates/{}.json", entry.version),
+                    }
+                    // R2173000: and its BUSTED and complicated lists', on a version that kept them.
+                    let lists = crate::card_lists::lists_path(&entry.version, &patches_dir()).unwrap();
+                    match &entry.card_metrics_blob {
+                        Some(blob) => assert_eq!(
+                            *blob,
+                            git_blob_hash(&fs::read_to_string(&lists).unwrap()),
+                            "card_metrics/{}.json",
+                            entry.version
+                        ),
+                        None => assert!(!lists.exists(), "card_metrics/{}.json", entry.version),
                     }
                 }
             }

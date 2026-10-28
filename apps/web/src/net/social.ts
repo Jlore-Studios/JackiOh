@@ -10,7 +10,7 @@
 // token: each reads the tab's session (`net/session.ts`) and renews it once on a 401 (R194,
 // `callWithRenewal`). No session, or a session that has ended, is the 401 a signed-out request gets.
 
-import { apiRequest, type RequestOptions } from "./api.ts";
+import { apiRequest, type RequestOptions, type SendOptions } from "./api.ts";
 import { withSession } from "./gate.ts";
 
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
@@ -81,8 +81,8 @@ export async function cancelFriendRequest(requestId: string): Promise<void> {
   await social<null>(`/api/friends/requests/${part(requestId)}`, { method: "DELETE" });
 }
 
-export async function removeFriend(profileId: string): Promise<void> {
-  await social<null>(`/api/friends/${part(profileId)}`, { method: "DELETE" });
+export async function removeFriend(profileId: string, options: SendOptions = {}): Promise<void> {
+  await social<null>(`/api/friends/${part(profileId)}`, { method: "DELETE", ...options });
 }
 
 // Blocks (B46)

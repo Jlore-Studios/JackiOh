@@ -7,6 +7,11 @@
 // (`checkCustomCard`, loaded the first time the editor asks, R915009), and a script with a problem is
 // not saved, since the server never compiles one (§12.9). A save the server refuses shows its issues
 // or its sentence as it sent them.
+//
+// R2119000: Delete asks nothing. The card leaves the list at once behind "Card deleted · Undo", and
+// its DELETE waits for the undo window (`undo/hold.ts`). Undo puts it back where it was; a DELETE that
+// fails puts it back too and shows why. A new card's first save sends a held DELETE first, so the
+// card it frees a place for is gone before the server counts.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -15,7 +20,7 @@ import type { CardDef, CustomCard, CustomIssue } from "@jackioh/shared";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
-import { ApiRequestError } from "../net/api.ts";
+import { ApiRequestError, type SendOptions } from "../net/api.ts";
 import {
   createCustomCard,
   customIssuesOf,
@@ -27,6 +32,8 @@ import {
   type CustomCardsResponse,
 } from "../net/customCards.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
+import { UndoToast } from "../undo/UndoToast.tsx";
 import { checkCustomCard, type ScriptProblem } from "../wasm/index.ts";
 import { customDef, validateCustomCard } from "../wire/validator.ts";
 import { BuilderView } from "./BuilderView.tsx";
@@ -58,7 +65,8 @@ export type CreatorApi = {
   list: (token: string) => Promise<CustomCardsResponse>;
   create: (token: string, input: CustomCardInput) => Promise<{ card: CustomCard }>;
   update: (token: string, id: string, version: number, input: CustomCardInput) => Promise<{ card: CustomCard }>;
-  remove: (token: string, id: string) => Promise<{ deleted: boolean }>;
+  /** R2119000: `options.keepalive` when the page is going away. */
+  remove: (token: string, id: string, options?: SendOptions) => Promise<{ deleted: boolean }>;
   check: (card: CustomCard) => Promise<{ script: ScriptProblem[] }>;
 };
 
@@ -77,6 +85,8 @@ export type CreatorProps = {
   onTry: (cardId: string) => void;
   /** Told whether the editor holds changes not yet saved, each time that changes; the route asks before leaving with them (R1484000). */
   onUnsaved?: (unsaved: boolean) => void;
+  /** The undo window's timers (R2119000); a test hands a manual one. */
+  undoTimer?: UndoTimer;
 };
 
 type ScriptCheck =
@@ -98,6 +108,19 @@ function inputOf(draft: Draft): CustomCardInput {
 
 function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+/** A new card nobody has touched: nothing a leave would lose. */
+function isUntouchedNew(draft: Draft): boolean {
+  return draft.id === null && JSON.stringify(cardOf(draft)) === JSON.stringify(cardOf(newDraft()));
+}
+
+/** R2119000: `card` back in the list at `at`, its place before it was deleted, unless it is there already. */
+function withCardAt(cards: readonly CustomCard[], card: CustomCard, at: number): CustomCard[] {
+  if (cards.some((held) => held.id === card.id)) return [...cards];
+  const next = [...cards];
+  next.splice(Math.min(at, next.length), 0, card);
+  return next;
 }
 
 /** The script's problems, checked a moment after the last edit; stale answers are dropped. The second value asks again after a check that failed, with no edit. */
@@ -189,7 +212,6 @@ function Editor({
   const issues = save.kind === "refused" && save.issues.length > 0 ? save.issues : frameIssues;
   const refusal = builderRefusal(draft);
   const dirty = isDirty(draft, saved);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const scriptReady = script.kind === "checked" && script.source === draft.source && problems.length === 0;
   const canSave = scriptReady && frameIssues.length === 0 && save.kind !== "saving" && (dirty || saved === null) && !(saved === null && atLimit);
@@ -282,28 +304,8 @@ function Editor({
           <button type="button" className="button-secondary" data-testid={creatorTestid.tryIt} disabled={!(canSave || (saved !== null && !dirty))} onClick={onTry}>
             {t("Try it against the AI")}
           </button>
-          {saved === null ? null : confirmDelete ? (
-            <div className="creator-note">
-              <p>{t("Delete this card? A deck that holds it cannot start a game until the card is replaced.")}</p>
-              <div className="creator-row">
-                <button
-                  type="button"
-                  className="button-secondary"
-                  data-testid={creatorTestid.deleteConfirm}
-                  onClick={() => {
-                    setConfirmDelete(false);
-                    onDelete();
-                  }}
-                >
-                  {t("Delete it")}
-                </button>
-                <button type="button" className="button-secondary" onClick={() => setConfirmDelete(false)}>
-                  {t("Keep it")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" className="button-secondary" data-testid={creatorTestid.delete} onClick={() => setConfirmDelete(true)}>
+          {saved === null ? null : (
+            <button type="button" className="button-secondary" data-testid={creatorTestid.delete} onClick={onDelete}>
               {t("Delete")}
             </button>
           )}
@@ -351,8 +353,9 @@ export function UnsavedNote({ onDiscard, onKeep }: { onDiscard: () => void; onKe
   );
 }
 
-export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: CreatorProps): ReactElement {
+export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved, undoTimer }: CreatorProps): ReactElement {
   const { state, reload, replace } = useCustomCards(token, api.list);
+  const { held, hold, undo, sendNow } = useUndoHold(undoTimer);
   const cards = state.kind === "ready" ? state.cards : [];
   const limit = state.kind === "ready" ? state.limit : 0;
   const [draft, setDraft] = useState<Draft>(newDraft);
@@ -362,8 +365,15 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
   const saved = draft.id === null ? null : (cards.find((card) => card.id === draft.id) ?? null);
   const dirty = isDirty(draft, saved);
   /** Changes a leave would lose: a dirty draft, unless it is a new card nobody has touched. */
-  const unsaved = dirty && !(draft.id === null && JSON.stringify(cardOf(draft)) === JSON.stringify(cardOf(newDraft())));
+  const unsaved = dirty && !isUntouchedNew(draft);
   const reopenAfterReload = useRef<string | null>(null);
+  // R2119000: a held DELETE answers after renders have moved on; it reads the list and token as they are then.
+  const latestCards = useRef(cards);
+  latestCards.current = cards;
+  const latestToken = useRef(token);
+  latestToken.current = token;
+  /** R2119000: the last held DELETE sent, settled either way; a new card's first save waits for it. */
+  const removing = useRef<Promise<void>>(Promise.resolve());
 
   // After "Open the newer save": the list is read again, then that card opened from it.
   useEffect(() => {
@@ -394,12 +404,19 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
 
   const persist = useCallback(async (): Promise<CustomCard | null> => {
     setSave({ kind: "saving" });
+    if (draft.id === null) {
+      // R2119000: a held card still holds its place under the cap until its DELETE has gone.
+      sendNow();
+      await removing.current;
+    }
     try {
       const { card } =
         draft.id === null || draft.version === null
           ? await api.create(token, inputOf(draft))
           : await api.update(token, draft.id, draft.version, inputOf(draft));
-      const next = cards.some((held) => held.id === card.id) ? cards.map((held) => (held.id === card.id ? card : held)) : [...cards, card];
+      // The list as it is now: a held DELETE may have gone, or come back, while this one waited.
+      const listed = latestCards.current;
+      const next = listed.some((held) => held.id === card.id) ? listed.map((held) => (held.id === card.id ? card : held)) : [...listed, card];
       replace(next);
       setDraft((current) => ({ ...current, id: card.id, version: card.version }));
       setSave({ kind: "saved" });
@@ -415,20 +432,40 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
       setSave({ kind: "refused", message, issues });
       return null;
     }
-  }, [api, cards, draft, replace, token]);
+  }, [api, draft, replace, sendNow, token]);
 
-  const onDelete = useCallback(async () => {
+  const onDelete = useCallback(() => {
     if (draft.id === null) return;
     const id = draft.id;
-    try {
-      await api.remove(token, id);
-      replace(cards.filter((card) => card.id !== id));
-      setDraft(newDraft());
-      setSave({ kind: "idle" });
-    } catch (cause) {
-      setSave({ kind: "refused", message: messageOf(cause), issues: [] });
-    }
-  }, [api, cards, draft.id, replace, token]);
+    const at = cards.findIndex((card) => card.id === id);
+    const card = cards[at];
+    if (card === undefined) return;
+    const putBack = (): void => {
+      replace(withCardAt(latestCards.current, card, at));
+    };
+    // `hold` first, since it sends any deletion held before this one.
+    hold({
+      words: () => t("Card deleted"),
+      send: (keepalive) => {
+        const now = latestToken.current;
+        const sent = keepalive ? api.remove(now, id, { keepalive: true }) : api.remove(now, id);
+        removing.current = sent.then(
+          () => undefined,
+          (cause: unknown) => {
+            putBack();
+            setSave({ kind: "refused", message: messageOf(cause), issues: [] });
+          },
+        );
+      },
+      restore: () => {
+        putBack();
+        setDraft((current) => (isUntouchedNew(current) ? draftOf(card) : current));
+      },
+    });
+    replace(cards.filter((held) => held.id !== id));
+    setDraft(newDraft());
+    setSave({ kind: "idle" });
+  }, [api, cards, draft.id, hold, replace]);
 
   const onTryIt = useCallback(async () => {
     const card = dirty || draft.id === null ? await persist() : saved;
@@ -504,11 +541,12 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
             if (save.kind !== "saving") setSave({ kind: "idle" });
           }}
           onSave={() => void persist()}
-          onDelete={() => void onDelete()}
+          onDelete={onDelete}
           onTry={() => void onTryIt()}
           onReloadStale={onReloadStale}
         />
       </div>
+      <UndoToast held={held} onUndo={undo} />
     </div>
   );
 }

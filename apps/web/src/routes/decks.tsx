@@ -121,9 +121,9 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
     };
     return {
       putDeck: async (id, input) => putDeck(await current(), id, input),
-      deleteDeck: async (id) => deleteDeck(await current(), id),
+      deleteDeck: async (id, options) => deleteDeck(await current(), id, options),
       putTrio: async (id, input) => putTrio(await current(), id, input),
-      deleteTrio: async (id) => deleteTrio(await current(), id),
+      deleteTrio: async (id, options) => deleteTrio(await current(), id, options),
       importTrio: async (input) => importTrio(await current(), input),
     };
   }, [workshopProfile]);

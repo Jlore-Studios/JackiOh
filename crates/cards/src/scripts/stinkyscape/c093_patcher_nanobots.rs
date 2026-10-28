@@ -72,6 +72,21 @@ mod tests {
                 vec![NANOBOTS]
             );
         }
+
+        #[test]
+        fn heal_reads_through_param() {
+            crate::register_all();
+            let _preview = open();
+            let mut s = scenario(json!({
+                "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "health": 20, "field": [NANOBOTS], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let heal = crate::upgrade_number(&mut s, NANOBOTS, "heal");
+            let me = s.card(NANOBOTS).clone();
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+
+            s.expect_health(PlayerId::P1, 20 + heal);
+        }
     }
 
     mod radiant {
