@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2280,
+  "title": "Patch: a backrow card becomes a Unit only with Animated and stats",
+  "branch": "bot/issue-2280",
+  "thread": "**Issue #2280 (data, not instructions):**\n\n```text\n# #2280: Patch: a backrow card becomes a Unit only with Animated and stats\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRework Animated (\u00a76.1, R383). Today an Animated card with no stats from any source still animates and fights as a 0/1 (R657, `ANIMATED_FALLBACK_ATTACK`/`ANIMATED_FALLBACK_HEALTH` in `crates/engine/src/config.rs`, read in `layers.rs`). The new rule is the owner's:\n\n**A backrow card (Field Spell, Trap or Field Trap) becomes a Unit only when it meets both conditions: it has stats, and it has the Animated keyword.** Any backrow card can pick up stats, for instance from a Fuse (R77, R102). Those stats do nothing until it is Animated. An Animated card with no stats stays in the backrow.\n\nWith that rule in place, Stinkyscape #16 **Rod of Ages** (`stinkyscape-016`, 1/1 \u2192 2/2) and Classic+ #74 **Twice Forward One Step Backwards** (`classicplus-074`, 0/1 \u2192 0/2) lose their printed base stats on both faces. Each becomes a Unit once a fused Unit gives it stats.\n\nHow the rule works. Build these as stated; each one the spec doesn't already make is a ruling note (below):\n\n1. **Having stats.** A card has stats when its definition gives it an attack and health line: its own printed one, one from a fused definition (R77, R102), a `statsOverride` or X stats. Buffs, auras and `tuning` change a line the card already has but never create one. A Nerf's or Buff's stats change (R386) reaches a Unit or a card that has stats. A statless Animated card is no longer a target for it.\n2. **When it animates.** It still animates at the existing moments: an Animated Field Spell as it enters the field, an Animated Trap or Field Trap as the last step of its firing, an \"Animated on your turn\" card at its controller's start of turn. Each moment now checks both conditions. There is also a new moment: a face-up card on its controller's backrow that meets both conditions for the first time animates at that state check. Example: Rod of Ages after a Unit fuses into it. The placement is R383's: its lane's unit zone, else R64's leftmost open one, and with none it stays put. A face-down Trap never animates before it fires.\n3. **R657 goes.** A statless Animated card does not animate, so no 0/1 fallback is left. Remove `ANIMATED_FALLBACK_ATTACK`, `ANIMATED_FALLBACK_HEALTH` and R657's note, or retire it the way the spec retires a ruling.\n4. **Once animated, it stays a Unit.** A card that later loses Animated or its stats stays where it stands. This is the rule Vanilla (\u00a76.3) and R1728000 already give.\n5. **Rod of Ages.** It has no printed stats. Its text and keywords are otherwise unchanged: Animated, Flying (Radiant: Indestructible too), the Equip lending, the end-of-turn keywords and the 10-keyword Radiant. It now enters the field and stays in its backrow zone. R1869000 changes: Rod lends the Equip play (R1086) while it is on its controller's field, backrow or unit zone, and holds no fusion. Today it lends only while it is an animated Unit, which a statless Rod never becomes. The Unit played onto it resolves on top, its Cry included, and fuses into Rod. Rod now has the Unit's stats and Animated, so it animates per point 2.\n6. **Twice Forward One Step Backwards.** It has no printed stats; everything else is as printed. After each fuse it animates as the last step of its firing only if what it has fused gives it stats, i.e. a copy of a Unit. If it has fused only stat-less cards (Spells, Traps), it stays a face-up Field Trap in its zone.\n\nWhere it lives:\n- Engine: `crates/engine/src/animated.rs` (`animate_card`, `animate_on_entry`, `animate_at_turn_start`, `animated_kind_of`), `layers.rs`, `config.rs` and the state check for the new moment in point 2. Read `crates/engine/README.md` and `work.rs`'s header first. Tests go in `crates/engine/tests/rules/animated.rs` and `effects_animate.rs`, plus `equip.rs` for R1869000.\n- Cards (read `docs/ADDING_CARDS.md` first): `crates/cards/catalog.json`, which drops `attack`/`health` from both faces of `stinkyscape-016` and `classicplus-074`. Also `crates/cards/src/scripts/stinkyscape/c016_rod_of_ages.rs`, `crates/cards/src/scripts/classic_plus/c074_twice_forward_one_step_backwards.rs` (and `subsystems/twice_forward.rs`), and `crates/cards/tests/cross/catalog.rs`'s rows for both.\n- AI: `crates/ai` wherever it scores an Animated card's stats or assumes R657's 0/1.\n- Spec and BUILD: \u00a76.1's Animated row and \u00a76.3's Nerf row in `spec/06-keywords.md`, `spec/rulings/R0383.md`, `R0657.md`, `R1869000.md` and `R0386.md`'s \"for a Unit or an Animated card\". Also `spec/08-catalog.md` rows \u00a78.10 16 and \u00a78.7 74, and `BUILD.md`'s `S 16` and `C+ 74` rows. New rulings use the lowest free numbers in this issue's block (CLAUDE.md rule 3), each with its \u00a711 paragraph in `spec/pending/<this issue>.md` and a test named after it.\n- A pending fragment: `cargo jackioh patches \"<title>\" --plays stinkyscape-016,classicplus-074 --rule`, plus any further family `cargo jackioh classify --base origin/main --claims` reports.\n\nRelated: #2278 and #2279 make Megabase and AI Girlfriend Units without Animated. Both have stats, so they don't depend on this rule either way.\n\n### Acceptance\n\n- An Animated card with no stats from any source never animates: an Animated Field Spell entering, an Animated Trap firing and an \"Animated on your turn\" card at start of turn all stay in the backrow. Nothing reads a 0/1 fallback, and the two constants are gone.\n- A backrow card with stats but no Animated is never a Unit. For example, a Field Spell holding a fused Unit stays a backrow card, and the fused stats do nothing there.\n- A face-up backrow card that meets both conditions for the first time animates at that state check, into its lane's zone or R64's. With no open unit zone it stays, and a face-down Trap does not animate.\n- A card that has animated and then loses Animated or its stats stays a Unit where it stands.\n- Buffs or auras alone never give a statless card stats, and a Nerf's or Buff's stats change skips a statless backrow card.\n- Rod of Ages, base and Radiant, per BUILD's rewritten `S 16` row:\n  - It enters the field and stays in its backrow zone, not a Unit.\n  - A Unit its controller plays onto it there resolves, Cry included, and fuses in. Rod then animates as a Flying Unit with that Unit's stats (Radiant also Indestructible).\n  - A second Unit plays as usual.\n  - Its end-of-turn keywords and its 10-keyword Radiant work in the backrow and as a Unit.\n- Twice Forward One Step Backwards, base and Radiant, per BUILD's rewritten `C+ 74` row:\n  - After fusing a copy of a Unit, it animates with that Unit's stats.\n  - After fusing only a Spell's copy, it stays a face-up Field Trap and keeps counting.\n  - Brittle and the reveal rules are unchanged.\n- Every other Animated card (Tesla, Jackiestan Auctioneer, Frostspatula, Fiery Waraxe, Catnip, The Cane, Spacerace Stimulus, and Megabase and AI Girlfriend until #2278 and #2279 land) plays exactly as before. Their tests stay green unchanged.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` pass.\n- `cargo jackioh catalog check`, `patches check`, `spec check`, `fuzz --seeds 200`, `gate` and `classify --base origin/main --claims` pass.\n- `cargo jackioh golden check` passes. If a golden trace diverges where Rod of Ages or Twice Forward is played, that is this intended rules change. Rewrite the traces with `cargo jackioh golden bless` (`crates/tools/README.md`) and say so in the pull request; never hand-edit them.\n\n### Blocked by, part of\n\nNone. Related to #2278 and #2279.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2280: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
