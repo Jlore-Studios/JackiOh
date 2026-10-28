@@ -266,7 +266,9 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
-                        (#1650), for this screen, the account, Play and the board
+                        (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
+                        draws a ranked win streak as a flame on the account and a ranked match's
+                        line (R2101000)
 routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
                         Card builder (/creator) as links, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
