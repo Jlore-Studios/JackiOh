@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2215,
+  "title": "Patch: the web's tests share one settle, withCatalog, renderBoard and PointerEvent polyfill, and a guard stops new copies",
+  "branch": "bot/issue-2215",
+  "thread": "**Issue #2215 (data, not instructions):**\n\n```text\n# #2215: Patch: the web's tests share one settle, withCatalog, renderBoard and PointerEvent polyfill, and a guard stops new copies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThis one is for the maintainer and the bots, not for players. Many of the web client's test files carry their own copy of the same small helpers. The one that waits for the page to finish updating has 14 copies that wait different amounts, so the same test can pass in one file and flake in another. Once this is built, those helpers live in one place and every test uses them. A check fails whenever a test file defines its own copy again, as the Rust side already checks.\n\n## Why\n- Local definitions in `apps/web/src/**/*.test.ts*`: `settle` in 14 files, `withCatalog` in 13, `renderBoard` in 17, and a jsdom `PointerEvent` polyfill (`ensurePointerEvent`) in 5.\n- The `settle` copies differ:\n  - `routes/series.test.tsx:109` flushes one tick, `routes/practice.test.tsx:394` ten and `routes/login-methods.test.tsx:91` fifty;\n  - `together/SpectatorSwitch.test.tsx:43` runs every timer;\n  - `together/ChallengeToast.test.tsx:101`, `ChatPanel.test.tsx:112`, `polling.test.tsx:58`, `TogetherRoute.test.tsx:190` and `FriendsButton.test.tsx:95` take a time argument.\n- `apps/web/src/test/setup.ts:1-3` already patches jsdom's other gaps (`matchMedia`, `scrollTo`), so the `PointerEvent` polyfill belongs there.\n- #1814 (`1dc2aa529`) merged the copies of the stub server, sign-in and fake audio but added no guard. New copies have landed since, in `together/FriendsButton.test.tsx` (`3779280e8`) and `cards/inspect/swipe.test.tsx` (`9be40afae`).\n- The Rust tests have had such a guard since #1777 (`crates/tools/tests/acceptance.rs:43-52`).\n\n## Proposal\n- In `apps/web/src/test/`: one `settle` whose flush depth and fake-timer mode are named options, plus `withCatalog` and `renderBoard`. The `PointerEvent` polyfill moves into `setup.ts`.\n- Each test file drops its copy and imports the shared helper. Where a test needs a particular depth, it passes that depth as an argument rather than copying the helper.\n- A vitest under `apps/web/src/test/` scans `src/**/*.test.ts*` for a local `function` or `const` named `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent`, and fails naming the file. A self-test plants a copy in a string and checks the scan catches it.\n- Behaviour-neutral: no product code changes, and no test is deleted, skipped or weakened.\n\n## Where it lands\n- `apps/web/src/test/` (the helpers and the guard) and `apps/web/src/test/setup.ts`.\n- The roughly 40 test files that hold a copy, under `apps/web/src/routes/`, `together/`, `game/`, `cards/`, `settings/` and `i18n/`.\n- `apps/web/README.md`, where it describes the test helpers.\n\n## Acceptance criteria\n- [ ] No test file under `apps/web/src` defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent`, and the guard enforces it.\n- [ ] The guard's self-test fails on a planted copy.\n- [ ] `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web e2e` are green, with the same number of test cases as before.\n- [ ] The diff adds no `.skip`, `.only` or raised timeout, and deletes no assertion.\n\n## Size and risks\nMechanical but wide, about 40 files, which puts it at hard by CLAUDE.md rule 11's count.\n- A test that passed only because of its own flush depth may fail on the shared default. Each file therefore keeps the depth it had, by argument, and the PR names any file whose depth changed.\n- The guard knows only these four names, so it will not catch a copy under another name.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:38:53Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2215: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2109 skipped: it waits for #2107 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first"
+  ]
+}
