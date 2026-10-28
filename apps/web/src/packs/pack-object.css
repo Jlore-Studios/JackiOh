@@ -75,11 +75,11 @@
 
 /* Stinkyscape (#1884): the set mark's deep-space disc and its green planet. */
 .pack-object[data-pack="Stinkyscape"] {
-  --pack-foil-a: #1f3a34;
-  --pack-foil-b: #0a1416;
-  --pack-accent: #9fe07a;
-  --pack-crimp-a: #5fbf4a;
-  --pack-crimp-b: #1d4a1a;
+  --pack-foil-a: var(--pal-green-900);
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-lime-400);
+  --pack-crimp-a: var(--pal-green-500);
+  --pack-crimp-b: var(--pal-green-900);
 }
 
 .pack-object[data-pack="global"] {
