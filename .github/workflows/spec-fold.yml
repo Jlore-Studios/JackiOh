@@ -1,0 +1,110 @@
+# The daily spec fold (`cargo jackioh spec fold`, crates/tools/src/spec.rs). A branch that adds a
+# ruling writes its §11 paragraph to spec/pending/<n>.md, n its issue's number (or its pull
+# request's), and never the end of spec/11-rulings.md or spec/INDEX.md: those two files conflicted on
+# nearly every merge, and in one week 42 of the 68 revisions the night bot ran only because main had
+# moved were for them (reviews/2026-10-22-issue-682-subscriptions.md, finding 3). Once a day this folds
+# the paragraphs pending on main into 11-rulings.md in number order, deletes them, rewrites INDEX.md
+# from the notes, and opens the result as a pull request that merges itself by squash once CI passes,
+# as patches-ship.yml's promotions do. Only those two files wait for it: a branch still writes its
+# ruling notes and its section edits itself, so the spec is true the moment its code merges.
+#
+# The result goes up from `patches/spec-fold-<short sha>` (vercel.json deploys no `patches/` branch;
+# never a `bot/` one, which bot-commands.yml treats as the night bot's) with BOT_GITHUB_TOKEN, because
+# a pull request opened with GITHUB_TOKEN starts no workflow, so the checks branch protection requires
+# would never report. A run closes every fold still open: it starts from a newer main, whose
+# spec/pending/ still holds their paragraphs. A failed fold opens one issue (or comments on the one
+# open) for the night bot instead of failing quietly every day. Daily at 09:37 UTC, and on demand:
+# `gh workflow run spec-fold.yml`.
+name: spec fold
+
+on:
+  schedule:
+    - cron: "37 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The failure's issue (the last step).
+  issues: write
+
+concurrency:
+  group: spec-fold
+  cancel-in-progress: false
+
+jobs:
+  fold:
+    name: fold the pending paragraphs
+    runs-on: ubuntu-latest
+    # A release build of the CLI first (the cache holds its dependencies, not the crates themselves).
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+
+      - name: fold
+        run: cargo jackioh spec fold
+
+      - name: open the fold pull request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- spec)" ]; then
+            echo "Nothing pending and the index current; no fold to open."
+            exit 0
+          fi
+
+          head=$(git rev-parse HEAD)
+          branch="patches/spec-fold-$(git rev-parse --short HEAD)"
+          title="Patch: fold the pending §11 paragraphs and the rulings index into the spec"
+          login=$(gh api user --jq .login)
+          id=$(gh api user --jq .id)
+
+          git checkout -b "$branch"
+          git add -A spec
+          git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
+            commit -q -m "$title" \
+            -m "Folds spec/pending/ on main at $head into spec/11-rulings.md and rewrites spec/INDEX.md (\`cargo jackioh spec fold\`)."
+          git push -u origin "$branch"
+
+          body=$(printf '%s\n' \
+            "Folds the §11 paragraphs pending on main at $head into \`spec/11-rulings.md\`, in number order, deletes them and rewrites \`spec/INDEX.md\` from the ruling notes (\`cargo jackioh spec fold\`)." \
+            "" \
+            "Opened by \`.github/workflows/spec-fold.yml\`; it merges itself once CI passes.")
+          url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body")
+          gh pr merge "$url" --auto --squash
+
+          # Older folds still open folded a subset of what this one folds.
+          gh pr list --state open --base main --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("patches/spec-fold-")) | "\(.number) \(.headRefName)"' |
+            while read -r number ref; do
+              [ "$ref" = "$branch" ] && continue
+              gh pr close "$number" --delete-branch --comment "Superseded by $url, which folds everything this one did from a newer main."
+            done
+          echo "### spec fold" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: report a failed fold
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="spec fold failed to fold the pending §11 paragraphs"
+          body=$(printf '%s\n' \
+            "\`cargo jackioh spec fold\` or its pull request failed on main at $GITHUB_SHA ([the run]($RUN_URL)), so \`spec/pending/\` stays as it is and \`spec/INDEX.md\` is not rewritten." \
+            "" \
+            "The run's log names the failure (\`spec check\` rule 6 refuses a pending file the fold cannot place). Fix it on a branch whose \`cargo jackioh spec check\` passes; once it merges, run this workflow again (Actions -> spec fold -> Run workflow) or wait for tomorrow's run.")
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body "$body" --label "bot:build" --label "difficulty:medium" --label "priority:high"
+          fi

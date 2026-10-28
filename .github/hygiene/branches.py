@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""The weekly hygiene run's branch survey, its two issues, and the deletions a person ticks
-(.github/workflows/hygiene.yml, hygiene-delete.yml).
+"""The weekly hygiene run's branch survey, its two issues, the code audit's issue, and the deletions
+a person ticks (.github/workflows/hygiene.yml, code-audit.yml, hygiene-delete.yml).
 
   survey                             every branch, its pull requests and what its bot name points at
   report SURVEY                      the stale branches as checkboxes, for a person to tick
-  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue for Squishy,
-                                     unless that kind's last one is still open
+  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue, or the
+                                     `code` audit, for Squishy, unless that kind's last one is
+                                     still open
   delete ISSUE                       delete the branches ticked in that issue, after surveying again
 
 A branch is safe to delete when nothing live uses it and deleting it loses nothing that cannot come
@@ -37,8 +38,10 @@ KEEP_PREFIXES = ("ai/",)
 NAMED = re.compile(r"(?:bot|squishy)/(?:issue-(?P<issue>\d+)|old/issue-(?P<old>\d+)-.+"
                    r"|oneshot-(?P<oneshot>\d+)/.+|wip/(?P<pr>\d+))")
 TITLE = "Architecture: weekly hygiene"
-#: The two issues a week opens, so each cleanup is a pull request of its own (#888).
-KINDS = {"files": "dead files and archives", "instructions": "agent instructions"}
+#: Each issue's title before its date: the two a week opens, so each cleanup is a pull request of its
+#: own (#888), and the code audit code-audit.yml opens every three days (#900, #2142).
+KINDS = {"files": f"{TITLE}, dead files and archives", "instructions": f"{TITLE}, agent instructions",
+         "code": "Patch: audit the codebase for dead code, duplicates and zombie routes"}
 #: A ticked checkbox in the branch section, its branch the first code span; a struck one no longer matches.
 TICKED = re.compile(r"^\s*- \[[xX]\] `([^`]+)`", re.M)
 LABELS = ("architecture", "difficulty:hard", "squishy:build", "person merges")
@@ -231,12 +234,12 @@ def open_issue(repo: str, kind: str, template: str, report: str, guidance: str, 
                today: str, *, dry_run: bool) -> str:
     """Opens the week's issue of `kind`, or says why not: one of each kind is open at a time, since
     its builder reads only the issue body, never a workflow's comment."""
-    prefix = f"{TITLE}, {KINDS[kind]}"
+    prefix = KINDS[kind]
     still_open = gh_json("issue", "list", "--repo", repo, "--state", "open", "--search",
                          f'in:title "{prefix}"', "--json", "number,title")
     still_open = [i for i in still_open if i["title"].startswith(prefix)]
     if still_open:
-        return f"#{still_open[0]['number']} is still open, so no new {kind} issue this week"
+        return f"#{still_open[0]['number']} is still open, so no new {kind} issue this time"
     body = (template.replace("<!-- run -->", run_url).replace("<!-- branches -->", report)
             .replace("<!-- guidance -->", guidance.strip() or "_The guidance step gave nothing this week._"))
     title = f"{prefix}, {today}"
