@@ -1,6 +1,6 @@
 """The bot machine's memory (#312): whether its jobs run short of it, read by the jobs themselves.
 
-Each box has 4 vCPUs and 16 GB of RAM with 8 GB of swap (2 and 7.7 GB until 2026-10-26), and
+Each box has 2 vCPUs and 7.6 GB of RAM, with compressed swap in memory and 8 GB of swapfile, and
 CloudWatch keeps only its CPU unless the agent `bot/machine/setup.sh` installs is allowed to
 publish (the instance role needs `CloudWatchAgentServerPolicy`). The box powers off when idle, so `free` shows only the present.
 So every model job on the machine (`work.Worker`) reads the kernel's own counters as it starts,

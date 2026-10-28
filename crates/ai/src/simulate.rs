@@ -319,8 +319,10 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             // surcharge reads the same gate approximately — the unit's attack against the hero's
             // life (`effective_life`, as the trap's lethal judge reads it, R964000) — so a chip
             // attack at an armed board is not charged the playout's price.
-            let lethalish = find_instance(state, attacker_id)
-                .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
+            // R2201000: nothing is lethal against a seat that cannot lose.
+            let lethalish = jackioh_engine::can_lose(state, defender)
+                && find_instance(state, attacker_id)
+                    .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()

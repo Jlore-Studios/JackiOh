@@ -48,9 +48,31 @@ if [ ! -f /swapfile ]; then
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
+# Ubuntu 24.04's needrestart restarts every service whose libraries an apt run replaced, at the end
+# of that run, unattended upgrades (06:00 to 07:00 UTC) and this script's own included. A runner
+# restarted in the middle of a job kills the job ("received a shutdown signal": 2026-10-22 07:00,
+# 10-24 06:20, and 10-28 when this script installed zram; reviews/2026-10-27-muse-usage.md, finding
+# 6). Written before the first apt run here, so the runners and the training lanes are never among
+# them: they take the new libraries at their next restart.
+mkdir -p /etc/needrestart/conf.d
+cat > /etc/needrestart/conf.d/night-vm.conf <<'EOF'
+$nrconf{override_rc}{qr(^actions\.runner\.)} = 0;
+$nrconf{override_rc}{qr(^jackioh-train@)} = 0;
+EOF
+
 apt-get update -qq
 apt-get install -y -qq git curl unzip zip jq build-essential ca-certificates gnupg python3 \
   python3-venv python3-pip bubblewrap util-linux cloud-guest-utils >/dev/null
+# Compressed swap in memory (zram), taken before the swapfile: three building jobs overrun the 8 GB
+# of an m7i-flex.large, and paging to the swapfile on EBS stalled a box for 766 s on 2026-10-27
+# (reviews/2026-10-27-muse-usage.md, finding 4). The cloud kernel keeps its module in the extras.
+modprobe zram 2>/dev/null \
+  || apt-get install -y -qq "linux-modules-extra-$(uname -r)" >/dev/null 2>&1 || true
+if apt-get install -y -qq zram-tools >/dev/null 2>&1; then
+  printf 'ALGO=zstd\nPERCENT=50\nPRIORITY=100\n' > /etc/default/zramswap
+  systemctl enable zramswap >/dev/null 2>&1 || true
+  systemctl restart zramswap || echo "zram swap did not start; the swapfile alone stays" >&2
+fi
 # A disk made larger in EC2 (Modify volume) is grown into by cloud-init at the next boot; this
 # grows the partition and the filesystem now, so the room counts without a restart.
 root_src="$(findmnt -no SOURCE / || true)"
