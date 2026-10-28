@@ -1742,9 +1742,31 @@ impl InvariantMonitor {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
+        // R14: the player whose play turns the rings, whose seat reads the direction (§3.1).
+        let mut playing: Option<PlayerId> = None;
         for event in events {
             match event {
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
+                GameEvent::CardPlayed { player, .. } => playing = Some(*player),
+                // R14: a rotation carries every pile one step around its ring, so a zone something
+                // landed on earlier in the action is the next one along now (Core #52 Silly Silas
+                // played onto a Unit, the pile turned, then Silas killed: fuzz seed 128).
+                GameEvent::Rotated { direction } => {
+                    if let Some(perspective) = playing {
+                        for slot in &mut landed {
+                            let to = crate::zones::ring_neighbor(
+                                crate::zones::ZoneSlot {
+                                    player: slot.0,
+                                    row: slot.1,
+                                    lane: slot.2,
+                                },
+                                *direction,
+                                perspective,
+                            );
+                            *slot = (to.player, to.row, to.lane);
+                        }
+                    }
+                }
                 GameEvent::Summoned {
                     player, row, lane, ..
                 } => landed.push((*player, *row, *lane)),

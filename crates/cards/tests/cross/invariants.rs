@@ -1540,6 +1540,53 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             assert!(mismatches[0].contains(&fiender.id), "{found:?}");
         }
     }
+
+    /// R14: a play announced into the zone beside the unit's, and the rings then turned (Core #52
+    /// Silly Silas played onto a unit, the pile carried one step, Silas killed, all inside one
+    /// action: fuzz seed 128 of the Stinkyscape release), may have covered and uncovered it too.
+    #[test]
+    fn r14_r1829000_i4_follows_a_covering_play_s_zone_around_the_ring() {
+        use jackioh_engine::wire::RotationDirection;
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let now = g.state().turn;
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(now);
+        // A zone of p1's that one step around p1's unit ring brings onto the Fiender's, lane 1.
+        let (from, direction) = [RotationDirection::Left, RotationDirection::Right]
+            .into_iter()
+            .flat_map(|direction| (2..=5).map(move |lane| (lane, direction)))
+            .find(|(lane, direction)| {
+                let to = jackioh_engine::zones::ring_neighbor(
+                    jackioh_engine::zones::ZoneSlot {
+                        player: PlayerId::P1,
+                        row: jackioh_engine::wire::Row::Units,
+                        lane: *lane,
+                    },
+                    *direction,
+                    PlayerId::P1,
+                );
+                (to.player, to.lane) == (PlayerId::P1, 1)
+            })
+            .expect("a zone one step from lane 1");
+        let played = event(json!({
+            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 4,
+        }));
+        let announced = event(json!({
+            "type": "cardAnnounced", "player": "p1", "instanceId": "silas", "defId": "core-052",
+            "cardType": "Unit", "costPaid": 4, "targets": [], "row": "units", "lane": from,
+        }));
+        let rotated = event(json!({ "type": "rotated", "direction": direction }));
+
+        assert_eq!(
+            monitor
+                .clone()
+                .after(&[announced.clone(), played.clone(), rotated], g.state()),
+            no_violations()
+        );
+        let found = monitor.clone().after(&[announced, played], g.state());
+        assert_eq!(entry_mismatches(&found).len(), 1, "{found:?}");
+    }
 }
 
 /// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
