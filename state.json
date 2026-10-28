@@ -6906,9 +6906,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-28T15:38:05Z",
+    "at": "2026-10-28T16:21:55Z",
     "url": "",
-    "what": "build #2214 on claude-7"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-28T16:12:33Z",
@@ -13431,11 +13431,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-28T15:45:53Z",
-    "last_run": "2026-10-28T08:32:09Z",
-    "provider": null,
+    "idle_since": "2026-10-28T16:21:55Z",
+    "last_run": "2026-10-28T16:21:55Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:8ccba784-1793204495",
     "taken_asks": []
   },
   "usage": null,
