@@ -6683,11 +6683,13 @@
         "by": "`claude` (strong)",
         "sha": "6349c662af1957163ebd95db10099f77a6da2ae3"
       },
+      "closed_at": "2026-10-28T14:53:15Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T13:20:22Z",
       "issue": 2208,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
