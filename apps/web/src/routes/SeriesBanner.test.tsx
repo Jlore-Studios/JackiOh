@@ -91,8 +91,8 @@ describe("the series banner", () => {
     expect(screen.getByTestId(seriesBannerTestid.yourDeck(0))).toHaveAttribute("data-won", "true");
     expect(screen.getByTestId(seriesBannerTestid.yourDeck(1))).toHaveAttribute("data-won", "false");
     expect(screen.getByTestId(seriesBannerTestid.opponentDeck(2))).toHaveAttribute("data-won", "true");
-    expect(screen.getByLabelText("Your decks: 1 of 3 decks have won")).toBeInTheDocument();
-    expect(screen.getByLabelText("Their decks: 1 of 3 decks have won")).toBeInTheDocument();
+    expect(screen.getByLabelText("Your decks: 1 of 3 have won a game")).toBeInTheDocument();
+    expect(screen.getByLabelText("Their decks: 1 of 3 have won a game")).toBeInTheDocument();
     expect(screen.queryByTestId(seriesBannerTestid.continue)).toBeNull();
   });
 

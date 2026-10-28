@@ -800,7 +800,7 @@ function SignedOutPlay(): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <p>{t("Online play is invite-only for now: you'll need an invite code after signing up.")}</p>
           <a
             className="button-primary play-cta"
             href={paths.login}

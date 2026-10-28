@@ -240,7 +240,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
             ))}
           </ul>
           {collection === null ? (
-            <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
+            <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
           ) : null}
         </section>
 
@@ -335,7 +335,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
         ) : null}
         {confirming ? (
           <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
-            <p id={confirmTextId}>{t("Delete “{trio}”? Its decks stay saved. This can’t be undone.", { trio: label })}</p>
+            <p id={confirmTextId}>{t("Delete “{trio}”? Its decks stay saved. This can't be undone.", { trio: label })}</p>
             <div className="ws-confirm-actions">
               <button type="button" className="ws-action ws-action--danger" data-testid={TRIO_DELETE_CONFIRM} onClick={onDelete}>
                 {t("Delete")}

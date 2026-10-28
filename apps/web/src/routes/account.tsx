@@ -606,7 +606,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
       {asking ? (
         <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
           <p>
-            {t("This deletes your account for good and signs this device out. You can’t undo it.")}
+            {t("This deletes your account for good and signs this device out. You can't undo it.")}
           </p>
           <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
           <input

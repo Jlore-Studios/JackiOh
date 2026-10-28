@@ -468,7 +468,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               </ul>
             )}
             {compared.length === 0 ? null : (
-              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can’t be added here.")}</p>
+              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can't be added here.")}</p>
             )}
             {conflicts.size === 0 ? null : (
               <p className="ws-conflicts" data-testid={DECK_CONFLICTS} data-count={String(conflicts.size)}>
@@ -509,7 +509,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               ))}
             </ul>
             {collection === null ? (
-              <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
+              <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
             ) : null}
           </section>
 
@@ -578,10 +578,10 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
               <p id={confirmTextId}>
                 {triosNamingIt === 0
-                  ? t("Delete “{deck}”? This can’t be undone.", { deck: label })
+                  ? t("Delete “{deck}”? This can't be undone.", { deck: label })
                   : triosNamingIt === 1
-                    ? t("Delete “{deck}”? Its slot in {count} trio will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })
-                    : t("Delete “{deck}”? Its slot in {count} trios will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })}
+                    ? t("Delete “{deck}”? Its slot in {count} trio will be empty. This can't be undone.", { deck: label, count: triosNamingIt })
+                    : t("Delete “{deck}”? Its slot in {count} trios will be empty. This can't be undone.", { deck: label, count: triosNamingIt })}
               </p>
               <div className="ws-confirm-actions">
                 <button type="button" className="ws-action ws-action--danger" data-testid={DECK_DELETE_CONFIRM} onClick={onDelete}>

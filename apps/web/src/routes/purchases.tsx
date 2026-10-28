@@ -257,7 +257,7 @@ export default function PurchasesRoute(): ReactElement {
         <h2>{t("Purchases")}</h2>
         <p data-testid={purchasesTestid.disclaimer}>
           {t(
-            "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server\u2019s seeded, logged roll, and every figure on this page is the server\u2019s.",
+            "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server's seeded, logged roll, and every figure on this page is the server's.",
           )}
         </p>
         {token === null ? (

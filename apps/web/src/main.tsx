@@ -214,7 +214,7 @@ function NotFound({ path }: { path: string }): ReactElement {
   );
   return (
     <ShellPanel testId={shellTestid.notFound}>
-      <p className="notice">{t("That page doesn’t exist.")}</p>
+      <p className="notice">{t("That page doesn't exist.")}</p>
       <p className="auth-hint">
         {nothingBefore}
         <code>{path}</code>
@@ -320,7 +320,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
     return (
       <ShellPanel testId={shellTestid.loadFailed}>
         <p className="notice" role="alert">
-          {t("This screen didn’t load. Check your connection, then reload the page.")}
+          {t("This screen didn't load. Check your connection, then reload the page.")}
         </p>
         <div className="row">
           <button
@@ -379,7 +379,7 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
     return (
       <ShellPanel testId={shellTestid.engineFailed}>
         <p className="notice" role="alert">
-          {t("The game didn’t load. Check your connection, then try again.")}
+          {t("The game didn't load. Check your connection, then try again.")}
         </p>
         <div className="row">
           <button

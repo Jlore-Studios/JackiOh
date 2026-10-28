@@ -47,7 +47,7 @@ function connectionWords(state: DuosConnection): string {
     case "reconnecting":
       return t("Reconnecting…");
     case "refused":
-      return t("This match isn’t available");
+      return t("This match isn't available");
     case "closed":
       return t("Disconnected");
   }
@@ -197,7 +197,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       return (
         <ShellPanel testId={duosTestid.connecting}>
           <p className="notice" data-testid={duosTestid.refused} role="alert">
-            {t("This co-op match isn’t available. It may have ended, or it may not be yours to join.")}
+            {t("This co-op match isn't available. It may have ended, or it may not be yours to join.")}
           </p>
           <div className="row">
             <a className="button-primary" href={paths.together} onClick={followInApp(paths.together)}>

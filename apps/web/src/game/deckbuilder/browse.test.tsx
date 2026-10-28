@@ -829,7 +829,7 @@ describe("sorting by win rate (B34)", () => {
     sortBy("winRate", "desc");
     await screen.findByTestId(DB_WINRATE_RETRY);
     expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveAttribute("data-state", "failed");
-    expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveTextContent("Win rates couldn’t be loaded");
+    expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveTextContent("Win rates couldn't be loaded");
     expect(poolOrder()).toEqual(DEFAULT_ORDER);
     expect(asked()).toBe(1);
   });

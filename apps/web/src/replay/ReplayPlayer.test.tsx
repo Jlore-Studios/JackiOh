@@ -524,8 +524,8 @@ describe("leaving, paging and failing", () => {
       expired: "This replay has expired.",
     });
 
-    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("error", "Couldn’t reach JackiOh.") }));
-    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("error", "Couldn't reach JackiOh.") }));
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     cleanup();
 
     // A page that fails later, reached with a jump: the board gives way to the reason.
@@ -563,13 +563,13 @@ describe("leaving, paging and failing", () => {
       total: healthy.total,
       calls: healthy.calls,
       page: (from, count) =>
-        down ? Promise.reject(new ReplayFailure("error", "Couldn’t reach JackiOh.")) : healthy.page(from, count),
+        down ? Promise.reject(new ReplayFailure("error", "Couldn't reach JackiOh.")) : healthy.page(from, count),
     };
     await open(flaky);
     down = true;
     await press(replayTestid.end);
 
-    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn't reach JackiOh.");
     expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
 
     down = false;

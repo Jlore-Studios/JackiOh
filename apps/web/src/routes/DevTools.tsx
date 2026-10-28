@@ -128,7 +128,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
 
   return (
     <div className="form-card dev-tools" data-testid={devToolsTestid.panel}>
-      <p>{t("These change this account’s own cards, cosmetics, Jlore, tracks and quests.")}</p>
+      <p>{t("These change this account's own cards, cosmetics, Jlore, tracks and quests.")}</p>
 
       <label htmlFor={`${ids}-set`}>{t("Set track")}</label>
       <select

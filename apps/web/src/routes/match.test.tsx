@@ -495,7 +495,7 @@ describe("the match screen in a player's words", () => {
     expect(connectionWords("open")).toBe("Connected");
     expect(connectionWords("connecting")).toBe("Connecting…");
     expect(connectionWords("reconnecting")).toBe("Reconnecting…");
-    expect(connectionWords("refused")).toBe("This match isn’t available");
+    expect(connectionWords("refused")).toBe("This match isn't available");
     expect(connectionWords("closed")).toBe("Disconnected");
   });
 
@@ -516,7 +516,7 @@ describe("the match screen in a player's words", () => {
       act(() => {
         live().onclose?.({ code: FORBIDDEN_CLOSE, reason: "not a participant in this match", wasClean: true });
       });
-      expect(screen.getByTestId("match-refused")).toHaveTextContent("This match isn’t available.");
+      expect(screen.getByTestId("match-refused")).toHaveTextContent("This match isn't available.");
       expect(screen.getByTestId("match-connecting").textContent).not.toMatch(/not a participant|socket/);
       expect(logged.mock.calls.flat().join(" ")).toMatch(/not a participant in this match/);
     } finally {
@@ -1092,7 +1092,7 @@ describe("a socket refused mid-game", () => {
       });
       expect(document.body.textContent).not.toMatch(/refused this match socket/);
       expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "refused");
-      expect(document.body.textContent).toMatch(/This match isn’t available/);
+      expect(document.body.textContent).toMatch(/This match isn't available/);
       // A refusal is settled: no retry is offered.
       expect(screen.queryByTestId("match-reconnect")).toBeNull();
     } finally {

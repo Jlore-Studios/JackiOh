@@ -446,7 +446,7 @@ function InviteScreen({ account }: { account: Account }) {
           <div className="brand">
             <h1>JackiOh</h1>
           </div>
-          <h2>{redeemed ? t("You\u2019re in") : active ? t("You\u2019re all set") : t("Enter your invite code")}</h2>
+          <h2>{redeemed ? t("You're in") : active ? t("You're all set") : t("Enter your invite code")}</h2>
 
           {redeemed ? (
             <div className="notice" data-testid={inviteTestid.redeemed} role="status" tabIndex={-1} ref={redeemedRef}>
@@ -535,7 +535,7 @@ function InviteScreen({ account }: { account: Account }) {
                 <p data-testid={inviteTestid.checkResult} data-result={emailCheck} role="status">
                   {emailCheck === "unchanged"
                     ? t("Still not confirmed. Open the link we emailed, then check again.")
-                    : t("Couldn’t check just now. Try again in a moment.")}
+                    : t("Couldn't check just now. Try again in a moment.")}
                 </p>
               ) : null}
               {resendNotice === null ? null : <p data-testid={inviteTestid.resendNotice}>{t(resendNotice)}</p>}
@@ -578,7 +578,7 @@ function InviteScreen({ account }: { account: Account }) {
               {/* One short line between the field and Redeem: the four groups and the count under
                   them already show the shape, so this only says what a paste may carry. */}
               <p className="invite-screen__help" id={helpId} data-testid={inviteTestid.help}>
-                {t("Paste it as is: case and dashes don’t matter.")}
+                {t("Paste it as is: case and dashes don't matter.")}
               </p>
 
               {attemptsRemaining === undefined || rateLimit !== null ? null : (

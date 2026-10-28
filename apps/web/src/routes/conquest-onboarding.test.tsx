@@ -294,7 +294,8 @@ describe("Conquest first-series walkthrough and onboarding", () => {
     const l4Hint = screen.getByTestId(TRIO_L4_HINT);
     expect(l4Hint).toBeInTheDocument();
     expect(l4Hint).toHaveTextContent(conquestText("trioL4Hint"));
-    expect(l4Hint).toHaveTextContent("Rule L4");
+    expect(l4Hint).toHaveTextContent("each card can be in only one of them");
+    expect(l4Hint).not.toHaveTextContent("Rule L4");
   });
 
   it("conquest copy text passes validator fragment exclusion check", () => {

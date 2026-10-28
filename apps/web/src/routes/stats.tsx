@@ -10,7 +10,7 @@
 //    rest of the page, names no data source and none of the gate's workings (R661); its one games
 //    tile counts the patch's games, never the gate's live count.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
-//    for a Played Δ the server withholds until both its sides reach the floor (R654).
+//    for a Played vs held the server withholds until both its sides reach the floor (R654).
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
@@ -183,7 +183,7 @@ const SORT_LABELS: Record<SortColumn, string> = {
   radiantWinRate: "Radiant",
   normalWinRate: "Normal",
   playRate: "Play rate",
-  playedDelta: "Played Δ",
+  playedDelta: "Played vs held",
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
@@ -697,18 +697,18 @@ export default function StatsRoute(): ReactElement {
           <summary className="stats-info-summary">{t("How to read these statistics")}</summary>
           <div className="stats-info-content">
             <p>
-              <strong>{t("Sample size threshold:")}</strong>{" "}
+              <strong>{t("Too few games:")}</strong>{" "}
               {withNodes(
-                t("Cards with fewer than {minSample} games display {phrase} instead of a percentage to prevent misleading sample artifacts.", {
+                t("A card with fewer than {minSample} games shows {phrase} instead of a percentage, since so few games can mislead.", {
                   minSample,
                 }),
-                { phrase: <em>{t('"not enough games"')}</em> },
+                { phrase: <em>{t("“not enough games”")}</em> },
               )}{" "}
               {withNodes(
-                t("Played Δ needs {minSample} games on each side, played and drawn but not played, and shows {phrase} until then.", {
+                t("Played vs held needs {minSample} games on each side, played and drawn but not played, and shows {phrase} until then.", {
                   minSample,
                 }),
-                { phrase: <em>{t('"not enough data"')}</em> },
+                { phrase: <em>{t("“not enough data”")}</em> },
               )}
             </p>
             <p>
@@ -1002,7 +1002,7 @@ export default function StatsRoute(): ReactElement {
                       checked={visibleCols.playedDelta}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
                     />
-                    {t("Played Δ")}
+                    {t("Played vs held")}
                   </label>
                   {signedIn && (
                     <label className="stats-col-toggle">
@@ -1023,7 +1023,7 @@ export default function StatsRoute(): ReactElement {
               <p className="stats-loading">{t("Loading card statistics…")}</p>
             ) : cardStatsError ? (
               <div className="stats-error">
-                <p>{t("Failed to load card statistics.")}</p>
+                <p>{t("The card statistics didn't load.")}</p>
                 <button type="button" className="stats-retry-btn" onClick={() => setCardStatsAttempt((n) => n + 1)}>
                   {t("Retry")}
                 </button>
@@ -1256,7 +1256,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          {t("Played Δ")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Played vs held")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       {signedIn && visibleCols.personal && (
@@ -1387,7 +1387,7 @@ export default function StatsRoute(): ReactElement {
           <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
             {setsError ? (
               <div className="stats-error">
-                <p>{t("Failed to load the set statistics.")}</p>
+                <p>{t("The set statistics didn't load.")}</p>
                 <button
                   type="button"
                   className="stats-retry-btn"
@@ -1520,7 +1520,7 @@ export default function StatsRoute(): ReactElement {
                       <h2 className="stats-sets-outlier-title">{title}</h2>
                       {list.length === 0 ? (
                         <p className="stats-empty-sub">
-                          {t("No card is {z} standard errors from 50% yet.", { z: SET_STATS_OUTLIER_Z })}
+                          {t("No card is {z} margins or more from 50% yet.", { z: SET_STATS_OUTLIER_Z })}
                         </p>
                       ) : (
                         <ol className="stats-sets-outlier-cards">
@@ -1534,7 +1534,7 @@ export default function StatsRoute(): ReactElement {
                                 {shownName(card.id, card.name)}
                               </button>{" "}
                               <span className="stats-sample-hint">
-                                {t("{set} · {rate} over {games} games · {z} standard errors", {
+                                {t("{set} · {rate} over {games} games · {z} margins", {
                                   set: t(card.set),
                                   rate: setPercent(card.winRate),
                                   games: formatNumber(card.games),
@@ -1554,7 +1554,7 @@ export default function StatsRoute(): ReactElement {
                 </div>
                 <p className="stats-sample-hint stats-sets-note">
                   {t(
-                    "★ marks the highest win rate. ± is one standard error, counted as if every card-game were independent; they are not, so sets less than two or three of it apart are within noise. Strong and weak cards are {z} or more standard errors over or under 50%.",
+                    "★ marks the highest win rate. ± is the margin: about how far luck alone can move a win rate. The true margin is wider, since one game counts every card in both decks, so sets less than two or three margins apart are too close to call. A card is strong or weak when it is {z} of its own margins or more over or under 50%.",
                     { z: SET_STATS_OUTLIER_Z },
                   )}
                 </p>
@@ -1575,7 +1575,7 @@ export default function StatsRoute(): ReactElement {
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
               <p className="stats-player-note">
-                {t("Player stats are public by default. Elo ratings and rankings are kept separate.")}
+                {t("Player stats are public by default. Ratings and ranks are not shown here.")}
               </p>
             </div>
 
@@ -1583,7 +1583,7 @@ export default function StatsRoute(): ReactElement {
               <p className="stats-loading">{t("Loading players…")}</p>
             ) : playersError ? (
               <div className="stats-error">
-                <p>{t("Failed to load player stats.")}</p>
+                <p>{t("The player stats didn't load.")}</p>
                 <button type="button" className="stats-retry-btn" onClick={() => fetchPlayers(playerQuery, playerPage)}>
                   {t("Retry")}
                 </button>
@@ -1748,7 +1748,7 @@ export default function StatsRoute(): ReactElement {
 
                 <div className="stats-drilldown-details">
                   {drillDownLoading ? (
-                    <p className="stats-loading">{t("Loading drill-down data…")}</p>
+                    <p className="stats-loading">{t("Loading this card's details…")}</p>
                   ) : drillDownError ? (
                     <div className="stats-error">
                       <p>{t("Details unavailable.")}</p>
