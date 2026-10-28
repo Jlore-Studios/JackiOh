@@ -7527,7 +7527,7 @@
     "what": "build #2257 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-28T20:09:32Z",
+    "at": "2026-10-28T20:17:05Z",
     "notes": [
       "CI on #2217: #2217: queued a CI fix"
     ],
@@ -8235,7 +8235,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T20:09:32Z",
+  "loop_tick": "2026-10-28T20:17:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
