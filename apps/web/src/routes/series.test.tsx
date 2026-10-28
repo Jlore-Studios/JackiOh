@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate } from "../net/navigate.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import SeriesRoute, { endReasonWords, seriesTestid } from "./series.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -488,6 +489,21 @@ describe("the series screen", () => {
         expect(words.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("#2115 shows a panel skeleton until the series answers, then the score and none of the words", async () => {
+    render(<SeriesRoute seriesId={SERIES_ID} token={TOKEN} />);
+
+    // Before any await the stubbed read has not answered.
+    const loading = screen.getByTestId(seriesTestid.loading);
+    expect(loading).toHaveTextContent("Loading the series…");
+    expectSkeleton(loading, "panel");
+    expect(screen.queryByTestId(seriesTestid.score)).toBeNull();
+
+    await screen.findByTestId(seriesTestid.score);
+    await settle();
+    expect(screen.queryByTestId(seriesTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the series…")).toBeNull();
   });
 
   it("a series that cannot be read says why, in the server's words", async () => {

@@ -15,6 +15,7 @@ import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getQuests, type QuestsResponse } from "../net/api.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 
 /** Unit conversions, not configuration. */
 const SECONDS_PER_MINUTE = 60;
@@ -178,9 +179,7 @@ export function QuestsView({
     return (
       <div className="account-quests">
         <h3 className="account-heading">{t("Quests")}</h3>
-        <p className="notice" role="status" data-testid={questsTestid.loading}>
-          {t("Loading your quests…")}
-        </p>
+        <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );
   }
