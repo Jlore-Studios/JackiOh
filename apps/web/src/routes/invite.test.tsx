@@ -11,12 +11,12 @@ import {
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
 } from "@jackioh/server-config";
+import { INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
 import { codeFieldTestid, inviteTestid } from "../auth/testids.ts";
 import { ApiRequestError, getCodeStatus, getMe, redeemCode } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import InviteRoute, {
   INVITE_CODE_INPUT,
-  INVITE_CODE_PLACEHOLDER,
   INVITE_ERROR,
   INVITE_NOT_NEEDED,
   INVITE_PAUSED,

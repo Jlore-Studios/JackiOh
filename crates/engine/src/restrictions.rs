@@ -35,22 +35,14 @@
 //! where it stands by `combat.rs` (`zones::is_carried`) — so the registry was always empty and every
 //! check here is its flag alone.
 
-use crate::catalog::def_of;
 use crate::config::GAUNTLET_LANES;
 use crate::damage::DamageTarget;
+use crate::faces::card_type_of_face;
 use crate::layers::{AuraTable, unit_has};
 use crate::script::{EffectContext, StaticFlags};
 use crate::state::{CardInstance, EngineError, GameState, Position};
 use crate::wire::{CardType, KeywordKind, PLAYER_IDS, Row, Zone, has_keyword};
 use crate::zones::{card_at, slot_of};
-
-/// `faces::card_type_of` for a definition and a face alone (TS passed `{ defId, radiant }`, a card
-/// with no zone): the running face's own type, else the definition's.
-fn type_of_face(state: &GameState, def_id: &str, radiant: bool) -> CardType {
-    let def = def_of(Some(state), def_id);
-    let face = if radiant { &def.radiant } else { &def.base };
-    face.type_.unwrap_or(def.type_)
-}
 
 /// E35: whether the card has Immune to Spells now (a keyword, so layered: printed, granted, aura).
 pub fn immune_to_spells(state: &GameState, card: &CardInstance) -> bool {
@@ -81,7 +73,7 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
     }
     match ctx.def_id.as_deref() {
         None | Some("") => false,
-        Some(def_id) => type_of_face(ctx.sink.state, def_id, ctx.radiant) == CardType::Spell,
+        Some(def_id) => card_type_of_face(ctx.sink.state, def_id, ctx.radiant) == CardType::Spell,
     }
 }
 
@@ -108,7 +100,7 @@ pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = source.zone {
         return CardType::Unit;
     }
-    type_of_face(state, &source.def_id, source.radiant)
+    card_type_of_face(state, &source.def_id, source.radiant)
 }
 
 /// R781001: whether the card is Immutable while in play: on the field, face-up (a face-down card's

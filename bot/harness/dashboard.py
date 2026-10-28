@@ -1069,7 +1069,7 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
                        "Central",
-    "code-audit.yml": "every three days: the code audit's issue for Squishy",
+    "code-audit.yml": "every three days: the code audit's issue for the night bot",
     "db-size.yml": "twice a day: an issue once production's database nears its Supabase plan's cap",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",

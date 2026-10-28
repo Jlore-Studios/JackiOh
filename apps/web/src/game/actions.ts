@@ -44,7 +44,6 @@
 // without it pays none, which is what the engine listed it to mean.
 
 import type {
-  Action,
   ActionBody,
   ActivationView,
   PendingOption,
@@ -1222,11 +1221,6 @@ export function answerPlaguePlacement(
     }
   });
   return picked === undefined ? null : answerAction(pending, [picked.key], view, legal);
-}
-
-/** The nonce is handed in, never generated: this module is as pure as the engine (CLAUDE.md rule 4). */
-export function withNonce(body: ActionBody, playerId: PlayerId, nonce: string): Action {
-  return { ...body, playerId, nonce };
 }
 
 /** Zone choices in board order, for a picker that wants to draw a grid. */

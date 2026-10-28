@@ -5,11 +5,10 @@ trap backrow. This file binds every agent, not only Claude.
 
 ## Where things are
 
-- `SPEC.md` points to `spec/`, the only source of rules, cards and engine design: one note per section
-  (`spec/NN-<slug>.md`), one per ruling (`spec/rulings/R<nnnn>.md`) and their index (`spec/INDEX.md`), mapped
-  by `spec/README.md`. Section references (§) point here. If a doc disagrees with the spec, the spec wins and
-  the doc is the bug.
-- `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass table); `REVIEW.md` is
+- `SPEC.md` points to `spec/`, the only source of rules, cards and engine design; `spec/README.md` maps its
+  notes. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
+  the bug.
+- `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass tables); `REVIEW.md` is
   the audit, its reports in `reviews/`.
 - Each crate's and app's `README.md` (`crates/*`, `apps/web`, `e2e`) is its contract: read it before you
   change that code. So is `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708). Also:
@@ -17,9 +16,9 @@ trap backrow. This file binds every agent, not only Claude.
   `docs/architecture.md`, `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`,
   `training/README.md`, `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client) and
   `docs/v0.4.0/` (the Luau card scripts, #442, and their return to Rust, #902).
-- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs
-  `docs/classic-sets.md`, `docs/meditative-set.md` and `docs/meditative-plus-set.md`) are what REVIEW Part A
-  checks the spec against; read them only when the task is about them.
+- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs `docs/*-set*.md`,
+  each named in REVIEW.md's Part A inputs) are what REVIEW Part A checks the spec against; read them only
+  when the task is about them.
 
 ## Rules of engagement
 
@@ -59,7 +58,8 @@ trap backrow. This file binds every agent, not only Claude.
    same through the card kit, `docs/custom-cards.md`, which `crates/luau` turns into the same effects.)
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
-   covering base and Radiant behaviour per the BUILD M4-T4 table (M9's for Classic and Classic+).
+   covering base and Radiant behaviour per its set's must-pass table in BUILD (M4-T4's for Core, M9's to
+   M12's for the later sets).
 7. The client sends intent and renders `viewFor` (the engine's `view_for`); it never enforces rules and never
    sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session
@@ -71,21 +71,19 @@ trap backrow. This file binds every agent, not only Claude.
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
-    it is): **easy** only under `bot/harness/easy.py`'s rule (small, one crate or app, no spec, BUILD,
-    shared-surface, engine, AI, catalog, card or migration work, a unit test checks it, no decision left,
-    nothing blocking it); **hard** for engine rules, the AI, design across crates, a migration, or about 40
-    files or more; **medium** for the rest. Torn between two, take the harder. The bot never changes your
-    label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner rates
-    it.
+    it is; `bot/harness/easy.py` holds the easy rule), **hard** for engine rules, the AI, design across
+    crates, a migration, or about 40 files or more. Torn between two, take the harder. The bot never changes
+    your label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner
+    rates it.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
     red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
 13. Never delete or disable anything called from outside this codebase without asking a person first: a
     webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
-    or a person or another service calls (`/api/catalog` is Render's health check), or a `cargo jackioh`,
-    server or harness subcommand that a workflow, a deploy or a person runs. That nothing in the tree calls
-    it is no proof it is dead (#900).
+    or a person or another service calls (`/readyz` is Render's health check, and deploy-watch polls
+    `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
+    runs. That nothing in the tree calls it is no proof it is dead (#900).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
@@ -154,41 +152,30 @@ has the rest, the server's fixture reseed among it.
 ### CI
 
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
-`bot selftest`. On a pull request `rust` includes `rust (classify)`, which labels it with
-its kind and tier and fails when the pending fragments do not match the cards that play differently
-(R1370000): run `cargo jackioh classify --base origin/main --claims` before pushing. `rust` also fails when
-`apps/web/src/wire/` or `crates/cards/luau/jackioh.luau` differs from what the Rust generates, and runs
-`luau-analyze --mode=strict` over the Luau there (#442 L10). A pull request that changes only paths on
-`scripts/ci-scope.sh`'s skip list (the bots, the agent instruction files, the issue forms, …) skips every job
-but `bot selftest`; adding a path to that list takes proof that nothing in `crates/`, `apps/`, `e2e/` or
-`spec/` reads it. Past that, each job runs only when the pull request touches what it reads: `ci-scope.sh` prints
-a line per job (clippy, each `rust (test …)` group by the crate graph, web, e2e, each db suite; #751), its
-header says what turns each on, and `ci-scope.test.ts` and `crates/tools/tests/acceptance.rs` hold them, so
-a file a test newly reads from outside its crate goes in the script's map in the same pull request. A push to
-`main` runs everything. `bot selftest` itself runs only when a pull request touches what the bot's tests read
-(`ci.yml`'s `changes` job, `bot`; #1455). Everything slow or statistical (fuzz at 10,000 seeds and the Duos wave,
-`gate --full`, `golden check`, the Rust tests marked `#[ignore = "daily: <why>"]`, the web's sweeps behind
-`apps/web/src/test/daily.ts`, coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites, the
-notebooks' tests) runs daily in `super.yml`. A test moves there only when a cheaper test keeps its rule per pull
-request, which its `daily:` reason names (`acceptance.rs` refuses an ignore without one). Each workflow's
-header says what it does, `ci.yml`'s the five-minute budget of every job.
+`bot selftest`. On a pull request `rust` includes `rust (classify)`, which labels it with its kind and tier
+and fails when the pending fragments do not match the cards that play differently (R1370000): run
+`cargo jackioh classify --base origin/main --claims` before pushing. A pull request runs only the jobs that
+read what it changes (`scripts/ci-scope.sh`, whose header says what turns each on; #751), so a file a test
+newly reads from outside its crate goes in the script's map in the same pull request, and a path joins its
+skip list (a pull request of only those paths skips every job but `bot selftest`) only with proof that
+nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A push to `main` runs everything. Everything slow
+or statistical runs daily in `super.yml`, whose header lists it. A test moves there
+(`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test
+keeps its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does,
+`ci.yml`'s the five-minute budget of every job.
 
 ## Architecture
 
-- `crates/engine`: the rules, the wire types every layer shares and the deck validator, entered through
-  `reduce(state, action)`, `legal_actions` and `view_for(state, player)`. Read `work.rs`'s header before
-  touching anything that can open a prompt. It depends on neither `crates/cards` nor `crates/luau`; its tests
-  use fixture scripts and the `testkit` feature (`scenario()` and its verbs).
-- `crates/cards`: `catalog.json`, one Rust script per card and `patches/`, the card patch history. A script
-  reads state only through the prelude's read helpers, never `state.players[…]`; a missing verb or board fact
-  goes into the engine (board facts in `src/query.rs`) with its test.
-- `crates/ai`: the practice opponent, pure and seeded like the engine; hidden cards never change a decision.
-- `crates/server`: one binary, the HTTP API and one in-memory match actor per match pushing `view_for` over a
-  WebSocket. `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the Docker
-  suites, and a store change goes in `tests/store/contract.rs`.
-- `apps/web`: the Vite/React client. Components take a `PlayerView` and nothing else; legality comes from
-  `legalActions`, never a client-side check. `Game.tsx` is the one board; each of its layers (animations,
-  effects, audio, cards, drag, settings) has one owning module.
+- `crates/engine` depends on neither `crates/cards` nor `crates/luau`; its tests use fixture scripts and the
+  `testkit` feature (`scenario()` and its verbs). Read `work.rs`'s header before touching anything that can
+  open a prompt.
+- `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a
+  missing verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
+- `crates/ai`: hidden cards never change a decision.
+- `crates/server`: `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the
+  Docker suites, and a store change goes in `tests/store/contract.rs`.
+- `apps/web`: components take a `PlayerView` and nothing else. `Game.tsx` is the one board; each of its
+  layers (animations, effects, audio, cards, drag, settings) has one owning module.
 
 ## The night bot
 
