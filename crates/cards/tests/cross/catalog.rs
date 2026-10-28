@@ -7008,16 +7008,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row(
-        "11",
-        "Thwomp",
-        c(2),
-        T::Spell,
-        &[],
-        R::Common,
-        NO_STATS,
-        NO_STATS,
-    ),
+    row("11", "Thwomp", c(2), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
     row(
         "12",
         "Fortify",
@@ -8470,7 +8461,10 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             .expect("#39.1");
         assert_eq!(golem.rarity, Rarity::Token);
         if let Some(entry) = CATALOG.get("traininggrounds-039-1") {
-            assert_eq!(entry.printed_rarity.map(|rarity| rarity.as_str()), Some("Legendary"));
+            assert_eq!(
+                entry.printed_rarity.map(|rarity| rarity.as_str()),
+                Some("Legendary")
+            );
         }
     }
 }
@@ -9291,9 +9285,15 @@ mod the_tags_issue_1837_moves_r1837000 {
             ]
             .concat()
         );
+        // The held Training Grounds set's #27 Hopeful Jelly Bean and its snapshot #50 Glowy Jelly Bean
+        // (part 2, #2195) join it as they land (R2194000).
         assert_eq!(
             tagged(Tag::JellyBean),
-            strings(&["core-026", "core-027", "core-028", "core-029"])
+            [
+                strings(&["core-026", "core-027", "core-028", "core-029"]),
+                landed(&["traininggrounds-027", "traininggrounds-050"]),
+            ]
+            .concat()
         );
         // A Jelly Bean is a card named one, and the Other-Origins cards are the tokens an Otherworldly
         // card adds, every one a token its maker names: Otherworldly Removal's three, and each of

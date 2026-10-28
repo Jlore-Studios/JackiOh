@@ -2880,8 +2880,12 @@ pub(crate) mod tests {
         #[test]
         fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
             register_all();
-            let training_grounds = |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
-            assert!(!set_ships(jackioh_engine::SetName::TrainingGrounds), "held until its release, #2204");
+            let training_grounds =
+                |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
+            assert!(
+                !set_ships(jackioh_engine::SetName::TrainingGrounds),
+                "held until its release, #2204"
+            );
             assert!(FUZZ_POOL.iter().any(training_grounds));
             assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
         }

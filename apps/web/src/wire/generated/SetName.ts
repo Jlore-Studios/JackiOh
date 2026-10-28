@@ -2,8 +2,9 @@
 
 /**
  * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
- * issue #1173, R1178000) ship; Stinkyscape (issue #1836) is held until its release (#1884,
- * R1857000); Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+ * issue #1173, R1178000) and Stinkyscape (issue #1836, R1857000; released by #1884) ship;
+ * Training Grounds (issue #2193) is held until its release (#2204, R2194000); Boss and Boss-X
+ * are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
  * shipped, so no pool or random deck finds one.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Boss" | "Boss-X" | "Custom";
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Custom";

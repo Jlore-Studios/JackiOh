@@ -942,7 +942,11 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
             json!({ "tags": ["Call to Chaos"] }),
             json!({ "withTokens": true }),
         ] {
-            assert_eq!(training_grounds(&pool(args.clone())), Vec::<String>::new(), "{args}");
+            assert_eq!(
+                training_grounds(&pool(args.clone())),
+                Vec::<String>::new(),
+                "{args}"
+            );
         }
         assert_eq!(
             pool(json!({ "set": "Training Grounds" })),

@@ -2235,7 +2235,9 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, 0);
+        // Stinkyscape ships, so leaving it out holds no more apart: only the held Training Grounds set
+        // is (R2194000).
+        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
         // So a card it lacks fails, as any shipped set's would: the totals and the index.
         let mut missing = shipped_catalog();
