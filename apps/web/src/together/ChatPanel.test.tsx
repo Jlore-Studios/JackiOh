@@ -4,6 +4,7 @@
 // rate-limited) in the server's words without adding a message. The Friends button's panel (#1831,
 // which replaced the board rail's chat toggle) lists friends, each opening this panel.
 // #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.
+// R2120000: a send shows at once; its answer replaces it, a refusal marks it failed with Retry and Discard.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -70,6 +71,41 @@ function type(text: string): void {
 function send(): void {
   const button = screen.getByTestId("chat-send");
   if ((button as HTMLButtonElement).disabled !== true) fireEvent.click(button);
+}
+
+const CHAT = `/api/chat/${ANN.profileId}`;
+
+/** The sends drawn that no answer has replaced yet (R2120000). */
+function pending(): HTMLElement[] {
+  return screen.queryAllByTestId("chat-pending");
+}
+
+/** Every message drawn, the server's and the pending, top to bottom, as its body. */
+function bodies(): string[] {
+  return Array.from(document.querySelectorAll('[data-testid="chat-message"], [data-testid="chat-pending"]')).map(
+    (element) => element.querySelector(".chat-message__body")?.textContent ?? "",
+  );
+}
+
+/** From now on the stub takes each POST when it is made, but its answer waits for `release()`, oldest first (R2120000). */
+function holdSends(): () => void {
+  const answer = globalThis.fetch;
+  const held: (() => void)[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const reply = answer(input, init);
+      if (init?.method !== "POST") return reply;
+      return new Promise<Response>((resolve) => {
+        held.push(() => {
+          resolve(reply);
+        });
+      });
+    }),
+  );
+  return () => {
+    held.shift()?.();
+  };
 }
 
 /** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
@@ -401,12 +437,144 @@ describe("#1898 a failed read of the conversation", () => {
     type("hello again");
     send();
     await waitFor(() => {
-      expect(screen.getByTestId("chat-error")).toHaveTextContent(words);
+      expect(screen.getByTestId("chat-pending")).toHaveTextContent(words);
     }, SLOW);
 
     await settle(CHAT_POLL_MS + 1);
-    expect(screen.getByTestId("chat-error")).toHaveTextContent(words);
+    expect(screen.getByTestId("chat-pending")).toHaveTextContent(words);
+    expect(screen.getByTestId("chat-pending")).toHaveAttribute("data-state", "failed");
     expect(screen.queryByTestId("chat-read-error")).toBeNull();
+  });
+});
+
+describe("R2120000 a message shows at once while it sends", () => {
+  it("R2120000 a sent message shows at once as sending, the draft clears, and the player can write the next", async () => {
+    vi.useFakeTimers();
+    const server = serve(conversation());
+    const release = holdSends();
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+
+    type("well played");
+    send();
+    expect(pending()).toHaveLength(1);
+    const row = must(pending()[0], "the sending message");
+    expect(row).toHaveAttribute("data-state", "sending");
+    expect(row).toHaveTextContent("well played");
+    expect(row).toHaveTextContent("Sending…");
+    expect(screen.getByTestId("chat-input")).toHaveValue("");
+    expect(shown()).toHaveLength(2);
+
+    type("gg");
+    expect(screen.getByTestId("chat-send")).toBeEnabled();
+
+    await settle();
+    expect(server.to("POST", CHAT)).toHaveLength(1);
+    release();
+    await settle();
+    expect(pending()).toHaveLength(0);
+    expect(shown()).toHaveLength(3);
+    expect(must(shown()[2], "the answered message")).toContain("well played");
+  });
+
+  it("R2120000 the answer replaces the sending message with no duplicate, even when a poll brings it back first", async () => {
+    vi.useFakeTimers();
+    const server = serve(conversation());
+    const release = holdSends();
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+    const once = (): number => bodies().filter((body) => body === "well played").length;
+
+    type("well played");
+    send();
+    await settle();
+    const reads = server.to("GET", CHAT).length;
+    await settle(CHAT_POLL_MS);
+    expect(server.to("GET", CHAT).length).toBeGreaterThan(reads);
+    expect(once()).toBe(1);
+    expect(pending()).toHaveLength(1);
+
+    release();
+    await settle();
+    expect(pending()).toHaveLength(0);
+    expect(once()).toBe(1);
+    expect(shown()).toHaveLength(3);
+    await settle(CHAT_POLL_MS);
+    expect(once()).toBe(1);
+  });
+
+  it("R2120000 a refused send shows failed in the server's words, and Retry sends the same body again", async () => {
+    vi.useFakeTimers();
+    const words = "You are sending messages too fast.";
+    const refused = { send: true };
+    const server = serve(conversation(), (call) => (refused.send && call.method === "POST" ? refusal(429, "rate_limited", words) : undefined));
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+
+    type("hello again");
+    send();
+    await settle();
+    const row = must(pending()[0], "the failed message");
+    expect(row).toHaveAttribute("data-state", "failed");
+    expect(row).toHaveTextContent(words);
+    expect(shown()).toHaveLength(2);
+    expect(screen.queryByTestId("chat-error")).toBeNull();
+
+    refused.send = false;
+    fireEvent.click(within(row).getByTestId("chat-pending-retry"));
+    await settle();
+    expect(server.to("POST", CHAT).map((call) => call.body)).toEqual([{ body: "hello again" }, { body: "hello again" }]);
+    expect(pending()).toHaveLength(0);
+    expect(shown()).toHaveLength(3);
+    expect(must(shown()[2], "the retried message")).toContain("hello again");
+  });
+
+  it("R2120000 Discard drops a failed send and sends nothing more", async () => {
+    vi.useFakeTimers();
+    const server = serve(conversation(), (call) => (call.method === "POST" ? refusal(404, "not_found", "You can only chat with friends.") : undefined));
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+
+    type("still there?");
+    send();
+    await settle();
+    expect(must(pending()[0], "the failed message")).toHaveAttribute("data-state", "failed");
+
+    fireEvent.click(screen.getByTestId("chat-pending-discard"));
+    await settle();
+    expect(pending()).toHaveLength(0);
+    expect(shown()).toHaveLength(2);
+    expect(server.to("POST", CHAT)).toHaveLength(1);
+  });
+
+  it("R2120000 two quick sends stay in the order sent, after every message the server has, and reach it in that order", async () => {
+    vi.useFakeTimers();
+    const messages = conversation();
+    const server = serve(messages);
+    const release = holdSends();
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+
+    type("first");
+    send();
+    type("second");
+    send();
+    await settle();
+    expect(pending().map((row) => row.getAttribute("data-state"))).toEqual(["sending", "sending"]);
+    expect(server.to("POST", CHAT)).toHaveLength(1);
+
+    messages.push(message("msg-3", ANN.profileId, "rematch?", 3));
+    await settle(CHAT_POLL_MS);
+    expect(bodies()).toEqual(["good luck", "you too", "rematch?", "first", "second"]);
+
+    release();
+    await settle();
+    expect(server.to("POST", CHAT)).toHaveLength(2);
+    release();
+    await settle();
+    expect(server.to("POST", CHAT).map((call) => call.body)).toEqual([{ body: "first" }, { body: "second" }]);
+    expect(pending()).toHaveLength(0);
+    expect(bodies()).toEqual(["good luck", "you too", "rematch?", "first", "second"]);
   });
 });
 

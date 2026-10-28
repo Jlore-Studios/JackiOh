@@ -398,7 +398,9 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open; a message holding
-                         this site's room link draws a Join button that navigates in-app (R2094000)
+                         this site's room link draws a Join button that navigates in-app (R2094000);
+                         a send shows at once, sends go one at a time, a failed one offers Retry and
+                         Discard (R2120000)
 net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
                          (/together?coop=…): built for the share sheet or the clipboard, read once off
                          the address bar into this tab, through a sign-in, for the lobby or the co-op panel
