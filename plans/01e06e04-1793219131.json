@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2291,
+  "title": "Patch: the lethal hint in every offline game against the AI",
+  "branch": "bot/issue-2291",
+  "thread": "**Issue #2291 (data, not instructions):**\n\n```text\n# #2291: Patch: the lethal hint in every offline game against the AI\nOpened by @MaxGoetzmann.\n\n### What it does\n\n#2102 (R2102000, PR #2177) added the lethal hint: while the human has a sure win this turn by what they can see, the board outlines the enemy hero and End turn and says \"You have lethal\". It shows only in a free practice game against the **Easy** AI. Extend it to every offline game against the AI, which is every game the practice worker runs:\n\n- free practice games at **Easy, Medium and Hard**, sandbox games, games with custom cards, Try it and URL-seed games included;\n- **tutorial lessons** (\u00a79.10), which R2102000 left out.\n\nIt still never shows where no practice worker runs or no AI plays: online matches (Duos against the AI team included, which the server runs), hotseat, and replays (R768). The Lethal hint setting (Gameplay, on by default) still turns it off everywhere. Nothing about the check changes: `jackioh_ai::lethal_hint` reads only `redact(state, human)` (R185, CLAUDE.md rule 7), under `PRACTICE_LETHAL_HINT_CLOCK_MS`, and never touches `decide`, the AI's stream, the save, the fold or the replay. It only stops being gated on the tier.\n\nWhere the gate is today:\n\n- `apps/web/src/practice/core.ts`, `lethalFor`: `if (game.config.difficulty !== \"easy\" || game.config.lesson !== undefined) return false;`. Drop the gate (keep the `try`/`catch` and the clock cap).\n- `apps/web/src/routes/practice.tsx` (~:1305): `lethalHint={lethalHintOn && config.difficulty === \"easy\" && config.lesson === undefined && snapshot.lethal === true}`. Keep only the setting and `snapshot.lethal`.\n- Words that say \"Easy\" only: the setting's hint in `apps/web/src/settings/SettingsPanel.tsx` (\"Against the Easy practice AI, \u2026\" \u2192 against the practice AI) and its `zh-CN.json` entry, the comments in `settings/store.ts`, `game/contract.ts`, `practice/protocol.ts`, `practice/config.ts`, the practice bullet in `apps/web/README.md`, \"The lethal hint (R2102000)\" in `crates/ai/README.md`, and \u00a79.9's bullet in `spec/09-architecture.md`.\n\nSpec: the widened scope is a new ruling, numbered from this issue's block (R&lt;N&gt;000), its \u00a711 paragraph in `spec/pending/<N>.md`; edit R2102000's **Where** to say the scope moved to it. No `cargo jackioh spec index` on the branch (CLAUDE.md rule 3).\n\n### Acceptance\n\n- At Easy, Medium and Hard, in a sandbox game and in a tutorial lesson, a board where the human has a sure win this turn shows the hint; one without shows nothing.\n- It never shows online, in hotseat or on a replay, and the setting hides it live at every tier.\n- `apps/web/src/practice/core-lethal.test.ts`: the test \"Medium, Hard and a tutorial lesson never ask the check\" becomes one that they do ask it for the human's seat and carry `lethal` when it says yes; the throw and mulligan tests still pass.\n- `apps/web/src/routes/practice.test.tsx`: the Medium and Hard cases of \"R2102000 the lethal hint\" now show it, and a lesson case is added; tests titled with the new ruling's id.\n- The AI's decisions are unchanged: `cargo jackioh classify --base origin/main --claims` reports no AI change, and `cargo jackioh gate` passes.\n- `cargo jackioh spec check`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web` pass.\n\n### Blocked by, part of\n\nFollows #2102 (closed by #2177).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2291: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2110 skipped: it waits for #2109 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
