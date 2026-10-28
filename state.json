@@ -5942,14 +5942,13 @@
     "what": "revise #2168 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-28T09:34:54Z",
+    "at": "2026-10-28T09:52:24Z",
     "notes": [
       "CI on #2189: #2189: queued a CI fix",
-      "delivered review #2155 on claude-8 (run 40664418981): reviewed",
-      "delivered build #2107 on muse (run 40629838869): interrupted",
-      "started revise #2155 on claude-1 (run 40665788830)",
-      "started build #2107 on muse (run 40665881612)",
-      "started revise #2217 on claude-3 (run 40665979889)",
+      "#2125 needs a plan",
+      "delivered revise #2168 on muse (run 40650898037): approved",
+      "started plan #2125 on claude-4 (run 40667958412)",
+      "started revise #2168 on muse (run 40668053255)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -6656,7 +6655,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-28T09:34:54Z",
+  "loop_tick": "2026-10-28T09:52:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
