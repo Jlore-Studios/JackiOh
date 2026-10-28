@@ -173,6 +173,12 @@ pub const TIMEOUT_ANSWER_CAP: usize = 500;
 pub const CALL_TO_CHAOS_CHAIN_CAP: i32 = 20;
 /// R58: cast-on-draw cards one draw may cast before the next one goes to hand uncast.
 pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
+/// R2067000: cast-on-draw cards one action may cast over all its chains, before the next one goes to
+/// hand uncast as R58's 21st does. A trigger's draw begins a chain of its own (R217), so a trigger
+/// that draws for each cast's discard (Classic #64 Malzahar's Recycler under #21 Hinder) beside a
+/// library that refills as it is drawn (#33 Unstable Clone Machine) began chains without end. A whole
+/// library's worth, so an action that does not refill its library as it draws never reaches it.
+pub const CAST_ON_DRAW_ACTION_CAP: i32 = LIBRARY_CAP;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -964,6 +970,10 @@ pub const CHAOS_STINKY_FIELD_SPELLS: i32 = 3;
 /// §8.10 row 150 entry 8, R1882004: the most rest-of-game Acclaimed death rules one player holds, bounded
 /// as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at the cap resolves into nothing.
 pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
+/// §8.10 row 150 entry 8, R2176001: the most Calls to Chaos the death watch casts for one player in one
+/// turn, its terminator (REVIEW A3.6): each cast is a chain with R28's cap of its own, and a cast that
+/// kills an Acclaimed Unit starts another, so an Acclaimed death past this many that turn casts nothing.
+pub const CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN: i32 = 5;
 /// §8.10 row 151 entry 2: "summon 3 Drone Corvettes".
 pub const CHAOS_SCAPE_CORVETTES: i32 = 3;
 /// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).

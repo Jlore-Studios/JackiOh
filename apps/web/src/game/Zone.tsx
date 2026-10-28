@@ -47,10 +47,10 @@ export type ZoneProps = {
   pops?: ReadonlyMap<string, Pops>;
 };
 
-/** A zone's accessible name: "you units lane 3". */
+/** A zone's accessible name: "Your units, lane 3". */
 function zoneLabel(side: Side, row: Row, lane: number): string {
-  if (side === "you") return row === "units" ? t("you units lane {lane}", { lane }) : t("you backrow lane {lane}", { lane });
-  return row === "units" ? t("opponent units lane {lane}", { lane }) : t("opponent backrow lane {lane}", { lane });
+  if (side === "you") return row === "units" ? t("Your units, lane {lane}", { lane }) : t("Your backrow, lane {lane}", { lane });
+  return row === "units" ? t("Enemy units, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
 }
 
 /**

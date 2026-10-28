@@ -23,6 +23,7 @@ import { readPracticeResume } from "../practice/resume.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { readPlayerStats, resetPlayerStats } from "../stats/store.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import PracticeRoute, { readPracticeParams } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
@@ -232,6 +233,32 @@ describe("R915006 a saved deck that names custom cards starts with them", () => 
     fireEvent.change(screen.getByTestId(practiceTestid.deck), { target: { value: "saved:1" } });
     expect(await screen.findByTestId(practiceTestid.customBlocked)).toHaveTextContent("could not be loaded");
     expect(screen.getByTestId(practiceTestid.start)).toBeDisabled();
+  });
+
+  it("#2115 custom cards still being read wait behind a panel skeleton, then the deck starts", async () => {
+    let answer: (value: CustomCardsResponse) => void = () => {};
+    const loadCustomCards = vi.fn(
+      () =>
+        new Promise<CustomCardsResponse>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    renderRoute(fakeHost(), { loadCustomCards });
+    await waitFor(() => {
+      expect(Array.from((screen.getByTestId(practiceTestid.deck) as HTMLSelectElement).options).map((o) => o.value)).toContain("saved:1");
+    });
+    fireEvent.change(screen.getByTestId(practiceTestid.deck), { target: { value: "saved:1" } });
+
+    expectSkeleton(await screen.findByTestId(practiceTestid.customBlocked), "panel");
+    expect(screen.getByText("Loading your custom cards…")).toBeInTheDocument();
+    expect(screen.getByTestId(practiceTestid.start)).toBeDisabled();
+
+    answer(customResponse([IMP]));
+    await waitFor(() => {
+      expect(screen.queryByTestId(practiceTestid.customBlocked)).toBeNull();
+    });
+    expect(screen.queryByText("Loading your custom cards…")).toBeNull();
+    expect(screen.getByTestId(practiceTestid.start)).toBeEnabled();
   });
 });
 

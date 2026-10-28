@@ -3,7 +3,8 @@
 // card's text — a face, the detail view's reading-size lines, the printed text beside a face in
 // play — prints them the same way:
 //
-// - glossary terms ("Cry:", keywords, verbs) in bold (`.cf-term`, rules.ts's tokenizer);
+// - glossary terms ("Cry:", keywords, verbs) in bold (`.cf-term`, rules.ts's tokenizer), each
+//   showing its glossary rule on hover, a long press or focus where its surface allows (TermTip.tsx, R2098000);
 // - on a Radiant face, the stretches its base face's text does not have (`marks`, radiantDiff.ts,
 //   R277): gold, bold and underlined (`.cf-mark`), so the mark does not rest on colour alone;
 // - the names the card's `refs` link (refs.ts, R279): a reference (`CardRef`), marked everywhere
@@ -27,8 +28,9 @@
 // Lava Golem …"), a mark inside a name sits inside the reference ("Rush Tokens"' marked "Tokens"),
 // and a mark that crosses a name's edge is cut there, so the elements always nest.
 //
-// It renders text nodes and spans (and, for an interactive reference, a portal), so it can sit
-// inside a <span> inside a <button> — where references stay marks and never become controls.
+// It renders text nodes and spans (and, for an interactive reference or a term showing its
+// rule, a portal), so it can sit inside a <span> inside a <button> — where references stay
+// marks and never become controls.
 
 import { Fragment, type ReactElement, type ReactNode } from "react";
 
@@ -36,7 +38,9 @@ import type { CardDef, PreviewValue } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import { CardRef } from "./CardRef.tsx";
+import { TermTip } from "./TermTip.tsx";
 import { CHINESE_TERMS, chineseDef } from "./chinese.ts";
+import type { GlossaryTermId } from "./glossary.ts";
 import type { TextRange } from "./radiantDiff.ts";
 import { useDefResolver } from "./refContext.tsx";
 import { findRefs, type RefMatch } from "./refs.ts";
@@ -58,7 +62,7 @@ type RulesTextProps = {
 };
 
 type Insert = { at: number; text: string; label: string };
-type Term = { start: number; end: number; term: string };
+type Term = { start: number; end: number; term: GlossaryTermId };
 /** A stretch the text is wrapped in: a Radiant mark or a reference. */
 type Wrap = { start: number; end: number } & ({ kind: "mark" } | { kind: "ref"; match: RefMatch; def: CardDef });
 
@@ -213,9 +217,9 @@ export function RulesText({ text, marks = NONE, refs = NONE, values = NONE, tune
         term === undefined ? (
           <Fragment key={next()}>{numbers(from, to)}</Fragment>
         ) : (
-          <strong key={next()} className="cf-term" data-term={term.term}>
+          <TermTip key={next()} term={term.term}>
             {numbers(from, to)}
-          </strong>
+          </TermTip>
         ),
       );
       if (to < end) out.push(...valuesAt(to));

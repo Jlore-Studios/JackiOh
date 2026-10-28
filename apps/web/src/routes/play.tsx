@@ -55,6 +55,7 @@ import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -800,7 +801,7 @@ function SignedOutPlay(): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <p>{t("Online play is invite-only for now: you'll need an invite code after signing up.")}</p>
           <a
             className="button-primary play-cta"
             href={paths.login}
@@ -1191,9 +1192,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
             </h2>
 
             {lobby.kind === "loading" && mode !== "random" ? (
-              <p className="lobby-note" role="status">
-                {t("Loading your decks…")}
-              </p>
+              <Skeleton variant="panel" label={t("Loading your decks…")} />
             ) : null}
             {lobby.kind === "failed" && mode !== "random" ? (
               <>

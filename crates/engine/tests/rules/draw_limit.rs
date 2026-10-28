@@ -16,7 +16,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_ok, events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
+    Bench, act, act_ok, events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain,
@@ -66,26 +66,6 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
 
 fn strings(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
-}
-
-/// TS `sinkFor(state)`: a sink's events and rng (from the state's cursor), lent with the state to one
-/// engine call at a time, so the test reads and writes the state between calls as TS did.
-struct Bench {
-    events: Vec<GameEvent>,
-    rng: Rng,
-}
-
-impl Bench {
-    fn new(state: &GameState) -> Bench {
-        Bench {
-            events: Vec::new(),
-            rng: Rng::new(&state.seed, state.rng_cursor),
-        }
-    }
-
-    fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
-        EngineSink::new(state, &mut self.events, &mut self.rng)
-    }
 }
 
 /// A view's events as JSON.

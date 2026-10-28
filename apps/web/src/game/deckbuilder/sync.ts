@@ -351,18 +351,18 @@ function randomId(): string {
 export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
 
 /** R341: why an import made nothing, when the server could not be asked. */
-export const IMPORT_OFFLINE_MESSAGE = "You’re offline, so nothing was imported. Try again once you’re back online.";
+export const IMPORT_OFFLINE_MESSAGE = "You're offline, so nothing was imported. Try again once you're back online.";
 /** R341: why an import made nothing, when earlier edits (a deletion made to make room) have not landed. */
 export const IMPORT_UNSAVED_MESSAGE =
-  "Your latest changes haven’t reached the server yet, so nothing was imported. Try again once they’re saved.";
+  "Your latest changes haven't reached the server yet, so nothing was imported. Try again once they're saved.";
 
 /** R2100000: why a deck's history is not shown, when the server could not be asked. */
-export const HISTORY_OFFLINE_MESSAGE = "You’re offline, so this deck’s history can’t be shown. Try again once you’re back online.";
+export const HISTORY_OFFLINE_MESSAGE = "You're offline, so this deck's history can't be shown. Try again once you're back online.";
 /** R2100000: why a restore changed nothing, when the server could not be asked. */
-export const RESTORE_OFFLINE_MESSAGE = "You’re offline, so nothing was restored. Try again once you’re back online.";
+export const RESTORE_OFFLINE_MESSAGE = "You're offline, so nothing was restored. Try again once you're back online.";
 /** R2100000: why a restore changed nothing, when the deck's latest edit has not landed (a restore would save over it). */
 export const RESTORE_UNSAVED_MESSAGE =
-  "This deck’s latest changes haven’t reached the server yet, so nothing was restored. Try again once they’re saved.";
+  "This deck's latest changes haven't reached the server yet, so nothing was restored. Try again once they're saved.";
 /** The server's own sentence for a deck it does not hold for this account (`crates/server/src/api/decks.rs`). */
 const NO_SUCH_DECK_MESSAGE = "There is no such deck.";
 

@@ -1203,7 +1203,7 @@ export default function LoginRoute(): ReactElement {
 
           {forgot ? (
             <p className="auth-hint">
-              {t("Enter the address you signed up with. If it has an account, we’ll email a link to choose a new password.")}
+              {t("Enter the address you signed up with. If it has an account, we'll email a link to choose a new password.")}
             </p>
           ) : null}
           {signingUp && !refusedHere ? (

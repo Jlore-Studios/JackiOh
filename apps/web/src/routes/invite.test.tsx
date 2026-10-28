@@ -171,7 +171,7 @@ describe("a pending account", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(done);
     });
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You\u2019re in");
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You're in");
     expect(window.location.pathname).toBe("/invite");
     expect(screen.queryByTestId(INVITE_SUBMIT)).toBeNull();
     expect(screen.queryByTestId(inviteTestid.whereFrom)).toBeNull();

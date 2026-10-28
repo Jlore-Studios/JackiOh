@@ -1,10 +1,12 @@
 // `/leaderboard`: Jlorious first, then the tiers, then the Raisins — and never a rating, nor a
 // profile id (R1436).
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
+import { getLeaderboard, keptPaths, type LeaderboardResponse } from "../net/api.ts";
+import { rememberRead } from "../net/readCache.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import LeaderboardRoute, { leaderboardTestid } from "./leaderboard.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -128,10 +130,70 @@ describe("the leaderboard screen", () => {
 
     fireEvent.click(screen.getByTestId(leaderboardTestid.retry));
     expect(screen.getByTestId(leaderboardTestid.loading)).toBeInTheDocument();
+    expectSkeleton(screen.getByTestId(leaderboardTestid.loading), "rows");
     expect(screen.queryByTestId(leaderboardTestid.retry)).toBeNull();
 
     expect(await screen.findByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.2");
+    expect(screen.queryByTestId(leaderboardTestid.loading)).toBeNull();
+    expect(screen.queryByText("Loading the ladder…")).toBeNull();
     expect(getLeaderboard).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("R2125000 the ladder opens on its last answer", () => {
+  /** Lets a settled read's `then` run inside React's `act`. */
+  async function flush(): Promise<void> {
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+  }
+
+  it("R2125000 a kept ladder shows at once, without the loading state, then the read's answer", async () => {
+    rememberRead(TOKEN, keptPaths.leaderboard, board({ season: "v0.1" }));
+    let answer: (value: LeaderboardResponse) => void = () => undefined;
+    vi.mocked(getLeaderboard).mockReturnValue(
+      new Promise<LeaderboardResponse>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.1");
+    expect(screen.queryByTestId(leaderboardTestid.loading)).toBeNull();
+    expect(getLeaderboard).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      answer(board({ season: "v0.2" }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.2");
+    expect(screen.queryByTestId(leaderboardTestid.loading)).toBeNull();
+  });
+
+  it("R2125000 a failed read behind a kept ladder keeps it and shows nothing", async () => {
+    rememberRead(TOKEN, keptPaths.leaderboard, board({ season: "v0.1" }));
+    vi.mocked(getLeaderboard).mockRejectedValue(new Error("the server refused"));
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    await flush();
+
+    expect(getLeaderboard).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.1");
+    expect(screen.queryByTestId(leaderboardTestid.error)).toBeNull();
+    expect(screen.queryByTestId(leaderboardTestid.retry)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("R2125000 another account's kept ladder is never shown", () => {
+    rememberRead("token-other", keptPaths.leaderboard, board({ season: "v0.1" }));
+    vi.mocked(getLeaderboard).mockReturnValue(new Promise<LeaderboardResponse>(() => undefined));
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(leaderboardTestid.loading)).toBeInTheDocument();
+    expect(screen.queryByTestId(leaderboardTestid.season)).toBeNull();
   });
 });

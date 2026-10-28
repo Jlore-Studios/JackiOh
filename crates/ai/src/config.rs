@@ -100,8 +100,8 @@ pub struct AiSearch {
     /// rather than played on (#1797, `beam_search`). Its screen, 400 games of improve-dev against the
     /// parent (`2bcd74f93`), read 215-184 with one game aborted, edge 0.078 (0.019 to 0.136).
     pub zone_variants: i32,
-    /// #1759, R1759000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
-    /// would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
+    /// #1759, R1759000, R2021000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
+    /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
     /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
     /// every one, and a unit that cannot win its next fight never stood down in a line, as the
     /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
@@ -819,6 +819,13 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
 /// before the AI is trained on it is listing it here.
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+
+/// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
+/// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a
+/// permission to play from the graveyard with no price floor (Classic #90 In Too Deep's reward L) is
+/// legal again after every cast, and each cast scored a little better than ending the turn, so the
+/// AI cast it until the match's action cap (#1885, Stinkyscape's Reknite and The Coin).
+pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
 
 /// R1885000: the most Stinkyscape cards the shadow ban (R186) may hold, 20% of the set's 175 non-token
 /// cards (`docs/stinkyscape-set.md` ST6, fullsend 2). `cargo jackioh sweep --write` refuses reports of

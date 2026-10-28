@@ -132,4 +132,29 @@ mod tests {
         assert!(card.radiant);
         assert_eq!(card.cost_mod, -1);
     }
+
+    #[test]
+    fn r4_a_full_hand_burns_the_pick() {
+        let mut hand = vec![json!(OPTIMIZER)];
+        hand.extend((0..HAND_CAP).map(|_| json!(FILLER)));
+        let mut s = scenario(json!({
+            "seed": "optimizer-full",
+            "p1": { "hand": hand, "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        // An effect's cast leaves the hand full: here it starts one past it, so the play leaves it full.
+        s.play(OPTIMIZER, json!({}));
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+        let pick = offered(&s)[0].clone();
+        s.answer(json!(pick));
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+        assert!(
+            s.hand(P1).iter().all(|card| card.def_id == FILLER),
+            "the pick is not in hand"
+        );
+        assert!(
+            s.pile(P1, "graveyard").iter().any(|card| card.def_id == pick),
+            "it burned"
+        );
+    }
 }

@@ -122,7 +122,7 @@ export function syncWords(status: SyncStatus): string {
     case "offline":
       return t("Offline. Kept on this device.");
     case "error":
-      return status.message === null ? t("Couldn’t save") : t("Couldn’t save: {message}", { message: t(status.message) });
+      return status.message === null ? t("Couldn't save") : t("Couldn't save: {message}", { message: t(status.message) });
   }
 }
 

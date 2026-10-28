@@ -470,7 +470,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               </ul>
             )}
             {compared.length === 0 ? null : (
-              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can’t be added here.")}</p>
+              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can't be added here.")}</p>
             )}
             {conflicts.size === 0 ? null : (
               <p className="ws-conflicts" data-testid={DECK_CONFLICTS} data-count={String(conflicts.size)}>
@@ -511,7 +511,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               ))}
             </ul>
             {collection === null ? (
-              <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
+              <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
             ) : null}
           </section>
 
@@ -524,6 +524,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 type="button"
                 className="ws-action"
                 data-testid={DECK_TO_PRACTICE}
+                data-route={practicePath}
                 aria-label={t("Practice with this deck")}
                 onClick={() => {
                   navigate(practicePath);
