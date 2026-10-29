@@ -2882,13 +2882,17 @@ pub(crate) mod tests {
             assert!(legal_held.iter().all(|id| FUZZ_POOL.contains(*id)));
             assert!(!SHIPPED_FUZZ_POOL.iter().any(held));
             if legal_held.is_empty() {
-                // Every set ships since the Stinkyscape release (#1884): there is nothing to preview,
-                // and the released set is dealt as any shipped set is.
-                assert!(
-                    FUZZ_POOL
-                        .iter()
-                        .any(|id| CATALOG[id.as_str()].set.as_str() == "Stinkyscape")
-                );
+                // Every set ships since the Training Grounds release (#2204), as it did after the
+                // Stinkyscape release (#1884): there is nothing to preview, and the released sets are
+                // dealt as any shipped set is.
+                for set in ["Stinkyscape", "Training Grounds"] {
+                    assert!(
+                        FUZZ_POOL
+                            .iter()
+                            .any(|id| CATALOG[id.as_str()].set.as_str() == set),
+                        "{set}"
+                    );
+                }
                 return;
             }
             let seed = (1..=SWEEP_SEEDS)
@@ -2901,18 +2905,19 @@ pub(crate) mod tests {
         }
 
         /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
-        /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.
+        /// Grounds set was held, the fuzz pool dealt its cards and the golden traces' pool none. Since
+        /// its release (#2204) it ships, so both pools deal it.
         #[test]
-        fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
+        fn r2194000_the_fuzz_pool_and_the_golden_pool_hold_the_shipped_training_grounds_set() {
             register_all();
             let training_grounds =
                 |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
             assert!(
-                !set_ships(jackioh_engine::SetName::TrainingGrounds),
-                "held until its release, #2204"
+                set_ships(jackioh_engine::SetName::TrainingGrounds),
+                "shipped by its release, #2204"
             );
             assert!(FUZZ_POOL.iter().any(training_grounds));
-            assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
+            assert!(SHIPPED_FUZZ_POOL.iter().any(training_grounds));
         }
 
         #[test]

@@ -12,9 +12,9 @@
 //! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
 //! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
 //! lean like Meditative+'s; its four tags name no tribe.
-//! R2194000: the Training Grounds set (issue #2193) is the fourth held set, after Stinkyscape in the
-//! catalog order, held until its release (#2204): its fixture cards here are in no pool that names no
-//! set and in no deck, while a pool that names it reaches them and a preview opens it.
+//! R2194000: the Training Grounds set (issue #2193) was the fourth held set, after Stinkyscape in the
+//! catalog order, and shipped with its release (#2204), so its fixture cards here now draw, deal and
+//! lean like Stinkyscape's, and it is the newest set.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, pair_key, set_is_open};
@@ -51,8 +51,8 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
 /// #16.1, and the AI generated helpers of M+ #1, #1.1 and #1.2), two Prime tokens and a KY and a Book
 /// card for the pools, and three cards and two tokens of the Stinkyscape set (shipped since its
 /// release, #1884, R1857000: a Drone Core, a Weapon and a Swarm Unit, a War Doctrine and an AI
-/// generated card), and two cards and a token of the held Training Grounds set (R2194000: a Human
-/// Unit, a Call to Chaos edition and the Golem it summons).
+/// generated card), and two cards and a token of the Training Grounds set (shipped since its release,
+/// #2204, R2194000: a Human Unit, a Call to Chaos edition and the Golem it summons).
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -273,11 +273,12 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
                 unshipped(&pool(json!({ "tags": ["CN"] }))),
                 vec!["boss-001", "boss-002"]
             );
-            // The Meditative, Meditative+ and Stinkyscape sets keep their places after Classic+
-            // (B2.2), and a set the catalog order does not name sorts after every set it does.
+            // The Meditative, Meditative+, Stinkyscape and Training Grounds sets keep their places
+            // after Classic+ (B2.2), and a set the catalog order does not name sorts after every set
+            // it does.
             let all = pool(json!({}));
             assert_eq!(
-                &all[all.len() - 9..],
+                &all[all.len() - 11..],
                 [
                     "meditative-033",
                     "meditative-034",
@@ -286,6 +287,8 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
                     "stinkyscape-027",
                     "stinkyscape-050",
                     "stinkyscape-091",
+                    "traininggrounds-001",
+                    "traininggrounds-039",
                     "boss-001",
                     "boss-002"
                 ]
@@ -405,7 +408,7 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(
             newest_shipped_set(),
-            SetName::Stinkyscape,
+            SetName::TrainingGrounds,
             "a preview ships nothing"
         );
     }
@@ -454,11 +457,12 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
             pool(json!({ "defId": ["meditativeplus-016-1"] })),
             vec!["meditativeplus-016-1"]
         );
-        // In its catalog place, after Meditative and before Stinkyscape, the set that ships after
-        // it (R1857000); a preview of it changes nothing, since it is open already.
+        // In its catalog place, after Meditative and before Stinkyscape and Training Grounds, the
+        // sets that ship after it (R1857000, R2194000); a preview of it changes nothing, since it is
+        // open already.
         let all = pool(json!({}));
         assert_eq!(
-            &all[all.len() - 7..],
+            &all[all.len() - 9..],
             [
                 "meditative-033",
                 "meditative-034",
@@ -466,7 +470,9 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
                 "meditativeplus-021",
                 "stinkyscape-027",
                 "stinkyscape-050",
-                "stinkyscape-091"
+                "stinkyscape-091",
+                "traininggrounds-001",
+                "traininggrounds-039"
             ]
         );
         let _preview = preview_sets(&[SetName::MeditativePlus]);
@@ -538,8 +544,9 @@ mod r1371_the_newest_shipped_set {
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
         // Classic+ until the Meditative set's release, Meditative from v0.3.5, the Meditative+ set
-        // from v0.3.15 (R1178000), and the Stinkyscape set from its release (#1884, R1857000).
-        assert_eq!(newest, SetName::Stinkyscape);
+        // from v0.3.15 (R1178000), the Stinkyscape set from its release (#1884, R1857000), and the
+        // Training Grounds set from its own (#2204, R2194000).
+        assert_eq!(newest, SetName::TrainingGrounds);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(newest_shipped_set(), newest);
@@ -564,9 +571,12 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
             ]
         );
         // No other pool reaches them: a Felinor pool is cards only, and a Human pool leaves out the
-        // Human Jazakus Prime.
+        // Human Jazakus Prime (and holds Training Grounds #1 since that set shipped, #2204).
         assert_eq!(pool(json!({ "tags": ["Felinor"] })), Vec::<String>::new());
-        assert_eq!(pool(json!({ "tags": ["Human"] })), vec!["core-022"]);
+        assert_eq!(
+            pool(json!({ "tags": ["Human"] })),
+            vec!["core-022", "traininggrounds-001"]
+        );
         // An AI pool is the AI generated cards, every one a token, alone or beside other tags: the
         // ten of Classic+, since Meditative+ shipped M+ #1.1 Base Camp and #1.2 Spa Day, and since
         // Stinkyscape shipped its ten (R1857000).
@@ -586,7 +596,8 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
                 "classicplus-t-ai-01",
                 "meditativeplus-001-1",
                 "meditativeplus-001-2",
-                "stinkyscape-t-ai-01"
+                "stinkyscape-t-ai-01",
+                "traininggrounds-001"
             ]
         );
         // A set that has not shipped adds its Prime tokens only when previewed (R1420).
@@ -760,7 +771,7 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     ];
 
     #[test]
-    fn r1857000_stinkyscape_follows_meditative_plus_and_ships_as_the_newest_set() {
+    fn r1857000_stinkyscape_follows_meditative_plus_and_ships() {
         assert_eq!(SetName::Stinkyscape.as_str(), "Stinkyscape");
         assert_eq!(json_as::<SetName>(json!("Stinkyscape")), SetName::Stinkyscape);
         let at = |set: SetName| CATALOG_SETS.iter().position(|each| *each == set);
@@ -768,22 +779,21 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             at(SetName::Stinkyscape),
             at(SetName::MeditativePlus).map(|at| at + 1)
         );
-        // Shipped: it is open, it is the newest set, and a lean names it.
+        // Shipped: it is open and a lean names it. It was the newest set until the Training Grounds
+        // set shipped after it (#2204, R2194000).
         assert!(set_ships(SetName::Stinkyscape));
-        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::Stinkyscape));
+        assert_eq!(SHIPPED_SETS.get(5), Some(&SetName::Stinkyscape));
         assert!(set_is_open(SetName::Stinkyscape));
-        assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
         assert_eq!(
             LeanPick::parse("Stinkyscape"),
             Some(LeanPick::Set(SetName::Stinkyscape))
         );
         assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::Stinkyscape)));
-        assert_eq!(LeanPick::Newest.resolve(), SetName::Stinkyscape);
         // A preview of it changes nothing, and a preview of a held set ships nothing.
         {
             let _preview = preview_sets(&[SetName::Stinkyscape, SetName::Boss]);
             assert!(set_is_open(SetName::Stinkyscape));
-            assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
+            assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
         }
         assert!(set_is_open(SetName::Stinkyscape));
     }
@@ -844,18 +854,20 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             pool(json!({ "defId": ["stinkyscape-t-ai-01"] })),
             vec!["stinkyscape-t-ai-01"]
         );
-        // In its catalog place, last of the sets that ship and before the Boss set the order does
-        // not name.
+        // In its catalog place, after Meditative+ and before Training Grounds, the set that ships
+        // after it (R2194000), and the Boss set the order does not name.
         let _preview = preview_sets(&[SetName::Boss]);
         let all = pool(json!({}));
         assert_eq!(
-            &all[all.len() - 7..],
+            &all[all.len() - 9..],
             [
                 "meditativeplus-011",
                 "meditativeplus-021",
                 "stinkyscape-027",
                 "stinkyscape-050",
                 "stinkyscape-091",
+                "traininggrounds-001",
+                "traininggrounds-039",
                 "boss-001",
                 "boss-002"
             ]
@@ -896,11 +908,15 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     }
 }
 
-mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
+/// R2194000: the Training Grounds set (issue #2193) was the fourth set R1420's gate held, as R1857000
+/// said of Stinkyscape: seventh in the catalog order, right after Stinkyscape, and in no pool that
+/// names no set, no deck and no lean until its release (#2204) listed it in `SHIPPED_SETS`. Since then
+/// it ships as the newest set (R1371), and its pools reach it like every shipped set's (R2194001).
+mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
     use super::*;
 
     #[test]
-    fn r2194000_training_grounds_follows_stinkyscape_and_is_held() {
+    fn r2194000_training_grounds_follows_stinkyscape_and_ships_as_the_newest_set() {
         assert_eq!(SetName::TrainingGrounds.as_str(), "Training Grounds");
         assert_eq!(
             json_as::<SetName>(json!("Training Grounds")),
@@ -912,41 +928,51 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
             at(SetName::Stinkyscape).map(|at| at + 1)
         );
         assert_eq!(CATALOG_SETS.last(), Some(&SetName::TrainingGrounds));
-        // Held: not shipped, not open, never the newest set, and no lean names it.
-        assert!(!set_ships(SetName::TrainingGrounds));
-        assert!(!set_is_open(SetName::TrainingGrounds));
-        assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
-        assert_eq!(LeanPick::parse("Training Grounds"), None);
-        assert!(!LeanPick::choices().contains(&LeanPick::Set(SetName::TrainingGrounds)));
-        // A preview opens it on this thread without shipping it.
+        // Shipped: it is open, it is the newest set, and a lean names it.
+        assert!(set_ships(SetName::TrainingGrounds));
+        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::TrainingGrounds));
+        assert!(set_is_open(SetName::TrainingGrounds));
+        assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
+        assert_eq!(
+            LeanPick::parse("Training Grounds"),
+            Some(LeanPick::Set(SetName::TrainingGrounds))
+        );
+        assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::TrainingGrounds)));
+        assert_eq!(LeanPick::Newest.resolve(), SetName::TrainingGrounds);
+        // A preview of it changes nothing, and a preview of a held set ships nothing.
         {
-            let _preview = preview_sets(&[SetName::TrainingGrounds]);
+            let _preview = preview_sets(&[SetName::TrainingGrounds, SetName::Boss]);
             assert!(set_is_open(SetName::TrainingGrounds));
-            assert!(!set_ships(SetName::TrainingGrounds));
-            assert_eq!(newest_shipped_set(), SetName::Stinkyscape);
+            assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
         }
-        {
-            let _preview = preview_every_set();
-            assert!(set_is_open(SetName::TrainingGrounds));
-        }
-        assert!(!set_is_open(SetName::TrainingGrounds));
+        assert!(set_is_open(SetName::TrainingGrounds));
     }
 
     #[test]
-    fn r2194000_r2194001_a_pool_that_names_no_set_never_reaches_it_one_that_names_it_does() {
+    fn r2194000_r2194001_a_pool_that_names_no_set_reaches_it_and_one_that_names_it_keeps_to_it() {
         setup();
-        // Whatever an unnamed pool asks for: its tribe, its tag, every token.
-        for args in [
-            json!({}),
-            json!({ "tags": ["Human"] }),
-            json!({ "tags": ["Call to Chaos"] }),
-            json!({ "withTokens": true }),
+        // Whatever an unnamed pool asks for: its tribe, its tag, every token; its token only where a
+        // pool asks for tokens (§5.1).
+        for (args, expected) in [
+            (
+                json!({}),
+                vec!["traininggrounds-001", "traininggrounds-039"],
+            ),
+            (json!({ "tags": ["Human"] }), vec!["traininggrounds-001"]),
+            (
+                json!({ "tags": ["Call to Chaos"] }),
+                vec!["traininggrounds-039"],
+            ),
+            (
+                json!({ "withTokens": true }),
+                vec![
+                    "traininggrounds-001",
+                    "traininggrounds-039",
+                    "traininggrounds-039-1",
+                ],
+            ),
         ] {
-            assert_eq!(
-                training_grounds(&pool(args.clone())),
-                Vec::<String>::new(),
-                "{args}"
-            );
+            assert_eq!(training_grounds(&pool(args.clone())), expected, "{args}");
         }
         assert_eq!(
             pool(json!({ "set": "Training Grounds" })),
@@ -964,9 +990,9 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
             pool(json!({ "defId": ["traininggrounds-039-1"] })),
             vec!["traininggrounds-039-1"]
         );
-        // Previewed, it draws in its catalog place: after Stinkyscape, before the Boss set the order
-        // does not name.
-        let _preview = preview_sets(&[SetName::TrainingGrounds, SetName::Boss]);
+        // In its catalog place, last of the sets that ship: after Stinkyscape, before the Boss set
+        // the order does not name.
+        let _preview = preview_sets(&[SetName::Boss]);
         let all = pool(json!({}));
         assert_eq!(
             &all[all.len() - 5..],
@@ -981,20 +1007,14 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
     }
 
     #[test]
-    fn r2194000_no_deck_holds_one_unless_previewed() {
+    fn r2194000_a_deck_holds_its_cards_since_it_shipped_and_never_its_token() {
         setup();
         let catalog = defs();
-        assert!(!deckable(&catalog["traininggrounds-001"]));
+        assert!(deckable(&catalog["traininggrounds-001"]));
         assert!(!deckable(&catalog["traininggrounds-039-1"]), "a Token never is");
         let mut deck: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
         deck.push("traininggrounds-001".to_string());
-        let refused = validate_deck(&deck, &catalog, "p1", 20).expect_err("refused");
-        assert!(
-            refused
-                .to_string()
-                .contains("Training Grounds, which has not shipped yet"),
-            "{refused}"
-        );
+        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
 
         let collection: IndexMap<String, i32> = deck.iter().map(|id| (id.clone(), 1)).collect();
         let result = jackioh_engine::validator::validate_deck(&jackioh_engine::validator::DeckInput {
@@ -1015,17 +1035,7 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
             .filter(|error| error.rule == jackioh_engine::validator::LoadoutRule::L3)
             .map(|error| error.message.as_str())
             .collect();
-        assert_eq!(l3.len(), 1, "{:?}", result.errors);
-        assert!(
-            l3[0].contains("the Training Grounds set has not shipped yet"),
-            "{}",
-            l3[0]
-        );
-
-        let _preview = preview_sets(&[SetName::TrainingGrounds]);
-        assert!(deckable(&catalog["traininggrounds-001"]));
-        assert!(!deckable(&catalog["traininggrounds-039-1"]), "a Token never is");
-        assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
+        assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
     }
 }
 
@@ -1106,14 +1116,20 @@ mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
         }
     }
 
+    // Re-pinned for the Training Grounds release (#2204): unpreviewed, the snapshot was refused as a
+    // held card; since the set shipped it is taken alone, and the pair is still refused.
     #[test]
-    fn r2195000_r1420_unpreviewed_the_snapshot_is_refused_as_a_held_card_not_as_a_pair() {
+    fn r2195000_r1420_unpreviewed_the_snapshot_alone_is_taken_since_its_set_shipped() {
         register_catalog(with_snapshot());
         let catalog = with_snapshot();
         let mut snapshot: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
         snapshot[1] = "traininggrounds-041".to_string();
-        let said = l3(&snapshot, &catalog);
+        assert_eq!(l3(&snapshot, &catalog), Vec::<String>::new());
+        assert!(validate_deck(&snapshot, &catalog, "p1", 20).is_ok());
+        let mut both = snapshot.clone();
+        both[2] = "core-002".to_string();
+        let said = l3(&both, &catalog);
         assert_eq!(said.len(), 1, "{said:?}");
-        assert!(said[0].contains("has not shipped yet"), "{}", said[0]);
+        assert!(said[0].contains("not both"), "{}", said[0]);
     }
 }

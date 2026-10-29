@@ -1260,11 +1260,13 @@ mod tests {
         assert!(read_diff(&held, &held_long, &[]).play.is_empty());
         let diff = edit(&with(60, 10, &core_only), &with(61, 10, &core_only));
         assert!(diff.play.is_empty(), "no reader ships: {diff:?}");
+        // The reader's own set shipping is the release, not a threshold move: every card of the set
+        // plays differently for that alone (R2204000), and the threshold adds nothing to it.
         let diff = edit(&with(60, 10, &core_only), &with(61, 10, &shipping));
-        assert!(
-            !diff.play.contains("stinkyscape-109"),
-            "the reader's own set shipping is the release's major, not a threshold move"
-        );
+        assert_eq!(diff.sets, vec!["Stinkyscape".to_string()]);
+        assert!(diff.play.contains("stinkyscape-109"));
+        let level = edit(&with(60, 10, &core_only), &with(60, 10, &shipping));
+        assert_eq!(diff.play, level.play);
         // The classification names the reader, so `--claims` asks a fragment for it (R1370000).
         let classification = classify(&edit(&with(60, 10, &shipping), &with(61, 10, &shipping)), None);
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));

@@ -485,9 +485,10 @@ mod r654_public_card_and_player_stats {
         let app = test_app().await;
         for set in jackioh_engine::SHIPPED_SETS {
             let name = set.as_str();
-            // `+` is a space in a query unless it is encoded.
-            let param = name.to_lowercase().replace('+', "%2B");
-            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus"));
+            // `+` is a space in a query unless it is encoded, and a space is no URI character
+            // ("Training Grounds", #2204).
+            let param = name.to_lowercase().replace('+', "%2B").replace(' ', "%20");
+            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus").replace(' ', ""));
             let (status, _, data) = get_public(&app, &format!("/api/stats/cards?set={param}")).await;
             let ids = ids_of(&data);
             assert_eq!(status, 200, "set={param}");

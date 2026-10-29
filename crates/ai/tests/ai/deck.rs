@@ -24,6 +24,8 @@ use jackioh_engine::testkit::{
     registered_catalog, validate_deck,
 };
 
+use jackioh_engine::catalog::pair_key;
+
 use super::support::{ai_pool, register_cards};
 
 const SEEDS: usize = 200;
@@ -152,7 +154,9 @@ mod build_ai_deck_b22 {
     #[test]
     fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_and_meditative_plus_alike() {
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI's soft gate is empty and #1186's
-        // sweep banned none of the set, so its cards are dealt beside the four sets before it.
+        // sweep banned none of the set, so its cards are dealt beside the four sets before it. Re-pinned
+        // for the Training Grounds release (#2204): the gate holds Stinkyscape, not Training Grounds, so
+        // the AI deals itself the newest set beside the five.
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -162,7 +166,7 @@ mod build_ai_deck_b22 {
         sets.sort();
         assert_eq!(
             sets,
-            vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+"]
+            vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+", "Training Grounds"]
         );
     }
 
@@ -599,7 +603,8 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     /// The tags a theme may be (at least `minThemeSize` cards of the pool `banned` and the gate `gated`
-    /// leave), each with how many cards the pool holds of it; never Quickdraw (R817000).
+    /// leave), each with how many cards the pool holds of it, a Core card and its snapshot counted
+    /// once since a deck holds one of them (R2195000); never Quickdraw (R817000).
     fn themes(banned: &[String], gated: &[SetName]) -> Vec<(String, usize)> {
         register_cards();
         let pool: Vec<CardDef> = query(&CatalogQueryArgs::default())
@@ -607,16 +612,22 @@ mod r1370_a_deck_that_leans_on_a_set {
             .filter(|def| !banned.contains(&def.id) && !gated.contains(&def.set))
             .cloned()
             .collect();
-        let mut counts: IndexMap<String, usize> = IndexMap::new();
+        let mut counts: IndexMap<String, IndexSet<String>> = IndexMap::new();
         for def in &pool {
             for tag in &def.tags {
                 if *tag != Tag::Token && *tag != Tag::Quickdraw {
-                    *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
+                    counts
+                        .entry(tag.as_str().to_string())
+                        .or_default()
+                        .insert(pair_key(def).to_string());
                 }
             }
         }
+        // Re-pinned for the Training Grounds release (#2204): TG #59 is Core #47's Fruit snapshot, so
+        // the Fruit pool counted one card twice and asked a floor the deck can never meet.
         let mut themes: Vec<(String, usize)> = counts
             .into_iter()
+            .map(|(tag, cards)| (tag, cards.len()))
             .filter(|(_, count)| *count >= AI_DECK.min_theme_size as usize)
             .collect();
         themes.sort();
@@ -676,12 +687,13 @@ mod r1370_a_deck_that_leans_on_a_set {
         // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
         // Every pin was re-dealt for #1704, whose costs move the builder's curve again.
         // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
-        // deal the decks unchanged.
+        // deal the decks unchanged. And for the Training Grounds release (#2204): the literals gate it
+        // as well, so the decks are still the ones dealt before it was in any pool.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
                 21,
                 &[
                     "classicplus-006",
@@ -709,7 +721,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
                 21,
                 &[
                     "core-089",
@@ -737,7 +749,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -775,7 +787,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"], "theme": "Human" }),
                 20,
                 &[
                     "classic-008",
@@ -955,15 +967,27 @@ mod r1370_a_deck_that_leans_on_a_set {
             .map(|def| def.id.clone())
             .collect();
         of_newest.sort();
+        let printed: Vec<String> = of_newest
+            .iter()
+            .filter(|id| {
+                let def = def_of(None, id);
+                def.snapshot_of.is_none() && !def.tags.contains(&Tag::Quickdraw)
+            })
+            .cloned()
+            .collect();
         // Ban all but six of the set's cards, short of the 13 a 25-card deck owes. A player's deck, so
         // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
         // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
         // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
         // gave the units' up (seed 7). Its last six hold two Units (M+ #21, #24), as Meditative's first
-        // six did (M #2, #3), so every floor stays in reach and the units' is still held.
-        let short = of_newest.len() - 6;
-        let kept: Vec<String> = of_newest[short..].to_vec();
-        let banned: Vec<String> = of_newest[..short].to_vec();
+        // six did (M #2, #3), so every floor stays in reach and the units' is still held. Re-pinned for
+        // the Training Grounds release (#2204): the newest set's snapshots (#41–#60) are left out, as a
+        // Core card dealt first keeps its snapshot out (R2195000), and so is #40 Goetzmann Game Design, a
+        // Quickdraw card the cap may keep out (R817000), so the six kept are TG #34–#39, two of them Units
+        // (#36, #38).
+        let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
+        assert!(kept.iter().all(|id| !def_of(None, id).tags.contains(&Tag::Quickdraw)));
+        let banned: Vec<String> = of_newest.iter().filter(|id| !kept.contains(id)).cloned().collect();
         for n in 1..=SEEDS {
             let deck = build_ai_deck(
                 &mut create_rng(&format!("r1370:short:{n}"), 0),
@@ -1159,10 +1183,11 @@ mod r1390_the_ai_decks_soft_gate {
         let gate = GATE;
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the newest set that ships was Meditative+,
         // which this gate leaves, so a lean on gated Meditative landed on it and no longer on
-        // Classic+. Re-pinned for the Stinkyscape release (#1884): the newest set is Stinkyscape now.
+        // Classic+. Re-pinned for the Stinkyscape release (#1884): the newest set is Stinkyscape now,
+        // and for the Training Grounds release (#2204): Training Grounds is.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
-            Some(SetName::Stinkyscape)
+            Some(SetName::TrainingGrounds)
         );
         assert_eq!(
             ungated_lean(Some(SetName::ClassicPlus), gate),
@@ -1171,12 +1196,17 @@ mod r1390_the_ai_decks_soft_gate {
         assert_eq!(ungated_lean(Some(SetName::Core), gate), Some(SetName::Core));
         assert_eq!(ungated_lean(None, gate), None);
         // The walk back starts from the newest set that ships, not from the set the lean names, and
-        // skips every gated set: past Stinkyscape, Meditative+ and Meditative, as it skips Classic+
-        // here.
+        // skips every gated set: past Training Grounds, Stinkyscape, Meditative+ and Meditative, as it
+        // skips Classic+ here.
         assert_eq!(
             ungated_lean(
                 Some(SetName::Meditative),
-                &[SetName::ClassicPlus, SetName::Meditative, SetName::Stinkyscape]
+                &[
+                    SetName::ClassicPlus,
+                    SetName::Meditative,
+                    SetName::Stinkyscape,
+                    SetName::TrainingGrounds
+                ]
             ),
             Some(SetName::MeditativePlus)
         );
@@ -1187,7 +1217,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::ClassicPlus,
                     SetName::Meditative,
                     SetName::MeditativePlus,
-                    SetName::Stinkyscape
+                    SetName::Stinkyscape,
+                    SetName::TrainingGrounds
                 ]
             ),
             Some(SetName::Classic)
@@ -1212,15 +1243,15 @@ mod r1390_the_ai_decks_soft_gate {
                 DECK_SIZE,
                 &options(json!({ "leanSet": "Meditative", "gatedSets": GATE })),
             );
-            let on_stinkyscape = build_ai_deck(
+            let on_newest = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
-                &options(json!({ "leanSet": "Stinkyscape", "gatedSets": GATE })),
+                &options(json!({ "leanSet": "Training Grounds", "gatedSets": GATE })),
             );
-            assert_eq!(on_meditative, on_stinkyscape, "{seed}");
+            assert_eq!(on_meditative, on_newest, "{seed}");
             assert!(gated_in(&on_meditative).is_empty(), "{seed}: {on_meditative:?}");
             assert!(
-                of_set(&on_meditative, SetName::Stinkyscape) >= lean_floor(DECK_SIZE),
+                of_set(&on_meditative, SetName::TrainingGrounds) >= lean_floor(DECK_SIZE),
                 "{seed}: {on_meditative:?}"
             );
         }
@@ -1326,8 +1357,8 @@ mod r1390_the_ai_decks_soft_gate {
 
     /// The Stinkyscape set ships with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
     /// D8): the gate holds it, so no AI deck at any tier holds one of its cards, a lean on it leans on
-    /// Meditative+, the newest set that ships and is not gated, and a player's random deck from the
-    /// same stream is dealt from it.
+    /// the newest set that ships and is not gated (Meditative+ until the Training Grounds release,
+    /// #2204, Training Grounds since), and a player's random deck from the same stream is dealt from it.
     #[test]
     fn r1390_the_gate_holds_the_stinkyscape_set_from_its_release() {
         register_cards();
@@ -1335,7 +1366,7 @@ mod r1390_the_ai_decks_soft_gate {
         assert!(AI_DECK_GATED_SETS.contains(&SetName::Stinkyscape));
         assert_eq!(
             ungated_lean(Some(SetName::Stinkyscape), AI_DECK_GATED_SETS),
-            Some(SetName::MeditativePlus)
+            Some(SetName::TrainingGrounds)
         );
         let mut player_stinkyscape = 0;
         for (tier, size, base) in ai_rules() {
@@ -1360,7 +1391,7 @@ mod r1390_the_ai_decks_soft_gate {
         );
         assert_eq!(of_set(&leaning, SetName::Stinkyscape), 0, "{leaning:?}");
         assert!(
-            of_set(&leaning, SetName::MeditativePlus) >= lean_floor(DECK_SIZE).min(26),
+            of_set(&leaning, SetName::TrainingGrounds) >= lean_floor(DECK_SIZE),
             "{leaning:?}"
         );
     }
