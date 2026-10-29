@@ -1200,6 +1200,8 @@
   "Ping your teammate": "向队友发信号",
   "Pass to teammate": "传给队友",
   "Trade": "交易",
+  "Tradable": "可交易",
+  "No Trades left this turn": "本回合没有剩余交易次数",
   "Resources": "资源",
   "Credits": "信用点",
   "{cost} mana · {left} left": "{cost} 点法力 · 剩余 {left} 次",
