@@ -9198,11 +9198,13 @@
     "what": "revise #2348 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T08:57:47Z",
+    "at": "2026-10-29T09:07:04Z",
     "notes": [
-      "delivered revise #2304 on claude-8 (run 40839051032): built",
-      "started review #2304 on claude-4 (run 40846199458)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2304 on claude-4 (run 40846199458): reviewed",
+      "delivered suggest on claude-3 (run 40845092104): interrupted",
+      "started revise #2348 on claude-4 (run 40847443845)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9908,7 +9910,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T08:57:47Z",
+  "loop_tick": "2026-10-29T09:07:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
