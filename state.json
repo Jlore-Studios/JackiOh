@@ -7996,9 +7996,12 @@
     "2310": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-28T23:06:53Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2278,
       "kind": "revise",
       "last_findings": [],
