@@ -120,13 +120,13 @@
    screen's one gold "go". So Continue and every lesson's Start or Replay are the tavern's wood
    secondary button, which tavern.css draws; the coach's lavender stays on the board. */
 
-/* Four stops along a path: each lesson's node sits on its card's top edge, and a line runs from
+/* Five stops along a path: each lesson's node sits on its card's top edge, and a line runs from
    node to node behind the cards, showing through the gaps between them. */
 .tutorial-path__lessons {
   --node: 34px;
   --path-gap: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--path-gap);
   margin: 0;
   padding: 0;
@@ -966,7 +966,7 @@
 
 /* ---- tablets and phones: the path runs down the screen ----------------------------------- */
 
-/* Four across needs a desktop's width; below it the lessons stack, each node on the path's line
+/* Five across needs a desktop's width; below it the lessons stack, each node on the path's line
    down the left. */
 @media (max-width: 900px) {
   .tutorial-path__lessons {
@@ -1095,7 +1095,7 @@
   }
 }
 
-/* A landscape phone: the path keeps its row of four, tighter, so the practice setup is not pushed
+/* A landscape phone: the path keeps its row of five, tighter, so the practice setup is not pushed
    a whole screen down. */
 @media (max-height: 520px) and (min-width: 721px) {
   .tutorial-path {
@@ -1194,12 +1194,12 @@
   gap: 4px 12px;
 }
 
-.app-shell .field-guide__title {
+.field-guide .field-guide__title {
   margin: 0;
   font-size: var(--type-2xl);
 }
 
-.app-shell .field-guide__count {
+.field-guide .field-guide__count {
   margin: 0;
   color: var(--text-dim);
   font-size: var(--type-md);
@@ -1237,7 +1237,7 @@
   justify-content: flex-end;
 }
 
-.app-shell .field-guide__close {
+.field-guide .field-guide__close {
   min-height: 44px;
   padding: 7px 18px;
 }

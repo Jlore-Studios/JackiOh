@@ -4,9 +4,11 @@
 // focus and keeps Tab inside, closes on Escape or Close, and gives focus back to the button that opened it.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
+import { ruleSentence } from "./coach.ts";
 import { FIELD_GUIDE } from "./discoveries.ts";
 import { lessonById } from "./lessons.ts";
 import { fieldGuideOf, useTutorialProgress } from "./progress.ts";
@@ -56,7 +58,7 @@ function FieldGuideDialog({ met, onClose }: { met: readonly string[]; onClose():
                 {found ? (
                   <>
                     <strong className="field-guide__name">{t(entry.name)}</strong>
-                    <span className="field-guide__rule">{t(entry.rule)}</span>
+                    <span className="field-guide__rule">{ruleSentence(entry)}</span>
                   </>
                 ) : (
                   <>
@@ -107,15 +109,19 @@ export function FieldGuideButton({ testid, compact = false }: { testid: string; 
       >
         <span aria-hidden="true">{compact ? t("Guide") : label}</span>
       </button>
-      {open ? (
-        <FieldGuideDialog
-          met={met}
-          onClose={() => {
-            setOpen(false);
-            button.current?.focus();
-          }}
-        />
-      ) : null}
+      {/* On the page itself: the HUD it opens from is a containing block that would clip it. */}
+      {open
+        ? createPortal(
+            <FieldGuideDialog
+              met={met}
+              onClose={() => {
+                setOpen(false);
+                button.current?.focus();
+              }}
+            />,
+            document.body,
+          )
+        : null}
     </>
   );
 }

@@ -144,7 +144,7 @@ describe("R2205002 the Field Guide", () => {
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(FIELD_GUIDE.length);
     const mana = screen.getByTestId(tutorialTestid.fieldGuideEntry("mana"));
     expect(mana).toHaveAttribute("data-found", "true");
-    expect(mana).toHaveTextContent("each card costs mana");
+    expect(mana).toHaveTextContent("Each card costs mana");
     const cry = screen.getByTestId(tutorialTestid.fieldGuideEntry("cry"));
     expect(cry).toHaveAttribute("data-found", "false");
     expect(cry, "a mechanic not met keeps its rule hidden").not.toHaveTextContent("it happens when you play the unit");

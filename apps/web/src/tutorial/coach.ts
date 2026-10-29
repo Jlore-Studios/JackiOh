@@ -424,6 +424,12 @@ export type CoachDisplay =
   | { mode: "waiting"; stepNumber: number; stepCount: number; aiToAct: boolean }
   | Bubble;
 
+/** An entry's rule as a sentence of its own: it is written to follow "You found {name}:". */
+export function ruleSentence(entry: Discovery): string {
+  const rule = t(entry.rule);
+  return rule.charAt(0).toUpperCase() + rule.slice(1);
+}
+
 /** A bubble with a title and text: a tip, a step or a discovery. */
 export function isBubble(display: CoachDisplay): display is Bubble {
   return display.mode === "tip" || display.mode === "step" || display.mode === "discovery";
@@ -442,7 +448,7 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
       mode: "discovery",
       id: entry.id,
       title: t("You found {name}", { name: t(entry.name) }),
-      text: t(entry.rule),
+      text: ruleSentence(entry),
       anchor: null,
       ack: true,
       holdAi: false,

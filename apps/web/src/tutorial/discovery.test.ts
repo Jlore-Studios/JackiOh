@@ -109,7 +109,7 @@ describe("R2205000 the discovery coach", () => {
     expect(found.mode).toBe("discovery");
     if (found.mode !== "discovery") return;
     expect(found.title).toBe("You found Mana");
-    expect(found.text).toBe("each card costs mana, and you get one more crystal every turn.");
+    expect(found.text, "the rule as a sentence of its own").toBe("Each card costs mana, and you get one more crystal every turn.");
     expect(found.ack).toBe(true);
     expect(found.holdAi, "a discovery never holds the AI").toBe(false);
     state = coachAck(script, state, ctx(myTurn(3)));

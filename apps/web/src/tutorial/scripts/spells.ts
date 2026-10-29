@@ -44,7 +44,7 @@ export const script: LessonScript = {
     momentOf({
       id: "removal",
       title: "Too big to fight",
-      text: "That enemy unit is bigger than anything you have. Is there a card that doesn't need to fight it?",
+      text: "An enemy unit stands in your way, and a fight could cost you. Is there a card that doesn't need to fight it?",
       discovers: ["spell", "removal"],
       hints: ["Not every card is a unit. Read the cards in your hand.", "Play a spell that destroys a unit, aimed at the enemy's biggest."],
       pick: playOf([HIT_JOB, PATH_OF_EXILE, THWOMP, TRUE_STRIKE], { target: "enemy" }),

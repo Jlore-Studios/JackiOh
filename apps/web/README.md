@@ -674,16 +674,18 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 ## The tutorial
 
-The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322): four lessons on a path, each
-a practice game with two fixed decks, a fixed seed and seat, and the tutorial handicap on the AI
-seat (`AI_TUTORIAL`, the tier below Easy). A lesson is a practice config whose `lesson` names it
+The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003): five
+lessons on a path, each a practice game with two fixed decks of Training Grounds cards, a fixed seed and
+seat, the tutorial handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on
+the human's, with the pool hold in lessons 1–4 (`lessonHandicaps`). A lesson is a practice config whose `lesson` names it
 (`tutorial/start.ts`), so the same worker, controller and board play it; the worker reads the
 decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes them (R291).
 
 ```
 src/tutorial/
-  lessons.ts lessons/*.ts   each lesson as data: title, mechanics, seed, seat, both decks, retry tip
-  scripts/*.ts              each lesson's coach script: steps in order and reactive tips (page only)
+  lessons.ts lessons/*.ts   each lesson as data: title, its Field Guide entries, seed, seat, both decks, pool hold, retry tip
+  scripts/*.ts              each lesson's coach script: its moments, built with scripts/kit.ts (page only);
+                            scripts/testkit.ts's lessonSuite is every lesson's test
   coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, hint, display (R292, R314,
                             R2205000: moments, discoveries, escalating hints)
   discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
