@@ -18,9 +18,10 @@
 //! ```
 //!
 //! On the field neither the cost row nor a declared number only the card's Cry reads (`Param.cry`) is
-//! drawn, the price and the Cry being spent (R1748000). An Upgrade's keyword comes from R21's pool for
-//! a Unit, is Indestructible for a Field Spell, and Pierce or Lifesteal for a Spell or a Field Spell
-//! that deals damage (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
+//! drawn, the price and the Cry being spent (R1748000), nor a Tribute, paid as the card was played
+//! (R2261000). An Upgrade's keyword comes from R21's pool for a Unit, is Indestructible for a Field
+//! Spell, and Pierce or Lifesteal for a Spell or a Field Spell that deals damage
+//! (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
 //!
 //! R442: the draw is the row first, uniformly among the rows that can change the card, then the item
 //! within the row (which keyword, which number), uniformly, and for a stats row the split k in 0–4. A
@@ -57,8 +58,8 @@ use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
 use crate::mana::is_x_cost;
 use crate::numbers::{
-    NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
-    own_cost, parse_number_ref,
+    NumberRef, NumberedKey, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on,
+    numbers_on, own_cost, parse_number_ref,
 };
 use crate::params::{set_param, step_param, steppable_params_times};
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
@@ -432,7 +433,8 @@ fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
 /// it will start at. An X-cost card with no chosen X (off the field) has its X still to come, so its
 /// step always applies ("its X counts 1 less or more when it resolves"). On the field its X has
 /// resolved, so it has no X to move (SPEC §8.7 row 69: Classic+ #69 Buff Billy's Cry Upgrades draw
-/// from the stats and keyword rows only); elsewhere one applies while the X it counts can move.
+/// from the stats and keyword rows only); elsewhere one applies while the X it counts can move. Nor
+/// is a Tribute moved on the field, where it was paid (R2261000).
 fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<XItem> {
     let mut items: Vec<XItem> = Vec::new();
     let better = if direction == TuneDirection::Upgrade {
@@ -469,6 +471,10 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
     }
 
     for entry in numbered_keywords_on(state, card) {
+        // R2261000: a card on the field paid its Tribute to get there.
+        if entry.key == NumberedKey::Tribute && card.zone.z() == ZoneName::Field {
+            continue;
+        }
         let key: String = entry.key.as_str().to_string();
         let delta = if entry.better.as_str() == "up" {
             better

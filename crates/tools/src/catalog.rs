@@ -932,35 +932,58 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
-            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is.
+            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is;
+            // R2261001: one only one face's Cry reads, while the other face's lasting text reads it
+            // too, is marked with that face.
             let cry = param.get("cry");
-            if cry.is_some() && cry != Some(&Json::Bool(true)) {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: `cry` is `true` when present (got {})", describe(cry)),
-                );
-            }
-            let writing: Vec<&str> = texts
-                .iter()
-                .flat_map(|text| text.lines())
-                .map(str::trim)
-                .filter(|line| writes(line, key))
-                .collect();
-            let cry_only = !writing.is_empty() && writing.iter().all(|line| line.starts_with("Cry:"));
-            if cry_only && cry.is_none() {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: every line that writes {{{key}}} is a Cry, so it is `cry: true`"),
-                );
-            }
-            if cry.is_some() && !cry_only {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: `cry: true`, but a line that writes {{{key}}} is no Cry"),
-                );
+            let marked = match cry {
+                None => Some(None),
+                Some(Json::Bool(true)) => Some(Some("true")),
+                Some(Json::String(face)) if matches!(face.as_str(), "base" | "radiant") => {
+                    Some(Some(face.as_str()))
+                }
+                Some(_) => None,
+            };
+            // Per face: None when it never writes the number, else whether every line writing it is a Cry.
+            let cry_only = |text: &str| -> Option<bool> {
+                let writing: Vec<&str> = text
+                    .lines()
+                    .map(str::trim)
+                    .filter(|line| writes(line, key))
+                    .collect();
+                (!writing.is_empty()).then(|| writing.iter().all(|line| line.starts_with("Cry:")))
+            };
+            let wanted = match (cry_only(&texts[0]), cry_only(&texts[1])) {
+                (Some(true), Some(false)) => Some("base"),
+                (Some(false), Some(true)) => Some("radiant"),
+                (Some(true), _) | (_, Some(true)) => Some("true"),
+                _ => None,
+            };
+            let face_name = |face: &str| if face == "radiant" { "Radiant" } else { "base" };
+            let message = match (wanted, marked) {
+                (_, None) => Some(format!(
+                    "`cry` is `true`, \"base\" or \"radiant\" when present (got {})",
+                    describe(cry)
+                )),
+                (wanted, Some(marked)) if wanted == marked => None,
+                (Some("true"), _) => Some(format!(
+                    "every line that writes {{{key}}} is a Cry, so it is `cry: true`"
+                )),
+                (Some(face), _) => Some(format!(
+                    "only the {} face's Cry reads {{{key}}}, so it is `cry: \"{face}\"`",
+                    face_name(face)
+                )),
+                (None, Some(Some("true"))) => {
+                    Some(format!("`cry: true`, but a line that writes {{{key}}} is no Cry"))
+                }
+                (None, Some(Some(face))) => Some(format!(
+                    "`cry: \"{face}\"`, but the {} face's Cry alone does not read {{{key}}}",
+                    face_name(face)
+                )),
+                (None, Some(None)) => None,
+            };
+            if let Some(message) = message {
+                fail(failures, &p_at, &format!("{key}: {message}"));
             }
             let extra: Vec<&str> = param
                 .keys()
@@ -2544,7 +2567,9 @@ mod tests {
         catalog.insert("classic-005".to_string(), Json::Object(entry));
         assert_eq!(
             check_catalog(&catalog).failures,
-            ["catalog[\"classic-005\"].base: an Animated face prints both `attack` and `health` or neither (R2280000)"]
+            [
+                "catalog[\"classic-005\"].base: an Animated face prints both `attack` and `health` or neither (R2280000)"
+            ]
         );
     }
 
@@ -2694,27 +2719,68 @@ mod tests {
         let unmarked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up"}]"#;
         let (cry, cry_radiant) = ("Cry: Draw {draw}.", "Rush\\nCry: Draw {draw}.");
         let lasting = "Start of turn: Draw {draw}.";
+        let both = "Cry: Draw {draw}.\\nStart of turn: Draw {draw}.";
         // Every line that writes it is a Cry: marked, it passes; unmarked, it is refused.
         assert_eq!(params_failures(marked, cry, cry_radiant), Vec::<String>::new());
         assert_eq!(
             params_failures(unmarked, cry, cry_radiant),
             ["x.params[0]: draw: every line that writes {draw} is a Cry, so it is `cry: true`"]
         );
-        // A line that is no Cry writes it, beside a Cry or not: unmarked, it passes; marked, it is refused.
+        // A line that is no Cry writes it on each face, beside a Cry or not: unmarked, it passes;
+        // marked, it is refused. (A Cry on one face beside a lasting text on the other is R2261001's.)
         assert_eq!(params_failures(unmarked, lasting, lasting), Vec::<String>::new());
-        assert_eq!(params_failures(unmarked, cry, lasting), Vec::<String>::new());
+        assert_eq!(params_failures(unmarked, both, both), Vec::<String>::new());
         assert_eq!(
-            params_failures(marked, cry, lasting),
+            params_failures(marked, both, lasting),
             ["x.params[0]: draw: `cry: true`, but a line that writes {draw} is no Cry"]
         );
-        // `cry` is `true` or absent.
+        // `cry` is `true`, a face (R2261001) or absent.
         assert_eq!(
             params_failures(
                 r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":false}]"#,
                 cry,
                 cry_radiant
             ),
-            ["x.params[0]: draw: `cry` is `true` when present (got false)"]
+            ["x.params[0]: draw: `cry` is `true`, \"base\" or \"radiant\" when present (got false)"]
+        );
+    }
+
+    #[test]
+    fn r2261001_a_number_only_one_face_s_cry_reads_names_that_face() {
+        let on = |mark: &str| format!(r#"[{{"key":"lucky","base":1,"radiant":1,"better":"up"{mark}}}]"#);
+        let cry = "Cry: Give it Lucky {lucky}.";
+        let activate = "Activate: Give it Lucky {lucky}.";
+        // Meditative #101 Gachaholic's shape: the base face's Cry and the Radiant face's Activate.
+        assert_eq!(
+            params_failures(&on(r#","cry":"base""#), cry, activate),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), activate, cry),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            params_failures(&on(""), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":true"#), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        // The other face, every face's Cry, or no face's Cry alone: not that face.
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"base""#), cry, cry),
+            ["x.params[0]: lucky: every line that writes {lucky} is a Cry, so it is `cry: true`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), activate, activate),
+            [
+                "x.params[0]: lucky: `cry: \"radiant\"`, but the Radiant face's Cry alone does not read {lucky}"
+            ]
         );
     }
 
