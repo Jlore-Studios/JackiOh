@@ -220,8 +220,10 @@
     "what": "build #2157 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-10-29T05:57:23Z",
-    "notes": [],
+    "at": "2026-10-29T06:13:00Z",
+    "notes": [
+      "#2340: typed it Bug"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "providers": {
