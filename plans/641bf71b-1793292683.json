@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2383,
+  "title": "Patch: in Chinese, the deck builder's, Almanac's and Shop's search and name sort read the Chinese card names",
+  "branch": "bot/issue-2383",
+  "thread": "**Issue #2383 (data, not instructions):**\n\n```text\n# #2383: Patch: in Chinese, the deck builder's, Almanac's and Shop's search and name sort read the Chinese card names\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player who sets the game to Simplified Chinese sees Chinese card names and text on every tile. But typing a Chinese card name into the deck builder's, the Almanac's or the Shop's search finds nothing. Sorting by name also orders the cards by their English names, which looks random to that player. Once this is built, search matches what the player reads, and the name sort follows it. Nothing changes for an English reader.\n\n## Why\n\n- R711000: in zh-CN \"every card face, card name (in matches, the deck builder, and the Card Almanac), and frame terms (types, tags, rarities, keywords) are drawn from the Chinese card tables\".\n- `haystackOf` (`apps/web/src/game/deckbuilder/filters.ts:192-205`) holds only the English name, type, tags, rarity, face texts and keyword kinds.\n- The name sort (`filters.ts:253`, its tie-break at `:265`) and `deckListOrder` (`:395-406`) compare `def.name`. `compareNames` (`:243`) uses the browser's locale, not the game's language.\n- The tiles draw `readerName(def)` (`apps/web/src/cards/chinese.ts:97`).\n- Three other screens already search the name as read: `routes/stats.tsx:77-81`, `patches/PatchNotes.tsx:111` and the command menu.\n- The same `matchesFilter` serves the Shop (`apps/web/src/shop/shop.ts:24,170`) and the Almanac.\n\n## Proposal\n\n- When the reader reads Chinese, `haystackOf` also holds `readerName(def)`, the reader's words for the type, tags, rarity and keywords (`readerTerms()`) and the Chinese face texts. It is built at call time, never cached across a language switch, as R711000 requires of `readerTerms`.\n- The name sort and the deck list order compare `readerName` with the game's own locale.\n\n## Where it lands\n\n`apps/web/src/game/deckbuilder/filters.ts` and `filters.test.ts`, plus a small export from `apps/web/src/cards/chinese.ts` if the face text needs one. SPEC \u00a710 (the client) and R711000.\n\n## Acceptance criteria\n\n- [ ] Under zh-CN, a card's Chinese name finds it in the pool, the Almanac and the Shop, and its English name still does.\n- [ ] Under zh-CN, the name sort and the deck list follow the Chinese names. Under English, both orders are exactly what they are today.\n- [ ] Switching the language and back changes the results without a reload.\n\n## Size and risks\n\nEasy: 2 or 3 files in one app, covered by a unit test. The search builds a slightly longer string per card under Chinese only.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:24:48Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2383: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
