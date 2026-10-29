@@ -1,5 +1,5 @@
 //! Stinkyscape #127 Jlockeed's Siege Tank (SPEC §8.10 row 127). (3, Embiggened 4) Unit, Jlockeed, Rare;
-//! 8/5 → 16/10; held (R1420).
+//! 8/5 → 16/10.
 //!   Both faces: "End of turn: This attacks a random enemy. / Embiggened (4): Starship Piece."
 //!
 //! End of turn (R62): a forced attack (R53, `forced_attack_random`) on one enemy, the hero or a Unit,

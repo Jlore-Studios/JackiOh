@@ -13,7 +13,9 @@ import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@ja
 import { cosmeticsOf } from "../../cards/cosmetics.ts";
 import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
+import { navigate, newDeckPath } from "../../net/navigate.ts";
 import { expectEmptyState } from "../../test/empty.ts";
+import { at } from "../../test/stubServer.ts";
 import { UNDO_WINDOW_MS } from "../../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../../undo/UndoToast.tsx";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
@@ -1392,5 +1394,28 @@ describe("duplicating a deck (#2096)", () => {
     fireEvent.click(rowDuplicate);
     expect(screen.getByTestId(DECK_CAP)).toHaveTextContent(`${String(MAX_SAVED_DECKS)}/${String(MAX_SAVED_DECKS)}`);
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "d0");
+  });
+});
+
+describe("R2118000 New deck from the command menu", () => {
+  afterEach(() => {
+    at("/");
+  });
+
+  it("R2118000 /decks?new=deck makes and opens one new deck and drops the query", () => {
+    at("/decks?new=deck");
+    mount();
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+    expect(screen.getByTestId(DECK_NAME_INPUT)).toHaveValue("Deck 1");
+    expect(window.location.search).toBe("");
+    expect(screen.queryByTestId(deckRowId("new-2"))).toBeNull();
+  });
+
+  it("R2118000 a New deck move on an open workshop makes one in place", () => {
+    mount();
+    act(() => {
+      navigate(newDeckPath());
+    });
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
   });
 });

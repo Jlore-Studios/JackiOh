@@ -1,6 +1,6 @@
 //! SPEC §8.10 Stinkyscape 112 Job Application (§6.3 Quest stages, Hold beneath, Buff; §6.2 Death; §6.1
 //! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 1, Legendary, a card
-//! of the held Stinkyscape set (R1420).
+//! of the Stinkyscape set.
 //!   Base:    "Get employed! Its quest runs in three stages, one at a time. Death: Resummon this at
 //!            Stage 1. Stage 1, Upload Resume: Activate this to send a card from your hand in as your
 //!            resume; hear back in 2 to 6 turns. Stage 2, The Interview, one of three drawn at random:

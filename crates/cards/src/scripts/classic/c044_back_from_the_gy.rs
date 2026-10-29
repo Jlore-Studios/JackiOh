@@ -102,13 +102,6 @@ mod tests {
 
     use crate::js;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("the scenario has no {what}"),
-        }
-    }
-
     fn open(s: &Scenario) -> &PendingChoice {
         must(s.state().pending.as_ref(), "open prompt")
     }

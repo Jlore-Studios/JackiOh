@@ -1,4 +1,4 @@
-//! Stinkyscape #25 KY's Tricknology (SPEC §8.10 row 25). (2) Spell, KY, Epic; held (R1420).
+//! Stinkyscape #25 KY's Tricknology (SPEC §8.10 row 25). (2) Spell, KY, Epic.
 //!   Base:    "Choose a zone. Its Jacobian stretches a unit square. Summon a random Starship Piece in each
 //!            zone it covers, for the player whose zone it is. F(x, y) = (x² − y, xy)."
 //!   Radiant: "Choose a zone. Its Jacobian stretches a unit square. Summon a random Radiant Starship Piece

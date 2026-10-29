@@ -127,7 +127,7 @@ export type PracticeSnapshot = {
    */
   replay?: Pick<PracticeReplaySummary, "game" | "steps">;
   /**
-   * R2102000: present, and true, only while the human of a free game against the Easy AI has a sure
+   * R2102000: present, and true, only while the human of a game against the AI (R2291000) has a sure
    * win this turn by what they can see (`lethalHint`); the page shows it only with the Lethal hint
    * setting on. It never says how.
    */

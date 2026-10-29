@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-reknite Reknite, a Resource token of the held Stinkyscape set (R1420).
+//! SPEC §7 Stinkyscape T-reknite Reknite, a Resource token of the Stinkyscape set.
 //!   Base:    "Your hero has +{armor} Armor until the start of your next turn." (1)
 //!   Radiant: the same (2).
 //!

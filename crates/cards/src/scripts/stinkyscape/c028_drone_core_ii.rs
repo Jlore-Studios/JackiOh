@@ -1,5 +1,4 @@
-//! S #28 Drone Core II (SPEC §8.10 row 28): (1) Spell, Drone Core, Common, a card of the held Stinkyscape
-//! set (R1420).
+//! S #28 Drone Core II (SPEC §8.10 row 28): (1) Spell, Drone Core, Common, a card of the Stinkyscape set.
 //!   Base:    "Summon a Drone Interceptor."
 //!   Radiant: "Summon a Radiant Drone Interceptor."
 //! Engine: a summon of the Drone Interceptor into the caster's leftmost open unit zone (R64), no Cry (R1),

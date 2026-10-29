@@ -366,10 +366,6 @@ mod tests {
 
     const SEED: &str = "ky-tutor";
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("the scenario has no {what}"))
-    }
-
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "an open prompt")
     }

@@ -1,9 +1,8 @@
 //! S #137.1 Land Doctrine (SPEC §8.10 row 137.1; R53, R60, R1852005, R1859007, R1859008): (4) Spell,
-//! War Doctrine, Token (printed Legendary), a token of the held Stinkyscape set (R1420), which #137
+//! War Doctrine, Token (printed Legendary), a token of the Stinkyscape set, which #137
 //! Firststrike Capability Discovers and casts.
 //!
-//! Base:    "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy
-//!          Unit."
+//! Base:    "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
 //! Radiant: "For the rest of the game, your Units have Trample. Your Starship attacks each enemy Unit."
 //! Engine: `give_units_keyword { Trample }`, a `unitsHaveKeyword` player modifier for the rest of the
 //! game: every Unit its caster controls has Trample, those that arrive later too, but a Vanilla one,

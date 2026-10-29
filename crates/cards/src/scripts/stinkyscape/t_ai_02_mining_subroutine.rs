@@ -1,5 +1,5 @@
 //! S T-AI-2 Mining Subroutine (SPEC §7, §8.10 row T-AI-2; R482, R1840001, R1840002, R1881000): (0) Spell,
-//! AI, Token (no printed rarity), an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! AI, Token (no printed rarity), an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Gain a random Common or Rare Stinkyscape Resource."
 //!   Radiant: "Gain a random Radiant Common or Rare Stinkyscape Resource."
 //! Engine: `gain_resources` (R1840002) from a pool of the Common and Rare Resources named by id: the

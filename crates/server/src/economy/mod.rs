@@ -22,8 +22,12 @@
 //!   both read back (§14.5, #1305).
 //! - `cosmetic_packs`: opening a cosmetic pack the cosmetic cycle paid, its roll pure from the
 //!   holdings and a seed, the Chase Shard bar it fills and what the bar buys (§14.6, #1306).
+//! - `idempotency`: a spend's `Idempotency-Key`, its answer kept in the spend's transaction so a
+//!   retry replays it and spends nothing again, and the sweep of keys past their time (§14.11,
+//!   #2124, R2124000).
 
 pub mod cosmetic_packs;
+pub mod idempotency;
 pub mod math;
 pub mod packs;
 pub mod practice;
