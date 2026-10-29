@@ -84,8 +84,8 @@
   background: var(--bg-raised);
   box-shadow: var(--shadow-2);
   transition:
-    border-color calc(200ms * var(--anim-scale)) ease,
-    box-shadow calc(200ms * var(--anim-scale)) ease;
+    border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .seat-you {
@@ -343,8 +343,8 @@ button.modifier-badge[data-open="true"] {
   background: var(--pal-slate-900);
   transform: rotate(45deg);
   transition:
-    background calc(150ms * var(--anim-scale)) linear,
-    box-shadow calc(150ms * var(--anim-scale)) linear;
+    background calc(var(--motion-fast) * var(--anim-scale)) linear,
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) linear;
 }
 
 .mana-crystal[data-filled="true"] {
@@ -516,7 +516,7 @@ button.modifier-badge[data-open="true"] {
   flex: 0 0 var(--slot-w);
   width: var(--slot-w);
   transform-origin: 50% 100%;
-  transition: transform calc(160ms * var(--anim-scale)) ease;
+  transition: transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .hand-slot + .hand-slot {
@@ -613,7 +613,7 @@ button.modifier-badge[data-open="true"] {
 .hand-flip {
   position: relative;
   transform-style: preserve-3d;
-  animation: hand-reveal calc(560ms * var(--anim-scale)) cubic-bezier(0.3, 0.7, 0.4, 1)
+  animation: hand-reveal calc(var(--motion-slow) * var(--anim-scale)) var(--ease-out)
     calc(var(--i, 0) * 90ms * var(--anim-scale)) both;
 }
 
@@ -737,7 +737,7 @@ button.modifier-badge[data-open="true"] {
   opacity: 0.88;
   rotate: calc(var(--sand-variation) * 47deg);
   translate: -50% -50%;
-  animation: sand-settle var(--sand-fade) ease-out forwards;
+  animation: sand-settle var(--sand-fade) var(--ease-out) forwards;
 }
 
 .sand-mark--grain {
@@ -793,7 +793,7 @@ button.modifier-badge[data-open="true"] {
 .tap-mark--wood {
   border: 2px solid color-mix(in srgb, var(--pal-parchment) 55%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-brass-950) 35%, transparent);
-  animation: tap-ripple 420ms ease-out forwards;
+  animation: tap-ripple 420ms var(--ease-out) forwards;
 }
 
 @keyframes tap-ripple {
@@ -803,7 +803,7 @@ button.modifier-badge[data-open="true"] {
 
 .tap-mark--felt {
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-black) 34%, transparent), color-mix(in srgb, var(--pal-black) 12%, transparent) 55%, transparent 72%);
-  animation: tap-press 1600ms ease-out forwards;
+  animation: tap-press 1600ms var(--ease-out) forwards;
 }
 
 @keyframes tap-press {
@@ -815,7 +815,7 @@ button.modifier-badge[data-open="true"] {
 .tap-mark--stone {
   width: calc(6px + var(--sand-build) * 0.8px);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-white) 95%, transparent), color-mix(in srgb, var(--pal-slate-100) 55%, transparent) 35%, transparent 70%);
-  animation: tap-spark 260ms ease-out forwards;
+  animation: tap-spark 260ms var(--ease-out) forwards;
 }
 
 @keyframes tap-spark {
@@ -827,7 +827,7 @@ button.modifier-badge[data-open="true"] {
 .tap-mark--neon {
   border: 2px solid var(--tap-tint);
   box-shadow: 0 0 6px var(--tap-tint), inset 0 0 4px var(--tap-tint);
-  animation: tap-burst 520ms ease-out forwards;
+  animation: tap-burst 520ms var(--ease-out) forwards;
 }
 
 @keyframes tap-burst {
@@ -839,7 +839,7 @@ button.modifier-badge[data-open="true"] {
   border-radius: 52% 46% 55% 44%;
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
-  animation: tap-bleed 2400ms ease-out forwards;
+  animation: tap-bleed 2400ms var(--ease-out) forwards;
 }
 
 @keyframes tap-bleed {
@@ -852,7 +852,7 @@ button.modifier-badge[data-open="true"] {
   width: 6px;
   background: var(--tap-tint);
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-  animation: tap-scatter 700ms ease-out forwards;
+  animation: tap-scatter 700ms var(--ease-out) forwards;
 }
 
 @keyframes tap-scatter {
@@ -935,8 +935,8 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-brass-800) 30%, transparent);
   transition:
-    background-color calc(150ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    background-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* The backrow is the trap row: darker and dashed, so it never reads as a place for units. */
@@ -967,7 +967,7 @@ button.modifier-badge[data-open="true"] {
   border: 1px dashed color-mix(in srgb, var(--pal-brass-500) 16%, transparent);
   border-radius: var(--radius-sm);
   pointer-events: none;
-  transition: border-color calc(150ms * var(--anim-scale)) ease;
+  transition: border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .zone[data-row="units"]::before {
@@ -1067,8 +1067,8 @@ button.modifier-badge[data-open="true"] {
   overflow: hidden;
   font-size: var(--type-xs-em);
   transition:
-    transform calc(250ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    transform calc(var(--motion-base) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* Spells, traps and field cards are violet, units steel blue: the type reads before the text. */
@@ -1548,7 +1548,7 @@ button.modifier-badge[data-open="true"] {
 
 .game:not([data-reduced-motion="true"])[data-impact-tier="big"] .board [data-testid^="card-"],
 .game:not([data-reduced-motion="true"])[data-impact-tier="giga"] .board [data-testid^="card-"] {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
 }
 
 /* The board itself shakes in the effects layer (fx/shake.ts, B35), sized by DAMAGE_FEEL's shakePx. */
@@ -1561,7 +1561,7 @@ button.modifier-badge[data-open="true"] {
   background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
-  animation: giga-vignette-flash 400ms ease-out both;
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
 }
 
 /* #185 Unit Slam. The landing Unit hangs for its anticipation before its landing motion
@@ -1575,17 +1575,17 @@ button.modifier-badge[data-open="true"] {
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
-  animation: slam-wobble-slight 220ms ease-in-out both;
+  animation: slam-wobble-slight 220ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
-  animation: slam-wobble-hard 320ms ease-in-out both;
+  animation: slam-wobble-hard 320ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
@@ -1598,7 +1598,7 @@ button.modifier-badge[data-open="true"] {
   background: color-mix(in srgb, var(--pal-wood-800) 42%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
-  animation: giga-vignette-flash 400ms ease-out both;
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
@@ -1787,7 +1787,7 @@ button.modifier-badge[data-open="true"] {
   min-height: 38px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  transition: translate 80ms ease, box-shadow 120ms ease, filter 120ms ease;
+  transition: translate var(--motion-instant) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), filter var(--motion-fast) var(--ease-standard);
 }
 
 .board .control.control-end-turn:not(:disabled) {
@@ -1807,7 +1807,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .board .control.control-end-turn[data-turn-state="waiting"] {
-  animation: end-turn-ready-pulse 1.2s ease-in-out infinite;
+  animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
 .board .control.control-end-turn[data-turn-state="enemy"] {
@@ -1830,7 +1830,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .board .control.control-end-turn[data-animating="turnEnded"] {
-  animation: end-turn-turnover 150ms ease-in-out both;
+  animation: end-turn-turnover 150ms var(--ease-in-out) both;
   transform-style: preserve-3d;
 }
 

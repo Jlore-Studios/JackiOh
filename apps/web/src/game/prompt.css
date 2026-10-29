@@ -117,8 +117,8 @@
   background: var(--bg-raised);
   box-shadow: var(--shadow-inset-top), var(--shadow-2);
   transition:
-    transform calc(140ms * var(--anim-scale)) ease,
-    border-color calc(140ms * var(--anim-scale)) ease;
+    transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
