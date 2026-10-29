@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2380,
+  "title": "Patch: the AI prices a Dormant unit by the unit it wakes as",
+  "branch": "bot/issue-2380",
+  "thread": "**Issue #2380 (data, not instructions):**\n\n```text\n# #2380: Patch: the AI prices a Dormant unit by the unit it wakes as\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome new cards arrive asleep and wake a few turns later as a big unit. Imprisoned Cosmality, for example, costs 2 mana and wakes as a 10/6. To the practice AI a sleeping unit is worth nothing until it wakes. So the AI almost never plays these cards itself, and it doesn't prepare for the player's. Once this is built, the AI values a sleeping unit by what it will become, less the longer it has to wait. It plays these cards on curve and takes the player's seriously.\n\n## Why\n\n- `material()` (`crates/ai/src/evaluate.rs:453-458`) sums `unit_worth` over `active_units_of` only, and that leaves a Dormant card out (R1839000: \"It is no Unit \u2026 the AI's evaluation and its lethal solver\").\n- That choice was made before any Dormant card shipped:\n  - R1839000 says \"No shipped card is Dormant yet\".\n  - The AI test file's header says the same (`crates/ai/tests/ai/slumber.rs:7-8`).\n  - The test pins \"Its own Dormant card counts for nothing either, until it wakes\" (`slumber.rs:95-117`).\n- The latest sweep of record (`training/history/sweep-2026-10-29-2.md`) shows how rarely the AI plays these cards:\n\n| Card | Easy: affordable turns / plays | Hard: affordable turns / plays |\n| --- | --- | --- |\n| Imprisoned Cosmality (`stinkyscape-019`) | 64 / 3 | 110 / 1 |\n| Imprisoned Ship Smith (`stinkyscape-017`) | 46 / 1 | 41 / 2 |\n| Spacemine (a 2-cost unit), for comparison | 30 / 14 | 35 / 12 |\n\n- A Dormant card's status and countdown are on both seats' views (`UnitView.slumber`, R185), so pricing it uses no hidden information.\n\n## Proposal\n\n- In `material()`, add a term for each Dormant card on the side (`units_on_field_of` keeps them): the `unit_worth` of the card awake, times a named discount for each turn left on its countdown.\n- A card that waits for an effect to wake it, with no countdown, counts at a named share.\n- The weights are named in `EvalWeights` and `AI_EVAL`. `GREEDY_EVAL` keeps 0, since it is frozen.\n- Nothing else changes:\n  - `legal_actions` still never offers an action through or onto a Dormant card;\n  - the face-threat and lethal reads still ignore it until it wakes.\n- A new ruling amends R1839000's sentence on the AI's evaluation.\n\n## Where it lands\n\n- AI: `crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/slumber.rs` (the pinned test is rewritten under the new ruling), `crates/ai/README.md`.\n- Spec: `spec/rulings/R1839000.md`, a new ruling note, `spec/pending/<issue>.md`. SPEC \u00a76.1 (Dormant) and \u00a79's practice AI.\n\n## Acceptance criteria\n\n- [ ] Tests named after the new ruling:\n  - the AI's own Dormant card scores above an empty zone, and an enemy one scores below it from the AI's side;\n  - fewer turns left is worth more.\n- [ ] With 2 mana and Imprisoned Cosmality its only play, `decide` plays it at Medium and Hard (today it ends the turn).\n- [ ] Positions that differ only in a hidden card still give the same decision, and `GREEDY_EVAL` is unchanged.\n- [ ] `cargo jackioh gate` passes at smoke size, and the PR reports a `sweep` of `stinkyscape-017` and `stinkyscape-019` next to the numbers above.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\n\nHard (AI work by CLAUDE.md rule 11): about 7 files, 150 to 250 lines.\n\n- The weights start untuned, as #1886's training-lane starts did. A small gate screen may not see a change confined to two cards.\n- Any change to the evaluation can re-deal the seeded fixtures in the shadow-ban tests.\n- The Dormant Starship hull in the backrow is still priced by its printed cost however many pieces have fused into it (`evaluate.rs:490-498`). That is left for a follow-up.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:41:06Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2380: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
