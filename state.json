@@ -7198,25 +7198,12 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [
-          "claude"
-        ],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40717864745",
-            "tier": "medium"
-          }
-        ],
-        "sha": "22241039cfe0fe3eadd0f967c1bf3207f7f9890e",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
+        "approvals": [],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b61afff2c881515a6a0d64fed07cea7a47779513",
+        "tiers": {}
       }
     },
     "2266": {
