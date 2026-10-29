@@ -8843,11 +8843,15 @@
     "what": "revise #2300 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T06:20:23Z",
+    "at": "2026-10-29T06:31:30Z",
     "notes": [
-      "#2340 needs a plan",
-      "delivered build #2268 on claude-6 (run 40817785367): approved",
-      "started plan #2340 on claude-6 (run 40828892013)",
+      "delivered revise #2298 on claude-8 (run 40827794917): built",
+      "delivered build #2332 on claude-8 (run 40823705985): approved",
+      "delivered build #2323 on muse (run 40819236649): approved",
+      "started review #2298 on claude-8 (run 40830176398)",
+      "started review #2343 on claude-8 (run 40830264484)",
+      "started revise #2315 on claude-3 (run 40830349468)",
+      "started revise #2300 on claude-4 (run 40830441928)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -9555,7 +9559,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T06:20:23Z",
+  "loop_tick": "2026-10-29T06:31:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
