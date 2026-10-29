@@ -8175,22 +8175,12 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40800849360",
-            "tier": "medium"
-          }
-        ],
-        "sha": "f9c2e9ac9b23bafcd65cdb04f51a76fcca204c6c",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "f053502d6c13578dfa2a4b48df130a453d9b1b58",
+        "tiers": {}
       }
     },
     "2310": {
