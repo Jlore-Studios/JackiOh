@@ -1,8 +1,9 @@
 // Lesson 5 data (SPEC §9.10, R291, R2205003); ../scripts/finale.ts is the coach. The final exam:
 // the first lesson to deal Legendary and Mythic cards, all four of Training Grounds' (Seance, Tutorial
 // Master, Call to Chaos (Training-Grounds Edition) and Goetzmann Game Design), and the only one with
-// no pool hold, so random cards may be any card of the set. Deck order fixes this seed's deal
-// (`scripts/lesson-deal.ts finale`). The AI's deck holds no Legendary or Mythic card (R291).
+// no pool hold, so random cards may be any card of every shipped set (TG #40 draws from all of
+// them). Deck order fixes this seed's deal (`scripts/lesson-deal.ts finale`). The AI's deck holds
+// no Legendary or Mythic card (R291).
 
 import type { TutorialLesson } from "../lessons.ts";
 
