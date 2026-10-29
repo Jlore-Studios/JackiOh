@@ -8244,9 +8244,7 @@
       "source": "",
       "started_at": "2026-10-29T16:19:42Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6502006396"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
