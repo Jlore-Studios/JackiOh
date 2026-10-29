@@ -17,7 +17,7 @@
 
 .hand-hints {
   position: absolute;
-  z-index: 4;
+  z-index: var(--z-hover);
   top: 19%;
   left: 4%;
   display: flex;
@@ -38,7 +38,7 @@
   min-width: 1.4em;
   padding: 0 0.2em;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--bg-sunken) 70%, transparent);
   color: var(--text-dim);
 }

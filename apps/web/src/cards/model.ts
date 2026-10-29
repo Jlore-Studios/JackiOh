@@ -215,9 +215,10 @@ export type FaceModel = {
   frozenForever?: boolean;
   /**
    * R1852000, R1852005: in play, the card is a Starship (`UnitView.starship`): `pieces` how many
-   * Starship Pieces are fused into it, `launched` whether it has launched; null on every other card.
+   * Starship Pieces are fused into it, `launched` whether it has launched, and (R2249000) `list` the
+   * pieces themselves, oldest first, which its face prints in place of its text; null on every other card.
    */
-  starship?: { pieces: number; launched: boolean } | null;
+  starship?: { pieces: number; launched: boolean; list: readonly StarshipPieceRef[] } | null;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
   /**
@@ -250,6 +251,9 @@ export type FaceModel = {
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
  * `live` (a unit on the field) and `liveCost` stay where they were, beside it.
  */
+/** R1852005, R2249000: one Starship Piece fused into a Starship, on the face it fused on. */
+export type StarshipPieceRef = { defId: string; radiant: boolean };
+
 export type InPlay = {
   /** R243: a Unit card's stats in its owner's hand, as they stand (`CardView.attack`, `.health`). */
   handStats?: { attack: number; health: number };
@@ -290,10 +294,11 @@ export type InPlay = {
   /** R1848000: the unit is Frozen forever (`UnitView.frozenForever`). */
   frozenForever?: true;
   /**
-   * R1852000, R1852004: the card is a Starship (`UnitView.starship`): the pieces fused into it, and the
-   * name it took as it launched (null while it is Dormant), which its face prints in place of its own.
+   * R1852000, R1852004: the card is a Starship (`UnitView.starship`): how many pieces are fused into it,
+   * the name it took as it launched (null while it is Dormant), which its face prints in place of its
+   * own, and (R2249000) the pieces, oldest first, which its face lists in place of its text.
    */
-  starship?: { pieces: number; name: string | null };
+  starship?: { pieces: number; name: string | null; list?: readonly StarshipPieceRef[] };
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
   /** R1956001: the card that generated the viewer's own Created card (`CardView.createdBy`). */
@@ -431,7 +436,10 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     frozen: inPlay?.frozen === true,
     dormant: inPlay?.dormant ?? null,
     frozenForever: inPlay?.frozenForever === true,
-    starship: inPlay?.starship === undefined ? null : { pieces: inPlay.starship.pieces, launched: inPlay.starship.name !== null },
+    starship:
+      inPlay?.starship === undefined
+        ? null
+        : { pieces: inPlay.starship.pieces, launched: inPlay.starship.name !== null, list: inPlay.starship.list ?? [] },
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
@@ -544,8 +552,8 @@ function concealed(def: CardDef | undefined): boolean {
 
 /**
  * What the rules box prints in play (inPlay.ts). A Vanilla unit's text is gone; a Call to Chaos is
- * "???"; a card with a label prints it (R2247000); a #98 Heroic Power is the power it rolled. Anything
- * else prints its printed text.
+ * "???"; a card with a label prints it (R2247000); a Starship prints nothing, its pieces listed in its
+ * place (R2249000); a #98 Heroic Power is the power it rolled. Anything else prints its printed text.
  */
 function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay, chinese: boolean): FaceText {
   // R711000: a face drawn in Chinese for a reader of Chinese says it in the reader's words; the English
@@ -556,6 +564,8 @@ function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: Fac
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   // R2247000: a card that holds a label (Anomaly Found!'s "FO") prints it as its text.
   if (inPlay.label !== undefined) return { full: inPlay.label, marks: [] };
+  // R2249000: a Starship prints no text; its face lists the pieces fused into it instead (CardFace.tsx).
+  if (inPlay.starship !== undefined) return { full: "", marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
     // B3.4: Steady Shot's {shot} is the card's number as it stands (the view's), else as printed.

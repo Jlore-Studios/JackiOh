@@ -84,27 +84,27 @@ mod tests {
         #[test]
         fn r1839000_a_dormant_cards_zone_is_not_filled() {
             crate::register_all();
-            let (mut s, ship) = crate::built_starship(
-                "s158-dormant",
-                json!([{ "def": STARTOS, "lane": 2 }]),
-                json!({ "hand": [SWARM, ANCHOR], "field": [{ "def": VANILLA, "lane": 1 }] }),
-                json!({}),
-            );
-            assert_eq!(
-                s.unit_at(PlayerId::P1, 2).id,
-                ship,
-                "the Dormant Starship stands in lane 2"
-            );
+            // A Dormant Unit in lane 2 (a Dormant Starship stands in the backrow, R2249000).
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [SWARM, ANCHOR],
+                    "mana": 10,
+                    "field": [VANILLA, { "def": VANILLA, "lane": 2, "slumber": { "turns": 2 } }],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            let dormant = s.unit_at(PlayerId::P1, 2).id;
+            assert!(is_slumbering(s.card(dormant.as_str())));
             s.play(SWARM, json!({}));
 
             let lanes = row(&s);
             assert_eq!(lanes[0], Some(VANILLA.to_string()));
             assert_eq!(
                 s.unit_at(PlayerId::P1, 2).id,
-                ship,
-                "lane 2 still tops with the Starship"
+                dormant,
+                "lane 2 still tops with the Dormant card"
             );
-            assert!(is_dormant_starship(s.card(ship.as_str())));
             let slot = ZoneSlot {
                 player: PlayerId::P1,
                 row: Row::Units,
