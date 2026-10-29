@@ -8286,14 +8286,12 @@
     "what": "revise #2298 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-29T01:58:20Z",
+    "at": "2026-10-29T02:07:15Z",
     "notes": [
-      "#2318 needs a plan",
-      "delivered review #2306 on claude-4 (run 40801803977): reviewed",
-      "started plan #2318 on claude-4 (run 40803741959)",
+      "started plan #2110 on claude-8 (run 40804605070)",
+      "started revise #2298 on claude-6 (run 40804670302)",
       "nothing more to start: nothing is queued",
-      "pruned 7 plan file(s) older than 7 days",
-      "#2318: typed it Task"
+      "#2321: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8999,7 +8997,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T01:58:20Z",
+  "loop_tick": "2026-10-29T02:07:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
