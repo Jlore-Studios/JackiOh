@@ -531,7 +531,7 @@ describe("R318 the stylesheets", () => {
       const rule = block(css, selector);
       expect(rule).toMatch(/position:\s*absolute/);
       expect(rule).toMatch(/pointer-events:\s*none/);
-      expect(rule).toMatch(/z-index:\s*\d+/);
+      expect(rule).toMatch(/z-index:\s*var\(--z-overflow\)/);
     }
   });
 
