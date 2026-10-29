@@ -8530,7 +8530,9 @@
     },
     "2381": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6502277170"
+      ],
       "difficulty_by": {
         "at": "2026-10-29T20:19:44Z",
         "difficulty": "medium",
@@ -8566,9 +8568,7 @@
       "started_at": "2026-10-29T20:48:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6502277170"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2382": {
