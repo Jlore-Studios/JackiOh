@@ -7151,6 +7151,15 @@
       "failures": 0,
       "feedback_since": "2026-10-29T10:28:35Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-10-29T16:24:59Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "",
+        "provider": "claude-3",
+        "reason": "`claude-3` reached its usage limit",
+        "trail": "- said: You've hit your 5-hour limit \u00b7 resets 7:20pm (UTC)"
+      },
       "interruptions": 1,
       "issue": 2270,
       "kind": "revise",
