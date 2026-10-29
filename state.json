@@ -9233,8 +9233,15 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T21:26:22Z",
-    "notes": [],
+    "at": "2026-10-29T21:33:53Z",
+    "notes": [
+      "delivered revise #2310 on muse (run 40930519211): approved",
+      "delivered build #2388 on muse (run 40910275993): interrupted",
+      "started build #2388 on muse (run 40959311057)",
+      "started revise #2310 on muse (run 40959410462)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -9939,7 +9946,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T21:26:22Z",
+  "loop_tick": "2026-10-29T21:33:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
