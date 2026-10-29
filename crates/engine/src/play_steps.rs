@@ -1567,10 +1567,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so, for a client to animate it from there. Public: the
         // graveyard is.
-        from: match run.source {
-            Some(PlaySource::Graveyard) => Some(PlayedFrom::Graveyard),
-            None => None,
-        },
+        from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
     });

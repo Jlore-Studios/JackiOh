@@ -67,7 +67,7 @@ mod tests {
     }
 
     fn gained(s: &Scenario) -> Vec<CardInstance> {
-        let in_hand = crate::resources_in_hand(&s, P1);
+        let in_hand = crate::resources_in_hand(s, P1);
         assert!(in_hand.iter().all(|card| card_def(&card.def_id).resource.is_some()));
         in_hand
     }

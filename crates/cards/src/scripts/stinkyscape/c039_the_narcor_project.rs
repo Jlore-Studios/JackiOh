@@ -137,7 +137,7 @@ mod tests {
     }
 
     fn in_hand(s: &Scenario) -> Vec<String> {
-        def_ids(&crate::resources_in_hand(&s, P1))
+        def_ids(&crate::resources_in_hand(s, P1))
     }
 
     fn brittle(s: &Scenario) -> Option<i32> {
