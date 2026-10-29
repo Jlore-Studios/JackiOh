@@ -102,6 +102,8 @@
 // Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 27 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 27 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-28.md
 // Sweep of record: 2026-10-28 (UTC), `cargo jackioh sweep`, pass 1 over 175 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 86 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-29.md
+// Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 10 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 10 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -306,43 +308,15 @@
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "stinkyscape-004",
-        "neverPlayed: hard: affordable in hand on 25 turns over 24 pass-2 games, never played",
-    ),
-    (
-        "stinkyscape-010",
-        "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "stinkyscape-025",
-        "neverPlayed: hard: affordable in hand on 42 turns over 24 pass-2 games, never played",
-    ),
-    (
-        "stinkyscape-080",
-        "error: easy: 1 engine or search error(s) over 8 games",
-    ),
-    (
-        "stinkyscape-087",
-        "neverPlayed: hard: affordable in hand on 27 turns over 24 pass-2 games, never played",
-    ),
-    (
-        "stinkyscape-096",
-        "neverPlayed: hard: affordable in hand on 39 turns over 24 pass-2 games, never played",
-    ),
-    (
-        "stinkyscape-118",
-        "neverPlayed: hard: affordable in hand on 46 turns over 24 pass-2 games, never played",
+        "neverPlayed: easy: affordable in hand on 28 turns over 33 pass-2 games, never played",
     ),
     (
         "stinkyscape-149",
-        "neverPlayed: hard: affordable in hand on 35 turns over 24 pass-2 games, never played",
+        "neverPlayed: hard: affordable in hand on 62 turns over 42 pass-2 games, never played",
     ),
     (
         "stinkyscape-167",
-        "neverPlayed: hard: affordable in hand on 31 turns over 24 pass-2 games, never played",
-    ),
-    (
-        "stinkyscape-174",
-        "neverPlayed: easy: affordable in hand on 20 turns over 24 pass-2 games, never played",
+        "neverPlayed: hard: affordable in hand on 60 turns over 35 pass-2 games, never played",
     ),
 ];
 
@@ -771,6 +745,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 10.8",
     ),
     (
+        "stinkyscape-010",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 2.3",
+    ),
+    (
         "stinkyscape-011",
         "at risk: easy: pass 1 affordable on 3 turns over 8 games, played 2 time(s), mean evaluate change -71.6",
     ),
@@ -891,6 +869,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 3.7; hard: pass 1 affordable on 8 turns over 8 games, played 2 time(s), mean evaluate change -41.9",
     ),
     (
+        "stinkyscape-087",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 18.3",
+    ),
+    (
         "stinkyscape-088",
         "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 17.4",
     ),
@@ -905,6 +887,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "stinkyscape-095",
         "at risk: hard: pass 1 affordable on 16 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-096",
+        "at risk: easy: pass 1 affordable on 10 turns over 8 games, never played; hard: pass 1 affordable on 13 turns over 8 games, never played",
     ),
     (
         "stinkyscape-104",
@@ -925,6 +911,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "stinkyscape-117",
         "at risk: easy: pass 1 affordable on 9 turns over 8 games, never played; hard: pass 1 affordable on 12 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-118",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, never played",
     ),
     (
         "stinkyscape-119",
@@ -1057,6 +1047,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "stinkyscape-173",
         "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-174",
+        "at risk: easy: pass 1 affordable on 5 turns over 8 games, never played; hard: pass 1 affordable on 10 turns over 8 games, never played",
     ),
     (
         "stinkyscape-175",
