@@ -1,5 +1,7 @@
 // Lesson-result modal (SPEC §9.10): wins persist on this device (progress.ts, R294), while loss
 // and draw retry the same lesson. It reads only the human's `PlayerView` (CLAUDE.md rule 7).
+// R314, R2205002: a win names each mechanic the game did not show found, with its rule, and the
+// Field Guide keeps it from then on.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -10,8 +12,9 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "../practice/config.ts";
 import { outcomeOf } from "../practice/PracticeResult.tsx";
 import { DIFFICULTY_LABEL } from "../practice/Tier.tsx";
+import { discoveryById } from "./discoveries.ts";
 import type { TutorialLesson } from "./lessons.ts";
-import { markLessonComplete } from "./progress.ts";
+import { markFound, markLessonComplete } from "./progress.ts";
 import { tutorialTestid } from "./testids.ts";
 import "../practice/practice.css";
 import "./tutorial.css";
@@ -26,6 +29,8 @@ type TutorialResultProps = {
   next: TutorialLesson | undefined;
   /** The next lesson was still locked when this one started, so this win is what opened it. */
   unlockedNow: boolean;
+  /** The Field Guide entries this lesson lists that its game did not show found (R2205000). */
+  missed?: readonly string[];
   onNext(): void;
   onRetry(): void;
   onBack(): void;
@@ -88,6 +93,25 @@ function WhatsNext(): ReactElement {
   );
 }
 
+/** R314: what the player walked past, named once so nothing is left unlearned. */
+function StillToFind({ ids }: { ids: readonly string[] }): ReactElement {
+  const headingId = useId();
+  return (
+    <section className="tutorial-result__next" data-testid={tutorialTestid.stillToFind} aria-labelledby={headingId}>
+      <h3 className="tutorial-result__next-title" id={headingId}>
+        {t("You can still find")}
+      </h3>
+      <ul className="tutorial-result__next-list">
+        {ids.map((id) => {
+          const entry = discoveryById(id);
+          if (entry === undefined) return null;
+          return <li key={id}>{t("{name}: {rule}", { name: t(entry.name), rule: t(entry.rule) })}</li>;
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function notQuiteLine(outcome: "loss" | "draw" | "win", reason: Result["reason"]): string {
   if (outcome === "draw") return reason === "turn-cap" ? t("The turn limit was reached: a draw.") : t("The lesson ended in a draw.");
   switch (reason) {
@@ -107,6 +131,7 @@ export function TutorialResult({
   lesson,
   next,
   unlockedNow,
+  missed = [],
   onNext,
   onRetry,
   onBack,
@@ -122,6 +147,11 @@ export function TutorialResult({
   useEffect(() => {
     if (won) markLessonComplete(lesson.id);
   }, [won, lesson.id]);
+
+  const named = missed.join(" ");
+  useEffect(() => {
+    if (won && named !== "") markFound(named.split(" "));
+  }, [won, named]);
 
   useEffect(() => {
     primary.current?.focus();
@@ -191,6 +221,7 @@ export function TutorialResult({
         </h2>
         <p className="practice-result__reason">{line}</p>
         {won ? null : <p className="tutorial-result__tip">{t("Tip: {tip}", { tip: t(lesson.retryTip) })}</p>}
+        {won && missed.length > 0 ? <StillToFind ids={missed} /> : null}
         {won && next === undefined ? <WhatsNext /> : null}
         <p className="practice-result__meta">
           {t("Tutorial · Lesson {number}: {title}", { number: lesson.number, title: t(lesson.title) })}

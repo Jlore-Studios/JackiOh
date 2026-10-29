@@ -970,7 +970,9 @@ describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () =>
       const d = driver();
       expect(d.send({ type: "start", config: lessonStartConfig(lesson) }).type, lesson.id).toBe("started");
       const debug = debugOf(d);
-      expect(debug.handicaps, lesson.id).toEqual({ [opponentOf(human)]: AI_TUTORIAL, [human]: TUTORIAL_HUMAN });
+      // R2201001: lessons 1–4 add their pool hold to the human's handicap.
+      const humanHandicap = lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : TUTORIAL_HUMAN;
+      expect(debug.handicaps, lesson.id).toEqual({ [opponentOf(human)]: AI_TUTORIAL, [human]: humanHandicap });
       expect(debug.decks[seatIndex(human)], lesson.id).toHaveLength(TUTORIAL_HUMAN.deckSize);
       // The handicap is part of the game: it folds back to the same hash with it.
       const replayed = fold({ seed: debug.seed, decks: debug.decks, handicaps: debug.handicaps, log: debug.log });
