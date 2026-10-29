@@ -7294,7 +7294,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-29T12:10:10Z",
+      "feedback_since": "2026-10-29T12:28:49Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2278,
@@ -7307,15 +7307,15 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "",
+      "round_tier": "medium",
       "run_id": "40873595199",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-29T12:28:49Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
