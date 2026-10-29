@@ -7737,7 +7737,7 @@
       }
     },
     "2298": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "strong",
       "ci_fixed_head": "345c53bdbdcd56709a3397cfd133b0a852e8ce6a",
@@ -7761,7 +7761,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2251,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
@@ -7771,11 +7771,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "40827794917",
+      "run_id": "pending:cb9ef676-1793255713",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-29T06:12:07Z",
+      "started_at": "2026-10-29T06:35:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -8829,9 +8829,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T06:23:11Z",
+    "at": "2026-10-29T06:35:51Z",
     "url": "",
-    "what": "plan #2340 on claude-6"
+    "what": "review #2298 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-29T06:20:23Z",
