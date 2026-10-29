@@ -8347,7 +8347,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-29T14:52:21Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:df2ba100-1793285535",
+      "run_id": "40895876958",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T14:52:39Z",
       "stop_requested": false,
