@@ -8361,9 +8361,15 @@
     "what": "build #2334 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T14:43:44Z",
+    "at": "2026-10-29T14:51:18Z",
     "notes": [
-      "night_run: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/pulls/2310: HTTP 503: Service Unavailable\n)"
+      "#2378 needs a plan",
+      "started plan #2378 on claude-6 (run 40895876958)",
+      "started revise #2309 on muse (run 40896005676)",
+      "started revise #2310 on muse (run 40896137182)",
+      "started build #2334 on claude-4 (run 40896249260)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9069,7 +9075,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T14:43:44Z",
+  "loop_tick": "2026-10-29T14:51:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
