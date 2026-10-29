@@ -320,6 +320,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:6497824042": {
+      "at": "2026-10-29T13:25:32Z",
+      "lines": [
+        "@jgoetzmann-bot queue"
+      ]
     }
   },
   "items": {
