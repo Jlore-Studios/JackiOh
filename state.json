@@ -7976,6 +7976,7 @@
     "2346": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "bce39115ff32f13c7bdbf111401157d846c0ed36",
       "ci_fixes": 1,
       "ci_reruns": {
         "d4b8d4ccbb74f9d95be2cdae7b602f29ee9d2060": 1
@@ -7992,7 +7993,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-29T08:41:15Z",
+      "feedback_since": "2026-10-29T11:32:36Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2327,
@@ -8007,11 +8008,11 @@
       "run_id": "40866196520",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-29T11:32:36Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
