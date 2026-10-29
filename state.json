@@ -8375,6 +8375,9 @@
       "started_at": "2026-10-29T15:13:36Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2386": {
+      "suggestion": true
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
