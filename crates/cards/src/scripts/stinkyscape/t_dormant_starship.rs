@@ -1,6 +1,6 @@
 //! S T-dormant-starship Dormant Starship (SPEC §8.10 row T-dormant-starship; R349, R1839000, R1852000,
 //! R1852003–R1852007, R1857001, R1859013): (3) Unit, Legendary, 0/0, the set's one entry that is
-//! neither a numbered card nor a token, of the held Stinkyscape set (R1420).
+//! neither a numbered card nor a token, of the Stinkyscape set.
 //!
 //! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
 //! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)

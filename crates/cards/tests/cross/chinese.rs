@@ -116,7 +116,7 @@ fn names_word(text: &str, phrase: &str) -> bool {
 
 /// R1303, R279: `text` with the names of the cards its card names (`refs`) blanked, each as R279 links
 /// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
-/// term inside a name ("Shadow Word Death", the held Stinkyscape set's S #12 token, holds "Death") asks
+/// term inside a name ("Shadow Word Death", the Stinkyscape set's S #12 token, holds "Death") asks
 /// its face for no Chinese term: such a name is held to its Chinese name instead
 /// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`). Only a name the card's `refs` list
 /// is blanked, so a term the text says outside one is still read.

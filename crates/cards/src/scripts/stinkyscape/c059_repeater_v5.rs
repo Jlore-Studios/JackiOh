@@ -1,4 +1,4 @@
-//! Stinkyscape #59 Repeater v5 (SPEC §8.10 row 59). Unit 0/8 → 0/16, Weapon, cost 4, Legendary; held (R1420).
+//! Stinkyscape #59 Repeater v5 (SPEC §8.10 row 59). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 6: Deal {damage} damage to an enemy, with Pierce. Deals half damage to heroes."
 //!            — damage 2

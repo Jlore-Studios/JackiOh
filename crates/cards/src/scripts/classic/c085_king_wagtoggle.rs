@@ -58,13 +58,6 @@ mod tests {
 
     use crate::matches_object;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     fn p2_hand() -> Value {
         json!({ "hand": [STOCKPILE] })
     }

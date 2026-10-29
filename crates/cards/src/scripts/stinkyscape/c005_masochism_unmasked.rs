@@ -1,5 +1,5 @@
-//! S #5 Masochism Unmasked (SPEC §8.10 row 5; R1849004, R1875000): (1) Field Trap, Rare, of the held
-//! Stinkyscape set (R1420).
+//! S #5 Masochism Unmasked (SPEC §8.10 row 5; R1849004, R1875000): (1) Field Trap, Rare, of the
+//! Stinkyscape set.
 //!   Base:    "Reveals when you take damage on your turn: Redirect all damage you take on your turn to
 //!            your opponent, up to {cap} each turn."
 //!   Radiant: the same, "and double it."

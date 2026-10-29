@@ -10,9 +10,11 @@
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
+use jackioh_engine::reduce::begin_game;
 use jackioh_engine::testkit::*;
+use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use super::harness::{both, spread};
+use super::harness::{act_ok, both, in_hand, new_game, spread};
 
 /// The keywords Rod's fixtures turn Radiant at (R1850005).
 pub const ROD_KEYWORDS: i32 = 3;
@@ -568,4 +570,128 @@ pub fn register_card_on_card() {
     let mut all_scripts = registered_scripts().clone();
     all_scripts.extend(COC_SCRIPTS.clone());
     register_scripts(all_scripts);
+}
+
+// ---------------------------------------------------------------------------------------------
+// The verbs' tests' board helpers, shared by `card_on_card.rs` and `unit_text.rs` (two binaries)
+// ---------------------------------------------------------------------------------------------
+
+/// p1's first main phase, both mulligans kept, ten mana a side and #1850's cards registered.
+pub fn playing(seed: &str) -> GameState {
+    let mut state = begin_game(&new_game(&format!("coc-{seed}"), None)).state;
+    register_card_on_card();
+    for player in [P1, P2] {
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act_ok(
+            &state,
+            json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+        )
+        .state;
+    }
+    for player in [P1, P2] {
+        state.players[player].auto_end_turn = Some(false);
+        state.players[player].mana.current = 10;
+        state.players[player].mana.max = 10;
+    }
+    state
+}
+
+/// Put `def_id` in `player`'s hand (Radiant when `radiant`) and play it, `extra` merged into the action.
+pub fn play(state: &GameState, player: PlayerId, def_id: &str, radiant: bool, extra: Value) -> ReduceResult {
+    let mut state = state.clone();
+    let mut card = in_hand(&mut state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("a card to play");
+    if radiant {
+        card.radiant = true;
+        if let Some(live) = find_instance_mut(&mut state, &card.id) {
+            live.radiant = true;
+        }
+    }
+    let mut body = json!({ "type": "play", "instanceId": card.id, "playerId": player });
+    if let (Some(body), Some(extra)) = (body.as_object_mut(), extra.as_object()) {
+        for (key, value) in extra {
+            body.insert(key.clone(), value.clone());
+        }
+    }
+    act_ok(&state, body)
+}
+
+/// A play's zone and its one target, as the action carries them.
+pub fn at(row: &str, lane: i32, target: &str) -> Value {
+    json!({
+        "zone": { "row": row, "lane": lane },
+        "targets": [{ "pick": "instance", "instanceId": target }],
+    })
+}
+
+/// End the active player's turn.
+pub fn pass(state: &GameState) -> ReduceResult {
+    act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
+}
+
+/// Apply one effect as `self_id`'s (none: no card) for `controller`, then settle, as a resolving
+/// card's would. The events it made.
+pub fn apply(
+    state: &mut GameState,
+    self_id: Option<&str>,
+    controller: PlayerId,
+    effect: Effect,
+) -> Vec<GameEvent> {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        {
+            let me = self_id.and_then(|id| find_instance(sink.state, id).cloned());
+            let mut ctx = make_context(
+                &mut sink,
+                me.as_ref(),
+                HookOptions {
+                    controller: Some(controller),
+                    ..Default::default()
+                },
+            );
+            (effect.apply)(&mut ctx);
+        }
+        settle(&mut sink, SettleOptions::default());
+    }
+    state.rng_cursor = rng.cursor();
+    events
+}
+
+pub fn instance(id: &str) -> Value {
+    json!({ "of": "instance", "instanceId": id })
+}
+
+pub fn destroy(state: &mut GameState, id: &str) -> Vec<GameEvent> {
+    apply(
+        state,
+        None,
+        P1,
+        effects::destroy(json_as(json!({ "target": instance(id) }))),
+    )
+}
+
+pub fn top(state: &GameState, player: PlayerId, lane: i32) -> Option<CardInstance> {
+    state.players[player]
+        .units
+        .get((lane - 1) as usize)?
+        .as_ref()?
+        .first()
+        .cloned()
+}
+
+pub fn on_field(state: &GameState, id: &str) -> bool {
+    find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
+}
+
+pub fn has(state: &GameState, id: &str, kind: KeywordKind) -> bool {
+    let card = find_instance(state, id).cloned().expect("the card");
+    unit_has(state, &card, kind)
 }

@@ -1,6 +1,6 @@
 //! SPEC §7 Stinkyscape T-anomaly-found Anomaly Found! (§8.10 row T-anomaly-found; §3.2, §6.3; R452,
 //! R1081000, R1839000, R1842000, R1855000–R1855002, R1879000–R1879002). (4) Spell, a token (printed
-//! Mythic) of the held Stinkyscape set (R1420), found by S #166 and S #167's scan and S #7's reward.
+//! Mythic) of the Stinkyscape set, found by S #166 and S #167's scan and S #7's reward.
 //!   Base:    "Replace your side of the field with a random Anomaly: exile every card on it, then lay
 //!            that Anomaly's board in its place. Every Cry on the new board fires, with random targets
 //!            and choices."

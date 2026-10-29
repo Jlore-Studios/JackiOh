@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 166 Scanning Probe Mk1 (row S 166; §2.4, §6.1 Lucky, §6.3; R987, R1438,
-//! R1855003). (1) Spell, Common, a card of the held Stinkyscape set (R1420).
+//! R1855003). (1) Spell, Common, a card of the Stinkyscape set.
 //!   Base:    "5% chance to add a Radiant Anomaly Found! to your hand. / 20% chance to add an
 //!            Anomaly Found! to your hand instead. / Otherwise, your future Scanning Probes have +1% and
 //!            +4% to these chances."
