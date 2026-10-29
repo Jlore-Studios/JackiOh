@@ -469,9 +469,9 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // promote-production.test.ts, which `web (unit 1/3)` runs on its own line: an `on` path alone turns
-  // it on (and `web` with it, so the job that runs it runs); an `off` path alone leaves it off, beside
-  // an engine source too, and beside an `on` path turns it on.
+  // promote-production.test.ts, which `web (promote-production)` runs on its own line: an `on` path
+  // alone turns it on (and `web` with it, so the job that runs it runs); an `off` path alone leaves
+  // it off, beside an engine source too, and beside an `on` path turns it on.
   const PROMOTE = {
     on: [
       "scripts/promote-production.sh",

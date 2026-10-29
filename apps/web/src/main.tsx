@@ -61,6 +61,12 @@
 // presence heartbeat (`together/presence.ts`) and shows the challenge toast (`together/ChallengeToast.tsx`)
 // over every screen, whichever is open: both are this file's, as the queue's follow is, so neither
 // waits on a screen's gate nor restarts with it.
+//
+// A COMMAND MENU ON EVERY MENU (R2118000). Ctrl+K (Cmd+K) opens the command menu
+// (`routes/CommandMenu.tsx`, `routes/commandEntries.ts`) on every menu screen: the common actions,
+// every menu page and the Almanac shelf's cards by name, each a `navigate` move. It is never
+// mounted on a board route, nor over a board sharing a menu's path (`game/boardShown.ts`), and it
+// is keyed by the path, so a move closes it. Presentation only (CLAUDE.md rule 7).
 
 import {
   Component,
@@ -107,6 +113,7 @@ import { watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
 // screen that failed to load anything else, so account.tsx is in the entry chunk either way.
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
+import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
 import { routeChunks, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
@@ -878,6 +885,8 @@ export function App(): ReactElement {
       </RouteErrorBoundary>
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
+      {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
+      <CommandMenu key={`command-menu:${path}`} path={path} />
     </>
   );
 }

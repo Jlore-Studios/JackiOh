@@ -74,7 +74,7 @@ export const testid = {
   seatSwitch: "seat-switch",
   result: "result-overlay",
   banner: "turn-banner",
-  /** R2102000: "You have lethal", in the board's notices, while the Easy practice tier's lethal hint is lit. */
+  /** R2102000: "You have lethal", in the board's notices, while the practice AI's lethal hint is lit. */
   lethalHint: "lethal-hint",
   /** "Concede this game?" (ConfirmConcede.tsx): the dialog the `concede` control opens. */
   concedeDialog: "concede-dialog",
