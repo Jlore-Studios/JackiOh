@@ -92,6 +92,14 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
+`routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
+`commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
+shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animation). It is never
+mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
+marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
+opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
