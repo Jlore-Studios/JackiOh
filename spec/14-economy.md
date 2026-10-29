@@ -44,6 +44,7 @@ Every value here is a constant named in backticks, never a number (CLAUDE.md rul
 | `QUEST_REPLACES_PER_DAY` | How many held quests an account may replace in a UTC day | [[§14.9]] |
 | `DEV_PROFILE_IDS` | The environment variable that lists the dev accounts | [[§14.10]] |
 | `IDEMPOTENCY_KEY_TTL_HOURS` | How long a spend's idempotency key and its answer are kept | [[§14.11]] |
+| `ECONOMY_SPENDS_RUNNING_MAX`, `ECONOMY_SPENDS_WAITING_MAX`, `SPEND_BUSY_RETRY_AFTER_MS` | How many spends one account runs at once and keeps waiting their turn, and the wait a spend refused past them states | [[§14.11]] |
 | `ECONOMY_LIVE` | The server's switch for the economy, on since going live | [[§14.12]] |
 | `STARTER_CARDS` | The cards a new account starts with | [[§14.12]] |
 
@@ -151,6 +152,8 @@ Every row says why. The collection's reasons are `pack`, `craft`, `reward`, `ref
 Every roll is seeded on the server, and its seed and result are logged with the grant it makes, so any opening replays exactly and can be audited. Each opening's seed is drawn afresh, so no seed an account can read foretells a later roll.
 
 A spend runs once, however often it is sent ([[R2124000]]). Every spend, a pack bought or opened, a token redeemed, a chase bought or an invite code redeemed ([[§9.4]]), may carry an idempotency key the client mints for a press and sends again on that press's retries. The server reads it under the account's economy lock: a key the account committed a spend with answers what that spend answered and spends nothing, the same key with another request is refused, and a new key's answer is written in the transaction of its grant. Only a committed spend keeps its key, for `IDEMPOTENCY_KEY_TTL_HOURS`, and no client reads one. A spend sent without a key runs as it always did.
+
+An account runs one spend at a time ([[R2378000]]). Each economy spend, a pack bought or opened, a token redeemed, a cosmetic pack opened or a chase bought, claims its account's turn before it reads the store and holds it until it answers: `ECONOMY_SPENDS_RUNNING_MAX` run at once, and one sent while they run waits its turn in the server, in the order sent and holding no database connection, then runs. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is refused at once with 429, stating `SPEND_BUSY_RETRY_AFTER_MS` and spending nothing, so a burst of presses buys or opens one at a time and never holds the database's connections on the lock. That refusal ran nothing and ends no press, and the client holds its Buy, Open, Open all, sealed pack, Reveal all and Next pack while one of its spends is out, its Buy and Open buttons turning a loading wheel. An invite code's redemption takes no turn ([[§9.4]]).
 
 ### 14.12 Going live
 

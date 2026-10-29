@@ -1,6 +1,7 @@
 // R2124000: `net/api.ts`'s spends go with an `Idempotency-Key`. A press mints one, its retries (after
 // a timeout, a failed transport or a server error) send it again, and any answer from the server, a
-// refusal included, ends the press, so the next press mints another. Reads send none.
+// refusal included, ends the press, so the next press mints another. Reads send none. A 429 ran
+// nothing, so it ends no press, and each spend is out from its press until it settles (R2378000).
 //
 // `fetch` is stubbed with one reply per call, in order: an answer, a failure of the transport, or
 // none at all (the request hangs until `apiRequest` gives up). The keys live in the module for the
@@ -22,6 +23,7 @@ import {
   redeemCode,
   redeemCosmeticToken,
 } from "./api.ts";
+import { spendOutNow } from "./spending.ts";
 import { jsonResponse } from "../test/stubServer.ts";
 
 const TOKEN = "tok-r2124000";
@@ -160,5 +162,33 @@ describe("R2124000 a spend runs once", () => {
     for (const key of spends) expect(key).toMatch(UUID);
     expect(new Set(spends).size).toBe(spends.length);
     expect(sent.at(-1)?.key).toBeUndefined();
+  });
+});
+
+describe("R2378000 one spend at a time", () => {
+  it("R2378000 a 429 ran nothing, so the press keeps its key", async () => {
+    const sent = stubFetch([refused(429, "rate_limited"), BOUGHT]);
+
+    await expect(buyPack(TOKEN, "r2378000-busy")).rejects.toMatchObject({ status: 429, code: "rate_limited" });
+    await expect(buyPack(TOKEN, "r2378000-busy")).resolves.toEqual(BOUGHT.body);
+
+    const [refusedKey, retryKey] = sent.map((call) => call.key);
+    expect(refusedKey).toMatch(UUID);
+    expect(retryKey).toBe(refusedKey);
+  });
+
+  it("R2378000 a spend is out from its press until its answer or its failure", async () => {
+    stubFetch([BOUGHT, "fail"]);
+    expect(spendOutNow()).toBe(false);
+
+    const bought = buyPack(TOKEN, "r2378000-out");
+    expect(spendOutNow(), "out from the press").toBe(true);
+    await bought;
+    expect(spendOutNow(), "in again on its answer").toBe(false);
+
+    const failed = openPack(TOKEN, "r2378000-out");
+    expect(spendOutNow()).toBe(true);
+    await expect(failed).rejects.toBeInstanceOf(ApiUnreachableError);
+    expect(spendOutNow(), "in again on its failure").toBe(false);
   });
 });

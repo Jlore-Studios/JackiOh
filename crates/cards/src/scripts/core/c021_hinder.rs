@@ -417,10 +417,11 @@ mod tests {
                     let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                     state = act(&state, ActionBody::Mulligan { keep }, player, &mut nonce, &mut log);
                 }
-                assert_eq!(state.turn, 1);
+                assert!(state.turn >= 1);
                 // R682: the cast discards at random and asks nothing, so a turn-1 cast leaves the Hinder and
-                // one discard in the graveyard with no prompt open.
-                if def_ids(&state.players.p1.graveyard).contains(&HINDER.to_string()) {
+                // one discard in the graveyard with no prompt open. A seed whose turn 1 R82 ended, its three
+                // cards (R2368000) holding nothing p1 could play, is passed over.
+                if state.turn == 1 && def_ids(&state.players.p1.graveyard).contains(&HINDER.to_string()) {
                     found = Some((seed, state, log));
                 }
                 at += 1;
