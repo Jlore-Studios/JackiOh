@@ -8055,30 +8055,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "377714d02d83b7642f0bffb63ea6d4058c903304",
-          "main": "18f73763243e9eefa84d424273f2fb260fdc9b31"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40886170248",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "bb161f7c241e18ae4afb8197da01f88500bf20a8",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2342": {
