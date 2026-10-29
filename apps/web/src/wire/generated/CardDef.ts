@@ -56,8 +56,8 @@ dealsDamage?: boolean,
  */
 usesPlague?: boolean, 
 /**
- * R1840000: this card is a Resource, a (0) Spell token gained into its player's Resource tray
- * and never a hand, with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
+ * R1840000, R2250000: this card is a Resource, a (0) Spell token gained into its player's hand,
+ * with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
  * `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
  * definition included, so a catalog without Resources serialises as before.
  */
