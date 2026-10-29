@@ -277,6 +277,8 @@ A menu opens on its last answer ([[R2125000]]): the collection, wallet, packs, c
 
 A move from one menu screen to another, a link's, a redirect's or the browser's Back or Forward, cross-fades the page in the browser's view transition ([[R2117000]]). No move into or out of a board's route fades, nor one off a board on screen, a replay in place among them: the animation queue owns what moves there. A change of query alone, Reduce motion and a browser without the API draw the move at once, and a move the leave guard holds ([[R1754000]]) fades once it goes. Presentation only (CLAUDE.md rule 7).
 
+The browser's Back, and Android's back gesture, close the topmost open sheet or dialog first, one per Back, and leave the address and the screen as they were; closing one never meets the leave guard ([[R2127000]]). They never close a prompt, a play being built or the mulligan. Presentation only.
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.
