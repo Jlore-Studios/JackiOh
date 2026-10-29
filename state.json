@@ -8803,19 +8803,13 @@
     "what": "revise #2315 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-29T17:16:26Z",
+    "at": "2026-10-29T17:28:31Z",
     "notes": [
-      "#2382 needs a plan",
-      "#2396 needs a plan",
-      "delivered revise #2341 on muse (run 40917772266): built",
-      "delivered plan #2387 on claude-1 (run 40917561284): planned",
-      "delivered plan #2383 on claude-7 (run 40915733461): planned",
-      "delivered plan #2384 on claude-3 (run 40905991189): interrupted",
-      "started plan #2382 on claude-7 (run 40920363283)",
-      "started plan #2396 on claude-1 (run 40920461354)",
-      "started build #2383 on muse (run 40920565281)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-29T19:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 28h 38m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it can start a build or a plan again in 35h 37m",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered plan #2380 on claude-5 (run 40915840164): interrupted",
+      "delivered revise #2315 on claude-8 (run 40904398987): approved",
+      "started revise #2315 on claude-8 (run 40922105974)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-29T19:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-29T21:50:00Z; it can start a build or a plan again in 4h 18m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 28h 28m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it can start a build or a plan again in 35h 28m",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9521,7 +9515,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T17:16:26Z",
+  "loop_tick": "2026-10-29T17:28:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
