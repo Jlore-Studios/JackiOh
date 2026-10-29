@@ -182,6 +182,37 @@
   content: none;
 }
 
+/* --- #2111, R2111000: whatever lands in a backrow zone is laid down as a set --------------- */
+
+/* Laid down, not slammed: a short drop, flat and heavy at 44% (a play's 110 ms wait + 44% of 250 ms
+   = 220 ms, PAIR_OFFSET_MS, where audio/director.ts sounds the thud), no bounce, no flash: it is going
+   out of sight. A Field Spell or Unit landing here is laid down alike, so no motion tells a face-down
+   arrival from a face-up one. The stand-in's twin is fx.css's fx-hold-set. */
+@keyframes jk-trap-set {
+  0% {
+    transform: translateY(-10px) scale(1.04);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  44% {
+    transform: translateY(0) scale(1.03, 0.94);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+  }
+  72% {
+    transform: translateY(0) scale(0.99, 1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.zone[data-row="backrow"][data-animating="summoned"]::after {
+  animation-name: jk-trap-set;
+}
+
 /* --- attackDeclared: attacker lunges toward the target and back (350 ms) ---------------- */
 
 /* The attacker rears up (lifts toward the viewer and draws back a touch), rushes the target, hits it
@@ -1333,13 +1364,21 @@
 /* --- trapFired: backrow card flips face-up, holds, then dissolves (700 ms) ----------- */
 
 @keyframes jk-trap-flip {
-  /* The reveal carries the arcane violet of a Secret going off. */
+  /* #2111, R2111000: a beat of anticipation first: still face-down, the card sinks and dims as if
+     drawing breath, then turns fast from 15%. */
   0% {
     transform: rotateY(180deg) scale(1);
     opacity: 1;
     filter: brightness(1);
   }
-  20% {
+  15% {
+    transform: rotateY(180deg) scale(0.94);
+    opacity: 1;
+    filter: brightness(0.8);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  /* The reveal carries the arcane violet of a Secret going off, at 30%: FX_TRAP_BURST_AT. */
+  30% {
     transform: rotateY(0deg) scale(1.12);
     opacity: 1;
     filter: brightness(1.9);
@@ -1374,7 +1413,12 @@
     transform: rotateY(180deg) scale(1);
     filter: brightness(1);
   }
-  20% {
+  15% {
+    transform: rotateY(180deg) scale(0.94);
+    filter: brightness(0.8);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  30% {
     transform: rotateY(0deg) scale(1.12);
     filter: brightness(1.9);
   }

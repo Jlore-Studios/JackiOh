@@ -17332,5 +17332,47 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.5.6b",
+    "date": "2026-10-29",
+    "title": "Stratos is spelled as Stratos Swarm spells it",
+    "source": "#2327",
+    "notes": "Stinkyscape #68's name is corrected to Stratos, the spelling #158 Stratos Swarm prints; S03 (#1860) had kept the designer list's swapped letters (R1860008). The name and #158's two texts only: no number, keyword, tag, pool or behaviour changes.",
+    "player": {
+      "title": "Stratos is spelled one way",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "The Stinkyscape Unit that Stratos Swarm fills your board with is now spelled Stratos, as the Swarm spells it. Nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "dbf122fb8f9a86a16babcbf822c2d8ee54181258"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "stinkyscape-068",
+        "name": "Stratos",
+        "kind": "changed",
+        "fields": [
+          "name"
+        ]
+      },
+      {
+        "id": "stinkyscape-158",
+        "name": "Stratos Swarm",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
