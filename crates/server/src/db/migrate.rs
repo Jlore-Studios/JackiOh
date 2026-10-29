@@ -279,6 +279,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0065_stinkyscape_set.sql"),
     ),
     (
+        "0066_deck_versions.sql",
+        include_str!("../../migrations/0066_deck_versions.sql"),
+    ),
+    (
         "0067_idempotency_keys.sql",
         include_str!("../../migrations/0067_idempotency_keys.sql"),
     ),
