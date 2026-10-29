@@ -8175,10 +8175,12 @@
     "what": "plan #2334 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T10:09:16Z",
+    "at": "2026-10-29T10:17:48Z",
     "notes": [
-      "delivered revise #2300 on claude-8 (run 40852490075): blocked",
-      "delivered revise #2335 on claude-8 (run 40833896343): approved"
+      "delivered plan #2334 on claude-1 (run 40836632343): failed",
+      "started plan #2334 on claude-4 (run 40856706075)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8884,7 +8886,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T10:09:16Z",
+  "loop_tick": "2026-10-29T10:17:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
