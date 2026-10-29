@@ -8151,13 +8151,11 @@
     "what": "revise #2300 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-29T09:44:47Z",
+    "at": "2026-10-29T09:55:15Z",
     "notes": [
-      "delivered review #2307 on claude-4 (run 40851030156): reviewed",
-      "delivered revise #2336 on muse (run 40833610703): approved",
-      "started review #2336 on claude-4 (run 40852385045)",
-      "started revise #2300 on claude-8 (run 40852490075)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2336 on claude-4 (run 40852385045): reviewed",
+      "delivered plan #2353 on claude-3 (run 40848653196): blocked",
+      "delivered revise #2346 on muse (run 40843945230): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8863,7 +8861,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T09:44:47Z",
+  "loop_tick": "2026-10-29T09:55:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
