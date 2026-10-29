@@ -8523,7 +8523,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-29T15:45:21Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:c95c0b78-1793295670",
+      "run_id": "40923758876",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T17:41:35Z",
       "stop_requested": false,
