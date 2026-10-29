@@ -676,8 +676,35 @@ mod r1370_a_deck_that_leans_on_a_set {
             );
             if let Some((tag, in_pool)) = theme {
                 let needed = floor_of(size, AI_DECK.theme_min_share);
-                if in_pool >= needed {
+                // R817000: a deck holding `maxQuickdraw` Quickdraw cards is dealt no more, so a theme's
+                // Quickdraw cards are out of reach once it does. Re-pinned for the Training Grounds
+                // release (#2204): a lean on the set deals TG #40 Goetzmann Game Design, a Quickdraw
+                // card, which can fill the cap before C+ #37, an Acclaimed Quickdraw card, is dealt.
+                let capped = deck
+                    .iter()
+                    .filter(|id| def_of(None, id).tags.contains(&Tag::Quickdraw))
+                    .count()
+                    >= AI_DECK.max_quickdraw as usize;
+                let barred = if capped {
+                    query(&CatalogQueryArgs::default())
+                        .into_iter()
+                        .filter(|def| {
+                            def.tags.iter().any(|t| t.as_str() == tag)
+                                && def.tags.contains(&Tag::Quickdraw)
+                                && !deck.contains(&def.id)
+                        })
+                        .count()
+                } else {
+                    0
+                };
+                if in_pool.saturating_sub(barred) >= needed {
                     assert!(tagged_in(&deck, tag) >= needed, "{at}: {deck:?}");
+                } else {
+                    assert_eq!(
+                        tagged_in(&deck, tag),
+                        in_pool - barred,
+                        "{at}: every reachable card of the theme: {deck:?}"
+                    );
                 }
             }
         }
