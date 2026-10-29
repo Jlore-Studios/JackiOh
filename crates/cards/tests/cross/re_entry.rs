@@ -541,6 +541,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
                     "hand": [MAGIC_JAMMED, TRANSMOGULATE, STOCKPILE],
                     "backrow": [{ "def": HEROIC_POWER, "lane": 1 }],
                     "library": LIBRARY,
+                    "mana": 10,
                 },
                 "p2": { "hand": [STOCKPILE], "library": LIBRARY },
             }));
@@ -552,7 +553,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
         let seed = seed_where("transmogulate-locked", |seed| {
             let (mut g, power) = setup(seed);
             g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&power) }));
-            g.play(TRANSMOGULATE, json!({}));
+            g.play(TRANSMOGULATE, json!({ "embiggen": true }));
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()) == Some(INFINISCEPTER.to_string())
         });
         let (mut g, power) = setup(&seed);
@@ -567,7 +568,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
 
         // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
         // and "the current occupant is unaffected" (§3.2).
-        g.play(TRANSMOGULATE, json!({}));
+        g.play(TRANSMOGULATE, json!({ "embiggen": true }));
         assert_eq!(
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()),
             Some(INFINISCEPTER.to_string())

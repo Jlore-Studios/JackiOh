@@ -1028,6 +1028,7 @@ formerId: string?,
 from: PlayedFrom?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+onDraw: true?,
 } | {
 ["type"]: "cardResolved",
 player: PlayerId,
@@ -1039,6 +1040,7 @@ radiant: boolean?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
 answer: SpellAnswer?,
+onDraw: true?,
 } | {
 ["type"]: "summoned",
 player: PlayerId,
@@ -1632,6 +1634,7 @@ controller: PlayerId,
 export type HeroGuard = {
 cap: number?,
 divisor: number?,
+guardsSelf: boolean?,
 }
 
 export type HoldArgs = {
@@ -1712,6 +1715,7 @@ n: number,
 ["kind"]: "Windfury",
 } | {
 ["kind"]: "Temporary",
+n: number?,
 } | {
 ["kind"]: "Deft",
 } | {

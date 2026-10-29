@@ -276,6 +276,22 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
     }
 }
 
+/// R2179002: whether a `cardPlayed` or a `cardResolved` reports a card cast on draw, a cast that is no
+/// play, which a card answering a play ("after you play", "when your opponent plays") passes by. Any
+/// other event: false.
+pub fn cast_on_draw_event(event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::CardPlayed {
+            on_draw: Some(true),
+            ..
+        } | GameEvent::CardResolved {
+            on_draw: Some(true),
+            ..
+        }
+    )
+}
+
 /// R174, R2199007: the field's departures so far, a mark a card keeps to ask later, through
 /// `left_field_since_mark`, whether a card has left the field since (Training Grounds #31 Level Up!'s
 /// per-Unit counts: a Unit that left and came back is a new arrival).

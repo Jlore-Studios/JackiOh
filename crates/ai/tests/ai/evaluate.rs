@@ -905,7 +905,7 @@ mod banked_state_1086 {
         let mut temporary = clone(&kept);
         temporary.players[AI].hand[0]
             .granted_keywords
-            .push(Keyword::Temporary);
+            .push(Keyword::TEMPORARY);
         assert!(eval(&temporary, AI) < eval(&kept, AI));
         assert_close(
             eval(&kept, AI) - eval(&temporary, AI),
@@ -916,7 +916,7 @@ mod banked_state_1086 {
         let mut theirs = clone(&kept);
         theirs.players[HUMAN].hand[0]
             .granted_keywords
-            .push(Keyword::Temporary);
+            .push(Keyword::TEMPORARY);
         assert_eq!(eval(&theirs, AI), eval(&kept, AI));
     }
 
@@ -931,7 +931,7 @@ mod banked_state_1086 {
         let mut temporary = clone(&plain);
         temporary.players[AI].hand[1]
             .granted_keywords
-            .push(Keyword::Temporary);
+            .push(Keyword::TEMPORARY);
         assert_eq!(greedy(&temporary), greedy(&plain));
     }
 }
@@ -1712,7 +1712,7 @@ mod banked_modifiers_1722 {
         for state in [&mut armed, &mut bare] {
             state.players[AI].hand[0]
                 .granted_keywords
-                .push(Keyword::Temporary);
+                .push(Keyword::TEMPORARY);
         }
         // Temporary's share (0.5) is the smaller, so the discard adds nothing past it (R637).
         assert_eq!(
