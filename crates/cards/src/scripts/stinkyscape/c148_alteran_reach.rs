@@ -1,6 +1,5 @@
 //! S #148 Alteran Reach (SPEC §8.10 row S 148; §6.1 Indestructible, §6.2 Quickdraw, §6.3, R46, R640,
-//! R1847000–R1847002): (1) Field Spell, Wincon, Quickdraw, Mythic, a card of the held Stinkyscape set
-//! (R1420).
+//! R1847000–R1847002): (1) Field Spell, Wincon, Quickdraw, Mythic, a card of the Stinkyscape set.
 //!   Base:    "Indestructible\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain
 //!            its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the
 //!            Universe to your hand."

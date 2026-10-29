@@ -22,7 +22,7 @@ pub const ID: &str = "meditativeplus-017";
 
 /// R1180005: cast this card at the enemy the engine named, when it is the card named.
 fn answer() -> TriggerDef {
-    // Not a trap, so the condition is read in `run` (only traps consult `when`, R99).
+    // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
     TriggerDef::new("dogpile", &[GameEventType::CardResolved], |ctx, event| {
         let GameEvent::CardResolved {
             answer: Some(answer), ..

@@ -59,7 +59,7 @@ fn reaches_threshold(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
 }
 
 fn summon_at_threshold() -> TriggerDef {
-    // Not a trap, so the condition is read in `run` (only traps consult `when`, R99).
+    // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
     TriggerDef::new("wardrum-summon", &[GameEventType::CardResolved], |ctx, event| {
         if reaches_threshold(ctx, event) { vec![summon_this()] } else { vec![] }
     })

@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 108 Trila 3, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 108 Trila 3, a card of the Stinkyscape set.
 //! (3) Unit, Common, 7/7 → 14/14: Starship Piece, Ranged, Windfury.
 //! Radiant: Starship Piece, Ranged, Rush, Windfury.
 //!

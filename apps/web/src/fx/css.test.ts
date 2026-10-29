@@ -157,6 +157,13 @@ const isZero = (value: string | undefined): boolean => value !== undefined && /^
 
 const fx = parseSheet(readSheet("src/fx/fx.css"));
 const anim = parseSheet(readSheet("src/game/animations.css"));
+const surfaces = parseSheet(readSheet("src/surfaces.css"));
+
+/** A `z-index` as its number: a layer token (`var(--z-…)`, #2109) reads through surfaces.css. */
+function layerOf(value: string | undefined): string | undefined {
+  const token = /^var\((--z-[\w-]+)\)$/.exec(value ?? "")?.[1];
+  return token === undefined ? value : declsFor(surfaces, ":root").get(token);
+}
 
 /** Every `@keyframes` animations.css defined before this task (BUILD M5-T4's Animation column). */
 const EXISTING_KEYFRAMES = [
@@ -486,7 +493,7 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
     // below the fold (y 874 in a 720 px viewport), under a status line still saying "Your turn".
     const overlay = declsFor(anim, '[data-testid="result-overlay"]');
     expect(overlay.get("position")).toBe("fixed");
-    expect(overlay.get("z-index")).toBe("39");
+    expect(layerOf(overlay.get("z-index"))).toBe("39");
     expect(normValue(overlay.get("max-width") ?? "")).toBe("calc(100vw - 32px)");
     expect(overlay.get("animation-name")).toBe("jk-result-overlay");
     const banner = declsFor(anim, '.game:has(> [data-testid="result-overlay"]) > [data-testid="turn-banner"]');

@@ -1,5 +1,5 @@
 //! S #147.2 Wardrum Blob (SPEC §7 row 147.2, §8.10 row 147.2): (2) Field Spell, Token (printed Legendary),
-//! a token of the held Stinkyscape set (R1420).
+//! a token of the Stinkyscape set.
 //!   Base:    "Aura: An AI always helps you make the Pareto Optimal decisions.
 //!             Start of turn: Do something helpful."
 //!   Radiant: "Aura: An AI always helps you make the Pareto Optimal decisions.

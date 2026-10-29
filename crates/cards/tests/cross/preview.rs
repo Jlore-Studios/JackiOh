@@ -192,13 +192,6 @@ fn hits_on(s: &Scenario, player: PlayerId) -> Vec<i32> {
         .collect()
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing: {what}"),
-    }
-}
-
 /// The first card of `player`'s hand with `def_id`, as it stands.
 fn held(s: &Scenario, player: PlayerId, def_id: &str) -> Option<CardInstance> {
     s.hand(player).iter().find(|card| card.def_id == def_id).cloned()

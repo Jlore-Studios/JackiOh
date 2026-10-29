@@ -1278,6 +1278,13 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     if event_stay.is_some() {
         ctx.event_stay = event_stay;
     }
+    // R99, R2271000: a trigger's printed condition holds wherever it runs. The traps' dispatch reads a
+    // trap's (`traps::fire_trap`), and a trap on the field is never queued (`holder_of`, R383), so this
+    // reads every other trigger's, once, as it resolves and with the context its list is built from.
+    // Declining does nothing, as a trap that declines is not spent (R61).
+    if def.when.as_ref().is_some_and(|when| !when(&mut ctx, &event)) {
+        return;
+    }
     let effects = (def.run)(&mut ctx, &event);
     crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);
 }

@@ -43,7 +43,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: none;
   color: inherit;
   font: inherit;

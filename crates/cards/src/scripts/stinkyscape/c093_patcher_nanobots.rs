@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 93 Patcher Nanobots, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 93 Patcher Nanobots, a card of the Stinkyscape set.
 //! (2) Unit, Common, 3/4 → 6/8: Starship Piece, Taunt.
 //! "Death: Heal your hero {heal}." — heal 6, Radiant 12.
 //!

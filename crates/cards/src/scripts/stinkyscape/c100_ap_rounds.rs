@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 100 AP Rounds, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 100 AP Rounds, a card of the Stinkyscape set.
 //! (1) Unit, Common, 3/1 → 6/2: Starship Piece, Equip, Pierce.
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it

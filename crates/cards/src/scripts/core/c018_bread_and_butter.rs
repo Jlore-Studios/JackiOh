@@ -28,8 +28,8 @@ fn unspent_on(event: &GameEvent) -> i32 {
 
 /// The same on both faces: `multiplier` is §8's X (base) or 3X (radiant), a declared number (R386)
 /// tuned on the Radiant face only (R749: the base face prints no number, always 1). The condition is
-/// written twice: `traps.rs` filters on `when`, `run_queued_trigger` ignores it and takes an empty
-/// effect list as "not met", so either way 0 unspent summons nothing and the trap stays armed.
+/// written twice: `traps.rs` filters on `when` (as `run_queued_trigger` does, R2271000), and `run`
+/// takes an empty effect list as "not met", so either way 0 unspent summons nothing and the trap stays armed.
 fn bread_trigger() -> TriggerDef {
     TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], |ctx, event| {
         let x = unspent_on(event) * param(&*ctx, "multiplier");

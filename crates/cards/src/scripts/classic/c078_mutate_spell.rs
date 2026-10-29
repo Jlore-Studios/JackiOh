@@ -109,13 +109,6 @@ mod tests {
         vec![X; n]
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     fn draws_by(events: &[GameEvent], player: PlayerId) -> usize {
         events
             .iter()
