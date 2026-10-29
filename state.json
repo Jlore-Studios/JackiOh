@@ -8048,6 +8048,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2314": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-28T23:21:05Z",
+      "issue": 2291,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
