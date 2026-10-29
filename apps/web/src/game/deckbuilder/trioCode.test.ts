@@ -502,7 +502,7 @@ describe("R1410 a trio's decks carry the Training Grounds set's numbers, 6000 + 
    * A version 2 trio code of Core and Stinkyscape cards in its first slot, exactly as this client
    * wrote it before the Training Grounds set had an offset (pinned here).
    */
-  const MINTED_BEFORE = "PIN";
+  const MINTED_BEFORE = "JKT2.F0JlZm9yZSBUcmFpbmluZyBHcm91bmRzAQNCb2ICnCgri7I";
   const MINTED_SLOTS: readonly TrioCodeSlot[] = [{ name: "Bob", cards: ["stinkyscape-148", fixtureCardId(43)] }, null, null];
 
   it("R1410 a trio code minted before the Training Grounds set had a number is byte for byte the code written now, and reads back the same", () => {

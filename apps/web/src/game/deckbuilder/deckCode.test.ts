@@ -780,7 +780,7 @@ describe("R1410 the Training Grounds set's numbers: 6000 + n (the release, issue
    * A version 2 code of Core, Meditative+ and Stinkyscape cards, exactly as this client wrote it
    * before the Training Grounds set had an offset (encoded before the release and pinned here).
    */
-  const MINTED_BEFORE = "PIN";
+  const MINTED_BEFORE = "JKO2.F0JlZm9yZSBUcmFpbmluZyBHcm91bmRzBCu6H7coAc7u";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), MEDITATIVE_PLUS_26, STINKYSCAPE_175, fixtureCardId(1)];
 
   it("R1410 numbers a Training Grounds card 6000 + n, after Stinkyscape's 5000, and moves no other set's offset", () => {
