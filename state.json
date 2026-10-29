@@ -8358,7 +8358,7 @@
     "what": "build #2325 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T02:42:28Z",
+    "at": "2026-10-29T02:49:24Z",
     "notes": [
       "CI on #2301: #2301: queued a CI fix"
     ],
@@ -9066,7 +9066,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T02:38:21Z",
+  "loop_tick": "2026-10-29T02:49:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
