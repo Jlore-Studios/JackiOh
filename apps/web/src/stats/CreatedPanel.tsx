@@ -6,10 +6,11 @@
 // table's Radiant and Normal rates do; the figures, their order and the comparison's own floor are
 // the server's (CLAUDE.md rule 7). It sits in the scrolling panel, never the fixed top (R1646000).
 
-import type { ReactElement } from "react";
+import { useId, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import type { PublicCreatedStat } from "../net/api.ts";
 import { faceRate, formatPlayedDelta } from "./model.ts";
+import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
@@ -32,18 +33,19 @@ export function CreatedPanel({
   nameOf: (id: string, name: string) => string;
 }): ReactElement | null {
   useLocale();
+  const titleId = useId();
   if (created.length === 0) return null;
 
   return (
     <section className="stats-created-panel" data-testid={statsTestid.createdPanel}>
-      <h2 className="stats-games-title">{t("Created cards")}</h2>
+      <h2 id={titleId} className="stats-games-title">{t("Created cards")}</h2>
       <p className="stats-sample-hint stats-games-note">
         {t(
           "Cards made during the game: tokens, generated cards, copies and The Coin. Used is the win rate of the seats that made a Created copy of the card and used one, Not used of those that made copies and used none; each needs {minSample} games.",
           { minSample },
         )}
       </p>
-      <div className="stats-table-wrapper">
+      <TableScroll labelledBy={titleId}>
         <table className="stats-table" data-testid={statsTestid.createdTable}>
           <thead>
             <tr>
@@ -80,7 +82,7 @@ export function CreatedPanel({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </section>
   );
 }
