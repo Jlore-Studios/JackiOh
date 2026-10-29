@@ -1,7 +1,6 @@
-// R2102000: the practice core's lethal hint. Against the Easy AI, and only in a free game, every
-// snapshot asks `lethalHint` for the human's seat and carries `lethal: true` when it says yes; at
-// Medium and Hard, and in a tutorial lesson (whose `difficulty` is a placeholder), it never asks. A
-// check that throws gives no hint and the game goes on.
+// R2102000, R2291000: the practice core's lethal hint. In every game against the AI (each tier, a
+// sandbox game, a tutorial lesson), every snapshot asks `lethalHint` for the human's seat and carries
+// `lethal: true` when it says yes. A check that throws gives no hint and the game goes on.
 //
 // `@jackioh/ai` is mocked with a `lethalHint` that is the real one until a test tells it to answer
 // yes or throw, and that records the seats and deadlines it was asked with. The check's own tests, the hidden-card
@@ -65,6 +64,18 @@ function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
   return { seed: "core-lethal", difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" }, ...over };
 }
 
+/** R2291000: the games beyond an Easy free game that the worker plays against the AI, each by name. */
+function everyOtherGame(): [string, PracticeStartConfig][] {
+  const lesson = TUTORIAL_LESSONS[0];
+  if (lesson === undefined) throw new Error("no tutorial lesson");
+  return [
+    ["medium", config({ difficulty: "medium" })],
+    ["hard", config({ difficulty: "hard" })],
+    ["a sandbox game", config({ difficulty: "hard", sandbox: true })],
+    ["a tutorial lesson", lessonStartConfig(lesson)],
+  ];
+}
+
 beforeEach(() => {
   plan.mode = "real";
   plan.seats = [];
@@ -87,20 +98,23 @@ describe("R2102000 the practice core's lethal hint", () => {
     expect(plan.seats.every((seat) => seat === HUMAN)).toBe(true);
   });
 
-  it("R2102000 Medium, Hard and a tutorial lesson never ask the check and carry no lethal", () => {
+  it("R2291000 Medium, Hard, a sandbox game and a tutorial lesson ask the check for the human's seat, and carry lethal when it says yes", () => {
     plan.mode = "yes";
-    const lesson = TUTORIAL_LESSONS[0];
-    if (lesson === undefined) throw new Error("no tutorial lesson");
-    const configs: PracticeStartConfig[] = [
-      config({ difficulty: "medium" }),
-      config({ difficulty: "hard" }),
-      lessonStartConfig(lesson),
-    ];
-    for (const start of configs) {
+    for (const [name, start] of everyOtherGame()) {
+      plan.seats = [];
       const snapshot = snapshotOf(driver().send({ type: "start", config: start }));
-      expect("lethal" in snapshot, start.lesson ?? start.difficulty).toBe(false);
+      expect(snapshot.lethal, name).toBe(true);
+      expect(plan.seats, name).toEqual([start.humanSeat]);
     }
-    expect(plan.seats).toEqual([]);
+  });
+
+  it("R2291000 Medium, Hard, a sandbox game and a tutorial lesson carry no lethal while the real check says no", () => {
+    for (const [name, start] of everyOtherGame()) {
+      plan.seats = [];
+      const snapshot = snapshotOf(driver().send({ type: "start", config: start }));
+      expect("lethal" in snapshot, name).toBe(false);
+      expect(plan.seats, name).toEqual([start.humanSeat]);
+    }
   });
 
   it("R2102000 a check that throws gives no hint and the game goes on", () => {

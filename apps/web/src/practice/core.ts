@@ -8,7 +8,7 @@
 // both hands and both libraries live on this side of `handle`, and what crosses it is a
 // `PracticeSnapshot` — `viewFor(state, human)`, the human's `legalActions`, whether the AI owes an
 // action, and the engine's refusal of the human's last action. The worker stands where §9.1 puts
-// the server. Against the Easy AI it adds whether the human has a sure win this turn (R2102000),
+// the server. In every game it adds whether the human has a sure win this turn (R2102000, R2291000),
 // which the Rust side asks of the human's own redaction, so the AI's hidden cards never steer it.
 //
 // Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
@@ -355,13 +355,12 @@ function apply(game: PracticeGame, body: ActionBody, human: boolean): string | n
 }
 
 /**
- * R2102000: whether the snapshot carries the lethal hint: only in a free game against the Easy AI (a
- * lesson's `difficulty` is a placeholder), asked for the human's seat of the human's own redaction,
- * on the Rust side, under its own wall-clock cap as `decide` is under the AI's. A check that runs past
- * it, or throws, gives no hint, and the game goes on.
+ * R2291000: whether the snapshot carries the lethal hint, in every game the worker plays against the
+ * AI (each tier, a sandbox game, a lesson; R2102000 kept it to Easy's free games): asked for the
+ * human's seat of the human's own redaction, on the Rust side, under its own wall-clock cap as
+ * `decide` is under the AI's. A check that runs past it, or throws, gives no hint, and the game goes on.
  */
 function lethalFor(game: PracticeGame, now: number): boolean {
-  if (game.config.difficulty !== "easy" || game.config.lesson !== undefined) return false;
   try {
     return lethalHint(game.state, humanSeatNow(game), now > 0 ? now + PRACTICE_LETHAL_HINT_CLOCK_MS : undefined);
   } catch {
