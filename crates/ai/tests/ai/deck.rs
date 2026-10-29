@@ -166,7 +166,14 @@ mod build_ai_deck_b22 {
         sets.sort();
         assert_eq!(
             sets,
-            vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+", "Training Grounds"]
+            vec![
+                "Classic",
+                "Classic+",
+                "Core",
+                "Meditative",
+                "Meditative+",
+                "Training Grounds"
+            ]
         );
     }
 
@@ -986,8 +993,15 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Quickdraw card the cap may keep out (R817000), so the six kept are TG #34–#39, two of them Units
         // (#36, #38).
         let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
-        assert!(kept.iter().all(|id| !def_of(None, id).tags.contains(&Tag::Quickdraw)));
-        let banned: Vec<String> = of_newest.iter().filter(|id| !kept.contains(id)).cloned().collect();
+        assert!(
+            kept.iter()
+                .all(|id| !def_of(None, id).tags.contains(&Tag::Quickdraw))
+        );
+        let banned: Vec<String> = of_newest
+            .iter()
+            .filter(|id| !kept.contains(id))
+            .cloned()
+            .collect();
         for n in 1..=SEEDS {
             let deck = build_ai_deck(
                 &mut create_rng(&format!("r1370:short:{n}"), 0),

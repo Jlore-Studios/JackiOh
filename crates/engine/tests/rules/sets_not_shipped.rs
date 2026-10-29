@@ -954,15 +954,9 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
         // Whatever an unnamed pool asks for: its tribe, its tag, every token; its token only where a
         // pool asks for tokens (§5.1).
         for (args, expected) in [
-            (
-                json!({}),
-                vec!["traininggrounds-001", "traininggrounds-039"],
-            ),
+            (json!({}), vec!["traininggrounds-001", "traininggrounds-039"]),
             (json!({ "tags": ["Human"] }), vec!["traininggrounds-001"]),
-            (
-                json!({ "tags": ["Call to Chaos"] }),
-                vec!["traininggrounds-039"],
-            ),
+            (json!({ "tags": ["Call to Chaos"] }), vec!["traininggrounds-039"]),
             (
                 json!({ "withTokens": true }),
                 vec![

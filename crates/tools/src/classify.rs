@@ -1110,23 +1110,40 @@ mod tests {
         let tg = "Training Grounds";
         let wrapped_many = read_diff(
             &side(set_cards(tg, "traininggrounds", PATCH_MIN_CARDS), SHIPPED),
-            &side(set_cards(tg, "traininggrounds", PATCH_MIN_CARDS), &ships(SetName::TrainingGrounds)),
+            &side(
+                set_cards(tg, "traininggrounds", PATCH_MIN_CARDS),
+                &ships(SetName::TrainingGrounds),
+            ),
             &[],
         );
         let classified = classify(&wrapped_many, None);
-        assert_eq!((classified.kind, classified.tier), (Kind::Cards, Some(Tier::Patch)));
+        assert_eq!(
+            (classified.kind, classified.tier),
+            (Kind::Cards, Some(Tier::Patch))
+        );
         assert_eq!(classified.sets, vec![tg.to_string()]);
         assert_eq!(classified.cards.len(), PATCH_MIN_CARDS);
-        assert!(classified.cards.iter().all(|family| family.starts_with("traininggrounds-")));
+        assert!(
+            classified
+                .cards
+                .iter()
+                .all(|family| family.starts_with("traininggrounds-"))
+        );
         let wrapped_few = read_diff(
             &side(set_cards(tg, "traininggrounds", 2), SHIPPED),
-            &side(set_cards(tg, "traininggrounds", 2), &ships(SetName::TrainingGrounds)),
+            &side(
+                set_cards(tg, "traininggrounds", 2),
+                &ships(SetName::TrainingGrounds),
+            ),
             &[],
         );
         assert_eq!(classify(&wrapped_few, None).tier, Some(Tier::Micro));
         let unwrapped = read_diff(
             &side(set_cards("Classic", "classic", PATCH_MIN_CARDS), SHIPPED),
-            &side(set_cards("Classic", "classic", PATCH_MIN_CARDS), &ships(SetName::Classic)),
+            &side(
+                set_cards("Classic", "classic", PATCH_MIN_CARDS),
+                &ships(SetName::Classic),
+            ),
             &[],
         );
         let classified = classify(&unwrapped, None);

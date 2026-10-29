@@ -2599,11 +2599,18 @@ mod tests {
                 let previous: Catalog = [entry("core-001", "Core")].into_iter().collect();
                 let with = |set: &str, prefix: &str| -> Catalog {
                     let mut catalog = previous.clone();
-                    catalog.extend((1..=crate::classify::PATCH_MIN_CARDS).map(|k| entry(&format!("{prefix}-{k:03}"), set)));
+                    catalog.extend(
+                        (1..=crate::classify::PATCH_MIN_CARDS)
+                            .map(|k| entry(&format!("{prefix}-{k:03}"), set)),
+                    );
                     catalog
                 };
                 let fragment = PendingFragment::default();
-                let (tier, plays) = crate::patches::tier_of(&previous, &with("Training Grounds", "traininggrounds"), &fragment);
+                let (tier, plays) = crate::patches::tier_of(
+                    &previous,
+                    &with("Training Grounds", "traininggrounds"),
+                    &fragment,
+                );
                 assert_eq!(tier, Tier::Patch);
                 assert_eq!(plays.len(), crate::classify::PATCH_MIN_CARDS);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.5.1");

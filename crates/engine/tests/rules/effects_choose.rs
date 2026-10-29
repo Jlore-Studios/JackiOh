@@ -850,7 +850,10 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             core_seen |= core;
             snapshot_seen |= copy;
         }
-        assert!(core_seen && snapshot_seen, "the pool keeps both cards of the pair");
+        assert!(
+            core_seen && snapshot_seen,
+            "the pool keeps both cards of the pair"
+        );
     }
 
     #[test]

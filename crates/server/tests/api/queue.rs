@@ -2826,17 +2826,31 @@ mod r253_what_may_be_queued_through_the_real_validator {
             .take(w.size - 2)
             .cloned()
             .collect();
-        let both: Vec<String> = [core, snapshot].iter().map(|id| (*id).to_string()).chain(rest.iter().cloned()).collect();
+        let both: Vec<String> = [core, snapshot]
+            .iter()
+            .map(|id| (*id).to_string())
+            .chain(rest.iter().cloned())
+            .collect();
         let pair_deck = save_deck_for(&w.app, "real", &both, "Twins").await;
         let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": pair_deck }), "L3").await;
         assert!(
-            refused["error"]["message"].as_str().unwrap_or("").contains("snapshot"),
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("snapshot"),
             "{refused}"
         );
         let mut one: Vec<String> = vec![snapshot.to_string()];
-        one.extend(w.pool.iter().filter(|id| *id != core && *id != snapshot).take(w.size - 1).cloned());
+        one.extend(
+            w.pool
+                .iter()
+                .filter(|id| *id != core && *id != snapshot)
+                .take(w.size - 1)
+                .cloned(),
+        );
         let one_deck = save_deck_for(&w.app, "real", &one, "Snapshot alone").await;
-        let (status, body) = enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": one_deck })).await;
+        let (status, body) =
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": one_deck })).await;
         assert_eq!(status, 200, "{body}");
     }
 
