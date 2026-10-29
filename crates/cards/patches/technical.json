@@ -2512,5 +2512,207 @@
     "pr": 2232,
     "title": "patches ship: v0.5.0",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "2403b16670fe097bc6939f13537458481e3222c8",
+    "pr": 2262,
+    "title": "named layers, corner radii and shadow depths, and gradients only where they mean something",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "68edaae1adf824bddceb29a99d4699bb775629b6",
+    "pr": 2288,
+    "title": "the slow web and server CI jobs split under five minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "163edc7f4ff4f15e642ad714e9e5197b5ef34d1f",
+    "title": "Merge pull request #2186 from Jlore-Studios/bot/issue-2124",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "b74d2888f19aa1ede487b7a218fbe836a57f64ea",
+    "pr": 2296,
+    "title": "the technical log gains the five entries of the stuck log #2242",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "8c65cabcd3b8ead0c8abc32656cf0c47151aa28a",
+    "pr": 2314,
+    "title": "the lethal hint in every offline game against the AI",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "c2bb39cdedb38d977b05791668ca0d35e0003a56",
+    "title": "Merge pull request #2284 from Jlore-Studios/claude/peaceful-maxwell-r7812c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "cf13e1bae5af65c20eb14d5222ca7b84f4e5657d",
+    "pr": 2316,
+    "title": "a gate's redirect joins the view transition that drew its screen, and a skipped transition is no error",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "91d05cce20a695a4987c24577e9628679162d280",
+    "pr": 2306,
+    "title": "hand hints, a tiny icon row on the viewer's own hand cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "f9249bab97e910603c06f8975ba5c953030c0f30",
+    "pr": 2319,
+    "title": "the AI deals itself the Stinkyscape set, the gate lifted",
+    "kind": "ai",
+    "player": "The practice AI now builds its decks with Stinkyscape cards too."
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "51b2645873d3829c9f00f0c5bcaaf52254175a0a",
+    "pr": 2163,
+    "title": "a deck keeps its earlier versions, and one can be restored",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "6a83160e37172e0f3f86c58349ded65e54e3e7e1",
+    "pr": 2322,
+    "title": "patches ship: v0.5.2b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "bf53671d42e02406fbaca4dd24b17d16a1a2830a",
+    "pr": 2326,
+    "title": "Trigor's chain ends against forced attacks and Poisonous (R2197002's terminator)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "3f3d2261537d25b4db31ce6db3c2cfa5682b6367",
+    "pr": 2308,
+    "title": "Training Grounds, the AI plays every card, and the sweep of record before it ships",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "23a91c99c29c10f9c2331433ba1f84c22cb5a19b",
+    "pr": 2329,
+    "title": "Training Grounds' screens show Level Up!'s attack count, mark In a hurry's tokens as end-of-turn, and fit a long hero badge on a phone",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "c5eeb1494d6e1f251a86f4918bc0c95d8aec7c8d",
+    "title": "Merge pull request #2301 from Jlore-Studios/bot/issue-2266",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "4bbd0d855aa9c4bcfec1619ef346caaff410f1c4",
+    "pr": 2343,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "177023fbe7ceec1f22035dc81099ac1f64f2ed6f",
+    "pr": 2337,
+    "title": "show the keyboard shortcuts the client already has",
+    "kind": "app",
+    "player": "Keyboard shortcuts now show in tooltips, the command menu and the home page footer, with ⌘ on Apple devices and Ctrl elsewhere."
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "a2c193a32d5429c2d3b70c92c02074a274493ff4",
+    "pr": 2342,
+    "title": "the playmat taps everywhere but on a card, occupied zones included",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0edb316a300dec24a15fbc9ec9254628071c2573",
+    "pr": 2298,
+    "title": "the card-token pick shows the cards it can unlock, with the deck builder's search, and asks before it spends the token",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "59597ef68093378e70031c5be0cfc249c24e0195",
+    "pr": 2347,
+    "title": "equal-height board rows and full-size Defense cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "052f5a7f13d4085391d177c80aa5861295b8d97c",
+    "pr": 2344,
+    "title": "patches ship: v0.5.3",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "b7a4418ed0aae166ed6bc985c81e759a49774dca",
+    "pr": 2352,
+    "title": "the AI prices an extra-turn card in hand and its banked Anomaly misses",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "d737897afa59daf19c3bb5a07bc1eff24877c9c2",
+    "pr": 2349,
+    "title": "the Stinkyscape release audit's last MINORs: Prison's R2271000 tests pin the fix, no \"held\" wording, the script count",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0c15ac98c08de1941105665cd7fe4574686293ca",
+    "pr": 2355,
+    "title": "the hero badge's popover closes without a window key handler (R2126000)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "5f7bb0be1e8d3697333e0aa92cf3ecafa7cba262",
+    "pr": 2354,
+    "title": "the Almanac passes axe again and the board fits a 1024x768 tablet",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "fea35ce3a56b0f839648926b76449b7490117e27",
+    "pr": 2335,
+    "title": "a few named durations and easing curves for every motion on the board",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "4e5adcf3c8d43fcf1e01d9f2416354ee0fa75dcf",
+    "pr": 2359,
+    "title": "the frozen key-handler census drops ModifierBadge, which no longer has one (R2126000)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "381c255cc23e60b97db7b8a6e310a390209c30d7",
+    "pr": 2356,
+    "title": "Floodgates' Death ends against a fused self-resummon",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0283f6dbee21ded69476a19d4e8733959600274c",
+    "pr": 2358,
+    "title": "the shadow ban swept again after a dispatch, over 10 card(s), with #2333's cards",
+    "kind": "ai"
   }
 ]

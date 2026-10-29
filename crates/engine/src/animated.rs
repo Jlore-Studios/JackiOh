@@ -42,12 +42,10 @@ use crate::catalog::def_of;
 use crate::layers::unit_view;
 use crate::preview::is_face_down;
 use crate::script::EngineSink;
-use crate::state::{
-    CardInstance, Exertion, GameState, Position, find_instance, find_instance_mut, is_turn_of,
-};
+use crate::state::{CardInstance, Exertion, GameState, Position, find_instance_mut, is_turn_of};
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Zone, has_keyword};
 use crate::zones::{
-    ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, release_home,
+    ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, live_or, release_home,
     reserve_home, slot_of, slots_of, stands_in_backrow, step_into_backrow, step_into_unit_zone,
 };
 
@@ -71,14 +69,6 @@ const ON_YOUR_TURN: KeywordKind = KeywordKind::AnimatedOnYourTurn;
 pub struct AnimateOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<Position>,
-}
-
-/// The card as it stands in the state now, or as the caller holds it when the state has no card of
-/// its id (TS read the live object either way).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone())
 }
 
 /// B2.7: the type the card's running face is printed as, wherever it stands. An animated card is a Unit
@@ -148,7 +138,7 @@ fn step_into_units(
     options: AnimateOptions,
     entry: bool,
 ) -> bool {
-    let card = live(sink.state, card);
+    let card = live_or(sink.state, card);
     // R1728000: a Unit standing in its backrow zone (a Flying Unit, R1081000) is a Unit already, as an
     // animated card is: it stays where it stands, in the position it has, and enters nothing.
     if (is_animated(sink.state, &card) || stands_in_backrow(sink.state, &card))
@@ -205,7 +195,7 @@ fn step_into_units(
 /// Unit, when neither takes it. A card dormant under a Stack does not return (it is not acting). Its
 /// position goes with the unit zone. Emits `deanimated`. True when it went back.
 pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
-    let card = live(sink.state, card);
+    let card = live_or(sink.state, card);
     let Some(from) = slot_of(sink.state, &card) else {
         return false;
     };
@@ -268,7 +258,7 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
 /// instead. Called by the paths that put a card onto the field — §10.5 step 4 (`play_steps::place_card`,
 /// plays and casts) and every summon (`effects/summon::summon_onto`) — right after the event that placed it.
 pub fn animate_on_entry(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
-    let card = live(sink.state, card);
+    let card = live_or(sink.state, card);
     let Some(at) = slot_of(sink.state, &card) else {
         return false;
     };

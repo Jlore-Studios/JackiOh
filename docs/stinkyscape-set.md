@@ -368,7 +368,7 @@ reconcile is the release (its Done when below). Every S part is blocked by F.
 | F | `the foundation` | — | the set held by R1420; the tags Drone Core, Weapon, War Doctrine and Swarm; the card-by-card brief from this plan; every shared row (D9) | — | hard |
 | S01 | `S01, the Dormant cards` | #17 Imprisoned Ship Smith, #19 Imprisoned Cosmality | M01 | — | hard |
 | S02 | `S02, the Starship cards` | Dormant Starship, #90 After Burner, #106 Warpfield Amplifier, #131 Spacerace Stimulus, #133 Ultra Capacitor, #136 Magic Module, #137 Firststrike Capability, #137.1–#137.4 Land, Sea, Air and Space Doctrine, #144 Prepare For Liftoff | M02, L2 | — | hard |
-| S03 | `S03, Starship Pieces on existing keywords` | #38 Shield Amplifier, #40 Poison Capsule, #43 Healing Capsule, #48 Ultralight Chassis, #49 Spacemine, #68 Startos, #69 Falcon, #72 Paragon Mk1, #73 Paragon Mk2, #93 Patcher Nanobots, #98 Hull Booster, #100 AP Rounds, #101 Overdrive Module, #107 RR-5000, #108 Trila 3, #122 Vamp Rounds, #175 Frost Module, #132 Defensive Crystal, #134 Felinor Containment Chamber, #158 Stratos Swarm | M02 | — | medium |
+| S03 | `S03, Starship Pieces on existing keywords` | #38 Shield Amplifier, #40 Poison Capsule, #43 Healing Capsule, #48 Ultralight Chassis, #49 Spacemine, #68 Stratos, #69 Falcon, #72 Paragon Mk1, #73 Paragon Mk2, #93 Patcher Nanobots, #98 Hull Booster, #100 AP Rounds, #101 Overdrive Module, #107 RR-5000, #108 Trila 3, #122 Vamp Rounds, #175 Frost Module, #132 Defensive Crystal, #134 Felinor Containment Chamber, #158 Stratos Swarm | M02 | — | medium |
 | S04 | `S04, the Resources and the asteroids` | Reknite, Korrelite, Gellium, Axnit, Narcor, Red Narcor; #39 The Narcor Project, #67 Tractor Beam, #75 Badger, #76 Honey Badger, #84 Power Cell, #84.1 Metal Scraps, #89 Spice, #96 Ocean Tsunami, #97 Asteroid Field, #116 Megabase, #155 Comet Crash, #169 Tiny, #170 Medium, #171 Large, #172 Huge Asteroid, #173 Abandoned Spice Tower | M03, M16 | — | hard |
 | S05 | `S05, the Miners` | #62–#66 Miner v1–v5, #78 Ozark, #79 Orca, #80 Galaxy | M03, M05 | S04 | medium |
 | S06 | `S06, the weapon rack` | #50–#61 Beam, Repeater, Cannon and Flak v3–v5, #81 Radix, #82 Phalanx, #83 Halo, #85 Prototype-X1, #86 Prototype-X2, #140 Rush Token, #141 Fruit, #142 Jade and #143 Book Launcher | M05, L1 | — | hard |
@@ -460,7 +460,7 @@ Stinkyscape card, and the AI's gates are green.
 | 163 | Swear Loyalities | "Golden" | Golden Accord; the name kept as written |
 | 169–172 | the asteroids | "Can't be in Defense Positio n" | Position |
 | anomalies | AT, MT, AN | "Small Asteroid" | Tiny Asteroid (#169) |
-| 68, 158 | Startos; Stratos Swarm | two spellings | Startos, as the Unit prints it |
+| 68, 158 | Stratos; Stratos Swarm | two spellings, #68's with two letters swapped | Stratos, as Stratos Swarm prints it (issue #2327, reversing S03's reading) |
 | 13 | Asphyxiants Cloud | "should deal 1 poisonous damage to all enemies, if it doesn't please reword" | "This and your next Spell this turn have **Poisonous**. Deal 1 damage to all enemies. Draw 1." |
 
 ## ST9. The designer's answers
@@ -589,7 +589,7 @@ Field Traps. Against ST1, which counts the numbered and sub-numbered entries by 
 75 Spells and 22 Field Spells after ST8's two, 8 Traps, 2 Field Traps, the two Swarm entries among the Units.
 
 **Names.** The final names are unique against the catalog and `chinese.json`, with straight apostrophes and
-ST8's spellings: Startos, Star-jumper Core (the list's header writes "core"), Swear Loyalities as written,
+ST8's spellings: Stratos, Star-jumper Core (the list's header writes "core"), Swear Loyalities as written,
 Starship Piece for "Starpiece". The Drone Battleship's layers are **Drone Battleship (Shield Layer)**,
 **(Propagation Layer)** and **(Meltdown Layer)**, so a text that says "the Drone Battleship" names all
 three, as "Call to Chaos" names every edition ([[R279]]'s parenthesis rule). Anomaly Found!'s text names no
@@ -1817,10 +1817,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Check:** "Start of your turn" is the label Start of turn ([[R366]]); "resource" is a Resource. R275: stats doubled; Radiant Resources.
 - **Class:** C.
 
-#### Stinkyscape #68 · Startos
+#### Stinkyscape #68 · Stratos
 `stinkyscape-068` · (1) Unit · Common · 3/3 → 6/6 · built by S03 (#1860)
 
-> **Designer:** (1) Startos, Unit, Common, Stinkyscape, #68 · Starship Piece / Flying / [3/3] ~~~ Starship Piece / Flying / [6/6]
+> **Designer:** (1) Stratos, Unit, Common, Stinkyscape, #68 · Starship Piece / Flying / [3/3] ~~~ Starship Piece / Flying / [6/6]
 
 - **Text:** Starship Piece, Flying
 - **Radiant:** Starship Piece, Flying
@@ -3133,14 +3133,14 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 #### Stinkyscape #158 · Stratos Swarm
 `stinkyscape-158` · (3) Spell · Rare · built by S03 (#1860)
 
-> **Designer:** (3) Stratos Swarm, Spell, Rare, Stinkyscape, #158 · Fill your board with Startos ~~~ Fill your board with Radiant Startos
+> **Designer:** (3) Stratos Swarm, Spell, Rare, Stinkyscape, #158 · Fill your board with Stratos ~~~ Fill your board with Radiant Stratos
 
-- **Text:** Fill your board with Startos.
-- **Radiant:** Fill your board with Radiant Startos.
-- **Engine:** `fill_board` with S #68 Startos (Core #62 Friend of Felinors' verb): every open unit zone of its caster's, a Dormant card's zone not one ([[R1839000]]), each a summoned card of its own definition, no Cry ([[R1]]), no token; Radiant `radiant: true`. Each is a Starship Piece, so each that dies fuses ([[R1852000]]).
-- **Rulings:** ST-S03-9: "Startos" is S #68 (ST8's spelling); a full board summons none. These are proposals for the S03 part, which takes R-numbers from its own block.
+- **Text:** Fill your board with Stratos.
+- **Radiant:** Fill your board with Radiant Stratos.
+- **Engine:** `fill_board` with S #68 Stratos (Core #62 Friend of Felinors' verb): every open unit zone of its caster's, a Dormant card's zone not one ([[R1839000]]), each a summoned card of its own definition, no Cry ([[R1]]), no token; Radiant `radiant: true`. Each is a Starship Piece, so each that dies fuses ([[R1852000]]).
+- **Rulings:** ST-S03-9: "Stratos" is S #68 (ST8's spelling); a full board summons none. These are proposals for the S03 part, which takes R-numbers from its own block.
 - **Numbers:** none (no number is printed).
-- **Check:** ST8: Startos, as the Unit prints it. R275: Radiant Startos.
+- **Check:** ST8: Stratos, as both cards print it since issue #2327. R275: Radiant Stratos.
 - **Class:** A
 
 #### Stinkyscape #159 · ETHICS

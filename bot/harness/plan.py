@@ -68,7 +68,7 @@ from harness.providers import TIER_RANK, Pool, Provider, Seat, tier_at_least
 from harness.queue import (KIND_ORDER, PRIORITY_NAMES, Candidate, branch_for_issue, candidates,
                            carries, cleared, is_human, label_names, needs_plan,
                            open_pull_for_branch, plan_floor, plan_meets, rating_source,
-                           set_state_label)
+                           requeue_cleared, set_state_label)
 from harness.state import item as state_item
 
 MODES = ("auto", "build", "revise", "review", "suggest")
@@ -1252,7 +1252,8 @@ def prune(ctx: Context, state: dict[str, Any]) -> list[str]:
 
 
 def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
-    """Requeue items a dead run left working; queue a revision for conflicted bot PRs."""
+    """Requeue items a dead run left working; queue a revision for conflicted bot PRs; put back
+    in the merge queue a cleared one it took out with no failed build (`queue.requeue_cleared`)."""
     notes: list[str] = prune(ctx, state)
     for thread in working_threads(ctx):
         number = int(thread["number"])
@@ -1299,6 +1300,13 @@ def housekeeping(ctx: Context, state: dict[str, Any]) -> list[str]:
                 kind="revise", source="conflict", queued_at=iso(ctx.now()), failures=0,
                 stop_requested=False), f"conflict #{number}")
             notes.append(f"queued #{number}: it conflicts with main")
+            continue
+        try:
+            requeued = requeue_cleared(ctx, pull, record)
+        except GitHubError as exc:
+            requeued = f"#{pull['number']}: could not check the merge queue ({exc})"
+        if requeued:
+            notes.append(requeued)
     for thread in ctx.gh.list_issues(labels=LABEL_PR_OPEN):
         number = int(thread["number"])
         if open_pull_for_branch(ctx, branch_for_issue(number)) is None:
@@ -1568,6 +1576,9 @@ def ci_logs(ctx: Context, run_id: Any) -> str:
     try:
         jobs = [j for j in ctx.gh.list_jobs(run_id)
                 if j.get("conclusion") in ("failure", "timed_out", "cancelled")]
+        # The failed first: a merge-queue build cancels the rest of its run once a required check
+        # failed (ci.yml's `queue-cancel-*`), and those cancelled jobs say nothing.
+        jobs.sort(key=lambda j: j.get("conclusion") == "cancelled")
     except GitHubError as exc:
         return data(f"(could not read the CI run: {exc})", "CI failure")
     parts = []

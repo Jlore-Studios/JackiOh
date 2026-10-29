@@ -2292,8 +2292,8 @@
       attack: { voice: "robot", text: "Pulling!" },
       death: { voice: "robot", text: "Beam collapsing." },
     },
-    "stinkyscape-068": { // Startos
-      play: { voice: "robot", text: "Startos reporting for duty." },
+    "stinkyscape-068": { // Stratos
+      play: { voice: "robot", text: "Stratos reporting for duty." },
       attack: { voice: "robot", text: "Strafing run." },
       death: { voice: "robot", text: "Hull lost." },
     },

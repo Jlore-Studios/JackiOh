@@ -528,6 +528,31 @@ class RequiredChecksTests(unittest.TestCase):
         missing = [check for check in cfg.required_checks if check not in names]
         self.assertEqual(missing, [], f"required checks with no job: {missing}; jobs: {sorted(names)}")
 
+    def test_the_required_checks_run_in_the_merge_queue_too(self):
+        """`main`'s merge queue (infra/github.tf) waits for the same checks on its own builds: a
+        workflow that reports one and not on `merge_group` takes every pull request out at the
+        queue's timeout. The `changes` job scopes a group's diff as a pull request's."""
+        text = read("ci.yml")
+        self.assertRegex(text, r"(?m)^  merge_group:")
+        scope = job(text, "changes")
+        self.assertIn("HEAD: ${{ github.event.pull_request.head.sha"
+                      " || github.event.merge_group.head_sha }}", scope)
+        self.assertIn('if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then', scope)
+
+    def test_a_failed_queue_build_is_cancelled_only_after_its_check_reported(self):
+        """Each required check's own job cancels the rest of a merge-queue build that it failed. A
+        cancel that ran before a summary job would leave that check skipped, which counts as
+        passing, so each waits on the summary itself and runs only on its failure."""
+        text = read("ci.yml")
+        jobs = {"rust": "rust", "web": "web", "e2e-smoke": "e2e smoke", "db": "db",
+                "bot-selftest": "bot selftest"}
+        self.assertEqual(set(jobs.values()), set(config.load(env={}).required_checks))
+        for summary in jobs:
+            cancel = job(text, f"queue-cancel-{summary}")
+            self.assertIn(f"needs: {summary}\n", cancel)
+            self.assertIn("if: ${{ failure() && github.event_name == 'merge_group' }}", cancel)
+            self.assertIn('gh run cancel "$RUN"', cancel)
+
 
 if __name__ == "__main__":
     unittest.main()

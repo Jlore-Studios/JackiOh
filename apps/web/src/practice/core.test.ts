@@ -591,17 +591,22 @@ function handOf(snapshot: PracticeSnapshot): string[] {
  * The seeds deal player 1 a play on turn 1 in all four runs, so R82 does not end that turn before the
  * view is read. The Radiant pass's shadow ban (R186) changed the AI's random deck and moved them, and
  * patch v0.1.1 (its shadow ban of Zao Gao and CN-Viral Injection, then its card patches) moved the
- * AI-first pair twice more.
+ * AI-first pair twice more. Megabase becoming a Unit (#2278) re-dealt the AI-first p1 seed into a
+ * dead hand, so seated p1 runs on `-h2`.
  */
 describe("R265 the practice mulligan: the AI answers its own at once, and the human answers before or after it", () => {
   for (const human of ["p1", "p2"] as const) {
     it(`R265 seated ${human}: the AI answers first without waiting, the human's picker stays open, and the human's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
+      // Megabase becoming a Unit (#2278) re-dealt `r265-ai-first-p1-h` into a p1
+      // hand with no turn-1 play, so R82 ends turn 1 before the view is read;
+      // `-h2` deals p1 a turn-1 play again. Seated p2 still holds on `-h`.
+      const seed = human === "p1" ? "r265-ai-first-p1-h2" : `r265-ai-first-${human}-h`;
       const d = driver();
       const started = snapshotOf(
         d.send({
           type: "start",
-          config: config({ seed: `r265-ai-first-${human}-h`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+          config: config({ seed, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
         }),
       );
       expect(started.aiToAct, "the AI owes its mulligan from the start").toBe(true);

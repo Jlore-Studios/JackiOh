@@ -21060,7 +21060,7 @@
   "stinkyscape-068": {
     "id": "stinkyscape-068",
     "index": "68",
-    "name": "Startos",
+    "name": "Stratos",
     "set": "Stinkyscape",
     "type": "Unit",
     "tags": [],
@@ -24810,11 +24810,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Startos."
+      "text": "Fill your board with Stratos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Startos."
+      "text": "Fill your board with Radiant Stratos."
     }
   },
   "stinkyscape-159": {
