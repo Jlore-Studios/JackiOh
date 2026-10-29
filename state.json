@@ -7949,22 +7949,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/cards/src/scripts/stinkyscape/c158_stratos_swarm.rs",
-            "crates/cards/src/scripts/stinkyscape/t_dormant_starship.rs",
             "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "a62aaecbf2c455840e559a60d86006a06dd34fac",
-          "main": "23a91c99c29c10f9c2331433ba1f84c22cb5a19b"
+          "from": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c",
+          "main": "8b6505b02ec1a6c560b2921642d975532c341a6b"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "40833694913",
+            "run": "40843945230",
             "tier": "medium"
           }
         ],
-        "sha": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c",
+        "sha": "d4b8d4ccbb74f9d95be2cdae7b602f29ee9d2060",
         "tiers": {
           "muse": "medium"
         }
