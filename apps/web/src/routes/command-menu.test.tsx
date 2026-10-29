@@ -15,6 +15,7 @@ import { almanacShelf } from "../game/deckbuilder/shelf.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { guardLeaving, paths } from "../net/navigate.ts";
 import { baseView } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { at } from "../test/stubServer.ts";
 import CommandMenu, { commandEntryTestid, commandMenuTestid } from "./CommandMenu.tsx";
 import { commandCards, commandMenuOn } from "./commandEntries.ts";
@@ -287,6 +288,28 @@ describe("R2118000 the command menu", () => {
     fireEvent.click(screen.getByTestId(commandMenuTestid.scrim));
     expect(screen.queryByTestId(commandMenuTestid.dialog)).toBeNull();
     expect(opener).toHaveFocus();
+  });
+
+  it("R2127000 Back closes the command menu, the focus goes back and the address stays", async () => {
+    at("/decks");
+    window.history.pushState(null, "", "/play");
+    render(
+      <>
+        <button type="button" data-testid="command-menu-opener">
+          opener
+        </button>
+        <CommandMenu path="/play" />
+      </>,
+    );
+    const opener = screen.getByTestId("command-menu-opener");
+    opener.focus();
+    openMenu();
+    expect(screen.getByTestId(commandMenuTestid.input)).toHaveFocus();
+
+    await pressBack();
+    expect(screen.queryByTestId(commandMenuTestid.dialog)).toBeNull();
+    expect(opener).toHaveFocus();
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("R2118000 Tab and Shift+Tab stay inside it", () => {
