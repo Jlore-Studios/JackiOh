@@ -1001,6 +1001,31 @@ fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
     if sink.state.result.is_some() {
         return;
     }
+    // R2285000: the attacker's own "When this attacks" first, before any damage. With no such hook
+    // nothing runs and the attack goes on at once, as before.
+    let open = if declared_attack_stands(sink.state, &open)
+        && find_instance(sink.state, &open.attacker_id).is_some_and(|card| has_when_attacks(sink.state, card))
+    {
+        let owed = OwedWhenAttacks {
+            attacker_id: open.attacker_id.clone(),
+            target_id: open.target_id.clone(),
+            declared: Some(open),
+            since,
+            stage: None,
+        };
+        match answer_when_attacks(sink, &owed, None).and_then(|owed| owed.declared) {
+            Some(open) => open,
+            None => return,
+        }
+    } else {
+        open
+    };
+    defend_and_fight(sink, open, since, bounce);
+}
+
+/// §4.2 step 5 for a declaration whose attacker has answered it (R2285000): the defender's side's
+/// "one of your Units is attacked" (R1849008), then the combat.
+fn defend_and_fight(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, bounce: bool) {
     // R1849008: the defender's side answers "one of your Units is attacked" before the combat. With
     // no such hook on that side nothing runs and the attack fights at once, as before.
     if declared_attack_stands(sink.state, &open) {
@@ -1124,8 +1149,7 @@ pub(crate) fn prime_combat(sink: &mut EngineSink<'_>, owed: &crate::attack_summo
                     && !crate::stays::left_field_after(sink.state, owed.since, &attacker.id)
                     && target_acts_since(sink.state, &target, owed.since) =>
             {
-                resolve_combat(sink, &attacker, &target);
-                close_combat(sink, &attacker, &target, true, None);
+                forced_combat(sink, &attacker, &target);
             }
             _ => {}
         }
@@ -1471,8 +1495,47 @@ pub(crate) fn force_attack_instead(
         instead_of: instead_of.map(str::to_string),
     });
 
-    resolve_combat(sink, attacker, target);
-    close_combat(sink, attacker, target, true, None);
+    forced_combat(sink, attacker, target);
+}
+
+/// A forced attack's combat and state check (R53), its attacker's "When this attacks" first
+/// (R2285000). With no such hook the combat is at once, as before; after one, the combat is fought
+/// only while the attacker and the target still act on the stays the attack began on (R174), as
+/// `prime_combat`'s forced branch asks. A question in the hook owes the rest, the combat included
+/// (R113), and a run that made this attack owes its own rest behind it.
+fn forced_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
+    if !has_when_attacks(sink.state, attacker) {
+        resolve_combat(sink, attacker, target);
+        close_combat(sink, attacker, target, true, None);
+        return;
+    }
+    let owed = OwedWhenAttacks {
+        attacker_id: attacker.id.clone(),
+        target_id: target_id_of(target),
+        declared: None,
+        since: crate::stays::exit_mark(sink.state),
+        stage: None,
+    };
+    if let Some(owed) = answer_when_attacks(sink, &owed, None) {
+        fight_forced_after(sink, &owed);
+    }
+}
+
+/// R2285000: a forced attack's combat once its attacker's hook has run.
+fn fight_forced_after(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) {
+    let attacker = find_instance(sink.state, &owed.attacker_id).cloned();
+    let target = attack_target_of(sink.state, &owed.target_id);
+    let (Some(attacker), Some(target)) = (attacker, target) else {
+        return;
+    };
+    if !is_active_on_field(sink.state, &attacker)
+        || crate::stays::left_field_after(sink.state, owed.since, &attacker.id)
+        || !target_acts_since(sink.state, &target, owed.since)
+    {
+        return;
+    }
+    resolve_combat(sink, &attacker, &target);
+    close_combat(sink, &attacker, &target, true, None);
 }
 
 /// §4.2 step 2: an attack is made on an enemy unit or the enemy hero, forced or not (R173).
@@ -1734,8 +1797,7 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
         forced: true,
         instead_of: None,
     });
-    resolve_combat(sink, &attacker, &target);
-    close_combat(sink, &attacker, &target, true, None);
+    forced_combat(sink, &attacker, &target);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1828,6 +1890,244 @@ pub fn run_owed_melee(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// "When this attacks": the attacker's `whenAttacks` hook, before any damage of its attack (R2285000)
+// ---------------------------------------------------------------------------------------------
+
+/// R113: the `resume.hook` of the engine sequence this section parks — an attacker's `whenAttacks`
+/// hook owed before its combat: the rest of the hook after a question of its own, or the state check
+/// that follows it, and then the rest of the attack.
+pub const WHEN_ATTACKS_WORK: &str = "@whenAttacks";
+
+/// The facts an attack hands its attacker's `whenAttacks` hook, in the hook's `ctx.data`
+/// (`when_attacks_of` reads them back): the attack's target (a unit's id or `hero-<player>`) and
+/// whether the attack was forced (R53).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WhenAttacksFacts {
+    pub target_id: String,
+    pub forced: bool,
+}
+
+/// The facts a `whenAttacks` hook was handed, or `None` outside one.
+pub fn when_attacks_of(ctx: &crate::script::EffectContext<'_>) -> Option<WhenAttacksFacts> {
+    let data = &ctx.data;
+    let target_id = data.get("targetId")?.as_str()?.to_string();
+    let forced = data.get("forced")?.as_bool()?;
+    Some(WhenAttacksFacts { target_id, forced })
+}
+
+/// What an owed `@whenAttacks` carries, all JSON: the attack the hook comes before — the declaration
+/// a declared attack stands on, or for a forced one (`declared: None`) its attacker, its target and
+/// the stays it began on, by id (R44's AI turn can replace every instance before an answer).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct OwedWhenAttacks {
+    attacker_id: String,
+    target_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    declared: Option<DeclaredAttack>,
+    since: u32,
+    /// How far the sequence got: `None` before the hook is done, `"check"` once only the state check
+    /// after it is owed, `"attack"` once only the rest of the attack is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    stage: Option<String>,
+}
+
+const WHEN_ATTACKS_KEY: &str = "whenAttacks";
+const CHECK_STAGE: &str = "check";
+const ATTACK_STAGE: &str = "attack";
+
+fn has_when_attacks(state: &GameState, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card).when_attacks.is_some()
+}
+
+fn owe_when_attacks(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) {
+    let mut data = IndexMap::new();
+    data.insert(WHEN_ATTACKS_KEY.to_string(), to_json(owed));
+    owe(sink, engine_resume(WHEN_ATTACKS_WORK, "hook", data));
+}
+
+/// R2285000: the attacker's hook, from `paused` when a question split it, then the state check that
+/// follows it (R59). The hook runs for the player who controls the attacker, a new one only while the
+/// attacker still acts on the field; one a question split finishes whatever became of it. The attack
+/// to go on with now, retargeted when the hook transformed its target (R2285002); `None` when the game
+/// ended or a question stopped the sequence, whose rest — the attack included — is then owed on
+/// `state.work` (R113).
+fn answer_when_attacks(
+    sink: &mut EngineSink<'_>,
+    owed: &OwedWhenAttacks,
+    paused: Option<PausedStep>,
+) -> Option<OwedWhenAttacks> {
+    if sink.state.result.is_some() {
+        return None;
+    }
+    match owed.stage.as_deref() {
+        Some(ATTACK_STAGE) => return Some(owed.clone()),
+        Some(CHECK_STAGE) => return check_after_when_attacks(sink, owed),
+        _ => {}
+    }
+    let card = find_instance(sink.state, &owed.attacker_id)
+        .filter(|card| paused.is_some() || is_active_on_field(sink.state, card))
+        .cloned();
+    let hook = card
+        .as_ref()
+        .and_then(|card| crate::scripts::script_of(sink.state, card).when_attacks.clone());
+    let (Some(card), Some(hook)) = (card, hook) else {
+        return Some(owed.clone());
+    };
+    let from = sink.events.len();
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("targetId".to_string(), json!(owed.target_id));
+    data.insert("forced".to_string(), json!(owed.declared.is_none()));
+    let mut plan_data = IndexMap::new();
+    plan_data.insert(WHEN_ATTACKS_KEY.to_string(), to_json(owed));
+    let plan = WorkPlan {
+        def_id: String::new(),
+        hook: WHEN_ATTACKS_WORK.to_string(),
+        step: "hook".to_string(),
+        radiant: false,
+        instance_id: None,
+        data: plan_data,
+        owner: card.controller,
+    };
+    let status = {
+        let mut ctx = crate::resolve::make_context(
+            sink,
+            Some(&card),
+            crate::resolve::HookOptions {
+                controller: Some(card.controller),
+                data: Some(data),
+                ..crate::resolve::HookOptions::default()
+            },
+        );
+        if let Some(paused) = &paused {
+            if let Some(exits_from) = paused.exits_from {
+                ctx.exits_from = Some(exits_from);
+            }
+            if let Some(summoned) = &paused.summoned {
+                ctx.summoned = Some(summoned.clone());
+            }
+        }
+        let effects = hook(&mut ctx);
+        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
+    };
+    let followed = retargeted(owed, &followed_target(sink, &owed.target_id, from));
+    match status {
+        crate::prompts::ListStatus::Done => check_after_when_attacks(sink, &followed),
+        // The hook's last effect asked: the hook is done, and its check waits for the answer.
+        crate::prompts::ListStatus::Asked => {
+            owe_when_attacks(
+                sink,
+                &OwedWhenAttacks {
+                    stage: Some(CHECK_STAGE.to_string()),
+                    ..followed
+                },
+            );
+            None
+        }
+        // Parked: the rest of the hook went to `state.work` as this sequence's own item, which takes
+        // the target the hook has already transformed.
+        crate::prompts::ListStatus::Parked => {
+            if followed.target_id != owed.target_id {
+                repark_retargeted(sink, owed, &followed);
+            }
+            None
+        }
+        crate::prompts::ListStatus::Over => None,
+    }
+}
+
+/// The state check after the hook (R59); a Death's question there owes the rest of the attack.
+fn check_after_when_attacks(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) -> Option<OwedWhenAttacks> {
+    crate::state_check::state_check(sink);
+    if is_paused(sink) {
+        if sink.state.result.is_none() {
+            owe_when_attacks(
+                sink,
+                &OwedWhenAttacks {
+                    stage: Some(ATTACK_STAGE.to_string()),
+                    ..owed.clone()
+                },
+            );
+        }
+        return None;
+    }
+    Some(owed.clone())
+}
+
+/// R2285002: the Unit an attack's target became, following each `transformed` since `from`: §6.3's
+/// Transform puts a new instance in the same zone and position, and the attack goes on against it.
+fn followed_target(sink: &EngineSink<'_>, target_id: &str, from: usize) -> String {
+    let mut id = target_id.to_string();
+    for event in sink.events.get(from..).unwrap_or(&[]) {
+        if let GameEvent::Transformed {
+            instance_id,
+            new_instance_id,
+            ..
+        } = event
+            && *instance_id == id
+        {
+            id = new_instance_id.clone();
+        }
+    }
+    id
+}
+
+/// The owed attack, aimed at `target_id` — its declaration's target too.
+fn retargeted(owed: &OwedWhenAttacks, target_id: &str) -> OwedWhenAttacks {
+    let mut owed = owed.clone();
+    if let Some(open) = owed.declared.as_mut() {
+        open.target_id = target_id.to_string();
+    }
+    owed.target_id = target_id.to_string();
+    owed
+}
+
+/// R2285002: the item a question parked mid-hook carries the attack as the hook began; it goes on
+/// against the target's new instance instead.
+fn repark_retargeted(sink: &mut EngineSink<'_>, was: &OwedWhenAttacks, now: &OwedWhenAttacks) {
+    let parked = sink.state.work.iter_mut().find(|item| {
+        item.resume.hook == WHEN_ATTACKS_WORK
+            && owed_when_attacks_of(&item.resume.data).is_some_and(|owed| owed == *was)
+    });
+    if let Some(item) = parked {
+        item.resume
+            .data
+            .insert(WHEN_ATTACKS_KEY.to_string(), to_json(now));
+    }
+}
+
+fn owed_when_attacks_of(data: &IndexMap<String, Value>) -> Option<OwedWhenAttacks> {
+    let raw = data.get(WHEN_ATTACKS_KEY)?;
+    let owed = raw.as_object()?;
+    owed.get("attackerId")?.as_str()?;
+    owed.get("targetId")?.as_str()?;
+    owed.get("since")?.as_u64()?;
+    serde_json::from_value::<OwedWhenAttacks>(raw.clone()).ok()
+}
+
+/// `work.rs`'s handler: the hook (or its rest, or its check) where the pause left it, then the rest
+/// of the attack — a declared one's defenders and combat, a forced one's combat (R113).
+pub fn run_owed_when_attacks(sink: &mut EngineSink<'_>, item: &WorkItem) {
+    let Some(owed) = owed_when_attacks_of(&item.resume.data) else {
+        return;
+    };
+    let Some(owed) = answer_when_attacks(sink, &owed, paused_of(&item.resume.data)) else {
+        return;
+    };
+    match owed.declared {
+        Some(open) => {
+            let since = open
+                .exits_from
+                .unwrap_or_else(|| crate::stays::exit_mark(sink.state));
+            let bounce = open.bounce_after == Some(true);
+            defend_and_fight(sink, open, since, bounce);
+        }
+        None => fight_forced_after(sink, &owed),
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // "After this attacks": the attacker's `afterAttack` hook, once the combat's state check has closed
 // ---------------------------------------------------------------------------------------------
 
@@ -1840,7 +2140,8 @@ pub const AFTER_ATTACK_WORK: &str = "@afterAttack";
 /// (`after_attack_of` reads them back): the attack's target (a unit's id or `hero-<player>`), the units
 /// that combat destroyed — the ones whose lethal hit was the attacker's (R42's killer: the attacked
 /// unit, and Cleave's kills) — whether the attacker is still on the field on the stay it attacked from
-/// once the check has closed, and whether the attack was forced (R53).
+/// once the check has closed (always true, since the hook runs only then, R2285001; kept for the
+/// scripts that read it), and whether the attack was forced (R53).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackFacts {
@@ -1873,7 +2174,7 @@ pub fn after_attack_of(ctx: &crate::script::EffectContext<'_>) -> Option<AfterAt
 #[serde(rename_all = "camelCase")]
 struct OwedAfterAttack {
     attacker_id: String,
-    /// The attacker just before the check that closed its combat (R78, R89): its self if it died.
+    /// The attacker just before the check that closed its combat (R78, R89): whose it was in that combat.
     snapshot: CardInstance,
     target_id: String,
     destroyed_ids: Vec<String>,
@@ -1993,8 +2294,8 @@ pub fn run_owed_combat_copies(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 /// The state check that closes a combat (§4.2 step 5, §4.3 step 3, R53), then the attacker's
-/// `afterAttack` hook (Classic #13, Classic+ #73.1, Core #32) — also when the attacker died in it, on
-/// the snapshot it fought with, as a Death hook reads its card (R78, R89). An attack that was called
+/// `afterAttack` hook (Classic #13, Classic+ #73.1, Core #32) — only when the attacker is still on the
+/// field on the stay it attacked from once that check has closed (R2285001). An attack that was called
 /// off (R44, R220) never fought and never reaches here. The hook is a whole effect, so a check follows
 /// it (R59); a question inside it, or a Death's question in the check before it, owes the rest to
 /// `state.work` (R113).
@@ -2144,25 +2445,21 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
+    // R2285001: "After this attacks" only for an attacker still on the field on the stay it attacked
+    // from. One that died in the combat, or left the field otherwise, does nothing, and no check is
+    // owed after a hook that never ran.
+    let (Some(self_card), true) = (live, survived) else {
+        return;
+    };
     let judged = OwedAfterAttack {
         survived: Some(survived),
         ..owed.clone()
     };
-    // A survivor is itself, on the field (Classic+ #73.1 transforms it); one that died is the snapshot
-    // it fought with, which a continuation reads back too (`prompts::SELF_KEY`, R89).
-    let self_card = match (&live, survived) {
-        (Some(live), true) => live.clone(),
-        _ => owed.snapshot.clone(),
-    };
-    // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("targetId".to_string(), json!(owed.target_id));
     data.insert("destroyedIds".to_string(), json!(owed.destroyed_ids));
     data.insert("survived".to_string(), json!(survived));
     data.insert("forced".to_string(), json!(owed.forced));
-    if !survived {
-        data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
-    }
     let mut plan_data = IndexMap::new();
     plan_data.insert(AFTER_ATTACK_KEY.to_string(), to_json(&judged));
     let plan = WorkPlan {
