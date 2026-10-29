@@ -205,10 +205,10 @@ function DeckTile({ deckName, cardId, def, owned, conflict, issue, onRemove, onI
 }
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
-  useLocale();
+  const locale = useLocale();
   const { deckName, cards, catalog, collection, conflicts, issues, head, onDropCard, onRemove, onInspect, children } = props;
   const [listOpen, setListOpen] = useState(false);
-  const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog]);
+  const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog, locale]);
   const full = cards.length >= DECK_SIZE;
   const list = useRef<HTMLUListElement>(null);
   useScrollEdges(list, cards.length);
