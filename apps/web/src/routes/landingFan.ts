@@ -6,7 +6,7 @@ import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh
 import catalogJson from "@jackioh/cards/catalog.json";
 
 import { nameTier, textTier, type LengthTier } from "../cards/fit.ts";
-import { isFullArt, showsFullArt } from "../cards/fullArt.ts";
+import { isFullArtCard, showsFullArt } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { overLimit, shortFormOf, type TextLimit } from "../cards/shortText.ts";
 import {
@@ -107,14 +107,15 @@ const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 
 /**
  * R639 favours faces whose name and rules text print at the largest size, but never excludes dense
  * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
- * full art off it is dealt only when its text fits the fan.
+ * full art off it is dealt only when its text fits the fan. A Training Grounds snapshot of one prints
+ * its words, so it does not (R2195001).
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);
   if (known !== undefined) return known;
   const face = faceModel({ defId: def.id, def, radiant: false });
   const fits =
-    isFullArt(def.name) ||
+    isFullArtCard(def.id, def.name) ||
     (TIER_RANK[nameTier(face.name)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER] &&
       TIER_RANK[textTier(face.text.full)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER]);
   const weight = fits ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE;
@@ -126,7 +127,7 @@ const WEIGHTS = new Map<string, number>();
 
 /** R1017002: `weigh`, with a hero's full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
 export function favouringFullArt(weigh: CardWeight, fullArtOn: boolean): CardWeight {
-  return (def) => weigh(def) * (fullArtOn && isFullArt(def.name) ? FULL_ART_WEIGHT_FACTOR : 1);
+  return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id, def.name) ? FULL_ART_WEIGHT_FACTOR : 1);
 }
 
 /** A nonpositive weight counts as one so no card becomes unreachable. */

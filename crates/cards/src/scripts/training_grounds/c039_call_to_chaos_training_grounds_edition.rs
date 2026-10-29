@@ -1,6 +1,6 @@
 //! SPEC §8.11 Training Grounds 39 Call to Chaos (Training-Grounds Edition) (R28, R87, R423, R436,
-//! R2200000–R2200004), a card of the held Training Grounds set (R1420, R2194000). (4) Spell, Call to
-//! Chaos, Legendary.
+//! R2200000–R2200004), a card of the Training Grounds set (R1420, R2194000), which ships since its
+//! release (#2204). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand
 //!            and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and
 //!            refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8
@@ -58,8 +58,15 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     /// The Call to Chaos pool of the sets that ship (R380, R1420): this edition joins it with its set.
-    const SHIPPED_EDITIONS: [&str; 5] =
-        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
+    /// Re-pinned for the Training Grounds release (#2204): it has (R2200004).
+    const SHIPPED_EDITIONS: [&str; 6] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        ID,
+    ];
     const RUSH_TOKEN: &str = "core-t-rush";
     const DESIGN: &str = "traininggrounds-040";
     const GOLEM: &str = "traininggrounds-039-1";
@@ -154,11 +161,12 @@ mod tests {
         def.set == SetName::TrainingGrounds && !def.token && def_id != ID
     }
 
-    /// The Calls to Chaos at (0) in p1's hand.
+    /// The Calls to Chaos at (0) in p1's hand. Re-pinned for the Training Grounds release (#2204): this
+    /// edition is one of them since its set ships (R2200004), so a copy is told from the free ones by
+    /// its printed cost alone, as the entry's adds cost (0).
     fn free_calls(s: &Scenario) -> Vec<String> {
         s.hand(P1)
             .iter()
-            .filter(|card| card.def_id != ID)
             .filter(|card| crate::card_def(&card.def_id).tags.contains(&Tag::CallToChaos))
             .filter(|card| cost_of(s, card) == CHAOS_TG_COST)
             .map(|card| card.def_id.clone())
@@ -192,12 +200,13 @@ mod tests {
         }
     }
 
+    /// Re-pinned for the Training Grounds release (#2204): the set ships.
     #[test]
-    fn r2194000_the_card_is_of_the_held_training_grounds_set() {
+    fn r2194000_the_card_is_of_the_training_grounds_set_which_ships_since_its_release() {
         crate::register_all();
         let def = crate::card_def(ID);
         assert_eq!(def.set, SetName::TrainingGrounds);
-        assert!(!set_ships(def.set));
+        assert!(set_ships(def.set));
     }
 
     mod base {
@@ -474,8 +483,10 @@ mod tests {
             assert_ne!(cast[0]["radiant"], json!(true));
         }
 
+        /// Re-pinned for the Training Grounds release (#2204): while the set was held no pool held this
+        /// card; now it ships, the pool that names no set holds it, last in catalog order.
         #[test]
-        fn r2200004_while_the_set_is_held_no_call_to_chaos_pool_holds_this_card() {
+        fn r2200004_once_its_set_ships_the_call_to_chaos_pool_holds_this_card() {
             crate::register_all();
             let pool: Vec<String> = catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
                 .iter()

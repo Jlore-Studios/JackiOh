@@ -166,13 +166,14 @@ mod tests {
             }
 
             #[test]
-            fn r1221_the_tribute_query_holds_the_thirteen_shipped_tribute_cost_cards() {
+            fn r1221_the_tribute_query_holds_the_fifteen_shipped_tribute_cost_cards() {
                 crate::register_all();
                 // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row
                 // 88 lists them: Lava Golem, The Rock, Nature Titan, Plague-Bringer Goliath, BOOM! Big
                 // Max, M #25 Blue-Eyes White Felinor and M #91 Windfast, and since the Stinkyscape
                 // release (#1884) S #74 Paragon-X, #80 Galaxy, #85 Prototype-X1, #86 Prototype-X2, #113 A
-                // Very Dandy Lad and #115 Scornboi.
+                // Very Dandy Lad and #115 Scornboi. Re-pinned for the Training Grounds release (#2204):
+                // TG #25 Trigor and #54 The Rock, the snapshot of Core #66.
                 // Turtinator's Tribute is an
                 // Activate's cost, not a play cost, and M #97's Tribute buildings are tokens, so
                 // neither is one of them.
@@ -199,6 +200,8 @@ mod tests {
                         "stinkyscape-086",
                         "stinkyscape-113",
                         "stinkyscape-115",
+                        "traininggrounds-025",
+                        "traininggrounds-054",
                     ]
                 );
                 // `false` forbids them.
