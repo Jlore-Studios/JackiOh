@@ -8618,7 +8618,7 @@
       }
     },
     "2336": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -8641,16 +8641,16 @@
       "issue": 2325,
       "kind": "revise",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "muse",
       "queued_at": "2026-10-29T06:52:35Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "40823645203",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:1e77f91b-1793257714",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-29T05:28:52Z",
+      "started_at": "2026-10-29T07:09:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -8955,9 +8955,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T07:08:19Z",
+    "at": "2026-10-29T07:09:16Z",
     "url": "",
-    "what": "build #2340 on claude-6"
+    "what": "revise #2336 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T06:51:16Z",
