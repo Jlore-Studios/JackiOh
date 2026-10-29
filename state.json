@@ -8394,6 +8394,13 @@
     "2323": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T03:55:20Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 9 (stands alone) cannot be checked offline, and the change rewrites R2214000's proving test (line 3), so it is not clearly easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
