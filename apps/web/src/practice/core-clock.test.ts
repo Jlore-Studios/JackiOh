@@ -57,7 +57,7 @@ function driver(saves?: PracticeSaveStore): Driver {
   };
 }
 
-/** Medium, so no lethal hint runs and every `decide` call is a move of the AI's. */
+/** Medium; every `decide` call is a move of the AI's, as the lethal hint (R2291000) asks `lethalHint`, never `decide`. */
 function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
   return { seed: "core-clock", difficulty: "medium", humanSeat: HUMAN, deck: { kind: "random" }, ...over };
 }
