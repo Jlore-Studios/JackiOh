@@ -1609,7 +1609,7 @@
   max-width: none;
   margin: 0;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .practice-table {
