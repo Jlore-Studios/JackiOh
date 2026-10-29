@@ -8227,10 +8227,10 @@
     "what": "revise #2350 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-29T11:40:02Z",
+    "at": "2026-10-29T11:48:31Z",
     "notes": [
-      "delivered revise #2315 on claude-3 (run 40830349468): approved",
-      "started revise #2315 on claude-8 (run 40867392677)",
+      "delivered revise #2350 on claude-3 (run 40848843523): approved",
+      "started revise #2350 on claude-1 (run 40868476058)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -8937,7 +8937,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T11:40:02Z",
+  "loop_tick": "2026-10-29T11:48:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
