@@ -17,7 +17,7 @@
 //! set and in no deck, while a pool that names it reaches them and a preview opens it.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
-use jackioh_engine::catalog::{deckable, set_is_open};
+use jackioh_engine::catalog::{deckable, pair_key, set_is_open};
 use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::*;
 
@@ -1026,5 +1026,94 @@ mod r2194000_the_training_grounds_set_is_held_after_stinkyscape {
         assert!(deckable(&catalog["traininggrounds-001"]));
         assert!(!deckable(&catalog["traininggrounds-039-1"]), "a Token never is");
         assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
+    }
+}
+
+/// R2195000: a Training Grounds snapshot (#41–#60) names the Core card it copies (`snapshotOf`), and a
+/// deck holds the Core card or the snapshot, never both: `create_game`'s check and the shared
+/// validator's L3 refuse the pair, and take either alone. The set is held, so the deck is judged under
+/// a preview of it, as the testkit opens it.
+mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
+    use super::*;
+    use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutRule};
+
+    /// `defs()` with a snapshot of core-002 beside it.
+    fn with_snapshot() -> CardDefs {
+        let mut catalog = defs();
+        let mut snapshot = card("traininggrounds-041", "Training Grounds", "41", &[], false);
+        snapshot.name = catalog["core-002"].name.clone();
+        snapshot.snapshot_of = Some("core-002".to_string());
+        catalog.insert(snapshot.id.clone(), snapshot);
+        catalog
+    }
+
+    /// The validator's L3 messages for `deck`, every card of it owned.
+    fn l3(deck: &[String], catalog: &CardDefs) -> Vec<String> {
+        let collection: IndexMap<String, i32> = deck.iter().map(|id| (id.clone(), 1)).collect();
+        let result = jackioh_engine::validator::validate_deck(&DeckInput {
+            deck: LoadoutDeck {
+                cards: deck.to_vec(),
+                ..Default::default()
+            },
+            catalog: CatalogSnapshot {
+                version: "test".to_string(),
+                cards: catalog.clone(),
+                banned: None,
+            },
+            collection,
+        });
+        result
+            .errors
+            .iter()
+            .filter(|error| error.rule == LoadoutRule::L3)
+            .map(|error| error.message.clone())
+            .collect()
+    }
+
+    #[test]
+    fn r2195000_both_are_refused_either_alone_is_taken() {
+        register_catalog(with_snapshot());
+        let catalog = with_snapshot();
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        assert_eq!(pair_key(&catalog["traininggrounds-041"]), "core-002");
+        assert_eq!(pair_key(&catalog["core-002"]), "core-002");
+        assert_eq!(pair_key(&catalog["core-003"]), "core-003");
+
+        let core: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
+        let mut both = core.clone();
+        both[19] = "traininggrounds-041".to_string();
+        let mut snapshot = core.clone();
+        snapshot[1] = "traininggrounds-041".to_string();
+
+        let refused = validate_deck(&both, &catalog, "p1", 20).expect_err("both refused");
+        assert!(
+            refused
+                .to_string()
+                .contains("a Core card and its Training Grounds snapshot"),
+            "{refused}"
+        );
+        let said = l3(&both, &catalog);
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(
+            said[0].contains("a Core card or its Training Grounds snapshot, not both"),
+            "{}",
+            said[0]
+        );
+
+        for deck in [&core, &snapshot] {
+            assert!(validate_deck(deck, &catalog, "p1", 20).is_ok());
+            assert_eq!(l3(deck, &catalog), Vec::<String>::new());
+        }
+    }
+
+    #[test]
+    fn r2195000_r1420_unpreviewed_the_snapshot_is_refused_as_a_held_card_not_as_a_pair() {
+        register_catalog(with_snapshot());
+        let catalog = with_snapshot();
+        let mut snapshot: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
+        snapshot[1] = "traininggrounds-041".to_string();
+        let said = l3(&snapshot, &catalog);
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(said[0].contains("has not shipped yet"), "{}", said[0]);
     }
 }
