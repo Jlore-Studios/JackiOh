@@ -7861,17 +7861,20 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-29T07:05:54Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
+      "round_tier": "strong",
       "run_id": "40833510475",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T07:08:19Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 3
     },
     "2341": {
       "action": "revise",
