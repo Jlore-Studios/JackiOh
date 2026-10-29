@@ -7251,11 +7251,14 @@
     "2310": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "2cb549424beb26e528c3f8d3fbacd7554c9d3ad4": 1,
         "b8631ed393b78674a9c2537cabaf9ad6dc1f3ff0": 1,
         "dd62dd1ec3c6034dc8e5d7efe5451a6e47c1d695": 1
       },
+      "ci_run_id": 40865907774,
+      "ci_sha": "dd62dd1ec3c6034dc8e5d7efe5451a6e47c1d695",
       "cleared": {
         "at": "2026-10-29T11:30:29Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -7276,14 +7279,15 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-29T10:52:24Z",
+      "queued_at": "2026-10-29T12:07:29Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "40861205865",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-29T10:54:13Z",
       "stop_requested": false,
       "taken_asks": [],
