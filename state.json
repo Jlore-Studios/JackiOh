@@ -9097,6 +9097,9 @@
     "2348": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "cd348ec46f4369c48a8dc882150be800f1234277": 1
+      },
       "cleared": {
         "at": "2026-10-29T07:57:10Z",
         "by": "`muse` (medium), `claude` (strong)",
