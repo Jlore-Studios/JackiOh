@@ -314,6 +314,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:6497340895": {
+      "at": "2026-10-29T13:00:31Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
