@@ -8545,6 +8545,8 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-29T04:40:30Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40819170991",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
