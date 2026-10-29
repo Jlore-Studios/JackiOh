@@ -8165,9 +8165,10 @@
     "what": "review #2304 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-29T10:26:56Z",
+    "at": "2026-10-29T10:35:39Z",
     "notes": [
-      "started revise #2304 on muse (run 40857867449)",
+      "delivered revise #2304 on muse (run 40857867449): built",
+      "started review #2304 on claude-8 (run 40859074136)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -8875,7 +8876,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T10:26:56Z",
+  "loop_tick": "2026-10-29T10:35:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
