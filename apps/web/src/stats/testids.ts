@@ -21,8 +21,6 @@ export const statsTestid = {
   patchPrevious: "stats-patch-previous",
   patchNext: "stats-patch-next",
   summaryTotalGames: "stats-summary-total-games",
-  provisionalBanner: "stats-provisional-banner",
-  fallbackToggle: "stats-fallback-toggle",
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
   cardsGrid: "stats-cards-grid",

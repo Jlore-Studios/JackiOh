@@ -171,8 +171,12 @@
 }
 
 /* #1999: it scrolls up and down only: a full Chase Shard bar's burst, which rides past the bar's
-   right end, is clipped at its edge rather than scrolling it sideways on a phone. */
+   right end, is clipped at its edge rather than scrolling it sideways on a phone. It is
+   `position: relative`, as `one-screen__body` is (index.css), so that a visually hidden label
+   inside it (the card-token pick's result count, #2298) scrolls with it instead of reaching below
+   the window and making the page scroll (R1580000). */
 .tavern.app-shell .shop-body {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;

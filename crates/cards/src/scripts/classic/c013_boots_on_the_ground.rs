@@ -5,10 +5,9 @@
 //! Charge is printed on both catalog faces, so §10.4 layer 1 grants it and nothing here does.
 //!
 //! "After this attacks" is the `afterAttack` hook: the engine runs it after the state check that closes
-//! each combat this card attacked in, declared or forced (R53, #9 Moths to the Flame), on its
-//! last-known snapshot as a Death hook runs (R78, R89). Defending is not attacking. A trigger on
-//! `attackDeclared` could not serve: a queued entry is dropped when its card leaves the field (R174),
-//! and a forced attack's event reaches no card that died in its combat (R212).
+//! each combat this card attacked in, declared or forced (R53, #9 Moths to the Flame), and only while it
+//! is still on the field on the stay it attacked from, so one that died in the combat does nothing
+//! (R2285001). Defending is not attacking.
 //!
 //! Radiant: §6.3 Recruit, the first permanent from the top of your deck, summoned into its row per R64
 //! with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full. The
@@ -38,7 +37,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 after each combat it
-// attacked in, forced ones included, even when it died (last-known state, R78); defending draws nothing.
+// attacked in and survived, forced ones included (R2285001); dying in it or defending draws nothing.
 // Radiant 4/2: Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386).
 // Forced attacks come from #9 Moths to the Flame (start of turn: every enemy Unit attacks this).
 #[cfg(test)]
@@ -120,7 +119,7 @@ mod tests {
         }
 
         #[test]
-        fn r78_it_draws_even_when_it_died_in_that_combat_reading_its_last_known_state() {
+        fn r2285001_it_draws_nothing_when_it_died_in_that_combat() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -129,12 +128,12 @@ mod tests {
             s.attack(BOOTS, MENACE);
 
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
-            assert_eq!(draws_by(&s, P1), 1);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR]);
+            assert_eq!(draws_by(&s, P1), 0);
         }
 
         #[test]
-        fn r53_r78_a_forced_attack_counts_moths_to_the_flame_makes_it_attack_it_dies_and_it_still_draws() {
+        fn r53_r2285001_moths_to_the_flame_forces_it_to_attack_and_it_dies_so_it_draws_nothing() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
                 "p2": { "hand": [ANCHOR], "field": [MOTHS], "library": [VANILLA] },
@@ -144,7 +143,7 @@ mod tests {
 
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })));
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR]);
         }
 
         #[test]
@@ -168,12 +167,13 @@ mod tests {
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
             }));
 
+            // It dies attacking, so it draws nothing (R2285001), and from the graveyard it answers nothing.
             s.attack(BOOTS, MENACE);
-            assert_eq!(draws_by(&s, P1), 1);
+            assert_eq!(draws_by(&s, P1), 0);
             s.expect_in_zone(BOOTS, "graveyard");
             s.attack(VANILLA, MENACE);
 
-            assert_eq!(draws_by(&s, P1), 1);
+            assert_eq!(draws_by(&s, P1), 0);
         }
 
         #[test]
@@ -285,7 +285,7 @@ mod tests {
         }
 
         #[test]
-        fn r78_it_recruits_even_when_it_died_in_that_combat() {
+        fn r2285001_it_recruits_nothing_when_it_died_in_that_combat() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [{ "def": BOOTS, "radiant": true }], "library": [TEMPO] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -294,7 +294,7 @@ mod tests {
             s.attack(BOOTS, MENACE);
 
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(unit_defs(&s, P1), lanes([Some(TEMPO), None, None, None, None]));
+            assert_eq!(unit_defs(&s, P1), lanes([None, None, None, None, None]));
         }
 
         #[test]
