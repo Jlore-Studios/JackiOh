@@ -9049,9 +9049,12 @@
         "sha": "cd348ec46f4369c48a8dc882150be800f1234277"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T03:40:04Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2269,
       "kind": "review",
       "pending_request": false,
