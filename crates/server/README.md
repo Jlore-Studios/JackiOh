@@ -972,8 +972,10 @@ sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearse
 Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
 `tests/db/run.sh` builds and links only that (CI's `db (store contract)` job stays under five minutes). A
-`store::` test lives in `server_store` only, and every other area in `server` only. `support/test_app.rs`
-builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with
+`store::` test lives in `server_store` only, and every other area in `server` only. CI's four
+`rust (test server …)` groups split the suite by test name (ci.yml's `rust-test` says how), so only
+the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
+`support/test_app.rs` builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with
 `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
