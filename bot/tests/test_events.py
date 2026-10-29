@@ -377,6 +377,59 @@ class ReviewAndCiTests(unittest.TestCase):
         self.assertIn("closed without merging", self.gh.bot_comments(5)[-1])
 
 
+class MergeQueueTests(unittest.TestCase):
+    """`main`'s merge queue (infra/github.tf): a cleared head its build took out goes back once,
+    then gets a CI fix; one still queued is the queue's; a queued pull request is held by taking
+    it out."""
+
+    def setUp(self):
+        self.gh = FakeGitHub()
+        self.gh.add_issue(5, labels=(LABEL_PR_OPEN,))
+        self.gh.add_pull(9, "bot/issue-5", body="Closes #5", labels=(LABEL_PR,), sha="s1")
+        self.ctx = make_ctx(self.gh, at=DAY, trust_text=TRUST)
+        self.ctx.store.update(lambda s: state_item(s, 9).update(cleared={"sha": "s1"}))
+
+    def queue_ci(self, branch="gh-readonly-queue/main/pr-9-abc", run_id=77):
+        # A merge group's run names no pull request; its branch does.
+        run = {"name": "CI", "conclusion": "failure", "head_branch": branch, "head_sha": "mg",
+               "id": run_id, "html_url": "q", "pull_requests": [], "event": "merge_group"}
+        return events.handle(self.ctx, "workflow_run",
+                             {"action": "completed", "sender": BOT, "workflow_run": run})
+
+    def test_a_cleared_head_goes_back_in_the_queue_once_then_gets_a_ci_fix(self):
+        self.queue_ci()
+        self.assertEqual(self.gh.auto_merge_heads["PR_9"], "s1")
+        self.assertNotIn(LABEL_REVISE, self.gh.label_names(9))
+        self.gh.disable_auto_merge("PR_9")  # GitHub queued it, and its build failed again
+        self.queue_ci(run_id=78)
+        self.assertNotIn("PR_9", self.gh.auto_merge)
+        self.assertIn(LABEL_REVISE, self.gh.label_names(9))
+        record = self.ctx.store.load()["items"]["9"]
+        self.assertEqual((record["source"], record["ci_run_id"], record["ci_fixes"]), ("ci", 78, 1))
+        self.assertIn("The merge queue took this out again", self.gh.bot_comments(9)[-1])
+        self.assertEqual(self.gh.reruns, [])  # the queue builds afresh; a re-run would not
+
+    def test_one_still_queued_a_held_one_or_an_uncleared_head_is_left_alone(self):
+        self.gh.merge_queue = {"PR_9"}  # built again without a pull request ahead that failed
+        self.queue_ci()
+        self.gh.merge_queue = set()
+        self.ctx.store.update(lambda s: state_item(s, 9).update(stop_requested=True))
+        self.queue_ci()
+        self.ctx.store.update(lambda s: state_item(s, 9).update(stop_requested=False,
+                                                                cleared={"sha": "s0"}))
+        self.queue_ci()
+        self.gh.add_pull(10, "people/x", labels=(), sha="p1")
+        self.queue_ci(branch="gh-readonly-queue/main/pr-10-abc")
+        self.assertEqual((self.gh.auto_merge, self.gh.label_names(9)), ({}, {LABEL_PR}))
+        self.assertEqual((self.gh.bot_comments(9), self.gh.reruns), ([], []))
+
+    def test_a_revision_or_a_stop_takes_a_queued_pull_request_out(self):
+        for body in ("/harness revise name it better", "/harness stop"):
+            self.gh.merge_queue = {"PR_9"}  # queued: REST `auto_merge` reads null
+            events.handle(self.ctx, "issue_comment", comment_event(9, body, pr=True))
+            self.assertEqual(self.gh.merge_queue, set(), body)
+
+
 class StatusTests(unittest.TestCase):
     """`/harness status` says which subscriptions are running, on what, and for how long."""
 

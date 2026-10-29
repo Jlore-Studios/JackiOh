@@ -528,6 +528,17 @@ class RequiredChecksTests(unittest.TestCase):
         missing = [check for check in cfg.required_checks if check not in names]
         self.assertEqual(missing, [], f"required checks with no job: {missing}; jobs: {sorted(names)}")
 
+    def test_the_required_checks_run_in_the_merge_queue_too(self):
+        """`main`'s merge queue (infra/github.tf) waits for the same checks on its own builds: a
+        workflow that reports one and not on `merge_group` takes every pull request out at the
+        queue's timeout. The `changes` job scopes a group's diff as a pull request's."""
+        text = read("ci.yml")
+        self.assertRegex(text, r"(?m)^  merge_group:")
+        scope = job(text, "changes")
+        self.assertIn("HEAD: ${{ github.event.pull_request.head.sha"
+                      " || github.event.merge_group.head_sha }}", scope)
+        self.assertIn('if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then', scope)
+
 
 if __name__ == "__main__":
     unittest.main()

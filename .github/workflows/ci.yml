@@ -69,12 +69,21 @@
 # of the smoke list, as super.yml does, for a branch that wants that proof before super.yml can be
 # dispatched there (GitHub dispatches only a workflow the default branch has). Pushes and pull
 # requests always run the smoke list.
+#
+# `merge_group` is main's merge queue (infra/github.tf `main_merge_queue`): before a pull request
+# lands, the queue builds main with every pull request ahead of it and this one on top, on a
+# `gh-readonly-queue/main/pr-<n>-<sha>` branch, and runs this workflow there. The five checks must
+# pass on that commit too, so two pull requests each green alone but red together (four of the five
+# red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
+# `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
+# the push to main still runs everything after it. A run here gets the smoke list, as a pull request.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
   workflow_dispatch:
     inputs:
       e2e:
@@ -149,13 +158,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # A merge group's diff is that of the pull requests in it: the queue's base to the group's head.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
-          if [ "$EVENT" = pull_request ]; then
+          if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
             sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
             # No name may expand as a glob in the loop below.
             set -f

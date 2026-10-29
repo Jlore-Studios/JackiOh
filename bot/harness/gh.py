@@ -463,6 +463,23 @@ class GitHub:
             {"id": node_id},
         )
 
+    def in_merge_queue(self, node_id: str) -> bool:
+        """Whether a pull request is in `main`'s merge queue now. REST has no field for it, and its
+        `auto_merge` reads null for a queued pull request."""
+        data = self.graphql(
+            "query($id: ID!) { node(id: $id) { ... on PullRequest { isInMergeQueue } } }",
+            {"id": node_id},
+        )
+        return bool(((data or {}).get("node") or {}).get("isInMergeQueue"))
+
+    def dequeue(self, node_id: str) -> None:
+        """Take a pull request out of `main`'s merge queue (infra/github.tf). GitHub answers with
+        an error when it is not in the queue."""
+        self.graphql(
+            "mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }",
+            {"id": node_id},
+        )
+
     def pin_issue(self, node_id: str) -> None:
         """Pin an issue to the top of the issue list (at most three are pinned)."""
         self.graphql(

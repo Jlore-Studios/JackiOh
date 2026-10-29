@@ -369,6 +369,31 @@ def adopt(ctx: Context, number: int, names: set[str], children: list[dict[str, A
     return said
 
 
+def merge_title(pull: dict[str, Any], method: str) -> str:
+    """The squash commit's title: the pull request's, as GitHub writes it for a pull request of
+    several commits. Without it a one-commit pull request lands on `main` under the bot's own
+    commit message ("bot: build pass 1 for #85")."""
+    title = str(pull.get("title") or "").strip()
+    if method != "squash" or not title:
+        return ""
+    return f"{title} (#{pull.get('number')})"
+
+
+def hold_merge(ctx: Context, pull: dict[str, Any]) -> None:
+    """Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue. A queued
+    pull request has no auto-merge left to turn off (REST `auto_merge` reads null once GitHub put
+    it in the queue), so only the dequeue stops it; a push to its branch takes it out as well."""
+    node = pull.get("node_id")
+    if not node:
+        return
+    actions = [ctx.gh.disable_auto_merge] if pull.get("auto_merge") else []
+    for action in actions + [ctx.gh.dequeue]:
+        try:
+            action(node)
+        except GitHubError:
+            pass  # nothing to turn off, or not in the queue
+
+
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
                  label_present: bool = False, extra: dict[str, Any] | None = None,
                  ask: Ask | None = None) -> str:
@@ -387,11 +412,8 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
         return (f"I am revising #{number} right now. When this run ends I go round once more "
                 "with your comment.")
     set_state_label(ctx, number, names, LABEL_REVISE)
-    if LABEL_PR in names and pull.get("auto_merge"):
-        try:
-            ctx.gh.disable_auto_merge(pull["node_id"])
-        except GitHubError:
-            pass
+    if LABEL_PR in names:
+        hold_merge(ctx, pull)
     def change(state: dict[str, Any]) -> None:
         _queued(state, number, "revise", by, force, ctx, ask)
         record = state_item(state, number)
@@ -474,9 +496,7 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
     set_state_label(ctx, number, names, LABEL_WORKING if working else None)
     if "pull_request" in thread and LABEL_PR in names:
         try:
-            pull = ctx.gh.get_pull(number)
-            if pull.get("auto_merge"):
-                ctx.gh.disable_auto_merge(pull["node_id"])
+            hold_merge(ctx, ctx.gh.get_pull(number))
         except GitHubError:
             pass
     dropped: list[str] = []
