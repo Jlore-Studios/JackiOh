@@ -8,7 +8,7 @@ use jackioh_engine::effects::animate;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::field::{banner, cover, golem, playing, springer, tower};
+use crate::rules::fixtures::field::{banner, cover, golem, playing, springer, tower, wisp};
 use crate::rules::fixtures::harness::{events_of_type, live, put, slot};
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. Every context
@@ -212,5 +212,58 @@ mod animate_b3_1_r383 {
             Some(card.id.clone())
         );
         assert_eq!(events, Vec::<GameEvent>::new());
+    }
+
+    #[test]
+    fn r2280000_the_verb_leaves_a_statless_animated_card_and_a_card_without_animated_in_the_backrow() {
+        let mut state = playing("animate-needs-both");
+        let statless = put(
+            &mut state,
+            &wisp.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        // The banner holds a fused Unit's stats, and no Animated.
+        sink_run(&mut state, |sink| {
+            jackioh_engine::subsystems::fuse::fuse(
+                sink,
+                jackioh_engine::subsystems::fuse::FuseArgs {
+                    ingredients: vec![unit.clone()],
+                    target: Some(flag.clone()),
+                    ..Default::default()
+                },
+            );
+        });
+        assert!(has_stat_line(&state, &live(&state, &flag.id)));
+        let events = sink_run(&mut state, |sink| {
+            for card in [&statless, &flag] {
+                let mut ctx = make_context(sink, None, as_player(PlayerId::P1));
+                (animate(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": card.id } }),
+                ))
+                .apply)(&mut ctx);
+            }
+        });
+        assert_eq!(events, Vec::<GameEvent>::new());
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P1, Row::Backrow, 1)),
+            Some(statless.id.clone())
+        );
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P1, Row::Backrow, 2)),
+            Some(flag.id.clone())
+        );
     }
 }

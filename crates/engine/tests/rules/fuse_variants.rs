@@ -1063,11 +1063,10 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
 
 /// R1087 (M #75): a keyword a fusion brings in applies at once — a fused "Animated on your turn"
 /// animates the kept card at its controller's next start of turn, while a fused plain Animated
-/// waits until the card enters the field again.
+/// animates a kept card with stats at the state check (R2280001).
 mod r1087_a_fused_animated_keyword_applies_at_once {
     use super::*;
     use jackioh_engine::animated::animate_at_turn_start;
-    use jackioh_engine::effects::move_::bounce_card;
 
     /// A plain Field Spell keeper (2/3), an "Animated on your turn" Field Spell (4/5) and a plain
     /// Animated Field Spell (1/1).
@@ -1167,7 +1166,7 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
     }
 
     #[test]
-    fn r1087_fused_plain_animated_waits_for_entry() {
+    fn r1087_r2280001_a_fused_plain_animated_animates_the_kept_card_at_the_state_check() {
         let mut game = animated_game("fused-plain");
         let keep = put(&mut game.state, "fv-keep", slot(P1, Row::Backrow, 1), json!({}));
         let plain = put(&mut game.state, "fv-plain", slot(P1, Row::Backrow, 2), json!({}));
@@ -1181,35 +1180,20 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
             "the fusion",
         );
 
-        // A fused plain Animated waits until the card enters the field again: no animation now,
-        // and none at the next start of turn either.
+        // The fusion moves nothing itself: the keeper, which had stats, has a plain Animated now too,
+        // so it animates at the state check (R2280001; before issue #2280 it waited for an entry).
         assert!(!is_animated(&game.state, &kept));
         assert!(animated_events(&sink.events).is_empty());
         let mut sink = Bench::new(&game.state);
-        animate_at_turn_start(&mut sink.sink(&mut game.state), P1);
-        let kept = must(find_instance(&game.state, &kept.id).cloned(), "the keeper");
-        assert!(!is_animated(&game.state, &kept));
-        assert!(animated_events(&sink.events).is_empty());
-
-        // Bounced and played again, it enters animated.
-        let kept_id = kept.id.clone();
-        let mut sink = Bench::new(&game.state);
-        let bounce = Effect::new("bounce-back", move |ctx| {
-            if let Some(card) = find_instance(ctx.state, &kept_id).cloned() {
-                bounce_card(&mut ctx.sink, &card);
-            }
-        });
-        run(&mut game.state, &mut sink, bounce, None);
-        game = advance(
-            &game,
-            json!({
-                "type": "play",
-                "instanceId": kept.id,
-                "zone": { "row": "backrow", "lane": 1 },
-                "playerId": "p1",
-            }),
-        );
+        state_check(&mut sink.sink(&mut game.state));
         let kept = must(find_instance(&game.state, &kept.id).cloned(), "the keeper");
         assert!(is_animated(&game.state, &kept));
+        assert_eq!(
+            card_at(&game.state, slot(P1, Row::Units, 1)).map(|card| card.id.clone()),
+            Some(kept.id.clone())
+        );
+        assert_eq!(animated_events(&sink.events).len(), 1);
+        assert_eq!(unit_view(&game.state, &kept).attack, 3);
+        assert_eq!(unit_view(&game.state, &kept).health, 4);
     }
 }

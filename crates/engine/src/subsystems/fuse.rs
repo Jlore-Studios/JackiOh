@@ -2293,6 +2293,11 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
     }
 
     let state: &GameState = sink.state;
+    // R2280001: whether the kept card stood ready to animate before the fusion, so a fusion that first
+    // gives it both stats and Animated owes it its animation.
+    let was = target
+        .as_ref()
+        .is_some_and(|target| crate::animated::ready_to_animate(state, &target.id));
     // R874000: a fusion past FUSED_CARDS_CAP cards is not made, before any of it is built.
     let held: usize = ingredients
         .iter()
@@ -2374,6 +2379,9 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         )
     };
 
+    if target.is_some() {
+        crate::animated::owe_animation(sink.state, &result.id, was);
+    }
     sink.events.push(GameEvent::Fused {
         instance_ids: ingredients.iter().map(|card| card.id.clone()).collect(),
         result_instance_id: result.id.clone(),

@@ -30,11 +30,11 @@ use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
     KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Tag, UnitView,
-    acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
-    owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
+    acting_with_flag, active_brittle_count, active_units_of, animated_with_stats, armor_of,
+    attack_restriction, attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords,
+    card_type_of_face, credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn,
+    has_keyword, heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live,
+    outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
     takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
@@ -510,8 +510,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
             Some(def) if readable_by(state, card, seat) => {
                 value += brittle_share(card, w)
                     * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
-                // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share).
-                if w.animated_share != 0.0 && animated_kind_of(state, card).is_some() {
+                // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
+                if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
                 }
                 // §10.1, R27/R62: a grade counter's banked steps are worth their own — a Combo-Index
