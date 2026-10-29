@@ -15470,17 +15470,21 @@
         {
           "at": "2026-10-29T04:51:00Z",
           "minutes": 109.4
+        },
+        {
+          "at": "2026-10-29T05:10:08Z",
+          "minutes": 144.6
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T07:59:00Z",
-          "utilization": 0.15
+          "utilization": 0.18
         },
-        "observed_at": "2026-10-29T04:51:00Z",
+        "observed_at": "2026-10-29T05:10:08Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.49
+          "utilization": 0.5
         },
         "status": "allowed"
       }
