@@ -392,7 +392,7 @@ pub fn ai_decide(
 }
 
 /// R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`),
-/// the Easy practice tier's lethal hint. `deadline_ms` is a clock as `ai_decide`'s is: a search still
+/// the practice AI's lethal hint. `deadline_ms` is a clock as `ai_decide`'s is: a search still
 /// running once `now_ms()` passes it lights nothing, and `deadline_ms <= 0` means no clock.
 pub fn lethal_hint(
     state_json: &str,
