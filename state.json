@@ -8077,7 +8077,10 @@
       "feedback_since": "2026-10-28T21:03:35Z",
       "issue": 2280,
       "kind": "revise",
+      "queued_at": "2026-10-29T00:55:23Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
