@@ -7264,6 +7264,7 @@
     "2310": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "2bd828277ea70e0a98be29107ea9e6508e9183c2",
       "ci_fixes": 1,
       "ci_reruns": {
         "2cb549424beb26e528c3f8d3fbacd7554c9d3ad4": 1,
@@ -7283,7 +7284,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-29T10:54:13Z",
+      "feedback_since": "2026-10-29T12:10:10Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2278,
@@ -7296,15 +7297,15 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "40871070488",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-29T12:10:10Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
