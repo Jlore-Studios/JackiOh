@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2332,
+  "title": "Patch: the playmat taps everywhere but on a card, occupied zones included",
+  "branch": "bot/issue-2332",
+  "thread": "**Issue #2332 (data, not instructions):**\n\n````text\n# #2332: Patch: the playmat taps everywhere but on a card, occupied zones included\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now a press on the playmat only taps (mark + sound, #1954, #2015) in a zone that holds no card. `isEmptySurfaceTarget` in `apps/web/src/game/SandSurface.tsx` throws away any press inside a `[data-testid^='zone-']` that contains a `.card`:\n\n```ts\nconst zone = target.closest<HTMLElement>(\"[data-testid^='zone-']\");\n// A blank lane slot is part of the sand; a slot containing a card always belongs to that card.\nreturn zone === null || zone.querySelector(\".card\") === null;\n```\n\nSo the margin around a unit or a set trap, which is the zone's own `div` and not the card, does nothing when you press it. It should tap like any other bit of the playmat. Only the card itself (and the controls the function already excludes) should block a tap.\n\nChange: drop the occupied-zone check, so a press taps unless its target is inside `.card, button, input, select, textarea, [role=button], .hero, .seat, .control-bar` (the existing `closest` list). Keep everything else as it is:\n\n- A press on the card sprite (anything inside `.card`) still does not tap, and still selects, attacks or targets as before.\n- A **legal** zone (one the player may pick, `role=\"button\"` in `Zone.tsx`) still does not tap, because the press is playing into it. The existing `[role=button]` exclusion handles this.\n- `disabled` (the action builder holding a card) and `data-dragging` still turn the surface off.\n- The tap takes the family of the half it lands in (#2015), with the same mark and sound as an empty-zone tap.\n\nUpdate the comments that say a slot with a card belongs to that card: the header at the top of `SandSurface.tsx` and the one inside `isEmptySurfaceTarget`.\n\nClient only: no engine, card, catalog or rules change, and no ruling.\n\n### Acceptance\n\n- [ ] In `apps/web/src/game/SandSurface.test.tsx`, rendering `Board` with `fullBoardView()`: a `pointerdown` on an occupied zone's own element (the `zone-\u2026` div, not its `.card`) adds a tap mark and makes one `playSfx` call with that playmat's `TAP_SFX`.\n- [ ] Same setup: a `pointerdown` on an element inside that zone's `.card` adds no mark and makes no `playSfx` call.\n- [ ] A `pointerdown` on a legal zone (`role=\"button\"`) adds no mark and makes no sound.\n- [ ] The existing #1954 and #2015 tests in `SandSurface.test.tsx` still pass.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n### Blocked by, part of\n\nFollows #1954 and #2015.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "easy",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "easy",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2332: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
