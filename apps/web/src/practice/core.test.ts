@@ -637,7 +637,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       const started = snapshotOf(
         d.send({
           type: "start",
-          config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+          config: config({ seed: `r265-human-first-${human}-e`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
         }),
       );
       const hand = handOf(started);

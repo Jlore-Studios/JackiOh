@@ -1,6 +1,6 @@
 // The site footer: the privacy policy, the terms, the purchases page (R1665000), the accessibility and
-// copyright pages, the patch notes (R388), the Card Almanac (R630), the replays (R768000), and a way to
-// reach the people who run JackiOh.
+// copyright pages, the patch notes (R388), the Card Almanac (R630), the replays (R768000), a way to
+// reach the people who run JackiOh and, on a keyboard device, the command menu's key (R2126000).
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
 // email address. Kept off the board. The contact is the owner's email address, the one the Terms,
@@ -10,6 +10,8 @@ import type { ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
+import { ShortcutHint } from "../shortcuts/Kbd.tsx";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 import { followInApp } from "./nav.tsx";
 
 import "./site-footer.css";
@@ -31,6 +33,7 @@ export const siteFooterTestid = {
   stats: "site-footer-stats",
   replays: "site-footer-replays",
   contact: "site-footer-contact",
+  shortcut: "site-footer-shortcut",
 } as const;
 
 export function SiteFooter(): ReactElement {
@@ -72,6 +75,7 @@ export function SiteFooter(): ReactElement {
           {t("Contact us")}
         </a>
       </nav>
+      <ShortcutHint keys={[SHORTCUTS.commandMenu]} words={t("Press {keys} for the command menu")} testid={siteFooterTestid.shortcut} />
     </footer>
   );
 }

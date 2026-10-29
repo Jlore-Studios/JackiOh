@@ -117,12 +117,12 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     }
 
     #[test]
-    fn r70_quickstriker_s_x_is_the_count_before_each_cast_of_a_cast_on_draw_chain_not_after_the_chain_8_38() {
+    fn r2179002_quickstriker_s_x_counts_no_cast_on_draw_so_a_chain_of_two_hinders_deals_nothing_8_38() {
         register_all();
         // p1 has Quickstriker. At p1's start of turn the draw casts Hinder, the draw repeats and casts a
-        // second Hinder, and the draw repeats again into Mr. Vanilla (§2.4, R58). Each cast is a play
-        // (R70), and §8 #38's X is "cards you played earlier this turn" — `turnLog.cardsPlayed` before
-        // THIS card: 0 for the first Hinder, 1 for the second. So p2's hero takes 1 in all, not 1 + 1.
+        // second Hinder, and the draw repeats again into Mr. Vanilla (§2.4, R58). §8 #38's X is "cards you
+        // played earlier this turn", and a cast on draw is no play (R2179002), so X is 0 for both and p2's
+        // hero takes nothing (through v0.5.2 each was a play, R70, and the second dealt 1).
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -133,21 +133,22 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.end_turn(); // p2 → p1: the draw chain casts both Hinders
 
         assert_eq!(g.state().active, P1);
-        assert_eq!(g.state().players.p1.turn_log.cards_played, 2);
-        g.expect_health(P2, 29);
+        assert_eq!(g.state().players.p1.turn_log.cards_played, 0);
+        g.expect_health(P2, 30);
     }
 
     #[test]
-    fn r70_gifted_program_makes_a_cast_on_draw_card_radiant_as_it_is_cast_10_5_step_3() {
+    fn r2179002_gifted_program_passes_a_cast_on_draw_card_by_and_makes_the_first_card_played_radiant_10_5_step_3()
+     {
         register_all();
-        // R70 names Gifted Program among the rules a cast counts for, with cost paid 0: "The first card
-        // costing 1 or less you play each turn becomes Radiant as it is played" (§8 #64). p1's start-of-
-        // turn draw casts Hinder, the first card p1 plays this turn, for 0 — so it resolves Radiant
-        // ("2 lower") and stays Radiant in the graveyard (R78).
+        // Gifted Program: "The first card costing 1 or less you play each turn becomes Radiant as it is
+        // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002; through
+        // v0.5.2 it was the first, R70, and resolved Radiant), so it stays base and the first card p1
+        // plays after it is the one made Radiant.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
-            "p1": { "backrow": [GIFTED], "field": [{ "def": VANILLA, "lane": 1 }], "library": [HINDER, VANILLA] },
+            "p1": { "backrow": [GIFTED], "field": [{ "def": VANILLA, "lane": 1 }], "library": [HINDER, VANILLA, VANILLA] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [RENO, RENO] },
         }));
 
@@ -156,16 +157,26 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         assert_eq!(g.state().active, P1);
         let hinder = g.card(HINDER).clone();
         g.expect_in_zone(&hinder.id, "graveyard");
-        assert!(hinder.radiant);
+        assert!(!hinder.radiant);
+        let drawn = g
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .map(|card| card.id)
+            .expect("the drawn Mr. Vanilla");
+        g.play(&drawn, json!({ "zone": 2 }));
+        assert!(g.card(&drawn).radiant);
     }
 
     #[test]
-    fn r70_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_10_5_step_5() {
+    fn r70_r2179002_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_that_is_no_play_10_5_step_5()
+     {
         register_all();
         // p1 plays /fullsend ("your cards gain 'Combo: draw 1'" this turn), then Mr. Vanilla, whose Combo
-        // draws Hinder, which casts itself. A cast is a play for Combo too (R70), with 2 cards played
-        // earlier, so Hinder's Combo draws a Reno. The Cry's random discard (R682) resolves after that
-        // draw and eats it; the cast-on-draw draw then repeats (§2.4) and brings the one Reno left.
+        // draws Hinder, which casts itself. Its granted Combo reads the 2 cards played earlier, so Hinder's
+        // Combo draws a Reno, though the cast is no play itself (R2179002). The Cry's random discard
+        // (R682) resolves after that draw and eats it; the cast-on-draw draw then repeats (§2.4) and
+        // brings the one Reno left.
         let mut g = scenario(json!({
             // The Radiant /fullsend: the face that grants "Combo: Draw 1".
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, VANILLA], "library": [HINDER, RENO, RENO, RENO, RENO] },
@@ -175,10 +186,68 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.play(FULLSEND, json!({}));
         g.play(VANILLA, json!({}));
 
-        assert_eq!(g.state().players.p1.turn_log.cards_played, 3);
+        // Through v0.5.2 the Hinder was the 3rd (R70).
+        assert_eq!(g.state().players.p1.turn_log.cards_played, 2);
         g.expect_in_zone(HINDER, "graveyard");
         assert_eq!(g.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 1);
         assert_eq!(g.pile(P1, "library").len(), 2);
+    }
+}
+
+mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
+    use super::*;
+
+    const HONEYPOT: &str = "core-060"; // #60 Bear Honeypot: when your opponent plays a (1) Cost or less card.
+
+    #[test]
+    fn r2179002_unstable_clone_machine_copies_no_card_cast_on_draw_and_copies_the_next_card_played() {
+        register_all();
+        // "After you play a card, shuffle 3 copies of it into your library": the Hinder p1's start-of-turn
+        // draw casts is no play, so nothing copies it (through v0.5.2 it was a play, R70, and copied).
+        let mut g = scenario(json!({
+            "active": "p2",
+            "turn": 8,
+            "p1": { "backrow": [CLONE_MACHINE], "field": [{ "def": VANILLA, "lane": 1 }], "library": [HINDER, VANILLA, VANILLA] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [RENO, RENO] },
+        }));
+
+        g.end_turn(); // p2 → p1: the draw casts Hinder
+
+        assert_eq!(g.state().active, P1);
+        assert!(!g.pile(P1, "library").iter().any(|card| card.def_id == HINDER));
+        let drawn = g
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .map(|card| card.id)
+            .expect("the drawn Mr. Vanilla");
+        let library = g.pile(P1, "library").len();
+        g.play(&drawn, json!({ "zone": 2 }));
+        assert_eq!(g.pile(P1, "library").len(), library + 3);
+    }
+
+    #[test]
+    fn r2179002_bear_honeypot_does_not_reveal_on_a_card_its_opponent_casts_on_draw() {
+        register_all();
+        // p2's face-down Honeypot answers p1's (1) Cost or less plays: p1's draw casts Hinder for 0, which
+        // is no play, so it stays face-down.
+        let mut g = scenario(json!({
+            "active": "p2",
+            "turn": 8,
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [{ "def": HINDER, "radiant": true }, VANILLA, VANILLA] },
+            "p2": { "backrow": [{ "def": HONEYPOT, "faceUp": false, "lane": 1 }], "library": [RENO, RENO] },
+        }));
+
+        g.end_turn(); // p2 → p1: the draw casts Hinder
+
+        assert_eq!(g.state().active, P1);
+        assert!(g.events().iter().any(|event| matches!(event, GameEvent::CardPlayed { def_id, on_draw: Some(true), .. } if def_id == HINDER)));
+        assert!(
+            !g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+        );
+        assert_eq!(g.card(HONEYPOT).face_up, Some(false));
     }
 }
 
@@ -372,38 +441,56 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
 }
 
 const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
+const INTROSPECTION: &str = "meditative-007"; // M #7: "End of turn: ... Draw 1. ..."
 
 mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     use super::*;
 
     #[test]
-    fn r2067000_hinders_beside_malzahars_recycler_and_clone_machine_stop_at_the_actions_cap() {
+    fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
         register_all();
-        // Fuzz seed 9688: each Hinder cast is a play #33 answers with three more Hinders (R70), so the
-        // library never runs dry, and its discard is answered by #64's draw, a chain of its own (R217).
-        // Each chain cast 20 (R58), its 21st went to the hand, and the next chain's first cast discarded
-        // that one, which drew again.
+        // Fuzz seed 9688 found the loop: each Hinder cast was a play #33 answered with three more Hinders
+        // (R70), so the library never ran dry, and its discard was answered by #64's draw, a chain of its
+        // own (R217). A cast on draw is no play since #2179 (R2179002), so #33 copies none and one library
+        // runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60 (the 21st of each chain of 20,
+        // R58, goes to the hand and the next chain's first cast discards it). The same action then starts
+        // p2's turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's casts.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [VANILLA, VANILLA],
-                "backrow": [CLONE_MACHINE, RECYCLER],
+                "backrow": [INTROSPECTION, RECYCLER, CLONE_MACHINE],
                 "library": vec![HINDER; LIBRARY_CAP as usize],
             },
-            "p2": { "hand": [VANILLA], "field": [VANILLA], "library": [VANILLA, VANILLA] },
+            "p2": {
+                "hand": [VANILLA, VANILLA],
+                "backrow": [RECYCLER],
+                "library": vec![HINDER; LIBRARY_CAP as usize],
+            },
         }));
 
-        // The Activate's cost discards both Vanillas, and #64 answers with two draws.
-        s.activate(RECYCLER, json!({}));
+        s.end_turn();
         assert!(s.state().pending.is_none());
-        let casts = s
-            .last_events()
-            .iter()
-            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER))
-            .count();
-        assert_eq!(casts as i32, CAST_ON_DRAW_ACTION_CAP);
+        assert_eq!(s.state().active, P2);
+        let casts = |player| {
+            s.last_events()
+                .iter()
+                .filter(|event| {
+                    matches!(event, GameEvent::CardPlayed { def_id, player: by, .. } if def_id == HINDER && *by == player)
+                })
+                .count() as i32
+        };
+        assert_eq!(casts(P1) + casts(P2), CAST_ON_DRAW_ACTION_CAP);
+        assert!(casts(P2) > 0, "the cap spans the turn the action ends");
+        // R2179002: #33 shuffled no copy in, so p1's library ran dry.
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
+        );
+        assert!(s.state().players[P1].library.is_empty());
         assert_eq!(s.state().cast_chain, None);
-        // Past the cap, a Hinder drawn goes to the hand uncast.
-        assert!(s.hand(P1).iter().any(|card| card.def_id == HINDER));
+        // Past the cap, a Hinder p2 draws goes to the hand uncast.
+        assert!(s.hand(P2).iter().any(|card| card.def_id == HINDER));
     }
 }
 

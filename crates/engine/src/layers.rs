@@ -171,6 +171,8 @@ pub fn card_keywords(state: &GameState, instance: &CardInstance) -> Vec<Keyword>
         face_of(state, instance).keywords
     };
     all.extend(instance.granted_keywords.iter().cloned());
+    // R2179001: one Temporary, written as the count it has left.
+    let all = crate::temporary::with_temporary_count(&all, instance);
     as_set(&with_brittle_count(&all, instance))
 }
 

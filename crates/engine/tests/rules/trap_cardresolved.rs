@@ -169,6 +169,7 @@ fn resolved_for(instance: &CardInstance, permanent: bool, cost_paid: i32) -> Gam
         arrived_during: None,
         exits_from: None,
         answer: None,
+        on_draw: None,
     }
 }
 
@@ -346,6 +347,7 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             from: None,
             arrived_during: None,
             exits_from: None,
+            on_draw: None,
         };
         assert!(traps_watching(&state, &play).is_empty());
         let mut answered = Bench::new(&state);

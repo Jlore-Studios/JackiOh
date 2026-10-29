@@ -82,8 +82,9 @@ import {
   PLAY_STATUS,
   QUESTS_QUEST,
   SHOP_WALLET,
-  TOKEN_CARD_PICKS,
+  TOKEN_CARD_CONFIRM,
   TOKEN_HELD_CARD,
+  TOKEN_POOL_CARDS,
   collectionTrackId,
   collectionTrackLevelId,
   collectionTrackXpId,
@@ -481,20 +482,23 @@ function redeemACardToken(loop: Loop): void {
   });
   cy.intercept("POST", "**/api/tokens/redeem-card").as("redeemCard");
   let picked = "";
-  cy.get(TOKEN_CARD_PICKS)
+  cy.get(TOKEN_POOL_CARDS)
     .first()
     .should("not.be.disabled")
     .invoke("attr", "data-testid")
     .then((testid) => {
-      picked = String(testid).slice(tokenCardPickId("").length);
+      picked = String(testid).slice(poolCardId("").length);
       expect(loop.owned.has(picked), `§14.5: the picker offers ${picked}, a card not owned`).to.eq(false);
     });
   cy.then(() => {
+    // The face opens the card's detail, Unlock asks, and Confirm spends the token.
+    cy.get(ts(poolCardId(picked))).click();
     cy.get(ts(tokenCardPickId(picked))).click();
+    cy.get(ts(TOKEN_CARD_CONFIRM)).click();
   });
   cy.wait("@redeemCard").then((interception) => {
     expect(interception.response?.statusCode, "POST /api/tokens/redeem-card").to.eq(200);
-    expect((interception.request.body as { cardId?: string }).cardId, "the Pick sends its own card").to.eq(picked);
+    expect((interception.request.body as { cardId?: string }).cardId, "the Confirm sends its own card").to.eq(picked);
     expect((interception.response?.body as TokensBody).tokens.card, "§14.5: the redemption spent the token").to.eq(held - 1);
   });
   cy.then(() => {
@@ -504,7 +508,8 @@ function redeemACardToken(loop: Loop): void {
       expect(owned.size, "and nothing else").to.eq(loop.owned.size + 1);
       loop.owned = owned;
     });
-    cy.get(ts(tokenCardPickId(picked)), { timeout: timeouts.view }).should("not.exist");
+    // The collection's re-read takes the unlocked card out of the pool.
+    cy.get(ts(poolCardId(picked)), { timeout: timeouts.view }).should("not.exist");
   });
 }
 
