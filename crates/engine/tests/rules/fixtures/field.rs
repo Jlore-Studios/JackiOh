@@ -110,7 +110,8 @@ pub static golem: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A stat-less Animated Field Spell (R657): incidentally animated, it fights as a 0/1.
+/// A stat-less Animated Field Spell: with no stats it never animates (R2280000; it fought as a 0/1
+/// before issue #2280, R657).
 pub static wisp: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "wisp",
@@ -195,6 +196,20 @@ pub static unlocker: LazyLock<CardDef> = LazyLock::new(|| def("unlocker", 9420, 
 /// Classic #14's Radiant move as a Spell: flicker a chosen Unit, then ask (a pause after the flicker).
 pub static blink: LazyLock<CardDef> = LazyLock::new(|| def("blink", 9421, "Spell", json!({})));
 
+/// A stat-less Animated Trap that notes every enemy play: it fires and, with no stats, stays face-up in
+/// its zone (R2280000).
+pub static mote: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "mote",
+        9422,
+        "Trap",
+        json!({
+            "base": { "keywords": [animated()], "text": "mote" },
+            "radiant": { "keywords": [animated()], "text": "mote" },
+        }),
+    )
+});
+
 pub static FIELD_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         tesla.clone(),
@@ -218,6 +233,7 @@ pub static FIELD_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         unlocker.clone(),
         blink.clone(),
         mourner.clone(),
+        mote.clone(),
     ]
 });
 
@@ -397,6 +413,7 @@ pub static FIELD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
         (watcher.id.clone(), both(enemy_play_noter("fd-watch", "watched", false))),
         (listener.id.clone(), both(enemy_play_noter("fd-listen", "heard", false))),
         (ears.id.clone(), both(enemy_play_noter("fd-ears", "heard", true))),
+        (mote.id.clone(), both(enemy_play_noter("fd-mote", "moted", true))),
         (
             wrecker.id.clone(),
             both(Script {
