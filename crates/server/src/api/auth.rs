@@ -15,8 +15,6 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use axum::body::Body;
-use axum::response::Response;
 use serde_json::{Value, json};
 
 use crate::api::consent::{age_check_owed, terms_owed};
@@ -27,6 +25,7 @@ use crate::api::username::own_username;
 use crate::app::App;
 use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, PasswordGrantOutcome, Session};
 use crate::config::USERNAME_SIGN_IN_WINDOW_MS;
+use crate::social::no_content;
 use crate::username::sign_in_name;
 
 // R160: sign-up and sign-in answer identically for every outcome that depends on whether an
@@ -238,12 +237,7 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     remove_account(app, caller).await?;
     // No id in the line: the account is gone, and so is the reason to name it.
     tracing::info!(event = "account.deleted");
-    let mut response = Response::new(Body::empty());
-    *response.status_mut() = axum::http::StatusCode::NO_CONTENT;
-    response
-        .headers_mut()
-        .insert("cache-control", axum::http::HeaderValue::from_static("no-store"));
-    Ok(response)
+    Ok(no_content())
 }
 
 /// `DELETE /api/account`'s work, shared with the age screen's refusal (R757000, `consent.rs`),

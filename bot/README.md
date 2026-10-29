@@ -842,6 +842,20 @@ review runs go out.
   subscription's login, which the builder's code must never run beside. CI runs every check.
 - When the rule holds, auto-merge turns on, pinned to that commit: GitHub will not merge a head
   that moved after the approval.
+- **The merge queue.** Auto-merge puts the pull request in `main`'s merge queue
+  ([`infra/github.tf`](../infra/github.tf)) once its checks pass, and the queue lands it after CI
+  passes on `main` with it on top. Once one of the five checks fails there, the rest of that run
+  is cancelled (ci.yml's `queue-cancel-*`), and when the queue took a cleared head out
+  (`events.on_queue_ci`, on `gh-readonly-queue/main/pr-<n>-<sha>`) it gets a CI fix with that
+  run's logs at once, with no re-run: its own CI passed, so what failed is nearly always what it
+  and the newer `main` do together. The fix merges `main` first and is reviewed like any revision,
+  under the same cap as any CI fix, and its auto-merge queues it again at the back. One still in
+  the queue was built again without a failing pull request ahead of it, and a held pull request or
+  a head that moved is left alone. One the queue took out with no failed build (a conflict with a
+  pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
+  commit `main` is at (`queue.requeue_cleared`), unless a person took it out. Every hold
+  (`queue.hold_merge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
+  it has no auto-merge left to turn off.
 - **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
   (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
   runs or before, the revision that resolves them needs no review run: its builder resolves the

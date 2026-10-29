@@ -5625,7 +5625,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(0, 2),
         st(0, 4),
     ),
-    row("68", "Startos", c(1), T::Unit, &[], R::Common, st(3, 3), st(6, 6)),
+    row("68", "Stratos", c(1), T::Unit, &[], R::Common, st(3, 3), st(6, 6)),
     row("69", "Falcon", c(2), T::Unit, &[], R::Rare, st(4, 1), st(8, 2)),
     row(
         "70",
@@ -8409,7 +8409,7 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             );
         }
         // Every entry of the set is `traininggrounds-…` (B2.2's segment, its name's space dropped),
-        // and until its release (#2204) the set is held.
+        // and since its release (#2204) the set ships.
         for entry in entries()
             .into_iter()
             .filter(|entry| entry.set == SetName::TrainingGrounds)
@@ -8423,8 +8423,8 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             );
         }
         assert!(
-            !set_ships(SetName::TrainingGrounds),
-            "the set is held until its release, #2204"
+            set_ships(SetName::TrainingGrounds),
+            "the set ships from its release, #2204"
         );
     }
 

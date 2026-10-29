@@ -37,6 +37,18 @@ export const tutorialTestid = {
   coachAck: "coach-ack",
   /** The ring round the anchor's elements; `pointer-events: none`; absent when none is on screen. */
   coachRing: "coach-ring",
+  /** In a moment's bubble: Hint, the next hint; absent once the last is shown (R2205000). */
+  coachHint: "coach-hint",
+  /** The Field Guide's button in the HUD (R2205002). */
+  fieldGuideHud: "field-guide-hud",
+  /** The Field Guide's button in the lesson path's header: "Field Guide k/n". */
+  fieldGuidePath: "field-guide-path",
+  /** The Field Guide dialog. */
+  fieldGuide: "field-guide",
+  /** In the Field Guide: Close. */
+  fieldGuideClose: "field-guide-close",
+  /** One entry in the Field Guide; `data-found="true|false"`. */
+  fieldGuideEntry: (id: string): string => `field-guide-entry-${id}`,
   /** The end-of-lesson dialog; `data-outcome="win|loss|draw"`, `data-lesson`. */
   result: "tutorial-result",
   /** In the result dialog after a win: start the next lesson. */
@@ -47,6 +59,8 @@ export const tutorialTestid = {
   back: "tutorial-back",
   /** In the result dialog after the last lesson: back to the lobby's practice setup. */
   playPractice: "tutorial-play-practice",
+  /** In the result dialog after a win: the mechanics the game did not show found, each with its rule (R314). */
+  stillToFind: "tutorial-still-to-find",
   /** In the result dialog after the last lesson: "What's next" (the practice tiers, decks, draws). */
   whatsNext: "tutorial-whats-next",
   /** In the result dialog: close it and look at the final board. */

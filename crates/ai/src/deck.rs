@@ -573,8 +573,16 @@ fn narrow_leaning<'a>(
     lean: Option<SetName>,
 ) -> Vec<&'a CardDef> {
     let classes: Vec<usize> = remaining.iter().map(|def| class_of(def, theme, lean)).collect();
+    // R2195000: a Core card and its snapshot are one card to the floors, since dealing either takes the
+    // other out. A pair counts once, as the union of its classes (a snapshot shares its Core card's
+    // type and tags, so one class holds the other), and taking either card spends that entry.
+    let keys: Vec<&str> = remaining.iter().map(|def| pair_key(def)).collect();
+    let mut pair_class: IndexMap<&str, usize> = IndexMap::new();
+    for (key, class) in keys.iter().zip(&classes) {
+        *pair_class.entry(key).or_insert(0) |= class;
+    }
     let mut avail = [0; CLASSES];
-    for class in &classes {
+    for class in pair_class.values() {
         avail[*class] += 1;
     }
     // A floor short of cards owes only the cards it has left, so it takes every one of them.
@@ -597,25 +605,25 @@ fn narrow_leaning<'a>(
         if needed < slots_left {
             return remaining.to_vec();
         }
-        let mut takes = [false; CLASSES];
-        for (class, takes) in takes.iter_mut().enumerate() {
-            if avail[class] == 0 {
-                continue;
-            }
-            let mut after = avail;
-            after[class] -= 1;
-            let mut owed_after = owed;
-            for (at, bit) in FLOOR_BITS.into_iter().enumerate() {
-                if class & bit != 0 {
-                    owed_after[at] = (owed_after[at] - 1).max(0);
+        // Whether taking a card of `class` whose pair counts as `spent` keeps every floor in reach.
+        let mut takes: IndexMap<(usize, usize), bool> = IndexMap::new();
+        let mut keeps = |class: usize, spent: usize| {
+            *takes.entry((class, spent)).or_insert_with(|| {
+                let mut after = avail;
+                after[spent] -= 1;
+                let mut owed_after = owed;
+                for (at, bit) in FLOOR_BITS.into_iter().enumerate() {
+                    if class & bit != 0 {
+                        owed_after[at] = (owed_after[at] - 1).max(0);
+                    }
                 }
-            }
-            *takes = min_slots(owed_after, &after) == Some(needed - 1);
-        }
+                min_slots(owed_after, &after) == Some(needed - 1)
+            })
+        };
         return remaining
             .iter()
-            .zip(&classes)
-            .filter(|(_, class)| takes[**class])
+            .zip(classes.iter().zip(&keys))
+            .filter(|(_, (class, key))| keeps(**class, pair_class[**key]))
             .map(|(def, _)| *def)
             .collect();
     }

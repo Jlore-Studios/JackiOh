@@ -339,6 +339,9 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/tests/store/contract.rs", [false, true, false]],
     ["crates/server/tests/support/test_app.rs", [false, true, false]],
     ["crates/server/tests/server_store.rs", [false, true, false]],
+    // The seed test seeds the real catalog and counts the shipped sets' tags (#2204).
+    ["crates/cards/catalog.json", [false, true, false]],
+    ["crates/engine/src/wire/catalog_types.rs", [false, true, false]],
     ["crates/server/src/env.rs", [false, false, true]],
     ["crates/server/src/main.rs", [false, false, true]],
     ["crates/server/src/app.rs", [false, false, true]],

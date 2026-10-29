@@ -1740,6 +1740,6 @@ fn preview_no_test_previews_only_sets_that_ship() {
 
 #[test]
 fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
-    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::TrainingGrounds]);\nlet _e = preview_every_set();\n";
+    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }

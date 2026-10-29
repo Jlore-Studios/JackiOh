@@ -673,6 +673,7 @@ mod duos_life_r964000 {
 mod banked_state_1086 {
     use super::*;
 
+    use jackioh_engine::config::CALL_TO_CHAOS_RADIANT_EFFECTS;
     use jackioh_engine::testkit::{JADE_ASCEND_AT, JADE_BEAUTY_AT, Scenario, active_units_of};
 
     const JADE: &str = "meditative-039-2"; // (0) Spell token: add 1 to your Jade Counter, gain 1 mana
@@ -954,6 +955,42 @@ mod banked_state_1086 {
         let turn = board(json!({ "p1": { "hand": [EVENT_HORIZON] }, "p2": { "hand": [VANILLA] } }));
         let farewell = board(json!({ "p1": { "hand": [FAREWELL] }, "p2": { "hand": [VANILLA] } }));
         assert_eq!(greedy(&turn), greedy(&farewell));
+    }
+
+    /// #1886: Core #95 Call to Chaos, (4) Spell, whose Radiant face rolls three effects (R423); and
+    /// Core #78 /fullsend, a (4) Spell with no Call to Chaos tag.
+    const CHAOS: &str = "core-095";
+
+    #[test]
+    fn a_radiant_call_to_chaos_in_hand_counts_its_extra_effects_at_the_base_faces_price() {
+        let radiant = |card: &str| {
+            board(
+                json!({ "p1": { "hand": [{ "def": card, "radiant": true }] }, "p2": { "hand": [VANILLA] } }),
+            )
+        };
+        let base = |card: &str| board(json!({ "p1": { "hand": [card] }, "p2": { "hand": [VANILLA] } }));
+        let extra = AI_EVAL.radiant_chaos_effect
+            * f64::from(CALL_TO_CHAOS_RADIANT_EFFECTS - 1)
+            * AI_EVAL.hand_per_cost
+            * 4.0;
+        assert!(
+            extra > AI_EVAL.radiant_in_hand,
+            "setup: the reading should beat the flat price"
+        );
+        assert_close(eval(&radiant(CHAOS), AI) - eval(&base(CHAOS), AI), extra, 9);
+        // Any other Radiant card keeps the flat price for its Radiant text.
+        assert_close(
+            eval(&radiant(FULLSEND), AI) - eval(&base(FULLSEND), AI),
+            AI_EVAL.radiant_in_hand,
+            9,
+        );
+        // The frozen baseline gives a Radiant Call to Chaos the flat price, as it did.
+        let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        assert_close(
+            greedy(&radiant(CHAOS)) - greedy(&base(CHAOS)),
+            GREEDY_EVAL.radiant_in_hand,
+            9,
+        );
     }
 
     #[test]

@@ -4,10 +4,11 @@
 import type { LessonScript } from "../coach.ts";
 import { script as advanced } from "./advanced.ts";
 import { script as basics } from "./basics.ts";
+import { script as finale } from "./finale.ts";
 import { script as spells } from "./spells.ts";
 import { script as traps } from "./traps.ts";
 
-export const LESSON_SCRIPTS: Readonly<Record<string, LessonScript>> = { basics, spells, traps, advanced };
+export const LESSON_SCRIPTS: Readonly<Record<string, LessonScript>> = { basics, spells, traps, advanced, finale };
 
 export function scriptFor(lessonId: string): LessonScript | undefined {
   return LESSON_SCRIPTS[lessonId];

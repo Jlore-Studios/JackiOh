@@ -69,12 +69,22 @@
 # of the smoke list, as super.yml does, for a branch that wants that proof before super.yml can be
 # dispatched there (GitHub dispatches only a workflow the default branch has). Pushes and pull
 # requests always run the smoke list.
+#
+# `merge_group` is main's merge queue (infra/github.tf `main_merge_queue`): before a pull request
+# lands, the queue builds main with every pull request ahead of it and this one on top, on a
+# `gh-readonly-queue/main/pr-<n>-<sha>` branch, and runs this workflow there. The five checks must
+# pass on that commit too, so two pull requests each green alone but red together (four of the five
+# red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
+# `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
+# the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
+# and stops once one of the five has failed (`queue-cancel-*`, at the end).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
   workflow_dispatch:
     inputs:
       e2e:
@@ -149,13 +159,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # A merge group's diff is that of the pull requests in it: the queue's base to the group's head.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
-          if [ "$EVENT" = pull_request ]; then
+          if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
             sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
             # No name may expand as a glob in the loop below.
             set -f
@@ -1403,3 +1414,94 @@ jobs:
           test "$CRATES" = success
           test "$IMAGE" = success
           test "$DEPLOY" = success
+
+  # ------------------------------------------------------------------------------------------------
+  # the merge queue
+  # ------------------------------------------------------------------------------------------------
+
+  # A merge-queue build (`merge_group`) whose required check failed is over: the queue took the pull
+  # request out when that check reported, so the rest of the run only holds runners every other run
+  # waits for (up to 50 minutes on 2026-10-29). One job after each of the five cancels the run then,
+  # and the bot that owns the pull request answers the cancelled run with a CI fix
+  # (bot/harness/events.py `on_queue_ci`). Never sooner, at a failed piece: a run cancelled before a
+  # summary job runs leaves that required check skipped, and a skipped required check counts as
+  # passing, which here would let the queue land the pull request.
+  queue-cancel-rust:
+    name: cancel the queue build (rust)
+    needs: rust
+    if: ${{ failure() && github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the rest of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  queue-cancel-web:
+    name: cancel the queue build (web)
+    needs: web
+    if: ${{ failure() && github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the rest of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  queue-cancel-e2e-smoke:
+    name: cancel the queue build (e2e smoke)
+    needs: e2e-smoke
+    if: ${{ failure() && github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the rest of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  queue-cancel-db:
+    name: cancel the queue build (db)
+    needs: db
+    if: ${{ failure() && github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the rest of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"
+
+  queue-cancel-bot-selftest:
+    name: cancel the queue build (bot selftest)
+    needs: bot-selftest
+    if: ${{ failure() && github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: cancel the rest of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: gh run cancel "$RUN" -R "$REPO" || echo "the run had ended"

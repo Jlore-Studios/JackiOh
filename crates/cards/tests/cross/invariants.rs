@@ -860,6 +860,49 @@ mod r1062_fiery_waraxe_reanimated {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 
+    /// Fuzz seed 2443: the autopilot's turn animates The Cane at its controller's start of turn, then
+    /// plays Knowledge Breaker, whose Nerf takes its "Animated on your turn" in the same action. The
+    /// animation entered nothing (R1062), so I4 reads the keyword as the animation had it, off the
+    /// change the later event names, and not off the state the action left.
+    #[test]
+    fn r1062_i4_reads_animated_on_your_turn_as_the_animation_had_it_though_a_nerf_later_in_the_action_takes_it()
+     {
+        let nerfed = |announced: bool| {
+            let mut g = scenario(json!({
+                "p1": { "hand": ["meditative-066", "core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let mut monitor = create_invariant_monitor(g.state());
+            g.play("meditative-066", json!({ "zone": 1 }));
+            assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+            g.end_turn();
+            assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+            g.end_turn();
+            let waraxe = g.unit(PlayerId::P1, 1).expect("the waraxe animated").clone();
+            find_instance_mut(g.state_mut(), &waraxe.id)
+                .expect("the waraxe")
+                .tuning
+                .get_or_insert_default()
+                .remove_keywords = Some(vec![KeywordKind::AnimatedOnYourTurn]);
+            let mut events = g.last_events().to_vec();
+            if announced {
+                events.push(event(json!({
+                    "type": "degraded", "instanceId": waraxe.id, "defId": waraxe.def_id,
+                    "change": { "kind": "keyword", "keyword": { "kind": "Animated on your turn" }, "added": false },
+                })));
+            }
+            monitor.after(&events, g.state())
+        };
+        assert_eq!(nerfed(true), no_violations());
+        // With no event naming the change, the keyword is read where the action left it: I4 still fires.
+        assert!(
+            nerfed(false)
+                .iter()
+                .any(|found| found.starts_with("I4 entry mismatch")),
+            "an animation the state alone shows without the keyword is still an entry"
+        );
+    }
+
     /// Fuzz seed 5644 (#1216): a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn,
     /// fires on its controller's turn and animates as its firing's last step, face-up for the first
     /// time: an entry (R383), as the engine's `summonedTurn` says, not the start-of-turn animation

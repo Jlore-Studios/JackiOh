@@ -90,8 +90,9 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420). Re-pinned
     /// for the Stinkyscape release (#1884): its #127 Siege Tank, #128 Yamato Cannon and #129 Missile Pod
-    /// join them.
-    const JLOCKEED_UNITS: [&str; 7] = [
+    /// join them; and for the Training Grounds release (#2204): its #48 Jlockeed Shredder-10, the
+    /// snapshot of Core #13.
+    const JLOCKEED_UNITS: [&str; 8] = [
         "core-013",
         "classicplus-048",
         "classicplus-051",
@@ -99,6 +100,7 @@ mod tests {
         "stinkyscape-127",
         "stinkyscape-128",
         "stinkyscape-129",
+        "traininggrounds-048",
     ];
 
     fn slot(lane: i32) -> ZoneSlot {
@@ -179,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_seven_the_tests_name() {
+    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_eight_the_tests_name() {
         crate::register_all();
         let pool: Vec<String> = crate::CATALOG
             .values()
@@ -237,7 +239,7 @@ mod tests {
         }
 
         #[test]
-        fn r1261_r60_repeats_allowed_and_all_seven_reached() {
+        fn r1261_r60_repeats_allowed_and_all_eight_reached() {
             let mut seen: Vec<String> = Vec::new();
             let mut repeated = false;
             for n in 0..12 {

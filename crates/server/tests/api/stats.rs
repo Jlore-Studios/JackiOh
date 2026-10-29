@@ -485,9 +485,10 @@ mod r654_public_card_and_player_stats {
         let app = test_app().await;
         for set in jackioh_engine::SHIPPED_SETS {
             let name = set.as_str();
-            // `+` is a space in a query unless it is encoded.
-            let param = name.to_lowercase().replace('+', "%2B");
-            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus"));
+            // `+` is a space in a query unless it is encoded, and a space is no URI character
+            // ("Training Grounds", #2204).
+            let param = name.to_lowercase().replace('+', "%2B").replace(' ', "%20");
+            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus").replace(' ', ""));
             let (status, _, data) = get_public(&app, &format!("/api/stats/cards?set={param}")).await;
             let ids = ids_of(&data);
             assert_eq!(status, 200, "set={param}");
@@ -801,7 +802,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(huge_status, 400);
     }
 
-    /// R1142000: PUT /api/stats/player accepts a body under PLAYER_STATS_BYTES_MAX (65536)
+    /// R1142000: PUT /api/stats/player accepts a body under PLAYER_STATS_BYTES_MAX (131072)
     /// and summarises it on GET /api/stats/players; a body exceeding it returns 400.
     #[tokio::test]
     async fn r1142000_put_player_stats_accepts_body_under_new_cap_and_refuses_past_it() {

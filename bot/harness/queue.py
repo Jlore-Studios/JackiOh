@@ -26,7 +26,8 @@ from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIF
                             LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
                             LABEL_HUMAN_REQUIRED, LABEL_PR,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
+                            LABEL_PERSON_MERGES, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_TREE,
                             LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR, SLASH,
                             UNRATED_PLAN_FLOOR)
 from harness.context import Context
@@ -369,6 +370,61 @@ def adopt(ctx: Context, number: int, names: set[str], children: list[dict[str, A
     return said
 
 
+def merge_title(pull: dict[str, Any], method: str) -> str:
+    """The squash commit's title: the pull request's, as GitHub writes it for a pull request of
+    several commits. Without it a one-commit pull request lands on `main` under the bot's own
+    commit message ("bot: build pass 1 for #85")."""
+    title = str(pull.get("title") or "").strip()
+    if method != "squash" or not title:
+        return ""
+    return f"{title} (#{pull.get('number')})"
+
+
+def hold_merge(ctx: Context, pull: dict[str, Any]) -> None:
+    """Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue. A queued
+    pull request has no auto-merge left to turn off (REST `auto_merge` reads null once GitHub put
+    it in the queue), so only the dequeue stops it; a push to its branch takes it out as well."""
+    node = pull.get("node_id")
+    if not node:
+        return
+    actions = [ctx.gh.disable_auto_merge] if pull.get("auto_merge") else []
+    for action in actions + [ctx.gh.dequeue]:
+        try:
+            action(node)
+        except GitHubError:
+            pass  # nothing to turn off, or not in the queue
+
+
+def requeue_cleared(ctx: Context, pull: dict[str, Any], record: dict[str, Any]) -> str:
+    """Put a bot pull request back in `main`'s merge queue when the queue took its cleared head
+    out and no failed build of it says why, so `events.on_queue_ci` never heard: it conflicted
+    with a pull request ahead of it that then failed, or its checks ran past the queue's timeout.
+    Only when the queue's removal is the last thing that touched its auto-merge and no person
+    did it, and once for each commit `main` is at, so one that conflicts again waits for `main`
+    to move. The housekeeping pass calls it. A note of what it did, or ""."""
+    head = str((pull.get("head") or {}).get("sha") or "")
+    node = str(pull.get("node_id") or "")
+    if (pull.get("auto_merge") or pull.get("state") != "open" or not node
+            or pull.get("mergeable_state") == "dirty" or cleared(record).get("sha") != head
+            or label_names(pull) & {LABEL_READY, LABEL_PERSON_MERGES}
+            or record.get("stop_requested")):
+        return ""
+    removal = ctx.gh.queue_removal(node)
+    if removal is None or (removal["type"] == "User"
+                           and removal["actor"].lower() != ctx.cfg.bot_login.lower()):
+        return ""
+    main = ctx.gh.branch_sha(ctx.cfg.default_branch) or ""
+    tried = dict(record.get("requeued") or {})
+    if tried.get(head) == main:
+        return ""
+    ctx.gh.enable_auto_merge(node, ctx.cfg.merge_method, head,
+                             merge_title(pull, ctx.cfg.merge_method))
+    number = int(pull["number"])
+    tried[head] = main
+    ctx.store.update(lambda s: state_item(s, number).update(requeued=tried), f"requeue #{number}")
+    return f"#{number}: back in the merge queue (taken out: {removal['reason'] or 'no reason'})"
+
+
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
                  label_present: bool = False, extra: dict[str, Any] | None = None,
                  ask: Ask | None = None) -> str:
@@ -387,11 +443,8 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
         return (f"I am revising #{number} right now. When this run ends I go round once more "
                 "with your comment.")
     set_state_label(ctx, number, names, LABEL_REVISE)
-    if LABEL_PR in names and pull.get("auto_merge"):
-        try:
-            ctx.gh.disable_auto_merge(pull["node_id"])
-        except GitHubError:
-            pass
+    if LABEL_PR in names:
+        hold_merge(ctx, pull)
     def change(state: dict[str, Any]) -> None:
         _queued(state, number, "revise", by, force, ctx, ask)
         record = state_item(state, number)
@@ -474,9 +527,7 @@ def stop(ctx: Context, number: int, *, by: str) -> str:
     set_state_label(ctx, number, names, LABEL_WORKING if working else None)
     if "pull_request" in thread and LABEL_PR in names:
         try:
-            pull = ctx.gh.get_pull(number)
-            if pull.get("auto_merge"):
-                ctx.gh.disable_auto_merge(pull["node_id"])
+            hold_merge(ctx, ctx.gh.get_pull(number))
         except GitHubError:
             pass
     dropped: list[str] = []

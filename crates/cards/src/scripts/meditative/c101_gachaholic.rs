@@ -74,8 +74,9 @@ mod tests {
     /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
     /// Eugenics with patch v0.3.10, R831014). Re-pinned for the Stinkyscape release (#1884): its #77
     /// Yuma, #112 Job Application, #145 Fortify Flesh, #153 Stimmycheck and #166 and #167, the Scanning
-    /// Probes, join it.
-    const SHIPPED_POOL: [&str; 16] = [
+    /// Probes, join it; and for the Training Grounds release (#2204): its #49 Reoccurring Dream, the
+    /// snapshot of Core #23.
+    const SHIPPED_POOL: [&str; 17] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -92,6 +93,7 @@ mod tests {
         "stinkyscape-153",
         "stinkyscape-166",
         "stinkyscape-167",
+        "traininggrounds-049",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.

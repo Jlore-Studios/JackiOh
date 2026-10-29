@@ -153,7 +153,9 @@ has the rest, the server's fixture reseed among it.
 ### CI
 
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
-`bot selftest`. On a pull request `rust` includes `rust (classify)`, which labels it with its kind and tier
+`bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
+`main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
+out failed there, against the newer `main`, and its fix starts from merging `main`. On a pull request `rust` includes `rust (classify)`, which labels it with its kind and tier
 and fails when the pending fragments do not match the cards that play differently (R1370000): run
 `cargo jackioh classify --base origin/main --claims` before pushing. A pull request runs only the jobs that
 read what it changes (`scripts/ci-scope.sh`, whose header says what turns each on; #751), so a file a test

@@ -45,7 +45,7 @@ use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_TUNING_SERIES, AiDeckOptions, AiOptions, GREEDY_EVAL,
     GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SearchBudget, SeatController,
     binomial_tail, build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games,
-    greedy_action, play_match, run_gate_games,
+    greedy_action, play_match, run_gate_games, subject_seat_of,
 };
 /// Issue #1113: the seeded fixtures' deck rule and runners; the `cargo test` smokes alone play
 /// them, so they (and this import) exist only in test builds.
@@ -143,11 +143,6 @@ pub(crate) fn literal<T: Serialize>(value: &T) -> String {
         Ok(other) => other.to_string(),
         Err(error) => format!("<{error}>"),
     }
-}
-
-/// Game n (1-based): the subject sits p1 when n is odd and p2 when n is even.
-pub(crate) fn subject_seat_of(n: i32) -> PlayerId {
-    if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 
 fn full_seeds(matchup: Matchup) -> i32 {

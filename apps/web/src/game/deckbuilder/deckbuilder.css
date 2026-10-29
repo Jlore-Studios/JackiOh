@@ -380,6 +380,23 @@
   min-width: 0;
 }
 
+/* A virtual pool (#2334) mounts only the cards near the view, each placed in its grid cell and out of
+   the grid's flow: the grid's rows are all one height (an inline style) and hold the places of the
+   rest. Each card contains its paint, with the clip margin of a face (below): measured in a scroll
+   without it, every card that mounted laid out every face drawn again, and a frame took three
+   times as long. Scroll anchoring would only move what the window moves. */
+.db-pool--virtual {
+  position: relative;
+  overflow-anchor: none;
+}
+
+.db-item--placed {
+  position: absolute;
+  inset: 0;
+  contain: paint;
+  overflow-clip-margin: 24px;
+}
+
 /* The card button is the card: no chrome of its own, the face is the whole look. */
 .deckbuilder.app-shell .db-card {
   position: relative;

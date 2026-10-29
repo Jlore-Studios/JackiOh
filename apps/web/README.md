@@ -324,7 +324,8 @@ WASM), the module the server runs at queue, and the server's refusal, when it co
 ```
 routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
+                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
+                        grid mounting only the rows of its 700 cards near the view, poolWindow.ts, #2334),
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
@@ -679,28 +680,36 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 ## The tutorial
 
-The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322): four lessons on a path, each
-a practice game with two fixed decks, a fixed seed and seat, and the tutorial handicap on the AI
-seat (`AI_TUTORIAL`, the tier below Easy). A lesson is a practice config whose `lesson` names it
+The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003): five
+lessons on a path, each a practice game with two fixed decks of Training Grounds cards, a fixed seed and
+seat, the tutorial handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on
+the human's, with the pool hold in lessons 1–4 (`lessonHandicaps`). A lesson is a practice config whose `lesson` names it
 (`tutorial/start.ts`), so the same worker, controller and board play it; the worker reads the
 decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes them (R291).
 
 ```
 src/tutorial/
-  lessons.ts lessons/*.ts   each lesson as data: title, mechanics, seed, seat, both decks, retry tip
-  scripts/*.ts              each lesson's coach script: steps in order and reactive tips (page only)
-  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, display (R292, R314)
+  lessons.ts lessons/*.ts   each lesson as data: title, its Field Guide entries, seed, seat, both decks, pool hold, retry tip
+  scripts/*.ts              each lesson's coach script: its moments, built with scripts/kit.ts (page only);
+                            scripts/testkit.ts's lessonSuite is every lesson's test
+  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, hint, display (R292, R314,
+                            R2205000: moments, discoveries, escalating hints)
+  discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
   Coach.tsx layout.ts       the ring, and the bubble placed clear of what it points at (a panel above the board on phones)
   TutorialPath.tsx          the lesson path at the top of the lobby (locked / open / done), with Hide / Show
                             tutorial (R322; its look in path-visibility.css)
-  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Exit tutorial) and its result dialog
-  progress.ts               completed lessons and the Hide/Show choice in localStorage `jackioh.tutorial.v1`,
-                            try/catch (R294), and R321's merge with another copy (a union, the newest choice)
+  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Field Guide, Exit tutorial) and its result
+                            dialog, which names what the game did not show found (R314)
+  FieldGuide.tsx            the Field Guide's button and dialog, from the HUD and the path's header (R2205002)
+  progress.ts               completed lessons, the Hide/Show choice and the Field Guide's found entries (the
+                            device's alone, R2205002) in localStorage `jackioh.tutorial.v1`, try/catch (R294),
+                            and R321's merge with another copy (a union, the newest choice)
   accountSync.ts            an active account's copy (`GET`/`PUT /api/tutorial`, R320) kept level with the
                             device's (R321); the practice route mounts it
-  harness.ts                test support only: a lesson played through the real core by a policy (R293)
+  harness.ts                test support only: a lesson played through the real core by a policy: coach,
+                            coach-passive, autopilot, random or reckless (R293, R2205001)
   config.ts testids.ts devHandle.ts   the numbers, the testids (mirrored in e2e), `window.__jackiohTutorial`
 ```
 
@@ -710,6 +719,12 @@ src/tutorial/
   a tip or an `info` step holds the AI, and each shows "Got it"; an action step never holds it; a
   step expires after `TUTORIAL_STEP_TURNS_MAX` of the player's own turns (the lesson's `final` step
   ends with the game); and Exit tutorial is in the HUD throughout. Nothing strands a lesson.
+- A `moment` step (R2205000) asks a question with nothing pointed at, and is done once the view
+  shows the player found what it sets up (`discoveries.ts`, read from the fresh events, the view
+  and the public catalog). Its hint escalates a level per own turn it stays unfound, or per Hint
+  press: the nudge, then the pointed hint with its ring; past `TUTORIAL_MOMENT_TURNS_MAX` it
+  retires. It never holds the AI. Each entry found for the first time shows a discovery bubble with
+  Got it, and the tracker hands it to the device's Field Guide (`markFound`).
 - The bubble adopts a new step only once the board has caught up (no `data-animating`), so it never
   points at a card the board has not drawn; a step or tip with `holdAi` holds the AI through
   `setHold("coach", …)` until its "Got it".

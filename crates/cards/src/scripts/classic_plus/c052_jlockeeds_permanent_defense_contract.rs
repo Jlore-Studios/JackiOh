@@ -77,8 +77,10 @@ mod tests {
     /// Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8) and
     /// Meditative+ #4 Supply Drop (§8.9). Re-pinned for v0.3.5: the Meditative set joins the pool; and
     /// for v0.3.15 (Meditative+ ships, #1187): M+ #4 joins it; and for the Stinkyscape release (#1884):
-    /// its #124 to #130, Jlockeed's space program.
-    const POOL: [&str; 15] = [
+    /// its #124 to #130, Jlockeed's space program. Re-pinned for the Training Grounds release (#2204):
+    /// that set's snapshots #45 Jlockeed's Weapons (of Core #14) and #48 Jlockeed Shredder-10 (of Core
+    /// #13) join it.
+    const POOL: [&str; 17] = [
         "classic-004",
         "classicplus-048",
         "classicplus-051",
@@ -94,6 +96,8 @@ mod tests {
         "stinkyscape-128",
         "stinkyscape-129",
         "stinkyscape-130",
+        "traininggrounds-045",
+        "traininggrounds-048",
     ];
 
     use crate::scenario;

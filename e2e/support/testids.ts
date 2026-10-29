@@ -478,11 +478,22 @@ export const TUTORIAL_OUTCOME = "tutorial-outcome";
 export const COACH = "coach";
 export const COACH_ACK = "coach-ack";
 export const COACH_RING = "coach-ring";
+/** R2205000: a moment's Hint button. */
+export const COACH_HINT = "coach-hint";
+/** R2205002: the Field Guide's buttons (HUD, path) and its dialog. */
+export const FIELD_GUIDE_HUD = "field-guide-hud";
+export const FIELD_GUIDE_PATH = "field-guide-path";
+export const FIELD_GUIDE = "field-guide";
+export const FIELD_GUIDE_CLOSE = "field-guide-close";
+export function fieldGuideEntryId(entryId: string): string {
+  return `field-guide-entry-${entryId}`;
+}
 export const TUTORIAL_RESULT = "tutorial-result";
 export const TUTORIAL_NEXT = "tutorial-next";
 export const TUTORIAL_RETRY = "tutorial-retry";
 export const TUTORIAL_BACK = "tutorial-back";
 export const TUTORIAL_PLAY_PRACTICE = "tutorial-play-practice";
+export const TUTORIAL_STILL_TO_FIND = "tutorial-still-to-find";
 export const TUTORIAL_WHATS_NEXT = "tutorial-whats-next";
 export const TUTORIAL_VIEW_BOARD = "tutorial-view-board";
 
@@ -693,8 +704,6 @@ export const STATS_TAB_CARDS = "stats-tab-cards";
 export const STATS_TAB_PLAYERS = "stats-tab-players";
 export const STATS_SUMMARY_TILES = "stats-summary-tiles";
 export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
-export const STATS_PROVISIONAL_BANNER = "stats-provisional-banner";
-export const STATS_FALLBACK_TOGGLE = "stats-fallback-toggle";
 export const STATS_SEARCH_INPUT = "stats-search-input";
 export const STATS_CARDS_TABLE = "stats-cards-table";
 export const STATS_PLAYERS_TABLE = "stats-players-table";
