@@ -22,7 +22,8 @@
    height from that (`cqh`): `(100cqh - the layout's fixed parts) / the card heights it stacks`,
    so a match bar, a turn banner or a phone's browser toolbar shrinks the cards instead of pushing
    End turn or your hand off the screen. Whatever height is spare goes to the field, the one row
-   that is `1fr`, whose lanes stay centred in it.
+   that is `1fr`: on a desktop or a tablet its four rows grow into it (`.lane`), and on a phone
+   its lanes stay centred in it.
 
    Green is not painted here. `data-legal="true"` only means "clickable" (a pointer and full
    opacity); the green glow is `data-glow="ready"`, styled by highlights.css, which Board.tsx
@@ -285,6 +286,32 @@
   background: color-mix(in srgb, var(--mana) 14%, var(--bg-sunken));
   color: var(--text-dim);
   font-size: var(--type-2xs-em);
+}
+
+/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label. */
+button.modifier-badge {
+  text-align: left;
+}
+
+button.modifier-badge[data-open="true"] {
+  border-color: var(--mana);
+  color: var(--text);
+}
+
+/* The whole label, laid on the page beside its badge (ModifierBadge.tsx places it, inside a 16px
+   gutter), so a long one is read on touch without pushing the hero row apart. */
+.modifier-full {
+  position: fixed;
+  z-index: var(--z-drag);
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--mana) 55%, var(--line-bright));
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-size: var(--type-sm);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------------------------------- mana and piles --- */
@@ -639,8 +666,9 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  /* The field's row is the board's `1fr`, so it may be taller than its lanes: they stay centred,
-     with the spare height as mat above and below them. */
+  /* The field's row is the board's `1fr`, so it may be taller than its lanes: on a phone they stay
+     centred, with the spare height as mat above and below them; on a desktop or a tablet they fill
+     it (the media query after `.lane`). */
   align-content: center;
   gap: var(--gap);
   min-width: 0;
@@ -841,8 +869,12 @@
 }
 
 /* Fixed rows, not `minmax(0, …)`: each lane is its own grid, so an empty zone must still hold
-   its row open or the four bands would stop lining up across the five lanes. */
+   its row open or the four bands would stop lining up across the five lanes. `--def-scale` is how
+   far a DEF card shrinks (Card.tsx turns it with `rotate(90deg) scale(var(--def-scale, 1))`): on a
+   phone a card turned sideways is wider than its lane, so it is drawn at 72%. */
 .lane {
+  --def-scale: 0.72;
+
   position: relative;
   z-index: var(--z-content);
   display: grid;
@@ -851,26 +883,40 @@
   min-width: 0;
 }
 
-/* Wherever the board has the room (a desktop, a tablet held upright), the unit rows take height
-   from the backrow rows, which hold a trap's back or a field card and are mostly empty: minions
-   were a third of their lane, 57 px wide in a 188 px zone. The four rows still sum to four card
-   heights, so nothing else on the board moves, and a unit fills its taller row as a broad oval,
-   the way Hearthstone's minions sit on its board. A phone keeps equal rows: its backrow is already
-   at the 44 px touch floor. */
+/* Wherever the board has the room (a desktop, a tablet held upright), the four rows are one height
+   and share the field's height: the backrow's traps and field cards matter as much as the units.
+   They line up across the five lanes because every lane fills the field's one row
+   (`align-content: stretch`, then `height: 100%`, which keeps the field asking the board for no
+   more than four card heights) and splits it into four equal rows, none under a card height, so
+   an empty zone still holds its row open. A row grows to at most `--row-max`, so a DEF card at
+   full size (`--def-scale: 1`) still fits across the narrowest lane (136 px at 761 px wide);
+   past that the lanes stay centred. A card's width follows its row through `aspect-ratio`. A
+   phone keeps fixed equal rows: its backrow is already at the 44 px touch floor. */
 @media (min-width: 761px) and (min-height: 501px) {
-  .lane {
-    --unit-row: calc(var(--card-h) * 1.2);
-    --back-row: calc(var(--card-h) * 0.8);
+  .field {
+    align-content: stretch;
+  }
 
-    grid-template-rows: var(--back-row) var(--unit-row) var(--unit-row) var(--back-row);
+  .lane {
+    --def-scale: 1;
+    --row-max: calc(var(--card-h) * 1.2);
+
+    align-self: center;
+    height: 100%;
+    max-height: calc(var(--row-max) * 4 + var(--gap) * 3);
+    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
   }
 
   .zone[data-row="units"] > .card.cf-host--minion {
-    max-width: min(100%, calc(var(--unit-row) * 0.86));
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.86;
   }
 
   .zone[data-row="backrow"] > .card {
-    max-width: calc(var(--back-row) * 0.74);
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.74;
   }
 }
 
@@ -2102,6 +2148,13 @@
 @media (min-width: 1025px) {
   .board {
     --card-h: clamp(56px, min(calc((100cqh - 215px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
+  }
+
+  /* The same width bound keeps a lane over 2.1 card heights wide here, so the rows may grow to
+     twice a card's height and a DEF card still fits across its lane at full size: 1.2 card
+     heights left a 1920x1080 screen's field with mat above and below. */
+  .lane {
+    --row-max: calc(var(--card-h) * 2);
   }
 }
 

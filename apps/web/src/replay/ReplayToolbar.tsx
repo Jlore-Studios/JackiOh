@@ -8,11 +8,16 @@
 // nothing moves: the board goes to where it is let go (`pointerup` on the window), and
 // `pointercancel` leaves it where it was. Moved without a pointer (its arrow keys, a `change`
 // with no hold), it moves at once. Giving focus back after a fresh board is the replay's job.
+//
+// The arrow keys are the two replays' own (ReplayPlayer.tsx, DuosReplay.tsx); the four step and turn
+// buttons name them in their tooltips and aria-keyshortcuts, and listen for none (R2126000).
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
+import { useShortcutHints } from "../shortcuts/Kbd.tsx";
+import { ariaKeyshortcuts, SHORTCUTS, shortcutTitle } from "../shortcuts/shortcuts.ts";
 
 export const replayTestid = {
   player: "replay-player",
@@ -63,6 +68,7 @@ const IGNORE = (): void => undefined;
 
 export function ReplayToolbar({ at, last, playing, onPlaying, onGoTo, onTurn, readout, actions }: ReplayToolbarProps): ReactElement {
   useLocale();
+  const hints = useShortcutHints();
   /** Where the scrubber is while it is held: the board moves when it is let go, not at every tick. */
   const [scrub, setScrub] = useState<number | null>(null);
 
@@ -98,10 +104,26 @@ export function ReplayToolbar({ at, last, playing, onPlaying, onGoTo, onTurn, re
       <button type="button" data-testid={replayTestid.start} aria-label={t("To the start")} disabled={atStart} onClick={() => onGoTo(0)}>
         ⏮
       </button>
-      <button type="button" data-testid={replayTestid.backTurn} aria-label={t("Back a turn")} disabled={atStart} onClick={() => onTurn(-1)}>
+      <button
+        type="button"
+        data-testid={replayTestid.backTurn}
+        aria-label={t("Back a turn")}
+        title={shortcutTitle(t("Back a turn"), SHORTCUTS.replayBackTurn, hints)}
+        aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.replayBackTurn)}
+        disabled={atStart}
+        onClick={() => onTurn(-1)}
+      >
         ⏪
       </button>
-      <button type="button" data-testid={replayTestid.backStep} aria-label={t("Back a step")} disabled={atStart} onClick={() => onGoTo(at - 1)}>
+      <button
+        type="button"
+        data-testid={replayTestid.backStep}
+        aria-label={t("Back a step")}
+        title={shortcutTitle(t("Back a step"), SHORTCUTS.replayBackStep, hints)}
+        aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.replayBackStep)}
+        disabled={atStart}
+        onClick={() => onGoTo(at - 1)}
+      >
         ‹
       </button>
       <button
@@ -114,10 +136,26 @@ export function ReplayToolbar({ at, last, playing, onPlaying, onGoTo, onTurn, re
       >
         {playing ? "⏸" : "▶"}
       </button>
-      <button type="button" data-testid={replayTestid.forwardStep} aria-label={t("Forward a step")} disabled={atEnd} onClick={() => onGoTo(at + 1)}>
+      <button
+        type="button"
+        data-testid={replayTestid.forwardStep}
+        aria-label={t("Forward a step")}
+        title={shortcutTitle(t("Forward a step"), SHORTCUTS.replayForwardStep, hints)}
+        aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.replayForwardStep)}
+        disabled={atEnd}
+        onClick={() => onGoTo(at + 1)}
+      >
         ›
       </button>
-      <button type="button" data-testid={replayTestid.forwardTurn} aria-label={t("Forward a turn")} disabled={atEnd} onClick={() => onTurn(1)}>
+      <button
+        type="button"
+        data-testid={replayTestid.forwardTurn}
+        aria-label={t("Forward a turn")}
+        title={shortcutTitle(t("Forward a turn"), SHORTCUTS.replayForwardTurn, hints)}
+        aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.replayForwardTurn)}
+        disabled={atEnd}
+        onClick={() => onTurn(1)}
+      >
         ⏩
       </button>
       <button type="button" data-testid={replayTestid.end} aria-label={t("To the end")} disabled={atEnd} onClick={() => onGoTo(last)}>

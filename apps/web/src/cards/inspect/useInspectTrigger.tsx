@@ -10,6 +10,7 @@ import { startsOnTermTip } from "../TermTip.tsx";
 import { readCardSettings, useCardSettings } from "../settings.ts";
 // The settings panel's "Hover previews" switch also gates the preview (with `hoverPreviews`).
 import { readSettings as readPanelSettings, useSetting as usePanelSetting } from "../../settings/store.ts";
+import type { Shortcut } from "../../shortcuts/shortcuts.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
 import { HoverPreview } from "./HoverPreview.tsx";
 import { InspectSheet } from "./InspectSheet.tsx";
@@ -46,6 +47,8 @@ export type InspectOptions = {
   prefer?: PreviewPrefer;
   /** Default true: overlays show lines of code (E36); matches pass false because it is hidden. */
   showLoc?: boolean;
+  /** R2126000: the key that opens the inspect view from the focused trigger, which the hover preview names. */
+  keyHint?: Shortcut;
 };
 
 export type InspectHandlers = {
@@ -355,7 +358,7 @@ export function useInspectTrigger(
       const face = options?.showLoc === false ? { ...subject.face, loc: null } : subject.face;
       overlay =
         active.mode === "hover" ? (
-          <HoverPreview face={face} anchor={active.anchor} prefer={options?.prefer} note={subject.note} />
+          <HoverPreview face={face} anchor={active.anchor} prefer={options?.prefer} note={subject.note} keyHint={options?.keyHint} />
         ) : (
           <InspectSheet face={face} onClose={close} note={subject.note} />
         );

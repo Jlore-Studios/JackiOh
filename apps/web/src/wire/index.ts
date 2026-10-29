@@ -99,6 +99,7 @@ export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
 export type { StarscapeReward } from "./generated/StarscapeReward.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
+export type { TallyView } from "./generated/TallyView.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
 export type { TradesView } from "./generated/TradesView.ts";
