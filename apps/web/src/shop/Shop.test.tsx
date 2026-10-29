@@ -6,7 +6,8 @@
 // slot's points flying into them (R1953000); the Chase Shard bar
 // filling from before to after and, at full, bursting and revealing the chase choice; reduce motion
 // showing every end state at once; each panel telling the page what it changed and reading again when
-// told. The tier filters live beside them as pure tests over crafted registries, since the shipped
+// told, and Buy waiting with a wheel while another spend of the tab is out (R2378000). The tier
+// filters live beside them as pure tests over crafted registries, since the shipped
 // registry holds no Legendary or Mythic a token could reach. The stylesheet is read as text, as
 // `economy/FillBar.test.tsx` reads its own, because Vitest stubs CSS imports.
 
@@ -26,6 +27,7 @@ import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
 import { clearReadCache } from "../net/readCache.ts";
+import { whileSpending } from "../net/spending.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
@@ -439,6 +441,88 @@ function cosmeticServer(answers: { packs?: Reply; open?: Reply } = {}): ReturnTy
     return undefined;
   });
 }
+
+describe("R2378000 one spend at a time", () => {
+  /** The server's words for a spend sent past the ones waiting their turn. */
+  const BUSY = "your last purchase or opening is still going through; try again in a moment";
+
+  let release: () => void = () => undefined;
+  let outside: Promise<void> = Promise.resolve();
+
+  /** Another spend of the tab's (a pack opening, say), out until `settleOutside`. */
+  function spendOutside(): void {
+    act(() => {
+      outside = whileSpending(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          }),
+      );
+    });
+  }
+
+  async function settleOutside(): Promise<void> {
+    await act(async () => {
+      release();
+      await outside;
+    });
+  }
+
+  afterEach(async () => {
+    await settleOutside();
+  });
+
+  it("R2378000 Buy waits while another spend is out, turning a wheel, and a press sends nothing", async () => {
+    const server = shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    expect(screen.getByTestId(T.buy("Core"))).toHaveAttribute("aria-busy", "false");
+
+    spendOutside();
+    for (const pack of shopPacks()) {
+      expect(screen.getByTestId(T.buy(pack)), pack).toBeDisabled();
+      expect(screen.getByTestId(T.buy(pack)), pack).toHaveAttribute("aria-busy", "true");
+      expect(screen.getByTestId(T.buy(pack)), pack).toHaveClass("spend-wait");
+    }
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(server.to("POST", "/api/packs/buy")).toHaveLength(0);
+
+    await settleOutside();
+    expect(screen.getByTestId(T.buy("Core"))).toBeEnabled();
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(screen.getByTestId(T.buy("Core")), "its own press waits with the wheel too").toHaveAttribute("aria-busy", "true");
+    expect(await screen.findByText("150 Jlore")).toBeInTheDocument();
+    expect(screen.getByTestId(T.buy("Core"))).toHaveAttribute("aria-busy", "false");
+    expect(server.to("POST", "/api/packs/buy")).toHaveLength(1);
+  });
+
+  it("R2378000 a short wallet's Buy turns no wheel while a spend is out", async () => {
+    shopServer();
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    spendOutside();
+    expect(screen.getByTestId(T.buy("Core"))).toBeDisabled();
+    expect(screen.getByTestId(T.buy("Core")), "it waits on the wallet, not the spend").toHaveAttribute("aria-busy", "false");
+  });
+
+  it("R2378000 a refusal past the ones waiting their turn shows the server's words, in the reader's language too", async () => {
+    shopServer({ wallet: { status: 200, body: { jlore: 250 } }, buy: refusal(429, "rate_limited", BUSY) });
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(BUSY);
+    expect(screen.getByTestId(T.buy("Core")), "nothing is out, so Buy can be pressed again").toBeEnabled();
+
+    cleanup();
+    await setLocale("zh-CN");
+    render(<Shop token={TOKEN} />);
+    await screen.findByTestId(T.wallet);
+    fireEvent.click(screen.getByTestId(T.buy("Core")));
+    expect(await screen.findByTestId(T.error)).toHaveTextContent("你上一次的购买或开包仍在处理中；请稍后再试");
+  });
+});
 
 describe("#1309 the cosmetic packs", () => {
   it("the shard bar's choice appears only when full", async () => {

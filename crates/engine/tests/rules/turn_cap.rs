@@ -74,7 +74,7 @@ mod r389_b4_3_the_turn_cap {
     }
 
     #[test]
-    fn r389_r3_r1156000_r1705000_two_do_nothing_25_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4()
+    fn r389_r3_r1156000_r1705000_r2368000_two_do_nothing_25_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4()
      {
         let over = pass_until_over(playing("fatigue"));
         assert_eq!(
@@ -82,9 +82,10 @@ mod r389_b4_3_the_turn_cap {
             Some(GameOverReason::HeroDeath)
         );
         assert!(over.turn < TURN_CAP_PLAYER_TURNS);
-        // B4.3's arithmetic at 25 cards (R1705000): both libraries hold 21 and empty on each seat's 21st
-        // turn; the eighth fatigue draw kills on a seat's 29th, the first player's first, at player-turn 57.
-        assert_eq!(over.turn, 57);
-        assert_eq!(over.result.map(|result| result.winner), Some(Winner::P2));
+        // B4.3's arithmetic at 25 cards (R1705000) on three and four opening cards (R2368000): the first
+        // player's library holds 22 and empties on its 22nd turn, the second's 21 on its 21st; the eighth
+        // fatigue draw kills on the second player's 29th turn, player-turn 58, before the first's 30th.
+        assert_eq!(over.turn, 58);
+        assert_eq!(over.result.map(|result| result.winner), Some(Winner::P1));
     }
 }

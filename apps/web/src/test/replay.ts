@@ -26,7 +26,10 @@ import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts"
 // out; "replay-player-8" holds cards in both hands, animates, and passes every replay test.
 // Re-pinned for #2179, whose costs change `cheap20` again: "replay-player-8" now ends with the opponent's
 // hand empty; "replay-player-10" holds cards in both and passes every replay test.
-const SEED = "replay-player-10";
+// Re-pinned for #2368, whose first player opens on three cards (R2368000): "replay-player-10" now ends
+// in under three pages with both hands empty; "replay-player-6" holds cards in both and passes every
+// replay test.
+const SEED = "replay-player-6";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;
 /** The turns the folded game must span for turn moves to have somewhere to go. */
