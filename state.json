@@ -8938,17 +8938,16 @@
     "what": "revise #2300 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T06:31:30Z",
+    "at": "2026-10-29T06:51:16Z",
     "notes": [
-      "delivered revise #2298 on claude-8 (run 40827794917): built",
-      "delivered build #2332 on claude-8 (run 40823705985): approved",
-      "delivered build #2323 on muse (run 40819236649): approved",
-      "started review #2298 on claude-8 (run 40830176398)",
-      "started review #2343 on claude-8 (run 40830264484)",
-      "started revise #2315 on claude-3 (run 40830349468)",
-      "started revise #2300 on claude-4 (run 40830441928)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "CI on #2336: #2336: re-ran the failed jobs of run 40820066607",
+      "delivered review #2343 on claude-8 (run 40830264484): reviewed",
+      "delivered review #2298 on claude-8 (run 40830176398): reviewed",
+      "delivered build #2327 on claude-1 (run 40822098915): approved",
+      "delivered build #2330 on muse (run 40820236656): approved",
+      "could not deliver revise #2317 on claude-3 (run 40816072360), try 1 of 3 (GitHubError: GET /repos/Jlore-Studios/JackiOh/pulls/2317: HTTP 422: The request could not be processed because too many files changed): it is tried again next tick (2 more)",
+      "delivered revise #2309 on muse (run 40800849360): approved",
+      "night_run: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/pulls/2317: HTTP 422: The request could not be processed because too many files changed)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9652,7 +9651,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T06:31:30Z",
+  "loop_tick": "2026-10-29T06:51:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
