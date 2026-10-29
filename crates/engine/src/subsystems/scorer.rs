@@ -965,10 +965,21 @@ pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec
     scored
 }
 
-/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`.
+/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`. R2204001: one offer never holds both
+/// cards of a Core-or-snapshot pair, so a card whose pair a better-ranked card holds is passed over for
+/// the next; a ranking with no pair in it offers what it always did.
 pub fn top_three(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
+    let mut pairs: Vec<String> = Vec::new();
     rank(state, viewer, options)
         .into_iter()
+        .filter(|scored| {
+            let key = crate::catalog::pair_key(&scored.def).to_string();
+            let fresh = !pairs.contains(&key);
+            if fresh {
+                pairs.push(key);
+            }
+            fresh
+        })
         .take(DISCOVER_OPTIONS as usize)
         .collect()
 }

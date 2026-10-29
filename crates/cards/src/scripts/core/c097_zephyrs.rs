@@ -22,26 +22,6 @@ const PICKED: &str = "picked";
 /// R29: "Discover shows the top 3" — §6.3's Discover is 1 of 3 either way, said explicitly.
 const OFFERED: i32 = 3;
 
-/// R29, R2204001: the scorer's top three for `controller` in `state`, a card whose Core-or-snapshot
-/// pair (`catalog::pair_key`) a better-ranked card already holds passed over for the next, so the
-/// Discover offers three different cards once the Training Grounds snapshots ship beside their Core
-/// cards. A ranking with no pair in it gives `subsystems::top_three` unchanged.
-pub(crate) fn perfect_three(state: &GameState, controller: PlayerId, radiant: bool) -> Vec<subsystems::Scored> {
-    let mut pairs: Vec<String> = Vec::new();
-    subsystems::rank(state, controller, &subsystems::ScorerOptions { radiant: Some(radiant) })
-        .into_iter()
-        .filter(|scored| {
-            let key = jackioh_engine::catalog::pair_key(&scored.def).to_string();
-            let fresh = !pairs.contains(&key);
-            if fresh {
-                pairs.push(key);
-            }
-            fresh
-        })
-        .take(OFFERED as usize)
-        .collect()
-}
-
 /// The two faces differ only in which face the scorer ranks and which face reaches the hand.
 fn zephyrs(radiant: bool) -> Script {
     Script {
@@ -55,10 +35,16 @@ fn zephyrs(radiant: bool) -> Script {
             // the ranking is made when the Discover applies, and not again when the hook is rebuilt to
             // resume "exile this" after the answer (§10.7's dry run plays every candidate).
             discover.query_fn = Some(Arc::new(move |at| {
-                let ids: Vec<String> = perfect_three(at.state, at.controller, radiant)
-                    .iter()
-                    .map(|scored| scored.def.id.clone())
-                    .collect();
+                let ids: Vec<String> = subsystems::top_three(
+                    at.state,
+                    at.controller,
+                    &subsystems::ScorerOptions {
+                        radiant: Some(radiant),
+                    },
+                )
+                .iter()
+                .map(|scored| scored.def.id.clone())
+                .collect();
                 json_as::<CatalogQueryArgs>(json!({ "defId": ids }))
             }));
             vec![
@@ -190,7 +176,7 @@ mod tests {
 
             // The state the card read is this one with the spell resolving: #97 is out of the hand and no
             // prompt is open yet, so the scorer's dry run plays.
-            let top: Vec<String> = perfect_three(&resolving(&setup), P1, false)
+            let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(None))
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
@@ -257,7 +243,7 @@ mod tests {
             assert_eq!(charger.map(priority_of), Some(json!("lethal")));
             // …and the card offers the top 3 of the state it resolves in, the best of them a lethal card,
             // which is the whole of what #97 contributes.
-            let top = perfect_three(&resolving(&setup), P1, false);
+            let top = subsystems::top_three(&resolving(&setup), P1, &options(None));
             assert_eq!(top.first().map(priority_of), Some(json!("lethal")));
             let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
             assert_eq!(sorted(&option_ids(&open(s.state()))), sorted(&top));
@@ -336,7 +322,7 @@ mod tests {
             s.play(ZEPHYRS, json!({}));
 
             // Ranked for the state as the Discover meets it, the dry run included (a prompt open stops it).
-            let top: Vec<String> = perfect_three(&resolving(&setup), P1, true)
+            let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(Some(true)))
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
@@ -394,10 +380,10 @@ mod tests {
     /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
     /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). Re-pinned for the
     /// Training Grounds release (#2204): the top three pass over a card whose Core-or-snapshot pair a
-    /// better card holds (`perfect_three`, R2204001), as facing three 7/7s Core #43 Big Felinor and its
+    /// better card holds (`subsystems::top_three`, R2204001), as facing three 7/7s Core #43 Big Felinor and its
     /// snapshot TG #51 both rank at "clear".
     fn offers_rank_at(setup: &Value, priorities: &[&str]) {
-        let top = perfect_three(&resolving(setup), P1, false);
+        let top = subsystems::top_three(&resolving(setup), P1, &options(None));
         for scored in &top {
             let priority = priority_of(scored);
             assert!(

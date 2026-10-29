@@ -106,8 +106,7 @@ mod tests {
     /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet). Re-pinned for
     /// v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release (#1884) its #87 Siva 1.
     /// Re-pinned for the Training Grounds release (#2204): the set's Felinor Units join the pool, #17,
-    /// #22, #23 and #33 and the snapshots #44 (of Core #12) and #51
-    /// (of Core #43).
+    /// #22, #23 and #33 and the snapshots #44 (of Core #12) and #51 (of Core #43).
     const FELINOR_UNITS: &[&str] = &[
         "core-012",
         "core-043",

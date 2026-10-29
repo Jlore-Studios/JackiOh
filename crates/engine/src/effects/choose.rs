@@ -1217,7 +1217,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .shuffle(&pool)
             .into_iter()
             .filter(|def| {
-                let key = crate::catalog::pair_key(*def);
+                let key = crate::catalog::pair_key(def);
                 let fresh = !shown_pairs.contains(&key);
                 if fresh {
                     shown_pairs.push(key);
