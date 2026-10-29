@@ -8062,14 +8062,9 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T00:05:37Z",
+    "at": "2026-10-29T00:15:26Z",
     "notes": [
-      "CI on #2217: #2217: queued a CI fix",
-      "delivered revise #2310 on muse (run 40785018510): approved",
-      "started revise #2301 on muse (run 40792002764)",
-      "started revise #2310 on muse (run 40792073497)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "CI on #2217: #2217: queued a CI fix"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8775,7 +8770,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T00:05:37Z",
+  "loop_tick": "2026-10-29T00:15:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
