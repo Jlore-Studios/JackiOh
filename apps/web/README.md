@@ -92,6 +92,14 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
+`routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
+`commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
+shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animation). It is never
+mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
+marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
+opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -206,6 +214,15 @@ the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
+**Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
+under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
+(`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
+and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
+hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
+The list ships empty.
+
 ## Commands
 
 ```
@@ -293,7 +310,12 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
-                        one POST /api/trios/import, never the autosave (R341);
+                        one POST /api/trios/import, never the autosave (R341); the open deck's History
+                        popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
+                        kept, newest first, each with its date and the cards in and out since the one
+                        before (deckHistory.ts), and Restore on all but the newest, one POST that the
+                        server keeps as a new version, never the autosave; unsaved edits go first, and a
+                        deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
                         under it (DeckPatchBadge.tsx, R2097000)
@@ -570,14 +592,14 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- Against the Easy AI a free game's snapshot adds `lethal: true` while the human has a sure win this
-  turn by what they can see (R2102000): the core asks `lethalHint(state, human, deadlineMs)`, which the
-  Rust AI answers from the human's own redaction, so the AI's hidden cards never change it, under a
-  wall-clock cap of its own (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). Medium, Hard and a
-  lesson never ask. The route passes it to `Game`'s `lethalHint` while the Lethal hint setting is
-  on, and the board shows it (`data-lethal-hint` on the game, which outlines the enemy hero and End
-  turn, and the `lethal-hint` line "You have lethal") once it shows the newest view, never on a
-  replay. Online and hotseat boards never set it.
+- In every game against the AI (each tier, a sandbox game, custom cards, a lesson) the snapshot adds
+  `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
+  the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
+  redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
+  (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). The route passes it to `Game`'s `lethalHint`
+  while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
+  outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
+  the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
 - A free game in progress survives a reload (R668). After every answer the core writes its save

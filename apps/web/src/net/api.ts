@@ -108,6 +108,8 @@ export type RequestOptions = {
   token?: string | null;
   body?: unknown;
   signal?: AbortSignal;
+  /** A spend's `Idempotency-Key` (R2124000): `spendRequest` below sets it, and nothing else does. */
+  idempotencyKey?: string;
   /** R2119000: the request outlives the page (`fetch`'s `keepalive`), for one sent as it goes away. */
   keepalive?: boolean;
 };
@@ -139,6 +141,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.authorization = `Bearer ${options.token}`;
   }
   if (options.body !== undefined) headers["content-type"] = "application/json";
+  if (options.idempotencyKey !== undefined) headers["idempotency-key"] = options.idempotencyKey;
 
   // A request that never answers (a stalled mobile network, a dead socket) must not leave a screen
   // on "Checking your account…" or a button on "Redeeming…" for ever. The race is against our own
@@ -219,6 +222,36 @@ async function keptGet<T>(path: string, token: string | null, signal?: AbortSign
   const answer = await apiRequest<T>(path, { token, signal });
   rememberRead(token, path, answer);
   return answer;
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2124000: a spend runs once. Every spend (a pack bought or opened, a token redeemed, a chase
+// bought, an invite code redeemed) goes with an `Idempotency-Key`, a UUID minted when the player
+// presses and sent again by that press's retries, "Try again" after a timeout included, so a spend
+// the server finished after we gave up answers the same and spends nothing again. Any answer from
+// the server, a refusal included, ends the press: the next one is a new key. A press with no answer
+// (a timeout or a failed transport) or a server error keeps its key for the retry. A press is the
+// spend's path and body: pressing again before an answer is the retry of the press that got none.
+// ---------------------------------------------------------------------------------------------
+
+/** The first status that is the server's own failure, not its answer to the spend. */
+const FIRST_SERVER_ERROR_STATUS = 500;
+
+/** Each unanswered press's key, by `${path} ${body}`, until the server answers it. */
+const unansweredKeys = new Map<string, string>();
+
+async function spendRequest<T>(path: string, token: string, body: unknown): Promise<T> {
+  const press = `${path} ${JSON.stringify(body)}`;
+  const idempotencyKey = unansweredKeys.get(press) ?? globalThis.crypto.randomUUID();
+  unansweredKeys.set(press, idempotencyKey);
+  try {
+    const answer = await apiRequest<T>(path, { method: "POST", token, body, idempotencyKey });
+    unansweredKeys.delete(press);
+    return answer;
+  } catch (cause) {
+    if (cause instanceof ApiRequestError && cause.status < FIRST_SERVER_ERROR_STATUS) unansweredKeys.delete(press);
+    throw cause;
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -488,7 +521,7 @@ export function getCodeStatus(token: string): Promise<CodeStatusResponse> {
 export type RedeemResponse = { status: "active"; needsInviteCode: false };
 
 export function redeemCode(token: string, code: string): Promise<RedeemResponse> {
-  return apiRequest<RedeemResponse>("/api/codes/redeem", { method: "POST", token, body: { code } });
+  return spendRequest<RedeemResponse>("/api/codes/redeem", token, { code });
 }
 
 export type CollectionEntry = { cardId: string; quantity: number };
@@ -675,7 +708,7 @@ function withItem<T extends { id: string }>(list: T[], item: T): T[] {
 }
 
 export async function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
-  const answer = await apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+  const answer = await spendRequest<OpenedPackResponse>("/api/packs/open", token, { pack });
   // R2125000: the next visit shows what this answer left.
   updateCachedRead<PacksResponse>(token, keptPaths.packs, (before) => ({
     ...before,
@@ -725,7 +758,7 @@ export function getTracks(token: string): Promise<TracksResponse> {
 export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
 
 export async function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
-  const answer = await apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+  const answer = await spendRequest<BoughtPackResponse>("/api/packs/buy", token, { pack });
   // R2125000: the next visit shows what this answer left.
   rememberRead(token, keptPaths.wallet, { jlore: answer.jlore } satisfies WalletResponse);
   updateCachedRead<PacksResponse>(token, keptPaths.packs, (before) => ({
@@ -759,11 +792,7 @@ export function getTokens(token: string): Promise<TokenBarsResponse> {
 
 /** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
 export async function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
-  const answer = await apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", {
-    method: "POST",
-    token,
-    body: { cardId },
-  });
+  const answer = await spendRequest<TokenBarsResponse>("/api/tokens/redeem-card", token, { cardId });
   // R2125000: the next visit shows what this answer left.
   rememberRead(token, keptPaths.tokens, answer);
   return answer;
@@ -782,11 +811,11 @@ export async function redeemCosmeticToken(
   cosmeticId: string,
   cardId?: string,
 ): Promise<TokenBarsResponse> {
-  const answer = await apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
-    method: "POST",
+  const answer = await spendRequest<TokenBarsResponse>(
+    "/api/tokens/redeem-cosmetic",
     token,
-    body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
-  });
+    cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
+  );
   // R2125000: the next visit shows what this answer left.
   rememberRead(token, keptPaths.tokens, answer);
   return answer;
@@ -836,11 +865,7 @@ export type OpenedCosmeticPackResponse = {
 };
 
 export async function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
-  const answer = await apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", {
-    method: "POST",
-    token,
-    body: {},
-  });
+  const answer = await spendRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", token, {});
   // R2125000: the next visit shows what this answer left.
   updateCachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks, (before) => ({
     ...before,
@@ -855,11 +880,11 @@ export async function openCosmeticPack(token: string): Promise<OpenedCosmeticPac
  * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
  */
 export async function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
-  const answer = await apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
-    method: "POST",
+  const answer = await spendRequest<CosmeticPacksResponse>(
+    "/api/cosmetic-packs/chase",
     token,
-    body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
-  });
+    cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
+  );
   // R2125000: the next visit shows what this answer left.
   rememberRead(token, keptPaths.cosmeticPacks, answer);
   return answer;
@@ -955,6 +980,38 @@ export async function deleteDeck(token: string, id: string, options: SendOptions
         ? { ...trio, deckIds: trio.deckIds.map((slot) => (slot === id ? null : slot)) as TrioSlots }
         : trio,
     ),
+  }));
+  return answer;
+}
+
+/** R2100000: a version a save of the deck kept: its name and cards then, and when (ms). */
+export type DeckVersion = { id: string; name: string; cards: string[]; savedAt: number };
+
+/** `GET /api/decks/:id/versions` (R2100000): the deck's kept versions, newest first; 404 when the deck is not the caller's. */
+export function getDeckVersions(token: string, deckId: string): Promise<{ versions: DeckVersion[] }> {
+  return apiRequest<{ versions: DeckVersion[] }>(`/api/decks/${encodeURIComponent(deckId)}/versions`, { token });
+}
+
+/**
+ * `POST /api/decks/:id/versions/:versionId/restore` (R2100000): saves the version's name and cards as
+ * the deck's, keeping its portrait and picks, and keeps that as a new version, so the one it replaced
+ * stays listed. Refusals as `putDeck`'s (a draft rule, `update_required`), and 404 for a deck or
+ * version that is not the caller's.
+ */
+export async function restoreDeckVersion(
+  token: string,
+  deckId: string,
+  versionId: string,
+  catalogVersion: string,
+): Promise<{ deck: SavedDeck; versions: DeckVersion[] }> {
+  const answer = await apiRequest<{ deck: SavedDeck; versions: DeckVersion[] }>(
+    `/api/decks/${encodeURIComponent(deckId)}/versions/${encodeURIComponent(versionId)}/restore`,
+    { method: "POST", token, body: { catalogVersion } },
+  );
+  // R2125000: the next visit shows the restored deck, as after any save.
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+    ...before,
+    decks: withItem(before.decks, answer.deck),
   }));
   return answer;
 }
