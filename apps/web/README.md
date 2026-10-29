@@ -214,6 +214,15 @@ the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
+**Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
+under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
+(`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
+and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
+hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
+The list ships empty.
+
 ## Commands
 
 ```
