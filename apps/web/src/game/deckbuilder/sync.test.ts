@@ -23,6 +23,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
+import { settle } from "../../test/settle.ts";
 import { fixtureCardId } from "./fixtures.ts";
 import {
   IMPORT_OFFLINE_MESSAGE,
@@ -46,14 +47,6 @@ const CATALOG_VERSION = "test-catalog-1";
 const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * 1000;
 
 // Fakes
-
-async function settle(): Promise<void> {
-  for (let round = 0; round < 5; round += 1) {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  }
-}
 
 type ManualClock = SyncClock & { advance(ms: number): Promise<void>; pending(): number };
 
@@ -84,10 +77,10 @@ function manualClock(start = 1_000): ManualClock {
         timers.delete(due[0]);
         now = due[1].at;
         due[1].run();
-        await settle();
+        await settle({ macrotasks: 5, ticks: 0, act: false });
       }
       now = target;
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     },
   };
 }
@@ -326,7 +319,7 @@ describe("the debounced save", () => {
 
     store.updateDeck(id, { cards: [fixtureCardId(7)] });
     release();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(store.getSnapshot().unsynced.has(id), "the confirmation was for the older revision").toBe(true);
 
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
@@ -342,7 +335,7 @@ describe("the debounced save", () => {
     store.start();
     const id = store.createDeck({ name: "Aggro" }) ?? "";
     window.dispatchEvent(new Event("pagehide"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls.map((call) => call.id)).toEqual([id]);
   });
 
@@ -356,7 +349,7 @@ describe("the debounced save", () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     try {
       document.dispatchEvent(new Event("visibilitychange"));
-      await settle();
+      await settle({ macrotasks: 5, ticks: 0, act: false });
     } finally {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
@@ -445,7 +438,7 @@ describe("offline", () => {
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     server.state.offline = false;
     window.dispatchEvent(new Event("online"));
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.decks.has(id)).toBe(true);
   });
 
@@ -458,7 +451,7 @@ describe("offline", () => {
     const id = first.createDeck({ name: "Made on the train", cards: [fixtureCardId(4)] }) ?? "";
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     const second = open({ api: server.api, clock: manualClock(), storage });
     expect(second.getSnapshot().decks.map((deck) => deck.id)).toEqual([id]);
@@ -536,7 +529,7 @@ describe("merging the mirror over the server", () => {
     first.deleteDeck("d1");
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     first.stop();
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
 
     server.state.offline = false;
     const secondClock = manualClock();
@@ -825,7 +818,7 @@ describe("a trio import", () => {
     expect(result.ok ? result.trioId : "").toBe(trio?.id);
     expect(trio?.deckIds).toEqual([snapshot.decks[0]?.id, null, snapshot.decks[1]?.id]);
     expect(trio?.name).toBe("Shared trio");
-    await settle();
+    await settle({ macrotasks: 5, ticks: 0, act: false });
     expect(server.calls).toHaveLength(1);
   });
 
@@ -1119,5 +1112,67 @@ describe("the deck's portrait (R641)", () => {
     });
     expect(result.ok).toBe(true);
     expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
+  });
+});
+
+describe("the catalog a deck was last saved under (R2097000)", () => {
+  it("R2097000 a server deck keeps the catalog version it was saved under", () => {
+    const store = open({
+      api: fakeServer().api,
+      server: response([{ ...savedDeck("d1", "Aggro", [fixtureCardId(1)], 1), catalogVersion: "older" }]),
+    });
+    expect(store.getSnapshot().decks[0]?.catalogVersion).toBe("older");
+  });
+
+  it("R2097000 a deck made or edited here carries this build's catalog version", () => {
+    const server = fakeServer();
+    const store = open({
+      api: server.api,
+      server: response([{ ...savedDeck("d1", "Aggro", [fixtureCardId(1)], 1), catalogVersion: "older" }]),
+    });
+    const id = store.createDeck({ name: "Fresh" });
+    expect(store.getSnapshot().decks.find((deck) => deck.id === id)?.catalogVersion).toBe(CATALOG_VERSION);
+    store.updateDeck("d1", { name: "Aggro v2" });
+    expect(store.getSnapshot().decks.find((deck) => deck.id === "d1")?.catalogVersion).toBe(CATALOG_VERSION);
+  });
+
+  it("R2097000 the mirror keeps an unsaved deck's catalog version", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          {
+            item: { id: "d1", name: "Old deck", cards: [fixtureCardId(1)], catalogVersion: "older", createdAt: 1, updatedAt: 1 },
+            dirty: true,
+          },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    expect(mirrored?.decks[0]?.item.catalogVersion).toBe("older");
+
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          {
+            item: { id: "d1", name: "Old deck", cards: [fixtureCardId(1)], createdAt: 1, updatedAt: 1 },
+            dirty: true,
+          },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const bare = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    expect(bare?.decks[0]?.item).toBeDefined();
+    expect("catalogVersion" in (bare?.decks[0]?.item ?? {})).toBe(false);
   });
 });

@@ -495,7 +495,11 @@ fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRu
             .result
             .as_ref()
             .is_some_and(|result| result.winner == Winner::from(viewer));
-        if won || (trial.result.is_none() && enemy_health <= projected_board_damage(&trial, viewer)) {
+        // R2201000: no lethal against a seat that cannot lose.
+        let can_lose = crate::state::can_lose(&trial, enemy);
+        if won
+            || (trial.result.is_none() && can_lose && enemy_health <= projected_board_damage(&trial, viewer))
+        {
             outcome.lethal = true;
         }
         if enemy_units_before > 0 && crate::zones::active_units_of(&trial, enemy).is_empty() {
@@ -622,6 +626,7 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         radiant_fallback: None,
         ingredients: None,
         craft: None,
+        snapshot_of: None,
         base: face.clone(),
         radiant: face,
     }
@@ -864,6 +869,8 @@ fn score_parts(
     };
     let lethal = played.lethal
         || (contribution > 0
+            // R2201000: no lethal against a seat that cannot lose.
+            && crate::state::can_lose(state, enemy)
             && projected_board_damage_in(auras, viewer) + contribution
                 >= crate::duos_life::effective_life(state, enemy));
 

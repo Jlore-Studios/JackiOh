@@ -22,7 +22,7 @@
 //! Every roll and every price move draws from the match's rng, in the order this file draws them
 //! (§10.7); opening and re-rolling report nothing (R1853000).
 
-use crate::catalog::{def_of, find_def, query_cost, registered_catalog};
+use crate::catalog::{def_of, find_def, made_by_a_rule, query_cost, registered_catalog};
 use crate::config::{
     HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_CREDITS_PER_MANA,
     MARKETPLACE_CREDITS_PER_MANA_PAST, MARKETPLACE_CYCLE_TURNS, MARKETPLACE_FIXED_LOT_STOCK,
@@ -134,8 +134,10 @@ fn moved_price(rng: &mut Rng, base: i32) -> i32 {
 
 /// R1853001: the ids one lot draws from, in a fixed order: the catalog's Resources sorted, the ids named
 /// that a definition is found for, or a set's cards that are no token, in catalog order, all of them or
-/// (R1881006) those that print a keyword on their base face.
+/// (R1881006) those that print a keyword on their base face. A set lot never holds a card only a rule
+/// makes (R1857001: the Dormant Starship), as no `catalog::query` pool does.
 fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
+    let in_set = |def: &CardDef, set| def.set == set && !def.token && !made_by_a_rule(def);
     match pool {
         MarketPool::Resources => resource_def_ids(),
         MarketPool::Ids(ids) => ids
@@ -145,12 +147,12 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
             .collect(),
         MarketPool::Set(set) => registered_catalog()
             .values()
-            .filter(|def| def.set == set && !def.token)
+            .filter(|def| in_set(def, set))
             .map(|def| def.id.clone())
             .collect(),
         MarketPool::SetKeyword(set, keyword) => registered_catalog()
             .values()
-            .filter(|def| def.set == set && !def.token && has_keyword(&def.base.keywords, keyword))
+            .filter(|def| in_set(def, set) && has_keyword(&def.base.keywords, keyword))
             .map(|def| def.id.clone())
             .collect(),
     }
@@ -163,7 +165,11 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
 pub fn roll_offers(state: &GameState, rng: &mut Rng, table: &[MarketLot]) -> Vec<MarketOffer> {
     let mut offers: Vec<MarketOffer> = Vec::new();
     for lot in table {
-        let mut candidates = pool_ids(state, lot.pool);
+        // R2201001: a held game offers no Legendary or Mythic card.
+        let mut candidates: Vec<String> = pool_ids(state, lot.pool)
+            .into_iter()
+            .filter(|id| !find_def(Some(state), id).is_some_and(crate::catalog::held_out))
+            .collect();
         for _ in 0..lot.count {
             if candidates.is_empty() {
                 break;

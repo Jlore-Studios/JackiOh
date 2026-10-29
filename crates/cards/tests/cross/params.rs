@@ -391,7 +391,12 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // The Meditative+ set, held until it ships (R1178000), joins batch by batch (M+ #4's
         // `embiggenedCards`); each of its numbers is held to the rule above, and the pinned lists are
         // the shipped sets'. So is the held Stinkyscape set's (R1857000), until its release re-pins them.
-        base_only.retain(|entry| !entry.starts_with("meditativeplus-") && !entry.starts_with("stinkyscape-"));
+        // The held Training Grounds set's are too (R2194000), its snapshots' among them (R2195003).
+        base_only.retain(|entry| {
+            !entry.starts_with("meditativeplus-")
+                && !entry.starts_with("stinkyscape-")
+                && !entry.starts_with("traininggrounds-")
+        });
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
@@ -470,10 +475,14 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .count();
         // The Meditative+ set, held until it ships (R1178000), joins the count batch by batch; each
         // of its numbers is held to the rule above, and the pinned counts are the shipped sets'. So
-        // does the held Stinkyscape set (R1857000).
+        // does the Stinkyscape set (R1857000), and the held Training Grounds set (R2194000).
         let held = radiant_only
             .iter()
-            .filter(|entry| entry.starts_with("meditativeplus-") || entry.starts_with("stinkyscape-"))
+            .filter(|entry| {
+                entry.starts_with("meditativeplus-")
+                    || entry.starts_with("stinkyscape-")
+                    || entry.starts_with("traininggrounds-")
+            })
             .count();
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
@@ -547,12 +556,15 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     const AI_PRINTED: &str = "an AI generated card's printed number (R482)";
     /// An Immutable card's number: neither a Buff nor a Nerf reaches it (R386).
     const IMMUTABLE: &str = "an Immutable card's number, which nothing tunes";
-    /// A digit in the name of a card the text names (the held Stinkyscape set's Siva 1, Paragon Mk1,
+    /// A digit in the name of a card the text names (the Stinkyscape set's Siva 1, Paragon Mk1,
     /// Scanning Probe Mk1, Shockwave447, RR-5000, Trila 3, 1v1 Final Destination), which is no amount.
     const CARD_NAME: &str = "a digit in a card name the text names";
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
+        // R2195003: the snapshots of Core #23 and #26, TG #49 and #50.
+        ("traininggrounds-049", KEYWORD),
+        ("traininggrounds-050", TARGETS),
         ("classic-023", KEYWORD),
         ("classic-057", KEYWORD),
         ("classicplus-025", KEYWORD),
@@ -578,6 +590,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-157", KEYWORD),
         ("stinkyscape-t-korrelite", KEYWORD),
         ("stinkyscape-t-axnit", KEYWORD),
+        ("traininggrounds-010", KEYWORD),
         ("core-042", PRICE),
         ("core-046", PRICE),
         ("core-051", PRICE),
@@ -611,6 +624,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classicplus-043", ENGINE),
         ("classicplus-062", ENGINE),
         ("classicplus-073", ENGINE),
+        ("traininggrounds-039", ENGINE),
         ("meditative-032", ENGINE),
         ("meditative-039-1", ENGINE),
         ("meditative-095", ENGINE),
@@ -644,6 +658,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("core-026", TARGETS),
         ("classic-029", EITHER_WAY),
         ("classic-064", EITHER_WAY),
+        ("traininggrounds-034", EITHER_WAY),
         ("classicplus-t-ai-03", AI_PRINTED),
         ("classicplus-t-ai-04", AI_PRINTED),
         ("classicplus-t-ai-05", AI_PRINTED),

@@ -144,6 +144,7 @@ const SET_PREFIXES: &[(&str, &str)] = &[
     ("Meditative+", "Meditative+"),
     ("S", "Stinkyscape"),
     ("Stinkyscape", "Stinkyscape"),
+    ("TG", "Training Grounds"),
 ];
 
 /// The set of a card in `cards` that neither a set name nor a card before it places: Core's cards

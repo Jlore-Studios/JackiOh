@@ -2,7 +2,7 @@
 //! `_generated.ts`, `missing-tests.ts` and `registry.test.ts`'s completeness checks.
 //!
 //! Walks `src/scripts/<set>/<file>.rs` (`<set>` one of `core`, `classic`, `classic_plus`,
-//! `meditative`, `meditative_plus`, `stinkyscape`, the last a held set's, R1857000), reads each
+//! `meditative`, `meditative_plus`, `stinkyscape`, `training_grounds`, the last a held set's, R2194000), reads each
 //! file's `pub const ID: &str = "…";` line, and writes `$OUT_DIR/registry.rs`:
 //!
 //! ```text
@@ -58,6 +58,8 @@
 //! `COMPLICATED` (more than its `COMPLICATED_CODE_LINES`), both numbers read off
 //! `crates/engine/src/config.rs` as `CODE_BLOCK_MAX_LINES` is. Each is sorted by id, and computed
 //! anew on every build, so both lists grow with the catalog; `register_all` hands them to the engine.
+//! Beside them, `LIST_READERS`: the ids whose script reads the two lists (`reads_card_lists`, R2173000),
+//! which the golden replay's list test keeps out of its shard (R1846003).
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
@@ -73,18 +75,20 @@ use std::path::{Path, PathBuf};
 #[allow(dead_code)]
 #[path = "src/code_lines.rs"]
 mod code_lines;
-use code_lines::{code_lines, without_comments};
+use code_lines::{code_lines, reads_card_lists, without_comments};
 
 /// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
 /// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
-/// `stinkyscape` is the held Stinkyscape set's (issue #1836, R1857000).
-const SETS: [&str; 6] = [
+/// `stinkyscape` is the Stinkyscape set's (issue #1836, R1857000), and `training_grounds` the held
+/// Training Grounds set's (issue #2193, R2194000).
+const SETS: [&str; 7] = [
     "core",
     "classic",
     "classic_plus",
     "meditative",
     "meditative_plus",
     "stinkyscape",
+    "training_grounds",
 ];
 
 /// One card file: its set, its module name, its absolute path and its `ID`.
@@ -230,11 +234,15 @@ fn render_card_metrics(
     busted_over: usize,
     complicated_over: usize,
 ) -> String {
+    let mut readers: Vec<&str> = Vec::new();
     let counts: Vec<(&str, usize)> = by_id
         .iter()
         .map(|(id, file)| {
             let source = std::fs::read_to_string(&file.path)
                 .unwrap_or_else(|e| panic!("{}: {e}", file.path.display()));
+            if reads_card_lists(&source) {
+                readers.push(id);
+            }
             (*id, code_lines(&source))
         })
         .collect();
@@ -262,6 +270,14 @@ fn render_card_metrics(
         }
         out.push_str("];\n");
     }
+    out.push_str(
+        "\n/// The ids whose script reads the BUSTED or complicated lists, sorted by id (R2173000).\n",
+    );
+    out.push_str("pub static LIST_READERS: &[&str] = &[\n");
+    for id in &readers {
+        let _ = writeln!(out, "    {id:?},");
+    }
+    out.push_str("];\n");
     out
 }
 

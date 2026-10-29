@@ -19,6 +19,7 @@ import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
@@ -104,14 +105,6 @@ function serve(challenges: Challenges, special?: (call: Call) => Reply | undefin
 
 function acceptButtons(): HTMLElement[] {
   return screen.queryAllByRole("button", { name: /^accept/i });
-}
-
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
 }
 
 const realApi = await vi.importActual<typeof import("../net/api.ts")>("../net/api.ts");
@@ -362,7 +355,7 @@ describe("B57 the challenge toast", () => {
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(BOB.username);
@@ -376,7 +369,7 @@ describe("B57 the challenge toast", () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(0);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(ANN.username);
@@ -396,7 +389,7 @@ describe("B57 the challenge toast", () => {
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
     },
@@ -520,7 +513,7 @@ describe("R2031000 an All Random challenge's more cards from", () => {
       // The lobby (or any other door) writes the device's pick while the shell is up.
       window.localStorage.setItem(PLAY_LEAN_SET_KEY, "Classic");
       challenges.incoming = [{ ...INCOMING, mode: "random" }];
-      await settle(SOCIAL_POLL_MS + 1);
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
       await waitFor(() => {
         expect(screen.getByTestId<HTMLSelectElement>(challengeToastTestid.lean).value).toBe("Classic");
       }, SOON);

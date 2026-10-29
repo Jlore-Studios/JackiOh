@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 73 Paragon Mk2, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 73 Paragon Mk2, a card of the Stinkyscape set.
 //! (4) Unit, Legendary, 7/1 → 14/2: Starship Piece, Charge, Flying, Ranged, Divine Shield.
 //! Radiant: Starship Piece, Charge, Flying, Ranged, Divine Shield, Pierce.
 //!

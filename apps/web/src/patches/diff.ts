@@ -92,6 +92,8 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "radiantFallback",
   "dealsDamage",
   "usesPlague",
+  // R1437000: display only and in no snapshot, so a change to it alone is no card change.
+  "flavor",
   "base",
   "radiant",
 ]);
@@ -122,8 +124,11 @@ function paramText(param: Param): string {
   if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
   if (param.tunedOn === "base") parts.push("tuned on the base face only");
   if (param.power !== undefined) parts.push(`tuned only while the card has ${powerTitle({ name: param.power }, false)}`);
-  // R1748000: a number only the card's Cry reads is out of a Nerf's and a Buff's reach on the field.
+  // R1748000: a number only the card's Cry reads is out of a Nerf's and a Buff's reach on the field,
+  // on the one face it names (R2261001).
   if (param.cry === true) parts.push("tuned only off the field");
+  if (param.cry === "base") parts.push("tuned only off the field on the base face");
+  if (param.cry === "radiant") parts.push("tuned only off the field on the Radiant face");
   parts.push(param.better === "up" ? "more is better" : "less is better");
   return parts.join(", ");
 }

@@ -75,13 +75,6 @@ mod tests {
 
     use crate::matches_object;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     /// The cost a player's own view gives a card in their hand (R65).
     fn hand_cost(s: &Scenario, player: PlayerId, def_id: &str) -> Option<i64> {
         let view = js(&s.view(player));

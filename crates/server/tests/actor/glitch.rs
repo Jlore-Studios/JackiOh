@@ -429,6 +429,10 @@ mod glitchs_swap {
             "playerId": "p1",
         }));
         idle(&w).await;
+        // #2213: the first `idle` can be queued before the socket's reader has queued the frame; the second
+        // follows it, so it waits for the frame's whole ending. The result's write holds no store lock
+        // while it folds, so no read of the tables waits it out any more.
+        idle(&w).await;
         // Stamped p2, the seat P1 plays now: p1 — P2 — wins.
         let actions = table(&w.app, |data| json!(data.tables.match_actions)).await;
         let last = &actions.last().expect("a logged action")["action"];

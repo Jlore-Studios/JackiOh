@@ -1371,6 +1371,12 @@ pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
     }
 }
 
+/// `value`'s content, or a panic naming what the test expected there: the one copy every card and
+/// rules test shares (#2023; crates/tools/tests/acceptance.rs refuses a test's own copy).
+pub fn must<T>(value: Option<T>, what: &str) -> T {
+    value.unwrap_or_else(|| panic!("expected {what}"))
+}
+
 fn or_fail<T>(result: Result<T, String>) -> T {
     match result {
         Ok(value) => value,
@@ -3245,7 +3251,7 @@ mod tests {
         }
     }
 
-    /// The reads every card and rules test shares rather than copying (#1826).
+    /// The reads every card and rules test shares rather than copying (#1826, #2023).
     mod shared_reads {
         use super::*;
         use crate::testkit::pick;
@@ -3264,6 +3270,18 @@ mod tests {
                     s.unit_at("p1", 2);
                 },
                 "should hold a unit in lane 2",
+            );
+        }
+
+        #[test]
+        fn must_hands_back_the_value_and_fails_loudly_naming_what_is_missing() {
+            let s = board();
+            assert_eq!(must(s.unit("p1", 1), "p1's unit in lane 1").def_id, "core-043");
+            expect_throw_with(
+                || {
+                    must(s.unit("p1", 2), "p1's unit in lane 2");
+                },
+                "expected p1's unit in lane 2",
             );
         }
 

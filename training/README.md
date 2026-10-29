@@ -33,7 +33,7 @@ Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban o
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
 Meditative set into the AI's decks: it lifted R1390's gate after a sweep of record over the set's 102
 cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans were the unban
-lane's work until #1677; a sweep of record measures them now (#1675). The shadow ban holds Meditative cards only (R732000), and since #1186's sweep, which banned none,
+lane's work until #1677; a sweep of record measures them now (#1675). The shadow ban holds no card of a set before Meditative and at most half of Meditative's (R732000), and since #1186's sweep, which banned none,
 Meditative+ cards on the same terms (R1186000), and since #1885 Stinkyscape cards, at most 35 of them
 (R1885000): no lane, sweep or person adds a card of an earlier set to
 it, and the lanes only ever remove entries; the sweep after a promotion may ban a Meditative or
@@ -55,7 +55,7 @@ run.
 
 ## How a lane runs
 
-The training box (an EC2 `m7i-flex.large` set up by #306's part 39, always on until it became the Muse box, an `m7i-flex.xlarge` since 2026-10-26) runs three systemd services,
+The training box (an EC2 `m7i-flex.large` set up by #306's part 39, always on until it became the Muse box) runs three systemd services,
 `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user
 (`agent-train-improve`, `agent-train-unban`, `agent-train-gather`) with its own checkout (the two
 training lanes also hold a Muse login and GitHub token, which the gather lane needs neither of). Each runs

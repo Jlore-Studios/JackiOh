@@ -1,4 +1,4 @@
-//! Stinkyscape #57 Flak v4 (SPEC §8.10 row 57). Unit 0/6 → 0/12, Weapon, cost 3, Epic; held (R1420).
+//! Stinkyscape #57 Flak v4 (SPEC §8.10 row 57). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to all enemies, twice." — damage 2
 //!   Radiant: the same text — damage 4

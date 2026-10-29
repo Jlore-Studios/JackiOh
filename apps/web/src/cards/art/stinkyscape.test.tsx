@@ -8,7 +8,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import STINKYSCAPE_V050 from "./fixtures/stinkyscape-art-v0.5.0.json";
 import { CardArt } from "./CardArt.tsx";
+import { hashId } from "./hash.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES, stinkyscapeSvg, stinkySubject, tierOf, type StinkyFamily } from "./stinkyscape.ts";
 import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -189,6 +191,24 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
       expect(art?.dataset.artFamily, card.id).toBeUndefined();
       expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionFor(card.type), false, null));
       cleanup();
+    }
+  });
+});
+
+describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with", () => {
+  // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
+  // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
+  const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
+
+  it("R503 the fixture covers every Stinkyscape entry", () => {
+    expect(Object.keys(recorded).sort()).toEqual(SET.map((card) => card.id).sort());
+  });
+
+  it("R503 every Stinkyscape entry draws exactly the picture it shipped with, on both faces", () => {
+    for (const card of SET) {
+      const [base, radiant] = recorded[card.id] ?? [];
+      expect(hashId(svgOf(card, false)), card.id).toBe(base);
+      expect(hashId(svgOf(card, true)), card.id).toBe(radiant);
     }
   });
 });

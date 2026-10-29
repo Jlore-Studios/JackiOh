@@ -12,7 +12,8 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
-import { proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
+import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { isTrainingGroundsArt, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
@@ -63,11 +64,14 @@ export function CardArt({
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
   const cardName = name ?? resolve?.(defId)?.name;
-  // R2170000: the Stinkyscape set draws its own families; every other card keeps R503's art.
+  // R2170000 and R2202000: the Stinkyscape and Training Grounds sets draw their own families, and a
+  // Training Grounds snapshot its Core card's picture; every other card keeps R503's art.
+  const artId = snapshotArtOf(defId) ?? defId;
   const stinky = isStinkyscapeArt(defId);
-  const motif = stinky ? null : motifFor(cardName, theme);
+  const yard = isTrainingGroundsArt(defId);
+  const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
-  const real = artUrl(defId, radiant, manifest);
+  const real = artUrl(artId, radiant, manifest);
 
   if (real !== null && real.src !== failedSrc) {
     const src = real.src;
@@ -97,7 +101,9 @@ export function CardArt({
     ? null
     : stinky
       ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
-      : proceduralArtUri(defId, theme, compositionFor(type), radiant, motif);
+      : yard
+        ? trainingGroundsArtUri(defId, cardName, tags, type, radiant)
+        : proceduralArtUri(artId, theme, compositionFor(type), radiant, motif);
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
@@ -107,7 +113,9 @@ export function CardArt({
       data-art-theme={theme}
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
-      data-art-family={stinky ? stinkySubject(defId, cardName, tags, type).family : undefined}
+      data-art-family={
+        stinky ? stinkySubject(defId, cardName, tags, type).family : yard ? yardSubject(defId, cardName, tags, type).family : undefined
+      }
       data-art-pending={uri === null ? "true" : undefined}
       aria-hidden="true"
       style={

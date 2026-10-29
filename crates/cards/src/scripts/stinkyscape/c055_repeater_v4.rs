@@ -1,4 +1,4 @@
-//! Stinkyscape #55 Repeater v4 (SPEC §8.10 row 55). Unit 0/6 → 0/12, Weapon, cost 3, Epic; held (R1420).
+//! Stinkyscape #55 Repeater v4 (SPEC §8.10 row 55). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 6: Deal {damage} damage to an enemy, with Pierce. Deals half damage to heroes."
 //!            — damage 1

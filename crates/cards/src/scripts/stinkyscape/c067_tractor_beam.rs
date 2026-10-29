@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 67 Tractor Beam, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 67 Tractor Beam, a card of the Stinkyscape set.
 //!   Base:    "Starship Piece, Equip\nStart of turn: Gain a random Stinkyscape Resource." (0/2)
 //!   Radiant: "Starship Piece, Equip\nStart of turn: Gain a random Radiant Stinkyscape Resource." (0/4)
 //!

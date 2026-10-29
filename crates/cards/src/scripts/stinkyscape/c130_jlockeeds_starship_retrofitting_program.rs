@@ -1,5 +1,5 @@
 //! Stinkyscape #130 Jlockeed's Starship Retrofitting Program (SPEC §8.10 row 130). (1) Spell, Jlockeed,
-//! Epic; held (R1420).
+//! Epic.
 //!   Base:    "Add a random Jlockeed card to your hand. It gains Starship Piece."
 //!   Radiant: "Add a random Radiant Jlockeed card to your hand. It gains Starship Piece and costs
 //!            ({discount}) less." — discount 1

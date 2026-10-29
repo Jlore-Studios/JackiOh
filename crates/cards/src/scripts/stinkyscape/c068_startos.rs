@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 68 Startos, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 68 Startos, a card of the Stinkyscape set.
 //! (1) Unit, Common, 3/3 → 6/6: Starship Piece, Flying.
 //!
 //! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its

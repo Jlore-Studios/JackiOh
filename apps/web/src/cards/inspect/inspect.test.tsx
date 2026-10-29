@@ -3,14 +3,13 @@
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState, type ReactElement, type ReactNode } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, PlayerView, UnitView } from "@jackioh/shared";
 
-import Board from "../../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
-import { testid, type ClickTarget, type Highlight } from "../../game/contract.ts";
+import { testid, type ClickTarget } from "../../game/contract.ts";
+import { renderBoard } from "../../test/board.tsx";
 import { fullBoardView } from "../../test/fixtures.ts";
 import { must } from "../../test/stubServer.ts";
 import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
@@ -39,32 +38,6 @@ type PointerKind = "mouse" | "pen" | "touch";
 
 const START_X = 100;
 const START_Y = 100;
-
-/**
- * If a window lacks `PointerEvent`, testing-library drops `pointerType` and every touch looks like a
- * mouse: install a `MouseEvent` subclass that keeps it, only when the probe shows it lost.
- */
-function ensurePointerEvent(): void {
-  const win = document.defaultView;
-  if (win === null) return;
-  const probe = typeof win.PointerEvent === "function" ? new win.PointerEvent("pointerdown", { pointerType: "touch" }) : null;
-  if (probe !== null && probe.pointerType === "touch") return;
-
-  class TestPointerEvent extends win.MouseEvent {
-    readonly pointerType: string;
-    readonly pointerId: number;
-    readonly isPrimary: boolean;
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init);
-      this.pointerType = init.pointerType ?? "";
-      this.pointerId = init.pointerId ?? 1;
-      this.isPrimary = init.isPrimary ?? true;
-    }
-  }
-  for (const target of [win, globalThis]) {
-    Object.defineProperty(target, "PointerEvent", { value: TestPointerEvent, configurable: true, writable: true });
-  }
-}
 
 function pointerInit(pointerType: PointerKind | undefined, x: number = START_X, y: number = START_Y): PointerEventInit {
   const base: PointerEventInit = { clientX: x, clientY: y, pointerId: 1, isPrimary: true, button: 0 };
@@ -253,22 +226,9 @@ function expectFenceUntouched(spies: FenceSpies): void {
   }
 }
 
-function renderBoard(view: PlayerView, legal: string[] = [], onClick?: (target: ClickTarget) => void): void {
-  const highlight: Highlight = { legal: new Set(legal), selected: new Set() };
-  render(
-    <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
-      <Board view={view} highlight={highlight} onClick={onClick} />
-    </CatalogContext.Provider>,
-  );
-}
-
 function yourUnit(view: PlayerView, index: number): UnitView {
   return must(view.you.units[index], `fullBoardView().you.units[${String(index)}]`);
 }
-
-beforeAll(() => {
-  ensurePointerEvent();
-});
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -784,7 +744,7 @@ describe("long-press (B24)", () => {
     const unit = yourUnit(view, 0);
     const id = testid.card(unit.instanceId);
     const onClick = vi.fn<(target: ClickTarget) => void>();
-    renderBoard(view, [id], onClick);
+    renderBoard(view, { highlight: { legal: new Set([id]), selected: new Set() }, onClick });
 
     const card = screen.getByTestId(id);
     longPress(card);
@@ -798,7 +758,7 @@ describe("long-press (B24)", () => {
     const unit = yourUnit(view, 0);
     const id = testid.card(unit.instanceId);
     const onClick = vi.fn<(target: ClickTarget) => void>();
-    renderBoard(view, [id], onClick);
+    renderBoard(view, { highlight: { legal: new Set([id]), selected: new Set() }, onClick });
 
     realClick(screen.getByTestId(id));
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -1203,7 +1163,7 @@ describe("events inside an overlay stay inside it (B25)", () => {
     // The zone is legal too, so anything that bubbled out of the portal into `Zone` would report.
     const zoneId = testid.zone("you", "units", 1);
     const onClick = vi.fn<(target: ClickTarget) => void>();
-    renderBoard(view, [cardId, zoneId], onClick);
+    renderBoard(view, { highlight: { legal: new Set([cardId, zoneId]), selected: new Set() }, onClick });
 
     longPress(screen.getByTestId(cardId));
     const sheet = screen.getByTestId(INSPECT_SHEET);
