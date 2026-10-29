@@ -202,13 +202,6 @@ mod tests {
     const FELINORS: &str = "core-012"; // (2) Unit 3/4
     const TIMMY: &str = "core-011"; // (1) Unit 3/3
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("the scenario has no {what}"),
-        }
-    }
-
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")
     }

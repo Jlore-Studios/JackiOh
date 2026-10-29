@@ -27,13 +27,6 @@ const TWISTED_SORCERER: &str = "core-068";
 
 use super::{craft_fused, scenario};
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// A sink over the scenario's state with an event list of its own and an rng at the state's cursor,
 /// which nothing writes back.
 fn fuse_in(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {

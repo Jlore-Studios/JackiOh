@@ -11,7 +11,7 @@ use super::fixtures::keywords_783::{
     register_keywords_783, second_wind,
 };
 use super::fixtures::play_pipeline_b::{in_graveyard, plays_of};
-use super::fixtures::prompt_harness::{board, must};
+use super::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;

@@ -490,13 +490,6 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing {what}"),
-    }
-}
-
 fn at<T: Clone>(list: &[T], index: usize) -> T {
     must(list.get(index).cloned(), &format!("item {index}"))
 }

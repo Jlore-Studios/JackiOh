@@ -151,13 +151,6 @@ mod tests {
 
     use crate::matches_object;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     fn attack_of(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
         match s.unit(player, lane) {
             Some(unit) => s.stats(&unit).attack,
