@@ -120,7 +120,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4
     const POINTMASTER: &str = "core-020"; // 7/1 First Strike
     const MENACE: &str = "core-019"; // 9/9 Taunt
-    const PANTHER: &str = "core-032"; // 5/4 Rush: after this attacks and survives, draw 2 for each Unit that attack destroyed.
+    const PANTHER: &str = "core-032"; // 5/4 Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
     const GARY: &str = "core-004"; // 1/1
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.

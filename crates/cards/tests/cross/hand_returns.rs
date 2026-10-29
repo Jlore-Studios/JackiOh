@@ -320,7 +320,7 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
 // Round 7 (lens L8): a return Spell cast on the other player's turn.
 
 const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
-const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
+const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; whenever it attacks, draw 2 per Unit destroyed
 const RENO: &str = "core-053";
 
 mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {

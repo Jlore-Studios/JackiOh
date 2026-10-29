@@ -157,18 +157,18 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
     }
 
     #[test]
-    fn r212_r42_r174_r2285001_a_prem_panther_that_trades_draws_nothing_and_neither_does_its_reborn_body_a_new_stay()
-     {
-        // Without Reborn the Panther is in its graveyard when its combat closes, and "After this attacks"
-        // runs only for an attacker still on the field (R2285001), so the trade draws nothing.
+    fn r212_r42_r174_r2396000_a_prem_panther_that_trades_draws_2_once_and_its_reborn_body_draws_nothing_more()
+    {
+        // Without Reborn the Panther is in its graveyard when its combat closes, and "Whenever this
+        // attacks" runs for it all the same, as the snapshot it fought with (R2396000): 2 for the kill.
         let plain = trade(false);
-        assert_eq!(plain.hand(PlayerId::P1).len(), 1);
+        assert_eq!(plain.hand(PlayerId::P1).len(), 3);
         // With Reborn the same trade happens, and the body back in lane 1 is a new arrival (R83) that
-        // attacked nothing, so it draws nothing either.
+        // attacked nothing: the attack is answered once, by the Panther that fought, and no more.
         let mut back = trade(true);
         let body = back.unit_at(PlayerId::P1, 1);
         back.expect_in_zone(&body.id, "field");
-        assert_eq!(back.hand(PlayerId::P1).len(), plain.hand(PlayerId::P1).len());
+        assert_eq!(back.hand(PlayerId::P1).len(), 3);
     }
 }
 

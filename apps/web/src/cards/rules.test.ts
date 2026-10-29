@@ -101,8 +101,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Chance to reveal",
     // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
     "After one of your Units attacks",
-    // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
+    // R2285000, R2285001, R2396000: the three attack timings, rules only; the cards print them in their
+    // own words.
     "When this attacks",
+    "Whenever this attacks",
     "After this attacks",
   ],
   "§6.3": [
