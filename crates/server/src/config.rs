@@ -1138,8 +1138,8 @@ pub const TIMING_FIT_CONCEDE_TURN_QUANTILE: f64 = 0.1;
 
 /// R1452, R747000: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`:
 /// the softmax temperature over the finalists, in evaluation points, and the chance it passes over a
-/// lethal it found), its skill (the chance each decision follows that AI, the rest a random legal
-/// action) and the rating its `bot_ratings` row is seeded with (R610), which is what
+/// lethal it found), its skill (the chance each decision follows that AI, the rest the skill miss,
+/// R2214000) and the rating its `bot_ratings` row is seeded with (R610), which is what
 /// `expected_elo_for_skill` measured for that skill (`BOT_SEED_RATINGS`, R748000). Always on the
 /// spec's resources: a strength is never a practice handicap (R180). The chance is rolled at each
 /// decision that finds a lethal, and the bot decides again after every move, so a bot that passed
@@ -1162,8 +1162,9 @@ pub struct BotStrength {
 /// chance and skill together, which the curve, measured at the arena's budget, does not) against each
 /// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
 /// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-/// The row is generation 13's calibration, pasted over the curve's too (docs/bot-calibration.md, Results).
-pub const BOT_SEED_RATINGS: [f64; 5] = [1216.0, 1383.0, 1536.0, 1692.0, SKILL_ELO_ANCHOR];
+/// The row is generation 13's calibration with the skill miss (R2214000), pasted over the curve's too
+/// (docs/bot-calibration.md, Results).
+pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, SKILL_ELO_ANCHOR];
 
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
@@ -1278,13 +1279,13 @@ pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
 /// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
-/// rows since generation 13 (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the
-/// ongoing calibration.
+/// rows since generation 13, and with the skill miss since R2214000 (docs/bot-calibration.md,
+/// Results); the live Glicko ratings (R603) are the ongoing calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
-    (0.0, 1216.0),
-    (0.25, 1383.0),
-    (0.5, 1536.0),
-    (0.75, 1692.0),
+    (0.0, 1517.0),
+    (0.25, 1576.0),
+    (0.5, 1666.0),
+    (0.75, 1716.0),
     (1.0, SKILL_ELO_ANCHOR),
 ];
 
@@ -2652,6 +2653,10 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.11, R2124000: hours a spend's idempotency key and its answer are kept before the
+/// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
+/// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
+pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
 /// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
 /// request past it is refused and issues nothing. Bounds one account's place in the claim queue
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).

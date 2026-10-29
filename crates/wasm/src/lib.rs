@@ -247,7 +247,7 @@ pub fn ai_decide(
     ))
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see, the Easy practice tier's
+/// R2102000: whether `seat` has a sure win this turn by what it can see, the practice AI's
 /// lethal hint. `deadline_ms` is a `Date.now()` time, as `ai_decide`'s is: a search still running once
 /// the clock passes it lights nothing; `deadline_ms <= 0` means no clock.
 #[wasm_bindgen]

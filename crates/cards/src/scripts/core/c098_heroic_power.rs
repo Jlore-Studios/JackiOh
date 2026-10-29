@@ -126,10 +126,6 @@ mod tests {
         keys
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("expected {what}"))
-    }
-
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.last_events()
             .iter()

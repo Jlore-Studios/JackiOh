@@ -9,6 +9,7 @@
 //! goes in the file its name falls in.
 
 pub mod activate;
+pub mod adjacency_aura;
 pub mod after_attack;
 pub mod after_attacked;
 pub mod ai_policy;
@@ -23,6 +24,7 @@ pub mod attack_mods;
 pub mod audit;
 pub mod aura_table;
 pub mod auto_end_turn;
+pub mod autopilot;
 pub mod backrow_death;
 pub mod backrow_piles;
 pub mod blueprint;
@@ -31,6 +33,8 @@ pub mod brittle;
 pub mod call_to_chaos;
 pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
+pub mod call_to_chaos_scape;
+pub mod call_to_chaos_stinky;
 pub mod card_metrics;
 pub mod card_on_card;
 pub mod carried_damage;

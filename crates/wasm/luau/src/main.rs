@@ -406,7 +406,7 @@ pub extern "C" fn ai_decide(
     })
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see, the Easy practice tier's
+/// R2102000: whether `seat` has a sure win this turn by what it can see, the practice AI's
 /// lethal hint: 1 for yes, 0 for no, and -1 with the message stowed for `jackioh_last_error` on
 /// failure, which `index.ts` throws. `deadline_ms` is a wall-clock time as `ai_decide`'s is: a search
 /// still running once the clock passes it lights nothing; `deadline_ms <= 0` means no clock. Its

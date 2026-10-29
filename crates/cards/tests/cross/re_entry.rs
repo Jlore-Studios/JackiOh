@@ -70,13 +70,6 @@ fn pile_of(g: &Scenario, player: PlayerId, lane: usize) -> Vec<String> {
         .collect()
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("missing: {what}"),
-    }
-}
-
 /// Whether the unit's keywords as the layers read them include `kind`.
 fn has_keyword(g: &Scenario, id: &str, kind: KeywordKind) -> bool {
     g.stats(id).keywords.iter().any(|keyword| keyword.kind() == kind)

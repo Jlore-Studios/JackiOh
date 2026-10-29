@@ -1,4 +1,4 @@
-//! Stinkyscape #123 Gokugains (SPEC §8.10 row 123). (1) Unit, Rare, 2/1 → 4/2, Cloaked; held (R1420).
+//! Stinkyscape #123 Gokugains (SPEC §8.10 row 123). (1) Unit, Rare, 2/1 → 4/2, Cloaked.
 //!   Base:    "Cloaked\nCry: Secretly Nerf a random Unit in your opponent's hand {times|time|times}, never
 //!            its cost. No one sees the Nerfs until it is played." — times 3
 //!   Radiant: the same text — times 30

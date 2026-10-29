@@ -243,7 +243,7 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
     {
       // R363: Professor Curvature's shape reaches a price of 4 or more: the embiggen price, not the
       // base one. An embiggen price under 4 (Meditative #81 Deadman's Hand's (2)) is out of its reach,
-      // and a base price of 4 is in it: the held Stinkyscape set's #79 Orca, (4) embiggen (5) (R1857000).
+      // and a base price of 4 is in it: the Stinkyscape set's #79 Orca, (4) embiggen (5) (R1857000).
       name: "a (4)+ Cost discount (R363)",
       change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: CURVE_FROM }] },
       normal: (a) => (a >= CURVE_FROM ? a - 1 : a),

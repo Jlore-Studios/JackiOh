@@ -332,10 +332,6 @@ mod tests {
             .collect()
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("expected {what}"))
-    }
-
     fn effective(s: &Scenario, card: &CardInstance) -> i32 {
         effective_cost(s.state(), card, Default::default())
     }

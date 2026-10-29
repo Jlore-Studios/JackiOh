@@ -1,6 +1,7 @@
 //! Port of `packages/engine/test/damage.test.ts`.
 //!
-//! One test per step of the damage pipeline (SPEC §4.4), in order, plus §6.3 healing and R18.
+//! One test per step of the damage pipeline (SPEC §4.4), in order, steps 0, 0a and 4a among them,
+//! plus §6.3 healing and R18.
 
 use jackioh_engine::effects::plague;
 use jackioh_engine::testkit::*;
@@ -10,8 +11,12 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
     trample_lifesteal, trampler,
 };
-use crate::rules::fixtures::harness::{events_of_type, json_of, live, new_game, put, slot};
+use crate::rules::fixtures::damage_combat::{
+    bolt, cancel_gambit, grunt, playing, recorder, solar, wall as spell_target,
+};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
+use crate::rules::fixtures::stinkyscape_verbs::{MASOCHISM, PLAIN, REDIRECT_CAP, register_stinkyscape_verbs};
 
 /// TS `newGame()`: the harness's default seed.
 fn game() -> GameState {
@@ -80,6 +85,54 @@ fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -
 /// `describe("the damage pipeline (§4.4, M2-T3)")`.
 mod the_damage_pipeline_s4_4_m2_t3 {
     use super::*;
+
+    #[test]
+    fn step_0_spell_damage_raises_a_spell_s_hit_and_not_a_unit_s() {
+        let mut state = playing("damage-step-0");
+        let mage = put(&mut state, &solar.id, slot(P1, Row::Units, 1), json!({}));
+        let target = put(&mut state, &spell_target.id, slot(P2, Row::Units, 1), json!({}));
+        let spell = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
+        with_sink(&mut state, |sink| {
+            assert_eq!(spell_damage_of(sink.state, P1), 2);
+            // The Spell's 3 is raised by its controller's Spell Damage +2, before every later step.
+            assert_eq!(hit(sink, Some(&spell.id), on_unit(&target.id), 3, None), 5);
+            assert_eq!(live(sink.state, &target.id).damage, 5);
+            // The Unit that prints it deals its own hit unraised.
+            assert_eq!(hit(sink, Some(&mage.id), on_unit(&target.id), 2, None), 2);
+            assert_eq!(amounts(sink.events, GameEventType::Damage), vec![5, 2]);
+        });
+    }
+
+    #[test]
+    fn step_0a_on_its_own_turn_a_hit_on_a_hero_moves_to_the_opponent_up_to_the_cap_and_the_rest_goes_on() {
+        register_stinkyscape_verbs();
+        let mut s = scenario(json!({
+            "seed": "damage-step-0a",
+            "active": "p1",
+            "p1": { "backrow": [{ "def": MASOCHISM, "faceUp": true }], "library": [PLAIN, PLAIN] },
+            "p2": { "library": [PLAIN, PLAIN] },
+        }));
+        let p1 = s.state().players.p1.hero.health;
+        let p2 = s.state().players.p2.hero.health;
+        with_sink(s.state_mut(), |sink| {
+            // The whole hit is under the cap: none of it is taken, and all of it is dealt to p2.
+            assert_eq!(
+                hit(sink, None, on_hero(P1), REDIRECT_CAP - 5, None),
+                REDIRECT_CAP - 5
+            );
+            assert_eq!(sink.state.players.p1.hero.health, p1);
+            assert_eq!(sink.state.players.p2.hero.health, p2 - (REDIRECT_CAP - 5));
+            assert_eq!(events_of_type(sink.events, GameEventType::Redirected).len(), 1);
+            // The next 10: the cap's last 5 move, and the other 5 go on from step 1 as the rest of the hit.
+            assert_eq!(hit(sink, None, on_hero(P1), 10, None), 10);
+            assert_eq!(sink.state.players.p1.hero.health, p1 - 5);
+            assert_eq!(sink.state.players.p2.hero.health, p2 - REDIRECT_CAP);
+            // A hit on the opponent's hero is not its controller's own: nothing moves.
+            assert_eq!(hit(sink, None, on_hero(P2), 3, None), 3);
+            assert_eq!(sink.state.players.p2.hero.health, p2 - REDIRECT_CAP - 3);
+            assert_eq!(events_of_type(sink.events, GameEventType::Redirected).len(), 2);
+        });
+    }
 
     #[test]
     fn step_1_divine_shield_negates_a_10_hit_fully_and_is_gone_and_the_next_hit_lands() {
@@ -284,6 +337,36 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             );
             assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 0);
         });
+    }
+
+    #[test]
+    fn step_4a_a_hit_that_alone_would_be_lethal_meets_the_replacement_before_anything_is_dealt() {
+        let mut state = playing("damage-step-4a");
+        let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &cancel_gambit.id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let action =
+            json!({ "type": "attack", "attackerId": attacker.id, "targetId": "hero-p2", "playerId": "p1" });
+
+        // At 30 the grunt's 2 is no lethal hit: the window stays shut, the hit lands and the trap waits.
+        let mut game = recorder(&state);
+        let result = game.play(action.clone());
+        assert_eq!(game.state().players.p2.hero.health, 28);
+        assert_eq!(amounts(&result.events, GameEventType::Damage), vec![2]);
+        assert!(events_of_type(&result.events, GameEventType::TrapFired).is_empty());
+
+        // At 2 the same hit would leave the hero at 0: the replacement acts first and cancels it, so it
+        // deals nothing and emits no damage (R1704001).
+        state.players.p2.hero.health = 2;
+        let mut game = recorder(&state);
+        let result = game.play(action);
+        assert!(events_of_type(&result.events, GameEventType::Damage).is_empty());
+        assert_eq!(events_of_type(&result.events, GameEventType::TrapFired).len(), 1);
+        assert!(game.state().players.p2.hero.health > 0);
     }
 
     #[test]

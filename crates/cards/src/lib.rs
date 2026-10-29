@@ -36,11 +36,11 @@ pub use code_blocks::CODE_BLOCKS;
 /// R1846000: the card metrics, compiled in by `build.rs` from every script: `CODE_LINES` (each
 /// catalog entry's code lines), `BUSTED` and `COMPLICATED` (the ids over the engine's
 /// `BUSTED_CODE_LINES` and `COMPLICATED_CODE_LINES`), each sorted by id; `register_all` hands them
-/// to the engine.
+/// to the engine. `LIST_READERS` (R2173000): the ids whose script reads those lists.
 mod card_metrics {
     include!(concat!(env!("OUT_DIR"), "/card_metrics.rs"));
 }
-pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED};
+pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, LIST_READERS};
 
 /// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, and whether it reads
 /// the BUSTED or complicated lists.
@@ -428,6 +428,57 @@ pub(crate) fn def_ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> {
 #[cfg(test)]
 pub(crate) fn events_json(s: &jackioh_engine::testkit::Scenario) -> Vec<serde_json::Value> {
     s.events().iter().map(js).collect()
+}
+
+/// R2195003: a Training Grounds snapshot plays exactly as its Core card. The same game, built by
+/// `setup` and played by `play` once with each card's id, logs the same events and ends in the same
+/// state, the snapshot's id read as the Core card's. The one thing left out is the element its play
+/// records (`gameLog.lastElement`, R980), which is its own number's, as R2195003 rules.
+#[cfg(test)]
+pub(crate) fn expect_plays_as(
+    core: &str,
+    snapshot: &str,
+    setup: impl Fn(&str) -> serde_json::Value,
+    play: impl Fn(&mut jackioh_engine::testkit::Scenario, &str),
+) {
+    let game = |id: &str| {
+        let mut s = scenario(setup(id));
+        play(&mut s, id);
+        let read_as_core = |value: serde_json::Value| -> serde_json::Value {
+            serde_json::from_str(&value.to_string().replace(id, core)).unwrap_or_default()
+        };
+        let events: Vec<serde_json::Value> = events_json(&s).into_iter().map(read_as_core).collect();
+        assert!(!events.is_empty(), "{id}: the game logged nothing");
+        let mut state = read_as_core(js(s.state()));
+        for side in state["players"]
+            .as_object_mut()
+            .into_iter()
+            .flat_map(|players| players.values_mut())
+        {
+            if let Some(log) = side["gameLog"].as_object_mut() {
+                log.remove("lastElement");
+            }
+        }
+        (events, state)
+    };
+    let (core_events, core_state) = game(core);
+    let (events, state) = game(snapshot);
+    for (n, (was, now)) in core_events.iter().zip(&events).enumerate() {
+        assert_eq!(now, was, "{snapshot} plays unlike {core} at event {n}");
+    }
+    assert_eq!(
+        events.len(),
+        core_events.len(),
+        "{snapshot} logs a different number of events than {core}"
+    );
+    for (key, was) in core_state.as_object().into_iter().flatten() {
+        assert_eq!(
+            state.get(key),
+            Some(was),
+            "{snapshot} ends with another `{key}` than {core}"
+        );
+    }
+    assert_eq!(state, core_state, "{snapshot} ends in another state than {core}");
 }
 
 /// R386, B3.4 rule 3's Number row: one Upgrade or Degrade of `card` that draws its declared number

@@ -110,7 +110,7 @@ and a softmax
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
-## The lethal hint (R2102000)
+## The lethal hint (R2102000, R2291000)
 
 ```rust
 pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;
@@ -119,8 +119,8 @@ pub const LETHAL_HINT_DETERMINIZATIONS: usize;     // AI_BUDGET.determinizations
 pub const LETHAL_HINT_NODES: usize;                // AI_BUDGET.lethal_nodes
 ```
 
-Whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's lethal hint
-(§9.9): the practice worker asks it for the human's seat. Like `decide` it reads the true state only
+Whether `seat` has a sure win this turn by what it can see, for the lethal hint of every game the
+practice worker plays against the AI (§9.9): the practice worker asks it for the human's seat. Like `decide` it reads the true state only
 through `redact`, so two states that differ only in what the seat cannot see give one answer. It
 fills the redaction in as `LETHAL_HINT_DETERMINIZATIONS` worlds drawn from `LETHAL_HINT_SEED`'s
 stream, a stream of its own (never the match's or a caller's), and answers whether `find_lethal`
@@ -164,8 +164,8 @@ counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets`
 thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
-#732 did once it had measured the AI on the Meditative set, the list's one set until then. It holds the
-Stinkyscape set from its release (issue #1884) until issue #1885 measures the AI on it: gating a set that
+#732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
+Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
@@ -230,9 +230,11 @@ its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summe
 names the seed, the seat and the first message (`Decision::first_sim_panic`, native only).
 
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
-`[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
-§10.7's policy). `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one
-plays as it did before the knob; `AI_SKILL_MIN` is the random policy exactly, with no search. In
+`[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
+R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
+true state's candidates, read on one determinization of what the seat sees. `None` is `AI_SKILL_MAX`:
+full skill, which takes no draw, so a seat without one plays as it did before the knob; `AI_SKILL_MIN`
+is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
 (`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
 knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The

@@ -26,10 +26,17 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
 pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
 pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
 
-/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
-/// decision, 1.0 follows the AI at every decision as it did before the knob.
+/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays the skill miss
+/// (`skill::skill_miss_action`, R2214000) at every decision, 1.0 follows the AI at every decision as it
+/// did before the knob.
 pub const AI_SKILL_MIN: f64 = 0.0;
 pub const AI_SKILL_MAX: f64 = 1.0;
+
+/// R2214000: the softmax temperature, in `evaluate`'s points (GREEDY_EVAL), over a skill miss's one-ply
+/// scores (`skill::skill_miss_action`): a move 4 points below the best is drawn e⁻¹ times as often. Of
+/// 3, 4, 6, 8 and 12 (#2214's plan, 840 turn starts), 4 is the highest that ends a turn with a card it
+/// can play under half as often as the random policy (0.038 to 0.096).
+pub const AI_SKILL_MISS_TEMPERATURE: f64 = 4.0;
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
@@ -50,7 +57,7 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
-/// R2102000: the stream the Easy practice tier's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
+/// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
 
@@ -824,12 +831,12 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
 /// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
 /// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496). It holds the
-/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8): the set ships with
-/// the AI dealing itself none of it, though the AI answers every card of it a player brings, until
-/// fullsend 2's sweep (issue #1885) measures the AI on the set and empties the list again. Gating a
-/// set that ships before the AI is trained on it is listing it here.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Stinkyscape];
+/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496), and the
+/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8) until issue #1885's
+/// sweep of record (training/history/sweep-2026-10-28.md) banned 10 of its 175 cards, within
+/// `STINKYSCAPE_BAN_CEILING` (R1885000), and emptied it again. Gating a set that ships before the AI
+/// is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a

@@ -1,5 +1,4 @@
-//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (2) Unit, Epic, 1/8 → 2/16, Starship Piece, Flying; held
-//! (R1420).
+//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (2) Unit, Epic, 1/8 → 2/16, Starship Piece, Flying.
 //!   Base:    "Starship Piece, Flying\nCry: At the start of your opponent's next turn, make them a trade
 //!            offer: you give them a card from your hand, then they Discover one of theirs to give you."
 //!   Radiant: "Starship Piece, Flying, Lucky 1\nCry: …" (the same Cry)

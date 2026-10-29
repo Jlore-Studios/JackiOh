@@ -1,4 +1,4 @@
-//! Stinkyscape #54 Beam v4 (SPEC §8.10 row 54). Unit 0/6 → 0/12, Weapon, cost 3, Epic; held (R1420).
+//! Stinkyscape #54 Beam v4 (SPEC §8.10 row 54). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy, with Cleave and Pierce. Has an extra turn
 //!            cooldown. Deals half damage to heroes." — damage 9

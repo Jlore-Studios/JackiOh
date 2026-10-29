@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 107 RR-5000, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 107 RR-5000, a card of the Stinkyscape set.
 //! (2) Unit, Rare, 4/4 → 8/8: Starship Piece, Ranged.
 //! "Start of turn: Gain +{attackGain} Attack." — attackGain 4, Radiant 8 (R1860005).
 //!

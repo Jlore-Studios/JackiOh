@@ -48,6 +48,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type DragEvent,
   type ReactElement,
   type ReactNode,
@@ -190,6 +191,39 @@ export function poolCardLabel(
   return t("{card}. Show details", { card: parts.join(t(", ")) });
 }
 
+/** Whether the browser reports a `content-visibility: auto` holder nearing the screen. */
+const SEES_NEAR =
+  typeof HTMLElement !== "undefined" && "oncontentvisibilityautostatechange" in HTMLElement.prototype;
+
+/**
+ * A pool card's face, drawn the first time the browser un-skips its holder and kept after. A face
+ * still skipped holds nothing: reading the style of anything inside a skipped face forces a layout
+ * of the whole page, so a pool of skipped faces, each built at once, cost a page layout per face to
+ * whatever reads them all (axe, in spec 38, ran past its timeout once Stinkyscape joined the pool).
+ * A browser without the event draws every face at once, as before.
+ */
+function PoolFace({ children }: { children: ReactNode }): ReactElement {
+  const holder = useRef<HTMLSpanElement>(null);
+  const [near, setNear] = useState(!SEES_NEAR);
+  // Before the first frame, which is when the browser decides whether the holder is skipped.
+  useLayoutEffect(() => {
+    const element = holder.current;
+    if (near || element === null) return undefined;
+    const onState = (event: Event): void => {
+      if ((event as Event & { skipped?: boolean }).skipped === false) setNear(true);
+    };
+    element.addEventListener("contentvisibilityautostatechange", onState);
+    return () => {
+      element.removeEventListener("contentvisibilityautostatechange", onState);
+    };
+  }, [near]);
+  return (
+    <span ref={holder} className="db-card-face" aria-hidden="true" data-skippable="">
+      {near ? children : null}
+    </span>
+  );
+}
+
 function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
   const locale = useLocale();
   const place = deck?.place ?? null;
@@ -247,13 +281,13 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
         {...inspect.handlers}
       >
         {/* `data-skippable` (fit.ts SKIPPABLE_ATTRIBUTE): deckbuilder.css lets the browser skip the
-            face's layout off screen, and its text fit waits until it is near (#263). */}
+            face's layout off screen, and the face is drawn and fitted when it is near (#263). */}
         {/* R2098000: its terms show their rule on hover and long press; they take no focus inside this button, whose face is aria-hidden. */}
-        <span className="db-card-face" aria-hidden="true" data-skippable="">
+        <PoolFace>
           <TermTips>
             <CardFace face={face} layout="full" lazyArt worn={worn} />
           </TermTips>
-        </span>
+        </PoolFace>
         {fresh ? (
           <span className="db-new" data-new-set={def.set} aria-hidden="true">
             {t("New")}

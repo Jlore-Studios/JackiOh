@@ -150,9 +150,11 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_and_meditative_plus_alike() {
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_and_stinkyscape_alike()
+     {
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI's soft gate is empty and #1186's
-        // sweep banned none of the set, so its cards are dealt beside the four sets before it.
+        // sweep banned none of the set, so its cards are dealt beside the four sets before it. Since
+        // #1885 the gate is empty again, and the Stinkyscape set is dealt beside them.
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -162,7 +164,14 @@ mod build_ai_deck_b22 {
         sets.sort();
         assert_eq!(
             sets,
-            vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+"]
+            vec![
+                "Classic",
+                "Classic+",
+                "Core",
+                "Meditative",
+                "Meditative+",
+                "Stinkyscape"
+            ]
         );
     }
 
@@ -1294,9 +1303,9 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative. The list holds
-        // the Stinkyscape set alone since its release (#1884).
-        assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
+        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative. The list held
+        // the Stinkyscape set from its release (#1884) until #1885 measured the AI on it.
+        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1324,43 +1333,35 @@ mod r1390_the_ai_decks_soft_gate {
         }
     }
 
-    /// The Stinkyscape set ships with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
-    /// D8): the gate holds it, so no AI deck at any tier holds one of its cards, a lean on it leans on
-    /// Meditative+, the newest set that ships and is not gated, and a player's random deck from the
-    /// same stream is dealt from it.
+    /// The Stinkyscape set shipped with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
+    /// D8) until #1885's sweep of record measured the AI on it and emptied the list: the AI's own decks
+    /// are dealt from it at every tier, and a lean on it is a lean on it.
     #[test]
-    fn r1390_the_gate_holds_the_stinkyscape_set_from_its_release() {
+    fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_stinkyscape_cards() {
         register_cards();
         assert!(SHIPPED_SETS.contains(&SetName::Stinkyscape));
-        assert!(AI_DECK_GATED_SETS.contains(&SetName::Stinkyscape));
+        assert!(!AI_DECK_GATED_SETS.contains(&SetName::Stinkyscape));
         assert_eq!(
             ungated_lean(Some(SetName::Stinkyscape), AI_DECK_GATED_SETS),
-            Some(SetName::MeditativePlus)
+            Some(SetName::Stinkyscape)
         );
-        let mut player_stinkyscape = 0;
+        let mut dealt = 0;
         for (tier, size, base) in ai_rules() {
             for n in 1..=GATE_SEEDS {
                 let seed = format!("r1390:stinkyscape:{tier}:{n}");
                 let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
                 assert_eq!(deck.len(), size as usize, "{seed}");
-                assert_eq!(of_set(&deck, SetName::Stinkyscape), 0, "{seed}: {deck:?}");
-                let player = build_ai_deck(
-                    &mut create_rng(&seed, 0),
-                    size,
-                    &options(json!({ "manaCap": base["manaCap"], "banned": [], "gatedSets": [] })),
-                );
-                player_stinkyscape += of_set(&player, SetName::Stinkyscape);
+                dealt += of_set(&deck, SetName::Stinkyscape);
             }
         }
-        assert!(player_stinkyscape > 0, "no player's deck held a Stinkyscape card");
+        assert!(dealt > 0, "no AI deck held a Stinkyscape card");
         let leaning = build_ai_deck(
             &mut create_rng("r1390:stinkyscape:lean", 0),
             DECK_SIZE,
             &options(json!({ "leanSet": "Stinkyscape" })),
         );
-        assert_eq!(of_set(&leaning, SetName::Stinkyscape), 0, "{leaning:?}");
         assert!(
-            of_set(&leaning, SetName::MeditativePlus) >= lean_floor(DECK_SIZE).min(26),
+            of_set(&leaning, SetName::Stinkyscape) >= lean_floor(DECK_SIZE),
             "{leaning:?}"
         );
     }
@@ -1702,6 +1703,52 @@ mod r976000_shaping_is_an_option {
         assert_eq!(
             serde_json::to_value(options(json!({ "shape": true }))).ok(),
             Some(json!({ "shape": true }))
+        );
+    }
+}
+
+/// R2195000: a random deck holds a Core card or its Training Grounds snapshot, never both, and an
+/// included one keeps the other out. The set is held, so the deals are made under its preview, leaning
+/// on it so the snapshots are dealt often.
+mod r2195000_a_random_deck_holds_a_core_card_or_its_snapshot {
+    use super::*;
+    use jackioh_engine::testkit::{SetName, preview_sets};
+
+    /// The Core cards `deck` holds beside their snapshots.
+    fn both_in(deck: &[String]) -> Vec<String> {
+        deck.iter()
+            .filter_map(|id| def_of(None, id).snapshot_of.clone())
+            .filter(|core| deck.contains(core))
+            .collect()
+    }
+
+    #[test]
+    fn r2195000_no_random_deck_holds_both_and_an_included_one_keeps_the_other_out() {
+        register_cards();
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        let leaning = json!({ "banned": [], "gatedSets": [], "leanSet": "Training Grounds" });
+        let mut snapshots = 0;
+        for n in 0..SEEDS {
+            let seed = format!("r2195000:{n}");
+            let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(leaning.clone()));
+            snapshots += deck
+                .iter()
+                .filter(|id| def_of(None, id).snapshot_of.is_some())
+                .count();
+            assert_eq!(both_in(&deck), Vec::<String>::new(), "{seed}: {deck:?}");
+
+            let mut including = leaning.clone();
+            including["include"] = json!(["core-002"]);
+            let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(including));
+            assert!(deck.contains(&"core-002".to_string()), "{seed}");
+            assert!(
+                !deck.contains(&"traininggrounds-041".to_string()),
+                "{seed}: {deck:?}"
+            );
+        }
+        assert!(
+            snapshots > 0,
+            "no deck held a snapshot, so the deals measured nothing"
         );
     }
 }

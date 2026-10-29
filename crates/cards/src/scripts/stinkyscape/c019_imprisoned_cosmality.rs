@@ -1,11 +1,11 @@
-//! S #19 Imprisoned Cosmality (SPEC §8.10 row 19): (2) Unit, Common, 10/6 → 20/12, of the held
-//! Stinkyscape set (R1420).
+//! S #19 Imprisoned Cosmality (SPEC §8.10 row 19): (2) Unit, Common, 10/6 → 20/12, of the
+//! Stinkyscape set.
 //!   Base:    "Pierce / Dormant for 2 turns. When this awakens, deal {damage} damage randomly split
 //!            among all enemies." ({damage} 10)
 //!   Radiant: the same text, {damage} 20.
 //! Engine: Pierce (R346) is catalog data. Dormant (R1839000), `StaticFlags.slumber { turns: 2 }`,
-//! awake at the start of its controller's second turn after it arrived, not summoning sick
-//! (R1839001). `when_this_awakens` (R1839002): C+ #3's `damage_split`, {damage} hits of 1, each on an
+//! awake at the start of its controller's second turn after it arrived, summoning sick that turn
+//! (R1839001, R2259000). `when_this_awakens` (R1839002): C+ #3's `damage_split`, {damage} hits of 1, each on an
 //! enemy drawn from the match rng among the enemy hero and the enemy Units still standing (R60), with
 //! no state check between the hits (R59); each hit's source is this Unit, so each pierces Armor
 //! (R346). Both faces run this script; the number is the face's declared `damage` (R386).
@@ -94,8 +94,37 @@ mod tests {
             .collect()
     }
 
+    /// R2271000: an awake Cosmality in p1's unit zone 1 (`radiant` both faces) while a second, played
+    /// into zone 2, lies Dormant until its awakening; how many hits the awake one dealt by then.
+    fn hits_of_the_awake_one(radiant: bool) -> usize {
+        let mut s = crate::scenario(json!({
+            "seed": "cosmality-beside",
+            "p1": {
+                "field": [{ "def": ID, "lane": 1, "radiant": radiant }],
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "library": crate::filler(4),
+            },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }));
+        let awake = s.unit_at(P1, 1).id;
+        s.play(ID, json!({ "zone": 2 }));
+        to_its_awakening(&mut s);
+        assert!(s.events().iter().any(|event| matches!(event, GameEvent::Awakened { .. })));
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Damage { source_id: Some(source), .. } if *source == awake))
+            .count()
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_deals_nothing() {
+            // "When THIS awakens": the awake Cosmality answered every awakening with its 10 hits too,
+            // until its condition was read (R2271000).
+            assert_eq!(hits_of_the_awake_one(false), 0);
+        }
 
         #[test]
         fn r1839001_played_it_lies_dormant_and_awakens_at_the_start_of_its_controllers_second_turn_after() {
@@ -161,11 +190,13 @@ mod tests {
         }
 
         #[test]
-        fn r1839001_awake_it_is_not_summoning_sick_and_attacks_that_turn() {
+        fn r1839001_r2259000_awake_it_is_summoning_sick_that_turn_and_attacks_the_next() {
             let mut s = played(false, json!({}), "cosmality");
             to_its_awakening(&mut s);
             s.expect_health(P2, HERO_HEALTH - 10);
 
+            s.expect_refused(|s| s.attack(ID, "hero"));
+            s.end_turn().end_turn();
             s.attack(ID, "hero");
             s.expect_health(P2, HERO_HEALTH - 10 - 10);
         }
@@ -183,6 +214,11 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_deals_nothing_on_the_radiant_face() {
+            assert_eq!(hits_of_the_awake_one(true), 0);
+        }
 
         #[test]
         fn r275_a_20_12_whose_awakening_deals_20_hits_of_1() {

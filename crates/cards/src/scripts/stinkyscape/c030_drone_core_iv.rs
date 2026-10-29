@@ -1,5 +1,4 @@
-//! S #30 Drone Core IV (SPEC §8.10 row 30): (3) Spell, Drone Core, Rare, a card of the held Stinkyscape
-//! set (R1420).
+//! S #30 Drone Core IV (SPEC §8.10 row 30): (3) Spell, Drone Core, Rare, a card of the Stinkyscape set.
 //!   Base:    "Summon {interceptors|Drone Interceptor|Drone Interceptors}." — interceptors 3
 //!   Radiant: "Summon {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}." — interceptors 3
 //! Engine: as S #29, one summon per Interceptor, each into the caster's leftmost open unit zone in turn

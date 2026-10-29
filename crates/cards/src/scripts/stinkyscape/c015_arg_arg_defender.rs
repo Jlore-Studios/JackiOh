@@ -1,5 +1,5 @@
-//! S #15 Arg Arg Defender (SPEC §8.10 row 15): (1) Unit, Human, Common, 2/3 → 4/6, of the held
-//! Stinkyscape set (R1420).
+//! S #15 Arg Arg Defender (SPEC §8.10 row 15): (1) Unit, Human, Common, 2/3 → 4/6, of the
+//! Stinkyscape set.
 //!   Base:    "Cry: Give adjacent Units +{buff}/+{buff} and Taunt."
 //!   Radiant: "Cry: Give adjacent Units +{buff}/+{buff}, Divine Shield and Taunt."
 //! Engine: Cry (R1): each Unit in the unit zones beside it on its own side (§3.1, `adjacent_to`, as C+
