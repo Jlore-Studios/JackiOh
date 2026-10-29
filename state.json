@@ -9001,13 +9001,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-29T13:29:55Z",
-      "free": 79015170048,
-      "percent": 36,
-      "total": 123690532864
+      "at": "2026-10-29T13:37:37Z",
+      "free": 47425253376,
+      "percent": 54,
+      "total": 102888095744
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40877864878",
-    "runner": "night-vm-muse",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40851121338",
+    "runner": "night-vm-muse-3-b2",
     "shown": null
   },
   "machine_memory": [
