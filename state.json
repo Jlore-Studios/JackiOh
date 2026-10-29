@@ -8158,11 +8158,10 @@
     "what": "revise #2300 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-29T09:55:15Z",
+    "at": "2026-10-29T10:09:16Z",
     "notes": [
-      "delivered review #2336 on claude-4 (run 40852385045): reviewed",
-      "delivered plan #2353 on claude-3 (run 40848653196): blocked",
-      "delivered revise #2346 on muse (run 40843945230): approved"
+      "delivered revise #2300 on claude-8 (run 40852490075): blocked",
+      "delivered revise #2335 on claude-8 (run 40833896343): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8868,7 +8867,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T09:55:15Z",
+  "loop_tick": "2026-10-29T10:09:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
