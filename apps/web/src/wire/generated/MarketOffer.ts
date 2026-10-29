@@ -3,8 +3,8 @@ import type { PerPlayer } from "./PerPlayer";
 import type { PlayerId } from "./PlayerId";
 
 /**
- * R1853001, R1853005: one lot at the Marketplace: a card of `def_id`, at `price` Credits this turn
- * (`base` before it moved), `stock` of it for each player this cycle and the copies each has bought.
+ * R1853005, R2250002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base` before
+ * it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
  */
 export type MarketOffer = { defId: string, 
 /**
@@ -12,7 +12,13 @@ export type MarketOffer = { defId: string,
  */
 radiant?: true, base: number, price: number, stock: number, bought: PerPlayer<number>, 
 /**
- * R1853005: the one player a lot an effect added is offered to; absent on a rolled lot, which is
- * both players'.
+ * R2250002, R1853005: the one player the lot is offered to: the player it was rolled for, or the
+ * player an effect added it for. Absent on no lot since #2250.
  */
-owner?: PlayerId, };
+owner?: PlayerId, 
+/**
+ * R1853005: a lot an effect added for the rest of the game, at a price that never moves, renewed
+ * at its owner's turn start; absent on a rolled offer, which the owner's next turn start replaces.
+ * Only ever `Some(true)`.
+ */
+fixed?: true, };

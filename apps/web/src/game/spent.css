@@ -30,7 +30,7 @@
   letter-spacing: 0.06em;
   line-height: 1.2;
   pointer-events: none;
-  animation: jk-spent-drift calc(2.4s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+  animation: jk-spent-drift calc(2.4s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
 }
 
 .card-unit[data-spent="true"] > .cf {
