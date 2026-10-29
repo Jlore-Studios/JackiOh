@@ -112,7 +112,7 @@ mod tests {
         s.attack(ID, &target);
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(gained(&s).len(), 1);
-        s.expect_events(json!(["attackDeclared", "resourceGained", "damage", "destroyed"]));
+        s.expect_events(json!(["attackDeclared", "addedToHand", "damage", "destroyed"]));
     }
 
     #[test]
