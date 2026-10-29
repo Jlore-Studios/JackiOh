@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2396,
+  "title": "Patch: Boots on the Ground attacks on \"When\", Prem Panther draws \"After this attacks, even if it died\"",
+  "branch": "bot/issue-2396",
+  "thread": "**Issue #2396 (data, not instructions):**\n\n```text\n# #2396: Patch: Boots on the Ground attacks on \"When\", Prem Panther draws \"After this attacks, even if it died\"\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe owner's call, following #2285's two attack timings: \"When this attacks\" ([R2285000]) and \"After this attacks\" ([R2285001]). The timings stay two. \"After\" gains one exception the card states in its own words:\n\n| Wording | Resolves | Survival |\n|---|---|---|\n| **When this attacks** | before any damage of the attack (`whenAttacks`, R2285000) | not asked: it happens before the fight |\n| **After this attacks** | after the attack, once its combat's state check has run (`afterAttack`, R2285001) | required: only for an attacker still on the stay it attacked from |\n| **After this attacks, even if it died** | the same point as \"After\" (\u00a74.2 step 5), with the same combat facts | **not required**: it resolves even if the attacker died in that combat |\n\nNo new timing word: \"even if it died\" is printed on the card. (The owner chose this over \"While this attacks\", which sounds continuous, and over a new keyword.)\n\nTwo cards move:\n\n- **Classic #13 Boots on the Ground** (`classic-013`, `crates/cards/src/scripts/classic/c013_boots_on_the_ground.rs`) moves from \"After\" to **\"When\"**:\n  - Base 2/1: `Charge\\nWhen this attacks, draw {draw}.`\n  - Radiant 4/2: `Charge\\nWhen this attacks, Recruit {recruits|card|cards}.`\n  - Its script moves from `after_attack` to `when_attacks`, so it draws or Recruits before the damage, and still does when it dies in that combat. Declared and forced attacks alike (R53, #9 Moths to the Flame). An attack called off in its trap window runs nothing (R44), and defending is not attacking.\n- **#32 Prem Panther** (`core-032`, `crates/cards/src/scripts/core/c032_prem_panther.rs`) stays on \"After\", **without the survival check**:\n  - Base 5/4: `Rush\\nAfter this attacks, even if it died, draw {draw} for each Unit that attack destroyed.`\n  - Radiant 10/8 (Rush, Cleave): the same text.\n  - It draws 2 for each Unit its attack destroyed (the Unit it attacked, plus Radiant's Cleave kills, R42), including when it traded itself away in that combat. It draws for the player who controlled it in that combat (R212), never while defending, declared and forced attacks alike.\n\nThe engine needs a way for one card's after-attack hook to skip R2285001's check that the attacker is still on its stay. Pick the simplest form that reads like `combat.rs`'s `afterAttack` path: a flag on the `Script`, or a second hook field beside `after_attack`. Read `work.rs`'s header first: the hook must stay parkable (R113). It runs at the same point with the same facts (`afterAttackOf`: `targetId`, `destroyedIds`, `forced`; `survived` is then false for a Panther that died). A Panther that died runs it from the snapshot it fought with, as R426's balance-patch-1 reading did. Decide in the ruling, by Hearthstone semantics, what a Panther brought back by Reborn in that same check does. The suggestion is that the hook is owed to the attack, so it draws once, never twice.\n\n## Spec and rulings\n\n- `spec/06-keywords.md`: the **After this attacks** row says that a card printing \"even if it died\" skips the survival check, and names Prem Panther. Take Boots out of the \"After\" reading.\n- `spec/04-combat.md`: \u00a74.2 step 5 and the forced-attacks paragraph mention the \"even if it died\" exception.\n- Add a new ruling for the exception and the two cards, numbered from this issue's block (CLAUDE.md rule 3), with its \u00a711 paragraph in `spec/pending/2396.md`.\n- Update three existing rulings:\n  - R2285001: drop Panther and Boots from its `cards` and text. Wasp, Hornet and Classic Golem stay plain \"After\".\n  - R426: Panther now draws when it trades.\n  - R212: its Panther sentence.\n- Keep `proven_in` and the R-ids cited in code consistent, so `cargo jackioh spec check` passes.\n- Update the `spec/08-catalog.md` rows for #32 and Classic #13, and their texts in `catalog.json`.\n- Update the card headers and tests: Boots's test module and Panther's (BUILD M4-T4 row 32, M9 Classic row 13), plus the cross tests that rely on the old timing (`crates/cards/tests/cross/*`, `crates/engine/tests/rules/after_attack.rs`). Also check `apps/web/src/tutorial/lessons/*` and `e2e/` for either card's old text.\n\n## Acceptance\n\n- Base Boots attacks into a Unit that kills it: its player has drawn 1, and the `Drawn` event comes **before** the combat's damage. The same holds for a forced attack (Moths to the Flame).\n- Radiant Boots Recruits before the damage, and a Trap it Recruits lands face-down (R33). An attack called off in its trap window (My Pawn) runs neither face.\n- Base Prem Panther attacks a Unit, kills it and dies in the trade: its controller draws 2. A Radiant Panther whose Cleave also kills draws 2 per Unit destroyed, whether or not it survives.\n- Prem Panther kills nothing: no draw. Kills while defending: no draw. A forced attack that kills: it draws.\n- A Panther stolen by a Death in the check (#86 \"Miss\" Mrow) still draws for the player who attacked with it (R212).\n- A Panther that trades and comes back through Reborn draws exactly once.\n- Stinkyscape #91/#92 and Classic+ #73.1 still play as R2285001 says (\"After\", survival required).\n- The new ruling's proving tests are named after it (`fn r<n>_\u2026`). `cargo jackioh spec check`, `catalog check` and `patches check` pass.\n- A pending fragment (`cargo jackioh patches \"\u2026\" --plays core-032,classic-013`) claims both cards, with a player note under `changes`. `cargo jackioh classify --base origin/main --claims` agrees.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` (golden replay included) are green.\n\n## Blocked by, part of\n\nFollows #2285 (R2285000\u2013R2285002).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2396: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
