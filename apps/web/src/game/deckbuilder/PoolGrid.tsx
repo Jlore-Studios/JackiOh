@@ -39,8 +39,8 @@
 // change, an opened detail or a card the deck takes re-renders only the cards it changes. A pool
 // that grows (the first render, a cleared search) keeps the cards it drew until a background render
 // (`useDeferredValue`), which yields to input, has drawn the rest. The first render draws
-// POOL_FIRST_CARDS at once, or the whole pool with `wholeFirst` (#2334): the Almanac's pool mounts with
-// its route, whose first render React holds behind the route chunk's loading panel on a first visit
+// POOL_FIRST_CARDS at once, or the whole pool with `wholeFirst` (#2334): the Almanac sets it when its
+// route's chunk was not in at the mount, whose first render React holds behind the chunk's loading panel
 // whatever it costs, so a staged mount there only delayed the rest of the grid.
 
 import {
@@ -115,7 +115,7 @@ type PoolGridBaseProps = {
   /** R1956000: the cards drawn as the viewer's own copies (the signed-in Almanac's); none when absent. */
   own?: OwnCopies;
   /**
-   * #2334: the first render draws the whole pool, not POOL_FIRST_CARDS of it (the Almanac's). A pool
+   * #2334: the first render draws the whole pool, not POOL_FIRST_CARDS of it (the Almanac's, when its route's first render is held). A pool
    * that grows later still keeps what it drew until the background render has drawn the rest.
    */
   wholeFirst?: boolean;

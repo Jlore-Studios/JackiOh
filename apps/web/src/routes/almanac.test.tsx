@@ -20,7 +20,8 @@ import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
-import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
+import { POOL_FIRST_CARDS, poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
+import { RouteHeld } from "./chunks.tsx";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -150,19 +151,26 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
   });
 
-  it("#2334 draws the whole pool in the grid's first render", () => {
-    const drawn: number[] = [];
-    render(
-      <Profiler
-        id="almanac"
-        onRender={() => {
-          drawn.push(document.querySelectorAll(".db-card").length);
-        }}
-      >
-        <AlmanacRoute />
-      </Profiler>,
-    );
-    expect(drawn[0]).toBe(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT).length);
+  it("#2334 draws the whole pool in the grid's first render when the route's chunk was held, and the first cards only when it was not", () => {
+    const firstRender = (held: boolean): number => {
+      const drawn: number[] = [];
+      render(
+        <RouteHeld.Provider value={held}>
+          <Profiler
+            id="almanac"
+            onRender={() => {
+              drawn.push(document.querySelectorAll(".db-card").length);
+            }}
+          >
+            <AlmanacRoute />
+          </Profiler>
+        </RouteHeld.Provider>,
+      );
+      cleanup();
+      return drawn[0] ?? 0;
+    };
+    expect(firstRender(true)).toBe(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT).length);
+    expect(firstRender(false)).toBe(POOL_FIRST_CARDS);
   });
 
   it("R674 never shows Glitch, though the catalog holds it", () => {

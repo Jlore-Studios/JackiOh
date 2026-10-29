@@ -14,7 +14,7 @@ vi.doMock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   loadWasm,
 }));
-const { resetRoutePrefetchForTests, routeChunk, routeChunks, watchRouteIntent } = await import("./chunks.tsx");
+const { resetRoutePrefetchForTests, routeChunk, routeChunks, useRouteHeld, watchRouteIntent } = await import("./chunks.tsx");
 
 function Stub(): ReactElement {
   return <p data-testid="stub-screen">stub</p>;
@@ -137,6 +137,29 @@ describe("R2116000 prefetching a screen on intent", () => {
     );
     expect(screen.getByTestId("stub-screen")).toBeInTheDocument();
     expect(fallbackSpy).not.toHaveBeenCalled();
+  });
+
+  it("#2334 a screen is told its first render is held only when its code had not arrived at the mount", async () => {
+    function Probe(): ReactElement {
+      return <p data-testid="held">{String(useRouteHeld())}</p>;
+    }
+    const cold = routeChunk(() => Promise.resolve({ default: Probe }));
+    render(
+      <Suspense fallback={null}>
+        <cold.Screen />
+      </Suspense>,
+    );
+    expect((await screen.findByTestId("held")).textContent).toBe("true");
+    cleanup();
+
+    const warm = routeChunk(() => Promise.resolve({ default: Probe }));
+    await act(() => warm.load());
+    render(
+      <Suspense fallback={null}>
+        <warm.Screen />
+      </Suspense>,
+    );
+    expect(screen.getByTestId("held").textContent).toBe("false");
   });
 
   it("R2116000 Save-Data turns all prefetching off", () => {

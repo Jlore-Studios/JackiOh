@@ -6,13 +6,25 @@
 //
 // None of this is a rule (CLAUDE.md rule 7): only code is fetched, never game state.
 
-import { lazy, useState, type ComponentType, type ReactElement } from "react";
+import { createContext, lazy, useContext, useEffect, useState, type ComponentType, type ReactElement } from "react";
 
 import { duosIdOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadWasm } from "../wasm/index.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
+
+/**
+ * #2334: whether the screen under it was drawn through `lazy()`, because its code had not arrived at
+ * the mount. React then holds the screen's first commit for its loading panel whatever that render
+ * costs, so a screen may draw everything in it; one drawn at once (its chunk prefetched on intent,
+ * R2116000) has no hold, and a first render that long delays the first paint.
+ */
+export const RouteHeld = createContext(false);
+
+export function useRouteHeld(): boolean {
+  return useContext(RouteHeld);
+}
 
 type ScreenModule<P> = { default: ComponentType<P> };
 
@@ -40,10 +52,23 @@ export function routeChunk<P extends object>(importScreen: () => Promise<ScreenM
     return pending;
   };
   const Lazy = lazy(load);
+  // A mount that chose `Lazy` and suspended is discarded, and its retry sees `arrived`, so the hold is
+  // remembered here from the render that chose `Lazy` until a `Screen` commits.
+  let held = false;
   function Screen(props: P): ReactElement {
     // Chosen once per mount: a screen that swapped from `Lazy` to its module mid-life would remount.
-    const [Shown] = useState<ComponentType<P>>(() => arrived ?? Lazy);
-    return <Shown {...props} />;
+    const [mount] = useState(() => {
+      if (arrived === null) held = true;
+      return { Shown: arrived ?? Lazy, held };
+    });
+    useEffect(() => {
+      held = false;
+    }, []);
+    return (
+      <RouteHeld.Provider value={mount.held}>
+        <mount.Shown {...props} />
+      </RouteHeld.Provider>
+    );
   }
   return { load, Screen };
 }
