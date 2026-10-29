@@ -7163,7 +7163,7 @@
       "action": "review",
       "asks": [],
       "audit_tier": "strong",
-      "cross_rounds": 1,
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
