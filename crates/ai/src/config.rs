@@ -104,9 +104,9 @@ pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
-    /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
-    /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
-    /// zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
+    /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
+    /// it has one (R2203001) (candidates.rs `placement_key`: what stands beside the lane or the
+    /// board's edge, and in the lane's four zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
     /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
     /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
@@ -831,12 +831,12 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
 /// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
 /// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496). It holds the
-/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8): the set ships with
-/// the AI dealing itself none of it, though the AI answers every card of it a player brings, until
-/// fullsend 2's sweep (issue #1885) measures the AI on the set and empties the list again. Gating a
-/// set that ships before the AI is trained on it is listing it here.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Stinkyscape];
+/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496), and the
+/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8) until issue #1885's
+/// sweep of record (training/history/sweep-2026-10-28.md) banned 10 of its 175 cards, within
+/// `STINKYSCAPE_BAN_CEILING` (R1885000), and emptied it again. Gating a set that ships before the AI
+/// is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a

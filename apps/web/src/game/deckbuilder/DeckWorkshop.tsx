@@ -1,7 +1,8 @@
 // `/decks` deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one open at
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
-// the local store and supplied API (R256).
+// the local store and supplied API (R256). The open deck's kept versions are its History, in the
+// editor's head (R2100000).
 // #2096: Duplicate, on each deck's row and in its editor, makes a new deck with its cards, portrait and picks under copyName's name, and opens it.
 // R2119000: Delete deck and Delete trio ask nothing. The item leaves the list at once (the store's `hide`)
 // behind "Deck deleted · Undo" or "Trio deleted · Undo", and its DELETE waits for the undo window
@@ -22,10 +23,14 @@ import type { DecksResponse } from "../../net/api.ts";
 import { navigate, paths, practiceDeckPath, useSearch, wantsNewDeck } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
+import { useShortcutHints } from "../../shortcuts/Kbd.tsx";
+import { ariaKeyshortcuts, SHORTCUTS, shortcutTitle } from "../../shortcuts/shortcuts.ts";
 import { useUndoHold } from "../../undo/hold.ts";
 import { UndoToast } from "../../undo/UndoToast.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
+// R2100000: the kept versions' popover, under another name than #2099's undo history (history.ts).
+import DeckHistoryPopover from "./DeckHistory.tsx";
 import DeckPatchBadge, { useNewestChanges } from "./DeckPatchBadge.tsx";
 import { emptyHistory, historyKey, inTextField, recorded, redone, sealed, undone, type DeckHistory, type DeckPatch } from "./history.ts";
 import { DECK_SIZE } from "./deckSize.ts";
@@ -432,6 +437,7 @@ function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | nu
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
   useLocale();
+  const hints = useShortcutHints();
   const patch = useNewestChanges(catalog.version);
 
   const [store] = useState<DeckStore>(() =>
@@ -650,6 +656,18 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           void store.flush();
         }}
         onBack={backToList}
+        // R2100000: mounted with the editor, which is keyed by the deck, so one deck's list never shows under another.
+        history={
+          <DeckHistoryPopover
+            deckId={openDeck.id}
+            store={store}
+            catalog={catalog}
+            onRestored={() => {
+              // R2100000, #2099: Undo's steps were taken on the deck the restore replaced, so they end, as on closing the editor.
+              setHistory((current) => (current.deckId === openDeck.id ? emptyHistory(current.deckId) : current));
+            }}
+          />
+        }
       />
     );
   } else if (openTrio !== null) {
@@ -758,8 +776,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
               className="ws-history-button"
               data-testid={DECK_UNDO}
               aria-label={t("Undo")}
-              title={t("Undo")}
-              aria-keyshortcuts="Control+Z Meta+Z"
+              title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
+              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.undo)}
               disabled={history.past.length === 0}
               onClick={undo}
             >
@@ -774,8 +792,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
               className="ws-history-button"
               data-testid={DECK_REDO}
               aria-label={t("Redo")}
-              title={t("Redo")}
-              aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+              title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}
+              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.redo)}
               disabled={history.future.length === 0}
               onClick={redo}
             >

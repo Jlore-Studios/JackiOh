@@ -85,7 +85,8 @@ buys and sales at the Marketplace (R1853004), the other attacks, position switch
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
-first (#1778). Its root tries a play in every distinct placement;
+first (#1778). Its root tries a play in every distinct placement (the zones beside its lane and
+across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A line that differs from an earlier one only in where its units stand is a lane variant
@@ -164,8 +165,8 @@ counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets`
 thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
-#732 did once it had measured the AI on the Meditative set, the list's one set until then. It holds the
-Stinkyscape set from its release (issue #1884) until issue #1885 measures the AI on it: gating a set that
+#732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
+Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
@@ -177,23 +178,24 @@ never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrit
 and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
 oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
 A card takes the row of the latest report that lists it, in either table (R1186000), and none when the
-latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative, Meditative+ and Stinkyscape rows,
+latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative, Meditative+, Stinkyscape and Training Grounds rows,
 less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those and the cleared).
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
 set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
-`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000): no sweep, lane or person adds a card of an
+`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000), and since #2203 Training Grounds cards, at most half
+of them (R2203000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
 (every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
 runners, `.github/workflows/sweep.yml`. `cargo jackioh sweep --due <base>` names the cards: the bans and
-the watched Meditative, Meditative+ and Stinkyscape cards when the AI changed, every non-token card of a set that
+the watched cards of the sets the ban may hold when the AI changed, every non-token card of a set that
 ships now and did not. Its report goes under `training/history/`, `--write` reads it last, and a
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
-promotion may ban a card of those three sets again when the new AI is slow with it, within each
+promotion may ban a card of those four sets again when the new AI is slow with it, within each
 set's ceiling; a record `--write` refuses opens an issue for a person instead.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood

@@ -79,6 +79,12 @@ export const DUO_MARK = "duo";
 /** The engine's `DUO_MARK_COLOR` (`effects/delay.rs`): Allure's aura, recoloured for Radiance. */
 export const DUO_MARK_COLOR: MarkColor = "gold";
 
+/** The engine's `END_OF_TURN_MARK` (`effects/delay.rs`): the mark a card a destroy at the end of this turn watches wears (R2321001). */
+export const END_OF_TURN_MARK = "endOfTurn";
+
+/** The engine's `END_OF_TURN_MARK_COLOR` (`effects/delay.rs`). */
+export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
+
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
@@ -95,6 +101,8 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   },
   // Duo and Squad (R1850001): Stinkyscape #110 iKwzki's one permanent, its Radiant face's every permanent of yours.
   duo: { name: "Duo", text: "Marked: made Radiant at the start of its marker's next turn" },
+  // R2321001: Training Grounds #15 In a hurry's Rush Tokens, while their destroy at the end of this turn waits.
+  [END_OF_TURN_MARK]: { name: "End of turn", text: "Marked: destroyed at the end of this turn" },
 };
 
 /** The words for a mark the table does not know. */
