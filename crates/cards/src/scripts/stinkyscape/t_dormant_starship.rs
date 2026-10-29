@@ -2,10 +2,8 @@
 //! R1852003–R1852007, R1857001, R1859013): (3) Unit, Legendary, 0/0, the set's one entry that is
 //! neither a numbered card nor a token, of the Stinkyscape set.
 //!
-//! Base and Radiant: "Dormant until it launches.\nEach of your Starship Pieces that dies fuses a copy
-//! into this.\nA card played onto this by Stack while it is Dormant is exiled before it resolves.
-//! \nActivate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires,
-//! then every When launched."
+//! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
+//! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
 //! Engine: its text is the engine's rules written out (R1859013), so its script is the hull alone:
 //! `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown (R1839000), its
 //! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000), exiles a
@@ -46,8 +44,8 @@ mod tests {
     use super::{ID, script};
     use crate::{built_starship, card_def, launch_starship};
     use jackioh_engine::prelude::{
-        STARSHIP_FULL_ROW_LANE, STARSHIP_LAUNCH_ABILITY, STARSHIP_LAUNCH_COST, STARSHIP_NAMES,
-        is_launched_starship,
+        STARSHIP_FULL_ROW_LANE, STARSHIP_LANE_ORDER, STARSHIP_LAUNCH_ABILITY, STARSHIP_LAUNCH_COST,
+        STARSHIP_NAMES, is_launched_starship,
     };
     use jackioh_engine::testkit::*;
 
@@ -60,8 +58,25 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
+    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill a backrow.
 
-    /// p1's Dormant Starship holding one Startos, standing in lane 2 beside a Vanilla in lane 1.
+    /// Every zone of a backrow taken by a face-down Trap, so a Starship finds none open (R2249000).
+    fn full_backrow() -> Value {
+        json!(vec![json!({ "def": TRAP, "faceUp": false }); BACKROW_ZONES as usize])
+    }
+
+    /// R2249000: the Starship standing in the middle of p1's backrow, as p1's view shows it.
+    fn ship_on_view(s: &Scenario) -> jackioh_engine::wire::UnitView {
+        let lane = STARSHIP_LANE_ORDER[0] as usize - 1;
+        match s.view(P1).you.backrow[lane].as_ref() {
+            Some(BackrowView::Public(card)) => card.unit.clone(),
+            _ => None,
+        }
+        .expect("the middle of the backrow shows the Starship")
+    }
+
+    /// p1's Dormant Starship holding one Startos, standing in the middle of the backrow (R2249000), a
+    /// Vanilla in unit lane 1.
     fn one_piece(seed: &str, p1: Value, p2: Value) -> (Scenario, String) {
         let mut p1 = p1;
         let mut field = vec![json!({ "def": VANILLA, "lane": 1 })];
@@ -102,11 +117,17 @@ mod tests {
             json!({}),
         );
         let card = s.card(ship.as_str()).clone();
-        assert!(matches!(card.zone, Zone::Field { player: P1, row: Row::Units, lane: 2 }));
+        assert_eq!(
+            card.zone,
+            Zone::Field {
+                player: P1,
+                row: Row::Backrow,
+                lane: STARSHIP_LANE_ORDER[0]
+            }
+        );
         let stats = s.stats(ship.as_str());
         assert_eq!((stats.attack, stats.health), (3, 3), "only what fused into it");
-        let view = s.view(P1);
-        let unit = view.you.units[1].as_ref().expect("lane 2 shows the Starship");
+        let unit = ship_on_view(&s);
         let abilities = unit.activations.clone().expect("the launch");
         assert_eq!(abilities.len(), 1);
         assert_eq!(abilities[0].ability, STARSHIP_LAUNCH_ABILITY);
@@ -124,19 +145,20 @@ mod tests {
     }
 
     #[test]
-    fn r1852000_with_its_owners_row_full_it_is_stacked_on_top_of_lane_3() {
+    fn r1852000_with_both_its_owners_rows_full_it_is_stacked_on_top_of_lane_3() {
         let mut s = crate::scenario(json!({
             "seed": "r1852000-full-row",
             "active": "p1",
             "p1": {
                 "hand": [HIT_JOB, FILLER],
                 "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                "backrow": full_backrow(),
                 "library": crate::filler(4),
                 "mana": 10,
             },
             "p2": { "hand": [FILLER], "field": [STARTOS], "library": crate::filler(4) },
         }));
-        // p1's Startos, stolen: its death fuses into its owner's Starship (R1852002), p1's row full.
+        // p1's Startos, stolen: its death fuses into its owner's Starship (R1852002), p1's rows full.
         let piece = s.unit_at(P2, 1).id;
         s.card_mut(piece.as_str()).owner = P1;
         let beneath = s.unit_at(P1, STARSHIP_FULL_ROW_LANE).id;
@@ -192,8 +214,15 @@ mod tests {
 
     #[test]
     fn r1852007_a_stack_card_played_onto_it_is_exiled_before_it_resolves() {
-        let (mut s, ship) = one_piece("r1852007-hull", json!({ "hand": [MONKEY] }), json!({}));
-        s.play(MONKEY, json!({ "zone": 2 }));
+        // With the backrow full the Starship stands in the unit row's middle (R2249000), under the Stack.
+        let (mut s, ship) = one_piece(
+            "r1852007-hull",
+            json!({ "hand": [MONKEY], "backrow": full_backrow() }),
+            json!({}),
+        );
+        let lane = STARSHIP_LANE_ORDER[0];
+        assert_eq!(s.unit_at(P1, lane).id, ship);
+        s.play(MONKEY, json!({ "zone": lane }));
         assert!(
             s.last_events()
                 .iter()
@@ -202,7 +231,7 @@ mod tests {
         let monkey = s.pile(P1, "exile").into_iter().find(|card| card.def_id == MONKEY);
         assert!(monkey.is_some(), "the Monkey is in exile");
         assert!(
-            s.unit(P1, 2).is_some_and(|unit| unit.id == ship),
+            s.unit(P1, lane).is_some_and(|unit| unit.id == ship),
             "the Starship tops its zone again"
         );
         assert!(is_dormant_starship(s.card(ship.as_str())), "still Dormant");
@@ -260,8 +289,7 @@ mod tests {
             expiry: ModifierExpiry::Used,
             kind: ModifierKind::StarshipLaunchCost { cost: 0 },
         });
-        let view = s.view(P1);
-        let unit = view.you.units[1].as_ref().expect("lane 2 shows the Starship");
+        let unit = ship_on_view(&s);
         assert_eq!(
             unit.activations.as_ref().expect("the launch")[0].label,
             "Launch (0)"
