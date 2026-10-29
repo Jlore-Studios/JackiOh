@@ -8,7 +8,7 @@
   position: fixed;
   top: 50%;
   left: max(16px, env(safe-area-inset-left));
-  z-index: 39;
+  z-index: var(--z-showcase);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -23,9 +23,9 @@
 .showcase-caption {
   padding: 4px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 90%, transparent);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--pal-black) 50%, transparent);
+  box-shadow: var(--shadow-3);
   color: var(--text);
   font-size: var(--type-md);
   font-weight: 700;
@@ -43,7 +43,7 @@
 
 .showcase-card--back {
   overflow: hidden;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-lg);
 }
 
 /* Phones held upright: the field is the middle of the screen, so the card stands over it, centred,
@@ -90,12 +90,12 @@
   top: 7%;
   left: -6%;
   right: -6%;
-  z-index: 2;
+  z-index: var(--z-raised);
   padding: 0.28em 0.6em;
   border-top: 2px solid var(--pal-gold-200);
   border-bottom: 2px solid var(--pal-brass-500);
-  background: linear-gradient(90deg, var(--pal-brass-600), var(--pal-gold-300) 22%, var(--pal-gold-200) 50%, var(--pal-gold-300) 78%, var(--pal-brass-600));
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--pal-black) 55%, transparent);
+  background: var(--pal-gold-200);
+  box-shadow: var(--shadow-3);
   color: var(--pal-brass-950);
   font-family: var(--font-display);
   font-size: clamp(var(--type-md), 2.4vh, var(--type-2xl));
@@ -142,16 +142,16 @@
   position: fixed;
   top: 45%;
   left: 50%;
-  z-index: 39;
+  z-index: var(--z-showcase);
   display: grid;
   justify-items: center;
   gap: 6px;
   max-width: calc(100vw - 32px);
   padding: 10px 18px 12px;
   border: 2px solid var(--radiant);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--pal-wood-900) 94%, transparent);
-  box-shadow: 0 12px 36px color-mix(in srgb, var(--pal-black) 60%, transparent);
+  box-shadow: var(--shadow-3);
   color: var(--text);
   pointer-events: none;
   transform: translate(-50%, -50%);
@@ -176,7 +176,7 @@
 .chaos-banner-line {
   padding: 3px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: clamp(var(--type-md), 2.6vh, var(--type-2xl));
   font-weight: 700;
   text-align: center;
@@ -243,9 +243,9 @@
   content: "";
   position: absolute;
   inset: -12%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--pal-purple-400) 55%, transparent), color-mix(in srgb, var(--pal-violet-500) 25%, transparent) 60%, transparent);
+  z-index: var(--z-below);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--pal-violet-500) 25%, transparent);
   animation: showcase-halo 1.1s ease-in-out infinite alternate;
 }
 
@@ -253,16 +253,16 @@
   position: absolute;
   top: -0.6em;
   right: -0.6em;
-  z-index: 2;
+  z-index: var(--z-raised);
   display: grid;
   place-items: center;
   min-width: 2.2em;
   height: 2.2em;
   padding: 0 0.4em;
   border: 2px solid var(--pal-slate-100);
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, var(--pal-violet-300), var(--pal-violet-700) 70%);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--pal-black) 55%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--pal-violet-700);
+  box-shadow: var(--shadow-2);
   color: var(--pal-white);
   font-family: var(--font-text);
   font-size: clamp(var(--type-md), 2.2vh, var(--type-2xl));

@@ -682,7 +682,8 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
-`card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::invariants::Monitor`
+`card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::Monitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
@@ -738,7 +739,7 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
     // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
-#[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the Easy tier's lethal hint; deadline_ms as ai_decide's
+#[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the practice AI's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;

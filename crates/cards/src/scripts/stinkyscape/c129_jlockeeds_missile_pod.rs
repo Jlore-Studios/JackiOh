@@ -1,5 +1,5 @@
 //! Stinkyscape #129 Jlockeed's Missile Pod (SPEC §8.10 row 129). (1, Embiggened 2) Unit, Jlockeed, Epic;
-//! 2/1 → 4/2; held (R1420).
+//! 2/1 → 4/2.
 //!   Base:    "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all
 //!            enemies. / Embiggened (2): Starship Piece and Equip." — divisor 4
 //!   Radiant: the same words — divisor 3

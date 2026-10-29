@@ -123,10 +123,6 @@ mod tests {
             .collect()
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("expected {what}"))
-    }
-
     /// The open prompt, as its JSON.
     fn open(s: &Scenario) -> Value {
         crate::js(must(s.state().pending.as_ref(), "an open prompt"))

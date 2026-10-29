@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 49 Spacemine, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 49 Spacemine, a card of the Stinkyscape set.
 //! (2) Unit, Common, 5/1 → 10/2: Starship Piece.
 //! "Death: Deal damage equal to its Attack to {targets|random enemy|random enemies}."
 //! — targets 1, Radiant 2 (R1860004).

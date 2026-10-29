@@ -19,7 +19,7 @@ import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts
 import { EmptyState } from "../../empty/EmptyState.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
-import { paths, practiceDeckPath } from "../../net/navigate.ts";
+import { navigate, paths, practiceDeckPath, useSearch, wantsNewDeck } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import { useUndoHold } from "../../undo/hold.ts";
@@ -520,6 +520,15 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     const id = store.createDeck({ name: nextName((number) => t("Deck {number}", { number }), decks.map((deck) => deck.name)) });
     if (id !== null) openItem({ kind: "deck", id });
   };
+
+  // R2118000: the command menu's New deck (`/decks?new=deck`) makes and opens one deck. The query is read off the
+  // address itself and dropped first, so a second run of this effect (StrictMode) makes none.
+  const asksNewDeck = wantsNewDeck(useSearch());
+  useEffect(() => {
+    if (!asksNewDeck || !wantsNewDeck(window.location.search)) return;
+    navigate(paths.decks, { replace: true, force: true });
+    newDeck();
+  }, [asksNewDeck]);
 
   // #2096: trios name decks by id (R252), so every trio naming the original still does.
   const duplicateDeck = (source: DeckItem): void => {
