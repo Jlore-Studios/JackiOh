@@ -40,9 +40,12 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// the log was recorded again, from `7044d528` to `5b8b57a7`. Cypress could not be fetched where that
 /// was done, so spec 01's policy (the first playable hand card into the first open zone, then each
 /// unit at the first target it may attack, then End turn) was run against the engine instead; on the
-/// base build that run gives the old log action for action and its hash.
+/// base build that run gives the old log action for action and its hash. Issue #2368's was another
+/// (R2368000): p1 opens on three cards, so its mulligan keeps three where it kept four, and the fourth,
+/// c16, is its turn-1 draw instead; the same policy, run the same way, plays every later action as
+/// before, and the hash moved from `5b8b57a7` to `972f5b85`.
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
-pub const HOTSEAT_HASH: &str = "5b8b57a7";
+pub const HOTSEAT_HASH: &str = "972f5b85";
 
 /// A game's first divergence from its trace.
 pub struct Mismatch {

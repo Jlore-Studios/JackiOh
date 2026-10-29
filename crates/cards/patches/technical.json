@@ -2995,5 +2995,99 @@
     "title": "a Tokens toggle on /stats with each token's win rate",
     "kind": "app",
     "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "5f8bff82c0b301e62d7db658a9ab9f54d1f562f6",
+    "pr": 2377,
+    "title": "patches log: 0283f6d..18f7376",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "8e04d4897c388bf98ccda7f6196d8967ccf5af69",
+    "pr": 2372,
+    "title": "the shadow ban swept again over the Training Grounds set, with Stinkyscape ungated",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "ab43a743828a4823be40553126559157a8e8c884",
+    "pr": 2393,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "fe7a340778530f3ec3a73d32bcf027a34a028dcf",
+    "pr": 2293,
+    "title": "the tutorial remade from Training Grounds, five lessons that can't be lost and a coach that lets you discover the rules",
+    "kind": "app",
+    "player": "The tutorial is remade from the Training Grounds set: five lessons you can't lose, a coach that asks rather than tells, and a Field Guide of everything you discover."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "a7ab98d16fa27f5fcb57443af3f4eb95752c0700",
+    "pr": 2397,
+    "title": "the shadow ban swept again after the Training Grounds set shipping",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "681d21729645aabf288cc4d7fe2698e71cbc3298",
+    "pr": 2398,
+    "title": "the Almanac's whole grid and its scroll match the 481-card baseline",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "000f35fe655093a63516bab9f09ecce672d7d938",
+    "pr": 2399,
+    "title": "the store's seed test expects Training Grounds' Jlockeed and Jelly Bean cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "abf139aff6248ca8f0c037fa7cd95efd7a859382",
+    "pr": 2400,
+    "title": "WIP: the AI prices the Credits it holds at what they buy (#2389)",
+    "kind": "ai",
+    "player": "The AI now saves its Marketplace Credits rather than spending them on any offer at any price."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "d718820a387ed60f48bd66a6693f2318bf27c044",
+    "pr": 2348,
+    "title": "a Tradable hand hint, dimmed once the turn's Trade is spent",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "6df2db20bd4e6e017e76ea88bcca9f24a6aa51d2",
+    "pr": 2339,
+    "title": "Back closes the top sheet or dialog before it leaves the screen",
+    "kind": "app",
+    "player": "Back closes the open sheet or dialog first instead of leaving the screen."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "55c3e31746161a65b9a02f188d1a0da8d01f9922",
+    "pr": 2405,
+    "title": "a player watching the finished match's replay is still taken to the rematch both sides agreed to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "edaa93ada13aa1862fdd51da93e2f42db9c238d7",
+    "pr": 2406,
+    "title": "patches ship: v0.5.7, v0.5.8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "59cec786eb678d49cfcd57c5897fe93ebb372369",
+    "pr": 2408,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
   }
 ]
