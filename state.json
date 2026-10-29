@@ -8942,9 +8942,12 @@
         "sha": "7c2ecc8b86c93c98bb055a9750b606f6ea821bb3"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T17:57:33Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2382,
       "kind": "review",
       "pending_request": false,
