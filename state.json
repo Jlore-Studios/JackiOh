@@ -7780,22 +7780,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40815188363",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ac3231d4c337f083de5bbfcad34b415d0409b423",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "345c53bdbdcd56709a3397cfd133b0a852e8ce6a",
+        "tiers": {}
       }
     },
     "2300": {
