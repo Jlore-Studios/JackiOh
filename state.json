@@ -7819,7 +7819,7 @@
       "queued_at": "2026-10-29T06:38:01Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:a33698db-1793255869",
+      "run_id": "40830441928",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
