@@ -62,6 +62,7 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill the backrow.
 
     /// Seeds per sweep.
     const SEEDS: usize = 30;
@@ -69,9 +70,16 @@ mod tests {
     fn setup(seed: &str, radiant: bool, p1_field: &[Value]) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];
         field.extend(p1_field.iter().cloned());
+        // R2248000: a Flying Unit of the pool stands in the backrow when the unit row is full, so a
+        // full board fills the backrow too.
+        let backrow: Vec<Value> = if field.len() == UNIT_ZONES as usize {
+            vec![json!({ "def": TRAP, "faceUp": false }); BACKROW_ZONES as usize]
+        } else {
+            Vec::new()
+        };
         crate::scenario(json!({
             "seed": seed,
-            "p1": { "hand": [FILLER], "field": field, "library": [SPARE, SPARE] },
+            "p1": { "hand": [FILLER], "field": field, "backrow": backrow, "library": [SPARE, SPARE] },
             "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
         }))
     }

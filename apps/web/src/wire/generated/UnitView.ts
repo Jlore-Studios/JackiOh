@@ -51,7 +51,8 @@ animated?: AnimatedView,
 berserk?: true, 
 /**
  * R1174000: the unit is Frozen (a status, public on the field on both seats): it can neither
- * attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
+ * attack nor switch its own position, nor (R2246000) use an Activate, until it thaws. Absent
+ * otherwise. Only ever `Some(true)`.
  */
 frozen?: true, 
 /**

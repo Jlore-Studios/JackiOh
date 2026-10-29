@@ -153,6 +153,28 @@ fn ability_ids(state: &GameState, instance: &str) -> Vec<String> {
         .collect()
 }
 
+/// Apply `effect` for `controller` with no card running it, then settle.
+fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(controller),
+                    ..Default::default()
+                },
+            );
+            (effect.apply)(&mut ctx);
+        }
+        settle(&mut sink, SettleOptions::default());
+    }
+    state.rng_cursor = rng.cursor();
+}
+
 /// The first target as JSON (null when there is none).
 fn first_target<T: serde::Serialize>(body: &T) -> Value {
     json_of(body)["targets"][0].clone()
@@ -1822,28 +1844,6 @@ mod r1876000_r1876001_another_cards_activate {
     use super::*;
     use jackioh_engine::effects::{ActivationOfArgs, refuse_own_activate, run_activation};
 
-    /// Apply `effect` for `controller` with no card running it, then settle.
-    fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
-        let mut events: Vec<GameEvent> = Vec::new();
-        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
-        {
-            let mut sink = EngineSink::new(state, &mut events, &mut rng);
-            {
-                let mut ctx = make_context(
-                    &mut sink,
-                    None,
-                    HookOptions {
-                        controller: Some(controller),
-                        ..Default::default()
-                    },
-                );
-                (effect.apply)(&mut ctx);
-            }
-            settle(&mut sink, SettleOptions::default());
-        }
-        state.rng_cursor = rng.cursor();
-    }
-
     fn of(id: &str) -> ActivationOfArgs {
         ActivationOfArgs {
             instance_id: Some(id.to_string()),
@@ -1893,5 +1893,105 @@ mod r1876000_r1876001_another_cards_activate {
         let hero = state.players.p2.hero.health;
         apply(&mut state, P1, run_activation(of(&card.id)));
         assert_eq!(state.players.p2.hero.health, hero);
+    }
+}
+
+mod r2246000_a_frozen_card_uses_no_activate {
+    use super::*;
+    use jackioh_engine::effects::{ActivationOfArgs, FreezeArgs, freeze, run_activation};
+
+    const FROZEN: &str = "that Unit is Frozen";
+
+    fn frost(state: &mut GameState, id: &str, forever: bool) {
+        let target = json_as(json!({ "of": "instance", "instanceId": id }));
+        apply(
+            state,
+            P2,
+            freeze(FreezeArgs {
+                target,
+                forever: forever.then_some(true),
+            }),
+        );
+        assert!(card(state, id).frozen.is_some(), "{id} is Frozen");
+    }
+
+    fn end_turns(mut state: GameState, players: &[&str]) -> GameState {
+        for player in players {
+            state = act(&state, input(json!({ "type": "endTurn", "playerId": player })));
+        }
+        state
+    }
+
+    #[test]
+    fn r2246000_a_frozen_unit_is_offered_no_activate_refused_one_and_its_view_says_why() {
+        let mut state = playing("frozen");
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        let free = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
+        frost(&mut state, &unit.id, false);
+
+        assert_eq!(why_not(&state, P1, &unit.id, None).as_deref(), Some(FROZEN));
+        assert!(!lists_activate_of(&state, &unit.id));
+        assert_eq!(
+            act_result(&state, activate(P1, &unit.id, json!({})))
+                .error
+                .as_deref(),
+            Some(FROZEN)
+        );
+        assert!(matches_object(
+            &json_of(view_for(&state, P1))["you"]["units"][0],
+            &json!({ "activations": [{ "ability": "surge", "usesLeft": 2, "usable": false, "reason": FROZEN }] })
+        ));
+        // A card that is not Frozen beside it activates as ever.
+        assert_eq!(why_not(&state, P1, &free.id, None), None);
+        assert!(lists_activate_of(&state, &free.id));
+    }
+
+    #[test]
+    fn r2246000_once_it_thaws_it_activates_again_with_its_uses_untouched() {
+        let mut state = playing("thaw");
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        // Frozen on its own turn with its exertion unspent: it thaws at this turn's cleanup (R1174000).
+        frost(&mut state, &unit.id, false);
+        assert_eq!(card(&state, &unit.id).frozen, Some(state.turn));
+        let state = end_turns(state, &["p1", "p2"]);
+        assert_eq!(state.active, P1);
+        assert_eq!(card(&state, &unit.id).frozen, None);
+        assert_eq!(why_not(&state, P1, &unit.id, None), None);
+        let before = state.players.p1.mana.current;
+        let state = act(&state, activate(P1, &unit.id, json!({})));
+        let state = act(&state, activate(P1, &unit.id, json!({})));
+        assert_eq!(
+            state.players.p1.mana.current,
+            before + 2,
+            "both of its Activate 2 uses"
+        );
+    }
+
+    #[test]
+    fn r2246000_r1848000_a_unit_frozen_forever_never_activates_again() {
+        let mut state = playing("forever");
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        frost(&mut state, &unit.id, true);
+        let state = end_turns(state, &["p1", "p2", "p1", "p2"]);
+        assert_eq!(state.active, P1);
+        assert_eq!(why_not(&state, P1, &unit.id, None).as_deref(), Some(FROZEN));
+        assert!(!lists_activate_of(&state, &unit.id));
+    }
+
+    #[test]
+    fn r2246000_r1876001_an_effect_still_runs_a_frozen_cards_ability() {
+        let mut state = playing("frozen-run");
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        frost(&mut state, &unit.id, false);
+        let before = state.players.p1.mana.current;
+        apply(
+            &mut state,
+            P1,
+            run_activation(ActivationOfArgs {
+                instance_id: Some(unit.id.clone()),
+                ..ActivationOfArgs::default()
+            }),
+        );
+        assert_eq!(state.players.p1.mana.current, before + 1);
     }
 }
