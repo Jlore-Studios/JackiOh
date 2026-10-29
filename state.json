@@ -8570,6 +8570,7 @@
       "feedback_since": "2026-10-29T02:42:34Z",
       "issue": 2325,
       "kind": "revise",
+      "queued_at": "2026-10-29T04:51:31Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [
