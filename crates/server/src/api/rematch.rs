@@ -101,11 +101,6 @@ fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
 }
 
 /// For the tests; nothing in `src/` calls it.
-pub fn clear_rematch_offers(app: &App) {
-    offers(app).clear();
-}
-
-/// For the tests; nothing in `src/` calls it.
 pub fn rematch_offer_count(app: &App) -> usize {
     offers(app).len()
 }

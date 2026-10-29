@@ -1,7 +1,7 @@
 //! SPEC §8.11 Training Grounds 4 Boulder Fist Ogre: (2) Unit, Common, 6/7 → 18/21, Rush on both faces,
 //! a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1): Rush lets it attack a
 //! Unit the turn it lands, never the hero. The Radiant face adds no keyword, the designer's word
-//! (`docs/radiant-audit.md`, as S #68 Startos).
+//! (`docs/radiant-audit.md`, as S #68 Stratos).
 
 use jackioh_engine::prelude::*;
 

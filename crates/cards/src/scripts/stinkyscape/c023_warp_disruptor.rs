@@ -130,7 +130,7 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14.
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
     const GREASER: &str = "meditative-100"; // (2) 7/7.
     const ATTACK: i32 = 2;
     /// "that unit cannot be in Defense Position" (R1849006).
@@ -238,22 +238,22 @@ mod tests {
         fn r1849007_a_flying_arrival_draws_only_a_flying_attacker() {
             let mut s = played(
                 false,
-                json!([{ "def": VANILLA, "lane": 1 }, { "def": STARTOS, "lane": 2 }, { "def": VANILLA, "lane": 3 }]),
+                json!([{ "def": VANILLA, "lane": 1 }, { "def": STRATOS, "lane": 2 }, { "def": VANILLA, "lane": 3 }]),
                 json!([]),
-                json!([STARTOS, FILLER]),
+                json!([STRATOS, FILLER]),
             );
             let flyer = s.unit_at(P1, 2).id;
             their_turn(&mut s);
-            s.play(STARTOS, json!({ "zone": 1 }));
+            s.play(STRATOS, json!({ "zone": 1 }));
             assert_eq!(forced(&s).into_iter().map(|(attacker, _)| attacker).collect::<Vec<_>>(), vec![flyer]);
         }
 
         #[test]
         fn r1849007_with_none_able_nothing_happens_and_the_rng_does_not_move() {
-            let mut s = played(false, json!([VANILLA]), json!([]), json!([STARTOS, FILLER]));
+            let mut s = played(false, json!([VANILLA]), json!([]), json!([STRATOS, FILLER]));
             their_turn(&mut s);
             let cursor = s.state().rng_cursor;
-            s.play(STARTOS, json!({ "zone": 1 }));
+            s.play(STRATOS, json!({ "zone": 1 }));
             assert!(forced(&s).is_empty());
             assert_eq!(s.state().rng_cursor, cursor);
         }

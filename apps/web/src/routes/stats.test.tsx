@@ -1682,6 +1682,126 @@ describe("R2089000 the Created cards", () => {
   });
 });
 
+describe("R2370000 the Tokens toggle", () => {
+  /** A Created card's figures: `played` seats used one at `playedRate`, `notPlayed` made one and used none. */
+  function created(id: string, name: string, played: number, playedRate: number | null, notPlayed: number, notPlayedRate: number | null) {
+    return {
+      id,
+      name,
+      cost: 1,
+      rarity: "Token",
+      set: "Core",
+      games: played + notPlayed,
+      createdPlayedGames: played,
+      createdPlayedWinRate: playedRate,
+      createdNotPlayedGames: notPlayed,
+      createdNotPlayedWinRate: notPlayedRate,
+      createdPlayedRadiantGames: 0,
+      createdPlayedRadiantWinRate: null,
+      createdPlayedNormalGames: played,
+      createdPlayedNormalWinRate: playedRate,
+      createdPlayedDelta: played >= 20 && notPlayed >= 20 && playedRate !== null && notPlayedRate !== null ? playedRate - notPlayedRate : null,
+      hasEnoughGames: played + notPlayed >= 20,
+      window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
+    };
+  }
+
+  /** 55 seats: 18 of 30 that used one won and 13 of 25 that used none, 31 of 55 in all (56%). */
+  const RUSH = created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52);
+  /** 40 seats, each used one, 28 won (70%). */
+  const SHEEP = created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null);
+  /** 12 seats, too few for a rate however many won. */
+  const GHOUL = created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null);
+  /** A Created copy of a deck card: no token. */
+  const COPY = created("core-001", "Spark Pup", 30, 0.5, 0, null);
+
+  /** Answers the card statistics with `body`, and anything else with nothing. */
+  function serveCards(body: unknown): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const answer = url.pathname === "/api/stats/cards" ? body : {};
+        return Promise.resolve(new Response(JSON.stringify(answer), { status: 200 }));
+      }),
+    );
+  }
+
+  /** The table's rows as their card ids, and each row's cells after its name. */
+  function rowsOf(table: HTMLElement): { ids: (string | null)[]; cells: string[][] } {
+    const rows = within(table).getAllByRole("row").slice(1);
+    return {
+      ids: rows.map((row) => row.getAttribute("data-card-id")),
+      cells: rows.map((row) => [...row.querySelectorAll("td")].map((td) => td.textContent ?? "")),
+    };
+  }
+
+  it("R2370000 starts off, and on lists the tokens alone, best first, each with its win rate", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, SHEEP, COPY, GHOUL] });
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.tokensToggle);
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByLabelText("Show tokens")).toBe(toggle);
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    expect(window.location.search).not.toContain("tokens=");
+    const createdBefore = rowsOf(screen.getByTestId(statsTestid.createdTable));
+
+    fireEvent.click(toggle);
+    const panel = screen.getByTestId(statsTestid.tokensPanel);
+    expect(screen.getByRole("tabpanel")).toContainElement(panel);
+    expect(within(panel).getByRole("heading", { name: "Tokens" })).toBeInTheDocument();
+    expect(panel).toHaveTextContent("Each needs 20 games");
+    const table = within(panel).getByTestId(statsTestid.tokensTable);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Token",
+      "Games",
+      "Win rate",
+      "Used",
+      "Not used",
+      "Used vs not used",
+    ]);
+    // Sheep (70%) over Rush (31 of 55, 56%); Ghoul's 12 seats are under the floor, so it shows no rate
+    // and comes last; Spark Pup's copy is no token.
+    expect(rowsOf(table)).toEqual({
+      ids: ["core-t-sheep", "core-t-rush", "core-t-ghoul"],
+      cells: [
+        ["40", "70%", "70%", "—", "—"],
+        ["55", "56%", "60%", "52%", "+8%"],
+        ["12", "—", "—", "—", "—"],
+      ],
+    });
+    expect(window.location.search).toContain("tokens=1");
+
+    // The Created cards are as they were, the tokens among them.
+    expect(rowsOf(screen.getByTestId(statsTestid.createdTable))).toEqual(createdBefore);
+    expect(createdBefore.ids).toEqual(["core-t-rush", "core-t-sheep", "core-001", "core-t-ghoul"]);
+
+    // The search box asks of the tokens what it asks of the other cards.
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
+    expect(rowsOf(within(screen.getByTestId(statsTestid.tokensPanel)).getByTestId(statsTestid.tokensTable)).ids).toEqual([
+      "core-t-rush",
+    ]);
+
+    fireEvent.click(screen.getByTestId(statsTestid.tokensToggle));
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    expect(window.location.search).not.toContain("tokens=");
+  });
+
+  it("R2370000 the address turns it on, and with no token to show it says so", async () => {
+    at("/stats?tokens=1");
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COPY] });
+    render(<StatsRoute />);
+
+    const panel = await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.tokensToggle)).toBeChecked();
+    expect(panel).toHaveTextContent("No tokens match the selected filters.");
+    expect(within(panel).queryByRole("table")).toBeNull();
+    expect(window.location.search).toContain("tokens=1");
+  });
+});
+
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
     rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
