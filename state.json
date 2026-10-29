@@ -8192,12 +8192,15 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T10:35:39Z",
+    "at": "2026-10-29T10:49:23Z",
     "notes": [
-      "delivered revise #2304 on muse (run 40857867449): built",
-      "started review #2304 on claude-8 (run 40859074136)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #2304 on claude-8 (run 40859074136): reviewed",
+      "delivered revise #2341 on muse (run 40838964190): approved",
+      "delivered revise #2310 on muse (run 40836800768): approved",
+      "started revise #2307 on muse (run 40861038420)",
+      "started revise #2341 on muse (run 40861122345)",
+      "started revise #2310 on muse (run 40861205865)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8903,7 +8906,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T10:35:39Z",
+  "loop_tick": "2026-10-29T10:49:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
