@@ -8374,13 +8374,8 @@
     "what": "build #2378 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-29T15:11:16Z",
-    "notes": [
-      "delivered review #2307 on claude-8 (run 40897793219): reviewed",
-      "delivered plan #2378 on claude-6 (run 40895876958): planned",
-      "started build #2378 on claude-6 (run 40899397960)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-29T15:25:45Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -9085,7 +9080,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T15:11:16Z",
+  "loop_tick": "2026-10-29T15:25:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
