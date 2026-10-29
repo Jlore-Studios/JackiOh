@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2334,
+  "title": "Patch: the Almanac's whole grid and its scroll match the 481-card baseline",
+  "branch": "bot/issue-2334",
+  "thread": "**Issue #2334 (data, not instructions):**\n\n```text\n# #2334: Patch: the Almanac's whole grid and its scroll match the 481-card baseline\nOpened by @MaxGoetzmann.\n\n### What it does\n\nThis is the follow-up that #2266's plan (Open question 1) and #2301 deferred. #2301 memoizes the pool's cards, keeps their handlers stable and draws the first `POOL_FIRST_CARDS` (48) at once and the rest in a `useDeferredValue` background render. Opening the Almanac, a filter change and opening a detail beat the pre-#2145 baseline (9be40af, 481 cards). Two of #2266's metrics still do not. These are the planner's numbers (headless Chromium, 1280x720, its `/tmp/almanac-measure.js` script in #2266's plan, ms):\n\n| | baseline 9be40af (481 cards) | main before #2301 (709) | #2301 (709) |\n|---|---|---|---|\n| open: whole grid in the DOM | 259\u2013260 | 349\u2013361 | 378\u2013453 |\n| clear search: whole grid | 271\u2013279 | 338\u2013349 | 333\u2013343 |\n| scroll: mean / p95 frame | 30\u201331 / 46 | 31 / 51 | 31 / 49\u201352 |\n\nThe per-card cost is already at parity. The grid now draws 709 faces instead of 481, and staging the mount trades total background time for first paint. The owner waived these two metrics for #2301 and ordered them here.\n\n**Measure first.** The table predates #2303 (b62feb4). `PoolGrid`'s `PoolFace` now leaves a face empty until the browser first un-skips its `content-visibility: auto` holder, which may already have closed part of the gap. Re-run the planner's script on main (with #2301 and #2303) and on the baseline before choosing a fix, and fix what the profile shows. The two candidate fixes, cheapest first:\n\n1. **Cheaper off-screen cards.** Keep every `.db-item` in the DOM, but make what an off-screen card mounts cheaper: its per-card hooks and providers (`AsOwnCopy`, `useFullArt`, `useOwnCopy`, `useInspectTrigger`), the text fitting (`fit.ts`) and any per-face observers. This keeps every spec and the browser's find-in-page working as they do.\n2. **Row virtualization.** Mount only the rows near the pool's scrolled view. This breaks every spec that expects every card in the DOM:\n   - `e2e/cypress/component/deckbuilder-layout.cy.tsx` checks `POOL_ITEMS` `should(\"have.length\", DECKABLE.length)` many times, and `fitEveryPoolCard` visits every card to check the B15 / R1017000 font-size floor on every pool card.\n   - `card-pool-<id>` lookups in `09-deckbuilder.cy.ts`, `33-almanac.cy.ts` and `45-economy-loop.cy.ts`, and in the web unit tests (`PoolGrid.test.tsx`, `almanac*.test.tsx`, `decks*.test.tsx`, `browse.test.tsx`, `DeckWorkshop.test.tsx`, `ribbon.test.tsx`, `Extended.test.tsx`).\n\n   If you take this route, every check keeps its meaning: for example, the floor is still checked on every card, by scrolling the pool through. Each pool card stays reachable by keyboard with its accessible name (R2098000's terms included), and the grid keeps `db-result-count`'s `data-count`. Losing the browser's find-in-page on unmounted cards is a product decision: stop with `human_required` rather than make it.\n\nEvery rule #2266 lists keeps working: R2098000 (keyword tooltips, hover, long press, control-mode tab stops), R1956000 (the viewer's own copies' cosmetics), R1383 (the \"New\" ribbon), and R630 and R654 (the read-only grid and the detail view's statistics). #2301's `PoolGrid.render.test.tsx` stays green. Any new threshold is a named constant (CLAUDE.md rule 9).\n\n### Acceptance\n\n- The PR gives baseline (9be40af), main and after numbers for `/almanac` from a production build, using #2266's measurement script. If virtualization changes what \"whole grid in the DOM\" means, the PR says how it measures the time until the grid has settled (no background render left) instead.\n- After the change, opening the Almanac until the grid has settled and clearing a search until the grid has settled are each at or under the baseline (260 ms and 279 ms), and the scroll p95 is at or under 46 ms.\n- Every other row of #2266's table is no worse than #2301's numbers.\n- A unit test keeps the main fix in place.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`, the e2e smoke and `deckbuilder-layout.cy.tsx` are green.\n\n### Blocked by, part of\n\nBlocked by #2266\n\n### Difficulty (a guess)\n\nmedium: the rest\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2334: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2310: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
