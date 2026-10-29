@@ -7,7 +7,7 @@
 //! Panther's: it runs once each combat this card attacked in, declared or forced (R53), is over and
 //! the state check after it has run (R59), for the player who controlled it there, even when it died
 //! in it (R426); it never runs for a defending Badger, nor for an attack called off before it fought
-//! (R44, Core #96 My Pawn). It is `gain_resources` of one random Resource into the tray (R1840000,
+//! (R44, Core #96 My Pawn). It is `gain_resources` of one random Resource into the hand (R1840000,
 //! R1840002), a ninth sold at once (R1840001). Radiant: a Radiant Resource.
 
 use jackioh_engine::effects::gain_resources;
@@ -37,7 +37,7 @@ pub fn script() -> CardScripts {
 }
 
 // S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75: "attacking a Unit or the hero gains one random
-// Resource into its controller's tray, defending none; a forced attack gains one; it dies and fuses into
+// Resource into its controller's hand, defending none; a forced attack gains one; it dies and fuses into
 // a Dormant Starship; radiant 4/6, Radiant Resources".
 #[cfg(test)]
 mod tests {
@@ -67,9 +67,9 @@ mod tests {
     }
 
     fn gained(s: &Scenario) -> Vec<CardInstance> {
-        let tray = s.pile(P1, "tray");
-        assert!(tray.iter().all(|card| card_def(&card.def_id).resource.is_some()));
-        tray
+        let in_hand = crate::resources_in_hand(s, P1);
+        assert!(in_hand.iter().all(|card| card_def(&card.def_id).resource.is_some()));
+        in_hand
     }
 
     #[test]
@@ -139,7 +139,7 @@ mod tests {
         let defender = s.unit_at(P1, 1);
         s.attack(&attacker, &defender);
         assert!(gained(&s).is_empty());
-        assert!(s.pile(P2, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]
@@ -156,8 +156,8 @@ mod tests {
     fn radiant_radiant_resources() {
         let mut s = badger(true, json!({ "hand": [FILLER], "library": filler(4) }));
         s.attack(ID, "hero");
-        let tray = gained(&s);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = gained(&s);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

@@ -1,7 +1,9 @@
 // R169 on touch (#2321): a hero's modifier badge is cut to a few words beside the portrait (12ch on a
 // phone), so Call to Chaos (Training-Grounds Edition)'s clause read "Add a rand…", and its `title` is a
 // hover a touch screen never shows. A tap on the badge opens its whole label beside it, laid on the
-// page so the hero row keeps its layout, and the tap never reaches the hero's own click.
+// page so the hero row keeps its layout, and the tap never reaches the hero's own click. It closes with
+// no key handler of its own (the board's are frozen, R2126000): the badge again, a tap elsewhere, or
+// focus leaving it.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +25,7 @@ const LONG: ModifierView = {
 };
 
 describe("R169 a modifier badge read in full on touch", () => {
-  it("R169 a tap opens the whole label on the page, and a second tap, Escape or a tap elsewhere closes it", () => {
+  it("R169 a tap opens the whole label on the page, and a second tap, a tap elsewhere or focus leaving closes it", () => {
     render(<ModifierBadge modifier={LONG} />);
     const badge = screen.getByRole("button", { name: LONG.label });
     expect(badge).toHaveAttribute("aria-expanded", "false");
@@ -40,9 +42,17 @@ describe("R169 a modifier badge read in full on touch", () => {
     fireEvent.click(badge);
     expect(screen.queryByTestId(modifierFullTestid(LONG.id))).toBeNull();
 
+    // A keyboard user: Tab away from the badge closes it.
     fireEvent.click(badge);
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.blur(badge, { relatedTarget: document.body });
     expect(screen.queryByTestId(modifierFullTestid(LONG.id))).toBeNull();
+
+    // Focus moving into the bubble (a click on it to read it) keeps it open.
+    fireEvent.click(badge);
+    const bubble = screen.getByTestId(modifierFullTestid(LONG.id));
+    fireEvent.blur(badge, { relatedTarget: bubble });
+    expect(screen.getByTestId(modifierFullTestid(LONG.id))).toBeInTheDocument();
+    fireEvent.click(badge);
 
     fireEvent.click(badge);
     fireEvent.pointerDown(document.body);

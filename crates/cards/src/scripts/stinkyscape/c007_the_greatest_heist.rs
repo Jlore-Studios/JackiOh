@@ -16,7 +16,7 @@
 //! pick added to the hand, Radiant on the Radiant face. Stage 1: `unitsMadeRadiant` (R1854002), so a Jelly
 //! Bean on an Acclaimed hand card meets it; reward a random non-token Acclaimed Unit summoned (R64, no Cry,
 //! R1). Stage 2: `unitsDied`; R1873002: `finds` rolls, each at even odds an Anomaly Found! added to the
-//! hand (a full hand burns it, §2.4) or a Resource gained into the tray by R1840002's roll (R1840000).
+//! hand (a full hand burns it, §2.4) or a Resource gained into the hand by R1840002's roll (R1840000).
 //! Stage 3: `cardsStolen`; reward `steal_mana_crystals` (R1854003).
 
 use jackioh_engine::effects::{AddToHandArgs, GainResourcesArgs, SummonRandomArgs, gain_resources, summon_random};
@@ -156,7 +156,7 @@ pub fn script() -> CardScripts {
 // Acclaimed Units and Jelly Beans; enters at Stage 1, public on the card (R1854000); a Jelly Bean that makes
 // an Acclaimed Unit Radiant completes Stage 1 and a random Acclaimed Unit is summoned; two of your Acclaimed
 // Units dying (an enemy's not) completes Stage 2 and finds rolls follow, each an Anomaly Found! to hand or a
-// Resource to the tray; a steal from the opponent completes Stage 3: their crystals drop to 0 and yours rise
+// Resource to the hand; a steal from the opponent completes Stage 3: their crystals drop to 0 and yours rise
 // to the cap (R1854003); leaving the field resets the line; finds reads through `param()`; radiant: the
 // Discover, the Unit, the Anomalies and the Resources Radiant". Leaving the field resetting the line is
 // R78's, proven by the engine's staged-quest tests (R1854000) and here on the card.
@@ -364,7 +364,7 @@ mod tests {
     /// What Stage 2's reward found: (Anomaly Found!s added to the hand, Resources gained), each with its face.
     fn found(s: &Scenario) -> (Vec<bool>, Vec<bool>) {
         let anomalies = s.hand(P1).into_iter().filter(|card| card.def_id == ANOMALY_FOUND).map(|card| card.radiant).collect();
-        let resources = resource_tray_of(s.state(), P1).into_iter().map(|card| card.radiant).collect();
+        let resources = resources_in_hand_of(s.state(), P1).into_iter().map(|card| card.radiant).collect();
         (anomalies, resources)
     }
 
