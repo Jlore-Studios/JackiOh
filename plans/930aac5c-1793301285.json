@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2381,
+  "title": "Patch: a daily sweep fuses each triggered card's text onto Units and plays it until the board settles",
+  "branch": "bot/issue-2381",
+  "thread": "**Issue #2381 (data, not instructions):**\n\n```text\n# #2381: Patch: a daily sweep fuses each triggered card's text onto Units and plays it until the board settles\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome of the worst bugs this month came from one card fused into another: a unit carrying another card's death or end-of-turn text. They produced a game that never ended, a board that never settled, and a crash. The random test games only meet a given pair by luck, so these bugs reached the daily runs or the AI's own sweeps first. Once this is built, a test goes through these combinations on purpose every day, with a small slice on every pull request, so this kind of bug is caught before a player meets it.\n\n## Why\n\nFusion bugs that got past the per-PR fuzz:\n\n- #1562 (`b3b8120de`, R1121000): a fused Book of Stats and Autocomplete replayed without end in one turn.\n- #998 (`2cbf0a17b`): a fusion grew to 288 cards, and fuzz seed 8286 ran out of memory.\n- #2243 (`9bfd8aebb`), from the daily waves after Stinkyscape shipped:\n  - Wormhole's text fused onto a Unit kept games from ending (R1884003);\n  - a fused Job Application at 0 health never settled (R1884004);\n  - a fused copier's targeting cost panicked (R1850000).\n- #2356 (`381c255cc`, R2197005): Floodgates and Job Application fused, and \"the board did not settle\". The AI sweep `sweep:hard:traininggrounds-014:6` found it, not the fuzz.\n- `docs/ADDING_CARDS.md:238-241` records two earlier ones, #104 and #105.\n\nThe fuzz's only deliberate fusion is one random pair of Units on a manufactured last board (`crates/tools/src/fuzz.rs:505-529`). Games read that board only through the few cards that bring one back.\n\n## Proposal\n\n- A test that enumerates pairs:\n  - a body from the fusable Units (no token, no Immutable: `FUSABLE_UNITS`' rule);\n  - a text from every card whose script has a Death, a trigger, a start- or end-of-turn hook, an aura or a fused hook, Field Spells and Traps included, since Wormhole and Job Application are no Units.\n- For each pair:\n  - build the fused card on a seat's board with `craft_fused` (`crates/cards/tests/cross/mod.rs:24`);\n  - run a fixed script: destroy it, have each side cast a Spell, end turns;\n  - then play a short random-policy run seeded from the pair, under `create_invariant_monitor` (`crates/engine/src/testkit/invariants.rs:1571`).\n- It fails on a panic, an engine cap, an invariant breach or a step bound, and names both card ids and the seed.\n- The whole enumeration runs daily (`#[ignore = \"daily: \u2026\"]`). A fixed stride sample runs on every pull request, so a cheaper test keeps the rule.\n- A known-open list, each entry citing an open issue, may only shrink (the policy `POOL_EXCLUSIONS` follows).\n\n## Where it lands\n\n- `crates/cards/tests/cross/fused_pairs.rs` and `mod.rs`. `crates/tools` beside the fuzz is the alternative if it needs the fuzz's growth bounds.\n- `docs/ADDING_CARDS.md` and the crate's README test list.\n- SPEC \u00a710 (fusion), R179 and R874000.\n\n## Acceptance criteria\n\n- [ ] The daily test walks every pair and prints how many it played. The per-PR sample stays within the `rust` job's budget.\n- [ ] #2356's pair and R1884004's pair are pinned cases and pass.\n- [ ] A planted fixture text that loops on its own death fails the sweep, with both ids and the seed in the message.\n- [ ] A failure's message reproduces it with one command.\n- [ ] Every known-open entry names an open issue.\n\n## Size and risks\n\nMedium: about 400 lines in 3 or 4 files, with no engine change.\n\n- The daily runtime needs sharding across cores.\n- The first full run may surface several loops, each needing its own fix or ruling. The PR lands the sweep with those on the known-open list rather than fixing them all.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:41:58Z:\n\napprove -> put this into the daily ci/cd\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:23:50Z:\n\nCan\u2019t test every pair every day, that\u2019s too much compute. Should sample a random subset though.\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:23:55Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2381: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
