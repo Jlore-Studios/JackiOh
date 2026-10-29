@@ -28,7 +28,7 @@
   background: var(--pal-red-500);
   box-shadow: 0 0 14px 3px color-mix(in srgb, var(--pal-ember-500) 55%, transparent);
   transform-origin: top center;
-  animation: market-sway 3.2s ease-in-out infinite alternate;
+  animation: market-sway 3.2s var(--ease-in-out) infinite alternate;
 }
 
 .market-lantern:nth-child(even) {
