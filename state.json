@@ -8035,7 +8035,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-29T13:53:42Z",
+      "feedback_since": "2026-10-29T17:04:21Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2268,
@@ -8045,15 +8045,15 @@
       "provider": "muse",
       "question": "",
       "queued_at": "2026-10-29T17:02:37Z",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "40917772266",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-29T17:04:21Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
