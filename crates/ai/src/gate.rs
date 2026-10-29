@@ -204,7 +204,7 @@ pub fn gate_needed(matchup: Matchup, games: i32) -> i32 {
 }
 
 /// Game n (1-based): the subject sits p1 when n is odd and p2 when n is even.
-fn subject_seat_of(n: i32) -> PlayerId {
+pub fn subject_seat_of(n: i32) -> PlayerId {
     if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 

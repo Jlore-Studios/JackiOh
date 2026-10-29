@@ -222,11 +222,6 @@ fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
     app.duos_again_offers.lock()
 }
 
-/// For the tests; nothing in `src/` calls it.
-pub fn duos_again_offer_count(app: &App) -> usize {
-    offers(app).len()
-}
-
 /// The reaper's tick (`api::results::run_reaper`, after `Registry::reap_finished`): drops each
 /// entry whose latest offer is older than `REMATCH_OFFER_TTL_MS` and whose finished match no actor
 /// holds any more. An unanswered one is what `live_entry` sweeps on a read nobody makes; one that
