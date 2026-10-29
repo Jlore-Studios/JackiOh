@@ -1,0 +1,28 @@
+{
+  "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
+  "sources": "#2226",
+  "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship). Queued as a unit's trigger it answered every event its condition admits since R2271000 (v0.5.2b), so 饕餮 holding Wormhole stole the opponent's Spells from its unit zone; before R2271000 read that condition, the same 饕餮 countered and recast its own controller's Spell for ever, which the daily fuzz waves of #2226 found. The classifier shows Big D-fender (core-001), Tnack Trav (stinkyscape-020), Beam v3 and Repeater v3 (stinkyscape-050, 051), Miner v1 and Miner v4 (stinkyscape-062, 065), Ozark (stinkyscape-078), Phalanx (stinkyscape-082), Spacerace Stimulus (stinkyscape-131) and the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in, playing differently.",
+  "player": {
+    "title": "A Trap fused into a Unit stays quiet",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A Trap fused into a Unit no longer springs from it, whatever fused it: Wormhole eaten by 饕餮 no longer steals your opponent's Spells."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "core-001",
+    "stinkyscape-020",
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-062",
+    "stinkyscape-065",
+    "stinkyscape-078",
+    "stinkyscape-082",
+    "stinkyscape-131",
+    "stinkyscape-t-dormant-starship"
+  ]
+}
