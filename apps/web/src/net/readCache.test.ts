@@ -25,6 +25,7 @@ import {
   openPack,
   putDeck,
   rematchStatus,
+  restoreDeckVersion,
   type DecksResponse,
   type PacksResponse,
   type SavedDeck,
@@ -205,6 +206,36 @@ describe("R2125000 a write's answer updates what is kept", () => {
     const after = cachedRead<DecksResponse>(A1, keptPaths.decks);
     expect(after?.decks.map((entry) => entry.id)).toEqual(["d-1", "d-3"]);
     expect(after?.trios[0]?.deckIds, "the trio's slot that named the deck empties (R252)").toEqual(["d-1", null, null]);
+  });
+
+  it("R2100000 a restored version folds into the kept decks, as a save does", async () => {
+    const deck = (cards: string[]): SavedDeck => ({
+      id: "d-1",
+      name: "One",
+      cards,
+      catalogVersion: "v",
+      portrait: null,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const decks: DecksResponse = {
+      catalogVersion: "v",
+      decks: [deck(["C001"])],
+      trios: [],
+      limits: { decks: 10, trios: 5, nameLength: 20 },
+    };
+    stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body: decks };
+      if (call.method === "POST" && call.path === "/api/decks/d-1/versions/v-1/restore") {
+        return { status: 200, body: { deck: deck(["C002"]), versions: [] } };
+      }
+      return undefined;
+    });
+    await getDecks(A1);
+
+    await restoreDeckVersion(A1, "d-1", "v-1", "v");
+
+    expect(cachedRead<DecksResponse>(A1, keptPaths.decks)?.decks.map((entry) => entry.cards)).toEqual([["C002"]]);
   });
 
   it("R2125000 a friend accepted or removed folds into the kept friends list", async () => {

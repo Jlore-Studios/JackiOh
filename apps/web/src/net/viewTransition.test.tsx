@@ -3,7 +3,7 @@
 // new screen. A separate file from `navigate.test.tsx`, which covers the leave guard itself.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setFxSettings, resetFxSettingsForTests } from "../fx/settings.ts";
@@ -38,9 +38,12 @@ async function traverse(step: () => void): Promise<void> {
 }
 
 const drawnInside: string[] = [];
+/** What the next transition's `ready` does: resolve, or reject as a transition a later one skipped. */
+let ready = (): Promise<void> => Promise.resolve();
 const start = vi.fn((update: () => void) => {
   update();
   drawnInside.push(document.querySelector('[data-testid="shown"]')?.textContent ?? "");
+  return { ready: ready(), finished: Promise.resolve(), updateCallbackDone: Promise.resolve() };
 });
 function Screen(): ReactElement {
   const path = usePathname();
@@ -48,7 +51,17 @@ function Screen(): ReactElement {
   return <p data-testid="shown">{path + search}</p>;
 }
 
+/** A gate as `Gated` in main.tsx is one: drawn on `from`, its effect moves on to `to`. */
+function Redirect({ from, to }: { from: string; to: string }): null {
+  const path = usePathname();
+  useEffect(() => {
+    if (path === from) navigate(to, { replace: true });
+  }, [path, from, to]);
+  return null;
+}
+
 beforeEach(() => {
+  ready = () => Promise.resolve();
   start.mockClear();
   drawnInside.length = 0;
   Object.defineProperty(document, "startViewTransition", { configurable: true, writable: true, value: start });
@@ -209,6 +222,34 @@ describe("R2117000 a move between two menu screens cross-fades in a view transit
     });
     expect(start).toHaveBeenCalledTimes(3);
     expect(drawnInside[drawnInside.length - 1]).toBe(paths.decks);
+  });
+
+  it("R2117000 a gate's redirect made while the new screen is drawn joins its view transition rather than starting a second (spec 14 B37)", () => {
+    at(paths.landing);
+    render(
+      <>
+        <Screen />
+        <Redirect from={paths.collection} to={paths.login} />
+      </>,
+    );
+    act(() => {
+      navigate(paths.collection);
+    });
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(drawnInside).toEqual([paths.login]);
+    expect(window.location.pathname).toBe(paths.login);
+  });
+
+  it("R2117000 a transition a later one skips rejects its ready, and that is no error", async () => {
+    render(<Screen />);
+    ready = () => Promise.reject(new DOMException("Transition was skipped", "AbortError"));
+    act(() => {
+      navigate(paths.collection);
+    });
+    // An unhandled rejection fails the run; let it surface before the test ends.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("shown").textContent).toBe(paths.collection);
   });
 
   it("R2117000 a change of the query alone stays on its screen and starts no view transition", () => {
