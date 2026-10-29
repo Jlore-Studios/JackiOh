@@ -1,7 +1,7 @@
 // "Concede this game?" (ConfirmConcede.tsx), on its own and as Game.tsx mounts it for every mode:
 // the board's Concede control only asks, and only the dialog's Concede sends `{ type: "concede" }`.
-// Keep playing, Escape and a click outside close it; the focus starts on Keep playing, Tab stays
-// inside, and the focus goes back to the Concede control when it closes.
+// Keep playing, Escape, Back (R2127000) and a click outside close it; the focus starts on Keep
+// playing, Tab stays inside, and the focus goes back to the Concede control when it closes.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +10,9 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import ConfirmConcede, { CONCEDE_BODY, CONCEDE_TITLE } from "./ConfirmConcede.tsx";
 import Game from "./Game.tsx";
-import { baseView } from "../test/fixtures.ts";
+import { baseView, card, emptySide, pendingFor } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
+import { at } from "../test/stubServer.ts";
 
 afterEach(cleanup);
 
@@ -171,5 +173,72 @@ describe("the board's Concede control asks first, in every mode (Game.tsx)", () 
     fireEvent.click(screen.getByTestId("concede"));
     fireEvent.click(screen.getByTestId("concede-confirm"));
     expect(onAction).toHaveBeenCalledWith({ type: "concede" });
+  });
+});
+
+describe("R2127000 the browser's Back over the question", () => {
+  /** The game's screen, one Back after `/decks`. */
+  function arrive(): void {
+    at("/decks");
+    window.history.pushState(null, "", "/practice");
+  }
+
+  const discover = baseView({
+    pending: pendingFor("discover", [
+      { key: "mode:core-043", label: "Flood", defId: "core-043" },
+      { key: "mode:core-055", label: "Archivist", defId: "core-055" },
+      { key: "mode:core-066", label: "Lava Golem", defId: "core-066" },
+    ]),
+  });
+  const mulligan = baseView({
+    you: emptySide("p1", {
+      hand: [card({ instanceId: "h1", defId: "core-002" }), card({ instanceId: "h2", defId: "core-019" })],
+    }),
+    pending: pendingFor(
+      "mulligan",
+      [
+        { key: "h1", label: "One", instanceId: "h1" },
+        { key: "h2", label: "Two", instanceId: "h2" },
+      ],
+      { min: 0, max: 2 },
+    ),
+  });
+
+  it("R2127000 Back means Keep playing: the question closes, nothing is sent, and the game and its address stay", async () => {
+    arrive();
+    const { onAction } = renderGame();
+    const control = screen.getByTestId("concede");
+    fireEvent.click(control);
+    expect(screen.getByTestId("concede-dialog")).toBeInTheDocument();
+
+    await pressBack();
+    expect(screen.queryByTestId("concede-dialog")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+    expect(control).toHaveFocus();
+    expect(window.location.pathname).toBe("/practice");
+  });
+
+  it("R2127000 with a Prompt or the mulligan on top Back works as before, and a concede asked over the mulligan closes first", async () => {
+    for (const view of [discover, mulligan]) {
+      arrive();
+      const { onAction } = renderGame(view, [{ type: "concede" }]);
+      expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+      await pressBack();
+      expect(window.location.pathname, "Back is the browser's, as before").toBe("/decks");
+      expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+      expect(onAction).not.toHaveBeenCalled();
+      cleanup();
+    }
+
+    arrive();
+    const { onAction } = renderGame(mulligan, [{ type: "concede" }]);
+    fireEvent.click(screen.getByTestId("concede"));
+    await pressBack();
+    expect(screen.queryByTestId("concede-dialog")).toBeNull();
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "mulligan");
+    expect(window.location.pathname).toBe("/practice");
+    await pressBack();
+    expect(window.location.pathname).toBe("/decks");
+    expect(onAction).not.toHaveBeenCalled();
   });
 });
