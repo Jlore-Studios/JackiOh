@@ -24,6 +24,7 @@ import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { SpectatorSwitch } from "../together/SpectatorSwitch.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
@@ -133,6 +134,8 @@ export default function SettingsPanel({
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
   const base = useId();
+  // R2127000: Back closes the panel as Close does.
+  useBackLayer(onClose);
 
   // Omit empty sections.
   const sections = SECTIONS.filter(

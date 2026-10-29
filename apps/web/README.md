@@ -94,6 +94,8 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
 `commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
@@ -149,7 +151,7 @@ present for exactly that window.
 **Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
-focus on open and is what Escape and a click outside do; Tab stays in the dialog, and the focus goes
+focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
@@ -233,11 +235,13 @@ sale the view lists, tray Resources then hand cards such as Spice (R1861000). Ea
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
-in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
-and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
+`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
-The list ships empty.
+The list ships the Tradable hint (#2269): a small swap-mark pip on each of the viewer's own
+hand cards with the Tradable keyword, dimmed once the turn's Trade is spent.
 
 ## Commands
 
@@ -257,7 +261,8 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
-mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
+(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 
