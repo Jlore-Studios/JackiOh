@@ -449,7 +449,7 @@ pub struct TransformRandomArgs {
     pub arrives: Option<bool>,
 }
 
-/// E24, Classic+ #73.1 Classic Golem: "transform that Unit into a random Classic or Classic+ Unit" (the
+/// E24, Classic+ #73.1 Classic Golem: "that Unit transforms into a random Classic or Classic+ Unit" (the
 /// Unit it attacks, R2285002). A §6.3
 /// Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
 /// card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on

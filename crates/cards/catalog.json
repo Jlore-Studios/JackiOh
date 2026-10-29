@@ -10863,7 +10863,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Rush, First Strike, Trample\nWhen this attacks a Unit, transform that Unit into a random Radiant Classic or Classic+ Unit. If this destroys it, this may attack again."
+      "text": "Rush, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit. If it dies, this may attack again."
     },
     "radiant": {
       "attack": 20,
@@ -10879,7 +10879,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Trample, Divine Shield\nWhen this attacks a Unit, transform that Unit into a random Classic or Classic+ Unit. If this destroys it, this may attack again."
+      "text": "Rush, Trample, Divine Shield\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit. If it dies, this may attack again."
     }
   },
   "classicplus-074": {

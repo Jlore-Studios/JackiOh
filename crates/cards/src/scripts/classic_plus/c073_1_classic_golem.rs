@@ -1,8 +1,8 @@
 //! C+ #73.1 Classic Golem (SPEC §8.7 row 73.1, B7). (4) Unit, Token (printed Legendary). 10/10 → 20/20.
-//!   Base:    "Rush, First Strike, Trample / When this attacks a Unit, transform that Unit into a random
-//!            Radiant Classic or Classic+ Unit. If this destroys it, this may attack again."
-//!   Radiant: "Rush, Trample, Divine Shield / When this attacks a Unit, transform that Unit into a random
-//!            Classic or Classic+ Unit. If this destroys it, this may attack again."
+//!   Base:    "Rush, First Strike, Trample / When this attacks a Unit, that Unit transforms into a random
+//!            Radiant Classic or Classic+ Unit. If it dies, this may attack again."
+//!   Radiant: "Rush, Trample, Divine Shield / When this attacks a Unit, that Unit transforms into a random
+//!            Classic or Classic+ Unit. If it dies, this may attack again."
 //!
 //! R2285002 (the designer's note, back from R424's self-transform): "when this attacks" is its
 //! `when_attacks` hook, before any damage of each attack it makes on a Unit, declared or forced (R53,
@@ -40,7 +40,7 @@ fn when_it_attacks(radiant: bool) -> Hook {
     })
 }
 
-/// "If this destroys it, this may attack again."
+/// "If it dies, this may attack again."
 fn after_it_attacks() -> Hook {
     hook(|ctx| {
         let Some(combat) = after_attack_of(ctx) else {
