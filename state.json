@@ -5322,6 +5322,7 @@
         "by": "`claude` (strong)",
         "sha": "31618d8e0e6b303f85ed028da968175257e18eea"
       },
+      "closed_at": "2026-10-29T01:18:30Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -5332,6 +5333,7 @@
       "issue": 2097,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
