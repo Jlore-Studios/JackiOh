@@ -1,7 +1,7 @@
 {
   "title": "A card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
   "sources": "#2271",
-  "notes": "Every queued trigger now reads its condition (`TriggerDef.when`) as it resolves; before, only the traps' dispatch read it (R2271000). Prison (meditative-097-8) rolled its capture for its own controller's plays and the opponent's Field Spells and Traps; an awake Imprisoned Ship Smith or Cosmality answered every awakening, a launched Starship's included (golden seeds 3, 75 and 160 for Prison, 13 and 191 for Ship Smith). A copy of a fused card now takes its stricter targeting cost (R2271001).",
+  "notes": "Every queued trigger now reads its condition (`TriggerDef.when`) as it resolves; before, only the traps' dispatch read it (R2271000). Prison (meditative-097-8) rolled its capture for its own controller's plays and the opponent's Field Spells and Traps; an awake Imprisoned Ship Smith or Cosmality answered every awakening, a launched Starship's included (golden seeds 3, 75 and 160 for Prison; 153, 196 and handicapped 223 for the Imprisoned cards). A copy of a fused card now takes its stricter targeting cost (R2271001).",
   "player": {
     "title": "Printed trigger conditions hold",
     "new": [],
@@ -18,8 +18,8 @@
   "cards": [],
   "plays": [
     "meditative-097",
-    "stinkyscape-043",
-    "stinkyscape-093",
+    "stinkyscape-104",
+    "stinkyscape-122",
     "stinkyscape-t-dormant-starship"
   ]
 }
