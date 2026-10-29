@@ -7352,14 +7352,21 @@
       "taken_asks": []
     },
     "2269": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-28T17:55:51Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:5cd6ae56-1793245137",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-10-29T03:40:04Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2270": {
       "action": "build",
@@ -8403,9 +8410,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T03:38:44Z",
+    "at": "2026-10-29T03:40:04Z",
     "url": "",
-    "what": "revise #2315 on claude-8"
+    "what": "build #2269 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T03:22:53Z",
