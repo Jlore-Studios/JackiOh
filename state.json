@@ -8185,7 +8185,9 @@
     },
     "2348": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6502006396"
+      ],
       "ci_fixes": 2,
       "ci_reruns": {
         "cd348ec46f4369c48a8dc882150be800f1234277": 1
@@ -8218,14 +8220,14 @@
       "pending_request": false,
       "provider": "claude-4",
       "question": "CI's only red check on #2348 is `web (unit 4/4)`: `apps/web/src/shortcuts/shortcuts.test.tsx` (R2126000, \"no new key handler\") finds a key handler in `game/ModifierBadge.tsx` (an Escape `keydown` listener from #2329) that its `BOARD_KEY_HANDLERS` map has no entry for. This branch does not touch either file, and `main`'s tree has the same mismatch. Please decide: add `\"game/ModifierBadge.tsx\": 1` to `BOARD_KEY_HANDLERS`, either on `main` (preferred) or in this pull request, or make ModifierBadge's handler go away. The test's comment says a count is never raised to pass it, so I left it alone.",
-      "queued_at": "2026-10-29T16:14:01Z",
-      "requested_by": "jgoetzmann-bot",
+      "queued_at": "2026-10-29T16:15:52Z",
+      "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40847443845",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "request",
       "started_at": "2026-10-29T09:09:32Z",
       "stop_requested": false,
       "taken_asks": [],
