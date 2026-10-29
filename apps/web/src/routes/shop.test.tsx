@@ -28,7 +28,7 @@ import { paths } from "../net/navigate.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packTestid } from "../packs/packs.ts";
 import {
-  collectionOf,
+  collectionOwningAllBut,
   cosmeticPacksInfo,
   openedCosmeticPack,
   ownedCosmeticsOf,
@@ -59,7 +59,7 @@ function shopRead(call: Call): Reply | undefined {
     case "/api/tokens":
       return { status: 200, body: tokenBars() };
     case "/api/collection":
-      return { status: 200, body: collectionOf() };
+      return { status: 200, body: collectionOwningAllBut("core-002", "core-003") };
     case "/api/cosmetics":
       return { status: 200, body: ownedCosmeticsOf() };
     case "/api/cosmetic-packs":

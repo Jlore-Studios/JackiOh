@@ -177,13 +177,16 @@ mod a_doctored_trace {
 
 /// R1846003, R2173000: the build's own games read the build's lists, and a game that plays neither
 /// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
-/// complicated pool, R1846001) replays to its recorded hashes whatever the lists hold: every card in
-/// both, or none. One shard's games under each, on this thread's override of the compiled metrics.
+/// complicated pool, R1846001), from its deck or made by a random effect, replays to its recorded
+/// hashes whatever the lists hold: every card in both, or none. One shard's games under each, on this
+/// thread's override of the compiled metrics.
 /// The games that play a reader are the build's version's, and replay under its own lists in the
 /// shards above; a carried version's fold reads its own (`card_metrics`, R2173000).
 mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use super::*;
+    use jackioh_engine::testkit::golden::events_text;
     use jackioh_engine::testkit::{clear_overrides, register_code_lines};
+    use jackioh_engine::{CreateGameArgs, begin_game, create_recorded_game, reduce};
 
     /// The cards that read the lists (R1846001), as `jackioh_cards::code_lines::reads_card_lists`
     /// finds them in their scripts: the cards build's `LIST_READERS`, each quoted as a game's line
@@ -193,6 +196,33 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
             .iter()
             .map(|id| format!("{id:?}"))
             .collect()
+    }
+
+    /// Whether any event of the game, replayed under the build's own lists, names a reader: one its
+    /// deck holds, or one a random effect makes mid-game (a random Legendary, a Discover), which the
+    /// line's text never names.
+    fn names_a_reader(line: &str, readers: &[String]) -> bool {
+        let game: Value = serde_json::from_str(line).expect("a golden line");
+        let args: CreateGameArgs =
+            serde_json::from_value(game["args"].clone()).expect("createGame's options");
+        let begun = begin_game(&create_recorded_game(&args));
+        let names = |events: &[jackioh_engine::GameEvent]| {
+            let text = events_text(events);
+            readers.iter().any(|reader| text.contains(reader.as_str()))
+        };
+        if names(&begun.events) {
+            return true;
+        }
+        let mut state = begun.state;
+        for step in game["steps"].as_array().expect("a `steps` array") {
+            let action: Action = serde_json::from_value(step["a"].clone()).expect("an Action");
+            let result = reduce(&state, &action);
+            if names(&result.events) {
+                return true;
+            }
+            state = result.state;
+        }
+        false
     }
 
     #[test]
@@ -214,6 +244,7 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
             .enumerate()
             .step_by(GOLDEN_SHARDS)
             .filter(|(_, line)| !readers.iter().any(|reader| line.contains(reader.as_str())))
+            .filter(|(_, line)| !names_a_reader(line, &readers))
             .collect();
         assert!(!games.is_empty(), "the shard holds games with no reader");
         for lines in [every, Vec::new()] {
@@ -293,7 +324,7 @@ const EXPECTED_RESULT: GameResult = GameResult {
     winner: Winner::P1,
     reason: GameOverReason::HeroDeath,
 };
-const EXPECTED_ACTIONS: usize = 41;
+const EXPECTED_ACTIONS: usize = 39;
 
 fn read(path: &str, text: &str) -> Recording {
     let parsed: Value =

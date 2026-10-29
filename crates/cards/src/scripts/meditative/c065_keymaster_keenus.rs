@@ -76,8 +76,9 @@ mod tests {
     const SILENCE: &str = "classicplus-009";
     /// (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const WEAPONS: &str = "core-014";
-    /// (1) 3/3 Unit with Indestructible: an Equip host that keeps Taunt out (R347).
-    const STATE_OF_THE_GAME: &str = "classic-041";
+    /// (4) 10/10 Unit with Indestructible: an Equip host that keeps Taunt out (R347), and not Immutable
+    /// as State of the Game is since #2179.
+    const THE_ROCK: &str = "core-066";
     const FILLER: &str = "core-005";
 
     fn played(seed: &str, radiant: bool, p1: Value) -> Scenario {
@@ -192,10 +193,12 @@ mod tests {
                 for n in 0..24 {
                     let mut s = scenario(json!({
                         "seed": format!("keenus-r347-{n}"),
-                        "p1": { "mana": 10, "hand": [STATE_OF_THE_GAME, KEENUS, FILLER], "library": filler(4) },
+                        "p1": { "mana": 10, "hand": [THE_ROCK, KEENUS, FILLER], "field": ["core-008"], "library": filler(4) },
                         "p2": { "hand": [FILLER], "library": filler(4) },
                     }));
-                    s.play(STATE_OF_THE_GAME, json!({}));
+                    // The Rock's Tribute 1 is a Mr. Vanilla.
+                    let tribute = s.unit(P1, 1).expect("the Mr. Vanilla").id;
+                    s.play(THE_ROCK, json!({ "zone": 1, "tributes": [tribute] }));
                     s.play(KEENUS, json!({ "zone": 1, "equip": true }));
                     let host = s.unit(P1, 1).expect("the fused host");
                     let drawn = drawn(&s, &host.id);

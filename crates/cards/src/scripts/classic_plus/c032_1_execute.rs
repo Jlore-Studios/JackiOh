@@ -64,6 +64,8 @@ mod tests {
     const TIMMY: &str = "core-011";
     /// C #41 State of the Game, 3/3 Indestructible.
     const UNBREAKABLE: &str = "classic-041";
+    /// C #80, Indestructible and no Immutable, so a Spell may target it (State of the Game may not since #2179).
+    const BIG_MAX: &str = "classic-080";
     const FILLER: &str = "core-005";
 
     fn destroyed(s: &Scenario) -> Vec<String> {
@@ -126,16 +128,18 @@ mod tests {
             }
 
             #[test]
-            fn r46_an_indestructible_damaged_unit_is_knocked_down_instead() {
+            fn r46_r2179000_an_indestructible_damaged_unit_survives_in_attack_position() {
                 crate::register_all();
+                // An Indestructible Unit is never in Defense Position (R2179000), so the knock-down has no
+                // switch to make.
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXECUTE, FILLER] },
-                    "p2": { "field": [{ "def": UNBREAKABLE, "damage": 1, "position": "DEF" }] },
+                    "p2": { "field": [{ "def": BIG_MAX, "damage": 1 }] },
                 }));
                 let targets = pick::unit_at(&s, P2, 1);
                 s.play(EXECUTE, json!({ "targets": targets }));
-                s.expect_in_zone(UNBREAKABLE, "field");
-                assert_eq!(s.stats(UNBREAKABLE).position, Position::Atk);
+                s.expect_in_zone(BIG_MAX, "field");
+                assert_eq!(s.stats(BIG_MAX).position, Position::Atk);
                 assert!(destroyed(&s).is_empty());
             }
         }
