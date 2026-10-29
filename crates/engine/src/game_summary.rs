@@ -14,9 +14,8 @@
 //! window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
 //! by its `transformed` to the card it resolves as, the one its `cardPlayed` names. A card a Counter
 //! sends to the countering player's hand and that player's effect then casts in the same step (C #4
-//! Palantir, R831001) passes through a hand too, and is a cast all the same, as is one whose cast waits
-//! on a prompt and is played in a later step (S #139 Wormhole's, found by the Training Grounds
-//! release's games, #2204). Each play keeps whether
+//! Palantir, R831001), or in the step that answers the prompt the cast opened (S #139 Wormhole asking
+//! the cast's target), passes through a hand too, and is a cast all the same. Each play keeps whether
 //! it was Radiant as `cardPlayed` placed it (R1147000), so step-3 Radiant (Gifted Program, Feng Shui
 //! per R0983, C+ #68) counts.
 //!
@@ -70,9 +69,9 @@ struct Reading {
     used: IndexSet<String>,
     created_used: PerPlayer<Vec<CreatedUse>>,
     created_played: PerPlayer<Vec<CreatedUse>>,
-    /// R831001: the cards a Counter sent to a hand whose cast a prompt holds in the resolving zone past
-    /// the step, so the `cardPlayed` a later step emits is a cast all the same.
-    stolen: IndexSet<String>,
+    /// R831001: the cards countered into a hand by a step that ended on a prompt, whose cast the step
+    /// that answers it may make.
+    stolen: Vec<String>,
 }
 
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
@@ -181,9 +180,9 @@ fn use_created(reading: &mut Reading, ids: &[&str], maker: PlayerId, card: &str,
 
 /// One step's events, in the order they happened.
 fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: &GameState) {
-    // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
-    // countering player's cast (R831001), never a play from hand.
-    let mut stolen: IndexSet<String> = std::mem::take(&mut reading.stolen);
+    // The cards this step countered into a hand, and those an earlier step did before it ended on a
+    // prompt: a `cardPlayed` naming one is the countering player's cast (R831001), never a play from hand.
+    let mut stolen: Vec<String> = std::mem::take(&mut reading.stolen);
     for (at, event) in events.iter().enumerate() {
         match event {
             GameEvent::Countered {
@@ -191,7 +190,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 to: CounteredTo::Hand,
                 ..
             } => {
-                stolen.insert(instance_id.clone());
+                stolen.push(instance_id.clone());
             }
             GameEvent::TurnStarted { player, turn, .. } => {
                 reading.current_turn = *turn;
@@ -343,7 +342,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 if !from_hand {
                     continue;
                 }
-                if stolen.contains(id.as_str()) {
+                if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
                     continue;
                 }
@@ -411,13 +410,10 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             _ => {}
         }
     }
-    // A stolen card still resolving waits on its cast's prompt; any other has been cast or let go.
-    stolen.retain(|id| {
-        PLAYER_IDS
-            .iter()
-            .any(|player| after.players[*player].resolving.iter().any(|card| card.id == *id))
-    });
-    reading.stolen = stolen;
+    // R831001: a cast that asks a choice of its caster finishes in the step that answers it.
+    if after.pending.is_some() {
+        reading.stolen = stolen;
+    }
 }
 
 fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatSummary {
@@ -497,7 +493,7 @@ impl SummaryReader {
                 used: IndexSet::new(),
                 created_used: per_seat(),
                 created_played: per_seat(),
-                stolen: IndexSet::new(),
+                stolen: Vec::new(),
             },
         }
     }
@@ -592,7 +588,7 @@ mod tests {
             used: IndexSet::new(),
             created_used: per_seat(),
             created_played: per_seat(),
-            stolen: IndexSet::new(),
+            stolen: Vec::new(),
         }
     }
 

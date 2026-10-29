@@ -72,6 +72,20 @@ function practiceUrl(seed: string): string {
   return `/practice?${params.toString()}`;
 }
 
+/**
+ * Wait until the card pool's first card has drawn its face. A pool card draws its face only once the
+ * browser reports it near the screen (PoolGrid's PoolFace, #2303), a frame or more after the pool
+ * shows, and since #2301 the Almanac's pool shows before any face does: axe run before then meets
+ * bare buttons, and the `.db-card` exceptions in axe-exceptions.ts read as stale.
+ */
+function poolFacesDrawn(): void {
+  cy.get(`${ts(CARD_POOL)} .db-card-face`, { timeout: timeouts.view })
+    .first()
+    .should(($face) => {
+      expect($face.children().length, "the pool's first card has drawn its face").to.be.greaterThan(0);
+    });
+}
+
 /** Open `path` signed out, wait for `root`, and check it. */
 function checkPublic(route: string, path: string, root: string): void {
   cy.visit(path);
@@ -147,7 +161,10 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/almanac", () => {
-          checkPublic(at("/almanac"), "/almanac", SCREEN.almanac);
+          cy.visit("/almanac");
+          cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
+          poolFacesDrawn();
+          expectNoBlockingViolations(at("/almanac"));
         });
 
         it("/patch-notes", () => {
@@ -218,6 +235,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
             // its row is pressed, and the pool is checked at both widths.
             cy.get(ts(deckRowId(deckId))).click();
             cy.get(ts(CARD_POOL), { timeout: timeouts.view }).should("be.visible");
+            poolFacesDrawn();
             expectNoBlockingViolations(at("/decks"));
           });
         });

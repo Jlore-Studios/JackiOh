@@ -1,7 +1,7 @@
 {
   "title": "Training Grounds, the release: the set ships to the normal game as the newest set",
   "sources": "Issue #2204, part 11 of the tracker #2193",
-  "notes": "The Training Grounds set ships (R1420, R2194000) as the newest set (R1371): its 40 cards, the token TG #39.1 and the 20 Core snapshots TG #41–#60 join every pool that names no set, the deck builder, the Almanac, packs, its set track, random decks and the AI's own decks (part 10, #2203, gates none of it). The owner wrapped the set into Stinkyscape's v0.5 line (R2204000), so the release is a patch of that line and not a major. Its mechanics are the rulings of parts 1–9 (#2194–#2202). A deck holds a Core card or its snapshot, never both (R2195000); a pool keeps both, and one offer, a catalog Discover or Core #97 Zephyrs' top three, shows at most one of a pair (R2204001). Core #95, Classic+ #73, Meditative #95, Stinkyscape #150 and #151, S #149 Wildar and S #4.6 The Big Crunch link TG #39, the edition their texts name (R279), and The Big Crunch casts it sixth (R2200004). Every card of an earlier set whose pool names no set (the random Calls to Chaos, Core #82 KY's Trial's Discover among seven sets, the random Legendaries, Tribute cards and the like, R380) can now offer the set's cards; their texts do not change, and the release claims them as Stinkyscape's did. S #109 xxFreshJack and S #111 Shockwave447 read the BUSTED and complicated lists, which take the set's cards now that they can join a pool (R2173001). The account statistics cap is 131,072 bytes (R1142000).",
+  "notes": "The Training Grounds set ships (R1420, R2194000) as the newest set (R1371): its 40 cards, the token TG #39.1 and the 20 Core snapshots TG #41–#60 join every pool that names no set, the deck builder, the Almanac, packs, its set track, random decks and the AI's own decks (part 10, #2203, gates none of it). The owner wrapped the set into Stinkyscape's v0.5 line (R2204000), so the release is a patch of that line and not a major. Its mechanics are the rulings of parts 1–9 (#2194–#2202). A deck holds a Core card or its snapshot, never both (R2195000); a pool keeps both, and one offer, a catalog Discover or Core #97 Zephyrs' top three, shows at most one of a pair (R2204001). Core #95, Classic+ #73, Meditative #95, Stinkyscape #150 and #151, S #149 Wildar and S #4.6 The Big Crunch link TG #39, the edition their texts name (R279), and The Big Crunch casts it sixth (R2200004). Stinkyscape #151's link is claimed by the pending Resources fragment (#2345), which changed the card too, as one card ships in one patch. Every card of an earlier set whose pool names no set (the random Calls to Chaos, Core #82 KY's Trial's Discover among seven sets, the random Legendaries, Tribute cards and the like, R380) can now offer the set's cards; their texts do not change, and the release claims them as Stinkyscape's did. S #109 xxFreshJack and S #111 Shockwave447 read the BUSTED and complicated lists, which take the set's cards now that they can join a pool (R2173001). The account statistics cap is 131,072 bytes (R1142000).",
   "player": {
     "title": "Training Grounds",
     "new": [
@@ -27,7 +27,6 @@
     "stinkyscape-004-6",
     "stinkyscape-149",
     "stinkyscape-150",
-    "stinkyscape-151",
     "traininggrounds-001",
     "traininggrounds-002",
     "traininggrounds-003",

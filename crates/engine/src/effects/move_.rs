@@ -428,6 +428,8 @@ fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
     // R11: a unit-token card leaving a hand ceases to exist and reaches no graveyard; B5 E5: a card a
     // replacement sent elsewhere is reported where it went.
     report_graveyard_landing(ctx, &card, moved);
+    // R2250001: a Resource discarded pays its player its Credits.
+    crate::resources::pay_resource_credits(ctx, card.owner, &card);
 }
 
 /// `discard`'s arguments: the target defaults to the first chosen selection.

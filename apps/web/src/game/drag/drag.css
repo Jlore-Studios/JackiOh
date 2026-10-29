@@ -115,8 +115,8 @@
     0 0 14px color-mix(in srgb, var(--pal-ember-500) 35%, transparent);
   transform: translate(-50%, -50%) rotate(-4deg) scale(1.06);
   transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease;
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
   will-change: left, top;
 }
 
@@ -344,7 +344,7 @@
     0 0 16px var(--drag-reticle-colour),
     inset 0 0 10px color-mix(in srgb, var(--drag-reticle-colour) 70%, transparent);
   transform: translate(-50%, -50%);
-  animation: drag-reticle-pulse 0.8s ease-in-out infinite alternate;
+  animation: drag-reticle-pulse 0.8s var(--ease-in-out) infinite alternate;
 }
 
 /* Placing a card: the ghost is the thing being aimed, so it stays on top, and the zone it would
