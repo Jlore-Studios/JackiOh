@@ -7909,6 +7909,9 @@
     "2307": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "ba2536ae8fd185b08ca46d67cca07f38c15c44a0": 1
+      },
       "cleared": {
         "at": "2026-10-28T23:19:24Z",
         "by": "`muse` (medium), `claude` (strong)",
