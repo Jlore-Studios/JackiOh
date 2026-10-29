@@ -8287,11 +8287,10 @@
     "what": "revise #2341 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T13:42:21Z",
+    "at": "2026-10-29T13:51:38Z",
     "notes": [
-      "delivered review #2346 on claude-6 (run 40883263900): reviewed",
-      "delivered revise #2309 on muse (run 40851121338): approved",
-      "started review #2309 on claude-6 (run 40884765595)",
+      "delivered revise #2341 on muse (run 40861122345): approved",
+      "started revise #2341 on muse (run 40886170248)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -8998,7 +8997,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T13:42:21Z",
+  "loop_tick": "2026-10-29T13:51:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
