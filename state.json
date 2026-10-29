@@ -9112,10 +9112,12 @@
     "what": "revise #2304 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-29T07:46:28Z",
+    "at": "2026-10-29T07:55:52Z",
     "notes": [
-      "CI on #2339: #2339: queued a CI fix",
-      "started revise #2339 on claude-3 (run 40837811718)",
+      "delivered review #2348 on claude-8 (run 40836714368): reviewed",
+      "delivered revise #2304 on muse (run 40825443933): approved",
+      "started revise #2341 on muse (run 40838964190)",
+      "started revise #2304 on claude-8 (run 40839051032)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -9822,7 +9824,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T07:46:28Z",
+  "loop_tick": "2026-10-29T07:55:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
