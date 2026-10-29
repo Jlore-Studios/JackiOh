@@ -1,5 +1,5 @@
-//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 4/5 → 8/10, of the held
-//! Stinkyscape set (R1420).
+//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 4/5 → 8/10, of the
+//! Stinkyscape set.
 //!   Base:    "When one of your Taunt Units is attacked, give it +{buff} Attack."
 //!   Radiant: "When one of your Taunt Units is attacked, give it +{buff} Attack."
 //! Engine: `ally_attacked` (R1849008): once §4.2 step 4's trap window closes on a declared attack that

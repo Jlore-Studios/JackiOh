@@ -403,12 +403,17 @@ function sheet(path: string): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), path), "utf8");
 }
 
-/** The z-index of the first rule whose selector is `selector`, at the start of a line. */
+/** The z-index of the first rule whose selector is `selector`, at the start of a line; a layer
+ * token (`var(--z-…)`, #2109) reads as the number surfaces.css gives it. */
 function zIndexOf(css: string, selector: string): number {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(`^${escaped}\\s*\\{[^}]*z-index:\\s*(\\d+)`, "m").exec(css);
+  const match = new RegExp(`^${escaped}\\s*\\{[^}]*z-index:\\s*(\\d+|var\\(--z-[\\w-]+\\))`, "m").exec(css);
   if (match === null) throw new Error(`no z-index for ${selector}`);
-  return Number(match[1]);
+  const token = /^var\((--z-[\w-]+)\)$/.exec(match[1] ?? "")?.[1];
+  if (token === undefined) return Number(match[1]);
+  const layer = new RegExp(`^\\s*${token}:\\s*(-?\\d+);`, "m").exec(sheet("../surfaces.css"));
+  if (layer === null) throw new Error(`no layer ${token} in surfaces.css`);
+  return Number(layer[1]);
 }
 
 /** The lift emotes.css gives a hero, and its seat, while a bubble, a sticker or a menu is up. */

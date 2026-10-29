@@ -1,5 +1,5 @@
-//! S #139 Wormhole (SPEC §8.10 row 139; R448, R1850004, R1875007): (2) Trap, Rare, of the held
-//! Stinkyscape set (R1420).
+//! S #139 Wormhole (SPEC §8.10 row 139; R448, R1850004, R1875007): (2) Trap, Rare, of the
+//! Stinkyscape set.
 //!   Base:    "Reveals when your opponent plays a Spell aimed only at their hero or permanents they
 //!            control: Counter it and cast it for yourself, aimed only at your hero or permanents you
 //!            control."

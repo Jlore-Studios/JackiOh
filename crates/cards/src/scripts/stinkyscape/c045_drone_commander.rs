@@ -1,5 +1,5 @@
-//! S #45 Drone Commander (SPEC §8.10 row 45): (4) Unit, Human, Epic, 8/12 → 16/24, a card of the held
-//! Stinkyscape set (R1420).
+//! S #45 Drone Commander (SPEC §8.10 row 45): (4) Unit, Human, Epic, 8/12 → 16/24, a card of the
+//! Stinkyscape set.
 //!   Base:    "Cry: Add {cards|random Drone Core card|random Drone Core cards} to your hand. Each costs
 //!            ({discount}) less." — cards 6, discount 1
 //!   Radiant: "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand.
@@ -8,7 +8,7 @@
 //!   non-token cards tagged Drone Core, R380), one draw of the match rng per card (R60), each with a
 //!   `costMod` of minus `discount` (R65), kept until a graveyard or exile (R766); a full hand burns the
 //!   overflow (§2.4). `cards` and `discount` are declared Cry numbers (R386, R1748000). The pool names no
-//!   set, so while the set is held it reaches no card (R1420). Radiant: added Radiant.
+//!   set, so it reaches the set's Drone Cores because the set ships (R1420). Radiant: added Radiant.
 
 use jackioh_engine::prelude::*;
 

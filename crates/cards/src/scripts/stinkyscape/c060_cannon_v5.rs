@@ -1,4 +1,4 @@
-//! Stinkyscape #60 Cannon v5 (SPEC §8.10 row 60). Unit 0/8 → 0/16, Weapon, cost 4, Legendary; held (R1420).
+//! Stinkyscape #60 Cannon v5 (SPEC §8.10 row 60). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy. Deals half damage to heroes." — damage 10
 //!   Radiant: the same text — damage 20

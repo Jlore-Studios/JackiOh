@@ -80,6 +80,30 @@ mod tests {
         json!({ "attack": attack, "health": health })
     }
 
+    /// This thread's script for `def_id`, for one test: after each card its controller's opponent
+    /// plays, it gains `attack` Attack (a negative one lowers it), before that card resolves (§10.5).
+    fn moves_on_enemy_plays(def_id: &str, attack: i32) {
+        let moves = TriggerDef::new("swd-moves", &[GameEventType::CardPlayed], move |ctx, event| match event {
+            GameEvent::CardPlayed { player, .. } if *player != ctx.controller => vec![effects::buff(json_as(
+                json!({ "target": { "of": "self" }, "attack": attack }),
+            ))],
+            _ => vec![],
+        });
+        let script = Script {
+            triggers: vec![moves],
+            ..Script::default()
+        };
+        let mut scripts = registered_scripts();
+        scripts.insert(
+            def_id.to_string(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
+        register_scripts(scripts);
+    }
+
     mod base {
         use super::*;
 
@@ -97,6 +121,30 @@ mod tests {
 
             s.play(DEATH, json!({ "targets": pick::instance(&target) }));
 
+            s.expect_in_zone(&target, "graveyard");
+        }
+
+        /// R1867005, R1868000: the limit is checked with the play and not again as the Spell resolves,
+        /// so a target lowered from 5 Attack to 3 between the two still dies.
+        #[test]
+        fn r1867005_a_target_lowered_past_the_limit_after_the_pick_still_dies() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [DEATH, FILLER], "mana": 9 },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [{ "def": VANILLA, "lane": 1, "statsOverride": stats_override(5, 5) }],
+                },
+            }));
+            moves_on_enemy_plays(VANILLA, -2);
+            let target = s.unit_at(P2, 1);
+
+            s.play(DEATH, json!({ "targets": pick::instance(&target) }));
+
+            assert!(s.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Buffed { instance_id, attack: -2, .. } if *instance_id == target.id
+            )));
             s.expect_in_zone(&target, "graveyard");
         }
 

@@ -75,13 +75,6 @@ fn resolved_face(g: &Scenario, id: &str) -> Option<bool> {
     })?
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
     use super::*;
 

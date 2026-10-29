@@ -10,7 +10,7 @@
   min-height: 32px;
   padding: 4px 10px;
   border: 1px solid color-mix(in srgb, var(--radiant) 55%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--radiant) 12%, var(--bg-sunken));
   color: var(--radiant);
   font-size: var(--type-sm);
@@ -22,7 +22,7 @@
   position: fixed;
   top: calc(max(8px, env(safe-area-inset-top)) + 58px);
   right: max(12px, env(safe-area-inset-right));
-  z-index: 60;
+  z-index: var(--z-drag);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -31,9 +31,9 @@
   padding: 12px 14px;
   overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--radiant) 45%, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
-  box-shadow: 0 18px 40px -16px color-mix(in srgb, var(--pal-black) 90%, transparent);
+  box-shadow: var(--shadow-3);
   color: var(--text);
   font-size: var(--type-md);
 }

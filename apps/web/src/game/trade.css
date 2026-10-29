@@ -4,7 +4,7 @@
    takes the pointer. On a Duos board the button rides the card bar, where duos.css draws it. */
 
 .trade-bar {
-  z-index: 70;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -22,7 +22,7 @@
   align-items: center;
   min-height: 0;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--type-3xs-em);
   line-height: 1.2;
   white-space: nowrap;
