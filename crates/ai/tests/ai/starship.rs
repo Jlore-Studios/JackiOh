@@ -194,7 +194,9 @@ fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() 
     let lane = STARSHIP_LANE_ORDER[0] as usize - 1;
     let mut without = state.clone();
     assert_eq!(
-        without.players[AI].backrow[lane].as_ref().map(|card| card.id.clone()),
+        without.players[AI].backrow[lane]
+            .as_ref()
+            .map(|card| card.id.clone()),
         Some(ship.clone())
     );
     without.players[AI].backrow[lane] = None;
