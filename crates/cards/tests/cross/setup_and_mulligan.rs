@@ -19,13 +19,6 @@ use jackioh_engine::testkit::*;
 
 use super::register_fixture_script;
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 fn fixture_def(id: &str, type_: CardType) -> CardDef {
     let face = if type_ == CardType::Unit {
         json!({ "attack": 2, "health": 2, "keywords": [], "text": id })

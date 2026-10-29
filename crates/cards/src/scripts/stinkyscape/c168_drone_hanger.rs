@@ -1,5 +1,4 @@
-//! S #168 Drone Hanger (SPEC §8.10 row 168): (2) Field Spell, Rare, a card of the held Stinkyscape set
-//! (R1420).
+//! S #168 Drone Hanger (SPEC §8.10 row 168): (2) Field Spell, Rare, a card of the Stinkyscape set.
 //!   Base:    "Start of turn: Summon a Drone Interceptor."
 //!   Radiant: "Start of turn: Summon a Radiant Drone Interceptor."
 //! Engine: Start of turn (R62), its controller's: a summon of the Drone Interceptor into their leftmost

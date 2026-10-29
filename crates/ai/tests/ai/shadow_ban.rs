@@ -1566,10 +1566,11 @@ mod v12 {
 }
 
 // ---------------------------------------------------------------------------------------------
-// R732000: the shadow ban holds Meditative cards only, at most half of the set (issue #732)
+// R732000: the shadow ban holds no card of a set before Meditative, and at most half of the
+// Meditative set (issue #732)
 // ---------------------------------------------------------------------------------------------
 
-mod r732000_the_shadow_ban_holds_meditative_cards_only {
+mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     use super::*;
 
     /// The Meditative set's non-token cards.

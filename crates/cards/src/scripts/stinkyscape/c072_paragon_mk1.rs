@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 72 Paragon Mk1, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 72 Paragon Mk1, a card of the Stinkyscape set.
 //! (3) Unit, Epic, 6/1 → 12/2: Starship Piece, Charge, Flying, Ranged.
 //! Radiant: Starship Piece, Charge, Flying, Ranged, Pierce.
 //!

@@ -14,8 +14,7 @@ use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::craft::register_craft_fixtures;
 use crate::rules::fixtures::harness::{act, act_logged, setup_catalog, sink_for};
 use crate::rules::fixtures::prompt_harness::{
-    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
-    round_trip,
+    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, open_as, round_trip,
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
 

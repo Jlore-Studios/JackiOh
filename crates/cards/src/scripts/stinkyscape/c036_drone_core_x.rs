@@ -1,5 +1,4 @@
-//! S #36 Drone Core X (SPEC §8.10 row 36): (8) Spell, Drone Core, Mythic, a card of the held Stinkyscape
-//! set (R1420).
+//! S #36 Drone Core X (SPEC §8.10 row 36): (8) Spell, Drone Core, Mythic, a card of the Stinkyscape set.
 //!   Base:    "Float reduces cost.\nSummon the Drone Battleship."
 //!   Radiant: "Float reduces cost.\nSummon a Radiant Drone Battleship."
 //! Engine: "Float reduces cost" as S #34 (R1563000): a hand and a deck trigger on its owner's Float, a
