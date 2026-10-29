@@ -17,7 +17,7 @@ import { statsTestid } from "./testids.ts";
 const PERCENT = 100;
 
 /** A rate as the cards table shows one, or "—" when there is none or its games are below the floor. */
-function rateText(games: number, rate: number | null, minSample: number): string {
+export function rateText(games: number, rate: number | null, minSample: number): string {
   const shown = faceRate(games, rate, minSample);
   return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;
 }
