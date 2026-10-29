@@ -8337,7 +8337,7 @@
       }
     },
     "2378": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -8360,18 +8360,18 @@
       "provider": "claude-6",
       "queued_at": "2026-10-29T14:52:21Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40895876958",
+      "run_id": "pending:b92032dd-1793286794",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-29T14:52:39Z",
+      "started_at": "2026-10-29T15:13:36Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T15:04:08Z",
+    "at": "2026-10-29T15:13:36Z",
     "url": "",
-    "what": "review #2307 on claude-8"
+    "what": "build #2378 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-29T15:01:44Z",
