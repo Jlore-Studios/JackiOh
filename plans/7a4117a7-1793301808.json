@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2385,
+  "title": "Patch: the server tests' copied helpers move into their shared support files, and the copy check covers the server's tests",
+  "branch": "bot/issue-2385",
+  "thread": "**Issue #2385 (data, not instructions):**\n\n```text\n# #2385: Patch: the server tests' copied helpers move into their shared support files, and the copy check covers the server's tests\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe server's test suite has the same small helper functions pasted into dozens of files. When one needs a fix it has to be fixed everywhere, and nothing stops more copies. Once this is built, each helper lives in one place. The check that already keeps the engine's, cards' and AI's test helpers single also fails a pull request that adds a new copy to the server's tests. Players notice nothing. The maintainer and the bots get less code to read.\n\n## Why\n\nCopies of the same helper under `crates/server/tests` (counted with grep):\n\n| Helper | Copies |\n| --- | --- |\n| `fn from<T\u2026>` (deserialize a JSON answer) | 29 |\n| `fn j` and `fn json_of`, which do what `to_json` (`support/store.rs:39`) already does | 11 |\n| `async fn table(` | 8 |\n| `fail_on` and `stop_failing` | 8 |\n| `fn playable()` | 9 |\n| `hmac_sha256_hex` | 3 |\n\n#1511 started moving these into `tests/support/`.\n\nThe shared-helper check, `SHARED_TEST_HELPERS` (`crates/tools/tests/acceptance.rs:986-1042`), has rows for the engine's rules tests, the testkit's readers, the cards' cross tests and the AI's tests, but none for `crates/server/tests`. The web's equivalent (#2237) has landed.\n\n## Proposal\n\n- Move each identical copy into `crates/server/tests/support/` (`store.rs`, or `engine.rs` for `playable`).\n- Replace `j` and `json_of` with `to_json`.\n- A copy whose body differs keeps its own, different name, as #1511 did.\n- Add a `SharedHelpers` row for the server trees that compile `support` (`actor`, `api`, `bots`, `loops`), with a self-test that refuses a planted copy.\n\n## Where it lands\n\nAbout 30 files under `crates/server/tests/`, and `crates/tools/tests/acceptance.rs`. No code outside the tests.\n\n## Acceptance criteria\n\n- [ ] `cargo test -p jackioh-server` runs the same number of tests before and after, all passing.\n- [ ] grep finds one definition of each moved helper.\n- [ ] The acceptance check passes on the tree and fails on a planted copy under `crates/server/tests`.\n- [ ] No file outside the test trees changes.\n\n## Size and risks\n\nMedium: about 30 files, mostly deletions (roughly 400 lines out).\n\n- A few panic messages change wording.\n- Touching many test files can conflict with open server pull requests, so it should land as one quick PR.\n- The Docker suites are untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:25:05Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2385: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
