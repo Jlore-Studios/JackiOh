@@ -7507,6 +7507,10 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-29T02:42:34Z",
       "stop_requested": false,
+      "strike_log": [
+        "CI still failed after 1 fix(es)"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
