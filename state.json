@@ -11678,6 +11678,10 @@
         {
           "at": "2026-10-29T17:19:19Z",
           "minutes": 68.7
+        },
+        {
+          "at": "2026-10-29T20:00:51Z",
+          "minutes": 27.3
         }
       ],
       "tokens_spent": [
@@ -12520,16 +12524,22 @@
           "cost": 4.7,
           "input": 216,
           "output": 43771
+        },
+        {
+          "at": "2026-10-29T20:00:51Z",
+          "cache": 10377544,
+          "cost": 5.1579,
+          "input": 158,
+          "output": 79763
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-29T19:20:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-30T00:20:00Z",
+          "utilization": 0.14
         },
-        "observed_at": "2026-10-29T17:19:19Z",
-        "rejected_resets_at": "2026-10-29T19:20:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-29T20:00:51Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
