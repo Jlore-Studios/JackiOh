@@ -1,7 +1,7 @@
 {
   "title": "Attack timings, and Classic Golem transforms its target",
   "sources": "#2285",
-  "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build.",
+  "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build, and the rule its divergences that touch no card.",
   "player": {
     "title": "Attack timings, and Classic Golem as designed",
     "new": [],
@@ -22,15 +22,20 @@
     "classic-013",
     "classic-045",
     "classicplus-018",
-    "core-032",
     "meditative-091",
     "meditativeplus-007",
     "stinkyscape-038",
     "stinkyscape-065",
+    "stinkyscape-072",
     "stinkyscape-075",
     "stinkyscape-076",
+    "stinkyscape-090",
     "stinkyscape-091",
     "stinkyscape-092",
+    "stinkyscape-140",
+    "stinkyscape-141",
+    "stinkyscape-175",
     "stinkyscape-t-dormant-starship"
-  ]
+  ],
+  "rule": true
 }
