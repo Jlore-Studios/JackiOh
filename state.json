@@ -8933,6 +8933,7 @@
     "2401": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "f2475fd7d81fcce8f98adc93693f8a6407bece9d",
       "ci_fixes": 1,
       "ci_reruns": {
         "f2996149ec04e8b2eb706c3c8d744250788874fd": 1
@@ -8946,22 +8947,26 @@
       },
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-29T15:13:36Z",
+      "feedback_since": "2026-10-29T19:24:37Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2378,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-29T18:39:21Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "40939840609",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-29T19:24:37Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
