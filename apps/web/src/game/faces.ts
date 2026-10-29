@@ -96,7 +96,14 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.slumber !== undefined) inPlay.dormant = { turns: unit.slumber.turns ?? null };
   if (unit?.frozenForever === true) inPlay.frozenForever = true;
   // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
-  if (unit?.starship !== undefined) inPlay.starship = { pieces: unit.starship.pieces.length, name: unit.starship.name ?? null };
+  // R2249000: and the pieces themselves, which its face lists in place of its text.
+  if (unit?.starship !== undefined) {
+    inPlay.starship = {
+      pieces: unit.starship.pieces.length,
+      name: unit.starship.name ?? null,
+      list: unit.starship.pieces.map((piece) => ({ defId: piece.defId, radiant: piece.radiant === true })),
+    };
+  }
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // R1956001: and the card that generated it, on the viewer's own Created card alone.
