@@ -173,8 +173,7 @@ mod tests {
         }
 
         #[test]
-        fn r387_never_itself_with_its_set_previewed() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
+        fn r387_never_itself_over_five_seeds() {
             for seed in 0..5 {
                 let mut s = game(&format!("m+023-never-itself-{seed}"), false, 1);
                 cast(&mut s, true);

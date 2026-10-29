@@ -100,7 +100,6 @@ fn priced_in_health(seed: &str, health: i32, enemy_health: i32) -> (GameState, S
 
 #[test]
 fn r1180004_the_ai_pays_health_for_a_lethal_spell_with_no_mana_left() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let (state, eclipse) = priced_in_health("ai-health-price-lethal", 30, 3);
     let decision = decide_at(&state, "ai-health-price-lethal");
     assert!(is_legal(&state, AI, &decision.action));
@@ -121,7 +120,6 @@ fn r1180004_the_ai_pays_health_for_a_lethal_spell_with_no_mana_left() {
 
 #[test]
 fn r1180004_the_ai_never_pays_its_last_health_for_a_spell() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let (state, eclipse) = priced_in_health("ai-health-price-last", 3, 30);
     let decision = decide_at(&state, "ai-health-price-last");
     assert!(is_legal(&state, AI, &decision.action));
@@ -163,7 +161,6 @@ fn bob_plays(state: &GameState) -> Vec<(Vec<String>, Vec<Selection>)> {
 
 #[test]
 fn r1185004_the_ai_weighs_bobs_four_modes_as_four_plays_the_take_with_its_target() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let s = bob_game("ai-bob-modes", false, json!([{ "def": VANILLA, "lane": 2 }]));
     let enemy = s.unit(HUMAN, 2).expect("the enemy Unit").id;
     let state = s.state().clone();
@@ -187,7 +184,6 @@ fn r1185004_the_ai_weighs_bobs_four_modes_as_four_plays_the_take_with_its_target
 
 #[test]
 fn r1185004_with_no_enemy_unit_the_ai_is_offered_no_take() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let s = bob_game("ai-bob-no-take", false, json!([]));
     let state = s.state().clone();
     let plays = bob_plays(&state);
@@ -205,7 +201,6 @@ fn r1185004_with_no_enemy_unit_the_ai_is_offered_no_take() {
 
 #[test]
 fn r1185004_the_ai_answers_the_radiant_bobs_discover_mid_list() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let mut s = bob_game("ai-bob-radiant", true, json!([{ "def": VANILLA, "lane": 1 }]));
     let enemy = s.unit(HUMAN, 1).expect("the enemy Unit").id;
     s.play(
@@ -254,7 +249,6 @@ fn supply_drop_game(seed: &str, mana: i32) -> GameState {
 
 #[test]
 fn r1181001_the_ai_weighs_both_supply_drop_modes_at_each_price_it_can_pay() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     for (mana, embiggens) in [
         (5, vec![Some(false), Some(true)]),
         (4, vec![Some(false), Some(true)]),
@@ -300,7 +294,6 @@ fn garden_game(seed: &str, radiant: bool, mana: i32) -> GameState {
 
 #[test]
 fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the_premium() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     // The base Garden's premium is 2 and the Radiant one's 1, over the Wand's normal (2): the Radiant
     // Garden's dearer choice costs 3, below the (4) the Wand prints.
     for (radiant, dearer) in [(false, 4), (true, 3)] {
@@ -352,7 +345,6 @@ const CURVATURE: &str = "core-077";
 
 #[test]
 fn the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     register_cards();
     let state = scenario(json!({
         "seed": "ai-supply-drop-combat",
@@ -425,7 +417,6 @@ fn scored_after_ending(state: &GameState) -> f64 {
 /// it lands past the reply, right after the AI's next turn, and counts in full.
 #[test]
 fn an_enemy_countdown_scores_a_3_health_unit_on_the_field_below_one_held() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let field = scored_after_ending(&facing_a_countdown("ai-countdown-threat", None, true));
     let hand = scored_after_ending(&facing_a_countdown("ai-countdown-threat", None, false));
     assert!(
@@ -441,7 +432,6 @@ fn an_enemy_countdown_scores_a_3_health_unit_on_the_field_below_one_held() {
 
 #[test]
 fn the_ais_own_countdown_is_blended_in_at_its_share_per_turn_it_still_waits() {
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     register_cards();
     let mut s = scenario(json!({
         "seed": "ai-countdown-payoff",
