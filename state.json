@@ -9185,9 +9185,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T08:41:15Z",
+    "at": "2026-10-29T08:50:42Z",
     "url": "",
-    "what": "revise #2346 on muse"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-29T08:38:11Z",
@@ -16635,11 +16635,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-29T07:58:29Z",
-    "last_run": "2026-10-28T16:36:53Z",
-    "provider": null,
+    "idle_since": "2026-10-29T08:50:42Z",
+    "last_run": "2026-10-29T08:50:42Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:2e4d1246-1793263816",
     "taken_asks": []
   },
   "usage": null,
