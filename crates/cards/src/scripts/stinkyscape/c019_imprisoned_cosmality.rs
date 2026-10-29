@@ -94,8 +94,37 @@ mod tests {
             .collect()
     }
 
+    /// R2271000: an awake Cosmality in p1's unit zone 1 (`radiant` both faces) while a second, played
+    /// into zone 2, lies Dormant until its awakening; how many hits the awake one dealt by then.
+    fn hits_of_the_awake_one(radiant: bool) -> usize {
+        let mut s = crate::scenario(json!({
+            "seed": "cosmality-beside",
+            "p1": {
+                "field": [{ "def": ID, "lane": 1, "radiant": radiant }],
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "library": crate::filler(4),
+            },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }));
+        let awake = s.unit_at(P1, 1).id;
+        s.play(ID, json!({ "zone": 2 }));
+        to_its_awakening(&mut s);
+        assert!(s.events().iter().any(|event| matches!(event, GameEvent::Awakened { .. })));
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Damage { source_id: Some(source), .. } if *source == awake))
+            .count()
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_deals_nothing() {
+            // "When THIS awakens": the awake Cosmality answered every awakening with its 10 hits too,
+            // until its condition was read (R2271000).
+            assert_eq!(hits_of_the_awake_one(false), 0);
+        }
 
         #[test]
         fn r1839001_played_it_lies_dormant_and_awakens_at_the_start_of_its_controllers_second_turn_after() {
@@ -185,6 +214,11 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r2271000_another_cards_awakening_deals_nothing_on_the_radiant_face() {
+            assert_eq!(hits_of_the_awake_one(true), 0);
+        }
 
         #[test]
         fn r275_a_20_12_whose_awakening_deals_20_hits_of_1() {

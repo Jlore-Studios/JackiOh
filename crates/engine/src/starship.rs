@@ -464,8 +464,8 @@ fn launches_self(ctx: &crate::script::EffectContext<'_>, event: &GameEvent) -> b
 /// §6.2 "When launched" (R1852003): the trigger a Starship Piece prints, answering the
 /// `starshipLaunched` of the Starship it is fused into and never another card's — so a piece's own
 /// "When launched" runs only as part of a Starship, after its fused Cries. The check is in `run`
-/// too: a trigger off the backrow is queued on its `on` alone (`when` is a trap's, R99), so a piece
-/// on the field, or a Starship launched before, would otherwise answer every later launch.
+/// too, as well as in `when`, which a queued trigger reads as it resolves (R2271000): a piece on the
+/// field, or a Starship launched before, answers no later launch.
 pub fn when_launched(
     id: impl Into<String>,
     run: impl Fn(&mut crate::script::EffectContext<'_>, &GameEvent) -> Vec<crate::script::Effect>
