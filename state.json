@@ -16637,7 +16637,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-29T08:50:42Z",
+    "idle_since": null,
     "last_run": "2026-10-29T08:50:42Z",
     "provider": "claude-3",
     "requested": false,
