@@ -86,8 +86,11 @@ mod r2321000_a_count_kept_on_a_unit_rides_on_its_view {
     /// The keeper in p1's backrow lane `lane` counts `n` on each Unit named.
     fn count(s: &mut Scenario, lane: i32, counted: &[(&str, i64)]) {
         let keeper = s.backrow(P1, lane).expect("a keeper in that lane");
-        let counts: serde_json::Map<String, Value> = counted.iter().map(|(id, n)| (id.to_string(), json!(n))).collect();
-        s.card_mut(keeper.id.as_str()).memory.insert(COUNTS.to_string(), Value::Object(counts));
+        let counts: serde_json::Map<String, Value> =
+            counted.iter().map(|(id, n)| (id.to_string(), json!(n))).collect();
+        s.card_mut(keeper.id.as_str())
+            .memory
+            .insert(COUNTS.to_string(), Value::Object(counts));
     }
 
     /// What `viewer` reads on the Unit `id` of either side.
@@ -168,6 +171,10 @@ mod r2321000_a_count_kept_on_a_unit_rides_on_its_view {
         count(&mut s, 1, &[(counted.as_str(), 1)]);
 
         assert_eq!(tallies_seen(&s, P1, &counted), Some(vec![tally(TRAP_KEEPER, 1)]));
-        assert_eq!(tallies_seen(&s, P2, &counted), None, "R33: the other seat cannot read the trap");
+        assert_eq!(
+            tallies_seen(&s, P2, &counted),
+            None,
+            "R33: the other seat cannot read the trap"
+        );
     }
 }

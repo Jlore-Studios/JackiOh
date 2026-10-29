@@ -14,6 +14,7 @@ import {
   type PlayerView,
   type Rarity,
   type Tag,
+  type UnitView,
 } from "@jackioh/shared";
 
 import { glitchInfo, isGlitch } from "../cards/glitch.ts";
@@ -105,10 +106,10 @@ export function useCardInfo(defId: string, radiant: boolean): CardInfo {
  * R2321000: the counts cards on the field keep on a Unit (`UnitView.tallies`), each with the name of
  * the card keeping it, read off the catalog as `useCardInfo` reads one. None for a card without.
  */
-export function useTallies(card: CardView | null | undefined): readonly NamedTally[] {
+export function useTallies(unit: UnitView | null | undefined): readonly NamedTally[] {
   const lookup = useContext(CatalogContext);
   const match = useContext(MatchCardsContext);
-  const tallies = card !== null && card !== undefined && "tallies" in card ? card.tallies : undefined;
+  const tallies = unit?.tallies;
   if (tallies === undefined) return NO_TALLIES;
   return tallies.map((tally) => ({
     name: (lookup?.(tally.defId, false) ?? lookupFromDefs(match.defs)(tally.defId, false) ?? unknownCard(tally.defId)).name,
