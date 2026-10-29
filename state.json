@@ -7888,7 +7888,7 @@
     "2339": {
       "action": "revise",
       "asks": [],
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_reruns": {
         "97d0dd9bbedc28f466459cfacb8d9c708641fc35": 1
       },
@@ -7919,7 +7919,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "This PR's `web` check is red because `main` is red, not because of this branch. On `main` (052f5a7f1), `apps/web/src/shortcuts/shortcuts.test.tsx` 'R2126000 no new key handler is added on a board route' fails. Its list of board key handlers, `BOARD_KEY_HANDLERS` (added by #2337), is missing `\"game/ModifierBadge.tsx\": 1`, the Escape `keydown` handler that #2329 added. Someone needs to fix that on `main`: either add the entry, or change ModifierBadge so it adds no key handler of its own. Then merge `main` into this branch again. Or should this PR carry the one-line entry itself?",
-      "queued_at": "2026-10-29T07:46:55Z",
+      "queued_at": "2026-10-29T16:14:10Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "40837811718",
       "runs_on": "ubuntu-latest",
