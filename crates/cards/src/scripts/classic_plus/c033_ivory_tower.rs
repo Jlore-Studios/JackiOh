@@ -39,7 +39,7 @@ fn is_stacked_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
 /// answer to the play left in its place — is fused into it.
 fn fuse_in(radiant: bool) -> TriggerDef {
     TriggerDef::new("ivory-tower-fuse", &[GameEventType::CardResolved], move |ctx, event| {
-        // Not a trap, so the condition is read in `run` (only traps consult `when`, R99).
+        // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
         if !is_stacked_play(ctx, event) {
             return vec![];
         }
