@@ -8631,9 +8631,12 @@
         "sha": "43936d0be8a3207da31dc8d4c9625346ee83b9b3"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T02:42:34Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2325,
       "kind": "review",
       "pending_request": false,
