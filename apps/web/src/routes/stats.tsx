@@ -55,6 +55,7 @@ import { faceRate, formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { usePlayerStats } from "../stats/store.ts";
+import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 
@@ -1095,7 +1096,7 @@ export default function StatsRoute(): ReactElement {
                 })}
               </ul>
             ) : (
-              <div className="stats-table-wrapper">
+              <TableScroll labelledBy="stats-tab-cards">
                 <table className="stats-table" data-testid={statsTestid.cardsTable}>
                   <thead>
                     <tr>
@@ -1401,7 +1402,7 @@ export default function StatsRoute(): ReactElement {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
 
             {/* R2089000: the Created cards, apart from the deck cards above */}
@@ -1452,7 +1453,7 @@ export default function StatsRoute(): ReactElement {
                     <span className="stats-summary-value">{setLeaders.median ? t(setLeaders.median) : "—"}</span>
                   </div>
                 </section>
-                <div className="stats-table-wrapper">
+                <TableScroll labelledBy="stats-tab-sets">
                   <table className="stats-table" data-testid={statsTestid.setsTable}>
                     <thead>
                       <tr>
@@ -1537,7 +1538,7 @@ export default function StatsRoute(): ReactElement {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </TableScroll>
                 <div className="stats-sets-outliers" data-testid={statsTestid.setsOutliers}>
                   {(
                     [
@@ -1620,7 +1621,7 @@ export default function StatsRoute(): ReactElement {
             ) : playersList.length === 0 ? (
               <EmptyState text={t("No players found.")} />
             ) : (
-              <div className="stats-table-wrapper">
+              <TableScroll labelledBy="stats-tab-players">
                 <table className="stats-table" data-testid={statsTestid.playersTable}>
                   <thead>
                     <tr>
@@ -1654,7 +1655,7 @@ export default function StatsRoute(): ReactElement {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
 
             {!playersLoading && !playersError && (playerPage > 1 || playersHasMore) && (

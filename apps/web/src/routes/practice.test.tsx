@@ -165,7 +165,7 @@ type HostOptions = {
   kept?: boolean;
   /** Issue #1146: the conceded game's last view carries the burst that ended it. */
   lethal?: boolean;
-  /** R2102000: the started game's snapshot says the human has lethal, as an Easy free game's would. */
+  /** R2102000: the started game's snapshot says the human has lethal, as any game's against the AI would (R2291000). */
   lethalHint?: boolean;
   /** R2208000: the worker's claim answer marks a decision this device's clock cut. */
   clockCut?: boolean;
@@ -2985,7 +2985,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
   });
 });
 
-// R2102000: the Easy practice tier's lethal hint.
+// R2102000, R2291000: the lethal hint of every game against the practice AI.
 
 describe("R2102000 the lethal hint", () => {
   afterEach(() => {
@@ -3015,14 +3015,46 @@ describe("R2102000 the lethal hint", () => {
     expect(dark()).toBe(true);
   });
 
-  it("R2102000 Medium and Hard never show it, whatever the snapshot says", async () => {
+  it("R2291000 Medium and Hard show it when the snapshot says lethal, and nothing when it does not", async () => {
     for (const difficulty of ["medium", "hard"] as const) {
       visit(`?seed=lethal3&difficulty=${difficulty}&deck=random&seat=p1`);
       renderRoute(routeHost({ lethalHint: true }));
       await screen.findByTestId(T.hud);
+      expect(shown(), difficulty).toBe(true);
+      cleanup();
+
+      renderRoute(routeHost());
+      await screen.findByTestId(T.hud);
       expect(dark(), difficulty).toBe(true);
       cleanup();
     }
+  });
+
+  it("R2291000 a sandbox game shows it when the snapshot says lethal", async () => {
+    const host = routeHost({ lethalHint: true });
+    renderRoute(host);
+    await settle({ ticks: 10 });
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+    expect(host.starts()[0]?.sandbox).toBe(true);
+    expect(shown()).toBe(true);
+  });
+
+  it("R2291000 a tutorial lesson shows it when the snapshot says lethal, and nothing when it does not", async () => {
+    visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
+    renderRoute(routeHost({ lethalHint: true }));
+    await screen.findByTestId("game");
+    await waitFor(() => {
+      expect(shown()).toBe(true);
+    });
+    cleanup();
+
+    visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
+    renderRoute(routeHost());
+    await screen.findByTestId("game");
+    expect(dark()).toBe(true);
   });
 
   it("R2102000 the Lethal hint setting turns it off and on again live", async () => {
@@ -3041,5 +3073,31 @@ describe("R2102000 the lethal hint", () => {
       writeSettings({ lethalHint: false });
     });
     expect(dark()).toBe(true);
+  });
+
+  it("R2291000 the Lethal hint setting hides it live at Medium, at Hard and in a lesson", async () => {
+    for (const [name, search] of [
+      ["medium", "?seed=lethal5&difficulty=medium&deck=random&seat=p1"],
+      ["hard", "?seed=lethal5&difficulty=hard&deck=random&seat=p1"],
+      ["a lesson", `?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`],
+    ] as const) {
+      visit(search);
+      renderRoute(routeHost({ lethalHint: true }));
+      await screen.findByTestId("game");
+      await waitFor(() => {
+        expect(shown(), name).toBe(true);
+      });
+
+      act(() => {
+        writeSettings({ lethalHint: false });
+      });
+      expect(dark(), name).toBe(true);
+
+      act(() => {
+        writeSettings({ lethalHint: true });
+      });
+      expect(shown(), name).toBe(true);
+      cleanup();
+    }
   });
 });

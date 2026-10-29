@@ -528,13 +528,6 @@ mod tests {
         })
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("expected {what}"),
-        }
-    }
-
     use crate::matches_object;
 
     /// TS `expect(line(s)).toMatchObject(pattern)`.

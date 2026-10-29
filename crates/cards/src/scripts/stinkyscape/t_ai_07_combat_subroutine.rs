@@ -1,6 +1,6 @@
 //! S T-AI-7 Combat Subroutine (SPEC §7, §8.10 row T-AI-7; R1, R21, R78, R347, R482, R1839000, R1881004):
-//! (2) Unit, AI, Token (no printed rarity), 2/2 → 4/4, an AI generated token of the held Stinkyscape set
-//! (R1420), built by S21.
+//! (2) Unit, AI, Token (no printed rarity), 2/2 → 4/4, an AI generated token of the Stinkyscape
+//! set, built by S21.
 //!   Base:    "Cry: Give each of your other Units a random combat keyword."
 //!   Radiant: "Cry: Give each of your other Units 2 random combat keywords."
 //! Engine: Cry (R1): for each other Unit acting for its controller (`active_units_of`, so a Dormant card is

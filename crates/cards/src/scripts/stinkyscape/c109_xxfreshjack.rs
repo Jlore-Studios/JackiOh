@@ -1,5 +1,4 @@
-//! Stinkyscape #109 xxFreshJack (SPEC §8.10 row 109). (4) Unit, Human, Acclaimed, Mythic, 6/11 → 12/22;
-//! held (R1420).
+//! Stinkyscape #109 xxFreshJack (SPEC §8.10 row 109). (4) Unit, Human, Acclaimed, Mythic, 6/11 → 12/22.
 //!   Base:    "Cry: Cast a random BUSTED card from anywhere in the game's code."
 //!   Radiant: "Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
 //!
