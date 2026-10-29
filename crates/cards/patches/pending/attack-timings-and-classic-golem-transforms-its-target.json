@@ -1,7 +1,7 @@
 {
   "title": "Attack timings, and Classic Golem transforms its target",
   "sources": "#2285",
-  "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build. The Stinkyscape shared tokens' family is claimed through the Dormant Starship, whose fused Badgers now gain before the damage.",
+  "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build.",
   "player": {
     "title": "Attack timings, and Classic Golem as designed",
     "new": [],
@@ -20,22 +20,25 @@
   ],
   "plays": [
     "classic-013",
-    "classic-016",
     "classic-045",
+    "core-032",
     "meditative-091",
     "meditativeplus-007",
+    "meditativeplus-018",
     "meditativeplus-025",
+    "stinkyscape-037",
+    "stinkyscape-043",
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
     "stinkyscape-065",
-    "stinkyscape-068",
     "stinkyscape-071",
-    "stinkyscape-074",
     "stinkyscape-075",
     "stinkyscape-076",
-    "stinkyscape-077",
     "stinkyscape-091",
     "stinkyscape-092",
     "stinkyscape-098",
-    "stinkyscape-137",
-    "stinkyscape-t-dormant-starship"
+    "stinkyscape-t-dormant-starship",
+    "stinkyscape-t-drone-interceptor"
   ]
 }
