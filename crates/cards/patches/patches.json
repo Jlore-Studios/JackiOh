@@ -16561,5 +16561,776 @@
       "stinkyscape-t"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.2b",
+    "date": "2026-10-29",
+    "title": "A card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
+    "source": "#2271",
+    "notes": "Every queued trigger now reads its condition (`TriggerDef.when`) as it resolves; before, only the traps' dispatch read it (R2271000). Prison (meditative-097-8) rolled its capture for its own controller's plays and the opponent's Field Spells and Traps; an awake Imprisoned Ship Smith or Cosmality answered every awakening, a launched Starship's included (golden seeds 3, 75 and 160 for Prison; 153, 196 and handicapped 223 for the Imprisoned cards). A copy of a fused card now takes its stricter targeting cost (R2271001).",
+    "player": {
+      "title": "Printed trigger conditions hold",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Prison captures only when your opponent plays a Unit, as printed, never on your own plays or their Field Spells and Traps.",
+        "Imprisoned Ship Smith and Imprisoned Cosmality answer only their own awakening, not another card's or a launched Starship's.",
+        "A trap's text fused onto a Unit springs only when that trap would.",
+        "Copying a fused card with Paul Allen's Ghost's text costs the Ghost's discards to target, as the fused card does."
+      ]
+    },
+    "commits": [
+      "da5a454ec10200fdfe856ce52bc5a2d6b338d448"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-097",
+      "stinkyscape-104",
+      "stinkyscape-122",
+      "stinkyscape-t-dormant-starship"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.3",
+    "date": "2026-10-29",
+    "title": "Stinkyscape's first pass: the Starship's face and where it arrives",
+    "source": "#2249",
+    "notes": "A Dormant Starship arrives in the middle of its owner's backrow first (R2249000); its printed text is cut to its Dormant line, its fusion and its Activate, the rest left to the Starship and Launch terms. The plays are classify's stage 2 against main.",
+    "player": {
+      "title": "The Starship's new look",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Dormant Starship arrives in the middle of your backrow when a zone there is open, then in the middle of your unit row.",
+        "In play a Starship shows the Starship Pieces fused into it instead of rules text: hover or long-press one to see its card.",
+        "Every Starship wears art of its own that changes with its pieces and its launch, and keeps it through every fusion."
+      ],
+      "text": [
+        "Dormant Starship's text is shorter: its Dormant line, its fusion and its Activate; the Starship and Launch tips hold the rest."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "2c9680cb1bcda904a7cf49975bd64450ca218db1"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-012",
+      "classic-016",
+      "classic-020",
+      "classic-021",
+      "classic-043",
+      "classic-045",
+      "classic-048",
+      "classic-061",
+      "classic-080",
+      "classic-082",
+      "classicplus-003",
+      "classicplus-021",
+      "classicplus-047",
+      "classicplus-048",
+      "classicplus-051",
+      "classicplus-059",
+      "classicplus-060",
+      "classicplus-063",
+      "classicplus-065",
+      "classicplus-069",
+      "core-002",
+      "core-003",
+      "core-013",
+      "core-014",
+      "core-016",
+      "core-020",
+      "core-022",
+      "core-038",
+      "core-043",
+      "core-046",
+      "core-055",
+      "core-068",
+      "core-074",
+      "core-075",
+      "core-085",
+      "core-088",
+      "core-091",
+      "core-100",
+      "core-t-rush",
+      "meditative-002",
+      "meditative-015",
+      "meditative-025",
+      "meditative-036",
+      "meditative-039",
+      "meditative-045",
+      "meditative-069",
+      "meditative-071",
+      "meditative-083",
+      "meditative-084",
+      "meditative-091",
+      "meditative-092",
+      "meditative-097",
+      "meditativeplus-008",
+      "meditativeplus-010",
+      "meditativeplus-016",
+      "meditativeplus-024",
+      "stinkyscape-003",
+      "stinkyscape-012",
+      "stinkyscape-013",
+      "stinkyscape-015",
+      "stinkyscape-040",
+      "stinkyscape-045",
+      "stinkyscape-046",
+      "stinkyscape-047",
+      "stinkyscape-048",
+      "stinkyscape-049",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-060",
+      "stinkyscape-061",
+      "stinkyscape-062",
+      "stinkyscape-064",
+      "stinkyscape-067",
+      "stinkyscape-068",
+      "stinkyscape-069",
+      "stinkyscape-072",
+      "stinkyscape-073",
+      "stinkyscape-074",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-077",
+      "stinkyscape-080",
+      "stinkyscape-083",
+      "stinkyscape-085",
+      "stinkyscape-086",
+      "stinkyscape-093",
+      "stinkyscape-098",
+      "stinkyscape-099",
+      "stinkyscape-100",
+      "stinkyscape-101",
+      "stinkyscape-104",
+      "stinkyscape-106",
+      "stinkyscape-107",
+      "stinkyscape-108",
+      "stinkyscape-109",
+      "stinkyscape-112",
+      "stinkyscape-113",
+      "stinkyscape-120",
+      "stinkyscape-122",
+      "stinkyscape-123",
+      "stinkyscape-127",
+      "stinkyscape-128",
+      "stinkyscape-133",
+      "stinkyscape-134",
+      "stinkyscape-136",
+      "stinkyscape-140",
+      "stinkyscape-141",
+      "stinkyscape-143",
+      "stinkyscape-147",
+      "stinkyscape-154",
+      "stinkyscape-175",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-korrelite"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-t-dormant-starship",
+        "name": "Dormant Starship",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.4",
+    "date": "2026-10-29",
+    "title": "Meditative balance changes IV",
+    "source": "#2179",
+    "notes": "Issue #2179's balance changes. Rules: an Indestructible unit is never in Defense Position (R2179000); Temporary takes a number, Temporary X (R2179001); a card cast on draw, like an Echo's repeat, is no play, so nothing that counts or answers plays sees it (R2179002); KY's Test's Easy problems are four-digit sums or differences, its old Hard problems Medium and its Hard ones new (R2179003); Playtester adds a random Book (R2179004); Anime Armor's cap guards the unit itself (R2179005). The other cards' changes are catalog data or kept v0.5.2 scripts (R767000). Felinor Fuser's and Dropshipping's files now hold their kept scripts too, which takes each over COMPLICATED_CODE_LINES (R1846000), so xxFreshJack and Shockwave447, which read the lists, play differently (R2173001). The golden traces were re-blessed: of 240, 11 are unchanged, 48 replay the same actions with new hashes and 181 play differently. The hotseat fixture is recorded again, since its p2 played Radiant Saintess at (1) on turn 2, and its hash moves from 7044d528 to 5b8b57a7; the practice claim fixture is recorded again for the same reason. No win rates were measured for it.",
+    "player": {
+      "title": "Meditative balance changes IV",
+      "new": [],
+      "balance": [
+        "Felinor Fuser is 3/3 (Radiant 6/6), up from 1/1 (2/2).",
+        "Conjure Bones' Embiggened version shuffles in 14 Bone Storms, down from 17.",
+        "Book of Nerf Nerfs 4 times (Radiant 8), down from 5 (10).",
+        "Catboy Maid SSR+ adds 1-2 to your Jade Counter (Radiant 1-4), down from 1-3 (1-6).",
+        "Joon Jorker Buffs 4 times (Radiant 8), down from 5 (10).",
+        "Anime Armor is 3/3 (Radiant 6/6), down from 4/4 (8/8).",
+        "Otherworldly Removal costs (3), up from (2).",
+        "Wondrous Wand's drawn cards cost (1), up from (0); its Radiant face's cost (0), and its Embiggened version draws 4, down from 5.",
+        "Trenful Trickster is 1/4 (Radiant 2/8), down from 1/5 (2/10).",
+        "Blood Moon costs (2), up from (1).",
+        "The Power to Punish costs (3), up from (2).",
+        "Spiritually 中国 costs (4), up from (3).",
+        "Radiant Saintess costs (2), up from (1).",
+        "Efficiency Dividend heals 3X (Radiant 6X), down from 4X (8X).",
+        "Medina Grifter is 3/1 (Radiant 6/2), down from 4/1 (8/2)."
+      ],
+      "changes": [
+        "Indestructible Units can't be in Defense Position, and still never have Taunt.",
+        "Temporary can take a number: a Temporary X card counts down at the end of each of your turns and is discarded at 0.",
+        "A card cast on draw is not a card played, as an Echo's extra casts never were: Combo, Jackiestan Auctioneer and every card that counts or answers plays ignore it.",
+        "Tranquility exiles itself.",
+        "Knowledge Breaker no longer Nerfs cards in decks.",
+        "Felinor Fuser Discovers (2) Cost or less Felinor Units (Radiant (3) Cost or less).",
+        "Transmogulate replaces your hand and deck; Embiggened for (4), your board too. It no longer reaches your graveyard or exile.",
+        "KY's Test's Easy problems are four-digit sums and differences, its old Hard problems are Medium, and its new Hard problems are doctoral.",
+        "Devil's Pact's Radiant face replaces your cards with base Books of Flame.",
+        "Playtester adds a Book of Buff or a Book of Nerf at random, with no choice.",
+        "State of the Game is Immutable.",
+        "Magic Amplifier can be Embiggened for (2), adding a random Spell or Field Spell that deals damage to your hand.",
+        "Prep can be Embiggened for (2), also drawing the highest cost Spell from your deck.",
+        "Anime Armor can't take more than 1 damage at a time either.",
+        "Dropshipping gives its cards Temporary 2 instead of Brittle 2.",
+        "The Power to Punish deals Pierce damage.",
+        "Spiritually 中国 does all three of its effects, and its Radiant face is printed in English.",
+        "Radiant Saintess's Radiant face has Reborn and no longer makes your hand Radiant.",
+        "Book of Buff's normal face only Buffs a permanent.",
+        "Claude's Datacenter adds its card with an Activate instead of at the end of your turn.",
+        "Felinor Fuser and Dropshipping are now complicated cards, so Shockwave447 can give them."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8b6505b02ec1a6c560b2921642d975532c341a6b"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-020",
+      "classic-035",
+      "classic-041",
+      "classicplus-011",
+      "classicplus-022",
+      "classicplus-023",
+      "classicplus-030",
+      "classicplus-032",
+      "classicplus-036",
+      "classicplus-072",
+      "core-024",
+      "core-081",
+      "core-083",
+      "meditative-016",
+      "meditative-032",
+      "meditative-061",
+      "meditativeplus-003",
+      "meditativeplus-009",
+      "meditativeplus-010",
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "changes": [
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-035",
+        "name": "Prep",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-041",
+        "name": "State of the Game",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-011",
+        "name": "Anime Armor",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-022",
+        "name": "Blood Moon",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-023",
+        "name": "Dropshipping",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-030",
+        "name": "Felinor Fuser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-032",
+        "name": "Otherworldly Removal",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-036",
+        "name": "Conjure Bones",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-071",
+        "name": "Book of Buff",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-072",
+        "name": "Book of Nerf",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-016",
+        "name": "Trenful Trickster",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-048",
+        "name": "Tranquility",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-061",
+        "name": "Joon Jorker",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-085",
+        "name": "Playtester",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-102",
+        "name": "Catboy Maid SSR+",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-009",
+        "name": "Magic Amplifier",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-010",
+        "name": "Medina Grifter",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.5",
+    "date": "2026-10-29",
+    "title": "Stinkyscape's first pass: Resources join the hand, and the Marketplace offers each player its own cards",
+    "source": "#2250",
+    "notes": "Resources are hand cards: gained into the hand, taking its space, and played or discarded for their Credits (R2250000, R2250001); the Resource tray is gone. The Marketplace offers each player 3 cards of its pool at the start of their turn, by the same odds and with no Resources, which only that player sees and buys (R2250002). The plays are classify's stage 2 against #2249's head.",
+    "player": {
+      "title": "Resources in your hand, a Marketplace of your own",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Resources go into your hand instead of a separate tray, and take up hand space there.",
+        "Playing or discarding a Resource gives you its Credits.",
+        "At the start of your turn the Marketplace offers you 3 cards of its own, with the same odds as before but never a Resource. Only you see and buy them."
+      ],
+      "text": [
+        "Ocean Tsunami fills your hand with Resources instead of your Resource tray.",
+        "Call to Chaos (Scape Edition)'s Marketplace offer comes each turn instead of each cycle.",
+        "Spice no longer says it sells like a Resource."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "9459384034428dc69505dc15b61aa1b0a4053827"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-017",
+      "classic-023",
+      "classic-059",
+      "classic-069",
+      "classic-082",
+      "classicplus-003",
+      "classicplus-013",
+      "classicplus-037",
+      "classicplus-046",
+      "core-003",
+      "core-012",
+      "core-014",
+      "core-015",
+      "core-038",
+      "core-045",
+      "core-075",
+      "core-092",
+      "core-t-rush",
+      "meditative-011",
+      "meditative-054",
+      "meditative-075",
+      "meditative-087",
+      "meditative-100",
+      "meditativeplus-007",
+      "meditativeplus-011",
+      "meditativeplus-024",
+      "stinkyscape-009",
+      "stinkyscape-012",
+      "stinkyscape-015",
+      "stinkyscape-018",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-027",
+      "stinkyscape-028",
+      "stinkyscape-029",
+      "stinkyscape-030",
+      "stinkyscape-031",
+      "stinkyscape-032",
+      "stinkyscape-033",
+      "stinkyscape-034",
+      "stinkyscape-035",
+      "stinkyscape-036",
+      "stinkyscape-038",
+      "stinkyscape-039",
+      "stinkyscape-040",
+      "stinkyscape-044",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-061",
+      "stinkyscape-062",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-066",
+      "stinkyscape-067",
+      "stinkyscape-068",
+      "stinkyscape-070",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-077",
+      "stinkyscape-078",
+      "stinkyscape-079",
+      "stinkyscape-080",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-083",
+      "stinkyscape-085",
+      "stinkyscape-087",
+      "stinkyscape-090",
+      "stinkyscape-100",
+      "stinkyscape-101",
+      "stinkyscape-104",
+      "stinkyscape-105",
+      "stinkyscape-106",
+      "stinkyscape-108",
+      "stinkyscape-109",
+      "stinkyscape-112",
+      "stinkyscape-114",
+      "stinkyscape-115",
+      "stinkyscape-116",
+      "stinkyscape-121",
+      "stinkyscape-122",
+      "stinkyscape-123",
+      "stinkyscape-127",
+      "stinkyscape-130",
+      "stinkyscape-133",
+      "stinkyscape-134",
+      "stinkyscape-138",
+      "stinkyscape-140",
+      "stinkyscape-141",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-145",
+      "stinkyscape-164",
+      "stinkyscape-166",
+      "stinkyscape-167",
+      "stinkyscape-169",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-175",
+      "stinkyscape-t-ai-02",
+      "stinkyscape-t-ai-03",
+      "stinkyscape-t-ai-04",
+      "stinkyscape-t-ai-05",
+      "stinkyscape-t-ai-06",
+      "stinkyscape-t-ai-07",
+      "stinkyscape-t-ai-08",
+      "stinkyscape-t-ai-09",
+      "stinkyscape-t-ai-10",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-089",
+        "name": "Spice",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-096",
+        "name": "Ocean Tsunami",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-151",
+        "name": "Call to Chaos (Scape Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.6",
+    "date": "2026-10-29",
+    "title": "Attack timings, and Classic Golem transforms its target",
+    "source": "#2285",
+    "notes": "The owner's ruling (#2285): \"When this attacks\" resolves before any damage of the attack (R2285000), and \"After this attacks\" only for an attacker still alive after it (R2285001). Classic Golem transforms the Unit it attacks before the damage, the base Golem into a Radiant Classic or Classic+ Unit and the Radiant Golem into a base-face one, and may attack again when it destroys it (R2285002, replacing R424). The plays are the families classify's second stage finds against main's build, and the rule its divergences that touch no card.",
+    "player": {
+      "title": "Attack timings, and Classic Golem as designed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "\"When this attacks\" now happens before the attack deals damage: Nature Titan, Badger and Honey Badger.",
+        "\"After this attacks\" now happens only if the attacker is still alive: Prem Panther, Boots on the Ground and The Propagation's Wasp and Hornet.",
+        "Classic Golem now transforms the Unit it attacks before the damage: into a Radiant Classic or Classic+ Unit, or a normal one from a Radiant Golem.",
+        "If Classic Golem destroys the Unit it transformed and survives, it may attack again."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "688d840212064815f73f4b98696126c51073816b"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-013",
+      "classic-045",
+      "classic-068",
+      "core-032",
+      "core-037",
+      "core-065",
+      "meditative-026",
+      "meditative-093",
+      "meditativeplus-007",
+      "stinkyscape-037",
+      "stinkyscape-038",
+      "stinkyscape-065",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-091",
+      "stinkyscape-092",
+      "stinkyscape-120",
+      "stinkyscape-140",
+      "stinkyscape-175",
+      "stinkyscape-t-dormant-starship"
+    ],
+    "changes": [
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

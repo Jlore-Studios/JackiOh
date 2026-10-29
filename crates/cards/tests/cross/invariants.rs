@@ -919,7 +919,9 @@ mod r1126_the_canes_pareto_animation {
     fn r1126_r1062_the_cane_animating_on_the_other_players_turn_enters_and_i4_stays_clean() {
         let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
         let mut g = scenario(json!({
-            "p1": { "mana": 10, "hand": [PARETO], "library": [VANILLA, VANILLA, VANILLA] },
+            // p1's (0) Spell, never played, keeps its turn from ending by itself (R82) once the Cane, which
+            // may not switch to Defense (R2179000), is all it has on the field.
+            "p1": { "mana": 10, "hand": [PARETO, "core-010"], "library": [VANILLA, VANILLA, VANILLA] },
             "p2": { "mana": 10, "hand": [VANILLA, BAD], "field": ["core-007"], "library": [VANILLA, VANILLA] },
         }));
         let mut monitor = create_invariant_monitor(g.state());
@@ -1307,21 +1309,21 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     }
 }
 
-/// R1122, R424: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
-/// combat is fought there, so a Classic Golem that kills the Unit it was re-aimed at killed its
-/// defender (R42) and its transform may attack again: the new Unit carries no `summonedTurn` and I4
-/// reads it as readied. Fuzz seed 9123 of the handicapped wave (#1645).
-mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
+/// R1122, R2285002: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
+/// combat is fought there, so a Classic Golem's "when this attacks" transforms the Unit it was re-aimed
+/// at, and a Golem that kills the Unit that took its place killed its defender (R42) and may attack
+/// again: I4 reads it as readied through the redirect and the transform both. Fuzz seed 9123 of the
+/// handicapped wave (#1645) was the redirect; R424's self-transform was its first shape.
+mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     use super::*;
 
     const GOLEM: &str = "classicplus-073-1";
     const TRAITOROUS_BLOOD: &str = "meditative-064";
     const MENACE: &str = "core-019";
 
-    #[test]
-    fn r1122_r424_i4_reads_a_golem_that_killed_the_unit_its_attack_was_redirected_to_as_readied() {
-        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
-        let mut g = scenario(json!({
+    fn board(seed: &str) -> Scenario {
+        scenario(json!({
+            "seed": seed,
             "p1": {
                 "field": [{ "def": GOLEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }],
                 "library": [VANILLA, VANILLA],
@@ -1331,7 +1333,40 @@ mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
                 "backrow": [{ "def": TRAITOROUS_BLOOD, "faceDown": true }],
                 "library": [VANILLA, VANILLA],
             },
-        }));
+        }))
+    }
+
+    /// The Unit the re-aimed attack's target became, when the Golem destroyed it and survived.
+    fn killed_and_survived(g: &Scenario, golem: &str, ally: &str) -> Option<String> {
+        let made = g.last_events().iter().find_map(|event| match event {
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } if *instance_id == ally => Some(new_instance_id.clone()),
+            _ => None,
+        })?;
+        let killed = g.last_events().iter().any(|event| {
+            matches!(event, GameEvent::Destroyed { instance_id, killer_id: Some(killer), .. }
+                if *instance_id == made && *killer == golem)
+        });
+        let alive = g.unit(PlayerId::P1, 2).is_some_and(|unit| unit.id == golem);
+        (killed && alive).then_some(made)
+    }
+
+    #[test]
+    fn r1122_r2285002_i4_reads_a_golem_that_killed_the_unit_its_redirected_attack_was_transformed_into_as_readied()
+     {
+        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
+        let seed = seed_where("redirected-golem", |seed| {
+            let mut g = board(seed);
+            let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;
+            let ally = g.unit(PlayerId::P1, 3).expect("p1's Vanilla").id;
+            let menace = g.unit(PlayerId::P2, 2).expect("p2's Menace").id;
+            g.attack(golem.as_str(), menace.as_str());
+            killed_and_survived(&g, &golem, &ally).is_some()
+        });
+        let mut g = board(&seed);
         let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;
         let ally = g.unit(PlayerId::P1, 3).expect("p1's Vanilla").id;
         let menace = g.unit(PlayerId::P2, 2).expect("p2's Menace").id;
@@ -1346,22 +1381,10 @@ mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
             "the trap re-aimed the attack at the Golem's neighbour: {:?}",
             g.last_events()
         );
-        let readied = g
-            .last_events()
-            .iter()
-            .find_map(|event| match event {
-                GameEvent::Transformed {
-                    instance_id,
-                    new_instance_id,
-                    ..
-                } if *instance_id == golem => Some(new_instance_id.clone()),
-                _ => None,
-            })
-            .expect("the Golem transformed");
-        assert_eq!(
-            g.card(readied.as_str()).summoned_turn,
-            None,
-            "R424: it may attack again"
+        assert!(killed_and_survived(&g, &golem, &ally).is_some());
+        assert!(
+            !g.card(golem.as_str()).exertion.attacked,
+            "R2285002: it may attack again"
         );
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
@@ -1540,6 +1563,53 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             assert!(mismatches[0].contains(&fiender.id), "{found:?}");
         }
     }
+
+    /// R14: a play announced into the zone beside the unit's, and the rings then turned (Core #52
+    /// Silly Silas played onto a unit, the pile carried one step, Silas killed, all inside one
+    /// action: fuzz seed 128 of the Stinkyscape release), may have covered and uncovered it too.
+    #[test]
+    fn r14_r1829000_i4_follows_a_covering_play_s_zone_around_the_ring() {
+        use jackioh_engine::wire::RotationDirection;
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let now = g.state().turn;
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(now);
+        // A zone of p1's that one step around p1's unit ring brings onto the Fiender's, lane 1.
+        let (from, direction) = [RotationDirection::Left, RotationDirection::Right]
+            .into_iter()
+            .flat_map(|direction| (2..=5).map(move |lane| (lane, direction)))
+            .find(|(lane, direction)| {
+                let to = jackioh_engine::zones::ring_neighbor(
+                    jackioh_engine::zones::ZoneSlot {
+                        player: PlayerId::P1,
+                        row: jackioh_engine::wire::Row::Units,
+                        lane: *lane,
+                    },
+                    *direction,
+                    PlayerId::P1,
+                );
+                (to.player, to.lane) == (PlayerId::P1, 1)
+            })
+            .expect("a zone one step from lane 1");
+        let played = event(json!({
+            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 4,
+        }));
+        let announced = event(json!({
+            "type": "cardAnnounced", "player": "p1", "instanceId": "silas", "defId": "core-052",
+            "cardType": "Unit", "costPaid": 4, "targets": [], "row": "units", "lane": from,
+        }));
+        let rotated = event(json!({ "type": "rotated", "direction": direction }));
+
+        assert_eq!(
+            monitor
+                .clone()
+                .after(&[announced.clone(), played.clone(), rotated], g.state()),
+            no_violations()
+        );
+        let found = monitor.clone().after(&[announced, played], g.state());
+        assert_eq!(entry_mismatches(&found).len(), 1, "{found:?}");
+    }
 }
 
 /// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
@@ -1653,6 +1723,117 @@ mod r1869002_i2_a_kill_credit {
         );
     }
 
+    /// R636: a Fuse brings its ingredients' text, and with it a Windfury an aura of theirs gives, which no
+    /// `keywordGranted` reports; the fused unit has it from the fuse on, inside the one action that fused
+    /// it and attacked twice (a handicapped seat's AI turn: M #65 Keymaster Keenus equipped onto S #113,
+    /// handicapped fuzz seed 7566 of the Stinkyscape release).
+    #[test]
+    fn r636_a_windfury_a_fuse_brings_allows_two_attacks_in_the_action_that_fused_it() {
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let unit = g.unit_at(PlayerId::P1, 1).id;
+        let mut monitor = create_invariant_monitor(g.state());
+        find_instance_mut(g.state_mut(), &unit)
+            .expect("the Vanilla")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Windfury" }))];
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let fused = event(json!({
+            "type": "fused", "instanceIds": ["c-gone", unit], "resultInstanceId": unit, "defId": VANILLA,
+        }));
+        assert_eq!(
+            monitor.after(&[fused, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
+    /// R636: a fusion whose text draws its keywords as it fuses (M #65 Keymaster Keenus' Aura) and that
+    /// leaves the field later in the same action took them away with its memory; two attacks it
+    /// declared after the fuse are one legal Windfury turn (Duos fuzz seed 679 of the Stinkyscape
+    /// release: equipped onto C+ #26, two kills, then exiled).
+    #[test]
+    fn r636_a_keyword_drawing_fusion_gone_by_the_action_s_end_may_have_attacked_twice() {
+        const KEYMASTER_KEENUS: &str = "meditative-065";
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        // Off the field by the action's end, as the exiled one was: here, in p1's hand.
+        let fused = craft_fused(&mut g, PlayerId::P1, &[KEYMASTER_KEENUS, VANILLA]);
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": fused.id, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let fuse = event(json!({
+            "type": "fused", "instanceIds": ["c-gone", fused.id], "resultInstanceId": fused.id, "defId": fused.def_id,
+        }));
+        assert_eq!(
+            monitor.after(&[fuse, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
+    /// R636: a token whose text draws its keywords as it arrives (the Stinkyscape Drone Corvette) and
+    /// that ceased to exist later in the same action took them with it; two attacks it declared are one
+    /// legal Windfury turn (fuzz seed 8567 of the release: summoned, two kills, killed, all inside one
+    /// autopilot action).
+    #[test]
+    fn r636_a_keyword_drawing_token_gone_by_the_action_s_end_may_have_attacked_twice() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let gone = "c-gone";
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": gone, "targetId": "hero-p1", "forced": false }),
+            )
+        };
+        let summoned = event(json!({
+            "type": "summoned", "player": "p2", "instanceId": gone, "defId": DRONE_CORVETTE, "row": "units", "lane": 4,
+        }));
+        assert_eq!(
+            monitor.after(&[summoned, declared(), declared()], g.state()),
+            no_violations()
+        );
+    }
+
+    /// R12, R636: a steal keeps a card on the field with the keywords it drew, so a Drone Corvette
+    /// summoned, attacking twice, stolen and attacking twice more for its new controller, then
+    /// bounced, all inside one AI turn, attacked legally (handicapped fuzz seed 1358 of the release).
+    #[test]
+    fn r636_r12_a_keyword_drawing_token_stolen_inside_the_action_keeps_what_it_drew() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let gone = "c-gone";
+        let declared = |target: &str| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": gone, "targetId": target, "forced": false }),
+            )
+        };
+        let summoned = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": gone, "defId": DRONE_CORVETTE, "row": "units", "lane": 3,
+        }));
+        let stolen = event(json!({
+            "type": "controlChanged", "instanceId": gone, "controller": "p2", "row": "units", "lane": 2, "how": "steal",
+        }));
+        assert_eq!(
+            monitor.after(
+                &[
+                    summoned,
+                    declared("hero-p2"),
+                    declared("hero-p2"),
+                    stolen,
+                    declared("hero-p1"),
+                    declared("hero-p1")
+                ],
+                g.state()
+            ),
+            no_violations()
+        );
+    }
+
     #[test]
     fn r1869002_a_unit_whose_text_answers_no_attack_earns_no_kill_credit() {
         let g = scenario(json!({
@@ -1678,6 +1859,82 @@ mod r1869002_i2_a_kill_credit {
     }
 
     #[test]
+    fn r1869002_a_kill_an_ambush_s_prompt_delayed_still_credits_the_attack_it_paused() {
+        // The attack is declared, an ambush's Discover (S #22 Gatinsir's Phalanxes) pauses its combat,
+        // and the kill lands in the answer's action: the attack the action left open is still the one
+        // resolving, so the kill frees Tmack Trav (fuzz seed 4195 of the release's super run).
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        let mut paused = g.state().clone();
+        paused.pending = Some(json_as(json!({
+            "id": "q1", "playerId": "p2", "kind": "discover", "prompt": "Discover", "options": [],
+            "min": 1, "max": 1,
+            "resume": { "defId": "stinkyscape-022", "hook": "trap", "step": "discover", "radiant": false, "data": {} },
+        })));
+        let declared = event(
+            json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": prey.id, "forced": false }),
+        );
+        assert_eq!(monitor.after(&[declared], &paused), no_violations());
+        let killed = event(json!({
+            "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+            "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+        }));
+        assert_eq!(monitor.after(&[killed], g.state()), no_violations());
+        let again = json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": "hero-p2", "forced": false });
+        assert_eq!(monitor.after(&[event(again)], g.state()), no_violations());
+    }
+
+    /// A kill whose victim's Death steals the attacker (Core #86) gives it a new stint before its
+    /// `afterAttack` frees it, and the prompt the action leaves open holds the credit unsettled: the
+    /// lifted sickness is the credit's, not an entry mismatch (handicapped fuzz seed 4737 of the release).
+    #[test]
+    fn r1869002_r12_a_kill_credit_unsettled_across_a_steal_reads_as_readied() {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        find_instance_mut(g.state_mut(), &tmack.id)
+            .expect("Tmack Trav")
+            .summoned_turn = None;
+        let mut paused = g.state().clone();
+        paused.pending = Some(json_as(json!({
+            "id": "q1", "playerId": "p1", "kind": "mode", "prompt": "Choose", "options": [],
+            "min": 1, "max": 1,
+            "resume": { "defId": "core-086", "hook": "death", "step": "steal", "radiant": false, "data": {} },
+        })));
+        let events = [
+            event(
+                json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": prey.id, "forced": false }),
+            ),
+            event(json!({
+                "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+                "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+            })),
+            event(json!({
+                "type": "controlChanged", "instanceId": tmack.id, "controller": "p1", "row": "units", "lane": 1,
+                "how": "steal",
+            })),
+        ];
+        let found = monitor.after(&events, &paused);
+        assert!(
+            !found
+                .iter()
+                .any(|message| message.starts_with("I4 entry mismatch")),
+            "{found:?}"
+        );
+    }
+
+    #[test]
     fn r1869002_a_kill_that_left_its_attack_spent_readied_nothing_and_its_credit_is_taken_back() {
         // The Wasp's text answers its attacks (it copies itself), but readies nothing: its kill leaves
         // its attack spent, so a second declaration is still an extra attack.
@@ -1697,5 +1954,60 @@ mod r1869002_i2_a_kill_credit {
         let found = monitor.after(&[event(again)], g.state());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// R678: a Glitch's boards outcome deals both fields again and places their cards with no `summoned`,
+/// so the `glitched` event is the entry of every card the field holds after it (a Glitch played from
+/// the graveyard mid-game: handicapped fuzz seed 7613 of the Stinkyscape release).
+mod r678_a_glitch_s_boards_are_entered {
+    use super::*;
+
+    #[test]
+    fn r678_i3_reads_the_cards_a_glitch_s_boards_placed_as_entered() {
+        let mut g = scenario(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [VANILLA] } }));
+        let monitor = create_invariant_monitor(g.state());
+        let turn = g.state().turn;
+        let placed = {
+            let state = g.state_mut();
+            let mut card = new_instance(
+                &mut *state,
+                VANILLA,
+                PlayerId::P1,
+                Zone::Resolving { player: PlayerId::P1 },
+            );
+            let slot = jackioh_engine::zones::ZoneSlot {
+                player: PlayerId::P1,
+                row: jackioh_engine::wire::Row::Units,
+                lane: 1,
+            };
+            assert!(jackioh_engine::zones::place_on_field(
+                state,
+                &mut card,
+                slot,
+                Default::default()
+            ));
+            find_instance_mut(state, &card.id)
+                .expect("the placed card")
+                .summoned_turn = Some(turn);
+            card.id
+        };
+        let glitched = event(json!({ "type": "glitched", "player": "p2", "outcome": "boards" }));
+        let silent = |found: &[String]| {
+            found
+                .iter()
+                .filter(|message| message.starts_with("I3 silent arrival") && message.contains(&placed))
+                .count()
+        };
+
+        let mut boards = monitor.clone();
+        let mut found = boards.after(&[glitched], g.state());
+        found.extend(boards.before(g.state(), PlayerId::P1, &ActionBody::EndTurn));
+        assert_eq!(silent(&found), 0, "{found:?}");
+
+        let mut none = monitor.clone();
+        let mut found = none.after(&[], g.state());
+        found.extend(none.before(g.state(), PlayerId::P1, &ActionBody::EndTurn));
+        assert_eq!(silent(&found), 1, "{found:?}");
     }
 }

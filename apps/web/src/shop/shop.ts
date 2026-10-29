@@ -18,8 +18,10 @@ import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
 
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
+import type { CatalogSnapshot } from "@jackioh/validator";
 import { t } from "../i18n/i18n.ts";
 import type { CollectionResponse, CosmeticSlot, OwnedCosmeticsResponse } from "../net/api.ts";
+import { matchesFilter, sortPool, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
 
 /** One registry entry, structurally: what the filters read. */
 export type RegistryCosmetic = {
@@ -81,6 +83,10 @@ export const shopTestid = {
   heldPack: "token-held-pack",
   cosmeticSpend: "token-cosmetic-spend",
   cardPick: (id: string) => `token-card-pick-${id}`,
+  cardConfirm: "token-card-confirm",
+  cardCancel: "token-card-cancel",
+  cardDialog: "token-card-dialog",
+  cardHint: "token-card-hint",
   cardNone: "token-card-none",
   packsPanel: "cosmetic-packs-panel",
   packsLoading: "cosmetic-packs-loading",
@@ -147,6 +153,25 @@ export function unownedCards(collection: CollectionResponse, defs: readonly Card
  * own card alone (R1313000); any other per-card kind fits every card owned at `MAX_COPIES`.
  * Null for an account cosmetic, which names no card.
  */
+/**
+ * The pool the card-token picker browses: the ids of `unowned` that the catalog knows, filtered
+ * and sorted as the deck builder sorts (SPEC §14.5 names exactly `unownedCards`; the browse is UX
+ * only, and `matchesFilter` never reads `ownedOnly`, so the hidden owned toggle cannot affect it).
+ */
+export function tokenPoolIds(
+  unowned: readonly CardDef[],
+  catalog: CatalogSnapshot,
+  filter: PoolFilter,
+  sort: PoolSort,
+): string[] {
+  const byId = new Map(unowned.map((def) => [def.id, def]));
+  const kept = [...byId.keys()].filter((id) => {
+    const def = catalog.cards[id];
+    return def !== undefined && matchesFilter(def, filter);
+  });
+  return sortPool(kept, catalog, sort);
+}
+
 export function fittingCards(cosmetic: RegistryCosmetic, quantities: Map<string, number>): string[] | null {
   if (!isPerCardKind(cosmetic.kind)) return null;
   if (cosmetic.card !== undefined) return ownsMax(cosmetic.card, quantities) ? [cosmetic.card] : [];

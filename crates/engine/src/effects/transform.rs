@@ -134,8 +134,7 @@ fn replace_off_field(
         ZoneName::Library => OffFieldZone::Library,
         ZoneName::Graveyard => OffFieldZone::Graveyard,
         ZoneName::Exile => OffFieldZone::Exile,
-        // R1840000: the tray holds Resources alone, so no card is replaced into it.
-        ZoneName::Field | ZoneName::Resolving | ZoneName::Gone | ZoneName::Tray => return None,
+        ZoneName::Field | ZoneName::Resolving | ZoneName::Gone => return None,
     };
     // R11: a unit-token card cannot sit in a graveyard or exile, so a replacement that would cease
     // to exist on arrival is refused instead of thinning the zone.
@@ -301,8 +300,7 @@ fn replace_card(
 fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
         Zone::Library { .. } => PLAYER_IDS.to_vec(),
-        // R1840000: a Resource tray is read as a hand is.
-        Zone::Hand { player } | Zone::Tray { player } => vec![opponent_of(player)],
+        Zone::Hand { player } => vec![opponent_of(player)],
         Zone::Field {
             row: Row::Backrow, ..
         } if card.face_up != Some(true) => {
@@ -449,14 +447,16 @@ pub struct TransformRandomArgs {
     pub arrives: Option<bool>,
 }
 
-/// E24, Classic+ #73.1 Classic Golem: "it transforms into a random Classic or Classic+ Unit". A §6.3
+/// E24, Classic+ #73.1 Classic Golem: "that Unit transforms into a random Classic or Classic+ Unit" (the
+/// Unit it attacks, R2285002). A §6.3
 /// Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
 /// card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on
 /// the field, one of its row (R35) — so the draw never lands on one the zone would refuse. Immutable
 /// refuses it (R23), and a refusal or an empty pool draws nothing (R129). `radiant` is the new card's
-/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` is Classic Golem's
-/// "the new Unit may attack again this turn" (R424): the new body on the field is not summoning sick
-/// this turn (a new instance's exertion is already fresh).
+/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` was Classic Golem's
+/// "the new Unit may attack again this turn" before it transformed its target instead (R424, R2285002):
+/// the new body on the field is not summoning sick this turn (a new instance's exertion is already
+/// fresh).
 ///
 /// MD-B10, R921 (Meditative #32): with `scope`, every card of the scope is replaced instead of the
 /// target's; with `same`, one definition is drawn for them all — from the definitions every one of
@@ -653,8 +653,9 @@ pub struct SwapBookArgs {
 /// becomes the Radiant face of the Book) and its place in the hand, and carries the swap on as the
 /// `swapsBook` enchantment, so it changes again at its owner's next end of turn. It is otherwise a new
 /// card, as any Transform result is (its cost changes and its other enchantments stay behind), except
-/// that a Temporary card's new Book is Temporary too (R637): the swap comes before cleanup, and a
-/// Temporary card must not leave the turn as a card that stays.
+/// that a Temporary card's new Book is Temporary too (R637), with the count the old card had left
+/// (R2179001): the swap comes before cleanup, and a Temporary card must not leave the turn as a card
+/// that stays.
 pub fn swap_book(args: SwapBookArgs) -> Effect {
     Effect::new("swapBook", move |ctx| {
         let Some(old) = instance_on_its_stay(ctx, &args.instance_id) else {
@@ -671,7 +672,10 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
         let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
             return;
         };
-        let temporary = is_temporary_card(ctx.state, &old);
+        // R2179001: the new Book keeps the old card's Temporary as it stands, its count included.
+        let temporary = is_temporary_card(ctx.state, &old)
+            .then(|| crate::temporary::temporary_number(&crate::layers::card_keywords(ctx.state, &old)))
+            .flatten();
         let Some(replacement) = replace_card(ctx, &old, def, old.radiant) else {
             return;
         };
@@ -682,8 +686,10 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
                     from: args.from.clone(),
                 },
             );
-            if temporary {
-                live.granted_keywords.push(Keyword::Temporary);
+            if let Some(count) = temporary {
+                live.granted_keywords.push(Keyword::Temporary {
+                    n: (count > 1).then_some(count),
+                });
             }
         }
     })

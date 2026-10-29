@@ -427,6 +427,23 @@ pub struct PreviewValue {
     pub ids: Option<Vec<String>>,
 }
 
+/// R2321000, §10.8: a count a card on the field keeps on this Unit (`Script.tallies`), `value` of
+/// `goal`, and the card keeping it by its catalog id (TG #31 Level Up!: the Unit's attacks toward its
+/// Radiant). Only from a card the viewer may read where it lies, so a face-down card's count never
+/// reaches the other seat.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TallyView {
+    pub def_id: String,
+    pub value: i32,
+    pub goal: i32,
+}
+
 /// `{ plague?: number; grade?: number }`: a unit's counters (`UnitView.counters`,
 /// `CardInstance.counters`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
@@ -615,6 +632,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
+    /// R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
+    /// of the cards keeping them. Absent when none does, never `[]`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tallies: Option<Vec<TallyView>>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -1135,12 +1157,6 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
-    /// R1840000: this seat's Resource tray beside its hand — the viewer's own in full, the
-    /// opponent's as a count, both in full once the game is over (R434), as `hand` is. Absent while
-    /// the tray holds none, so a game without a Resource sends the view it always did (D14).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub resource_tray: Option<HandView>,
     /// R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
     /// apart from the credit line's `credit` (R1223).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1361,9 +1377,9 @@ pub struct TradesView {
     pub left: i32,
 }
 
-/// R1853000–R1853003, §10.8: the open Marketplace as the viewer reads it (`marketplace::marketplace_view`):
-/// the lots offered to them and the sale prices of their own Resources and hand sales (R1861000). Which
-/// buys and sales are offered stays `legal_actions`' answer.
+/// R1853000–R1853003, R2250002, §10.8: the open Marketplace as the viewer reads it
+/// (`marketplace::marketplace_view`): the lots offered to them and the sale prices of their own hand
+/// sales (R1861000). Which buys and sales are offered stays `legal_actions`' answer.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1372,13 +1388,13 @@ pub struct TradesView {
 )]
 #[serde(rename_all = "camelCase")]
 pub struct MarketplaceView {
-    /// The turn the offering next re-rolls on (R1853001).
-    pub rerolls_on: i32,
+    /// The viewer's own offers (R2250002): the three rolled at the start of their turn, then the lots
+    /// an effect added for them (R1853005).
     pub offers: Vec<MarketOfferView>,
     pub sales: Vec<MarketSaleView>,
 }
 
-/// R1853001–R1853003, R1853005: one lot offered to the viewer.
+/// R1853001–R1853003, R1853005, R2250002: one lot offered to the viewer.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1396,7 +1412,7 @@ pub struct MarketOfferView {
     pub radiant: Option<bool>,
     /// This turn's price, in Credits.
     pub price: i32,
-    /// The copies the viewer may still buy this cycle (`marketplace::market_left`).
+    /// The copies the viewer may still buy (`marketplace::market_left`): 1 or 0 (R2250002).
     pub left: i32,
     /// A lot an effect added for the rest of the game, the viewer's alone (R1853005). Only ever
     /// `Some(true)`.
@@ -1411,8 +1427,8 @@ pub struct MarketOfferView {
     pub reason: Option<String>,
 }
 
-/// R1853002, R1853003: a Resource in the viewer's own tray, or a card in their hand that sells from there
-/// (R1861000), and what it sells for this turn.
+/// R1853002, R1853003, R1861000: a card in the viewer's hand that sells from there, and what it sells
+/// for this turn.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1423,7 +1439,7 @@ pub struct MarketOfferView {
 pub struct MarketSaleView {
     pub instance_id: String,
     pub def_id: String,
-    /// A Radiant Resource, sold at its Radiant face's quote. Only ever `Some(true)`.
+    /// A Radiant card, sold at its Radiant face's quote. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,

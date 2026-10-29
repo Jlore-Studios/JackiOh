@@ -14,7 +14,8 @@
 //! window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
 //! by its `transformed` to the card it resolves as, the one its `cardPlayed` names. A card a Counter
 //! sends to the countering player's hand and that player's effect then casts in the same step (C #4
-//! Palantir, R831001) passes through a hand too, and is a cast all the same. Each play keeps whether
+//! Palantir, R831001), or in the step that answers the prompt the cast opened (S #139 Wormhole asking
+//! the cast's target), passes through a hand too, and is a cast all the same. Each play keeps whether
 //! it was Radiant as `cardPlayed` placed it (R1147000), so step-3 Radiant (Gifted Program, Feng Shui
 //! per R0983, C+ #68) counts.
 //!
@@ -68,6 +69,9 @@ struct Reading {
     used: IndexSet<String>,
     created_used: PerPlayer<Vec<CreatedUse>>,
     created_played: PerPlayer<Vec<CreatedUse>>,
+    /// R831001: the cards countered into a hand by a step that ended on a prompt, whose cast the step
+    /// that answers it may make.
+    stolen: Vec<String>,
 }
 
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
@@ -176,9 +180,9 @@ fn use_created(reading: &mut Reading, ids: &[&str], maker: PlayerId, card: &str,
 
 /// One step's events, in the order they happened.
 fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: &GameState) {
-    // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
-    // countering player's cast (R831001), never a play from hand.
-    let mut stolen: Vec<&str> = Vec::new();
+    // The cards this step countered into a hand, and those an earlier step did before it ended on a
+    // prompt: a `cardPlayed` naming one is the countering player's cast (R831001), never a play from hand.
+    let mut stolen: Vec<String> = std::mem::take(&mut reading.stolen);
     for (at, event) in events.iter().enumerate() {
         match event {
             GameEvent::Countered {
@@ -186,7 +190,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 to: CounteredTo::Hand,
                 ..
             } => {
-                stolen.push(instance_id);
+                stolen.push(instance_id.clone());
             }
             GameEvent::TurnStarted { player, turn, .. } => {
                 reading.current_turn = *turn;
@@ -338,7 +342,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 if !from_hand {
                     continue;
                 }
-                if stolen.contains(&id.as_str()) {
+                if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
                     continue;
                 }
@@ -405,6 +409,10 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             }
             _ => {}
         }
+    }
+    // R831001: a cast that asks a choice of its caster finishes in the step that answers it.
+    if after.pending.is_some() {
+        reading.stolen = stolen;
     }
 }
 
@@ -485,6 +493,7 @@ impl SummaryReader {
                 used: IndexSet::new(),
                 created_used: per_seat(),
                 created_played: per_seat(),
+                stolen: Vec::new(),
             },
         }
     }
@@ -579,6 +588,7 @@ mod tests {
             used: IndexSet::new(),
             created_used: per_seat(),
             created_played: per_seat(),
+            stolen: Vec::new(),
         }
     }
 

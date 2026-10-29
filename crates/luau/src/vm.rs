@@ -24,13 +24,14 @@ use crate::{Face, LuauError, Site};
 /// The hooks a face may declare. `start_of_game` is not among them: only cards that
 /// stay in Rust use it (L14), so a face naming it fails to load like any other
 /// unknown key, instead of loading and never firing.
-pub const HOOKS: [&str; 30] = [
+pub const HOOKS: [&str; 31] = [
     "cry",
     "death",
     "delayed",
     "startOfTurn",
     "endOfTurn",
     "onPlayHook",
+    "whenAttacks",
     "afterAttack",
     "startOfOpponentTurn",
     "aura",

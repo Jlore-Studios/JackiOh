@@ -9,6 +9,7 @@
 //! field since (a bounce, a Reborn return) is a new arrival and starts again (R174). The Unit becomes
 //! Radiant after the combat of its Nth attack, if it still stands (`set_radiant`: the base layer swaps,
 //! damage and buffs stay, no Cry, R22, R74); one already Radiant is counted and nothing happens.
+//! R2321000: the counts that still hold ride on their Units in both views (`tallies`), `n` of "attacks".
 
 use jackioh_engine::combat::ally_attack_of;
 use jackioh_engine::prelude::*;
@@ -50,9 +51,41 @@ fn level_up(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     effects
 }
 
+/// R2321000: each count this card keeps that still holds, on the Unit it counts, toward its "attacks"
+/// (§10.8): a Unit of its controller's on the field that has not left it since its count began (R174),
+/// so the screen shows what the next attack will add to.
+fn tallies() -> TallyHook {
+    condition_hook(|ctx| {
+        let Some(counts) = ctx.self_.memory.get(COUNTS).and_then(Value::as_object) else {
+            return vec![];
+        };
+        let goal = param(&ctx, "attacks");
+        counts
+            .iter()
+            .filter(|(id, entry)| {
+                find_instance(ctx.state, id).is_some_and(|unit| {
+                    unit.controller == ctx.controller
+                        && matches!(unit.zone, Zone::Field { .. })
+                        && entry["mark"]
+                            .as_u64()
+                            .is_some_and(|mark| !left_field_since_mark(ctx.state, mark as u32, id))
+                })
+            })
+            .filter_map(|(id, entry)| {
+                Some(UnitTally {
+                    instance_id: id.clone(),
+                    value: i32::try_from(entry["n"].as_i64()?).ok()?,
+                    goal,
+                })
+            })
+            .collect()
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         ally_attack: Some(hook(level_up)),
+        tallies: Some(tallies()),
         ..Script::default()
     };
     let radiant = base.clone();
@@ -113,8 +146,68 @@ mod tests {
         s.unit(P1, lane).unwrap().radiant
     }
 
+    /// What `viewer` reads on p1's Unit in `lane`: the counts the field keeps on it, as `(keeper, value, goal)`.
+    fn tallies_seen(s: &Scenario, viewer: PlayerId, lane: i32) -> Option<Vec<(String, i32, i32)>> {
+        let id = s.unit(P1, lane).unwrap().id;
+        let view = s.view(viewer);
+        view.you
+            .units
+            .iter()
+            .chain(view.opponent.units.iter())
+            .flatten()
+            .find(|unit| unit.instance_id == id)
+            .unwrap()
+            .tallies
+            .clone()
+            .map(|tallies| tallies.into_iter().map(|tally| (tally.def_id, tally.value, tally.goal)).collect())
+    }
+
+    fn counted(value: i32, goal: i32) -> Option<Vec<(String, i32, i32)>> {
+        Some(vec![(LEVEL_UP.to_string(), value, goal)])
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn r2321000_each_units_count_rides_on_it_in_both_views() {
+            let mut s = board(false, json!({ "field": [VANILLA, VANILLA] }), json!({ "field": [wall()] }));
+            assert_eq!(tallies_seen(&s, P1, 1), None, "no attack yet, no count");
+            swing(&mut s, 1);
+            assert_eq!(tallies_seen(&s, P1, 1), counted(1, 3));
+            assert_eq!(tallies_seen(&s, P2, 1), counted(1, 3), "a face-up Field Spell's count is public");
+            assert_eq!(tallies_seen(&s, P1, 2), None, "each Unit counts apart");
+            next_round(&mut s);
+            swing(&mut s, 1);
+            assert_eq!(tallies_seen(&s, P2, 1), counted(2, 3));
+            next_round(&mut s);
+            swing(&mut s, 1);
+            assert!(radiant_at(&s, 1));
+            assert_eq!(tallies_seen(&s, P1, 1), counted(3, 3));
+        }
+
+        #[test]
+        fn r2321000_r174_a_bounced_and_replayed_unit_shows_no_stale_count() {
+            let mut s = board(
+                false,
+                json!({ "field": [VANILLA], "hand": [FILLER], "mana": 10 }),
+                json!({ "field": [wall()] }),
+            );
+            swing(&mut s, 1);
+            let vanilla = s.unit(P1, 1).unwrap();
+            bounce_to_hand(&mut s, &vanilla.id);
+            s.play(VANILLA, json!({ "zone": 1 }));
+            assert_eq!(tallies_seen(&s, P1, 1), None, "its count began again");
+        }
+
+        #[test]
+        fn r2321000_r78_the_counts_go_with_this_card() {
+            let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
+            swing(&mut s, 1);
+            let level_up = s.backrow(P1, 1).unwrap();
+            bounce_to_hand(&mut s, &level_up.id);
+            assert_eq!(tallies_seen(&s, P1, 1), None);
+        }
 
         #[test]
         fn r2199000_r2199007_a_unit_that_attacks_3_times_over_several_turns_becomes_radiant_after_the_third() {
@@ -314,6 +407,7 @@ mod tests {
             let mut s = board(true, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
             swing(&mut s, 1);
             assert!(!radiant_at(&s, 1));
+            assert_eq!(tallies_seen(&s, P1, 1), counted(1, 2), "R2321000: the Radiant face counts to 2");
             next_round(&mut s);
             swing(&mut s, 1);
 

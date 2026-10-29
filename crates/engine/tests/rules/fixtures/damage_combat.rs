@@ -16,6 +16,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
     cancel_attack, damage, damage_all, damage_split, draw, forced_attack_own_hero, heal, set_health, steal,
+    transform,
 };
 use jackioh_engine::testkit::*;
 
@@ -192,6 +193,8 @@ pub static argus: LazyLock<CardDef> = LazyLock::new(|| def("argus", 4711, "Field
 pub static hidden_argus: LazyLock<CardDef> = LazyLock::new(|| def("hidden-argus", 4712, "Trap", json!({})));
 /// Classic+ #11's shape: the hero takes at most 1 per hit.
 pub static anime_armor: LazyLock<CardDef> = LazyLock::new(|| plain_unit("anime-armor", 4713, 4, 4));
+/// Classic+ #11's shape since issue #2179: its hero and this Unit take at most 1 per hit (R2179005).
+pub static self_guard: LazyLock<CardDef> = LazyLock::new(|| plain_unit("self-guard", 4790, 4, 4));
 /// Classic+ #38's shape: Spell Damage +2 (Radiant +5).
 pub static solar: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -368,6 +371,15 @@ pub static ally_noter: LazyLock<CardDef> =
 /// R2199000: the same, whose hook asks its controller before it finishes.
 pub static ally_asker: LazyLock<CardDef> =
     LazyLock::new(|| def("ally-asker", 4748, "Field Spell", json!({})));
+/// R2285000: "When this attacks": notes the attack's target, whether it was forced, and the enemy
+/// hero's health as the hook runs (Classic #45 Nature Titan's shape).
+pub static striker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("striker", 4749, 2, 2));
+/// R2285000: the same, whose hook asks its controller before it finishes.
+pub static striker_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("striker-asker", 4750, 2, 2));
+/// R2285000: "When this attacks, destroy this": an attack whose attacker is gone does not fight.
+pub static kamikaze: LazyLock<CardDef> = LazyLock::new(|| plain_unit("kamikaze", 4751, 2, 2));
+/// R2285002: "When this attacks a Unit, transform it into a wall" (Classic+ #73.1 Classic Golem's shape).
+pub static shifter: LazyLock<CardDef> = LazyLock::new(|| plain_unit("shifter", 4752, 3, 3));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -384,6 +396,7 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         argus.clone(),
         hidden_argus.clone(),
         anime_armor.clone(),
+        self_guard.clone(),
         solar.clone(),
         lens.clone(),
         hidden_lens.clone(),
@@ -419,6 +432,10 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         cancel_gambit.clone(),
         ally_noter.clone(),
         ally_asker.clone(),
+        striker.clone(),
+        striker_asker.clone(),
+        kamikaze.clone(),
+        shifter.clone(),
     ]
 });
 
@@ -687,10 +704,12 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                 hero_guard(HeroGuard {
                     cap: None,
                     divisor: Some(2),
+                    guards_self: None,
                 }),
                 hero_guard(HeroGuard {
                     cap: None,
                     divisor: Some(4),
+                    guards_self: None,
                 }),
             ),
         ),
@@ -699,6 +718,7 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(hero_guard(HeroGuard {
                 cap: None,
                 divisor: Some(2),
+                guards_self: None,
             })),
         ),
         (
@@ -706,6 +726,15 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
             both(hero_guard(HeroGuard {
                 cap: Some(1),
                 divisor: None,
+                guards_self: None,
+            })),
+        ),
+        (
+            self_guard.id.clone(),
+            both(hero_guard(HeroGuard {
+                cap: Some(1),
+                divisor: None,
+                guards_self: Some(true),
             })),
         ),
         (
@@ -1017,6 +1046,58 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         vec![note(format!("attacked:answered:{survived}"))]
                     }),
                 )]),
+                ..Script::default()
+            }),
+        ),
+        (
+            striker.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|ctx| {
+                    let facts = when_attacks_of(&*ctx);
+                    let target = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.target_id.clone());
+                    let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
+                    let enemy = ctx.state.players[opponent_of(ctx.controller)].hero.health;
+                    vec![note(format!("when:{target}:{forced}:{enemy}"))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            striker_asker.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|_ctx| {
+                    vec![note("when:before"), ask_controller("answered"), note("when:tail")]
+                })),
+                resume: IndexMap::from([(
+                    "answered",
+                    hook(|ctx| {
+                        let forced = js_bool(when_attacks_of(&*ctx).map(|facts| facts.forced));
+                        vec![note(format!("when:answered:{forced}"))]
+                    }),
+                )]),
+                ..Script::default()
+            }),
+        ),
+        (
+            kamikaze.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|_ctx| {
+                    vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 99 })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            shifter.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|ctx| match when_attacks_of(&*ctx) {
+                    Some(facts) if !facts.target_id.starts_with("hero-") => vec![transform(json_as(
+                        json!({ "instanceId": facts.target_id, "defId": wall.id }),
+                    ))],
+                    _ => vec![],
+                })),
                 ..Script::default()
             }),
         ),
