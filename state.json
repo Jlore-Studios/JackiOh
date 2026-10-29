@@ -8553,7 +8553,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-29T16:32:31Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:641bf71b-1793292683",
+      "run_id": "40915733461",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T16:51:48Z",
       "stop_requested": false,
