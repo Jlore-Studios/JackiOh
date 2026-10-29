@@ -1285,6 +1285,8 @@ fn combine_objects(records: &[Script]) -> Script {
         secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
         preview: eager_condition(records.iter().map(|s| s.preview.clone()).collect()),
+        // R2321000: a fusion keeps every ingredient's counts, in ingredient order, as it previews.
+        tallies: eager_condition(records.iter().map(|s| s.tallies.clone()).collect()),
         activations: concat(records.iter().map(|s| s.activations.clone())),
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
