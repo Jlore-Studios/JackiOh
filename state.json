@@ -8138,6 +8138,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "3263e79b283ecf4ea26782ee02e26197cfcb0386"
       },
+      "closed_at": "2026-10-29T02:30:34Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -8147,6 +8148,7 @@
       "interruptions": 0,
       "issue": 2291,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-29T00:54:18Z",
