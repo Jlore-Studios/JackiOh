@@ -2,8 +2,8 @@
 // page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints.
 //
 // BUILD M8's key assertions for this row: "the landing's calls to action carry no Stats link and the
-// footer's "Stats" link opens `/stats`; the provisional banner names no data source and no count
-// towards the gate; summary tiles render the patch's games once, with no data source; cards table
+// footer's "Stats" link opens `/stats`; no provisional banner and no reading notes (R2325000); no data
+// source is named anywhere; summary tiles render the patch's games once, with no data source; cards table
 // searches and filters; card drill-down opens CardFace modal; players tab renders public stats
 // without Elo; Back returns to the landing page".
 //
@@ -23,7 +23,6 @@ import {
   STATS_DRILL_DOWN_CLOSE,
   STATS_DRILL_DOWN_MODAL,
   STATS_PLAYERS_TABLE,
-  STATS_PROVISIONAL_BANNER,
   STATS_SCREEN,
   STATS_SEARCH_INPUT,
   STATS_SUMMARY_TILES,
@@ -155,7 +154,7 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     });
   });
 
-  it("R654 R661 signed out: no Stats call to action, the footer's Stats link, a provisional banner with no source or gate, search, drill-down, players tab without Elo, and Back", () => {
+  it("R2325000 R654 R661 signed out: no Stats call to action, the footer's Stats link, no banner and no reading notes, search, drill-down, players tab without Elo, and Back", () => {
     expect(seed, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
 
     cy.visit("/");
@@ -179,14 +178,12 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.title().should("eq", "Statistics · JackiOh");
     cy.get(ts(STATS_SCREEN)).should("be.visible");
 
-    // The provisional banner says the figures are provisional, and names no source and no gate (R661)
-    cy.get(ts(STATS_PROVISIONAL_BANNER))
-      .should("be.visible")
-      .and("contain.text", "Provisional statistics")
-      .and("not.contain.text", "1000")
-      .and("not.contain.text", "AI development games");
+    // R2325000: no provisional banner and no reading notes, even with a provisional source (R661)
+    cy.get('[data-testid="stats-provisional-banner"]').should("not.exist");
     cy.get(ts(STATS_SCREEN))
-      .should("not.contain.text", "Data source")
+      .should("not.contain.text", "Provisional statistics")
+      .and("not.contain.text", "How to read these statistics")
+      .and("not.contain.text", "Data source")
       .and("not.contain.text", "AI games + live games (provisional)");
 
     // The summary counts the patch's games in one tile — never the gate's live count or the word

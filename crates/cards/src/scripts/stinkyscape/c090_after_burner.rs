@@ -43,7 +43,7 @@ mod tests {
     use jackioh_engine::prelude::{dormant_starship_of, random_pool_keywords};
     use jackioh_engine::testkit::*;
 
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
 
     fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
         s.stats(id).keywords.iter().map(Keyword::kind).collect()
@@ -82,7 +82,7 @@ mod tests {
     fn r1859000_on_the_field_it_does_nothing_when_a_starship_launches() {
         let (mut s, ship) = built_starship(
             "r1859000-field",
-            json!([{ "def": STARTOS, "lane": 1 }]),
+            json!([{ "def": STRATOS, "lane": 1 }]),
             json!({ "field": [{ "def": ID, "lane": 3 }] }),
             json!({}),
         );
@@ -95,7 +95,7 @@ mod tests {
             .into_iter()
             .filter(|kind| *kind != KeywordKind::Starship)
             .collect();
-        assert_eq!(ship_after, ship_before, "Startos's Starship gains nothing");
+        assert_eq!(ship_after, ship_before, "Stratos's Starship gains nothing");
         assert!(dormant_starship_of(s.state(), PlayerId::P1).is_none());
     }
 }

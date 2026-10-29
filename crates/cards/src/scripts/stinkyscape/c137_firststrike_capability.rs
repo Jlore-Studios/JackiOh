@@ -81,7 +81,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
@@ -100,12 +100,12 @@ mod tests {
             .collect()
     }
 
-    /// p1's Starship (a Startos and an Ultra Capacitor) and Firststrike Capability (Radiant if
+    /// p1's Starship (a Stratos and an Ultra Capacitor) and Firststrike Capability (Radiant if
     /// `radiant`) in hand, played into lane 4.
     fn played(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STARTOS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
+            json!([{ "def": STRATOS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
             json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
             json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
         );
@@ -191,7 +191,7 @@ mod tests {
     fn r1859006_the_launch_spends_no_launch_price() {
         let (mut s, _ship) = built_starship(
             "r1859006-price",
-            json!([{ "def": STARTOS, "lane": 1 }]),
+            json!([{ "def": STRATOS, "lane": 1 }]),
             json!({ "hand": [ID] }),
             json!({}),
         );

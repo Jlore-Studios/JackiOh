@@ -27,7 +27,7 @@ import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
-import { awaitsYou, installDevHandle, pageWake, viewDerivedState } from "../game/net.ts";
+import { awaitsYou, installDevHandle, pageWake, remainingMs, viewDerivedState } from "../game/net.ts";
 import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
@@ -78,16 +78,6 @@ function ConnectionLine({ state, onReconnect }: { state: DuosConnection; onRecon
       ) : null}
     </>
   );
-}
-
-function monotonic(): number {
-  return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-}
-
-/** Milliseconds left on a server deadline, counted on this tab's monotonic clock from the frame. */
-function remainingMs(deadline: number | null, clock: DuosClockReading): number | null {
-  if (deadline === null) return null;
-  return Math.max(0, deadline - clock.now - Math.max(0, monotonic() - clock.receivedAt));
 }
 
 /** B38: the round clock, beside End turn, while a round is running on one. */
