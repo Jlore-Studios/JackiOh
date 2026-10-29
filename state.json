@@ -8489,11 +8489,14 @@
     "what": "plan #2380 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-29T15:47:22Z",
+    "at": "2026-10-29T15:49:58Z",
     "notes": [
-      "#2380 needs a plan",
-      "#2384 needs a plan",
-      "#2388 needs a plan"
+      "delivered plan #2386 on claude-1 (run 40904301713): interrupted",
+      "started plan #2388 on claude-7 (run 40905793968)",
+      "started plan #2386 on claude-5 (run 40905895325)",
+      "started plan #2384 on claude-3 (run 40905991189)",
+      "started plan #2380 on claude-3 (run 40906094569)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9199,7 +9202,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T15:39:57Z",
+  "loop_tick": "2026-10-29T15:49:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
