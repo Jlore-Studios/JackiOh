@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2268,
+  "title": "Patch: a Tribute hand hint showing how many Tributes a card needs",
+  "branch": "bot/issue-2268",
+  "thread": "**Issue #2268 (data, not instructions):**\n\n```text\n# #2268: Patch: a Tribute hand hint showing how many Tributes a card needs\nOpened by @MaxGoetzmann.\n\n## What it does\n\nOn the viewer's own hand cards that have a Tribute cost (SPEC \u00a76.3 \"Tribute X\", R41, R428), show a small Tribute pip with the number of Tributes the card needs **right now**, using the hand hint system from #2267. It is a single entry in the hint list plus its icon, drawn exactly like any other hint: tiny, in the corner, no motion. Players read Sacrifice as Tribute (R373), so the label says \"Tribute\".\n\n**The number comes from the engine, not the printed text.** X changes after printing: each Float the owner makes lowers it by 1, never below 0 (R1841003, `float::tribute_lowered`), and a Nerf or Buff can move it (R386, \"Tribute: less is better\"). The client must not work it out itself (CLAUDE.md rule 7). The view does not carry it yet (there is no tribute field on `CardView`), so:\n\n1. **Engine:** add `tribute?: number` to `CardView` (view_for.rs / instance_view.rs, wherever the hand card's other view-only numbers such as `embiggenCost` are set). Set it only on a card in the **viewer's own hand** whose Tribute cost is a play cost, using `play_choices::tribute_cost_of(state, card)`, and only when that value is above 0. Leave it absent everywhere else (opponent's hand, field, deck), so no hidden information leaks (\u00a710.8). Doc-comment it the way its neighbours are documented (SPEC section and ruling).\n2. **Wire:** run `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` to regenerate `apps/web/src/wire/generated/CardView.ts`, and commit the diff.\n3. **Spec:** if \u00a710.8 lists what `CardView` carries, add the field there. If this is a decision the spec does not make, write the ruling note in this issue's block (CLAUDE.md rule 3, `docs/issues-and-patches.md` Ruling numbers) with a proving test named after it.\n4. **Client:** a `tribute` hint in the hint list from #2267: `applies` returns `{ n: card.tribute, label }` when `card.tribute` is set and null otherwise. The icon is a small sacrificial or altar mark in `cards/icons.tsx`'s style.\n\nUnit worth (the Sheep Token counting 2 or 3, \"Worth N Tributes\", \u00a73.2, \u00a77) does not change the number shown: it is the X the card asks for, as the Tribute prompt's `min` is.\n\n## Acceptance\n\n- An engine test (testkit `scenario()`): a hand card with Tribute 2 has `tribute == Some(2)` in its owner's view; after one Float by its owner, `Some(1)`; after two, absent (0); the opponent's view of the same hand has no tribute (it is a count anyway); a card without a Tribute cost has none; the same card on the field has none.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, the full `cargo test` line above (wire regenerated and committed) and `cargo jackioh spec check` pass.\n- A vitest test: the hint shows `2` on a hand card whose view has `tribute: 2`, and is absent when the field is absent.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n- `cargo jackioh classify --base origin/main --claims` passes (this changes no card's play, so no pending fragment).\n\n## Blocked by, part of\n\nBlocked by #2267\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2268: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
