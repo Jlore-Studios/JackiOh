@@ -8543,9 +8543,12 @@
         "sha": "5a656511be6bda12ea98a45ce0bdedc3c06c2426"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T02:42:00Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2110,
       "kind": "review",
       "pending_request": false,
