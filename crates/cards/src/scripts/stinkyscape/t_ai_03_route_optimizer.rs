@@ -1,9 +1,9 @@
 //! S T-AI-3 Route Optimizer (SPEC §7, §8.10 row T-AI-3; R65, R482, R1878000, R1881001): (1) Spell, AI,
-//! Token (no printed rarity), an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! Token (no printed rarity), an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Discover a Starship Piece. It costs (1) less."
 //!   Radiant: "Discover a Radiant Starship Piece. It costs (1) less."
 //! Engine: a Discover (§6.3), three different options from `query::starship_pieces()` (R1878000: every
-//!   non-token card printing Starship Piece, named by its set so the held gate leaves it whole), the pick
+//!   non-token card printing Starship Piece, named by its set so R1420's gate would leave it whole), the pick
 //!   added to its caster's hand with a `costMod` of −1 (R65), which travels with it (R78); a full hand
 //!   burns it (§2.4). A token never is one (R1881001). Radiant: the pick is added Radiant. Declares no
 //!   numbers (R482).

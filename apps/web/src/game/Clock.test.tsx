@@ -514,7 +514,7 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
     expect(css).toContain(':root[data-reduce-motion="true"] .clock-fuse, :root[data-reduce-motion="true"] .hand-you::before { display: none; }');
     // The heartbeat only runs under full motion, and the fuse never takes the pointer.
     expect(css).toContain('.clock[data-motion="full"][data-clock-side="you"]');
-    expect(css).toMatch(/\.clock-fuse \{ position: fixed; inset: 0; z-index: 37; pointer-events: none; \}/);
+    expect(css).toMatch(/\.clock-fuse \{ position: fixed; inset: 0; z-index: var\(--z-clock\); pointer-events: none; \}/);
   });
 
   it("R439 the fuse burns clockwise from the top-left corner, one edge per quarter", () => {

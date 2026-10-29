@@ -1,5 +1,5 @@
 //! S #90 After Burner (SPEC §8.10 row 90; R21, R1852000, R1852003, R1859000, R1859001): (2) Unit,
-//! Common, 4/8 → 8/16, Starship Piece, a card of the held Stinkyscape set (R1420).
+//! Common, 4/8 → 8/16, Starship Piece, a card of the Stinkyscape set.
 //!
 //! Base and Radiant: "Starship Piece\nWhen launched, your Starship gains {keywords|random combat
 //! keyword|random combat keywords}." Keywords 2, Radiant 4.

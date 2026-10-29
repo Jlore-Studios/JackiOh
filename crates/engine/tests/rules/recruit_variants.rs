@@ -42,10 +42,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 /// A card put into a player's exile, as the last one exiled.
 fn exiled(state: &mut GameState, def_id: &str, owner: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, owner, Zone::Exile { player: owner });

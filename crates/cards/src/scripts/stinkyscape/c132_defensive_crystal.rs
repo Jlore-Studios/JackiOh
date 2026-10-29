@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 132 Defensive Crystal, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 132 Defensive Crystal, a card of the Stinkyscape set.
 //! (2) Unit, Common, 3/6 → 6/12: Starship Piece.
 //! "Death: Your hero gains {heroArmor} Armor." — heroArmor 1, Radiant 2 (R1860006).
 //!

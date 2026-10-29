@@ -1,5 +1,5 @@
-//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 4/4 → 8/8, of the held
-//! Stinkyscape set (R1420).
+//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 4/4 → 8/8, of the
+//! Stinkyscape set.
 //!   Base:    "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //!   Radiant: "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //! Engine: S #91 The Propagation's Wasp's script; Rush is a catalog keyword. `after_attack`

@@ -97,13 +97,6 @@ mod tests {
     /// R55's four game counters.
     type Counters = GameCounters;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("expected {what}"),
-        }
-    }
-
     fn events_of(s: &Scenario, event_type: GameEventType) -> Vec<GameEvent> {
         s.events()
             .iter()

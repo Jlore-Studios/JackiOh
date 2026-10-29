@@ -1,4 +1,4 @@
-//! Stinkyscape #66 Miner v5 (SPEC §8.10 row 66). Unit 0/8 → 0/16, cost 4, Legendary; held (R1420).
+//! Stinkyscape #66 Miner v5 (SPEC §8.10 row 66). Unit 0/8 → 0/16, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 5: Gain a random Stinkyscape Resource."
 //!   Radiant: "Starship Piece, Equip

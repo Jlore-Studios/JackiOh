@@ -1,4 +1,4 @@
-//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (3) Field Spell, Quest, Legendary; held (R1420).
+//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (3) Field Spell, Quest, Legendary.
 //!   Base:    "Cry: Discover an Acclaimed Unit or a Jelly Bean.
 //!            Quest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random
 //!            Acclaimed Unit.

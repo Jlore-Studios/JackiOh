@@ -391,7 +391,7 @@ describe("R503 one distinct picture per catalog entry", () => {
     expect(varietySalt("meditative-097")).not.toBe(varietySalt("classic-043"));
     expect(varietySalt("meditative-097")).not.toBe(varietySalt("classicplus-043"));
     expect(varietySalt("meditative-097-4")).toBe(varietySalt("meditative-097"));
-    // R1857000: the held Stinkyscape set draws from its own, so none of its cards repeats a shipped one.
+    // R1857000: the Stinkyscape set draws from its own, so none of its cards repeats another set's one.
     expect(varietySalt("stinkyscape-071")).not.toBe(varietySalt("meditativeplus-001"));
     expect(varietySalt("stinkyscape-t-ai-01")).toBe(varietySalt("stinkyscape-071"));
   });

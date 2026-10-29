@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-red-narcor Red Narcor, a Resource token of the held Stinkyscape set (R1420).
+//! SPEC §7 Stinkyscape T-red-narcor Red Narcor, a Resource token of the Stinkyscape set.
 //!   Base:    "Add a random Legendary or Mythic card to your hand. It costs ({discount}) less." (2)
 //!   Radiant: "Add a random Radiant Legendary or Mythic card to your hand. It costs ({setCost})." (0)
 //!

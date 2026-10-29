@@ -1,5 +1,5 @@
 //! S #138 Pocket Peptides (SPEC §8.10 row 138; R70, R460, R946, R1875006, R1881007): (1) Trap, Common,
-//! of the held Stinkyscape set (R1420).
+//! of the Stinkyscape set.
 //!   Base:    "Reveals when one of your Units would die in combat: Cast CN Peptides on it."
 //!   Radiant: "Reveals when one of your Units would die in combat: Cast a Radiant CN Peptides on each of
 //!            your Units."

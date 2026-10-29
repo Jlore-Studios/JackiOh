@@ -1,16 +1,15 @@
 //! S #4.6 The Big Crunch (SPEC §8.10 row S 4.6, SPEC §7; §6.3 Cast, R28, R70, R87, R423, R436, R452,
-//! R1420, R1857002, R1870006): (4) Spell, Terminus, Token (printed Mythic), one of Olivian Expanse's
-//! picks.
+//! R1420, R1857002, R1870006): (4) Spell, Terminus, Token (printed Mythic), one of Olivian Expanse's picks.
 //!   Base:    "Cast one of each Call to Chaos."
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
 //! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each named
-//! by id, as they were while their sets were held (R1420). Each is a play for every
-//! rule, its choices its caster's (R70), rolling and naming its own effects to both players (R436),
-//! its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP` (R452); each
-//! lands in its caster's graveyard after it resolves (R87). The Radiant face casts each Radiant, three
-//! effects each (R423) (R1870006).
+//! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
+//! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
+//! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
+//! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
+//! (R452); each lands in its caster's graveyard after it resolves (R87). The Radiant face casts each
+//! Radiant, three effects each (R423) (R1870006).
 
 use jackioh_engine::prelude::*;
 

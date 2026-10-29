@@ -1,5 +1,5 @@
-//! SPEC §8.10 Stinkyscape 134 Felinor Containment Chamber, a card of the held Stinkyscape set
-//! (R1420). (1) Unit, Common, 2/1 → 4/2: Starship Piece.
+//! SPEC §8.10 Stinkyscape 134 Felinor Containment Chamber, a card of the Stinkyscape
+//! set. (1) Unit, Common, 2/1 → 4/2: Starship Piece.
 //! "Death: Summon a Felinor Token with this Unit's Attack and Health." / Radiant: "Death: Summon
 //! a Felinor Token with twice this Unit's Attack and Health. It gains Divine Shield." (R1860007).
 //!
