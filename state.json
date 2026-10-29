@@ -7053,12 +7053,22 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40859074136",
+            "tier": "medium"
+          }
+        ],
         "sha": "27e9a6057c7850cca12e40cca6ed26d6e3b00fc4",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "2306": {
