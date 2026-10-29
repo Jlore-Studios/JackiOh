@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2327,
+  "title": "Patch: spell Stinkyscape #68 \"Stratos\", not \"Startos\"",
+  "branch": "bot/issue-2327",
+  "thread": "**Issue #2327 (data, not instructions):**\n\n```text\n# #2327: Patch: spell Stinkyscape #68 \"Stratos\", not \"Startos\"\nOpened by @MaxGoetzmann.\n\n### What it does\n\nStinkyscape #68's name is misspelled \"Startos\". The right spelling is **Stratos**, the one #158 **Stratos Swarm** already uses. S03 (#1860) kept the misspelling on purpose: `docs/stinkyscape-set.md` line 463 (\"two spellings | Startos, as the Unit prints it\") and ruling R1860008 (\"'Startos' is Stinkyscape #68\"). This issue reverses that call. Every place that says \"Startos\" should say \"Stratos\".\n\nOnly the wording changes. The card id `stinkyscape-068` stays, so saves, decks and replays are unaffected. Under R1365000 a `name` or `text` change is wording alone, so this is a **micro** (`tier:micro`).\n\n**What changes (86 occurrences across 31 files on `main` at 91d05cc):**\n\n- **Card data**\n  - `crates/cards/catalog.json`: #68's `name`, and #158's base and Radiant `text` (\"Fill your board with (Radiant) Stratos.\").\n  - `crates/cards/tests/cross/catalog.rs:5619`: the row for #68.\n- **Script**\n  - `crates/cards/src/scripts/stinkyscape/c068_startos.rs` becomes `c068_stratos.rs`, with its header comment updated. Nothing else in the tree refers to the file by name, and the registry is generated.\n  - Comments and `expect` messages mentioning the card in `c158_stratos_swarm.rs`, `c131_spacerace_stimulus.rs`, `c137_firststrike_capability.rs`, `c137_1_land_doctrine.rs`, `c137_2_sea_doctrine.rs`, `c137_3_air_doctrine.rs`, `c137_4_space_doctrine.rs`, `t_dormant_starship.rs`, `c144_prepare_for_liftoff.rs`, `c090_after_burner.rs`, `c073_paragon_mk2.rs`, `c133_ultra_capacitor.rs` and `training_grounds/c004_boulder_fist_ogre.rs`.\n  - Test constants named `STARTOS` should become `STRATOS`. These are in `c068`, `c023_warp_disruptor.rs`, `c131`, `c136_magic_module.rs`, `c137_2`, `c137_3`, `t_dormant_starship.rs` and `c144`.\n- **Spec**\n  - `spec/08-catalog.md`: rows 68 and 158.\n  - `spec/rulings/R1860008.md`: its title, `cards` and body. Rewrite it to say \"Stratos\" is S #68, so both cards now use one spelling.\n  - `BUILD.md`: M12 rows S 68 and S 158.\n  - Don't run `cargo jackioh spec index`, and don't edit `spec/INDEX.md` or `spec/11-rulings.md` by hand. `spec-fold.yml` folds them on `main` (CLAUDE.md rule 3).\n- **Client**\n  - `apps/web/src/audio/card-audio.json5`: the `stinkyscape-068` name comment and the play line \"Startos reporting for duty.\" `voice-lines.test.ts` (R655) holds the comment to the new name.\n  - Stinkyscape has shipped, so the changed line needs its `.m4a` re-rendered. Push a commit whose message contains `[gen:voice]` (`docs/ADDING_CARDS.md`).\n- **Docs and designer notes**\n  - `docs/stinkyscape-set.md`: lines 371, 463, 592, the #68 section and the #158 section. Drop the \"two spellings\" row, or rewrite it to record the fix.\n  - `docs/radiant-audit.md`: rows 68 and 158.\n  - `docs/training-grounds-set.md:295`.\n  - `JackiOh_Stinkyscape_Cards.md`: lines 995, 1880 and 1882.\n- **Release record:** add a pending fragment, `cargo jackioh patches \"<title>\"`, claiming #68 and #158.\n\n**Not changed:** the shipped snapshots `crates/cards/patches/v0.5.0.json`, `v0.5.1.json`, `v0.5.2.json` and the shipped entries in `patches.json`. A shipped version never reopens (`docs/issues-and-patches.md`, Version numbers). The new name ships in the next version.\n\n### Acceptance\n\n- `git grep -n Startos` and `git grep -ni startos` return nothing, except in `crates/cards/patches/v0.5.*.json` and the shipped entries of `patches.json`.\n- `crates/cards/catalog.json` names `stinkyscape-068` \"Stratos\". #158's texts read \"Fill your board with Stratos.\" and \"Fill your board with Radiant Stratos.\"\n- `cargo test -p jackioh-cards c068` and `cargo test -p jackioh-cards c158_stratos_swarm` pass, including the R1860008 test.\n- `cargo jackioh catalog check`, `cargo jackioh patches check` and `cargo jackioh spec check` pass.\n- `cargo jackioh classify --base origin/main --claims` reports a micro (wording alone) for #68 and #158, and the fragment claims them.\n- `pnpm --dir apps/web test` passes (`voice-lines.test.ts`, `voiceData.test.ts`). `node apps/web/scripts/gen-voice.mjs --check` passes once the voice workflow has rendered the new line.\n\n### Blocked by, part of\n\nNone. This follows up #1860 (S03).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2327: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
