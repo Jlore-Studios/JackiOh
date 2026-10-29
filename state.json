@@ -8025,11 +8025,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-29T17:02:06Z",
+        "at": "2026-10-29T20:58:28Z",
         "by": "`claude` (strong)",
-        "carried_from": "377714d02d83b7642f0bffb63ea6d4058c903304",
-        "resolved_by": "`muse` (medium)",
-        "sha": "bb161f7c241e18ae4afb8197da01f88500bf20a8"
+        "carried_from": "bb161f7c241e18ae4afb8197da01f88500bf20a8",
+        "resolved_by": "`claude` (strong)",
+        "sha": "ad28104201d502da798df056f73ac4023b9f2ce6"
       },
       "died": 0,
       "difficulty": "medium",
