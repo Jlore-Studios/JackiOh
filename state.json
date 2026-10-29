@@ -7169,6 +7169,7 @@
         "by": "`claude` (medium)",
         "sha": "27e9a6057c7850cca12e40cca6ed26d6e3b00fc4"
       },
+      "closed_at": "2026-10-29T20:04:57Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -7188,6 +7189,7 @@
       "issue": 2270,
       "kind": "revise",
       "last_findings": [],
+      "merged": false,
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
