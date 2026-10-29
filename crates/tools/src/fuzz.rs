@@ -2919,18 +2919,19 @@ pub(crate) mod tests {
         const HELD_FIXTURE: &str = "fuzz-held";
 
         /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
-        /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.
+        /// Grounds set was held, the fuzz pool dealt its cards and the golden traces' pool none. Since
+        /// its release (#2204) it ships, so both pools deal it.
         #[test]
-        fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
+        fn r2194000_the_fuzz_pool_and_the_golden_pool_hold_the_shipped_training_grounds_set() {
             register_all();
             let training_grounds =
                 |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
             assert!(
-                !set_ships(jackioh_engine::SetName::TrainingGrounds),
-                "held until its release, #2204"
+                set_ships(jackioh_engine::SetName::TrainingGrounds),
+                "shipped by its release, #2204"
             );
             assert!(FUZZ_POOL.iter().any(training_grounds));
-            assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
+            assert!(SHIPPED_FUZZ_POOL.iter().any(training_grounds));
         }
 
         #[test]

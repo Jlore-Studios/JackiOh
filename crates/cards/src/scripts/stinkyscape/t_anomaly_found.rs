@@ -1,6 +1,6 @@
 //! SPEC §7 Stinkyscape T-anomaly-found Anomaly Found! (§8.10 row T-anomaly-found; §3.2, §6.3; R452,
-//! R1081000, R1839000, R1842000, R1855000–R1855002, R1879000–R1879002). (4) Spell, a token (printed
-//! Mythic) of the Stinkyscape set, found by S #166 and S #167's scan and S #7's reward.
+//! R1081000, R1839000, R1842000, R1855000–R1855002, R1879000–R1879002, R2204002). (4) Spell, a token
+//! (printed Mythic) of the Stinkyscape set, found by S #166 and S #167's scan and S #7's reward.
 //!   Base:    "Replace your side of the field with a random Anomaly: exile every card on it, then lay
 //!            that Anomaly's board in its place. Every Cry on the new board fires, with random targets
 //!            and choices."
@@ -252,8 +252,20 @@ pub fn preset(board: &Board) -> ReplaceBoardArgs {
     }
 }
 
-/// R1879000: one of `boards`, drawn from the match rng as the Spell resolves, each equally likely.
+/// R2204002: `boards` but those a held game's pools leave out (R2201001), a board that lays a
+/// Legendary or Mythic card (MT's Sanctum); every board when the game holds nothing.
+fn unheld(boards: &[Board]) -> Vec<Board> {
+    boards
+        .iter()
+        .filter(|board| !board.cards.iter().any(|lay| held_out(def_of(None, lay.def_id))))
+        .copied()
+        .collect()
+}
+
+/// R1879000: one of `boards`, drawn from the match rng as the Spell resolves, each equally likely
+/// (R2204002: of those a held game leaves in).
 pub fn replace_with_random(rng: &mut Rng, boards: &[Board]) -> Vec<Effect> {
+    let boards = unheld(boards);
     let Ok(count) = i32::try_from(boards.len()) else {
         return vec![];
     };
@@ -271,14 +283,15 @@ pub fn held_board(card: Option<&CardInstance>) -> Option<&'static Board> {
 }
 
 /// R2247000: as the card arrives in a hand, a library or on the field, it draws one of `boards`, each
-/// equally likely, and remembers its code as its label; a card that holds a board already draws nothing.
+/// equally likely (R2204002: of those a held game leaves in), and remembers its code as its label; a
+/// card that holds a board already draws nothing.
 fn draw_board(ctx: &EffectContext<'_>, boards: &[Board]) -> Vec<Effect> {
     if held_board(ctx.self_.as_ref()).is_some() {
         return vec![];
     }
     vec![remember_random(RememberRandomArgs {
         key: CARD_LABEL_KEY.to_string(),
-        options: boards.iter().map(|board| json!(board.code)).collect(),
+        options: unheld(boards).iter().map(|board| json!(board.code)).collect(),
     })]
 }
 
@@ -691,6 +704,69 @@ mod tests {
             s.play(ID, json!({}));
             let code = laid(&s, &ALL_BOARDS);
             assert!(BASE_BOARDS.iter().any(|board| board.code == code));
+        }
+    }
+
+    /// R2204002: a held game (R2201001) never draws MT, the one board that lays a Legendary card (S #152
+    /// Sanctum), neither as the card resolves nor as it arrives; the same seeds unheld do.
+    mod r2204002_a_held_game_draws_no_board_that_lays_a_held_card {
+        use super::*;
+
+        const PROBE: &str = "stinkyscape-166";
+
+        fn hold(s: &mut Scenario) {
+            s.state_mut().players[P1].handicap = Some(Handicap {
+                pool_hold: Some(true),
+                ..TUTORIAL_HUMAN
+            });
+        }
+
+        /// The board a play of an Anomaly Found! that holds none lays on `seed`, held or not.
+        fn resolved(seed: &str, held: bool) -> &'static str {
+            let mut s = setup(seed, false, json!([]));
+            if held {
+                hold(&mut s);
+            }
+            s.play(ID, json!({}));
+            laid(&s, &ALL_BOARDS)
+        }
+
+        /// The board a Scanning Probe Mk1's find holds on `seed`, held or not: a plain find at 16 misses.
+        fn found(seed: &str, held: bool) -> Option<String> {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [PROBE], "mana": 10, "library": [FILLER, FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+            }));
+            if held {
+                hold(&mut s);
+            }
+            s.state_mut().players[P1].anomaly_misses = Some(16);
+            s.play(PROBE, json!({}));
+            let card = s.hand(P1).into_iter().find(|card| card.def_id == ID)?;
+            card.memory.get(CARD_LABEL_KEY).and_then(Value::as_str).map(str::to_string)
+        }
+
+        #[test]
+        fn r2204002_r2201001_as_it_resolves() {
+            let seeds: Vec<String> = (0..SEEDS).map(|n| format!("r2204002-resolve-{n}")).collect();
+            for seed in &seeds {
+                assert_ne!(resolved(seed, true), MT.code, "{seed}");
+            }
+            assert!(seeds.iter().any(|seed| resolved(seed, false) == MT.code), "unheld, MT is drawn");
+        }
+
+        #[test]
+        fn r2204002_r2247000_as_it_arrives() {
+            let seeds: Vec<String> = (0..SEEDS).map(|n| format!("r2204002-arrive-{n}")).collect();
+            for seed in &seeds {
+                assert_ne!(found(seed, true).as_deref(), Some(MT.code), "{seed}");
+            }
+            assert!(
+                seeds.iter().any(|seed| found(seed, false).as_deref() == Some(MT.code)),
+                "unheld, a find holds MT"
+            );
         }
     }
 }

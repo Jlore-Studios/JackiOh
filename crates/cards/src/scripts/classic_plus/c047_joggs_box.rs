@@ -59,13 +59,15 @@ mod tests {
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
     /// Every Call to Chaos edition (R380): Core #95, C+ #73 and M #95. Re-pinned for v0.3.5: the
-    /// Meditative set joins the pool; and for the Stinkyscape release (#1884): its #150 and #151.
-    const CALLS: [&str; 5] = [
+    /// Meditative set joins the pool; for the Stinkyscape release (#1884): its #150 and #151; and for
+    /// the Training Grounds release (#2204): its #39 (R2200004).
+    const CALLS: [&str; 6] = [
         "core-095",
         "classicplus-073",
         "meditative-095",
         "stinkyscape-150",
         "stinkyscape-151",
+        "traininggrounds-039",
     ];
 
     #[derive(Clone, Debug)]
@@ -259,7 +261,8 @@ mod tests {
             assert!(defs.iter().all(|entry| entry.type_ == CardType::Spell && !entry.token));
             let sets: IndexSet<SetName> = defs.iter().map(|entry| entry.set).collect();
             // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-            // #1187): the Meditative+ set joins it; and for the Stinkyscape release (#1884): that set.
+            // #1187): the Meditative+ set joins it; for the Stinkyscape release (#1884): that set; and for
+            // the Training Grounds release (#2204): that set.
             assert_eq!(
                 sets,
                 IndexSet::from([
@@ -269,6 +272,7 @@ mod tests {
                     SetName::Meditative,
                     SetName::MeditativePlus,
                     SetName::Stinkyscape,
+                    SetName::TrainingGrounds,
                 ])
             );
         }
@@ -589,12 +593,19 @@ mod tests {
                     guard += 1;
                 }
                 if s.state().result.is_none() {
-                    // The paused rest followed the answers: the owed start-of-turn draw landed.
+                    // The paused rest followed the answers: the owed start-of-turn draw landed. Re-pinned
+                    // for the Training Grounds release (#2204): the first game that pauses now has the box
+                    // cast Core #90 CN-Viral Injection, so p2's draw takes a CN-Virus, cast on its draw
+                    // (§2.4), and goes on to the next card; one card of p2's draws reached its hand.
                     assert!(s.state().pending.is_none());
                     assert_eq!(
                         s.events()[from..]
                             .iter()
-                            .filter(|event| matches!(event, GameEvent::Drawn { player: P2, .. }))
+                            .filter(|event| matches!(
+                                event,
+                                GameEvent::Drawn { player: P2, instance_id, .. }
+                                    if s.card(instance_id).zone == Zone::Hand { player: P2 }
+                            ))
                             .count(),
                         1
                     );
