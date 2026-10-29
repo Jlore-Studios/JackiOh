@@ -1,11 +1,12 @@
 // The Field Guide (SPEC §9.10, R2205002): every mechanic the lessons let a player find, in lesson
 // order, each met one with its rule and each not yet met as "?" under the lesson that sets it up. One
 // button opens it, from the lesson HUD or the lesson path's header; it is a modal dialog that takes
-// focus, closes on Escape or Close, and gives focus back to the button that opened it.
+// focus and keeps Tab inside, closes on Escape or Close, and gives focus back to the button that opened it.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
+import { useModalKeys } from "../together/modalKeys.ts";
 import { FIELD_GUIDE } from "./discoveries.ts";
 import { lessonById } from "./lessons.ts";
 import { fieldGuideOf, useTutorialProgress } from "./progress.ts";
@@ -14,23 +15,18 @@ import "./tutorial.css";
 
 function FieldGuideDialog({ met, onClose }: { met: readonly string[]; onClose(): void }): ReactElement {
   const headingId = useId();
+  const dialog = useRef<HTMLElement>(null);
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     close.current?.focus();
   }, []);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
+  // The client's modal keys (R2126000 adds no key handler on a board route): Escape closes, Tab stays inside.
+  useModalKeys(dialog, onClose);
 
   return (
     <div className="field-guide-scrim" onClick={onClose}>
       <section
+        ref={dialog}
         className="field-guide"
         data-testid={tutorialTestid.fieldGuide}
         role="dialog"
