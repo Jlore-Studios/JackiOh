@@ -1,0 +1,62 @@
+{
+  "action": "build",
+  "number": 2325,
+  "title": "Patch: drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
+  "branch": "bot/issue-2325",
+  "thread": "**Issue #2325 (data, not instructions):**\n\n```text\n# #2325: Patch: drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats\nOpened by @MaxGoetzmann.\n\n## What\n\nRemove two blocks from the statistics page (`/stats`). They take up space and tell the player nothing useful:\n\n1. **The \"Provisional statistics\" banner**: the `stats-provisional-banner` block in `apps/web/src/routes/stats.tsx` (around line 701), its \"View previous patch (\u2026) \u2192\" fallback button (`statsTestid.fallbackToggle`) included. The patch bar's previous/next buttons and its picker (R1973002) already let the player step back a patch.\n2. **The \"How to read these statistics\" accordion**: the `<details className=\"stats-info-accordion\">` block right below it, with all its paragraphs.\n\nThis is presentation only (CLAUDE.md rule 7). Nothing changes in the server, the wire or `GET /api/stats/cards`: the response still sends `source`, `sourceLabel` and `gate`, and the client just stops reading `source` to decide whether to show a banner.\n\n## Done when\n\n- `stats.tsx` renders neither block. Delete whatever only they used: `isProvisional`, `fallback` and its computation, any `withNodes` or `minSample` uses left with no reader, and the `.stats-provisional-*` and `.stats-info-*` rules in `apps/web/src/routes/stats.css`.\n- The strings only these blocks used are gone from `apps/web/src/i18n/zh-CN.json` (the banner title, the summary, each paragraph's heading and body, the fallback button's label). Keep any string another screen still uses (grep before you delete).\n- The `provisionalBanner` and `fallbackToggle` test ids are gone from `apps/web/src/stats/testids.ts`, and `STATS_PROVISIONAL_BANNER` from `e2e/support/testids.ts`.\n- Tests:\n  - `apps/web/src/routes/stats.test.tsx`: the R654 test (about line 394) and the R661 test (about line 710) check that the page shows **no** banner and **no** \"How to read these statistics\" while the source is `provisional`, and still show no source label or live-game count. The R1973002 test about the banner's previous patch (about line 1619) is rewritten to test the patch bar's previous button instead, or dropped if another test already covers that.\n  - `e2e/cypress/e2e/34-stats.cy.ts` (about line 182) stops expecting the banner and checks that it is absent. Update its row in BUILD.md (about line 692) to match.\n- Rulings (CLAUDE.md rule 3): R654, R661 and R1973002 all describe the banner, and R661 also names the \"How to read these statistics\" notes. Add one ruling note in this issue's block (R(N\u00d71000), N this issue's number) that amends all three: the page shows no provisional banner and no reading notes, and the patch bar is the way back to the previous patch. Add \"(amended by R\u2026)\" to each one's title, in the same form R654's title already uses, and put a one-line amendment at the end of each. Name the proving test after the new ruling and list its files in `proven_in`. Its \u00a711 paragraph goes in `spec/pending/<N>.md`. Don't run `cargo jackioh spec index`.\n- Green: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`, `cargo jackioh spec check`, and the `34-stats` e2e spec.\n\nNo card data changes, so no patches fragment is needed. Run `cargo jackioh classify --base origin/main --claims` to confirm.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#2325: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
