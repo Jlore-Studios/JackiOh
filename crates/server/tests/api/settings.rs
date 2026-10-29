@@ -19,10 +19,10 @@ use jackioh_server::config::{
     PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
     PLAYER_SETTINGS_NAME_MAX_LENGTH, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
 };
-use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::from;
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -56,11 +56,6 @@ async fn setup() -> Fixture {
         other,
         pending,
     }
-}
-
-/// A store value built from JSON.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("a store value from its JSON")
 }
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.

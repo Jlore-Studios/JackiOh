@@ -616,6 +616,22 @@ pub fn real_pool() -> Vec<String> {
     pool
 }
 
+/// Every playable catalog id (no token), in `catalog.json` order.
+pub fn playable() -> Vec<String> {
+    jackioh_cards::register_all();
+    jackioh_cards::CATALOG
+        .iter()
+        .filter(|(_, def)| {
+            !def.token
+                && !serde_json::to_value(&def.tags)
+                    .expect("tags")
+                    .as_array()
+                    .is_some_and(|tags| tags.contains(&json!("Token")))
+        })
+        .map(|(id, _)| id.clone())
+        .collect()
+}
+
 /// A created, not yet begun, game on two decks (the test catalog's, which holds the real one).
 pub fn new_game(seed: &str, decks: (Vec<String>, Vec<String>)) -> GameState {
     create_game(&CreateGameOptions {

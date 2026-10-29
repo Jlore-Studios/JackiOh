@@ -24,7 +24,6 @@ use jackioh_engine::wire::{
     newest_shipped_set,
 };
 use jackioh_engine::{Action, GameOverReason, PlayerId, Winner};
-use serde::Serialize;
 use serde_json::{Value, json};
 
 use jackioh_server::actor::clock::initial_clocks;
@@ -37,7 +36,6 @@ use jackioh_server::config::{
     JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_UNRANKED_LOSS, JLORE_UNRANKED_WIN, MATCH_CEILING_MINUTES,
     SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
 };
-use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch};
 use jackioh_server::duos::{ceiling_draw, finish_match};
@@ -52,7 +50,7 @@ use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::store::{fake_ref, store};
+use crate::support::store::{fake_read, fake_ref, store, to_json};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -83,11 +81,6 @@ async fn economy_app(live: bool) -> Arc<App> {
     app
 }
 
-/// The JSON a row or any port value serialises to.
-fn j<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("the value serialises")
-}
-
 /// `test_app()` holds the E2E fixtures (R144), so they go first and every row a test reads is
 /// one it wrote.
 async fn fresh_store(app: &App) {
@@ -97,12 +90,6 @@ async fn fresh_store(app: &App) {
 /// A profile written without the API (status `active` unless set).
 async fn seed_profile(app: &App, input: Value) {
     let _ = fake_ref(app).lock().await.seed_profile(input);
-}
-
-/// One read of the fake's raw tables, as JSON.
-async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake_ref(app).lock().await;
-    read(&data)
 }
 
 /// The catalog version every match here is created at.
@@ -143,13 +130,13 @@ async fn create_match(app: &Arc<App>, match_id: &str, ranked: bool, past_ceiling
         "id": match_id,
         "seed": "seed-1",
         "players": [A, B],
-        "decks": [j(&first)["deck"], j(&second)["deck"]],
+        "decks": [to_json(&first)["deck"], to_json(&second)["deck"]],
         "catalogVersion": catalog_version(),
         "ranked": ranked,
         "status": "live",
         "createdAt": started_at,
         "finishedAt": null,
-        "clocks": j(&initial_clocks(started_at)),
+        "clocks": to_json(&initial_clocks(started_at)),
     }))
     .expect("a MatchRow");
     store!(app, |t| t.matches_create(&row));
@@ -367,7 +354,7 @@ mod ladder_payout {
         // The scripted engine really kills p1's enemy hero: A wins by hero-death.
         let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
         assert_eq!(outcome.winner, Winner::P1);
-        let row = j(&record_on(&app, MATCH_ID, outcome).await);
+        let row = to_json(&record_on(&app, MATCH_ID, outcome).await);
         assert_eq!(row["winnerProfileId"], json!(A));
 
         // The games pay exactly the configured Jlore; the wallet also holds level 1's track
@@ -530,7 +517,7 @@ mod rulings {
         // Both heroes die in the same check: a draw by mutual lethal.
         let outcome = play(&[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })]);
         assert_eq!(outcome.winner, Winner::Draw);
-        let row = j(&record_on(&app, MATCH_ID, outcome).await);
+        let row = to_json(&record_on(&app, MATCH_ID, outcome).await);
         assert!(row["winnerProfileId"].is_null());
 
         for profile in [A, B] {
@@ -585,7 +572,7 @@ mod rulings {
         log.extend(actions_of("p2", 4));
         append_log_to(&app, MATCH_ID, &log).await;
         let match_row: MatchRow = store!(app, |t| t.matches_get(MATCH_ID)).expect("the past-ceiling match");
-        let row = j(
+        let row = to_json(
             &record_ceiling_draw(&app, ceiling_draw_input(&match_row, now_ms()))
                 .await
                 .expect("the ceiling draw is written"),
@@ -830,10 +817,10 @@ mod level_rewards_once {
         assert_eq!(track_paid(&app, A).await, paid);
 
         // A repeated write of the same match pays nothing twice.
-        let before = j(&ledger_of(&app, A).await);
+        let before = to_json(&ledger_of(&app, A).await);
         let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
         record_on(&app, MATCH_3, outcome).await;
-        assert_eq!(j(&ledger_of(&app, A).await), before);
+        assert_eq!(to_json(&ledger_of(&app, A).await), before);
         assert_eq!(game_jlore_paid(&app, A).await, 3 * i64::from(JLORE_LADDER_LOSS));
     }
 }
@@ -863,7 +850,7 @@ mod no_payout {
     }
 
     async fn match_row_of(app: &App, id: &str) -> Value {
-        j(&store!(app, |t| t.matches_get(id)))
+        to_json(&store!(app, |t| t.matches_get(id)))
     }
 
     /// The seats of a match as its row records them: index 0 is p1.
@@ -934,7 +921,7 @@ mod no_payout {
             assert_eq!(jlore_of(app, profile).await, 0, "{profile} earns no Jlore");
             assert!(tracks_of(app, profile).await.is_empty(), "{profile} earns no XP");
             assert_eq!(
-                j(&ledger_of(app, profile).await),
+                to_json(&ledger_of(app, profile).await),
                 json!({
                     "jlore": [], "inventory": [], "counters": [],
                     "tracks": [], "quests": [], "cosmetics": [],
@@ -971,7 +958,7 @@ mod no_payout {
         );
         assert_eq!(quest_progress(&app, &winner, &quest).await, 1);
         assert_eq!(
-            table(&app, |data| j(&data.tables.results))
+            fake_read(&app, |data| to_json(&data.tables.results))
                 .await
                 .as_array()
                 .map(Vec::len),
@@ -1018,7 +1005,10 @@ mod no_payout {
         .await
         .expect("the match is voided");
         assert_paid_nothing(&app).await;
-        assert_eq!(table(&app, |data| j(&data.tables.results)).await, json!([]));
+        assert_eq!(
+            fake_read(&app, |data| to_json(&data.tables.results)).await,
+            json!([])
+        );
     }
 
     #[tokio::test]
@@ -1043,7 +1033,7 @@ mod no_payout {
 
         assert_paid_nothing(&app).await;
         assert_eq!(
-            table(&app, |data| j(&data.tables.results))
+            fake_read(&app, |data| to_json(&data.tables.results))
                 .await
                 .as_array()
                 .map(Vec::len),
@@ -1072,7 +1062,7 @@ mod no_payout {
         assert_eq!(game_jlore_paid(&app, B).await, 0);
         assert!(tracks_of(&app, B).await.is_empty());
         assert_eq!(
-            j(&ledger_of(&app, B).await),
+            to_json(&ledger_of(&app, B).await),
             json!({
                 "jlore": [], "inventory": [], "counters": [],
                 "tracks": [], "quests": [], "cosmetics": [],
@@ -1095,7 +1085,7 @@ mod joint_commit {
         let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
         record_on(&app, MATCH_ID, outcome).await;
 
-        let results = table(&app, |data| j(&data.tables.results)).await;
+        let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
         assert_eq!(results.as_array().map(Vec::len), Some(1));
         assert_eq!(results[0]["matchId"], json!(MATCH_ID));
 
@@ -1148,7 +1138,10 @@ mod joint_commit {
         .expect_err("the injected fault fails the write");
         assert!(format!("{error:?}").contains("injected fault"), "{error:?}");
 
-        assert_eq!(table(&app, |data| j(&data.tables.results)).await, json!([]));
+        assert_eq!(
+            fake_read(&app, |data| to_json(&data.tables.results)).await,
+            json!([])
+        );
         assert_eq!(jlore_of(&app, A).await, 0);
         assert!(tracks_of(&app, A).await.is_empty());
     }
@@ -1216,7 +1209,7 @@ mod reads {
                     "xp": 0,
                     "xpToNext": xp_to_next_level(0),
                     "levelXp": level_span_xp(0),
-                    "nextRewards": j(&reward_for_level(1)),
+                    "nextRewards": to_json(&reward_for_level(1)),
                     "rewardsClaimed": 0,
                     "unlocked": *set == newest(),
                 })
@@ -1246,7 +1239,7 @@ mod reads {
                 "xp": one_game,
                 "xpToNext": xp_to_next_level(one_game),
                 "levelXp": level_span_xp(one_game),
-                "nextRewards": j(&reward_for_level(level + 1)),
+                "nextRewards": to_json(&reward_for_level(level + 1)),
                 "rewardsClaimed": level,
                 "unlocked": true,
             })
@@ -1413,10 +1406,10 @@ mod daily_cap {
         assert_eq!(caps(&app, MATCH_ID).await, (true, false));
 
         // A repeat of the result changes nothing and answers the same.
-        let before = j(&ledger_of(&app, A).await);
+        let before = to_json(&ledger_of(&app, A).await);
         let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
         record_on_at(&app, MATCH_ID, outcome, DAY_ZERO + 5 * HOUR).await;
-        assert_eq!(j(&ledger_of(&app, A).await), before);
+        assert_eq!(to_json(&ledger_of(&app, A).await), before);
         assert_eq!(caps(&app, MATCH_ID).await, (true, false));
 
         // The next game of the day pays A no Jlore and writes no row, and still pays its XP.
@@ -1565,7 +1558,7 @@ mod coop {
 
     /// The co-op match row: A hosts, B joined.
     fn coop_match() -> DuosMatch {
-        let rules = j(&jackioh_engine::config::DUOS_HUMAN_TEAM);
+        let rules = to_json(&jackioh_engine::config::DUOS_HUMAN_TEAM);
         serde_json::from_value(json!({
             "id": COOP_ID,
             "seed": "seed-coop",
@@ -1735,14 +1728,20 @@ mod coop {
     async fn r1502000_a_coop_result_pays_once() {
         let app = coop_game().await;
         assert!(finish(&app, &won_by(Team::A), now_ms()).await);
-        let before = (j(&ledger_of(&app, A).await), j(&ledger_of(&app, B).await));
+        let before = (
+            to_json(&ledger_of(&app, A).await),
+            to_json(&ledger_of(&app, B).await),
+        );
         assert!(
             !finish(&app, &won_by(Team::B), now_ms()).await,
             "the first write stands"
         );
         assert_eq!(
             before,
-            (j(&ledger_of(&app, A).await), j(&ledger_of(&app, B).await))
+            (
+                to_json(&ledger_of(&app, A).await),
+                to_json(&ledger_of(&app, B).await)
+            )
         );
     }
 
@@ -1837,7 +1836,7 @@ mod the_answer_carries_what_it_paid {
     fn levels_paid(claimed: i64, now_claimed: i64) -> Value {
         Value::Array(
             (claimed + 1..=now_claimed)
-                .map(|level| json!({ "level": level, "rewards": j(&reward_for_level(level)) }))
+                .map(|level| json!({ "level": level, "rewards": to_json(&reward_for_level(level)) }))
                 .collect(),
         )
     }
@@ -1896,7 +1895,7 @@ mod the_answer_carries_what_it_paid {
                 .as_ref()
                 .unwrap_or_else(|| panic!("{seat} was paid"));
             assert_eq!(
-                j(paid),
+                to_json(paid),
                 json!({
                     "jlore": jlore,
                     "xp": game_xp(actions, won),
@@ -1936,7 +1935,7 @@ mod the_answer_carries_what_it_paid {
 
         let paid = recorded.economy[PlayerId::P1].clone().expect("A was paid");
         assert_eq!(
-            j(&paid.tracks),
+            to_json(&paid.tracks),
             json!([{ "setId": newest().as_str(), "before": was, "after": now, "levels": [] }])
         );
         assert_eq!(
@@ -1965,7 +1964,7 @@ mod the_answer_carries_what_it_paid {
 
         let paid = recorded.economy[PlayerId::P1].clone().expect("A was paid");
         assert_eq!(
-            j(&paid.quests),
+            to_json(&paid.quests),
             json!([{
                 "questId": named["questId"],
                 "title": named["title"],
@@ -1979,7 +1978,7 @@ mod the_answer_carries_what_it_paid {
         assert_eq!(paid.xp, game_xp(10, true));
         assert_eq!(now["xp"].as_i64(), Some(game_xp(10, true) + quest_xp(quest)));
         assert_eq!(
-            j(&paid.tracks),
+            to_json(&paid.tracks),
             json!([{
                 "setId": newest().as_str(),
                 "before": was,
@@ -2023,7 +2022,7 @@ mod the_answer_carries_what_it_paid {
         let sets: Vec<&str> = paid.tracks.iter().map(|gain| gain.set_id.as_str()).collect();
         assert_eq!(sets, vec![second_newest().as_str(), newest().as_str()]);
         assert_eq!(
-            j(&paid.tracks[0].before),
+            to_json(&paid.tracks[0].before),
             json!({
                 "level": locked["level"],
                 "xp": locked["xp"],
@@ -2037,7 +2036,7 @@ mod the_answer_carries_what_it_paid {
             (unlocked.level, unlocked.xp)
         );
         assert_eq!(
-            j(&paid.tracks[0].levels),
+            to_json(&paid.tracks[0].levels),
             levels_paid(0, unlocked.rewards_claimed)
         );
     }
