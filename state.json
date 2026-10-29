@@ -6928,7 +6928,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
+      "question": "Main is red on the web unit test `R2126000 no new key handler is added on a board route` (apps/web/src/shortcuts/shortcuts.test.tsx:279), and that is what failed CI here, not this pull request. #2329 (23a91c99c) added a keydown (Escape) listener in apps/web/src/game/ModifierBadge.tsx. #2337 (177023fbe), merged after it, added the BOARD_KEY_HANDLERS list without that file. The test's comment forbids raising a count just to pass, so someone must decide the fix on main: move ModifierBadge's Escape into the shortcuts module, or add `game/ModifierBadge.tsx: 1` to the list as intended. Once main is fixed, re-run CI on #2300 (or ask for a revise to merge main). This branch needs no change.",
       "queued_at": "2026-10-29T09:41:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
