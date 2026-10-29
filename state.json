@@ -7241,15 +7241,6 @@
       "failures": 0,
       "feedback_since": "2026-10-29T09:37:36Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-29T09:20:08Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nConflict revision of PR #2309 (AI Girlfriend becomes a Unit, issue #2279). The only\nconflict was `crates/engine/tests/golden/games.jsonl` (two hunks; both sides held the\nsame seeds with different step hashes). Resolved per instructions via\n`cargo jackioh golden bless` \u2192 240 games, 31616 steps, all valid JSON.\n`games.jsonl` is intentionally left unmerged in the index (`UU`); the harness stages\nthe merge. Do NOT run `git add`, commit, or otherwise touch the merge.\n\nBranch content verified intact after the main merge: catalog entry is Unit with no\nAnimated, keeper is `script_v0_5_2` (v0.5.2, matching shipped v0.5.2b) wired in\n`history.rs`, R1025 retired with running `r1025` tests in both `proven_in` files,\nR781002 reads \"a Unit answering an attack \u2026 acts as a Unit\". Main's staged changes\nto `catalog.json`/`BUILD.md`/`chinese.json`/`spec/08-catalog.md` touch unrelated lines.\n\nAll green in this run: `spec check` (1478 rulings), `catalog check`, `patches check`,\ngolden replay test, c049 tests (99), cross::catalog (43), cross::chinese (10),\nhistory (16), `cargo fmt --check`, `cargo clippy -p jackioh-cards --all-targets`.\n\n## Log\n\n- Inspected both conflict hunks: same seeds, diverged hashes; branch + main replays.\n- Ran `cargo jackioh golden bless` (took ~19 min incl. release build): wrote 240 games.\n- `cargo jackioh spec check`: ok. Marker grep over repo: clean.\n- Tests as listed above, all passing. No scope changes made.\n",
-        "provider": "muse",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its Strong final audit",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 2279,
       "kind": "revise",
