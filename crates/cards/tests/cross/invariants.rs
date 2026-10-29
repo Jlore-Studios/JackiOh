@@ -1353,7 +1353,8 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     }
 
     #[test]
-    fn r1122_r2285002_i4_reads_a_golem_that_killed_the_unit_its_redirected_attack_was_transformed_into_as_readied() {
+    fn r1122_r2285002_i4_reads_a_golem_that_killed_the_unit_its_redirected_attack_was_transformed_into_as_readied()
+     {
         let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
         let seed = seed_where("redirected-golem", |seed| {
             let mut g = board(seed);
