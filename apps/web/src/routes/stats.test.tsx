@@ -17,6 +17,7 @@ import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -1533,7 +1534,9 @@ describe("R1966000 the Sets tab", () => {
     serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: [] }), { status: 200 }));
     at("/stats?tab=sets");
     render(<StatsRoute />);
-    expect(await screen.findByText("No games on patch 0.2.0 yet.", undefined, SLOW)).toBeInTheDocument();
+    const noGames = await screen.findByText("No games on patch 0.2.0 yet.", undefined, SLOW);
+    expect(noGames).toBeInTheDocument();
+    expectEmptyState(noGames);
     cleanup();
 
     serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: NOW.cards.slice(2) }), { status: 200 }));

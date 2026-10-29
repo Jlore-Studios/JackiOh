@@ -9,10 +9,12 @@
 //! goes in the file its name falls in.
 
 pub mod activate;
+pub mod adjacency_aura;
 pub mod after_attack;
 pub mod after_attacked;
 pub mod ai_policy;
 pub mod ai_wheel;
+pub mod ally_attack;
 pub mod alt_wins;
 pub mod animated;
 pub mod announce;
@@ -151,6 +153,7 @@ pub mod graveyard_play_reason;
 pub mod graveyard_reset;
 pub mod hand_size;
 pub mod handicap;
+pub mod hero_floor;
 pub mod hero_immune;
 pub mod hero_power;
 pub mod hidden_nerfs_and_trades;

@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
@@ -164,7 +165,9 @@ describe("R388 the Patch notes page", () => {
     expect(within(patchEntry(V3)).getAllByTestId(patchTestid.openCard).map((name) => name.textContent)).toEqual(["Pancake Pal"]);
     expect(within(patchEntry(V3)).queryAllByTestId(patchTestid.changedCard)).toEqual([]);
     fireEvent.change(filter, { target: { value: "zzz" } });
-    expect(within(patchEntry(V3)).getByTestId(patchTestid.noMatch)).toHaveTextContent("No card in this patch matches “zzz”.");
+    const noMatch = within(patchEntry(V3)).getByTestId(patchTestid.noMatch);
+    expect(noMatch).toHaveTextContent("No card in this patch matches “zzz”.");
+    expectEmptyState(noMatch);
   });
 
   it("R388 a card's name opens it as it stands now, in the detail view with its whole history open", async () => {
@@ -197,7 +200,9 @@ describe("R388 the Patch notes page", () => {
 
   it("R388 with no patch data the page says there are no patch notes yet", async () => {
     renderPage(EMPTY_PATCH_SOURCE);
-    expect(await screen.findByTestId(patchTestid.empty)).toHaveTextContent("There are no patch notes yet.");
+    const empty = await screen.findByTestId(patchTestid.empty);
+    expect(empty).toHaveTextContent("There are no patch notes yet.");
+    expectEmptyState(empty);
     expect(screen.queryAllByTestId(patchTestid.patch)).toEqual([]);
   });
 

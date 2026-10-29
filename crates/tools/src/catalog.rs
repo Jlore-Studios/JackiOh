@@ -268,6 +268,26 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 12),
             ],
         },
+        // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): 60
+        // cards (#1 to #40 and the Core snapshots #41 to #60, part 2's) and the one token #39 defines,
+        // #39.1. Its rarities over its 60 cards: 26 Common, 19 Rare, 11 Epic, 3 Legendary and 1 Mythic.
+        // It does not ship yet, so its entries are checked for their shape alone until its release
+        // (#2204).
+        SetExpectation {
+            set: "Training Grounds",
+            segment: "traininggrounds",
+            cards: 60,
+            shared_cards: Vec::new(),
+            card_defined_tokens: texts(&["39.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[
+                ("Common", 26),
+                ("Rare", 19),
+                ("Epic", 11),
+                ("Legendary", 3),
+                ("Mythic", 1),
+            ],
+        },
     ]
 }
 
@@ -285,38 +305,47 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
 /// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
 /// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420),
-/// and the held Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
-/// from its release (#1884).
+/// the Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
+/// from its release (#1884), and the held Training Grounds set's (docs/training-grounds-set.md TG2's census
+/// of its 61, R2194000), which counts from its release (#2204).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
         // #114, #115, #147 and #147.1.
-        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20),
+        // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the snapshots #41, #43,
+        // #53 and #54.
+        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20) + training_grounds(15),
         // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
         // Stinkyscape #87.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1),
+        // Training Grounds #17, #22, #23 and #33, and the snapshots #44 and #51.
+        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2),
         // Meditative+ #21 Harmony Spirit.
         // Stinkyscape #142.
-        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1),
+        // Training Grounds #29 Oriental.
+        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
         // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
         // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
-        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1),
+        // Training Grounds' snapshot #59 Fig of Life.
+        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
-        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2),
+        // Training Grounds #39.
+        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #16, #44, #116, #148 and #154.
-        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5),
+        // Training Grounds #40 Goetzmann Game Design.
+        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
-        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7),
+        // Training Grounds' snapshots #45 and #48.
+        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7) + training_grounds(2),
         // Meditative+ #15 Book of Potions.
         // Stinkyscape #102.
         Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
@@ -350,14 +379,16 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Quest => 1 + stinkyscape(2),
         Tag::Otherworldly => 1 + stinkyscape(3),
         Tag::OtherOrigins => 3 + stinkyscape(9),
-        Tag::JellyBean => 4,
+        // Training Grounds #27 Hopeful Jelly Bean and the snapshot #50 Glowy Jelly Bean.
+        Tag::JellyBean => 4 + training_grounds(2),
         // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
         // (Weapon); the four #137 tokens (War Doctrine); #91 and #92, its Swarm Units (Swarm).
         Tag::DroneCore => stinkyscape(10),
         Tag::Weapon => stinkyscape(16),
         Tag::WarDoctrine => stinkyscape(4),
         Tag::Swarm => stinkyscape(2),
-        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52),
+        // Training Grounds #39.1.
+        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1),
     }
 }
 
@@ -379,6 +410,15 @@ fn meditative_plus(count: usize) -> usize {
 /// R1420, R1857000: the same for a Stinkyscape entry, held until its release (#1884).
 fn stinkyscape(count: usize) -> usize {
     if set_ships(SetName::Stinkyscape) { count } else { 0 }
+}
+
+/// R2194000: `count` once the Training Grounds set ships, else 0.
+fn training_grounds(count: usize) -> usize {
+    if set_ships(SetName::TrainingGrounds) {
+        count
+    } else {
+        0
+    }
 }
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
@@ -885,35 +925,58 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
-            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is.
+            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is;
+            // R2261001: one only one face's Cry reads, while the other face's lasting text reads it
+            // too, is marked with that face.
             let cry = param.get("cry");
-            if cry.is_some() && cry != Some(&Json::Bool(true)) {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: `cry` is `true` when present (got {})", describe(cry)),
-                );
-            }
-            let writing: Vec<&str> = texts
-                .iter()
-                .flat_map(|text| text.lines())
-                .map(str::trim)
-                .filter(|line| writes(line, key))
-                .collect();
-            let cry_only = !writing.is_empty() && writing.iter().all(|line| line.starts_with("Cry:"));
-            if cry_only && cry.is_none() {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: every line that writes {{{key}}} is a Cry, so it is `cry: true`"),
-                );
-            }
-            if cry.is_some() && !cry_only {
-                fail(
-                    failures,
-                    &p_at,
-                    &format!("{key}: `cry: true`, but a line that writes {{{key}}} is no Cry"),
-                );
+            let marked = match cry {
+                None => Some(None),
+                Some(Json::Bool(true)) => Some(Some("true")),
+                Some(Json::String(face)) if matches!(face.as_str(), "base" | "radiant") => {
+                    Some(Some(face.as_str()))
+                }
+                Some(_) => None,
+            };
+            // Per face: None when it never writes the number, else whether every line writing it is a Cry.
+            let cry_only = |text: &str| -> Option<bool> {
+                let writing: Vec<&str> = text
+                    .lines()
+                    .map(str::trim)
+                    .filter(|line| writes(line, key))
+                    .collect();
+                (!writing.is_empty()).then(|| writing.iter().all(|line| line.starts_with("Cry:")))
+            };
+            let wanted = match (cry_only(&texts[0]), cry_only(&texts[1])) {
+                (Some(true), Some(false)) => Some("base"),
+                (Some(false), Some(true)) => Some("radiant"),
+                (Some(true), _) | (_, Some(true)) => Some("true"),
+                _ => None,
+            };
+            let face_name = |face: &str| if face == "radiant" { "Radiant" } else { "base" };
+            let message = match (wanted, marked) {
+                (_, None) => Some(format!(
+                    "`cry` is `true`, \"base\" or \"radiant\" when present (got {})",
+                    describe(cry)
+                )),
+                (wanted, Some(marked)) if wanted == marked => None,
+                (Some("true"), _) => Some(format!(
+                    "every line that writes {{{key}}} is a Cry, so it is `cry: true`"
+                )),
+                (Some(face), _) => Some(format!(
+                    "only the {} face's Cry reads {{{key}}}, so it is `cry: \"{face}\"`",
+                    face_name(face)
+                )),
+                (None, Some(Some("true"))) => {
+                    Some(format!("`cry: true`, but a line that writes {{{key}}} is no Cry"))
+                }
+                (None, Some(Some(face))) => Some(format!(
+                    "`cry: \"{face}\"`, but the {} face's Cry alone does not read {{{key}}}",
+                    face_name(face)
+                )),
+                (None, Some(None)) => None,
+            };
+            if let Some(message) = message {
+                fail(failures, &p_at, &format!("{key}: {message}"));
             }
             let extra: Vec<&str> = param
                 .keys()
@@ -1458,6 +1521,35 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             refs_by_card.insert(key.as_str(), refs);
         }
 
+        // R2195000: a snapshot (Training Grounds #41–#60) names the Core card it copies, and keeps its
+        // name (R2195001).
+        if let Some(of) = value.get("snapshotOf") {
+            let original = of
+                .as_str()
+                .and_then(|id| catalog.get(id))
+                .and_then(Json::as_object);
+            let is_core_card = original.is_some_and(|o| {
+                o.get("set").and_then(Json::as_str) == Some("Core")
+                    && o.get("token") == Some(&Json::Bool(false))
+            });
+            if value.get("set").and_then(Json::as_str) != Some("Training Grounds") || !is_core_card {
+                fail(
+                    &mut failures,
+                    &at,
+                    &format!(
+                        "`snapshotOf` marks a Training Grounds card and names a Core card (got {})",
+                        describe(Some(of))
+                    ),
+                );
+            } else if original.and_then(|o| o.get("name")) != value.get("name") {
+                fail(
+                    &mut failures,
+                    &at,
+                    "a snapshot keeps its Core card's name (R2195001)",
+                );
+            }
+        }
+
         // R349: a card that prints no Radiant form carries `radiantFallback: true`, and its `radiant`
         // face is exactly the fallback the rule gives it: the base face with its attack and health
         // doubled, the same keywords and the same text.
@@ -1488,6 +1580,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "resource",
             "loc",
             "radiantFallback",
+            // R2195000: the Core card a Training Grounds snapshot copies (`CardDef.snapshot_of`).
+            "snapshotOf",
             "base",
             "radiant",
         ];
@@ -2195,7 +2289,9 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, 0);
+        // Stinkyscape ships, so leaving it out holds no more apart: only the held Training Grounds set
+        // is (R2194000).
+        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
         // So a card it lacks fails, as any shipped set's would: the totals and the index.
         let mut missing = shipped_catalog();
@@ -2628,27 +2724,68 @@ mod tests {
         let unmarked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up"}]"#;
         let (cry, cry_radiant) = ("Cry: Draw {draw}.", "Rush\\nCry: Draw {draw}.");
         let lasting = "Start of turn: Draw {draw}.";
+        let both = "Cry: Draw {draw}.\\nStart of turn: Draw {draw}.";
         // Every line that writes it is a Cry: marked, it passes; unmarked, it is refused.
         assert_eq!(params_failures(marked, cry, cry_radiant), Vec::<String>::new());
         assert_eq!(
             params_failures(unmarked, cry, cry_radiant),
             ["x.params[0]: draw: every line that writes {draw} is a Cry, so it is `cry: true`"]
         );
-        // A line that is no Cry writes it, beside a Cry or not: unmarked, it passes; marked, it is refused.
+        // A line that is no Cry writes it on each face, beside a Cry or not: unmarked, it passes;
+        // marked, it is refused. (A Cry on one face beside a lasting text on the other is R2261001's.)
         assert_eq!(params_failures(unmarked, lasting, lasting), Vec::<String>::new());
-        assert_eq!(params_failures(unmarked, cry, lasting), Vec::<String>::new());
+        assert_eq!(params_failures(unmarked, both, both), Vec::<String>::new());
         assert_eq!(
-            params_failures(marked, cry, lasting),
+            params_failures(marked, both, lasting),
             ["x.params[0]: draw: `cry: true`, but a line that writes {draw} is no Cry"]
         );
-        // `cry` is `true` or absent.
+        // `cry` is `true`, a face (R2261001) or absent.
         assert_eq!(
             params_failures(
                 r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":false}]"#,
                 cry,
                 cry_radiant
             ),
-            ["x.params[0]: draw: `cry` is `true` when present (got false)"]
+            ["x.params[0]: draw: `cry` is `true`, \"base\" or \"radiant\" when present (got false)"]
+        );
+    }
+
+    #[test]
+    fn r2261001_a_number_only_one_face_s_cry_reads_names_that_face() {
+        let on = |mark: &str| format!(r#"[{{"key":"lucky","base":1,"radiant":1,"better":"up"{mark}}}]"#);
+        let cry = "Cry: Give it Lucky {lucky}.";
+        let activate = "Activate: Give it Lucky {lucky}.";
+        // Meditative #101 Gachaholic's shape: the base face's Cry and the Radiant face's Activate.
+        assert_eq!(
+            params_failures(&on(r#","cry":"base""#), cry, activate),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), activate, cry),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            params_failures(&on(""), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":true"#), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        // The other face, every face's Cry, or no face's Cry alone: not that face.
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), cry, activate),
+            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"base""#), cry, cry),
+            ["x.params[0]: lucky: every line that writes {lucky} is a Cry, so it is `cry: true`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","cry":"radiant""#), activate, activate),
+            [
+                "x.params[0]: lucky: `cry: \"radiant\"`, but the Radiant face's Cry alone does not read {lucky}"
+            ]
         );
     }
 

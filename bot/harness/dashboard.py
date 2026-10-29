@@ -941,10 +941,12 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
     if retrain is None or retrain.get("conclusion") == "skipped":
         if plan is not None and plan.get("conclusion") == "failure":
             return "❌ the plan failed"
-        if lost:  # a run from before the retrain went on with the shards that finished
-            return export_failed
+        # Stopped in its export, by a person or by a new set (learn-set.yml): its shards were
+        # cancelled, not lost.
         if run.get("conclusion") == "cancelled":
             return "⏹️ cancelled"
+        if lost:  # a run from before the retrain went on with the shards that finished
+            return export_failed
         return "⏭️ waited on its open pull request"
     steps = retrain.get("steps") or []
     # The retrain goes on with the shards that finished; it stops here only when none did.
@@ -1084,6 +1086,7 @@ WORKFLOWS = {
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
     "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",
     "hygiene.yml": "weekly: the hygiene issues for Squishy",
+    "learn-set.yml": "a new set stops a learn export still early on the set before",
     "learn.yml": "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
     "lock-conversations.yml": "locks every conversation to collaborators",
     "patches-ship.yml": "ships the pending card-patch fragments after a merge",
@@ -1118,7 +1121,7 @@ LOCAL_ROLES = (
      "CPU: a container a job, `pc-gather-<time>`, only while the PC is otherwise idle", "`gather`"),
 )
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
-              "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
+              "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "

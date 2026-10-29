@@ -5,13 +5,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import {
+  SKELETON_DELAY_MS,
   SKELETON_PANEL_LINES,
   SKELETON_ROWS,
   SKELETON_TABLE_COLUMNS,
@@ -108,5 +109,50 @@ describe("R2115000 the skeleton", () => {
     const status = css.slice(css.indexOf(".skeleton__status {"), css.indexOf("}", css.indexOf(".skeleton__status {")));
     expect(status).toContain("position: absolute;");
     expect(status).toContain("clip-path: inset(50%);");
+  });
+});
+
+describe("R2108000 the skeleton waits a moment", () => {
+  it("R2108000 a read that answers within SKELETON_DELAY_MS never shows the blocks, and the words are there at once", () => {
+    try {
+      vi.useFakeTimers();
+      const { unmount } = render(<Skeleton variant="rows" label={LABEL} testId={TEST_ID} />);
+      const status = screen.getByTestId(TEST_ID);
+      expect(status).toHaveTextContent(LABEL);
+      const root = rootOf(status);
+      expect(root).toHaveAttribute("data-shown", "false");
+      act(() => {
+        vi.advanceTimersByTime(SKELETON_DELAY_MS - 1);
+      });
+      expect(root).toHaveAttribute("data-shown", "false");
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("R2108000 a wait that outlasts SKELETON_DELAY_MS shows its blocks, still under Reduce motion", () => {
+    try {
+      vi.useFakeTimers();
+      setReducedMotion(true);
+      render(<Skeleton variant="rows" label={LABEL} testId={TEST_ID} />);
+      act(() => {
+        vi.advanceTimersByTime(SKELETON_DELAY_MS);
+      });
+      const root = rootOf(screen.getByTestId(TEST_ID));
+      expect(root).toHaveAttribute("data-shown", "true");
+      expect(root).toHaveAttribute("data-motion", "reduced");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("R2108000 the stylesheet hides the blocks until shown and draws them in the tavern's brass", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "skeleton.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\s+/g, " ");
+    expect(css).toContain('.skeleton[data-shown="false"] .skeleton__blocks { visibility: hidden; }');
+    expect(css).toContain("--skeleton-ink: color-mix(in srgb, var(--pal-brass-500) 18%, transparent);");
   });
 });

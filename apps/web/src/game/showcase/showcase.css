@@ -27,7 +27,7 @@
   background: color-mix(in srgb, var(--pal-wood-900) 90%, transparent);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--pal-black) 50%, transparent);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 700;
   letter-spacing: 0.03em;
   white-space: nowrap;
@@ -69,7 +69,7 @@
 
   .showcase-caption {
     padding: 2px 10px;
-    font-size: 12px;
+    font-size: var(--type-sm);
   }
 }
 
@@ -97,10 +97,10 @@
   background: linear-gradient(90deg, var(--pal-brass-600), var(--pal-gold-300) 22%, var(--pal-gold-200) 50%, var(--pal-gold-300) 78%, var(--pal-brass-600));
   box-shadow: 0 6px 16px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--pal-brass-950);
-  font:
-    900 clamp(13px, 2.4vh, 20px) / 1.1 ui-serif,
-    Georgia,
-    serif;
+  font-family: var(--font-display);
+  font-size: clamp(var(--type-md), 2.4vh, var(--type-2xl));
+  font-weight: 900;
+  line-height: 1.1;
   letter-spacing: 0.06em;
   text-align: center;
   text-transform: uppercase;
@@ -159,7 +159,7 @@
 
 .chaos-banner-title {
   color: var(--radiant);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -177,7 +177,7 @@
   padding: 3px 12px;
   border: 1px solid var(--line-bright);
   border-radius: 8px;
-  font-size: clamp(14px, 2.6vh, 20px);
+  font-size: clamp(var(--type-md), 2.6vh, var(--type-2xl));
   font-weight: 700;
   text-align: center;
 }
@@ -264,10 +264,10 @@
   background: radial-gradient(circle at 35% 30%, var(--pal-violet-300), var(--pal-violet-700) 70%);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--pal-white);
-  font:
-    900 clamp(13px, 2.2vh, 18px) / 1 ui-sans-serif,
-    system-ui,
-    sans-serif;
+  font-family: var(--font-text);
+  font-size: clamp(var(--type-md), 2.2vh, var(--type-2xl));
+  font-weight: 900;
+  line-height: 1;
   animation: showcase-ordinal-pop var(--showcase-burst-ms, 420ms) ease-out both;
 }
 

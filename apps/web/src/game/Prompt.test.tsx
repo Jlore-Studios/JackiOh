@@ -10,7 +10,7 @@
 // Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
 // nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
 
-import type { ActionBody, CraftRecipe, PendingOption, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -1149,5 +1149,261 @@ describe("#1204 View the board folds a card picker to a bar", () => {
     expect(optionTestids()).toHaveLength(3);
     expect(peek()).toHaveAttribute("aria-pressed", "false");
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// A replay's board: the open prompt as offered, folded and inert (R2211000).
+// ---------------------------------------------------------------------------------------------
+
+describe("R2211000 a read-only prompt, a replay's", () => {
+  const DISCOVER: PendingOption[] = [
+    { key: "mode:core-043", label: "Flood", defId: "core-043" },
+    { key: "mode:core-055", label: "Archivist", defId: "core-055" },
+    { key: "mode:core-066", label: "Lava Golem", defId: "core-066" },
+  ];
+  const MULLIGAN: PendingOption[] = [
+    { key: "h1", label: "One", instanceId: "h1" },
+    { key: "h2", label: "Two", instanceId: "h2" },
+  ];
+  const peek = (): HTMLElement => screen.getByTestId("prompt-peek");
+
+  /** Every kind a read-only picker draws, as the engine opens it as a prompt. */
+  const KINDS: [string, PendingView][] = [
+    ["discover", pendingFor("discover", DISCOVER)],
+    ["mulligan", pendingFor("mulligan", MULLIGAN, { min: 0, max: 2 })],
+    [
+      "target",
+      pendingFor("target", [
+        { key: "instance:e1", label: "Enemy unit", instanceId: "e1" },
+        { key: "hero:p2", label: "Enemy hero", player: "p2" },
+      ]),
+    ],
+    [
+      "mode",
+      pendingFor(
+        "mode",
+        Array.from({ length: DISCOVER_OPTION_LIMIT + 1 }, (_, at) => ({
+          key: `mode:m${String(at)}`,
+          label: `Mode ${String(at)}`,
+        })),
+      ),
+    ],
+    ["number", pendingFor("number", ["0", "1", "2"].map((n) => ({ key: `mode:${n}`, label: n })))],
+    [
+      "answer",
+      pendingFor(
+        "answer",
+        [
+          { key: "mode:A", label: "285" },
+          { key: "mode:B", label: "295" },
+          { key: "none", label: "Stop" },
+        ],
+        { prompt: "482 − 197 = ?", streak: 1 },
+      ),
+    ],
+    [
+      "cell",
+      pendingFor("cell", [
+        { key: "zone:p2:units:2", label: "p2 units 2", player: "p2", row: "units", lane: 2 },
+        { key: "none", label: "Done" },
+      ]),
+    ],
+    [
+      "reward",
+      pendingFor(
+        "reward",
+        [
+          { key: "mode:A", label: "Heal your hero 6" },
+          { key: "mode:B", label: "Deal 3 damage" },
+        ],
+        { prompt: "Quest complete: Draw 2 cards" },
+      ),
+    ],
+    [
+      "direction",
+      pendingFor("direction", [
+        { key: "mode:left", label: "left" },
+        { key: "mode:right", label: "right" },
+      ]),
+    ],
+    ["x", pendingFor("x", Array.from({ length: X_CARD_LIMIT + 1 }, (_, x) => ({ key: String(x), label: String(x) })))],
+  ];
+
+  it("R2211000 opens folded under its title, with only the way back", () => {
+    const onAction = vi.fn();
+    render(
+      <Prompt
+        view={viewWith({ pending: pendingFor("discover", DISCOVER) })}
+        onAction={onAction}
+        onCancel={vi.fn()}
+        readOnly
+      />,
+    );
+    const modal = screen.getByTestId("prompt-modal");
+    const scrim = screen.getByTestId("prompt-scrim");
+
+    expect(modal).toHaveAttribute("data-read-only", "true");
+    expect(scrim).toHaveAttribute("data-read-only", "true");
+    expect(modal).toHaveAttribute("data-collapsed", "true");
+    expect(scrim).toHaveAttribute("data-collapsed", "true");
+    expect(modal).toHaveAttribute("aria-modal", "false");
+    expect(modal.querySelector(".prompt-title")).toHaveTextContent("Choose (discover)");
+    expect(optionTestids()).toEqual([]);
+    expect(screen.getAllByRole("button").map((button) => button.getAttribute("data-testid"))).toEqual(["prompt-peek"]);
+    expect(peek()).toHaveTextContent("Back to the choice");
+
+    fireEvent.click(peek());
+
+    expect(modal).not.toHaveAttribute("data-collapsed");
+    expect(optionTestids()).toHaveLength(3);
+    expect(modal).toHaveAttribute("aria-modal", "false");
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
+    expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  for (const [kind, pending] of KINDS) {
+    it(`R2211000 ${kind}: its options are aria-disabled and a click picks nothing`, () => {
+      const onAction = vi.fn();
+      const onInteraction = vi.fn();
+      render(
+        <Prompt view={viewWith({ pending })} legal={[]} onAction={onAction} onInteraction={onInteraction} readOnly />,
+      );
+      expect(kindOfModal()).toBe(kind);
+      expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-collapsed", "true");
+      fireEvent.click(peek());
+
+      const options = [...document.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']")].map(
+        (node) => node.closest<HTMLElement>('button, [role="button"]') ?? node,
+      );
+      expect(options.length, kind).toBeGreaterThan(0);
+      const before = options.map((option) => option.getAttribute("aria-pressed"));
+      for (const option of options) {
+        expect(option, kind).toHaveAttribute("aria-disabled", "true");
+        fireEvent.click(option);
+        fireEvent.keyDown(option, { key: "Enter" });
+      }
+
+      expect(options.map((option) => option.getAttribute("aria-pressed")), kind).toEqual(before);
+      expect(screen.queryByTestId("prompt-submit"), kind).toBeNull();
+      expect(screen.queryByTestId("prompt-sequence-clock"), kind).toBeNull();
+      expect(screen.getByTestId("prompt-modal").getAttribute("data-board-testids"), kind).toBe("");
+      expect(onAction, kind).not.toHaveBeenCalled();
+      expect(onInteraction, kind).not.toHaveBeenCalled();
+
+      if (kind === "x") {
+        const value = screen.getByTestId("x-value").textContent;
+        expect(screen.getByTestId("x-minus")).toHaveAttribute("aria-disabled", "true");
+        expect(screen.getByTestId("x-plus")).toHaveAttribute("aria-disabled", "true");
+        expect(screen.getByTestId("prompt-x")).toHaveAttribute("readonly");
+        fireEvent.click(screen.getByTestId("x-plus"));
+        fireEvent.change(screen.getByTestId("prompt-x"), { target: { value: "2" } });
+        expect(screen.getByTestId("x-value")).toHaveTextContent(value ?? "");
+        expect(onAction).not.toHaveBeenCalled();
+      }
+    });
+  }
+
+  it("R2211000 a click on the board's zones answers nothing, though the prompt names them (a cell)", () => {
+    const onAction = vi.fn();
+    const zone = document.createElement("div");
+    zone.setAttribute("data-testid", "zone-opponent-units-2");
+    document.body.append(zone);
+    render(
+      <Prompt
+        view={viewWith({
+          pending: pendingFor("cell", [{ key: "zone:p2:units:2", label: "p2 units 2", player: "p2", row: "units", lane: 2 }]),
+        })}
+        legal={[]}
+        onAction={onAction}
+        readOnly
+      />,
+    );
+
+    fireEvent.click(zone);
+    fireEvent.keyDown(zone, { key: "Enter" });
+
+    expect(onAction).not.toHaveBeenCalled();
+    zone.remove();
+  });
+
+  it("R2211000 a craft, a market and a board-only placement show the waiting panel under the prompt's words", () => {
+    const recipe: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const cases: [PendingView, string][] = [
+      [pendingFor("craft", [{ key: "craft:#digest", label: "Pure Closure", recipe }], { budget: 2, prompt: "Craft a card" }), "Craft a card"],
+      [pendingFor("market", [{ key: "leave", label: "Leave" }], { budget: 3, prompt: "Night market" }), "Night market"],
+      [
+        pendingFor(
+          "target",
+          [
+            { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+            { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+          ],
+          { prompt: "Place 3 Plague Counters on a permanent" },
+        ),
+        "Place 3 Plague Counters on a permanent",
+      ],
+    ];
+
+    for (const [pending, words] of cases) {
+      const onAction = vi.fn();
+      render(<Prompt view={viewWith({ pending })} legal={[]} onAction={onAction} readOnly />);
+
+      const modal = screen.getByTestId("prompt-modal");
+      expect(modal, words).toHaveAttribute("data-prompt-waiting", "waiting");
+      expect(modal, words).toHaveAttribute("data-read-only", "true");
+      expect(modal, words).toHaveAttribute("data-pending-for", "p1");
+      expect(modal, words).not.toHaveAttribute("data-prompt-kind");
+      expect(modal, words).toHaveTextContent(words);
+      expect(modal, words).toHaveTextContent("A replay doesn't show this choice.");
+      expect(optionTestids(), words).toEqual([]);
+      expect(screen.queryByTestId("prompt-submit"), words).toBeNull();
+      expect(screen.queryByTestId("craft-points"), words).toBeNull();
+      expect(onAction, words).not.toHaveBeenCalled();
+      cleanup();
+    }
+  });
+
+  it("R2211000 the other seat's prompt and an answered mulligan draw as live", () => {
+    render(<Prompt view={viewWith({ pending: waitingPending })} onAction={vi.fn()} readOnly />);
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-waiting", "waiting");
+    expect(modal).toHaveTextContent("Your opponent is choosing…");
+    expect(modal).not.toHaveAttribute("data-read-only");
+    expect(optionTestids()).toEqual([]);
+    cleanup();
+
+    render(
+      <Prompt
+        view={viewWith({
+          pending: waitingPending,
+          mulligan: { youReady: true, opponentReady: false, kept: ["h1"] },
+        })}
+        onAction={vi.fn()}
+        readOnly
+      />,
+    );
+    expect(screen.getByTestId(testid.mulliganWaiting)).toHaveAttribute("data-returning", "1");
+  });
+
+  it("R2211000 a prompt with no readOnly is the live one, unfolded, with Confirm", () => {
+    render(<Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER) })} onAction={vi.fn()} />);
+
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal).not.toHaveAttribute("data-read-only");
+    expect(modal).not.toHaveAttribute("data-collapsed");
+    expect(screen.getByTestId("prompt-submit")).toBeInTheDocument();
+    expect(screen.getByTestId("prompt-option-mode:core-043")).not.toHaveAttribute("aria-disabled");
   });
 });

@@ -33,6 +33,7 @@ import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "../cards/fullArt.ts";
 import { DuosReplayBack, DuosReplayPlayer } from "../duos/DuosReplay.tsx";
 import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
 import { DUOS_REPLAY_JSON_FORMAT, parseDuosReplayJson } from "../duos/download.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
@@ -48,6 +49,7 @@ import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonF
 import type { ReplayJsonGame } from "../replay/download.ts";
 import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
@@ -336,7 +338,9 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
 
         <section className="replays__section" aria-labelledby="replays-practice-heading">
           <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
-          {practice.kind === "loading" ? <p role="status">{t("Reading the games kept on this device…")}</p> : null}
+          {practice.kind === "loading" ? (
+            <Skeleton variant="rows" label={t("Reading the games kept on this device…")} />
+          ) : null}
           {practice.kind === "failed" ? (
             <>
               <p role="alert">{t(practice.message)}</p>
@@ -355,7 +359,11 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
             </>
           ) : null}
           {practice.kind === "ready" && practice.rows.length === 0 ? (
-            <p data-testid={replaysTestid.noPractice}>{t("Finish a practice game and it is kept here.")}</p>
+            <EmptyState
+              text={t("Finish a practice game and it is kept here.")}
+              testId={replaysTestid.noPractice}
+              action={{ label: t("Play vs AI"), to: paths.practice }}
+            />
           ) : null}
           {practice.kind === "ready" && practice.rows.length > 0 ? (
             <ul className="replays__list">
@@ -387,7 +395,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
 
         <section className="replays__section" aria-labelledby="replays-online-heading">
           <h2 id="replays-online-heading">{t("Online games")}</h2>
-          {account.kind === "loading" ? <p role="status">{t("Checking your account…")}</p> : null}
+          {account.kind === "loading" ? <Skeleton variant="panel" label={t("Checking your account…")} /> : null}
           {account.kind === "anonymous" ? (
             <p data-testid={replaysTestid.signIn}>
               <a href={paths.login} onClick={followInApp(paths.login)}>
@@ -423,7 +431,9 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
               </a>
             </p>
           )}
-          {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
+          {token !== null && online.kind === "loading" ? (
+            <Skeleton variant="rows" label={t("Reading your online games…")} />
+          ) : null}
           {token !== null && online.kind === "failed" ? (
             <>
               <p role="alert">{t(online.message)}</p>
@@ -442,7 +452,11 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
             </>
           ) : null}
           {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
-            <p data-testid={replaysTestid.noOnline}>{t("No online game of yours is kept. A game is kept for a while after it ends.")}</p>
+            <EmptyState
+              text={t("No online game of yours is kept. A game is kept for a while after it ends.")}
+              testId={replaysTestid.noOnline}
+              action={{ label: t("Find a match"), to: paths.play }}
+            />
           ) : null}
           {token !== null && online.kind === "ready" && online.rows.length > 0 ? (
             <>

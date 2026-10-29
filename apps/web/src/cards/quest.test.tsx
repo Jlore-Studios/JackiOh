@@ -8,19 +8,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
 import type { ActionBody, BackrowView, CardView, PlayerId, PlayerView, QuestView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerPrompts, devDeck, playOf, realGame, type RealGame } from "../audio/test/realGame.ts";
 import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { questProgress, questWords, stageWords } from "./cardState.ts";
@@ -37,11 +36,6 @@ afterEach(() => {
 });
 
 const ITD = "classic-090";
-const lookup = lookupFromDefs(CATALOG);
-
-function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
-  return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;
-}
 
 const FIRST: QuestView = {
   open: [

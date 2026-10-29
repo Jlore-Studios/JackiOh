@@ -112,7 +112,7 @@ import { routeChunks, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
-import { Skeleton, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
+import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
@@ -160,9 +160,17 @@ export { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
  * The frame every panel this file draws sits in: the wordmark on the tavern board. Exported for
  * the screens that wait the same way (the match screen before its first view).
  */
-export function ShellPanel({ testId, children }: { testId?: string; children: ReactNode }): ReactElement {
+export function ShellPanel({
+  testId,
+  shown = true,
+  children,
+}: {
+  testId?: string;
+  shown?: boolean;
+  children: ReactNode;
+}): ReactElement {
   return (
-    <div className="app-shell tavern shell-panel" data-testid={testId}>
+    <div className="app-shell tavern shell-panel" data-testid={testId} data-shown={shown ? "true" : "false"}>
       <section className="panel panel--auth">
         <div className="brand">
           <h1>JackiOh</h1>
@@ -253,9 +261,12 @@ export function Loading({ what, slow = false, testId, children, skeleton }: Load
       window.clearTimeout(timer);
     };
   }, [slow]);
+  // #2108, R2108000: a wait drawn as a skeleton shows once it outlasts SKELETON_DELAY_MS, and a
+  // sentence that waits on nothing shows at once.
+  const waited = useShownAfterDelay();
 
   return (
-    <ShellPanel {...(testId === undefined ? {} : { testId })}>
+    <ShellPanel {...(testId === undefined ? {} : { testId })} shown={skeleton === undefined || waited}>
       {skeleton === undefined ? (
         <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
           {t(what)}

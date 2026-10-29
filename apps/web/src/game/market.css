@@ -46,7 +46,7 @@
 
 .market-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--type-3xl);
   letter-spacing: 0.04em;
 }
 
@@ -58,7 +58,7 @@
 
 .market-purse {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--type-2xl);
 }
 
 .market-stall,
@@ -82,7 +82,7 @@
 
 .market-barters h3 {
   margin: 0.75rem 0 0.4rem;
-  font-size: 1rem;
+  font-size: var(--type-xl);
 }
 
 .market-deal,
@@ -111,7 +111,7 @@
 }
 
 .market-caption {
-  font-size: 0.85rem;
+  font-size: var(--type-md);
   text-align: center;
 }
 
@@ -189,7 +189,7 @@
 .marketplace-restock,
 .marketplace-left {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--type-md);
   opacity: 0.85;
 }
 
@@ -251,7 +251,7 @@
 
 .marketplace-sales h3 {
   margin: 0.75rem 0 0.4rem;
-  font-size: 1rem;
+  font-size: var(--type-xl);
 }
 
 /* The phone and a short landscape screen (prompt.css's breakpoint): two lots a row. */

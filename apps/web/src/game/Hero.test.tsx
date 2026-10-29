@@ -10,24 +10,15 @@
 // R1639000: a Heroic Power used this turn wears "Used", on either seat.
 
 import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CATALOG } from "@jackioh/cards";
-
+import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, heroPower } from "../test/fixtures.ts";
-import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Hero, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./Hero.tsx";
 
 afterEach(() => {
   cleanup();
 });
-
-const lookup = lookupFromDefs(CATALOG);
-
-function withCatalog(node: ReactElement): ReactElement {
-  return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
-}
 
 describe("R987 the hero's Luck badge", () => {
   it("R987 the badge appears with Luck on the side and is gone without it", () => {

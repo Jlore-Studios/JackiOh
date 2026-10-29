@@ -34,7 +34,10 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
    (20 by default, about two hours each) played one after another, in five rounds: a round starts
    once the one before it has ended, so no shard waits for the runner longer than its round takes
-   (about 8 hours of an idle PC), well under the 24 hours GitHub lets a job wait.
+   (about 8 hours of an idle PC), well under the 24 hours GitHub lets a job wait. The plan and the
+   export's build read `main` as it is when the run starts, not as it was when the run was queued,
+   so the export plays the newest patch however long the run waited behind the one before it (A new
+   patch ships, below).
 3. **Retrains** with `training/ml/retrain.sh` on `main`, over the shards that finished (a shard the PC
    lost costs the export its games, not the run; with none finished the run stops): the positions
    (R1006003, R1006004), folded by the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
@@ -88,6 +91,8 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 | What happens | What the lane does |
 |---|---|
 | `main` moves during the run. It does, about once an hour, in the AI, the engine and the cards: CI's training gate replays the gate against `main` as it is when the pull request opens, and the fixture's game is played on the merge | The gate plays on `main` as fetched just before it (step 5), not on the `main` the run began on. When `main` moved in what the gate depends on during the gate (`learn-promote.sh`'s `play_paths`), the network goes onto the newer `main` and is gated again, up to three times (`LEARN_GATE_TRIES`). Only a pass is ever gated again, so no pass is picked out of several. When `main` moved through all three, the run starts another on the same export (`export_run`), at most two in a row (`LEARN_CHAIN_MAX`) |
+| A patch or a micro ships (A new patch ships, below) | Nothing stops: the next run plays it, since each run plans on `main` as it is when it starts |
+| A set ships, a `major` patch (A new patch ships, below) | `learn-set.yml` cancels a run still in its export with fewer than 10 of its 20 shards played, and starts one on the new set when no other run is on its way. A run further on finishes, and the run after it exports the new set. The status issue shows a stopped run as cancelled |
 | CI fails on the lane's pull request | `watch` (the same workflow, on CI's completion for `ai/learn`) runs the failed jobs once more, for a flaky test. Red again, it closes the pull request, naming the failed jobs, and starts a run on the same export on `main` as it is by then, at most two in a row |
 | A promotion stays open: its checks failed and nothing closed it, auto-merge could not merge it, or a check never reported | The next run closes it, saying why, and goes on (step 1). After 48 hours it closes one whatever its checks say |
 | Something merged to `main` that pins the AI's own play outside `crates/ai` (as R1303002's fixture did, #1480) | The lane can't fix that: it may change nothing outside its files. CI fails, `watch` closes the promotion and tries the export again, and the lane stays stuck until a person fixes the test. The status issue shows it as a run whose promotion closed |
@@ -102,6 +107,28 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 
 What needs a person, then: a test outside `crates/ai` that pins the AI's play, an expired token, a PC
 that stays off, or a change to the exporter, the features, the trainer or the gate.
+
+### A new patch ships
+
+The network learns a worth for each card it has seen played, on top of the card's stats, which it
+reads live (`docs/learned-eval.md`, D5 and D10). A patch leaves the learned worth of the cards it
+changed stale until a run exports on it, and a set's new cards have none until then: they are valued
+by their stats alone.
+
+Patches and micros (`docs/issues-and-patches.md`, Version numbers) ship two or three times a day,
+and a run takes about two days, about 40 hours of them its export. So a patch or a micro stops
+nothing: a lane that started again on each would never finish an export. The next run plays it,
+since each run plans on `main` as it is when it starts (step 2), so it waits at most one run.
+
+A set (a `major` patch, about once a week; v0.5.0 brought 231 card changes) is what an export on the
+set before cannot learn at all. `.github/workflows/learn-set.yml`, on the push that ships it, cancels
+a run still in its export with fewer than `LEARN_SET_KEEP_SHARDS` (10, half of the 20) of its shards
+played, and starts a run when no other is on its way (one waiting behind the stopped run starts by
+itself, on the new set). From half on, finishing the export costs the lane less than playing it
+again, so that run goes on, as does a run past its export, one on an earlier run's export and one
+that planned after the set shipped; the run after it exports the new set. A stopped run's finished
+shards stay its artifacts for 30 days, and their games are not filed (step 7): a person can file
+them by hand (`training/README.md`, The gather lane).
 
 ## What it may change
 

@@ -1057,11 +1057,12 @@ function PracticeScreen({
     // stays whole either way.
     controller
       .claim()
-      .then((claim) => api.claim(token, claim))
+      .then(({ claim, clockCut }) => api.claim(token, claim).then((answer) => ({ answer, clockCut })))
       .then(
-        (answer) => {
+        ({ answer, clockCut }) => {
           if (!answer.paid) {
-            settleTo({ kind: "refused", reason: answer.reason });
+            // R2208000: the device's clock mark goes with the refusal, for the dialog to word.
+            settleTo({ kind: "refused", reason: answer.reason, ...(clockCut ? { clockCut: true as const } : {}) });
             return;
           }
           // #1664: the game's Jlore is in the wallet now, and its tracks and quests are for the dialog to play.

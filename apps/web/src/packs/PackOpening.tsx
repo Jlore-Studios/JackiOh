@@ -42,6 +42,7 @@ import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
@@ -538,9 +539,7 @@ export default function PackOpening({
 /** The unopened packs the account holds, each opened alone or, from two, all in a row. */
 function PacksHeld({ info, onOpen }: { info: PacksResponse; onOpen: (pack: string, count: number) => void }): ReactElement {
   if (info.unopened.length === 0) {
-    return (
-      <p data-testid={packTestid.none}>{t("No unopened packs.")}</p>
-    );
+    return <EmptyState text={t("No unopened packs.")} testId={packTestid.none} />;
   }
   return (
     <div data-testid={packTestid.held}>

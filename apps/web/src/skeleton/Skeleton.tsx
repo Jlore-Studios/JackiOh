@@ -2,9 +2,10 @@
 // four variants: a card grid, list rows, table rows and a generic panel. The words stay as a status line
 // a screen reader hears and nobody sees; the blocks are aria-hidden. Their shimmer is the one animation,
 // left out under Reduce motion, the settings panel's or the OS's (skeleton.css). Presentation only
-// (CLAUDE.md rule 7): a fixed number of blank blocks, never a count from the read.
+// (CLAUDE.md rule 7): a fixed number of blank blocks, never a count from the read. A wait shorter than
+// SKELETON_DELAY_MS shows no blocks, and the blocks are brass (#2108, R2108000).
 
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
 import { useSetting } from "../settings/store.ts";
@@ -22,6 +23,23 @@ export const SKELETON_TABLE_ROWS = 5;
 export const SKELETON_TABLE_COLUMNS = 4;
 /** A panel's lines under its heading bar. */
 export const SKELETON_PANEL_LINES = 2;
+
+/** #2108, R2108000: how long a wait runs before it shows, so a read that answers sooner never flashes a skeleton. */
+export const SKELETON_DELAY_MS = 300;
+
+/** #2108, R2108000: true once `SKELETON_DELAY_MS` has passed since mounting. A timer, not a CSS delay: Reduce motion zeroes every CSS delay (index.css). */
+export function useShownAfterDelay(): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShown(true);
+    }, SKELETON_DELAY_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+  return shown;
+}
 
 export const skeletonTestid = { root: "skeleton", status: "skeleton-status", blocks: "skeleton-blocks" } as const;
 
@@ -72,11 +90,13 @@ export function Skeleton({ label, variant, testId = skeletonTestid.status }: Ske
   const panelReduces = useSetting("reduceMotion");
   const osReduces = useOsReducedMotion();
   const reduced = panelReduces || osReduces;
+  const shown = useShownAfterDelay();
   return (
     <div
       className="skeleton"
       data-testid={skeletonTestid.root}
       data-variant={variant}
+      data-shown={shown ? "true" : "false"}
       data-motion={reduced ? "reduced" : "full"}
       style={{ "--skeleton-columns": SKELETON_TABLE_COLUMNS } as CSSProperties}
     >

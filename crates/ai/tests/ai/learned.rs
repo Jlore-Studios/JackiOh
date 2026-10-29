@@ -320,6 +320,38 @@ fn r1012003_the_tutorials_opponent_keeps_the_hand_eval_and_every_tier_takes_the_
     });
 }
 
+/// R1012003 with R2201000's floor and R2201001's pool hold: neither is a resource, so a seat under
+/// AI_TUTORIAL that also carries either is still the tutorial's opponent and keeps the hand eval, and
+/// the tiers carrying them still take the network's correction.
+#[test]
+fn r1012003_r2201000_the_tutorials_opponent_keeps_the_hand_eval_with_a_floor_or_a_pool_hold() {
+    let solo = state();
+    let lesson_fields = |handicap: Handicap| Handicap {
+        hero_floor: Some(TUTORIAL_HERO_FLOOR),
+        pool_hold: Some(true),
+        ..handicap
+    };
+    assert!(is_tutorial_opponent(Some(AI_TUTORIAL)));
+    assert!(is_tutorial_opponent(Some(lesson_fields(AI_TUTORIAL))));
+    assert!(!is_tutorial_opponent(None));
+    assert!(!is_tutorial_opponent(Some(TUTORIAL_HUMAN)));
+    for tier in [AI_DIFFICULTY.easy, AI_DIFFICULTY.medium, AI_DIFFICULTY.hard] {
+        assert!(!is_tutorial_opponent(Some(tier)));
+        assert!(!is_tutorial_opponent(Some(lesson_fields(tier))));
+    }
+    let mut tutorial = solo.clone();
+    tutorial.players[PlayerId::P1].handicap = Some(lesson_fields(AI_TUTORIAL));
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        for next in [NextSwing::Enemy, NextSwing::Seat] {
+            assert_eq!(
+                finalist_score_with(&tutorial, PlayerId::P1, next, EvalKind::Learned, &network),
+                evaluate(&tutorial, PlayerId::P1, next, &AI_EVAL)
+            );
+        }
+    });
+}
+
 fn state() -> GameState {
     jackioh_cards::register_all();
     scenario(json!({

@@ -11,10 +11,10 @@ import type { BackrowView, CardMark, PlayerView, UnitView } from "@jackioh/share
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import Board from "../game/Board.tsx";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { liveFace } from "../game/faces.ts";
+import { renderBoard } from "../test/board.tsx";
 import { fullBoardView } from "../test/fixtures.ts";
 import { marksTestid } from "./CardMarks.tsx";
 import { StateNotes, hasStateNotes } from "./inspect/StateNotes.tsx";
@@ -62,14 +62,6 @@ function markedView(marks: readonly CardMark[] = [STEAL]): { view: PlayerView; i
     },
   };
   return { view: next, ids: { mine: mine.instanceId, theirs: theirs.instanceId, myField: myField.instanceId, theirField: theirField.instanceId } };
-}
-
-function renderBoard(view: PlayerView): HTMLElement {
-  return render(
-    <CatalogContext.Provider value={lookup}>
-      <Board view={view} />
-    </CatalogContext.Provider>,
-  ).container;
 }
 
 function aura(root: ParentNode, instanceId: string): HTMLElement | null {

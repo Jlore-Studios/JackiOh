@@ -16,14 +16,17 @@ import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
 import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts";
+import { EmptyState } from "../../empty/EmptyState.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import { useUndoHold } from "../../undo/hold.ts";
 import { UndoToast } from "../../undo/UndoToast.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
+import DeckPatchBadge, { useNewestChanges } from "./DeckPatchBadge.tsx";
 import { emptyHistory, historyKey, inTextField, recorded, redone, sealed, undone, type DeckHistory, type DeckPatch } from "./history.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
@@ -142,10 +145,12 @@ type RailProps = {
   onNewDeck: () => void;
   onDuplicateDeck: (deck: DeckItem) => void;
   onNewTrio: () => void;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
 };
 
 function Rail(props: RailProps): ReactElement {
-  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onDuplicateDeck, onNewTrio } = props;
+  const { railRef, snapshot, catalog, collection, open, onOpen, onNewDeck, onDuplicateDeck, onNewTrio, patch } = props;
   const { decks, trios, limits, unsynced } = snapshot;
   const decksAtCap = decks.length >= limits.decks;
   const triosAtCap = trios.length >= limits.trios;
@@ -205,6 +210,7 @@ function Rail(props: RailProps): ReactElement {
               unsynced={unsynced.has(deck.id)}
               atCap={decksAtCap}
               reasonId={decksAtCap ? deckReason : undefined}
+              patch={patch}
               onOpen={() => {
                 onOpen({ kind: "deck", id: deck.id });
               }}
@@ -289,11 +295,13 @@ type DeckRowProps = {
   unsynced: boolean;
   atCap: boolean;
   reasonId: string | undefined;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
   onOpen: () => void;
   onDuplicate: () => void;
 };
 
-function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atCap, reasonId, onOpen, onDuplicate }: DeckRowProps): ReactElement {
+function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atCap, reasonId, patch, onOpen, onDuplicate }: DeckRowProps): ReactElement {
   const verdict = deckVerdict(deck, catalog, collection, nameLength);
   const status = deckStatus(verdict, collection !== null);
   // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
@@ -351,6 +359,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atC
         aria-describedby={reasonId}
         onClick={onDuplicate}
       />
+      {patch === null ? null : <DeckPatchBadge deckId={deck.id} cards={deckChanges(deck, patch)} version={patch.version} />}
     </li>
   );
 }
@@ -423,6 +432,7 @@ function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | nu
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
   useLocale();
+  const patch = useNewestChanges(catalog.version);
 
   const [store] = useState<DeckStore>(() =>
     createDeckStore({
@@ -588,6 +598,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         saved={!unsynced.has(openDeck.id)}
         refusal={refused.get(openDeck.id) ?? null}
         practicePath={practicePathOf(snapshot, openDeck)}
+        patch={patch}
         filter={filter}
         onFilter={setFilter}
         sort={sort}
@@ -714,11 +725,14 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   } else {
     main = (
       <div className="ws-empty" data-testid={WORKSHOP_EMPTY}>
-        <p>
-          {decks.length === 0
-            ? t("Make your first deck, or import a code someone shared.")
-            : t("Pick a deck or a trio from the list to work on it.")}
-        </p>
+        {decks.length === 0 ? (
+          <EmptyState
+            text={t("Make your first deck, or import a code someone shared.")}
+            action={{ label: t("Make a deck"), onPress: newDeck }}
+          />
+        ) : (
+          <EmptyState text={t("Pick a deck or a trio from the list to work on it.")} />
+        )}
       </div>
     );
   }
@@ -786,6 +800,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
           onNewDeck={newDeck}
           onDuplicateDeck={duplicateDeck}
           onNewTrio={newTrio}
+          patch={patch}
         />
         <main ref={mainRef} className="ws-main">
           {main}

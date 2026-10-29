@@ -50,6 +50,7 @@ import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume, readPracticeResumeStat
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { settle } from "../test/settle.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import type { TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
@@ -166,6 +167,8 @@ type HostOptions = {
   lethal?: boolean;
   /** R2102000: the started game's snapshot says the human has lethal, as an Easy free game's would. */
   lethalHint?: boolean;
+  /** R2208000: the worker's claim answer marks a decision this device's clock cut. */
+  clockCut?: boolean;
 };
 
 /** Fake definitions cost each card by its id's final digit. */
@@ -299,7 +302,12 @@ function routeHost(options: HostOptions = {}): RouteHost {
       if (body.type === "debug") return Promise.resolve({ id: mine, type: "debug", debug });
       if (body.type === "claim") {
         // R1303000: the conceded game's claim, as the worker answers it once the game is over.
-        return Promise.resolve({ id: mine, type: "claim", claim: { seed, result: "loss", log: [] } });
+        return Promise.resolve({
+          id: mine,
+          type: "claim",
+          claim: { seed, result: "loss", log: [] },
+          ...(options.clockCut === true ? { clockCut: true as const } : {}),
+        });
       }
       if (body.type === "catalog") {
         return Promise.resolve(
@@ -395,13 +403,6 @@ function concedeOnBoard(): void {
   fireEvent.click(screen.getByTestId("concede-confirm"));
 }
 
-/** Settle route effects and fake-host promises. */
-async function settle(): Promise<void> {
-  await act(async () => {
-    for (let i = 0; i < 10; i += 1) await Promise.resolve();
-  });
-}
-
 let fetchSpy: Mock<() => Promise<never>>;
 let socketSpy: Mock<(url: string) => void>;
 
@@ -446,7 +447,7 @@ afterEach(() => {
 describe("B32 /practice shows setup to anyone", () => {
   it("R1578000 the lobby offers no More ways to play and backs to Play", async () => {
     renderRoute(routeHost(), { loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });
-    await settle();
+    await settle({ ticks: 10 });
 
     // The Play hub holds the other ways now; the setup carries no links of its own to them.
     expect(screen.queryByRole("navigation", { name: "More ways to play" })).toBeNull();
@@ -460,7 +461,7 @@ describe("B32 /practice shows setup to anyone", () => {
     const host = routeHost();
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
     renderRoute(host, { loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     for (const id of [T.easy, T.medium, T.hard]) {
@@ -484,7 +485,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 the initial difficulty and deck come from jackioh.practice.setup", async () => {
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "hard", deck: "preset:humans" }));
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(PRACTICE_SETUP_KEY).toBe("jackioh.practice.setup");
     expect(screen.getByTestId(T.hard)).toBeChecked();
@@ -495,7 +496,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 a saved setup that is not JSON falls back to easy", async () => {
     window.localStorage.setItem(PRACTICE_SETUP_KEY, "{not json");
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(screen.getByTestId(T.easy)).toBeChecked();
@@ -504,7 +505,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 a saved setup naming no real difficulty falls back to easy", async () => {
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "nightmare", deck: "random" }));
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.easy)).toBeChecked();
     expect(screen.getByTestId(T.hard)).not.toBeChecked();
@@ -518,7 +519,7 @@ describe("B32 /practice shows setup to anyone", () => {
       throw new Error("site data is blocked");
     });
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(screen.getByTestId(T.easy)).toBeChecked();
@@ -618,7 +619,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 a pending account gets no saved decks", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
     renderRoute(routeHost(), { account: readyAccount("pending"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(savedOptions()).toEqual([]);
@@ -627,7 +628,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 a banned account gets no saved decks", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
     renderRoute(routeHost(), { account: readyAccount("banned"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(savedOptions()).toEqual([]);
@@ -636,7 +637,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 an active account that has saved no deck gets no saved options", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(null)));
     renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(savedOptions()).toEqual([]);
     expect([...deckOptions()].sort()).toEqual(["random", ...PRESET_VALUES].sort());
@@ -645,7 +646,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 saved decks that fail to load simply show no saved options", async () => {
     const loadDecks = vi.fn(() => Promise.reject(new Error("503 service unavailable")));
     renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(loadDecks).toHaveBeenCalled();
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
@@ -656,7 +657,7 @@ describe("B32 /practice shows setup to anyone", () => {
   it("B32 the route is not gated: an account still loading, or one that could not be read, gets setup", async () => {
     for (const account of [{ kind: "loading" }, { kind: "error", message: "offline" }] as Account[]) {
       renderRoute(routeHost(), { account });
-      await settle();
+      await settle({ ticks: 10 });
       expect(screen.getByTestId(T.setup)).toBeInTheDocument();
       expect(savedOptions()).toEqual([]);
       cleanup();
@@ -706,7 +707,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("an anonymous visitor is told to sign in", async () => {
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/sign in/i);
   });
 
@@ -715,7 +716,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
     });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/Save a deck in Decks/);
     expect(hint()).not.toMatch(/sign in/i);
     expect(screen.getByRole("link", { name: "Decks" })).toHaveAttribute("href", "/decks");
@@ -724,7 +725,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
   it("a pending or banned account hears that its decks come once it is active", async () => {
     for (const status of ["pending", "banned"] as const) {
       renderRoute(routeHost(), { account: readyAccount(status) });
-      await settle();
+      await settle({ ticks: 10 });
       expect(hint()).toMatch(/once your account is active/);
       expect(hint()).not.toMatch(/sign in/i);
       cleanup();
@@ -733,7 +734,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("while the account or its saved decks are read, the hint says it is looking", async () => {
     renderRoute(routeHost(), { account: { kind: "loading" } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/Looking for your saved decks/);
     cleanup();
 
@@ -741,7 +742,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       account: readyAccount("active"),
       loadDecks: vi.fn(() => new Promise<DecksResponse>(() => undefined)),
     });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/Looking for your saved decks/);
   });
 
@@ -750,13 +751,13 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.reject(new Error("503"))),
     });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/could not be loaded/);
     expect(hint()).not.toMatch(/sign in/i);
     cleanup();
 
     renderRoute(routeHost(), { account: { kind: "error", message: "offline" } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/could not be loaded/);
   });
 
@@ -766,7 +767,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       .mockRejectedValueOnce(new Error("503"))
       .mockResolvedValue(decksResponse(SAVED));
     renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/could not be loaded/);
     expect(screen.getByTestId(practiceTestid.savedRetry)).toBeEnabled();
 
@@ -784,7 +785,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       Promise.reject(new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } })),
     );
     renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
-    await settle();
+    await settle({ ticks: 10 });
     const retry = screen.getByTestId(practiceTestid.savedRetry);
     expect(retry).toBeDisabled();
     expect(retry).toHaveTextContent(/Try again in \d+ s/);
@@ -793,14 +794,14 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
   it("#1691 an account that could not be read offers its retry, held through a stated wait", async () => {
     const retry = vi.fn();
     renderRoute(routeHost(), { account: { kind: "error", message: "offline", retry } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(hint()).toMatch(/could not be loaded/);
     fireEvent.click(screen.getByTestId(practiceTestid.savedRetry));
     expect(retry).toHaveBeenCalledTimes(1);
     cleanup();
 
     renderRoute(routeHost(), { account: { kind: "error", message: "offline", retry, retryAfterMs: 60_000 } });
-    await settle();
+    await settle({ ticks: 10 });
     const held = screen.getByTestId(practiceTestid.savedRetry);
     expect(held).toBeDisabled();
     expect(held).toHaveTextContent(/Try again in \d+ s/);
@@ -854,7 +855,7 @@ describe("the setup previews the chosen deck", () => {
   it("a preset shows its name, identity, every card and a curve that adds up to the deck", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.requests).toContainEqual({ type: "catalog" });
 
     for (const preset of PRACTICE_PRESETS) {
@@ -875,7 +876,7 @@ describe("the setup previews the chosen deck", () => {
 
   it("resting the pointer on a previewed card shows the whole card", async () => {
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     const preset = PRACTICE_PRESETS[0];
     if (preset === undefined) throw new Error("no preset");
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: `preset:${preset.id}` } });
@@ -897,7 +898,7 @@ describe("the setup previews the chosen deck", () => {
 
   it("the random deck says it is dealt fresh each game and lists no cards", async () => {
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     expect((screen.getByTestId(T.deck) as HTMLSelectElement).value).toBe("random");
     expect(preview()).toHaveTextContent("Random deck");
     expect(preview()).toHaveTextContent(/every game/);
@@ -920,7 +921,7 @@ describe("the setup previews the chosen deck", () => {
   it("a catalog the worker cannot give still leaves the deck named, explained and playable", async () => {
     const host = routeHost({ catalog: "fail" });
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:blitz" } });
     expect(preview()).toHaveTextContent("Blitz");
     expect(preview()).toHaveTextContent(/card list could not be loaded/);
@@ -934,14 +935,14 @@ describe("the setup previews the chosen deck", () => {
   it("#1691 a card list the worker could not give offers Try again, which previews the deck", async () => {
     const options: HostOptions = { catalog: "fail" };
     renderRoute(routeHost(options));
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:blitz" } });
     expect(preview()).toHaveTextContent(/card list could not be loaded/);
     expect(previewedIds()).toEqual([]);
 
     options.catalog = "answer";
     fireEvent.click(screen.getByTestId(practiceTestid.defsRetry));
-    await settle();
+    await settle({ ticks: 10 });
     expect(previewedIds()).not.toEqual([]);
     expect(screen.queryByTestId(practiceTestid.defsRetry)).toBeNull();
   });
@@ -949,7 +950,7 @@ describe("the setup previews the chosen deck", () => {
   it("the setup's catalog host is closed once it has answered, and an autostarted game asks for no catalog", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     expect(host.disposals()).toBeGreaterThanOrEqual(1);
     cleanup();
 
@@ -1034,7 +1035,7 @@ describe("B32 URL parameters", () => {
     const select = screen.getByTestId(T.deck) as HTMLSelectElement;
     expect(select.value).toBe("saved:2");
     expect(select.options[select.selectedIndex]?.textContent).toBe(SAVED_NAMES[1]);
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(host.starts()).toEqual([]);
   });
@@ -1046,7 +1047,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("B33 practice-start sends the chosen setup and renders <Game> for the human seat", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
 
     fireEvent.click(screen.getByTestId(T.medium));
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
@@ -1071,7 +1072,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("R1373 R924000 the Random deck's pick travels on the deck choice, and a preset never carries it", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
     const picker = screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement;
@@ -1098,7 +1099,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "random", leanNewest: true }));
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     expect((screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement).value).toBe("newest");
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
@@ -1111,7 +1112,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("R923000 the Sandbox box starts a sandbox game: the HUD says so and its dev tools go to the host as acts", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
@@ -1133,7 +1134,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("R923000 a game started without the box is no sandbox and shows no tools", async () => {
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.start));
     const hud = await screen.findByTestId(T.hud);
     expect(host.starts()[0]?.sandbox).toBeUndefined();
@@ -1147,10 +1148,10 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const host = routeHost({ aiToAct: true });
     const gap = 200;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
@@ -1235,7 +1236,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
       visit(search);
       const host = routeHost();
       renderRoute(host);
-      await settle();
+      await settle({ ticks: 10 });
       expect(screen.getByTestId(T.setup), search).toBeInTheDocument();
       expect(host.starts(), search).toEqual([]);
       cleanup();
@@ -1319,7 +1320,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     fireEvent.click(screen.getByTestId("concede"));
     expect(screen.getByTestId("concede-dialog")).toHaveAttribute("role", "alertdialog");
     fireEvent.click(screen.getByTestId("concede-cancel"));
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.queryByTestId("concede-dialog")).toBeNull();
     expect(concedes(), "Keep playing sent nothing").toEqual([]);
     expect(screen.queryByTestId(T.result)).toBeNull();
@@ -1365,7 +1366,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     // Let the mark arrive before a step that would otherwise be sent.
     const gap = 400;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     // Runner in-flight marker (game/animations.ts).
@@ -1393,7 +1394,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     // Mark before rendering so the first gap waits.
     document.body.setAttribute("data-speaking", "core-011-play");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     // Any element marks an active voice line.
@@ -1419,7 +1420,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
       const gap = 40;
       document.body.setAttribute("data-speaking", "stuck");
       renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-      await settle();
+      await settle({ ticks: 10 });
       const aiSteps = (): number => host.requests.filter((body) => body.type === "aiStep").length;
 
       await act(async () => {
@@ -1446,7 +1447,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     // CardShowcase marks a held AI card.
     document.body.setAttribute("data-showcase", "played");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     try {
@@ -1471,7 +1472,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
       const gap = 40;
       document.body.setAttribute("data-showcase", "stuck");
       renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-      await settle();
+      await settle({ ticks: 10 });
       const aiSteps = (): number => host.requests.filter((body) => body.type === "aiStep").length;
 
       await act(async () => {
@@ -1597,7 +1598,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     }
 
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
     expect(unloadIsCancelled(), "the setup screen").toBe(false);
     cleanup();
@@ -2056,7 +2057,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
   }
 
   async function startFromSetup(): Promise<void> {
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
     fireEvent.click(screen.getByTestId(T.start));
     await screen.findByTestId(T.hud);
@@ -2226,6 +2227,37 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     });
   });
 
+  it("R2208000 an ai_mismatch refusal of a game this device's clock cut says the device ran out of time, and the server gets the claim alone", async () => {
+    const host = routeHost({ clockCut: true });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "refused");
+    });
+    expect(line).toHaveAttribute("data-reason", "ai_mismatch");
+    expect(line).toHaveTextContent("This game earned nothing (this device ran out of time on one of the AI's moves).");
+    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-1", result: "loss", log: [] });
+  });
+
+  it("R2208000 a refusal for another reason of a game this device's clock cut reads as before", async () => {
+    const host = routeHost({ clockCut: true });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "expired" }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "refused");
+    });
+    expect(line).toHaveAttribute("data-reason", "expired");
+    expect(line).toHaveTextContent("This game earned nothing (it came in too late to count).");
+  });
+
   it("R1303000 a claim that fails shows that the server could not check it, and the dialog stays whole", async () => {
     const host = routeHost();
     const earning = fakeEarning({ claim: () => Promise.reject(new Error("offline")) });
@@ -2255,7 +2287,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     const waiting = routeHost();
     const never = fakeEarning({ seed: () => new Promise<PracticeSeedIssued>(() => undefined) });
     renderEarning(waiting, never);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.start));
     expect(await screen.findByTestId(T.loading)).toBeInTheDocument();
     expect(waiting.starts()).toEqual([]);
@@ -2447,7 +2479,7 @@ describe("B40 the dev handle", () => {
 describe("Surface: the setup is remembered, and the pacing follows ?pace and reduced motion", () => {
   it("starting a game stores its difficulty and deck under jackioh.practice.setup, and the next visit opens on them", async () => {
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.hard));
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     fireEvent.click(screen.getByTestId(T.start));
@@ -2463,7 +2495,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     cleanup();
     renderRoute(routeHost());
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hard)).toBeChecked();
     expect((screen.getByTestId(T.deck) as HTMLSelectElement).value).toBe("preset:humans");
   });
@@ -2474,7 +2506,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
     });
     const host = routeHost();
     renderRoute(host);
-    await settle();
+    await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.start));
 
     expect(await screen.findByTestId(T.hud)).toBeInTheDocument();
@@ -2495,7 +2527,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
         visit(`?seed=pace1&difficulty=easy&deck=random&seat=p1${search}`);
         const host = routeHost({ aiToAct: true, holdAiSteps: true });
         renderRoute(host, { pacing: undefined });
-        await settle();
+        await settle({ ticks: 10 });
         const aiSteps = (): number => host.requests.filter((body) => body.type === "aiStep").length;
 
         expect(host.starts()).toHaveLength(1);
@@ -2579,7 +2611,7 @@ describe("practice plays on the full board, with sound and settings", () => {
     const gap = 40;
     voice.say(true);
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await settle();
+    await settle({ ticks: 10 });
     expect(screen.getByTestId(T.hud)).toBeInTheDocument();
     expect(screen.getByTestId("game")).toHaveAttribute("data-speaking", "true");
 
@@ -2618,7 +2650,7 @@ describe("practice plays on the full board, with sound and settings", () => {
     visit("?seed=calm1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true, holdAiSteps: true });
     renderRoute(host, { pacing: undefined });
-    await settle();
+    await settle({ ticks: 10 });
     const aiSteps = (): number => host.requests.filter((body) => body.type === "aiStep").length;
 
     await act(async () => {
@@ -2674,9 +2706,9 @@ describe("practice plays on the full board, with sound and settings", () => {
     try {
       visit("?seed=over9&difficulty=easy&deck=random&seat=p1");
       renderRoute(routeHost({ lethal: true }), { pacing: { ...PRACTICE_PACING_FAST, resultDelayMs: 0 } });
-      await settle();
+      await settle({ ticks: 10 });
       concedeOnBoard();
-      await settle();
+      await settle({ ticks: 10 });
       await act(async () => {
         vi.advanceTimersByTime(1);
       });
@@ -2685,7 +2717,7 @@ describe("practice plays on the full board, with sound and settings", () => {
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
-      await settle();
+      await settle({ ticks: 10 });
       await act(async () => {
         vi.advanceTimersByTime(1);
       });
@@ -2922,7 +2954,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
     for (const account of [ANONYMOUS, readyAccount("pending")]) {
       const tutorial = tutorialAccount([]);
       renderRoute(routeHost(), { account, tutorialAccount: tutorial });
-      await settle();
+      await settle({ ticks: 10 });
       expect(screen.getByTestId(tutorialTestid.lesson(first))).toHaveAttribute("data-status", "completed");
       expect(tutorial.load).not.toHaveBeenCalled();
       expect(tutorial.save).not.toHaveBeenCalled();
@@ -2944,7 +2976,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
       tutorialAccount: unreachable,
     });
-    await settle();
+    await settle({ ticks: 10 });
 
     expect(unreachable.load).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId(tutorialTestid.path)).toBeInTheDocument();

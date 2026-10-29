@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { manualClock } from "../game/deckbuilder/testkit.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
@@ -188,14 +189,6 @@ function rows(): HTMLElement[] {
   return screen.queryAllByTestId(TESTID.friendRow);
 }
 
-/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
-async function settle(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
-}
-
 function rowOf(friend: PlayerRef): HTMLElement {
   return must(
     rows().find((row) => (row.textContent ?? "").includes(friend.username)),
@@ -365,7 +358,7 @@ describe("B55 the friends list", () => {
     await waitFor(() => {
       expect(server.to("GET", "/api/friends").length).toBeGreaterThan(0);
     }, SLOW);
-    await settle(FRIENDS_POLL_MS + 1);
+    await settle({ advance: FRIENDS_POLL_MS + 1 });
     expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(rows()).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.requestAccept)).toHaveLength(0);
@@ -641,7 +634,7 @@ describe("B56 each friend row's controls", () => {
       const control = within(rowOf(friend)).queryByTestId(TESTID.challenge);
       if (control !== null) fireEvent.click(control);
     }
-    await settle(FRIENDS_POLL_MS + 1);
+    await settle({ advance: FRIENDS_POLL_MS + 1 });
     expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(server.to("POST", "/api/challenges")).toHaveLength(0);
   });
@@ -781,7 +774,7 @@ describe("B59 Shared with me", () => {
     await waitFor(() => {
       expect(server.to("GET", "/api/replays/shared").length).toBeGreaterThan(0);
     }, SLOW);
-    await settle(FRIENDS_POLL_MS + 1);
+    await settle({ advance: FRIENDS_POLL_MS + 1 });
     expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(screen.queryAllByText(wholeText("Ann#2"))).toHaveLength(0);
     expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);

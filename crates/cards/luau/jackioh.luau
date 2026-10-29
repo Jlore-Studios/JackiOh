@@ -106,6 +106,7 @@ armorOverride: number?,
 tuning: Tuning?,
 lucky: number?,
 copyOf: string?,
+exact: boolean?,
 memory: {[string]: JsonValue}?,
 fixedX: number?,
 }
@@ -2268,7 +2269,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,

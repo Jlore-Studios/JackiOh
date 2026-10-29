@@ -609,6 +609,12 @@
   margin-top: clamp(24px, 14vh, 140px);
 }
 
+/* #2108, R2108000: a wait's panel shows once it outlasts SKELETON_DELAY_MS, so a fast account
+   check or screen load never flashes it. */
+.tavern.shell-panel[data-shown="false"] .panel {
+  visibility: hidden;
+}
+
 /* In a row of ways on, the gold one keeps its colour but takes its neighbours' size. */
 .tavern.app-shell .row .button-primary {
   min-height: 44px;

@@ -32,6 +32,7 @@ import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
+import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -54,6 +55,7 @@ import { faceRate, formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { usePlayerStats } from "../stats/store.ts";
+import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 
@@ -1052,7 +1054,7 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             ) : filteredCards.length === 0 ? (
-              <p className="stats-empty">{t("No cards match the selected filters.")}</p>
+              <EmptyState text={t("No cards match the selected filters.")} />
             ) : view === "grid" ? (
               <ul className="stats-grid" data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
@@ -1094,7 +1096,7 @@ export default function StatsRoute(): ReactElement {
                 })}
               </ul>
             ) : (
-              <div className="stats-table-wrapper">
+              <TableScroll labelledBy="stats-tab-cards">
                 <table className="stats-table" data-testid={statsTestid.cardsTable}>
                   <thead>
                     <tr>
@@ -1400,7 +1402,7 @@ export default function StatsRoute(): ReactElement {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
 
             {/* R2089000: the Created cards, apart from the deck cards above */}
@@ -1428,7 +1430,7 @@ export default function StatsRoute(): ReactElement {
             ) : setsData === null ? (
               <Skeleton variant="table" label={t("Loading set statistics…")} />
             ) : sets.length === 0 ? (
-              <p className="stats-empty">{t("No games on patch {patch} yet.", { patch: setsData.patch })}</p>
+              <EmptyState text={t("No games on patch {patch} yet.", { patch: setsData.patch })} />
             ) : (
               <>
                 <p className="stats-player-note">
@@ -1451,7 +1453,7 @@ export default function StatsRoute(): ReactElement {
                     <span className="stats-summary-value">{setLeaders.median ? t(setLeaders.median) : "—"}</span>
                   </div>
                 </section>
-                <div className="stats-table-wrapper">
+                <TableScroll labelledBy="stats-tab-sets">
                   <table className="stats-table" data-testid={statsTestid.setsTable}>
                     <thead>
                       <tr>
@@ -1536,7 +1538,7 @@ export default function StatsRoute(): ReactElement {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </TableScroll>
                 <div className="stats-sets-outliers" data-testid={statsTestid.setsOutliers}>
                   {(
                     [
@@ -1617,9 +1619,9 @@ export default function StatsRoute(): ReactElement {
                 </button>
               </div>
             ) : playersList.length === 0 ? (
-              <p className="stats-empty">{t("No players found.")}</p>
+              <EmptyState text={t("No players found.")} />
             ) : (
-              <div className="stats-table-wrapper">
+              <TableScroll labelledBy="stats-tab-players">
                 <table className="stats-table" data-testid={statsTestid.playersTable}>
                   <thead>
                     <tr>
@@ -1653,7 +1655,7 @@ export default function StatsRoute(): ReactElement {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             )}
 
             {!playersLoading && !playersError && (playerPage > 1 || playersHasMore) && (

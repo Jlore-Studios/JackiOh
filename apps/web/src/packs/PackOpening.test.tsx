@@ -27,6 +27,7 @@ import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { openedPack, packsInfo } from "./fixtures.ts";
@@ -690,6 +691,7 @@ describe("#1308 the card packs panel", () => {
     packsServer({ info: { status: 200, body: { ...packsInfo(), unopened: [] } satisfies PacksResponse } });
     await panel();
     expect(screen.getByTestId(T.none)).toHaveTextContent("No unopened packs.");
+    expectEmptyState(screen.getByTestId(T.none));
     expect(screen.queryByTestId(T.held)).toBeNull();
   });
 

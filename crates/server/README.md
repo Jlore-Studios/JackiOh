@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
-| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
+| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -54,7 +54,7 @@ decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set 
 "newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). Every whole-log
-fold on an async path (a rebuild's three, a replay's opening, the reaper's, a game record's and `timing-backfill`'s) runs there too,
+fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one, before its result's transaction, which its quests and its game record share (#2213), a refiled game record's and `timing-backfill`'s) runs there too,
 one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
@@ -188,7 +188,8 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/cosmetic-packs/chase` | active | `{ cosmeticId, cardId? }`: a full Chase Shard bar buys one unowned Legendary or Mythic cosmetic and empties, 409 for a choice it cannot pay for, answering the bar and packs after it (R1306002) |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP the current level spans (`levelXp`) and the XP to the next level, the next rewards (all three `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
-| `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002) |
+| `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt, replacesLeft }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002); `replacesLeft` is the replaces the account may still spend this UTC day, `QUEST_REPLACES_PER_DAY` less its `removed` quest rows of the day, and 0 while the economy is off (R2210000) |
+| `POST` | `/api/quests/:questId/replace` | active | replaces a held quest: in one transaction under the account's economy lock it writes the quest's `removed` row and the `arrived` row of one drawn as an arrival is (uniformly among the entries not held, the replaced one excluded, its seed in the `ref`), which takes its slot at once with 0 progress, the replaced quest's progress lost and the arrival rhythm unmoved; answers what `GET /api/quests` answers. 409 `conflict` while the economy is off, when today's `QUEST_REPLACES_PER_DAY` are spent and when no other quest is left to draw, 404 `not_found` for a quest not held; a refusal writes nothing (R2210000) |
 | `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds, which it counts under the account's economy lock and issues nothing for (R1483000) |
@@ -307,8 +308,8 @@ What the actor holds, each with a test named after it:
   then (R744), and it reads as present (`presence`) until the game ends. As for any match, a
   restart's actor is rebuilt when the person's socket comes back.
 
-After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
-engine's `summarize_game`) under the match's mode and the patch the match started on (its row's
+After a result commits, `api::results` files the game in `game_records` (`api::game_records`, from the
+engine's `summarize_game` fold made once before the result's transaction, #2213) under the match's mode and the patch the match started on (its row's
 `catalog_version`), as `source: "live"`, and the store folds it into the card statistics' totals in
 the same transaction (R1044000); a failure is logged as `game.record.failed` and the result stands.
 
@@ -606,9 +607,9 @@ series still makes its picks.
   (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
-  no draw at full or zero skill); a decision the roll does not give to the AI is the random policy's
-  (`random_action`) with no search, whose draw-offer answer is still the bot's own roll's, and `r188_forbidden`
-  filters either.
+  no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
+  (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
+  draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
   `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
@@ -680,7 +681,7 @@ series still makes its picks.
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
-  `decide_styled` or the random policy, and no clock), fits each strength's Elo offset from the
+  `decide_styled` or the skill miss, and no clock), fits each strength's Elo offset from the
   strongest and prints the two config rows; it reads no database, and its anchor is the seed of
   record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
   seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
@@ -690,8 +691,8 @@ series still makes its picks.
 
 ### Skill to Elo (R747000)
 
-A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being a random
-legal action (`crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
+A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being the skill
+miss (R2214000; `crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
 Elo a bot at that skill is expected to hold: `SKILL_ELO_TABLE` read by straight lines between its
 rows, clamped to its ends, with the full-skill reference at `SKILL_ELO_ANCHOR` (1832 since generation 13's
 calibration, `docs/bot-calibration.md`, and 1200, the strongest bot's old seed, before it: high, so that a
@@ -707,18 +708,19 @@ prior: a bot's live Glicko-2 rating (R610) is the calibration that goes on.
 | 0.75 | 1080 | −123 | 66 of 200 (−123) | not run |
 | 1 (the reference) | 1200 | 0 | | |
 
-This table is R747000's measurement, held at 1200. Since generation 13 the rows of `SKILL_ELO_TABLE` are
-R748000's calibration of the strengths instead, 1216, 1383, 1536, 1692 and 1832 (`docs/bot-calibration.md`,
-Results). Its gaps to the reference agree with this table's to within 21 Elo, and the anchor moved by the
-promotions of generations 10 to 13.
+This table is R747000's measurement, held at 1200, of the miss as it was then, a uniform random move.
+Since generation 13 the rows of `SKILL_ELO_TABLE` are R748000's calibration of the strengths instead, and
+with the skill miss since R2214000 they are 1517, 1576, 1666, 1716 and 1832 (`docs/bot-calibration.md`,
+Results). Generation 13's calibration, with the uniform miss, agreed with this table's gaps to the
+reference to within 21 Elo, and the anchor moved by the promotions of generations 10 to 13.
 
 The games are `cargo jackioh arena` between this build's AI at each skill and the reference, and
 between each skill and the random policy, in a release build, on seeds a run's own name gives
 (`elo-747/…`), with the seats alternating. "Against the reference" is the wins of the skill's side;
 the figures in brackets are the Elo gap those games give and, against random, the gap to the
-reference after adding the random policy's. The 0 row is the random policy exactly (skill 0 plays
-`random_action` and nothing else), so its row is the reference's games against `random`: 779 wins of
-800 for the reference. The reference against 0.0 is not run again, and 0.75 against random, which
+reference after adding the random policy's. Before R2214000 the 0 row was the random policy exactly
+(skill 0 played `random_action` and nothing else), so its row is the reference's games against `random`:
+779 wins of 800 for the reference. The reference against 0.0 is not run again, and 0.75 against random, which
 the AI wins nearly always, resolves nothing, so it is not run. A cross-check ladder of adjacent
 skills, 100 games each, agrees with the table to within its noise: 0.5 beat 0.25 73–27 (+173, the
 table's +160), 0.75 beat 0.5 73–27 (+173, the table's +180), the reference beat 0.75 74–26 (+182,
@@ -730,7 +732,8 @@ the table's +120).
    `cargo jackioh arena --a self --b random --games 200 --seed "elo-<run>/random-vs-ref"`, four
    times with the seeds `…/random-vs-ref`, `…-b`, `…-c` and `…-d` (the shut-out needs the games);
    then for each skill
-   `S` in 0.25, 0.5 and 0.75, `--a self --a-skill S --b self --games 200 --seed "elo-<run>/sS-vs-ref"`
+   `S` in 0, 0.25, 0.5 and 0.75, `--a self --a-skill S --b self --games 200 --seed "elo-<run>/sS-vs-ref"`
+   (skill 0 is the skill miss since R2214000, no longer the random policy)
    (the duel lines and the tally are on stderr, with no `--out`), and for 0.25 and 0.5,
    `--a self --a-skill S --b random --games 200 --seed "elo-<run>/sS-vs-random"`.
 2. Score each run from the measured side: `p = (wins + draws / 2) / games`, held inside `[1 / 2N,

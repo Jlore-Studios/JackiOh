@@ -5,18 +5,19 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
-import { getQuests, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { getQuests, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getQuests: vi.fn() };
+  return { ...actual, getQuests: vi.fn(), replaceQuest: vi.fn() };
 });
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
@@ -101,6 +102,7 @@ describe("QuestsList", () => {
     render(<QuestsList quests={book({ quests: [], nextDueAt: Date.now() + 60_000 })} />);
 
     expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("No quests yet.");
+    expectEmptyState(screen.getByText("No quests yet."));
     expect(screen.getByTestId(questsTestid.next)).toHaveTextContent(/^Next quest in /);
   });
 
@@ -126,6 +128,78 @@ describe("QuestsList", () => {
     // The same due time arriving again asks nothing more: one read per due time.
     view.rerender(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
     expect(onArrived).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("QuestsList's Replace", () => {
+  const traps = quest({ questId: "traps-3", title: "Play 3 Traps", progress: 0, jlore: 60, xp: 3000 });
+
+  it("R2210000 offers Replace on each held quest only while a replace is left", () => {
+    const onReplace = vi.fn();
+    const view = render(<QuestsList quests={book({ quests: [quest(), traps], replacesLeft: 1 })} onReplace={onReplace} />);
+
+    expect(screen.getAllByTestId(questsTestid.replace)).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Replace Win 3 games" })).toBeInTheDocument();
+
+    view.rerender(<QuestsList quests={book({ quests: [quest(), traps], replacesLeft: 0 })} onReplace={onReplace} />);
+    expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    // A server from before #2210 sends no count, which reads as none left.
+    view.rerender(<QuestsList quests={book({ quests: [quest(), traps] })} onReplace={onReplace} />);
+    expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    // A caller that cannot send one is offered nothing.
+    view.rerender(<QuestsList quests={book({ quests: [quest(), traps], replacesLeft: 1 })} />);
+    expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+  });
+
+  it("R2210000 asks first, then shows the quests the server answers", async () => {
+    vi.mocked(getQuests).mockResolvedValue(book({ quests: [quest(), traps], replacesLeft: 1 }));
+    vi.mocked(replaceQuest).mockResolvedValue(book({ quests: [traps], replacesLeft: 0 }));
+    render(<QuestsPanel token={TOKEN} />);
+    await screen.findByText("Win 3 games");
+
+    fireEvent.click(screen.getByRole("button", { name: "Replace Win 3 games" }));
+    expect(screen.getByRole("alertdialog", { name: "Replace this quest?" })).toHaveTextContent(
+      "You lose its progress and get a different quest.",
+    );
+    fireEvent.click(screen.getByTestId(questsTestid.replaceCancel));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(replaceQuest).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Replace Win 3 games" }));
+    fireEvent.click(screen.getByTestId(questsTestid.replaceConfirm));
+    await waitFor(() => {
+      expect(screen.queryByText("Win 3 games")).toBeNull();
+    });
+    expect(replaceQuest).toHaveBeenCalledTimes(1);
+    expect(replaceQuest).toHaveBeenCalledWith(TOKEN, "win-3");
+    expect(screen.getByText("Play 3 Traps")).toBeInTheDocument();
+    expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    expect(screen.queryByTestId(questsTestid.replaceError)).toBeNull();
+    expect(getQuests).toHaveBeenCalledTimes(1);
+  });
+
+  it("R2210000 a refused replace says why and reads the quests again", async () => {
+    vi.mocked(getQuests)
+      .mockResolvedValueOnce(book({ replacesLeft: 1 }))
+      .mockResolvedValueOnce(book({ replacesLeft: 0 }));
+    vi.mocked(replaceQuest).mockRejectedValue(
+      new Error("You've already replaced a quest today. You can replace another tomorrow."),
+    );
+    render(<QuestsPanel token={TOKEN} />);
+    await screen.findByText("Win 3 games");
+
+    fireEvent.click(screen.getByTestId(questsTestid.replace));
+    fireEvent.click(screen.getByTestId(questsTestid.replaceConfirm));
+    expect(await screen.findByTestId(questsTestid.replaceError)).toHaveTextContent(
+      "You've already replaced a quest today.",
+    );
+    await waitFor(() => {
+      expect(getQuests).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    });
+    expect(screen.getByText("Win 3 games")).toBeInTheDocument();
   });
 });
 

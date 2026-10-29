@@ -39,11 +39,10 @@ import { CATALOG } from "@jackioh/cards";
 import {
   CardFace,
   FACE_ASPECT,
+  LONG_FACES,
   POWER_WORDS,
-  TEXT_TIER_MAX,
   faceModel,
   faceText,
-  shortFormOf,
   type FaceModel,
 } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
@@ -168,7 +167,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
   }
 
   // R1017000: no face gives its art's room to its words.
-  if (cf.hasAttribute("data-long")) problems.push(`${where}: takes the long layout (printed text is ${printedLength(def, radiant)} characters)`);
+  if (cf.hasAttribute("data-long")) problems.push(`${where}: takes the long layout (printed text is ${printedLength(def, radiant)} characters, premise-long: ${String(LONG_FACES.includes(`${def.id} ${radiant ? "radiant" : "base"}`))})`);
 
   const clamped = [...cf.querySelectorAll<HTMLElement>("[data-clamped]")];
   const mayClamp = clampAllowedFor(def, box, radiant);
@@ -183,58 +182,8 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards and five held Stinkyscape rows) each print a short form", () => {
-    const long = DEFS.flatMap((def) =>
-      FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
-    );
-    expect(TEXT_TIER_MAX.xl).to.eq(260);
-    // Balance patch 1 (issue #88) rewords C+ #40 Appropriations and C+ #42 KY's Test onto short
-    // faces, so they leave the allowance; nothing else crosses the tier either way. The catalog holds
-    // the Meditative set, and its wordiest faces cross it too: #8 Reach the Summit's Ascent ladder,
-    // #22 Mind Games and its #22.1 Fortify Mind, #49.1 YileGPT Prime and #95 Call to Chaos
-    // (meditative-faces.cy.tsx measures the set's faces at the inspect sizes); #65 Keymaster Keenus's
-    // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text, and C+ #62 KY's
-    // Papaya joined it with v0.3.10's Discover text (#967) and left it with #1017's cut. Each face
-    // left prints a short form, its header and "…", the whole text standing on its left in the
-    // hover preview (R1017000). The held Stinkyscape set's rows (R1857000) bring five more: #7 The
-    // Greatest Heist, #112 Job Application, the set's two Call to Chaos editions (#150, #151) and
-    // the Dormant Starship.
-    for (const entry of long) {
-      const [id, label] = entry.split(" ");
-      expect(shortFormOf(id ?? "", label === "radiant"), entry).to.not.equal(null);
-    }
-    expect(long).to.have.members([
-      "meditative-008 base",
-      "meditative-008 radiant",
-      "meditative-022 base",
-      "meditative-022 radiant",
-      "meditative-022-1 base",
-      "meditative-022-1 radiant",
-      "meditative-049-1 base",
-      "meditative-049-1 radiant",
-      "meditative-095 base",
-      "meditative-095 radiant",
-      "core-093 base",
-      "core-093 radiant",
-      "core-095 base",
-      "core-095 radiant",
-      "core-098 base",
-      "core-098 radiant",
-      "classicplus-073 base",
-      "classicplus-073 radiant",
-      "stinkyscape-007 base",
-      "stinkyscape-007 radiant",
-      "stinkyscape-112 base",
-      "stinkyscape-112 radiant",
-      "stinkyscape-150 base",
-      "stinkyscape-150 radiant",
-      "stinkyscape-151 base",
-      "stinkyscape-151 radiant",
-      "stinkyscape-t-dormant-starship base",
-      "stinkyscape-t-dormant-starship radiant",
-    ]);
-  });
-
+  // The premise this run assumes — every face over 260 printed characters prints a short form —
+  // is pinned per pull request in apps/web/src/cards/textLimit.test.ts against LONG_FACES.
   for (const box of FIT_BOXES) {
     for (const face of FACES) {
       const rule = box.clampAllowed ? "only a face that prints less may clamp" : "nothing clamps";

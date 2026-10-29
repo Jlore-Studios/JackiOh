@@ -3,7 +3,7 @@
 // #645) and the OAuth providers (R666). The provider and our server are a stubbed `fetch`; nothing
 // leaves the process.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
@@ -12,6 +12,7 @@ import { loginTestid } from "../auth/testids.ts";
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession, rememberPendingReset } from "../net/session.ts";
+import { settle } from "../test/settle.ts";
 import LoginRoute from "./login.tsx";
 
 const URL_ = "https://project.supabase.co";
@@ -86,12 +87,6 @@ function setField(testId: string, value: string): void {
 
 function submitForm(): void {
   fireEvent.submit(screen.getByTestId(loginTestid.form));
-}
-
-async function settle(): Promise<void> {
-  await act(async () => {
-    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
-  });
 }
 
 /** The provider's token answer: `token`, and the user's factors when it has any. */

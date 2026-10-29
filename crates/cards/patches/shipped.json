@@ -332,5 +332,12 @@
     "commit": "99d81ef412168b41d1171a440614b136f2f4246f",
     "blob": "4359065d22524710053f39753df8e001a76854a7",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "f5c99a227343fb373ef6efadef13467b9f12b379",
+    "blob": "2bba60cb7ef74783ed6f76804b3483e1135b5cba",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86",
+    "cardMetricsBlob": "394df3e8ef680b503b069ffc2f9e5f4be18454d8"
   }
 ]
