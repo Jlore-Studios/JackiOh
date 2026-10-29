@@ -8185,9 +8185,7 @@
     },
     "2348": {
       "action": "revise",
-      "asks": [
-        "c:6502006396"
-      ],
+      "asks": [],
       "ci_fixes": 2,
       "ci_reruns": {
         "cd348ec46f4369c48a8dc882150be800f1234277": 1
@@ -8218,19 +8216,21 @@
       "issue": 2269,
       "kind": "revise",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "muse",
       "question": "CI's only red check on #2348 is `web (unit 4/4)`: `apps/web/src/shortcuts/shortcuts.test.tsx` (R2126000, \"no new key handler\") finds a key handler in `game/ModifierBadge.tsx` (an Escape `keydown` listener from #2329) that its `BOARD_KEY_HANDLERS` map has no entry for. This branch does not touch either file, and `main`'s tree has the same mismatch. Please decide: add `\"game/ModifierBadge.tsx\": 1` to `BOARD_KEY_HANDLERS`, either on `main` (preferred) or in this pull request, or make ModifierBadge's handler go away. The test's comment says a count is never raised to pass it, so I left it alone.",
       "queued_at": "2026-10-29T16:15:52Z",
       "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "40847443845",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:30caaf41-1793290757",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-29T09:09:32Z",
+      "started_at": "2026-10-29T16:19:42Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6502006396"
+      ],
       "votes": {
         "approvals": [
           "muse",
@@ -8566,9 +8566,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T16:19:03Z",
+    "at": "2026-10-29T16:19:42Z",
     "url": "",
-    "what": "revise #2339 on claude-8"
+    "what": "revise #2348 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T16:05:15Z",
