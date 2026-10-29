@@ -8001,11 +8001,11 @@
       "queued_at": "2026-10-29T11:21:26Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "40843945230",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:325a8880-1793273523",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-29T08:41:15Z",
+      "started_at": "2026-10-29T11:32:36Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -8214,9 +8214,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T11:31:50Z",
+    "at": "2026-10-29T11:32:36Z",
     "url": "",
-    "what": "plan #2111 on claude-7"
+    "what": "revise #2346 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T11:17:10Z",
