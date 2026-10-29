@@ -2959,5 +2959,33 @@
     "pr": 2336,
     "title": "drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "eab368f635f1fdb0cfb47843e0fa756fc1139f1f",
+    "pr": 2373,
+    "title": "the backrow builds suspense: set, wait, flip",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "70ed19e032d2188d7fd5c7e0271a7edf691379fe",
+    "pr": 2331,
+    "title": "patches log: eba6392..da5a454",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "ca042e1d76202fa39e6f92fca2307976d449b6a8",
+    "pr": 2376,
+    "title": "WIP: the AI prices a Radiant Call to Chaos's extra effects in hand (R423)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "25aa9548bbf5cc1f470419eac907a885e81148cc",
+    "pr": 2374,
+    "title": "patches ship: v0.5.6b",
+    "kind": "app"
   }
 ]
