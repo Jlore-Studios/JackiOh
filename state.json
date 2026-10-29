@@ -8023,22 +8023,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40866196520",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "bce39115ff32f13c7bdbf111401157d846c0ed36",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2347": {
