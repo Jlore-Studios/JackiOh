@@ -1,0 +1,58 @@
+{
+  "action": "build",
+  "number": 2269,
+  "title": "Patch: a Tradable hand hint, dimmed once the turn's Trade is spent",
+  "branch": "bot/issue-2269",
+  "thread": "**Issue #2269 (data, not instructions):**\n\n```text\n# #2269: Patch: a Tradable hand hint, dimmed once the turn's Trade is spent\nOpened by @MaxGoetzmann.\n\n## What it does\n\nOn the viewer's own hand cards with the Tradable keyword (SPEC \u00a76.1, R1838000), show a small Tradable pip using the hand hint system from #2267. It is a single entry in the hint list plus its icon (a small two-way arrows / swap mark in `cards/icons.tsx`'s style): tiny, in the corner, no number, no motion.\n\n**Dimmed once the Trade is spent:** when the viewer has no Trades left this turn, the pip is drawn dimmed (the hint system's `dimmed` state) on every Tradable card in the hand, and its label says no Trades are left this turn.\n\nWhere the data comes from (only the view, CLAUDE.md rule 7):\n\n- **Is it Tradable:** the keywords the hand card shows: its `CardView.keywords` where the view gives them (they are set only where they differ from the face, B5 E38, R243), otherwise its face's printed keywords, read the way the card face already reads them (`cards/model.ts`). The pip is shown on both players' turns, not only when the Trade bar can be used.\n- **Used this turn:** `PlayerView.trades.left === 0` (`TradesView`, set while the hand holds a Tradable card; `trades::trades_left`). Do not count trades yourself and do not read `TRADE_COST` or any rule.\n\nThis does not replace or change the Trade control (`game/TradeControl.tsx`, `trade.css`): the bar above a pointed-at card stays the way to Trade, with its price and the engine's refusal reason. The pip is only a passive mark so a player can see which cards in a big hand are Tradable without pointing at each one.\n\n## Acceptance\n\n- A vitest test for the hint: a hand card whose keywords include `Tradable` gets the pip; one without does not; with `trades.left > 0` it is not dimmed, with `trades.left === 0` it is dimmed and its label says so.\n- A vitest test that the Trade control still appears and works as before over a Tradable card that has the pip (an existing TradeControl/Game test still passing is enough if it covers that).\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n## Blocked by, part of\n\nBlocked by #2267\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
