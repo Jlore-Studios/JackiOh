@@ -37,7 +37,6 @@ import { useLocale, t } from "../i18n/i18n.ts";
 import { useAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
-import { useRouteHeld } from "./chunks.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -72,7 +71,6 @@ export function almanacMeta(def: CardDef): string {
 
 export default function AlmanacRoute(): ReactElement {
   useLocale();
-  const routeHeld = useRouteHeld();
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   // `?card=<id>` opens that card's detail (`paths.almanacCard`, the statistics drill-down's link),
@@ -121,9 +119,8 @@ export default function AlmanacRoute(): ReactElement {
             tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}
             own={own ?? undefined}
-            // #2334: when the route's chunk was not in at the mount, React holds the first render behind
-            // the chunk's loading panel anyway, so every card is drawn in it; a prefetched route has no hold.
-            wholeFirst={routeHeld}
+            // #2334: about 700 cards, of which a screen shows a dozen.
+            virtual
             detail={
               detailCardId === null || detailDef === undefined
                 ? null

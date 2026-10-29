@@ -39,9 +39,15 @@
 // change, an opened detail or a card the deck takes re-renders only the cards it changes. A pool
 // that grows (the first render, a cleared search) keeps the cards it drew until a background render
 // (`useDeferredValue`), which yields to input, has drawn the rest. The first render draws
-// POOL_FIRST_CARDS at once, or the whole pool with `wholeFirst` (#2334): the Almanac sets it when its
-// route's chunk was not in at the mount, whose first render React holds behind the chunk's loading panel
-// whatever it costs, so a staged mount there only delayed the rest of the grid.
+// POOL_FIRST_CARDS at once.
+//
+// #2334: the Almanac's grid is `virtual`: it mounts only the rows of cards near what is in view
+// (poolWindow.ts, usePoolWindow.ts), since even staged, the 700 cards of its pool cost more to mount
+// than the 481 it once held. The grid's own rows keep the height of the rows left out, so the
+// scrollbar and each card's place are the whole pool's. A card that has focus stays mounted where
+// the pool scrolls away from it, and the cards just past the view are mounted before the keyboard
+// reaches them, so every card is reachable by Tab. The browser's find-in-page sees only the
+// cards that are mounted. A page with no layout to read (a test's jsdom) draws every card.
 
 import {
   memo,
@@ -66,12 +72,15 @@ import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
 import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
+import { poolRowTracks } from "./poolWindow.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
+import { usePoolWindow } from "./usePoolWindow.ts";
 import type { Holder } from "./workshop.ts";
 
 /**
  * How many of the pool's cards a grid's first render draws (#2266): more than any screen shows at
- * once. The rest follow in a render that yields to the pointer and the keyboard.
+ * once. The rest follow in a render that yields to the pointer and the keyboard; in a virtual grid,
+ * they are the rows its layout puts near the view, read before the first paint.
  */
 export const POOL_FIRST_CARDS = 48;
 
@@ -114,11 +123,8 @@ type PoolGridBaseProps = {
   ribbon?: SetName | null;
   /** R1956000: the cards drawn as the viewer's own copies (the signed-in Almanac's); none when absent. */
   own?: OwnCopies;
-  /**
-   * #2334: the first render draws the whole pool, not POOL_FIRST_CARDS of it (the Almanac's, when its route's first render is held). A pool
-   * that grows later still keeps what it drew until the background render has drawn the rest.
-   */
-  wholeFirst?: boolean;
+  /** #2334: mount only the rows of cards near the view (the Almanac's), not the whole pool. */
+  virtual?: boolean;
 };
 
 /** The deck editor's half: the open deck, ownership, the "+" and the drag. */
@@ -160,6 +166,8 @@ type PoolItemProps = {
   deck: PoolItemDeck | null;
   /** R1383: the card wears the "New" ribbon. */
   fresh: boolean;
+  /** #2334: the grid area a virtual grid places the card in; it then takes no part in the grid's flow. */
+  area?: string | undefined;
   onInspect: (cardId: string) => void;
 };
 
@@ -231,7 +239,7 @@ function PoolFace({ children }: { children: ReactNode }): ReactElement {
   );
 }
 
-function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
+function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps): ReactElement {
   const locale = useLocale();
   const place = deck?.place ?? null;
   const badge = placeWords(place);
@@ -255,7 +263,11 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
   );
 
   return (
-    <div className="db-item" data-card={cardId}>
+    <div
+      className={area === undefined ? "db-item" : "db-item db-item--placed"}
+      data-card={cardId}
+      style={area === undefined ? undefined : { gridArea: area }}
+    >
       <button
         type="button"
         className="db-card"
@@ -336,6 +348,7 @@ function samePoolItem(before: PoolItemProps, after: PoolItemProps): boolean {
     before.cardId !== after.cardId ||
     before.def !== after.def ||
     before.fresh !== after.fresh ||
+    before.area !== after.area ||
     before.onInspect !== after.onInspect
   ) {
     return false;
@@ -372,16 +385,16 @@ function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers):
   };
 }
 
-export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, ribbon = NEW_RIBBON_SET, own, wholeFirst = false } = props;
-
-  // The screen's handlers change more often than its cards do (DeckEditor's `add` with every card
-  // the deck takes), so the cards get these, which never change and call the latest.
+/**
+ * The screen's handlers change more often than its cards do (DeckEditor's `add` with every card the
+ * deck takes), so the cards get these, which never change and call the latest.
+ */
+function usePoolHandlers(props: PoolGridProps): PoolHandlers {
   const latest = useRef(props);
   useLayoutEffect(() => {
     latest.current = props;
   });
-  const handlers = useMemo<PoolHandlers>(
+  return useMemo<PoolHandlers>(
     () => ({
       onInspect: (cardId) => {
         latest.current.onInspect(cardId);
@@ -398,29 +411,102 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
     }),
     [],
   );
+}
+
+/** One card of the pool: null for an id the catalog does not hold. */
+function poolCard(props: PoolGridProps, handlers: PoolHandlers, cardId: string, area?: string): ReactElement | null {
+  const { catalog, ribbon = NEW_RIBBON_SET, own } = props;
+  const def = catalog.cards[cardId];
+  if (def === undefined) return null;
+  return (
+    <AsOwnCopy key={cardId} own={own} cardId={cardId}>
+      <PoolCard
+        cardId={cardId}
+        def={def}
+        deck={itemDeck(props, cardId, handlers)}
+        fresh={ribbon !== null && def.set === ribbon}
+        area={area}
+        onInspect={handlers.onInspect}
+      />
+    </AsOwnCopy>
+  );
+}
+
+export default function PoolGrid(props: PoolGridProps): ReactElement {
+  return props.virtual === true ? <WindowedPool {...props} /> : <StagedPool {...props} />;
+}
+
+/** Every card, the first POOL_FIRST_CARDS of them first (#2266). */
+function StagedPool(props: PoolGridProps): ReactElement {
+  const { ids } = props;
+  const handlers = usePoolHandlers(props);
   // A pool that grows draws only as many of its own cards as the last render drew, until the
   // background render has drawn the rest, so the grid never shows a card the pool no longer holds;
   // one that shrinks or reorders is drawn at once (a plain deferred list made a narrowing search
   // slower).
-  // #2334: no initial value for `wholeFirst`, since any initial value schedules a background render.
-  const deferred = useDeferredValue(ids, wholeFirst ? undefined : ids.slice(0, POOL_FIRST_CARDS));
+  const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
   const shown = ids.length > deferred.length ? ids.slice(0, deferred.length) : ids;
 
   return (
     <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
-      {shown.map((cardId) => {
-        const def = catalog.cards[cardId];
-        if (def === undefined) return null;
-        return (
-          <AsOwnCopy key={cardId} own={own} cardId={cardId}>
-            <PoolCard
-              cardId={cardId}
-              def={def}
-              deck={itemDeck(props, cardId, handlers)}
-              fresh={ribbon !== null && def.set === ribbon}
-              onInspect={handlers.onInspect}
-            />
-          </AsOwnCopy>
+      {shown.map((cardId) => poolCard(props, handlers, cardId))}
+    </section>
+  );
+}
+
+/** The grid area of the card at `at`: its row and column, and the lines they end on. */
+function cellOf(at: number, columns: number): string {
+  const row = Math.floor(at / columns) + 1;
+  const column = (at % columns) + 1;
+  return `${String(row)} / ${String(column)} / ${String(row + 1)} / ${String(column + 1)}`;
+}
+
+/** Only the rows near the view (#2334); the grid's row tracks hold the place of the rest. */
+function WindowedPool(props: PoolGridProps): ReactElement {
+  const { ids } = props;
+  const handlers = usePoolHandlers(props);
+  const section = useRef<HTMLElement>(null);
+  const view = usePoolWindow(section, ids.length);
+  // The card that has focus stays mounted where the pool scrolls away from it (a page down on the
+  // keyboard), or the focus would fall to the page.
+  const [held, setHeld] = useState<string | null>(null);
+
+  const rows = view === null || view === "all" ? null : view;
+  const from = rows === null ? 0 : rows.firstRow * rows.columns;
+  const to =
+    view === "all"
+      ? ids.length
+      : Math.min(ids.length, rows === null ? POOL_FIRST_CARDS : (rows.lastRow + 1) * rows.columns);
+  const heldAt = held === null ? -1 : ids.indexOf(held);
+  const mounted: number[] = [];
+  if (heldAt >= 0 && heldAt < from) mounted.push(heldAt);
+  for (let at = from; at < to; at += 1) mounted.push(at);
+  if (heldAt >= to) mounted.push(heldAt);
+
+  return (
+    <section
+      ref={section}
+      className={rows === null ? "db-pool" : "db-pool db-pool--virtual"}
+      aria-label={t("Card pool")}
+      data-testid={CARD_POOL}
+      style={rows === null ? undefined : { gridTemplateRows: poolRowTracks(ids.length, rows) }}
+      onFocus={(event) => {
+        const item = event.target instanceof Element ? event.target.closest<HTMLElement>(".db-item") : null;
+        setHeld(item?.dataset.card ?? null);
+      }}
+      onBlur={(event) => {
+        // Focus moving to another card of the pool is the next card's focus to say.
+        if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setHeld(null);
+      }}
+    >
+      {mounted.map((at) => {
+        const cardId = ids[at];
+        if (cardId === undefined) return null;
+        return poolCard(
+          props,
+          handlers,
+          cardId,
+          rows === null ? undefined : cellOf(at, rows.columns),
         );
       })}
     </section>

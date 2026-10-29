@@ -158,31 +158,3 @@ describe("#2266 the pool's cards are memoized", () => {
     for (const id of after) expect(getByTestId(poolCardId(id))).toBeTruthy();
   });
 });
-
-describe("#2334 a grid that draws its whole pool first", () => {
-  it("draws every card in its first render, and a pool that grows still keeps what it drew until the next render", () => {
-    const ids = Object.keys(CATALOG).slice(0, POOL_FIRST_CARDS + 12);
-    let drawn: number[] = [];
-    const grid = (shown: readonly string[]): ReactElement => (
-      <Profiler
-        id="pool"
-        onRender={() => {
-          drawn.push(document.querySelectorAll(".db-card").length);
-        }}
-      >
-        <PoolGrid ids={shown} catalog={CATALOG_HERE} onInspect={() => {}} wholeFirst />
-      </Profiler>
-    );
-
-    const { rerender } = render(grid(ids));
-    expect(drawn).toEqual([ids.length]);
-
-    drawn = [];
-    rerender(grid(ids.slice(0, 2)));
-    expect(new Set(drawn)).toEqual(new Set([2]));
-
-    drawn = [];
-    rerender(grid(ids));
-    expect(drawn).toEqual([2, ids.length]);
-  });
-});

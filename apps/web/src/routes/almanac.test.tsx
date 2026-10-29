@@ -9,7 +9,6 @@ import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
@@ -20,8 +19,7 @@ import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
-import { POOL_FIRST_CARDS, poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
-import { RouteHeld } from "./chunks.tsx";
+import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -149,28 +147,6 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(CARDS.length));
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
-  });
-
-  it("#2334 draws the whole pool in the grid's first render when the route's chunk was held, and the first cards only when it was not", () => {
-    const firstRender = (held: boolean): number => {
-      const drawn: number[] = [];
-      render(
-        <RouteHeld.Provider value={held}>
-          <Profiler
-            id="almanac"
-            onRender={() => {
-              drawn.push(document.querySelectorAll(".db-card").length);
-            }}
-          >
-            <AlmanacRoute />
-          </Profiler>
-        </RouteHeld.Provider>,
-      );
-      cleanup();
-      return drawn[0] ?? 0;
-    };
-    expect(firstRender(true)).toBe(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT).length);
-    expect(firstRender(false)).toBe(POOL_FIRST_CARDS);
   });
 
   it("R674 never shows Glitch, though the catalog holds it", () => {

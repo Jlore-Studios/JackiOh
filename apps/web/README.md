@@ -319,7 +319,8 @@ WASM), the module the server runs at queue, and the server's refusal, when it co
 ```
 routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
+                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
+                        grid mounting only the rows of its 700 cards near the view, poolWindow.ts, #2334),
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
