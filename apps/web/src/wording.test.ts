@@ -212,7 +212,7 @@ describe("R1320 players read Nerf and Buff", () => {
     );
     expect(found).toEqual([]);
     // The cards that tune print the new words (C+ #71 Book of Buff, C+ #72 Book of Nerf).
-    expect(CATALOG["classicplus-071"]?.base.text).toMatch(/^Buff a card /);
+    expect(CATALOG["classicplus-071"]?.base.text).toMatch(/^Buff a permanent /);
     expect(CATALOG["classicplus-072"]?.base.text).toMatch(/^Nerf a permanent /);
   });
 

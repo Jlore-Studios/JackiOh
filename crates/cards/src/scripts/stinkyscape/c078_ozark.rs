@@ -100,7 +100,7 @@ mod tests {
         assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
         // The Miner's Activate came with it.
         s.activate(host.as_str(), json!({ "ability": "mine" }));
-        assert_eq!(resource_tray_of(s.state(), P1).len(), 1);
+        assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
         // R60: the pick replays from the seed.
         let (again, other) = prospected(false, "s078");
         assert_eq!(miners_in(&again, &other), miners);

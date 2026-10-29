@@ -130,9 +130,6 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
   // Issue #1840 (Resources and Credits).
-  resourceGained: 250,
-  resourceSold: 700,
-  resourceDiscarded: 250,
   marketCreditsChanged: 200,
   // Issue #1853 (the Marketplace, R1853003).
   marketBought: 250,
@@ -264,10 +261,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
-  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
-  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
-  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
-  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
   // Issue #1853 (the Marketplace, R1853003).
   marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
@@ -358,7 +352,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(95);
+    expect(rows).toHaveLength(92);
   });
 
   it("gives every row an animation name and a testid template", () => {
