@@ -87,7 +87,7 @@ const PIECE_WORDS: readonly (readonly [string, string])[] = [
 
 /** The fleet's cards that print no Starship Piece: the hull waiting to launch and the base. */
 const FLEET_NAMES: readonly string[] = ["dormant starship", "megabase"];
-const FIGHTER_NAMES: readonly string[] = ["falcon", "startos", "yuma", "golem", "honey badger"];
+const FIGHTER_NAMES: readonly string[] = ["falcon", "stratos", "yuma", "golem", "honey badger"];
 const BATTLESHIP_NAMES: readonly string[] = ["paragon-x", "halo", "prototype-x2", "phalanx", "galaxy"];
 const MINER_NAMES: readonly string[] = ["miner", "ozark", "orca", "galaxy"];
 

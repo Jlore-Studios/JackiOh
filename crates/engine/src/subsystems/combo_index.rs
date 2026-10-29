@@ -21,6 +21,7 @@ use crate::effects::damage::damage;
 use crate::effects::move_::exile;
 use crate::effects::radiant::set_radiant_random;
 use crate::prelude::json_as;
+use crate::query::cards_played_this_turn;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CounterKind, GameEvent, PlayerId, Selection, opponent_of};
@@ -96,11 +97,6 @@ pub fn is_terminal_grade(grade: i32) -> bool {
     clamp_grade(grade) >= LAST_GRADE
 }
 
-/// The bookkeeping §10.5 step 4 keeps; `start_turn` clears it, so it is this turn's count alone.
-pub fn plays_this_turn(state: &GameState, player: PlayerId) -> i32 {
-    state.players[player].turn_log.cards_played
-}
-
 /// The cards this player played this turn that a copy can still be made from. `turnLog.playedIds` holds
 /// instance ids (§10.1), so a card that has ceased to exist (a unit token that left the field, R11) is
 /// dropped from the pool rather than making the E step fizzle at random (R86, in R60's shape).
@@ -129,7 +125,7 @@ pub fn grade_rises(state: &GameState, instance: &CardInstance) -> bool {
     if is_terminal_grade(grade) {
         return false;
     }
-    plays_this_turn(state, instance.controller) >= grade
+    cards_played_this_turn(state, instance.controller) >= grade
 }
 
 /// Writes the grade on the card in the state, by id. The event names the card even when it is nowhere now.

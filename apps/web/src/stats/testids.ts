@@ -27,6 +27,10 @@ export const statsTestid = {
   /** R2089000: the Created cards' section, below the cards table, and its table. */
   createdPanel: "stats-created-panel",
   createdTable: "stats-created-table",
+  /** R2370000: the Cards tab's Show tokens toggle, and the Tokens section it shows and its table. */
+  tokensToggle: "stats-tokens-toggle",
+  tokensPanel: "stats-tokens-panel",
+  tokensTable: "stats-tokens-table",
   viewTable: "stats-view-table",
   viewGrid: "stats-view-grid",
   sortSelect: "stats-sort-select",

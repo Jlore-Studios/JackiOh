@@ -1722,10 +1722,6 @@ impl DuosActor {
         engine::view(self.shared.pinned, &self.lock().state, seat)
     }
 
-    pub fn legal_for(&self, seat: DuosSeat) -> Vec<DuosActionBody> {
-        engine::legal(self.shared.pinned, &self.lock().state, seat)
-    }
-
     /// `duos_hash` of the live state, for a rebuild's check; never sent to a socket.
     pub fn hash(&self) -> String {
         engine::hash(&self.lock().state)
