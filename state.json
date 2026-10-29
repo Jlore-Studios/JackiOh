@@ -8062,7 +8062,7 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T00:15:26Z",
+    "at": "2026-10-29T00:22:50Z",
     "notes": [
       "CI on #2217: #2217: queued a CI fix"
     ],
@@ -8770,7 +8770,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T00:15:26Z",
+  "loop_tick": "2026-10-29T00:22:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
