@@ -7,7 +7,7 @@ import "./kbd.css";
 export const KBD_TESTID = "kbd";
 export const SHORTCUT_HINT_TESTID = "shortcut-hint";
 
-/** Where a sentence puts its shortcuts: `t("Press {keys} to inspect")`. */
+/** Where a sentence puts its shortcuts: `t("Focus the card, then press {keys} to inspect")`. */
 const KEYS_SLOT = "{keys}";
 
 /** Whether hints show now, kept current by the media query, and whether to write ⌘ for Ctrl. */

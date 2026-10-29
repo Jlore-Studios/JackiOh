@@ -105,8 +105,8 @@ opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation
 (⌘⇧Z on an Apple device, Ctrl+Shift+Z elsewhere, by user agent), `ariaKeyshortcuts`
 ("Control+Z Meta+Z") and `shortcutTitle` (a tooltip's "Undo (Ctrl+Z)"), with `touchOnly` and
 `subscribeTouchOnly` for `TOUCH_ONLY_QUERY`. `shortcuts/Kbd.tsx` draws them: `useShortcutHints`,
-`Kbd` (one keycap) and `ShortcutHint` (a sentence around some, `t("Press {keys} to inspect")`).
-They show in the hover preview of a card (`keyHint` on `useInspectTrigger`, "Press I to inspect"),
+`Kbd` (one keycap) and `ShortcutHint` (a sentence around some, `t("Focus the card, then press {keys} to inspect")`).
+They show in the hover preview of a card (`keyHint` on `useInspectTrigger`, "Focus the card, then press I to inspect"),
 in the Undo, Redo and replay step and turn buttons' tooltips, in the command menu (Enter on the
 selected entry, a legend of its keys) and in the site footer (Ctrl/⌘+K). A touch-only device
 (`(hover: none) and (pointer: coarse)`) shows no hint, though `aria-keyshortcuts` stays. A widget's

@@ -14,8 +14,9 @@
 // on the face's left whichever side of the anchor the preview opens on. A Summit in a game prints
 // its next Ascent line here too, from the level its view carries (R280).
 //
-// R2126000: a card whose trigger names a key (`keyHint`, "I") has it said under the face, "Press I to
-// inspect", on a keyboard device; the face alone stays the group's last child otherwise.
+// R2126000: a card whose trigger names a key (`keyHint`, "I") has it said under the face, "Focus the
+// card, then press I to inspect" (the key works only from the focused trigger, never a hovered one), on a
+// keyboard device; the face alone stays the group's last child otherwise.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
@@ -119,7 +120,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
         ) : (
           <div className="inspect-face-column">
             {faceBox}
-            <ShortcutHint keys={[keyHint]} words={t("Press {keys} to inspect")} />
+            <ShortcutHint keys={[keyHint]} words={t("Focus the card, then press {keys} to inspect")} />
           </div>
         )}
       </div>

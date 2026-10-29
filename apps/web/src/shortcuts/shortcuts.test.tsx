@@ -10,7 +10,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ts from "typescript";
 
-import { INSPECT_HOVER, closeInspect } from "../cards/index.ts";
+import { INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { testid } from "../game/contract.ts";
 import { ReplayToolbar, replayTestid } from "../replay/ReplayToolbar.tsx";
@@ -57,6 +57,8 @@ function toolbar(): void {
   );
 }
 
+let enemyId = "";
+
 /** Hovers the first opponent unit on a full board until its preview opens, and returns the preview. */
 function hoverPreview(): HTMLElement {
   vi.useFakeTimers();
@@ -64,6 +66,7 @@ function hoverPreview(): HTMLElement {
   renderBoard(view);
   const enemy = view.opponent.units.find((unit) => unit !== null);
   if (enemy === null || enemy === undefined) throw new Error("no enemy unit");
+  enemyId = enemy.instanceId;
   const el = screen.getByTestId(testid.card(enemy.instanceId));
   expect(el.getAttribute("aria-keyshortcuts")).toBe("I");
   fireEvent.pointerEnter(el, { pointerType: "mouse" });
@@ -129,7 +132,17 @@ describe("R2126000 shortcut hints", () => {
     const preview = hoverPreview();
     const inside = within(preview);
     expect(inside.getByTestId(KBD_TESTID).textContent).toBe("I");
-    expect(inside.getByTestId(SHORTCUT_HINT_TESTID).textContent).toBe("Press I to inspect");
+    expect(inside.getByTestId(SHORTCUT_HINT_TESTID).textContent).toBe("Focus the card, then press I to inspect");
+  });
+
+  it("R2126000 the hint's key opens the sheet from the focused card, and does nothing from the hovered one", () => {
+    const preview = hoverPreview();
+    expect(preview).toBeTruthy();
+    // No window handler answers I, so the hint asks for focus: a hovered card alone ignores the key.
+    fireEvent.keyDown(document.body, { key: "i" });
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+    fireEvent.keyDown(screen.getByTestId(testid.card(enemyId)), { key: "i" });
+    expect(screen.getByTestId(INSPECT_SHEET)).toBeTruthy();
   });
 
   it("R2126000 the site footer says Ctrl/Cmd+K opens the command menu", () => {
@@ -143,7 +156,7 @@ describe("R2126000 shortcut hints", () => {
     render(
       <>
         <Kbd keys={SHORTCUTS.commandMenu} />
-        <ShortcutHint keys={[SHORTCUTS.inspect]} words="Press {keys} to inspect" />
+        <ShortcutHint keys={[SHORTCUTS.inspect]} words="Focus the card, then press {keys} to inspect" />
       </>,
     );
     expect(screen.queryByTestId(KBD_TESTID)).toBeNull();
