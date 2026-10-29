@@ -7773,10 +7773,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T14:54:54Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
