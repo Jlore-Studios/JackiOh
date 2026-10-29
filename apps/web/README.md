@@ -575,14 +575,14 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- Against the Easy AI a free game's snapshot adds `lethal: true` while the human has a sure win this
-  turn by what they can see (R2102000): the core asks `lethalHint(state, human, deadlineMs)`, which the
-  Rust AI answers from the human's own redaction, so the AI's hidden cards never change it, under a
-  wall-clock cap of its own (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). Medium, Hard and a
-  lesson never ask. The route passes it to `Game`'s `lethalHint` while the Lethal hint setting is
-  on, and the board shows it (`data-lethal-hint` on the game, which outlines the enemy hero and End
-  turn, and the `lethal-hint` line "You have lethal") once it shows the newest view, never on a
-  replay. Online and hotseat boards never set it.
+- In every game against the AI (each tier, a sandbox game, custom cards, a lesson) the snapshot adds
+  `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
+  the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
+  redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
+  (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). The route passes it to `Game`'s `lethalHint`
+  while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
+  outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
+  the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
 - A free game in progress survives a reload (R668). After every answer the core writes its save
