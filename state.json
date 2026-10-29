@@ -15486,14 +15486,18 @@
         {
           "at": "2026-10-29T12:27:08Z",
           "minutes": 65.2
+        },
+        {
+          "at": "2026-10-29T12:36:12Z",
+          "minutes": 53.6
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T12:59:00Z",
-          "utilization": 0.17
+          "utilization": 0.18
         },
-        "observed_at": "2026-10-29T12:27:08Z",
+        "observed_at": "2026-10-29T12:36:12Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.6
