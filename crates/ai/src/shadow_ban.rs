@@ -106,6 +106,8 @@
 // Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 60 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 23 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-29-2.md
 // Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 10 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 10 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-29-3.md
+// Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 60 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 33 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -1061,96 +1063,108 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 3.1",
     ),
     (
-        "traininggrounds-006",
-        "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 8.8",
+        "traininggrounds-001",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 23.2",
+    ),
+    (
+        "traininggrounds-007",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, never played",
     ),
     (
         "traininggrounds-009",
-        "at risk: easy: pass 1 affordable on 6 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 23.1",
+    ),
+    (
+        "traininggrounds-012",
+        "at risk: hard: pass 1 affordable on 14 turns over 8 games, never played",
     ),
     (
         "traininggrounds-014",
         "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
     ),
     (
-        "traininggrounds-016",
-        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 35.9",
-    ),
-    (
-        "traininggrounds-017",
-        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 14.2",
-    ),
-    (
         "traininggrounds-019",
-        "at risk: easy: pass 1 affordable on 2 turns over 8 games, played 1 time(s), mean evaluate change -25.8",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, never played",
     ),
     (
-        "traininggrounds-021",
-        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 9.3",
+        "traininggrounds-020",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, never played",
+    ),
+    (
+        "traininggrounds-024",
+        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
     ),
     (
         "traininggrounds-025",
-        "at risk: easy: pass 1 affordable on 18 turns over 8 games, never played; hard: pass 1 affordable on 16 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 16 turns over 8 games, never played; hard: pass 1 affordable on 14 turns over 8 games, never played",
     ),
     (
         "traininggrounds-026",
-        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+    ),
+    (
+        "traininggrounds-027",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, never played",
     ),
     (
         "traininggrounds-029",
-        "at risk: hard: pass 1 affordable on 5 turns over 8 games, never played",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, never played",
     ),
     (
         "traininggrounds-030",
-        "at risk: hard: pass 1 affordable on 12 turns over 8 games, never played",
+        "at risk: hard: pass 1 affordable on 11 turns over 8 games, never played",
     ),
     (
         "traininggrounds-031",
-        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
-    ),
-    (
-        "traininggrounds-033",
-        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 2.0; hard: pass 1 affordable on 18 turns over 8 games, never played",
     ),
     (
         "traininggrounds-035",
-        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
+        "at risk: easy: pass 1 affordable on 18 turns over 8 games, never played; hard: pass 1 affordable on 8 turns over 8 games, never played",
     ),
     (
         "traininggrounds-036",
-        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.7",
+        "at risk: easy: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.7; hard: pass 1 affordable on 4 turns over 8 games, never played",
     ),
     (
         "traininggrounds-037",
-        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.0; hard: pass 1 affordable on 9 turns over 8 games, never played",
     ),
     (
-        "traininggrounds-041",
-        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+        "traininggrounds-038",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 25.3",
+    ),
+    (
+        "traininggrounds-046",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 28.6",
+    ),
+    (
+        "traininggrounds-049",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -1.9",
     ),
     (
         "traininggrounds-050",
-        "at risk: hard: pass 1 affordable on 17 turns over 8 games, never played",
-    ),
-    (
-        "traininggrounds-051",
-        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 5.3; hard: pass 1 affordable on 11 turns over 8 games, never played",
     ),
     (
         "traininggrounds-053",
-        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 16.6",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 18.7",
+    ),
+    (
+        "traininggrounds-054",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, never played",
     ),
     (
         "traininggrounds-055",
-        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 10 turns over 8 games, never played; hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change -1.8",
     ),
     (
         "traininggrounds-059",
-        "at risk: hard: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change 7.1",
+        "at risk: hard: pass 1 affordable on 13 turns over 8 games, played 1 time(s)",
     ),
     (
         "traininggrounds-060",
-        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
 ];
 
