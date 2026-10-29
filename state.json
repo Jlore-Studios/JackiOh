@@ -7869,6 +7869,7 @@
     "2340": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-29T12:29:19Z",
