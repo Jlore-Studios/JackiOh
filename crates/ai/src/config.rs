@@ -104,9 +104,9 @@ pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
-    /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
-    /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
-    /// zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
+    /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
+    /// it has one (R2203001) (candidates.rs `placement_key`: what stands beside the lane or the
+    /// board's edge, and in the lane's four zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
     /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
     /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read

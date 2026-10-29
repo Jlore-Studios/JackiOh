@@ -18,7 +18,7 @@
 use crate::ownership::readers_where_it_lies;
 use crate::script::{ConditionContext, ConditionZone};
 use crate::state::{CardInstance, GameState, find_instance};
-use crate::wire::{CardType, PlayerId, PreviewValue, Row, Zone};
+use crate::wire::{CardType, PlayerId, PreviewValue, Row, TallyView, Zone};
 
 /// §10.8: "traps show as unknown, Field Spells are public". A backrow Trap or Field Trap is readable
 /// by its current controller only until it flips face-up, which is what R33 keys on `controller`.
@@ -119,4 +119,45 @@ pub fn preview_of(
         })
         .collect();
     if copied.is_empty() { None } else { Some(copied) }
+}
+
+/// R2321000, §10.8: the counts the cards acting on the field keep on `unit` (`Script.tallies`), as
+/// `viewer` sees them: each from a card the viewer may read where it lies (`may_preview`, so a
+/// face-down card's count stays with its controller), asked as its own preview is, in R68's order.
+/// `None` for none.
+pub fn tallies_on(state: &GameState, unit: &CardInstance, viewer: PlayerId) -> Option<Vec<TallyView>> {
+    let holders = crate::triggers::field_holders_where(state, |card| {
+        crate::subsystems::copied_text::running_script_of(state, card)
+            .tallies
+            .is_some()
+            && may_preview(state, card, viewer, ConditionZone::Field)
+    });
+    let tallies: Vec<TallyView> = holders
+        .iter()
+        .flat_map(|holder| {
+            let card = &holder.card;
+            let script = crate::subsystems::copied_text::running_script_of(state, card);
+            let face = crate::subsystems::copied_text::text_face_of(state, card);
+            let counts = script.tallies.as_ref().map_or_else(Vec::new, |hook| {
+                hook(ConditionContext {
+                    state,
+                    self_: &face,
+                    controller: card.controller,
+                    radiant: face.radiant,
+                    zone: ConditionZone::Field,
+                    your_turn: state.active == card.controller,
+                })
+            });
+            counts
+                .into_iter()
+                .filter(|tally| tally.instance_id == unit.id)
+                .map(|tally| TallyView {
+                    def_id: card.def_id.clone(),
+                    value: tally.value,
+                    goal: tally.goal,
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    if tallies.is_empty() { None } else { Some(tallies) }
 }
