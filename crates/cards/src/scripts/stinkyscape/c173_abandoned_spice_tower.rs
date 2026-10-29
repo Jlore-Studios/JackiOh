@@ -109,7 +109,7 @@ mod tests {
         let added = spices(&s);
         assert_eq!(added.len(), 3);
         assert!(added.iter().all(|card| !card.radiant));
-        assert!(s.pile(P1, "tray").is_empty(), "hand cards, never Resources");
+        assert!(crate::resources_in_hand(&s, P1).is_empty(), "hand cards, never Resources");
     }
 
     #[test]

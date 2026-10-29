@@ -928,7 +928,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `jackioh_engine`, `loadStore`/`STORE_EXPORT_CANDIDATES`/`StoreUnavailableError` → nothing.
 - **Router**: TS's matcher, in TS's order; a wrong method on a known path answers **404**
   `not_found` "method not allowed for this path"; preflight `OPTIONS` answered by the CORS layer
-  first (`api/cors.rs`); bodies over 65,536 bytes are 400; a body that is not a JSON object is 400.
+  first (`api/cors.rs`); bodies over `API_MAX_BODY_BYTES` (131,072 bytes since issue #2204) are 400; a body that is not a JSON object is 400.
 - **WebSocket** at `/ws/match` on the same port. The token comes from an offered `jackioh.bearer.`
   subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when none is offered,
   for the previous day's client); the unused `Authorization` path is dropped, and only `jackioh.v1`
@@ -1247,3 +1247,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
 - **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` rewrote those alone.
+- **§6.1 / §6.6, counts kept on a unit (#2321, R2321000):** `Script` gains `tallies: Option<TallyHook>`, a pure read of `ConditionContext` returning `Vec<UnitTally>` (`{ instance_id, value, goal }`), combined across a Fuse's ingredients in order as `preview` is; `UnitView` carries `tallies: Option<Vec<TallyView>>` (`{ defId, value, goal }`, `preview::tallies_on`), absent when no card counts the unit, so no golden hash moves for a game without one.

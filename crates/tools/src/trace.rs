@@ -18,12 +18,12 @@ use anyhow::Result;
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AI_TUNING_SERIES, MatchHooks, NextSwing, evaluate, game_config,
-    play_match,
+    play_match, subject_seat_of,
 };
 use jackioh_engine::{ActionBody, GameState, PLAYER_IDS, Phase, PlayerId};
 
 use crate::board::{EVAL_DECIMALS, board, describe, hand_names};
-use crate::gate::{parse_matchup, subject_seat_of};
+use crate::gate::parse_matchup;
 use crate::sweep::to_fixed;
 
 /// `cargo jackioh trace …`.

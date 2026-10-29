@@ -42,6 +42,9 @@
 // carries the marks its view entry lists (R33: the player who cannot read the card still sees it is
 // marked); the opponent's hand of backs carries none.
 //
+// R2321000: a unit the view says a card on the field counts (`UnitView.tallies`, Level Up!'s attacks)
+// wears a pill per count, "▲ 2/3", named by the keeping card (cards/Tallies.tsx).
+//
 // R1295000: on a board that wears cosmetics (game/wearer.ts) the viewer's own card, by its owner,
 // wears the device's card cosmetics: its face is `worn`. A stolen unit keeps its owner's look; a
 // card in the resolving strip, which names no owner, wears the defaults. R1655000: it wears the
@@ -84,11 +87,12 @@ import {
   type InspectSubject,
 } from "../cards/index.ts";
 import CardMarks from "../cards/CardMarks.tsx";
+import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
 import { TheirCopy } from "../cards/loadouts.ts";
 import { marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
+import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
@@ -97,6 +101,7 @@ import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlig
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 
 import "./facedown.css";
 import "./countered.css";
@@ -285,6 +290,7 @@ export default function Card(props: CardProps): ReactElement {
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
   const fieldPower = useFieldPower(card?.instanceId);
   const copied = useCopiedDef(card);
+  const tallies = useTallies(unit);
   const settings = useCardSettings();
   // The preview opens only while the panel's "Hover previews" is on too (useInspectTrigger.tsx).
   const panelHover = useSetting("hoverPreviews");
@@ -308,6 +314,7 @@ export default function Card(props: CardProps): ReactElement {
           ...(props.type === undefined ? {} : { type: props.type }),
           ...(fieldPower === undefined ? {} : { fieldPower }),
           ...(copied === undefined ? {} : { copied }),
+          ...(tallies.length === 0 ? {} : { tallies }),
         });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
@@ -344,7 +351,12 @@ export default function Card(props: CardProps): ReactElement {
           }
         : null;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold, showLoc: false });
+  const inspect = useInspectTrigger(subject, {
+    prefer: form === "full" ? "above" : "beside",
+    touchHold: props.touchHold,
+    showLoc: false,
+    keyHint: SHORTCUTS.inspect,
+  });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
@@ -504,9 +516,10 @@ export default function Card(props: CardProps): ReactElement {
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
-      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
-      // It is the root's only inline style; the faces put theirs on inner elements.
-      style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
+      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale is the lane's `--def-scale`
+      // (board.css): 1 where a lane is wider than a row is tall, less on a phone, so the turned card
+      // stays inside its lane. It is the root's only inline style; the faces put theirs on inner elements.
+      style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
@@ -525,6 +538,8 @@ export default function Card(props: CardProps): ReactElement {
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
       <CardMarks marks={marks} instanceId={card.instanceId} />
+      {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
+      <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
         // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
         // cup) as well as colour, with the words in a tooltip, the inspect note and for a screen

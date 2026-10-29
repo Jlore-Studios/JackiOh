@@ -50,14 +50,7 @@ use crate::wire::{
     Winner, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
-use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
-
-/// The card as it stands in the state now, by id; the copy itself when it is nowhere.
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone())
-}
+use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
 /// Every unit on the field: the card that acts in each unit zone, the top of its pile (§3.2).
 ///
@@ -186,7 +179,7 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             // same turn finds none left to take). R347 keeps Taunt off a unit while it is Indestructible,
             // so there is none here to report; the stamp still matters if it stops being Indestructible
             // before the turn ends (a Vanilla).
-            let now = live(sink.state, &unit);
+            let now = live_or(sink.state, &unit);
             let had_taunt = has_keyword(
                 &crate::layers::unit_view(sink.state, &now).keywords,
                 KeywordKind::Taunt,
@@ -223,14 +216,16 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor),
 /// every Unit on either side in Defense Position switches to Attack Position, active player's first
 /// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
-/// exertion is spent; `positionSwitched` reports it.
+/// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
+/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it.
 fn leave_defense(sink: &mut EngineSink<'_>) {
-    if !crate::restrictions::defense_barred(sink.state) {
-        return;
-    }
+    let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
         for unit in units_of(sink.state, player) {
             if unit.position != Some(Position::Def) {
+                continue;
+            }
+            if !barred && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible) {
                 continue;
             }
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {
@@ -773,7 +768,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     let read: Vec<ReadCard> = dying
         .iter()
         .map(|card| {
-            let unit = live(sink.state, card);
+            let unit = live_or(sink.state, card);
             let view = crate::layers::unit_view(sink.state, &unit);
             ReadCard {
                 reborn: has_keyword(&view.keywords, KeywordKind::Reborn),
@@ -1137,9 +1132,9 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         // `destroyed` (R461, R1124's shape). Without such an aura every card is collected, as before.
         let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
             .into_iter()
-            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live(sink.state, card)));
+            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live_or(sink.state, card)));
         for card in &exiled {
-            let card = live(sink.state, card);
+            let card = live_or(sink.state, card);
             crate::zones::exile_to_pile(sink, card);
         }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);

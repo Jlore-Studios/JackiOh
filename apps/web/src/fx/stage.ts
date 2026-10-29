@@ -93,13 +93,14 @@ function shotCues(look: FlavorLook, attacker: string, target: string, c: Ctx): F
 
 function stageOf(event: GameEvent, c: Ctx): FxCue[] {
   const { entry, view, D } = c;
-  const hold = (from: FxAnchor | null, to: string, landMs: number): FxCue => ({
+  const hold = (from: FxAnchor | null, to: string, landMs: number, set = false): FxCue => ({
     kind: "hold",
     from,
     to: tid(to),
     delayMs: 0,
     landMs,
     durationMs: FX_HOLD_MAX_MS,
+    ...(set ? { set: true as const } : {}),
   });
   const conceal = (id: string, mode: "now" | "after"): FxCue => ({
     kind: "conceal",
@@ -119,6 +120,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
     case "summoned": {
       const zone = targetFor(event, view);
       if (zone === null) return [];
+      // #2111, R2111000: whatever lands in a backrow zone is set, not slammed.
+      const set = event.row === "backrow";
       const played = entry.events.find(
         (e): e is Extract<GameEvent, { type: "cardPlayed" }> => e.type === "cardPlayed" && e.instanceId === event.instanceId,
       );
@@ -126,20 +129,20 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const landMs = wait + frac(FX_SLAM_AT, D - wait);
       // R502: a card cast as it was drawn never was in a hand, so it comes out of its Deck pile.
       if (played !== undefined && c.env.memory.castOnDraw(played)) {
-        return [hold(tid(animTestid.library(sideOf(view, played.player))), zone, landMs)];
+        return [hold(tid(animTestid.library(sideOf(view, played.player))), zone, landMs, set)];
       }
       if (played !== undefined && event.instanceId !== "hidden") {
         // R227: a card set face-down took a fresh id, and its hand card still has the old one.
         const inHand = locateInstance(view, event.formerId ?? event.instanceId);
         if (inHand !== null && inHand.startsWith("hand-card-")) {
-          return [hold(tid(inHand), zone, landMs), conceal(inHand, "now")];
+          return [hold(tid(inHand), zone, landMs, set), conceal(inHand, "now")];
         }
       }
       if (played !== undefined && sideOf(view, played.player) === "opponent") {
         // Out of a hand the viewer only sees as backs: a back flies to the zone (R202).
-        return [hold(tid(animTestid.hand("opponent")), zone, landMs)];
+        return [hold(tid(animTestid.hand("opponent")), zone, landMs, set)];
       }
-      return [hold(null, zone, landMs)];
+      return [hold(null, zone, landMs, set)];
     }
     case "destroyed":
     case "exiled":

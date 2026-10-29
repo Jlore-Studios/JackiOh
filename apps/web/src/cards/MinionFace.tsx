@@ -166,7 +166,15 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
     >
       <span className="cf-scale">
         <span className="cf-portrait">
-          <CardArt defId={face.defId} name={face.englishName ?? face.name} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
+          <CardArt
+            defId={face.defId}
+            name={face.englishName ?? face.name}
+            radiant={face.radiant}
+            tags={face.tags}
+            type={face.type}
+            shape="oval"
+            starship={face.starship}
+          />
         </span>
 
         <KeywordFx plan={plan} />

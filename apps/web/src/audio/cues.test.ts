@@ -236,10 +236,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   // Issue #1838 (Tradable, R1838001).
   traded: { type: "traded", player: "p1" },
-  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
-  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
-  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
-  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
   // Issue #1853 (the Marketplace, R1853003).
   marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
@@ -348,9 +345,6 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   autopilotEngaged: "notify",
   awakened: "radiant",
   traded: "whoosh",
-  resourceGained: "draw",
-  resourceSold: "burn",
-  resourceDiscarded: "draw",
   marketCreditsChanged: "uiClick",
   marketBought: "draw",
   marketSold: "uiClick",
@@ -392,10 +386,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "awakened",
   // R1838001: a Trade's whoosh, whatever the seat.
   "traded",
-  // R1840000–R1840005: the tray's and the Credits' sounds, whatever the seat.
-  "resourceGained",
-  "resourceSold",
-  "resourceDiscarded",
+  // R1840005: the Credits' sound, whatever the seat.
   "marketCreditsChanged",
   // R1853003: a purchase's and a sale's sounds, whatever the seat.
   "marketBought",

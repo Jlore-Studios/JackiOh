@@ -54,13 +54,20 @@ export function isFullArt(englishName: string): boolean {
 }
 
 /**
- * Whether `face`'s full layout prints full art: a hero portrait's card while the Full-art cards
- * setting is on. A compact face and a board minion never do (CardFace, MinionFace). R2195001: a
- * Training Grounds snapshot shares its Core card's name but not its full art, a cosmetic of that card's
- * own (R1313000), so it prints its normal face.
+ * Whether the card `defId`, named `englishName` in English, has a full-art face at all: a hero
+ * portrait's card, never the Glitch. R2195001: a Training Grounds snapshot shares its Core card's name
+ * but not its full art, a cosmetic of that card's own (R1313000), so it has none.
+ */
+export function isFullArtCard(defId: string, englishName: string): boolean {
+  return !isGlitch(defId) && snapshotArtOf(defId) === null && isFullArt(englishName);
+}
+
+/**
+ * Whether `face`'s full layout prints full art: a full-art card's (`isFullArtCard`) while the Full-art
+ * cards setting is on. A compact face and a board minion never do (CardFace, MinionFace).
  */
 export function showsFullArt(face: FaceModel, fullArtOn: boolean = readCardSettings().fullArt): boolean {
-  return fullArtOn && !isGlitch(face.defId) && snapshotArtOf(face.defId) === null && isFullArt(face.englishName ?? face.name);
+  return fullArtOn && isFullArtCard(face.defId, face.englishName ?? face.name);
 }
 
 /** R1108000: whether the faces below it may print full art; false on a tutorial lesson's board. */

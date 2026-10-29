@@ -35,7 +35,6 @@
 //! SIDE SETUP  (what `p1`/`p2` accept)
 //! ---------------------------------------------------------------------------------------------
 //!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
-//!   tray                              (string | { def?, defId?, radiant? })[] — R1840000's Resources
 //!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
 //!                                                 position?, damage?, counters?, faceUp?,
 //!                                                 statsOverride?, costMod?, costOverride?,
@@ -82,7 +81,7 @@
 //!      the ACTIVE player first, then the opponent, and within a side:
 //!      hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
 //!      backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
-//!      resolving → Resource tray (R1840000).
+//!      resolving.
 //!      A method that needs the card somewhere particular narrows the search to that place first:
 //!      `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
 //!      naming the string and listing what was there instead. Holding several copies of one def?
@@ -149,7 +148,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::config::{BACKROW_ZONES, DECK_SIZE, UNIT_ZONES};
+use crate::config::DECK_SIZE;
 use crate::layers::{UnitView, unit_view};
 use crate::own_library::show_to_owner;
 use crate::rng::Rng;
@@ -163,7 +162,7 @@ use crate::wire::{
     PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::{
-    LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot,
+    LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, row_size,
 };
 
 pub const DEFAULT_SEED: &str = "jackioh-harness";
@@ -576,9 +575,6 @@ pub struct SideSetup {
     pub graveyard: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub exile: Option<Vec<PileSetup>>,
-    /// R1840000: the Resources in the side's Resource tray, oldest first.
-    #[serde(default)]
-    pub tray: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub health: Option<i32>,
     #[serde(default)]
@@ -754,7 +750,6 @@ fn side_order(state: &GameState, player: PlayerId, scope: Where) -> Vec<&CardIns
             .chain(side.exile.iter())
             .chain(side.library.iter())
             .chain(side.resolving.iter())
-            .chain(side.resource_tray.iter().flatten())
             .collect(),
     }
 }
@@ -863,14 +858,6 @@ struct Placement {
     row: Row,
     label: String,
     lane: Option<i32>,
-}
-
-fn row_size_of(row: Row) -> i32 {
-    if row == Row::Units {
-        UNIT_ZONES
-    } else {
-        BACKROW_ZONES
-    }
 }
 
 /// §3.2: a Unit goes in the unit zones and a Field Spell, Trap or Field Trap in the backrow, so the
@@ -1203,7 +1190,7 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
             .iter()
             .map(|&at| (placements[at].lane, placements[at].entry.stack == Some(true)))
             .collect();
-        let lanes = assign_lanes(&entries, row_size_of(row), &format!("{seat}.{}", row.as_str()))?;
+        let lanes = assign_lanes(&entries, row_size(row), &format!("{seat}.{}", row.as_str()))?;
         for (at, &index) in in_row.iter().enumerate() {
             placements[index].lane = lanes.get(at).copied();
         }
@@ -1233,16 +1220,6 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         setup.exile.as_deref().unwrap_or(&[]),
         &format!("{seat}.exile"),
     )?;
-    // R1840000: the tray's Resources, placed as the engine's own gain places one (no sale: the setup
-    // holds what it lists).
-    for (at, entry) in setup.tray.iter().flatten().enumerate() {
-        let at_ = format!("{seat}.tray[{at}]");
-        let def_id = setup_def_id(sink.state, &ref_of(pile_ref(entry), &at_)?, &at_)?;
-        let radiant = matches!(entry, PileSetup::Entry(fields) if fields.radiant == Some(true));
-        let mut card = new_instance(&mut *sink.state, &def_id, player, Zone::Tray { player });
-        card.radiant = radiant;
-        crate::resources::put_in_tray(&mut *sink.state, &mut card);
-    }
     Ok(())
 }
 
@@ -1501,8 +1478,7 @@ impl Scenario {
         ))
     }
 
-    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone", and
-    /// "tray" for a Resource in a Resource tray (R1840000).
+    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone".
     fn locate(&self, id: &str) -> &'static str {
         for player in PLAYER_IDS {
             let side = &self.current.players[player];
@@ -1520,9 +1496,6 @@ impl Scenario {
             }
             if side.resolving.iter().any(|card| card.id == id) {
                 return "resolving";
-            }
-            if side.resource_tray.iter().flatten().any(|card| card.id == id) {
-                return "tray";
             }
             if side.units.iter().flatten().flatten().any(|card| card.id == id) {
                 return "field";
@@ -1659,7 +1632,7 @@ impl Scenario {
             } else {
                 Row::Backrow
             });
-            let size = row_size_of(row);
+            let size = row_size(row);
             if lane < 1 || lane > size {
                 panic!(
                     "{what}: zone {lane} is out of range; {} lanes are 1..{size}",
@@ -1908,7 +1881,7 @@ impl Scenario {
             .clone()
     }
 
-    /// `zone`: "hand", "library", "graveyard", "exile" (TS `PileName`) or "tray" (R1840000).
+    /// `zone`: "hand", "library", "graveyard", "exile" (TS `PileName`).
     pub fn pile(&self, player: impl SeatRef, zone: &str) -> Vec<CardInstance> {
         let side = &self.current.players[player.seat_or(self.current.active)];
         match zone {
@@ -1916,17 +1889,14 @@ impl Scenario {
             "library" => side.library.clone(),
             "graveyard" => side.graveyard.clone(),
             "exile" => side.exile.clone(),
-            "tray" => side.resource_tray.clone().unwrap_or_default(),
             other => {
-                panic!(
-                    "pile(): \"{other}\" is not a pile; piles are hand, library, graveyard, exile and tray"
-                )
+                panic!("pile(): \"{other}\" is not a pile; piles are hand, library, graveyard and exile")
             }
         }
     }
 
     fn check_lane(what: &str, row: Row, lane: i32) {
-        let size = row_size_of(row);
+        let size = row_size(row);
         if lane < 1 || lane > size {
             panic!(
                 "{what}(): lane {lane} is out of range; {} lanes are 1..{size}",
@@ -1937,7 +1907,7 @@ impl Scenario {
 
     // --- assertions -----------------------------------------------------------------------------
 
-    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone" (TS `ZoneName`) or "tray".
+    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone" (TS `ZoneName`).
     pub fn expect_in_zone(&mut self, card: impl Into<CardRef>, zone: &str) -> &mut Scenario {
         let id = or_fail(self.ref_id(&card.into(), zone));
         let actual = self.locate(&id);

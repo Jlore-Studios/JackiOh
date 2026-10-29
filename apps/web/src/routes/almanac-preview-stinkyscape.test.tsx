@@ -41,7 +41,7 @@ import { ALMANAC_CHIP_TAGS, DECK_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, FILTER
 import { CARD_POOL, DB_FILTERS, filterSetId, filterTagId, poolCardId } from "../game/deckbuilder/testids.ts";
 import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
 
-/** The shelf renders every card of six sets, so a render here takes longer than vitest's default. */
+/** The shelf renders every card of the shipped sets, so a render here takes longer than vitest's default. */
 const SLOW = 30_000;
 
 const STINKYSCAPE: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.set === "Stinkyscape");
@@ -98,7 +98,11 @@ describe("the Almanac with the Stinkyscape set previewed (R1883000)", () => {
 
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
     expect(chips("Set")).toEqual([...FILTER_SETS]);
-    expect(chips("Set").at(-1)).toBe("Stinkyscape");
+    // Re-pinned for the Training Grounds release (#2204): Stinkyscape's chip is no longer the last, the
+    // newer set's follows it, so the test asserts the chip is there, right after Meditative+'s, as
+    // almanac-preview.test.tsx asserts the Meditative set's.
+    expect(chips("Set")).toContain("Stinkyscape");
+    expect(chips("Set").indexOf("Stinkyscape")).toBe(chips("Set").indexOf("Meditative+") + 1);
   });
 
   it("R1883000 the set's four tags get their chips once it ships: three in the deck builder, War Doctrine only in the almanac", () => {

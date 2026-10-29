@@ -37,7 +37,7 @@
 [data-animating] {
   /* Nothing mid-animation is clickable: the click would race the view swap behind it. */
   pointer-events: none;
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
   will-change: transform, opacity;
 }
@@ -140,7 +140,7 @@
   pointer-events: none;
   animation-name: jk-zone-landing;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -166,7 +166,7 @@
   pointer-events: none;
   animation-name: jk-summon-scale;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -182,6 +182,37 @@
   content: none;
 }
 
+/* --- #2111, R2111000: whatever lands in a backrow zone is laid down as a set --------------- */
+
+/* Laid down, not slammed: a short drop, flat and heavy at 44% (a play's 110 ms wait + 44% of 250 ms
+   = 220 ms, PAIR_OFFSET_MS, where audio/director.ts sounds the thud), no bounce, no flash: it is going
+   out of sight. A Field Spell or Unit landing here is laid down alike, so no motion tells a face-down
+   arrival from a face-up one. The stand-in's twin is fx.css's fx-hold-set. */
+@keyframes jk-trap-set {
+  0% {
+    transform: translateY(-10px) scale(1.04);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  44% {
+    transform: translateY(0) scale(1.03, 0.94);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
+  }
+  72% {
+    transform: translateY(0) scale(0.99, 1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.zone[data-row="backrow"][data-animating="summoned"]::after {
+  animation-name: jk-trap-set;
+}
+
 /* --- attackDeclared: attacker lunges toward the target and back (350 ms) ---------------- */
 
 /* The attacker rears up (lifts toward the viewer and draws back a touch), rushes the target, hits it
@@ -193,7 +224,7 @@
   0% {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
-    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
   }
   24% {
     transform:
@@ -203,7 +234,7 @@
       )
       scale(1.14);
     filter: brightness(1.12);
-    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.7);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
   }
   70% {
     transform:
@@ -221,7 +252,7 @@
       )
       scale(1.03);
     filter: brightness(1.2);
-    animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
+    animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
   }
   100% {
     transform: translate(0, 0) scale(1);
@@ -322,7 +353,7 @@
   pointer-events: none;
   animation-name: jk-number-pop;
   animation-fill-mode: both;
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-duration: calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
@@ -503,7 +534,7 @@
   );
   animation-name: jk-burn-climb;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  animation-timing-function: var(--ease-in);
   animation-fill-mode: both;
 }
 
@@ -669,7 +700,7 @@
 .burn-notice[data-playing="true"] > .burn-tag {
   animation-name: jk-hand-full;
   animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -681,7 +712,7 @@
     calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1)),
     calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-delay: 0s, calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out, ease-in;
+  animation-timing-function: var(--ease-out), var(--ease-in);
   animation-fill-mode: both, forwards;
 }
 
@@ -754,14 +785,14 @@
 .pile[data-animating="fatigue"]::before {
   animation-name: jk-fatigue-dim;
   animation-duration: calc(600ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
 .pile-notice[data-kind="fatigue"][data-playing="true"] > .pile-notice-tag {
   animation-name: jk-fatigue-badge;
   animation-duration: calc(600ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -880,14 +911,14 @@
 .pile-notice[data-kind="libraryFull"][data-playing="true"] > .pile-notice-tag {
   animation-name: jk-library-full-tag;
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
 .pile-notice[data-kind="libraryFull"][data-playing="true"] > .overflow-card {
   animation-name: jk-overflow-fizzle;
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -1158,21 +1189,22 @@
 /* --- positionSwitched: rotate 90 deg / back (250 ms) --------------------------------- */
 
 /* Both ends are the card's resting transforms (Card.tsx: ATK has none, DEF is
-   `rotate(90deg) scale(0.72)`), so the view that swaps in when the entry ends shows exactly the last
-   frame and nothing moves again. The board shows the view from before the switch while this plays,
-   so the card's own `data-position` is where it starts from: ATK turns into DEF, DEF back to ATK. */
+   `rotate(90deg) scale(var(--def-scale, 1))`, the lane's scale from board.css), so the view that
+   swaps in when the entry ends shows exactly the last frame and nothing moves again. The board
+   shows the view from before the switch while this plays, so the card's own `data-position` is
+   where it starts from: ATK turns into DEF, DEF back to ATK. */
 @keyframes jk-rotate-def {
   0% {
     transform: rotate(0deg) scale(1);
   }
   100% {
-    transform: rotate(90deg) scale(0.72);
+    transform: rotate(90deg) scale(var(--def-scale, 1));
   }
 }
 
 @keyframes jk-rotate-atk {
   0% {
-    transform: rotate(90deg) scale(0.72);
+    transform: rotate(90deg) scale(var(--def-scale, 1));
   }
   100% {
     transform: rotate(0deg) scale(1);
@@ -1182,7 +1214,7 @@
 [data-animating="positionSwitched"] {
   animation-name: jk-rotate-def;
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-timing-function: var(--ease-out);
 }
 
 [data-animating="positionSwitched"][data-position="DEF"] {
@@ -1205,7 +1237,7 @@
 [data-animating="controlChanged"] {
   animation-name: jk-cross-centre;
   animation-duration: calc(450ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-timing-function: var(--ease-standard);
   z-index: var(--z-result);
 }
 
@@ -1229,7 +1261,7 @@
   pointer-events: none;
   animation-name: jk-zone-landing;
   animation-duration: calc(450ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -1247,7 +1279,7 @@
 [data-animating="rotated"] {
   animation-name: jk-lane-slide;
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
-  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-timing-function: var(--ease-standard);
 }
 
 /* --- swapped: the swapped values cross the centre line together (500 ms) ------------- */
@@ -1332,13 +1364,21 @@
 /* --- trapFired: backrow card flips face-up, holds, then dissolves (700 ms) ----------- */
 
 @keyframes jk-trap-flip {
-  /* The reveal carries the arcane violet of a Secret going off. */
+  /* #2111, R2111000: a beat of anticipation first: still face-down, the card sinks and dims as if
+     drawing breath, then turns fast from 15%. */
   0% {
     transform: rotateY(180deg) scale(1);
     opacity: 1;
     filter: brightness(1);
   }
-  20% {
+  15% {
+    transform: rotateY(180deg) scale(0.94);
+    opacity: 1;
+    filter: brightness(0.8);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  /* The reveal carries the arcane violet of a Secret going off, at 30%: FX_TRAP_BURST_AT. */
+  30% {
     transform: rotateY(0deg) scale(1.12);
     opacity: 1;
     filter: brightness(1.9);
@@ -1373,7 +1413,12 @@
     transform: rotateY(180deg) scale(1);
     filter: brightness(1);
   }
-  20% {
+  15% {
+    transform: rotateY(180deg) scale(0.94);
+    filter: brightness(0.8);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
+  }
+  30% {
     transform: rotateY(0deg) scale(1.12);
     filter: brightness(1.9);
   }
@@ -1407,7 +1452,7 @@
   animation-name: jk-crystal-fill;
   animation-duration: calc(150ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-fill-mode: both;
-  animation-timing-function: ease-out;
+  animation-timing-function: var(--ease-out);
   box-shadow: 0 0 6px 1px color-mix(in srgb, var(--mana) 75%, var(--pal-white));
 }
 

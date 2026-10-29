@@ -5317,6 +5317,514 @@
     "stinkyscape-t-shield-layer-play": {
       "hash": "623fc1cc00d0d9aa",
       "bytes": 11591
+    },
+    "traininggrounds-001-attack": {
+      "hash": "cc89609238c61d59",
+      "bytes": 6599
+    },
+    "traininggrounds-001-death": {
+      "hash": "41f935787d0a7955",
+      "bytes": 12528
+    },
+    "traininggrounds-001-play": {
+      "hash": "d7ac88b81eeeff7a",
+      "bytes": 15048
+    },
+    "traininggrounds-002-attack": {
+      "hash": "6707060980fb4c8d",
+      "bytes": 6931
+    },
+    "traininggrounds-002-death": {
+      "hash": "a0642eb03a70d969",
+      "bytes": 7038
+    },
+    "traininggrounds-002-play": {
+      "hash": "0c519aeda9c6570b",
+      "bytes": 8800
+    },
+    "traininggrounds-003-attack": {
+      "hash": "c7f4cc66fbc052fe",
+      "bytes": 10685
+    },
+    "traininggrounds-003-death": {
+      "hash": "623916a623ff089f",
+      "bytes": 10555
+    },
+    "traininggrounds-003-play": {
+      "hash": "b6d09a9b4eca9057",
+      "bytes": 11791
+    },
+    "traininggrounds-004-attack": {
+      "hash": "24cc4cd680a8116d",
+      "bytes": 4821
+    },
+    "traininggrounds-004-death": {
+      "hash": "718f15a620d412d8",
+      "bytes": 7215
+    },
+    "traininggrounds-004-play": {
+      "hash": "b87ae9b93b3d789c",
+      "bytes": 11550
+    },
+    "traininggrounds-005-attack": {
+      "hash": "9405f4a16b25c1b4",
+      "bytes": 6179
+    },
+    "traininggrounds-005-death": {
+      "hash": "addbb3f6d32ad277",
+      "bytes": 7388
+    },
+    "traininggrounds-005-play": {
+      "hash": "2dbbe8b6f46df275",
+      "bytes": 8401
+    },
+    "traininggrounds-006-attack": {
+      "hash": "0213537d700b0203",
+      "bytes": 3711
+    },
+    "traininggrounds-006-death": {
+      "hash": "093eeb2a6a54ecf8",
+      "bytes": 4038
+    },
+    "traininggrounds-006-play": {
+      "hash": "aa488e5262425ffd",
+      "bytes": 6179
+    },
+    "traininggrounds-007-attack": {
+      "hash": "ed8f310edb8a1f38",
+      "bytes": 4959
+    },
+    "traininggrounds-007-death": {
+      "hash": "0d631ab5c9d80fb8",
+      "bytes": 5144
+    },
+    "traininggrounds-007-play": {
+      "hash": "a05135b58f78f355",
+      "bytes": 6685
+    },
+    "traininggrounds-008-attack": {
+      "hash": "7f01e68e7eac4fb1",
+      "bytes": 7675
+    },
+    "traininggrounds-008-death": {
+      "hash": "aac3eb2de723130f",
+      "bytes": 8897
+    },
+    "traininggrounds-008-play": {
+      "hash": "9af59be9b53a2819",
+      "bytes": 9724
+    },
+    "traininggrounds-009-attack": {
+      "hash": "fc79af47d3ead6ac",
+      "bytes": 3329
+    },
+    "traininggrounds-009-death": {
+      "hash": "3dfb8a15071b3b5a",
+      "bytes": 5824
+    },
+    "traininggrounds-009-play": {
+      "hash": "c2a11be2a2045756",
+      "bytes": 7853
+    },
+    "traininggrounds-010-cast": {
+      "hash": "e104f578f97d1964",
+      "bytes": 6410
+    },
+    "traininggrounds-011-cast": {
+      "hash": "3f0a61a42682ed82",
+      "bytes": 3554
+    },
+    "traininggrounds-012-cast": {
+      "hash": "9bb1457aa5ddc13f",
+      "bytes": 10057
+    },
+    "traininggrounds-013-cast": {
+      "hash": "c5b1c6124505b8a4",
+      "bytes": 4607
+    },
+    "traininggrounds-014-cast": {
+      "hash": "119b2db5ad21fcb6",
+      "bytes": 10127
+    },
+    "traininggrounds-015-cast": {
+      "hash": "84918a4583af30cb",
+      "bytes": 7760
+    },
+    "traininggrounds-016-attack": {
+      "hash": "83539898d7f3b20a",
+      "bytes": 4985
+    },
+    "traininggrounds-016-death": {
+      "hash": "900109b03ffc2394",
+      "bytes": 6259
+    },
+    "traininggrounds-016-play": {
+      "hash": "100e3ebeca19f117",
+      "bytes": 11002
+    },
+    "traininggrounds-017-attack": {
+      "hash": "5ba00884bb4a5338",
+      "bytes": 5868
+    },
+    "traininggrounds-017-death": {
+      "hash": "dda293dcc9fdcab9",
+      "bytes": 6929
+    },
+    "traininggrounds-017-play": {
+      "hash": "8141138963a78f8d",
+      "bytes": 8742
+    },
+    "traininggrounds-018-attack": {
+      "hash": "444fe07f07e4c328",
+      "bytes": 6303
+    },
+    "traininggrounds-018-death": {
+      "hash": "7b3bd345868d79be",
+      "bytes": 6863
+    },
+    "traininggrounds-018-play": {
+      "hash": "4437343180a938d1",
+      "bytes": 10420
+    },
+    "traininggrounds-019-cast": {
+      "hash": "9e9abedb8338d3b5",
+      "bytes": 8011
+    },
+    "traininggrounds-020-cast": {
+      "hash": "5d89d592a2ac8d8c",
+      "bytes": 8876
+    },
+    "traininggrounds-021-attack": {
+      "hash": "3335e048f12da93a",
+      "bytes": 3436
+    },
+    "traininggrounds-021-death": {
+      "hash": "823377a2068b7e1d",
+      "bytes": 5865
+    },
+    "traininggrounds-021-play": {
+      "hash": "f43619587753ac71",
+      "bytes": 7970
+    },
+    "traininggrounds-022-attack": {
+      "hash": "bb87d0b02799d1ed",
+      "bytes": 7508
+    },
+    "traininggrounds-022-death": {
+      "hash": "e87bd140f448cccf",
+      "bytes": 7621
+    },
+    "traininggrounds-022-play": {
+      "hash": "0ff3d9ffbaea3aab",
+      "bytes": 11725
+    },
+    "traininggrounds-023-attack": {
+      "hash": "58b757c9dc5c1d80",
+      "bytes": 6711
+    },
+    "traininggrounds-023-death": {
+      "hash": "41c392d8929d55a7",
+      "bytes": 9504
+    },
+    "traininggrounds-023-play": {
+      "hash": "7692c47525f452c8",
+      "bytes": 11892
+    },
+    "traininggrounds-024-cast": {
+      "hash": "a7864c34c3a3207c",
+      "bytes": 8219
+    },
+    "traininggrounds-025-attack": {
+      "hash": "9017cb806436d677",
+      "bytes": 3152
+    },
+    "traininggrounds-025-death": {
+      "hash": "8d6e3d4bb10cb66a",
+      "bytes": 8934
+    },
+    "traininggrounds-025-play": {
+      "hash": "8ca4c81144ca8e29",
+      "bytes": 10529
+    },
+    "traininggrounds-026-cast": {
+      "hash": "d5380bf5520695c6",
+      "bytes": 13232
+    },
+    "traininggrounds-027-cast": {
+      "hash": "ede326e21fe75ac8",
+      "bytes": 8531
+    },
+    "traininggrounds-028-attack": {
+      "hash": "d36c460efc8138cb",
+      "bytes": 6383
+    },
+    "traininggrounds-028-death": {
+      "hash": "915f278e0b733bd9",
+      "bytes": 7831
+    },
+    "traininggrounds-028-play": {
+      "hash": "858549ff46f7777d",
+      "bytes": 8044
+    },
+    "traininggrounds-029-attack": {
+      "hash": "8cefef94bc23dae0",
+      "bytes": 7682
+    },
+    "traininggrounds-029-death": {
+      "hash": "733f73d724e695c1",
+      "bytes": 9620
+    },
+    "traininggrounds-029-play": {
+      "hash": "7f8f1157eabc18e0",
+      "bytes": 9521
+    },
+    "traininggrounds-030-attack": {
+      "hash": "44164532438e0e9b",
+      "bytes": 2578
+    },
+    "traininggrounds-030-death": {
+      "hash": "7de145c2bb2ed497",
+      "bytes": 5007
+    },
+    "traininggrounds-030-play": {
+      "hash": "2dc96708fb21d2b0",
+      "bytes": 4432
+    },
+    "traininggrounds-031-cast": {
+      "hash": "6501b175a589855e",
+      "bytes": 2673
+    },
+    "traininggrounds-032-attack": {
+      "hash": "11cb85cdc3e7d536",
+      "bytes": 3459
+    },
+    "traininggrounds-032-death": {
+      "hash": "f352533d472ae22b",
+      "bytes": 4274
+    },
+    "traininggrounds-032-play": {
+      "hash": "c56581fae36b319e",
+      "bytes": 5442
+    },
+    "traininggrounds-033-attack": {
+      "hash": "614703d8eda13b80",
+      "bytes": 6777
+    },
+    "traininggrounds-033-death": {
+      "hash": "bcaeddf45ccd57d3",
+      "bytes": 6583
+    },
+    "traininggrounds-033-play": {
+      "hash": "8c0716a6318d1663",
+      "bytes": 8690
+    },
+    "traininggrounds-034-cast": {
+      "hash": "5ada6c3f36738d75",
+      "bytes": 8019
+    },
+    "traininggrounds-035-cast": {
+      "hash": "3fbe99bbdc7085d9",
+      "bytes": 11393
+    },
+    "traininggrounds-036-attack": {
+      "hash": "4c95e6874e0912e6",
+      "bytes": 6264
+    },
+    "traininggrounds-036-death": {
+      "hash": "956280b2614d1144",
+      "bytes": 7905
+    },
+    "traininggrounds-036-play": {
+      "hash": "949937bfb75c92c2",
+      "bytes": 11292
+    },
+    "traininggrounds-037-cast": {
+      "hash": "d4d4f066979fa4cf",
+      "bytes": 13716
+    },
+    "traininggrounds-038-attack": {
+      "hash": "a93d574a95554359",
+      "bytes": 3735
+    },
+    "traininggrounds-038-death": {
+      "hash": "76f7f162bc92a475",
+      "bytes": 4753
+    },
+    "traininggrounds-038-play": {
+      "hash": "6be804828db9114b",
+      "bytes": 9472
+    },
+    "traininggrounds-039-1-attack": {
+      "hash": "05009a1d5191195b",
+      "bytes": 6472
+    },
+    "traininggrounds-039-1-death": {
+      "hash": "b947dff97d6840cc",
+      "bytes": 9027
+    },
+    "traininggrounds-039-1-play": {
+      "hash": "b33fa641f9a425aa",
+      "bytes": 15611
+    },
+    "traininggrounds-039-cast": {
+      "hash": "ea29c5b6fdb1295c",
+      "bytes": 13361
+    },
+    "traininggrounds-040-cast": {
+      "hash": "dce5d0a1c89bf82d",
+      "bytes": 11946
+    },
+    "traininggrounds-041-attack": {
+      "hash": "4b46a92b6b3b1b7d",
+      "bytes": 11256
+    },
+    "traininggrounds-041-death": {
+      "hash": "8941c095e28847eb",
+      "bytes": 12180
+    },
+    "traininggrounds-041-play": {
+      "hash": "b03c3d20cf7e358e",
+      "bytes": 13711
+    },
+    "traininggrounds-042-cast": {
+      "hash": "0797129192a111d1",
+      "bytes": 8347
+    },
+    "traininggrounds-043-attack": {
+      "hash": "b9918389b493a9d4",
+      "bytes": 10865
+    },
+    "traininggrounds-043-death": {
+      "hash": "ed932eb7b95df3f7",
+      "bytes": 11046
+    },
+    "traininggrounds-043-play": {
+      "hash": "fa1c84620e4a15e0",
+      "bytes": 10786
+    },
+    "traininggrounds-044-attack": {
+      "hash": "af68095be43b44e7",
+      "bytes": 7066
+    },
+    "traininggrounds-044-death": {
+      "hash": "4679982c54211b88",
+      "bytes": 6735
+    },
+    "traininggrounds-044-play": {
+      "hash": "f59463c18f54609c",
+      "bytes": 9330
+    },
+    "traininggrounds-045-cast": {
+      "hash": "4a44ec0bdc8f2a96",
+      "bytes": 11373
+    },
+    "traininggrounds-046-cast": {
+      "hash": "36b27b53dafaac7c",
+      "bytes": 9698
+    },
+    "traininggrounds-047-attack": {
+      "hash": "d5d9339d69347e92",
+      "bytes": 9955
+    },
+    "traininggrounds-047-death": {
+      "hash": "f4ddbbed56ed3488",
+      "bytes": 10302
+    },
+    "traininggrounds-047-play": {
+      "hash": "569a0804fbf45f64",
+      "bytes": 14217
+    },
+    "traininggrounds-048-attack": {
+      "hash": "331d54688ace5405",
+      "bytes": 9558
+    },
+    "traininggrounds-048-death": {
+      "hash": "ee6e117e8b27bfa6",
+      "bytes": 9030
+    },
+    "traininggrounds-048-play": {
+      "hash": "21eee3b8affc4daa",
+      "bytes": 14719
+    },
+    "traininggrounds-049-cast": {
+      "hash": "331f6985c4a40a3d",
+      "bytes": 13570
+    },
+    "traininggrounds-050-cast": {
+      "hash": "57a712bb6d6316d0",
+      "bytes": 8485
+    },
+    "traininggrounds-051-attack": {
+      "hash": "9b5def43ad33eaed",
+      "bytes": 7412
+    },
+    "traininggrounds-051-death": {
+      "hash": "de55d39434ff1371",
+      "bytes": 8384
+    },
+    "traininggrounds-051-play": {
+      "hash": "fd50a57a97246346",
+      "bytes": 10236
+    },
+    "traininggrounds-052-cast": {
+      "hash": "9583dd14e8c5b703",
+      "bytes": 9596
+    },
+    "traininggrounds-053-attack": {
+      "hash": "941126c2451199f6",
+      "bytes": 10586
+    },
+    "traininggrounds-053-death": {
+      "hash": "8e1b971bac3d6496",
+      "bytes": 12035
+    },
+    "traininggrounds-053-play": {
+      "hash": "d00b164aa96a590f",
+      "bytes": 12285
+    },
+    "traininggrounds-054-attack": {
+      "hash": "d573a6f4eb6377ec",
+      "bytes": 9491
+    },
+    "traininggrounds-054-death": {
+      "hash": "cb2605cdd58d262e",
+      "bytes": 10070
+    },
+    "traininggrounds-054-play": {
+      "hash": "f4480e6fa57ab5bb",
+      "bytes": 12895
+    },
+    "traininggrounds-055-cast": {
+      "hash": "f0303014ae202f0e",
+      "bytes": 11370
+    },
+    "traininggrounds-056-attack": {
+      "hash": "a8f6128392c302ac",
+      "bytes": 8058
+    },
+    "traininggrounds-056-death": {
+      "hash": "d386ff828a8f8531",
+      "bytes": 9715
+    },
+    "traininggrounds-056-play": {
+      "hash": "b1b5d1ec8103980a",
+      "bytes": 11756
+    },
+    "traininggrounds-057-cast": {
+      "hash": "44a736411e0612a2",
+      "bytes": 9458
+    },
+    "traininggrounds-058-cast": {
+      "hash": "50fd38bdf3f9f1c8",
+      "bytes": 7837
+    },
+    "traininggrounds-059-cast": {
+      "hash": "457baea3676d41b1",
+      "bytes": 7870
+    },
+    "traininggrounds-060-cast": {
+      "hash": "bb33e71edb7c9567",
+      "bytes": 13310
     }
   }
 }

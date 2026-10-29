@@ -14,10 +14,12 @@ import {
   type PlayerView,
   type Rarity,
   type Tag,
+  type UnitView,
 } from "@jackioh/shared";
 
 import { glitchInfo, isGlitch } from "../cards/glitch.ts";
 import type { RolledPower } from "../cards/index.ts";
+import type { NamedTally } from "../cards/tallies.ts";
 
 export type CardInfo = {
   name: string;
@@ -99,6 +101,24 @@ export function useCardInfo(defId: string, radiant: boolean): CardInfo {
   const match = useContext(MatchCardsContext);
   return lookup?.(defId, radiant) ?? lookupFromDefs(match.defs)(defId, radiant) ?? unknownCard(defId);
 }
+
+/**
+ * R2321000: the counts cards on the field keep on a Unit (`UnitView.tallies`), each with the name of
+ * the card keeping it, read off the catalog as `useCardInfo` reads one. None for a card without.
+ */
+export function useTallies(unit: UnitView | null | undefined): readonly NamedTally[] {
+  const lookup = useContext(CatalogContext);
+  const match = useContext(MatchCardsContext);
+  const tallies = unit?.tallies;
+  if (tallies === undefined) return NO_TALLIES;
+  return tallies.map((tally) => ({
+    name: (lookup?.(tally.defId, false) ?? lookupFromDefs(match.defs)(tally.defId, false) ?? unknownCard(tally.defId)).name,
+    value: tally.value,
+    goal: tally.goal,
+  }));
+}
+
+const NO_TALLIES: readonly NamedTally[] = [];
 
 /** B5 E14: the definition of the Spell a copier has the text of (`CardView.copies`), when it copies one. */
 export function useCopiedDef(card: CardView | null | undefined): CardDef | undefined {

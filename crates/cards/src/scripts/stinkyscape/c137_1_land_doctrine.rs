@@ -76,7 +76,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
 
@@ -103,12 +103,12 @@ mod tests {
             .collect()
     }
 
-    /// p1's launched Starship (two Startos, 6/6), a Mr. Vanilla of p1's in lane 3, the Doctrine (Radiant
+    /// p1's launched Starship (two Stratos, 6/6), a Mr. Vanilla of p1's in lane 3, the Doctrine (Radiant
     /// if `radiant`) and a Mr. Vanilla in hand; p2's `enemies` in their unit zones.
     fn launched(seed: &str, radiant: bool, enemies: Value) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STARTOS, "lane": 1 }, { "def": STARTOS, "lane": 2 }]),
+            json!([{ "def": STRATOS, "lane": 1 }, { "def": STRATOS, "lane": 2 }]),
             json!({
                 "hand": [{ "def": ID, "radiant": radiant }, VANILLA],
                 "field": [{ "def": VANILLA, "lane": 3 }],
@@ -189,7 +189,7 @@ mod tests {
     fn r1859007_with_no_launched_starship_only_the_keyword() {
         let (mut s, _ship) = built_starship(
             "r1859007-land-none",
-            json!([{ "def": STARTOS, "lane": 1 }]),
+            json!([{ "def": STRATOS, "lane": 1 }]),
             json!({ "hand": [ID], "field": [{ "def": VANILLA, "lane": 3 }] }),
             json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
         );

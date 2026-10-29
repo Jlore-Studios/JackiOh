@@ -45,12 +45,15 @@ jobs:
     # for a vote on a suggestion (#929): that gate is only a substring, and the handler decides
     # whether the word stood alone on a line. The bot's own comments and labels are skipped by
     # actor. A CI run and a closed bot pull request are handled whoever caused them: the bot's own
-    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot.
+    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A CI run of
+    # the merge queue's (`gh-readonly-queue/main/pr-<n>-<sha>`) is any pull request's; the handler
+    # answers only the bot's own (`events.on_queue_ci`).
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'workflow_run'
         && contains(fromJSON('["failure", "timed_out", "cancelled", "startup_failure"]'), github.event.workflow_run.conclusion)
-        && startsWith(github.event.workflow_run.head_branch, 'bot/'))
+        && (startsWith(github.event.workflow_run.head_branch, 'bot/')
+          || startsWith(github.event.workflow_run.head_branch, 'gh-readonly-queue/')))
       || (github.event_name == 'pull_request_target' && github.event.action == 'closed'
         && contains(github.event.pull_request.labels.*.name, 'bot:pr'))
       || (github.actor != 'jgoetzmann-bot' && github.actor != 'github-actions[bot]' && (

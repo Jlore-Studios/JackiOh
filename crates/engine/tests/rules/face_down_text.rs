@@ -268,6 +268,7 @@ fn resolved(instance: &CardInstance) -> GameEvent {
         arrived_during: None,
         exits_from: None,
         answer: None,
+        on_draw: None,
     }
 }
 

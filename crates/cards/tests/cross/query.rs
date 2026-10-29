@@ -459,7 +459,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     // filter matches `def.type` exactly. Since the release (v0.3.5, R1420) the pool holds §8.8's two:
     // Meditative #64 Traitorous Blood, a (1) Trap, and #68 Catnip, a (1) Field Trap; and since its
     // release (#1884) the Stinkyscape set's six Traps (#22, #135, #138, #139, #144 and #174) and two
-    // Field Traps (#5 and #131).
+    // Field Traps (#5 and #131). Re-pinned for the Training Grounds release (#2204): that set's two
+    // Traps, #13 Explosive Runes and #14 Explosive Trap, and its Field Trap #24 Goliath Situation, all
+    // (1).
     const TRAP_POOL: &[&str] = &[
         "core-018",
         "core-041",
@@ -492,6 +494,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         "stinkyscape-139",
         "stinkyscape-144",
         "stinkyscape-174",
+        "traininggrounds-013",
+        "traininggrounds-014",
+        "traininggrounds-024",
     ];
 
     fn trap_query() -> Vec<&'static CardDef> {
@@ -509,11 +514,12 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     }
 
     #[test]
-    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_classic_plus_22_blood_moon_and_meditative_64_68()
-     {
+    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_and_meditative_64_68()
+    {
         register();
-        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10. The Stinkyscape
-        // set's (1) Cost ones join them from its release (#1884).
+        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10, Classic+ #22 Blood Moon
+        // (2) since #2179. The Stinkyscape set's (1) Cost ones join them from its release (#1884), and the
+        // Training Grounds set's from its own (#2204).
         assert_eq!(
             ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -523,7 +529,6 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-071",
                 "core-096",
                 "classic-063",
-                "classicplus-022",
                 "meditative-064",
                 "meditative-068",
                 "stinkyscape-005",
@@ -531,6 +536,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "stinkyscape-135",
                 "stinkyscape-138",
                 "stinkyscape-144",
+                "traininggrounds-013",
+                "traininggrounds-014",
+                "traininggrounds-024",
             ])
         );
     }
@@ -554,6 +562,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "meditative-068",
                 "stinkyscape-005",
                 "stinkyscape-131",
+                "traininggrounds-024",
             ])
         );
         assert_eq!(
@@ -590,7 +599,8 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // tokens are tokens, R1420). Re-pinned for v0.3.15 (Meditative+ ships, #1187): the set's one
     // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it; and for the Stinkyscape
     // release (#1884): its 28 Legendary cards (§8.10), the Dormant Starship, which only a rule
-    // makes, aside (R1857001). For replacing a card on
+    // makes, aside (R1857001); and for the Training Grounds release (#2204): its #37 Seance, #38
+    // Tutorial Master and #39 Call to Chaos (#39.1 is a token). For replacing a card on
     // the board, the script narrows the same pool by type and asks for TRAP_TYPES when the board card
     // is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
@@ -668,6 +678,9 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "stinkyscape-151",
         "stinkyscape-152",
         "stinkyscape-153",
+        "traininggrounds-037",
+        "traininggrounds-038",
+        "traininggrounds-039",
     ];
 
     #[test]
@@ -803,7 +816,8 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         register();
         let units = query(&q(json!({ "type": "Unit" })));
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): its Units follow Meditative's, so the set
-        // ranks name it after Meditative rather than ranking every set after Classic+ alike.
+        // ranks name it after Meditative rather than ranking every set after Classic+ alike. Re-pinned
+        // for the Training Grounds release (#2204): its Units follow Stinkyscape's (`CATALOG_SETS`).
         let set_rank = |set: SetName| -> f64 {
             match set {
                 SetName::Core => 0.0,
@@ -811,7 +825,8 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
                 SetName::ClassicPlus => 2.0,
                 SetName::Meditative => 3.0,
                 SetName::MeditativePlus => 4.0,
-                _ => 5.0,
+                SetName::Stinkyscape => 5.0,
+                _ => 6.0,
             }
         };
         let keys: Vec<(f64, f64)> = units
@@ -1000,6 +1015,9 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             "stinkyscape-166",
             "stinkyscape-167",
         ]));
+        // Re-pinned for the Training Grounds release (#2204): its #49 Reoccurring Dream, the snapshot
+        // of Core #23 (Lucky 1).
+        pool.extend(landed(&["traininggrounds-049"]));
         assert_eq!(ids(query(&luck_based())), pool);
         let expected: Vec<String> = ids(CATALOG
             .values()
@@ -1036,8 +1054,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "classic-033",
         "classic-082",
         "classicplus-006",
-        // C+ #30 Felinor Fuser, a 1/1 since issue #1828.
-        "classicplus-030",
+        // C+ #30 Felinor Fuser was a 1/1 from issue #1828 to #2179, which made it a 3/3.
         "classicplus-076",
     ];
 

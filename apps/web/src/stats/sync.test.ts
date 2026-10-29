@@ -69,11 +69,11 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
   it("R1142000 builds stats holding every catalog id with all five counters at 9999 and fits within PLAYER_STATS_BYTES_MAX", () => {
     // Every card a player can hold counters on: the sets that ship (R1420). A held set's entries
-    // reach no game, so no device counts them (the Training Grounds set until #2204, R2194000).
+    // reach no game, so no device counts them (as the Training Grounds set's did until #2204).
     const catalogIds = Object.entries(catalogJson)
       .filter(([, def]) => setShips((def as { set: SetName }).set))
       .map(([id]) => id);
-    expect(catalogIds.length).toBeGreaterThanOrEqual(450);
+    expect(catalogIds.length).toBeGreaterThanOrEqual(770);
 
     const cards: Record<string, CardCounters> = {};
     for (const id of catalogIds) {
@@ -102,7 +102,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
     // Must fit under PLAYER_STATS_BYTES_MAX
     expect(stringifiedLength).toBeLessThanOrEqual(PLAYER_STATS_BYTES_MAX);
-    // Every catalog card is included because all 450 fit under 65,536 bytes
+    // Every catalog card is included because all of them fit under the cap
     expect(Object.keys(payload.cards).length).toBe(catalogIds.length);
 
     // Seen is omitted

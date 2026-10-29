@@ -21,44 +21,19 @@
 use indexmap::IndexSet;
 use serde_json::Value;
 
-use crate::config::TUNE_MIN_AMOUNT;
 use crate::faces::card_type_of;
 use crate::mana::modifier_is_live;
 use crate::modifiers::{install_lasting_modifiers, remove_modifier};
+use crate::numbers::NumberedKey;
 use crate::script::{EngineSink, HookArgs};
 use crate::state::{
     CardInstance, EchoItem, GameState, ModifierKind, PlayerModifier, find_instance, find_instance_mut,
 };
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;
+use crate::tuning::tuned_count;
 use crate::wire::{CardType, GameEvent, PlayerId, Selection, Zone};
 use crate::zones::{MoveToZoneOptions, OffFieldZone, exile_to_pile, move_to_zone, report_graveyard_landing};
-
-/// TS `tuning.tunedCount(card, "Echo", printed)`, a private copy (fullsend rule 5). B3.4, R386: the
-/// value a numbered keyword has now — its printed value (or the value KY's Constant set outright,
-/// `tuning.set`) moved by the card's tuning steps for its key. A number the card does not print (0) is
-/// never tuned into existence. Never below TUNED_FLOOR (= TUNE_MIN_AMOUNT).
-fn tuned_echo(card: &CardInstance, printed: i32) -> i32 {
-    const KEY: &str = "Echo";
-    if printed <= 0 {
-        return printed;
-    }
-    let set = card
-        .tuning
-        .as_ref()
-        .and_then(|tuning| tuning.set.as_ref())
-        .and_then(|set| set.get(KEY).copied());
-    let step = card
-        .tuning
-        .as_ref()
-        .and_then(|tuning| tuning.x.as_ref())
-        .and_then(|x| x.get(KEY).copied())
-        .unwrap_or(0);
-    if set.is_none() && step == 0 {
-        return printed;
-    }
-    TUNE_MIN_AMOUNT.max(set.unwrap_or(printed) + step)
-}
 
 /// A snapshot of the card as it stands now, for a call that takes the card by value while the state is
 /// borrowed mutably (the callee finds the live card by its id).
@@ -166,7 +141,7 @@ pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
         .unwrap_or(0)
         .max(computed);
     // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
-    let own = 0.max(tuned_echo(card, printed));
+    let own = 0.max(tuned_count(card, NumberedKey::Echo.as_str(), printed));
     own + copied_echo(state, card)
 }
 
@@ -316,6 +291,8 @@ pub struct ResolvedCard {
     /// R1180005: the enemies the Spell targeted as it resolved, in order, taken off the card before it
     /// lands (`targeted::take_spell_targets`). Empty for anything that noted none.
     pub targeted: Vec<Selection>,
+    /// R2179002: the card was cast on draw, a cast that is no play, which `cardResolved` reports.
+    pub on_draw: bool,
 }
 
 // §10.5 step 7, both halves, for a play and for a cast (R70) alike.
@@ -409,5 +386,6 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
         arrived_during,
         exits_from: Some(exits_from),
         answer,
+        on_draw: resolved.on_draw.then_some(true),
     });
 }

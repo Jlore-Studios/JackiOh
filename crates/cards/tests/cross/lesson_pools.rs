@@ -102,6 +102,13 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
         if let Some(error) = &result.error {
             panic!("{seed}: refused: {error}");
         }
+        // A named card played inside the step but not by its action: the autopilot's play in the
+        // turn another seat's answer starts.
+        let names_one = names_one
+            || result.events.iter().any(|event| {
+                matches!(event, GameEvent::CardPlayed { def_id, .. }
+                    if NAMES_A_HELD_CARD.contains(&def_id.as_str()))
+            });
         state = result.state;
         steps += 1;
         for id in held_named(&state) {

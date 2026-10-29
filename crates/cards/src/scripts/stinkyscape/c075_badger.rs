@@ -3,12 +3,12 @@
 //!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!
 //! Starship Piece is the engine's printed keyword: its death fuses a copy into its owner's Dormant
-//! Starship (R1852000). "Whenever this attacks" is the engine's `afterAttack` hook, Core #32 Prem
-//! Panther's: it runs once each combat this card attacked in, declared or forced (R53), is over and
-//! the state check after it has run (R59), for the player who controlled it there, even when it died
-//! in it (R426); it never runs for a defending Badger, nor for an attack called off before it fought
-//! (R44, Core #96 My Pawn). It is `gain_resources` of one random Resource into the tray (R1840000,
-//! R1840002), a ninth sold at once (R1840001). Radiant: a Radiant Resource.
+//! Starship (R1852000). "Whenever this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
+//! Titan's: it runs for the player who controls this card before any damage of each attack it makes,
+//! declared or forced (R53, R2285000), so a Badger that dies in the combat has already gained; it never
+//! runs for a defending Badger, nor for an attack called off in its trap window (R44, Core #96 My
+//! Pawn). It is `gain_resources` of one random Resource into the hand (R1840000, R1840002), a ninth
+//! sold at once (R1840001). Radiant: a Radiant Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;
@@ -20,7 +20,7 @@ const RESOURCES: i32 = 1;
 
 fn face(radiant: bool) -> Script {
     Script {
-        after_attack: Some(hook(move |_ctx| {
+        when_attacks: Some(hook(move |_ctx| {
             vec![gain_resources(json_as(
                 json!({ "count": RESOURCES, "radiant": radiant }),
             ))]
@@ -37,7 +37,7 @@ pub fn script() -> CardScripts {
 }
 
 // S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75: "attacking a Unit or the hero gains one random
-// Resource into its controller's tray, defending none; a forced attack gains one; it dies and fuses into
+// Resource into its controller's hand, defending none; a forced attack gains one; it dies and fuses into
 // a Dormant Starship; radiant 4/6, Radiant Resources".
 #[cfg(test)]
 mod tests {
@@ -67,9 +67,9 @@ mod tests {
     }
 
     fn gained(s: &Scenario) -> Vec<CardInstance> {
-        let tray = s.pile(P1, "tray");
-        assert!(tray.iter().all(|card| card_def(&card.def_id).resource.is_some()));
-        tray
+        let in_hand = crate::resources_in_hand(s, P1);
+        assert!(in_hand.iter().all(|card| card_def(&card.def_id).resource.is_some()));
+        in_hand
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn r426_dying_in_the_combat_it_still_gains() {
+    fn r2285000_it_gains_before_the_damage_so_dying_in_the_combat_it_has_gained() {
         let mut s = badger(
             false,
             json!({ "hand": [FILLER], "library": filler(4), "field": [BODY] }),
@@ -112,6 +112,7 @@ mod tests {
         s.attack(ID, &target);
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(gained(&s).len(), 1);
+        s.expect_events(json!(["attackDeclared", "addedToHand", "damage", "destroyed"]));
     }
 
     #[test]
@@ -139,7 +140,7 @@ mod tests {
         let defender = s.unit_at(P1, 1);
         s.attack(&attacker, &defender);
         assert!(gained(&s).is_empty());
-        assert!(s.pile(P2, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]
@@ -156,8 +157,8 @@ mod tests {
     fn radiant_radiant_resources() {
         let mut s = badger(true, json!({ "hand": [FILLER], "library": filler(4) }));
         s.attack(ID, "hero");
-        let tray = gained(&s);
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = gained(&s);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

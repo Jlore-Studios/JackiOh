@@ -92,7 +92,7 @@ mod tests {
             0,
             "each draw casts a Scrap and draws again (R58)"
         );
-        assert_eq!(s.pile(P1, "tray").len(), 4, "each gained a Resource");
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), 4, "each gained a Resource");
     }
 
     #[test]

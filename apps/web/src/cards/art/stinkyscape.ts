@@ -15,7 +15,7 @@ import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
 
-/** Whether an id draws the set's own art: the held set's entries and tokens, nothing else. */
+/** Whether an id draws the set's own art: the set's entries and tokens, nothing else. */
 export function isStinkyscapeArt(defId: string): boolean {
   return defId.startsWith(STINKYSCAPE_PREFIX);
 }
@@ -87,7 +87,7 @@ const PIECE_WORDS: readonly (readonly [string, string])[] = [
 
 /** The fleet's cards that print no Starship Piece: the hull waiting to launch and the base. */
 const FLEET_NAMES: readonly string[] = ["dormant starship", "megabase"];
-const FIGHTER_NAMES: readonly string[] = ["falcon", "startos", "yuma", "golem", "honey badger"];
+const FIGHTER_NAMES: readonly string[] = ["falcon", "stratos", "yuma", "golem", "honey badger"];
 const BATTLESHIP_NAMES: readonly string[] = ["paragon-x", "halo", "prototype-x2", "phalanx", "galaxy"];
 const MINER_NAMES: readonly string[] = ["miner", "ozark", "orca", "galaxy"];
 
@@ -1422,6 +1422,96 @@ export function stinkyscapeSvg(defId: string, name: string | undefined, tags: re
     sky +
     (radiant ? rays(seed) : "") +
     group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn) +
+    rect(0, 0, BOX, BOX, "url(#v)") +
+    "</svg>"
+  );
+}
+
+// R2249000: the Starship's own art
+
+/** The seed every Starship's art grows from, so a Starship keeps one look whatever fuses into it. */
+const STARSHIP_SEED_ID = "stinkyscape-t-dormant-starship";
+/** The most modules, escorts and lit pieces one Starship's art draws, however many pieces it holds. */
+const STARSHIP_MODULES_MAX = 8;
+const STARSHIP_ESCORTS_MAX = 3;
+const STARSHIP_STREAKS = 14;
+const STARSHIP_SCALE = 1.22;
+const STARSHIP_TILT = -14;
+
+/** A warp streak behind a launched Starship, a line of light running off to the left. */
+function streak(rng: Rng, p: Paint): string {
+  const y = between(rng, 6, 94);
+  const x = between(rng, 40, 100);
+  const length = between(rng, 18, 46);
+  return line(x, y, x - length, y + between(rng, -2, 2), mixHex(p.glow, "#ffffff", 0.5), between(rng, 0.25, 0.7), {
+    opacity: between(rng, 0.25, 0.6),
+  });
+}
+
+/** One module fused onto the hull's flank: a pod on a strut, its core lit once the ship launches. */
+function module(p: Paint, x: number, y: number, side: number, lit: boolean): string {
+  const strut = line(x, 0, x, y, p.dark, 1.4);
+  const pod = ellipse(x, y, 4.6, 2.6, "url(#hl)", inked(p));
+  const core = circle(x + 1.2, y, 1.1, lit ? p.glow : p.dark, lit ? { opacity: 0.95 } : {});
+  const fin = poly([[x - 4, y], [x - 7, y + side * 3], [x - 2.5, y + side * 1.8]], p.hull, p.line);
+  return strut + fin + pod + core;
+}
+
+/**
+ * R2249000: the art every Starship wears, Dormant or launched and however many pieces are fused into it:
+ * a capital ship under its shield, a module on its flanks for each piece (up to `STARSHIP_MODULES_MAX`),
+ * its engines cold and its scaffold up while it is Dormant, and once it launches its engines lit, its
+ * shield glowing, warp streaks behind it and escorts beside it. Its seed is the hull's, never the fused
+ * definition's, which changes with every piece.
+ */
+export function starshipSvg(pieces: number, launched: boolean, radiant: boolean): string {
+  const seed = hashId(STARSHIP_SEED_ID);
+  const base: Paint = { ...FAMILY_PAINTS.fleet, glow: launched ? "#7fe8ff" : FAMILY_PAINTS.fleet.glow };
+  const p = radiant ? gild(base) : base;
+  const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
+  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
+  const defs: Defs = [];
+  gradients(p, defs);
+  defs.push(
+    `<radialGradient id="sh"><stop offset="0.6" stop-color="${p.glow}" stop-opacity="0"/>` +
+      `<stop offset="0.9" stop-color="${p.glow}" stop-opacity="${launched ? 0.35 : 0.12}"/>` +
+      `<stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>`,
+    `<radialGradient id="ha"><stop offset="0" stop-color="${p.nebula[0]}" stop-opacity="0.7"/>` +
+      `<stop offset="1" stop-color="${p.nebula[1]}" stop-opacity="0"/></radialGradient>`,
+  );
+  const sky = backdrop(behind, p, "fleet", true, defs);
+  const body: string[] = [];
+  // The halo behind it and, launched, the warp streaks it leaves.
+  body.push(ellipse(0, 0, 52, 30, "url(#ha)", { opacity: 0.55 }));
+  const shown = Math.max(0, Math.min(pieces, STARSHIP_MODULES_MAX));
+  const lit = launched ? shown : 0;
+  // Its modules, one a piece, alternating flanks from the stern forward.
+  const modules: string[] = [];
+  for (let i = 0; i < shown; i += 1) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const x = -26 + Math.floor(i / 2) * 13;
+    modules.push(module(p, x, side * between(ahead, 17, 21), side, i < lit));
+  }
+  body.push(modules.join(""));
+  body.push(group(at(0, 0, 0, 1.18), hull(ahead, p, launched ? "battleship" : "dormant")));
+  // The shield: a faint bubble while it sleeps, a glowing one once it flies.
+  body.push(ellipse(2, 0, 50, 27, "url(#sh)"));
+  body.push(ellipse(2, 0, 50, 27, "none", { stroke: p.glow, "stroke-width": 0.5, opacity: launched ? 0.7 : 0.25, "stroke-dasharray": launched ? "none" : "2 2" }));
+  if (launched) {
+    const escorts = Math.max(1, Math.min(STARSHIP_ESCORTS_MAX, Math.ceil(pieces / 2)));
+    for (let i = 0; i < escorts; i += 1) {
+      const y = (i % 2 === 0 ? -1 : 1) * (32 + i * 4);
+      body.push(group(at(18 - i * 16, y, 0, 0.3), hull(ahead, p, "fighter")));
+    }
+  }
+  const streaks = launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
+  return (
+    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `<defs>${defs.join("")}</defs>` +
+    sky +
+    streaks +
+    (radiant ? rays(seed) : "") +
+    group(at(SUBJECT_X, SUBJECT_Y, STARSHIP_TILT, STARSHIP_SCALE), body.join("")) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );

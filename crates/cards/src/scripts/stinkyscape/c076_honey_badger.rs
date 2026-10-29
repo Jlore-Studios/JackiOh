@@ -3,8 +3,8 @@
 //!   Radiant: "Starship Piece, Rush\nWhenever this attacks, gain a random Radiant Stinkyscape
 //!            Resource." (8/12)
 //!
-//! S #75 Badger's line ("whenever this attacks" is the `afterAttack` hook: declared or forced attacks,
-//! R53, even one it dies in, R426, never a defence or an attack called off, R44) with Rush (§6.1), a
+//! S #75 Badger's line ("whenever this attacks" is the `whenAttacks` hook, before any damage: declared
+//! or forced attacks, R53, R2285000, never a defence or an attack called off, R44) with Rush (§6.1), a
 //! printed keyword, so it may attack an enemy Unit, never the hero, the turn it lands and gain then.
 //! Starship Piece: its death fuses a copy into its owner's Dormant Starship (R1852000). Radiant: a
 //! Radiant Resource.
@@ -19,7 +19,7 @@ const RESOURCES: i32 = 1;
 
 fn face(radiant: bool) -> Script {
     Script {
-        after_attack: Some(hook(move |_ctx| {
+        when_attacks: Some(hook(move |_ctx| {
             vec![gain_resources(json_as(
                 json!({ "count": RESOURCES, "radiant": radiant }),
             ))]
@@ -62,9 +62,9 @@ mod tests {
         s.play(ID, json!({}));
         let target = s.unit_at(P2, 1);
         s.attack(ID, &target);
-        let tray = s.pile(P1, "tray");
-        assert_eq!(tray.len(), 1);
-        assert!(!tray[0].radiant);
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(!in_hand[0].radiant);
     }
 
     #[test]
@@ -72,7 +72,7 @@ mod tests {
         let mut s = landing(false);
         s.play(ID, json!({}));
         s.expect_refused(|s| s.attack(ID, "hero"));
-        assert!(s.pile(P1, "tray").is_empty());
+        assert!(crate::resources_in_hand(&s, P1).is_empty());
     }
 
     #[test]
@@ -81,8 +81,8 @@ mod tests {
         s.play(ID, json!({}));
         let target = s.unit_at(P2, 1);
         s.attack(ID, &target);
-        let tray = s.pile(P1, "tray");
-        assert_eq!(tray.len(), 1);
-        assert!(tray[0].radiant);
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), 1);
+        assert!(in_hand[0].radiant);
     }
 }

@@ -7,10 +7,11 @@
 //! whether a full board may play into the zone the Tribute empties (§3.2, R391) is the validator's
 //! too. The 1 is the printed keyword's, not a declared number.
 //!
-//! `titan` is one effect list for the Cry and for a trigger on `attackDeclared` whose attacker is this
-//! card, as #22 Carnivorous Cube's Cry and Death share one; forced attacks count (R53, #9 Moths to the
-//! Flame) and an attack on it names it the target, so defending does nothing. "Heal your hero" is §6.3
-//! Heal on a hero: no cap (§3); `draw` and `heal` are declared numbers read through `param` (R386).
+//! `titan` is one effect list for the Cry and for its `when_attacks` hook, as #22 Carnivorous Cube's Cry
+//! and Death share one: "whenever this attacks" resolves before any damage of the attack (R2285000), so
+//! a Titan that dies in the combat has already drawn and healed. Forced attacks count (R53, #9 Moths to
+//! the Flame), and defending does nothing, since the hook is the attacker's alone. "Heal your hero" is
+//! §6.3 Heal on a hero: no cap (§3); `draw` and `heal` are declared numbers read through `param` (R386).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -30,22 +31,6 @@ fn titan(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     ]
 }
 
-/// "Whenever this attacks": every `attackDeclared` whose attacker is this card, forced ones included.
-/// The test is in `run`: a `when` is read for traps only (R99), and an ordinary trigger's `run` is
-/// its whole condition, as #32 Prem Panther's is.
-fn on_attack() -> TriggerDef {
-    TriggerDef::new("45-whenever-this-attacks", &[GameEventType::AttackDeclared], |ctx, event| {
-        let GameEvent::AttackDeclared { attacker_id, .. } = event else {
-            return vec![];
-        };
-        let mine = ctx.self_.as_ref().is_some_and(|me| me.id == *attacker_id);
-        if !mine {
-            return vec![];
-        }
-        titan(ctx)
-    })
-}
-
 pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
@@ -53,7 +38,8 @@ pub fn script() -> CardScripts {
             ..StaticFlags::default()
         }),
         cry: Some(hook(titan)),
-        triggers: vec![on_attack()],
+        // "Whenever this attacks": before any damage of each attack it makes, forced ones included.
+        when_attacks: Some(hook(titan)),
         ..Script::default()
     };
 
@@ -66,8 +52,9 @@ pub fn script() -> CardScripts {
 
 // C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: Tribute 1 (§6.3, R101), refused
 // with no Unit to Tribute; on a full board it takes the tributed Unit's zone unless Reborn, Locked or
-// a Stack pile's top (R391); a Sheep overpays; Cry and each attack, forced included: draw 1, heal 3,
-// no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal) via `param()` (R386).
+// a Stack pile's top (R391); a Sheep overpays; Cry and each attack, forced included, before its damage
+// (R2285000): draw 1, heal 3, no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal)
+// via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -220,7 +207,7 @@ mod tests {
             }
 
             #[test]
-            fn whenever_it_attacks_draw_1_and_heal_your_hero_3_after_the_attack() {
+            fn r2285000_whenever_it_attacks_it_draws_1_and_heals_your_hero_3_before_the_damage() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A, B], "health": 20 },
@@ -231,7 +218,7 @@ mod tests {
 
                 s.expect_health(P2, 24).expect_health(P1, 23);
                 assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A]);
-                s.expect_events(json!(["attackDeclared", "damage", "drawn", "healed"]));
+                s.expect_events(json!(["attackDeclared", "drawn", "healed", "damage"]));
             }
 
             #[test]
@@ -251,7 +238,7 @@ mod tests {
             }
 
             #[test]
-            fn r212_the_attack_trigger_is_answered_after_that_combats_state_check_so_a_titan_that_died_in_it_draws_and_heals_nothing() {
+            fn r2285000_it_draws_and_heals_before_the_combat_so_a_titan_that_dies_in_it_has_drawn_and_healed() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A, B], "health": 20 },
@@ -261,8 +248,9 @@ mod tests {
                 s.attack(TITAN, MENACE);
 
                 s.expect_in_zone(TITAN, "graveyard");
-                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR]);
-                s.expect_health(P1, 20);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A]);
+                s.expect_health(P1, 23);
+                s.expect_events(json!(["attackDeclared", "drawn", "healed", "damage", "destroyed"]));
             }
 
             #[test]

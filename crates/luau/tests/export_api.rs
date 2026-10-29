@@ -977,6 +977,7 @@ mod generator {
             "\tchosen_recipe: (self: EffectContext) -> any,",
             "\tchosen_tuning_number: (self: EffectContext) -> any,",
             "\tsummoned_so_far: (self: EffectContext) -> {string},",
+            "\twhen_attacks_of: (self: EffectContext) -> any,",
             "\tafter_attack_of: (self: EffectContext) -> any,",
             "\tafter_attacked_of: (self: EffectContext) -> any,",
             "\tactivation_paid: (self: EffectContext) -> any,",

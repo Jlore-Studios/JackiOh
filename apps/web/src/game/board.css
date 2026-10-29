@@ -22,7 +22,8 @@
    height from that (`cqh`): `(100cqh - the layout's fixed parts) / the card heights it stacks`,
    so a match bar, a turn banner or a phone's browser toolbar shrinks the cards instead of pushing
    End turn or your hand off the screen. Whatever height is spare goes to the field, the one row
-   that is `1fr`, whose lanes stay centred in it.
+   that is `1fr`: on a desktop or a tablet its four rows grow into it (`.lane`), and on a phone
+   its lanes stay centred in it.
 
    Green is not painted here. `data-legal="true"` only means "clickable" (a pointer and full
    opacity); the green glow is `data-glow="ready"`, styled by highlights.css, which Board.tsx
@@ -83,8 +84,8 @@
   background: var(--bg-raised);
   box-shadow: var(--shadow-2);
   transition:
-    border-color calc(200ms * var(--anim-scale)) ease,
-    box-shadow calc(200ms * var(--anim-scale)) ease;
+    border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .seat-you {
@@ -287,6 +288,37 @@
   font-size: var(--type-2xs-em);
 }
 
+/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label.
+   `.hero` outranks src/index.css's `.app-shell button`, whose 9px 16px padding made the hero row
+   taller and the board 3px too tall for a 1024x768 tablet (B46): the badge keeps its own size. */
+.hero button.modifier-badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-weight: inherit;
+  text-align: left;
+}
+
+button.modifier-badge[data-open="true"] {
+  border-color: var(--mana);
+  color: var(--text);
+}
+
+/* The whole label, laid on the page beside its badge (ModifierBadge.tsx places it, inside a 16px
+   gutter), so a long one is read on touch without pushing the hero row apart. */
+.modifier-full {
+  position: fixed;
+  z-index: var(--z-drag);
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--mana) 55%, var(--line-bright));
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-size: var(--type-sm);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 /* ------------------------------------------------------------------------- mana and piles --- */
 
 .mana {
@@ -311,8 +343,8 @@
   background: var(--pal-slate-900);
   transform: rotate(45deg);
   transition:
-    background calc(150ms * var(--anim-scale)) linear,
-    box-shadow calc(150ms * var(--anim-scale)) linear;
+    background calc(var(--motion-fast) * var(--anim-scale)) linear,
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) linear;
 }
 
 .mana-crystal[data-filled="true"] {
@@ -484,7 +516,7 @@
   flex: 0 0 var(--slot-w);
   width: var(--slot-w);
   transform-origin: 50% 100%;
-  transition: transform calc(160ms * var(--anim-scale)) ease;
+  transition: transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .hand-slot + .hand-slot {
@@ -581,7 +613,7 @@
 .hand-flip {
   position: relative;
   transform-style: preserve-3d;
-  animation: hand-reveal calc(560ms * var(--anim-scale)) cubic-bezier(0.3, 0.7, 0.4, 1)
+  animation: hand-reveal calc(var(--motion-slow) * var(--anim-scale)) var(--ease-out)
     calc(var(--i, 0) * 90ms * var(--anim-scale)) both;
 }
 
@@ -639,8 +671,9 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  /* The field's row is the board's `1fr`, so it may be taller than its lanes: they stay centred,
-     with the spare height as mat above and below them. */
+  /* The field's row is the board's `1fr`, so it may be taller than its lanes: on a phone they stay
+     centred, with the spare height as mat above and below them; on a desktop or a tablet they fill
+     it (the media query after `.lane`). */
   align-content: center;
   gap: var(--gap);
   min-width: 0;
@@ -704,7 +737,7 @@
   opacity: 0.88;
   rotate: calc(var(--sand-variation) * 47deg);
   translate: -50% -50%;
-  animation: sand-settle var(--sand-fade) ease-out forwards;
+  animation: sand-settle var(--sand-fade) var(--ease-out) forwards;
 }
 
 .sand-mark--grain {
@@ -760,7 +793,7 @@
 .tap-mark--wood {
   border: 2px solid color-mix(in srgb, var(--pal-parchment) 55%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-brass-950) 35%, transparent);
-  animation: tap-ripple 420ms ease-out forwards;
+  animation: tap-ripple 420ms var(--ease-out) forwards;
 }
 
 @keyframes tap-ripple {
@@ -770,7 +803,7 @@
 
 .tap-mark--felt {
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-black) 34%, transparent), color-mix(in srgb, var(--pal-black) 12%, transparent) 55%, transparent 72%);
-  animation: tap-press 1600ms ease-out forwards;
+  animation: tap-press 1600ms var(--ease-out) forwards;
 }
 
 @keyframes tap-press {
@@ -782,7 +815,7 @@
 .tap-mark--stone {
   width: calc(6px + var(--sand-build) * 0.8px);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-white) 95%, transparent), color-mix(in srgb, var(--pal-slate-100) 55%, transparent) 35%, transparent 70%);
-  animation: tap-spark 260ms ease-out forwards;
+  animation: tap-spark 260ms var(--ease-out) forwards;
 }
 
 @keyframes tap-spark {
@@ -794,7 +827,7 @@
 .tap-mark--neon {
   border: 2px solid var(--tap-tint);
   box-shadow: 0 0 6px var(--tap-tint), inset 0 0 4px var(--tap-tint);
-  animation: tap-burst 520ms ease-out forwards;
+  animation: tap-burst 520ms var(--ease-out) forwards;
 }
 
 @keyframes tap-burst {
@@ -806,7 +839,7 @@
   border-radius: 52% 46% 55% 44%;
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
-  animation: tap-bleed 2400ms ease-out forwards;
+  animation: tap-bleed 2400ms var(--ease-out) forwards;
 }
 
 @keyframes tap-bleed {
@@ -819,7 +852,7 @@
   width: 6px;
   background: var(--tap-tint);
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-  animation: tap-scatter 700ms ease-out forwards;
+  animation: tap-scatter 700ms var(--ease-out) forwards;
 }
 
 @keyframes tap-scatter {
@@ -841,8 +874,12 @@
 }
 
 /* Fixed rows, not `minmax(0, …)`: each lane is its own grid, so an empty zone must still hold
-   its row open or the four bands would stop lining up across the five lanes. */
+   its row open or the four bands would stop lining up across the five lanes. `--def-scale` is how
+   far a DEF card shrinks (Card.tsx turns it with `rotate(90deg) scale(var(--def-scale, 1))`): on a
+   phone a card turned sideways is wider than its lane, so it is drawn at 72%. */
 .lane {
+  --def-scale: 0.72;
+
   position: relative;
   z-index: var(--z-content);
   display: grid;
@@ -851,26 +888,40 @@
   min-width: 0;
 }
 
-/* Wherever the board has the room (a desktop, a tablet held upright), the unit rows take height
-   from the backrow rows, which hold a trap's back or a field card and are mostly empty: minions
-   were a third of their lane, 57 px wide in a 188 px zone. The four rows still sum to four card
-   heights, so nothing else on the board moves, and a unit fills its taller row as a broad oval,
-   the way Hearthstone's minions sit on its board. A phone keeps equal rows: its backrow is already
-   at the 44 px touch floor. */
+/* Wherever the board has the room (a desktop, a tablet held upright), the four rows are one height
+   and share the field's height: the backrow's traps and field cards matter as much as the units.
+   They line up across the five lanes because every lane fills the field's one row
+   (`align-content: stretch`, then `height: 100%`, which keeps the field asking the board for no
+   more than four card heights) and splits it into four equal rows, none under a card height, so
+   an empty zone still holds its row open. A row grows to at most `--row-max`, so a DEF card at
+   full size (`--def-scale: 1`) still fits across the narrowest lane (136 px at 761 px wide);
+   past that the lanes stay centred. A card's width follows its row through `aspect-ratio`. A
+   phone keeps fixed equal rows: its backrow is already at the 44 px touch floor. */
 @media (min-width: 761px) and (min-height: 501px) {
-  .lane {
-    --unit-row: calc(var(--card-h) * 1.2);
-    --back-row: calc(var(--card-h) * 0.8);
+  .field {
+    align-content: stretch;
+  }
 
-    grid-template-rows: var(--back-row) var(--unit-row) var(--unit-row) var(--back-row);
+  .lane {
+    --def-scale: 1;
+    --row-max: calc(var(--card-h) * 1.2);
+
+    align-self: center;
+    height: 100%;
+    max-height: calc(var(--row-max) * 4 + var(--gap) * 3);
+    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
   }
 
   .zone[data-row="units"] > .card.cf-host--minion {
-    max-width: min(100%, calc(var(--unit-row) * 0.86));
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.86;
   }
 
   .zone[data-row="backrow"] > .card {
-    max-width: calc(var(--back-row) * 0.74);
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.74;
   }
 }
 
@@ -884,8 +935,8 @@
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-brass-800) 30%, transparent);
   transition:
-    background-color calc(150ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    background-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* The backrow is the trap row: darker and dashed, so it never reads as a place for units. */
@@ -916,7 +967,7 @@
   border: 1px dashed color-mix(in srgb, var(--pal-brass-500) 16%, transparent);
   border-radius: var(--radius-sm);
   pointer-events: none;
-  transition: border-color calc(150ms * var(--anim-scale)) ease;
+  transition: border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .zone[data-row="units"]::before {
@@ -989,18 +1040,13 @@
   height: calc(var(--card-h) * 0.62);
 }
 
-/* R1840000, R1840005: the Resource tray and the Credits count, drawn as the resolving strip is. */
-.resource-tray,
+/* R1840005: the Credits count, drawn as the resolving strip is. */
 .market-credits {
   display: inline-flex;
   gap: var(--gap);
   padding: 2px;
   border: 1px dashed var(--selected);
   border-radius: var(--radius-sm);
-}
-
-.card-tray {
-  height: calc(var(--card-h) * 0.62);
 }
 
 /* ---------------------------------------------------------------------------------- cards --- */
@@ -1021,8 +1067,8 @@
   overflow: hidden;
   font-size: var(--type-xs-em);
   transition:
-    transform calc(250ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    transform calc(var(--motion-base) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* Spells, traps and field cards are violet, units steel blue: the type reads before the text. */
@@ -1502,7 +1548,7 @@
 
 .game:not([data-reduced-motion="true"])[data-impact-tier="big"] .board [data-testid^="card-"],
 .game:not([data-reduced-motion="true"])[data-impact-tier="giga"] .board [data-testid^="card-"] {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
 }
 
 /* The board itself shakes in the effects layer (fx/shake.ts, B35), sized by DAMAGE_FEEL's shakePx. */
@@ -1515,7 +1561,7 @@
   background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
-  animation: giga-vignette-flash 400ms ease-out both;
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
 }
 
 /* #185 Unit Slam. The landing Unit hangs for its anticipation before its landing motion
@@ -1529,17 +1575,17 @@
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
-  animation: slam-wobble-slight 220ms ease-in-out both;
+  animation: slam-wobble-slight 220ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
-  animation: slam-wobble-hard 320ms ease-in-out both;
+  animation: slam-wobble-hard 320ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
@@ -1552,7 +1598,7 @@
   background: color-mix(in srgb, var(--pal-wood-800) 42%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
-  animation: giga-vignette-flash 400ms ease-out both;
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
@@ -1741,7 +1787,7 @@
   min-height: 38px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  transition: translate 80ms ease, box-shadow 120ms ease, filter 120ms ease;
+  transition: translate var(--motion-instant) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), filter var(--motion-fast) var(--ease-standard);
 }
 
 .board .control.control-end-turn:not(:disabled) {
@@ -1761,7 +1807,7 @@
 }
 
 .board .control.control-end-turn[data-turn-state="waiting"] {
-  animation: end-turn-ready-pulse 1.2s ease-in-out infinite;
+  animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
 .board .control.control-end-turn[data-turn-state="enemy"] {
@@ -1784,7 +1830,7 @@
 }
 
 .board .control.control-end-turn[data-animating="turnEnded"] {
-  animation: end-turn-turnover 150ms ease-in-out both;
+  animation: end-turn-turnover 150ms var(--ease-in-out) both;
   transform-style: preserve-3d;
 }
 
@@ -2107,6 +2153,13 @@
 @media (min-width: 1025px) {
   .board {
     --card-h: clamp(56px, min(calc((100cqh - 215px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
+  }
+
+  /* The same width bound keeps a lane over 2.1 card heights wide here, so the rows may grow to
+     twice a card's height and a DEF card still fits across its lane at full size: 1.2 card
+     heights left a 1920x1080 screen's field with mat above and below. */
+  .lane {
+    --row-max: calc(var(--card-h) * 2);
   }
 }
 

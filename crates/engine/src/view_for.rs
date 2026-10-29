@@ -88,6 +88,7 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
+use crate::plague::plague_on;
 use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated};
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
@@ -519,8 +520,7 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     };
     match &card.zone {
         Zone::Library { .. } => false,
-        // R1840000: a Resource tray is read as a hand is: its player's alone.
-        Zone::Hand { player } | Zone::Tray { player } => *player == viewer,
+        Zone::Hand { player } => *player == viewer,
         Zone::Field {
             row: Row::Backrow, ..
         } => backrow_is_public(state, card, viewer),
@@ -931,6 +931,8 @@ fn unit_view_of(
             None
         },
         attack_reason: attack_reason_of(state, auras, top, viewer),
+        // R2321000: the counts cards on the field the viewer may read keep on it.
+        tallies: crate::preview::tallies_on(state, top, viewer),
     })
 }
 
@@ -1000,12 +1002,6 @@ fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
         && state.active == card.controller
 }
 
-/// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). A private
-/// copy of `plague::plague_on` (fullsend rule 5).
-fn plague_tokens_on(card: &CardInstance) -> i32 {
-    card.counters.plague.unwrap_or(0).max(0)
-}
-
 /// A public backrow card names its owner and its controller, since R33's readability and #87's board
 /// swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
 /// face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
@@ -1021,7 +1017,7 @@ fn backrow_view(
     let card = card?;
     // B5 E19, R471: Plague Counters are public wherever they sit, a face-down card's included; B5 E21: a
     // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
-    let plague = plague_tokens_on(card);
+    let plague = plague_on(card);
     let under: i32 = match slot_of(state, card) {
         None => 0,
         Some(slot) => beneath_at(state, slot).len() as i32,
@@ -1590,21 +1586,6 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
-        // R1840000: the viewer's own Resource tray in full, the opponent's as a count, as the hand is,
-        // both in full once the game is over (R434); absent with no tray (D14).
-        resource_tray: side.resource_tray.as_ref().map(|tray| {
-            if player == viewer || state.result.is_some() {
-                HandView::Cards(
-                    tray.iter()
-                        .map(|card| hand_card_view(state, card, viewer))
-                        .collect(),
-                )
-            } else {
-                HandView::Count {
-                    count: tray.len() as i32,
-                }
-            }
-        }),
         // R1840005: public on both seats, and absent until first gained.
         market_credits: side.market_credits,
         // R846, R847: owed extra turns and the Rift flag, public on both seats.
@@ -2144,9 +2125,9 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it; R1853003:
-        // so does a card bought at the Marketplace.
-        GameEventType::ResourceGained | GameEventType::MarketBought => {
+        // R1853003: a card bought at the Marketplace is named as `addedToHand` names a card, its face
+        // with it.
+        GameEventType::MarketBought => {
             if hidden(&instance) {
                 shown.remove("radiant");
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2519,12 +2500,10 @@ fn redact_event(
         | GameEventType::AutopilotEngaged
         // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
         | GameEventType::Traded
-        // R1840001, R1840004: a sold or discarded Resource ceased to exist where both seats see it go,
-        // as a burned card is (R317); R1840005: Credits are a player and a number.
-        | GameEventType::ResourceSold
-        | GameEventType::ResourceDiscarded
+        // R1840005: Credits are a player and a number.
         | GameEventType::MarketCreditsChanged
-        // R1853003: so did a Resource sold at the Marketplace.
+        // R1853003, R1861000: a card sold at the Marketplace ceased to exist where both seats see it
+        // go, as a burned card is (R317).
         | GameEventType::MarketSold => event.clone(),
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
@@ -2776,8 +2755,7 @@ fn readable_where_stolen(
         return readable_from.contains(&viewer);
     }
     match zone {
-        // R1840000: a Resource tray is its holder's, as a hand is.
-        ZoneName::Hand | ZoneName::Tray => from == viewer,
+        ZoneName::Hand => from == viewer,
         ZoneName::Graveyard | ZoneName::Exile | ZoneName::Resolving => true,
         // A stolen card never comes out of "gone"; TS's switch had no case for it and answered nothing.
         ZoneName::Library | ZoneName::Field | ZoneName::Gone => false,

@@ -18,6 +18,13 @@
 // put both in Defense Position, where the aura's Armor left the player's fourth turn no attack that
 // clears a Taunt, so Deft Duelist's Charge never reached the hero. With Pointmaster the coach's line
 // plays as before through that turn, and wins on the fifth, once Hit Job takes out the AI's Jilliax.
+// Re-pinned for the Training Grounds release (#2204): Me and Mr Token holds Gary the Gambler's place
+// again. The AI samples the player's hidden hand from every shipped set's cards (crates/ai's
+// determinize.rs), so the set's sixty cards changed its search: on its first turn it raced Gary, with
+// its coin's Rush, into Mr. Vanilla, and the coach's turn-2 Taunt attack and spell at a unit never came.
+// With Me and Mr Token the player's deal is the same (the AI's deck keeps its size and order), the
+// coach's line wins on the fifth turn again, and a beginner who ignores the coach wins too: the race
+// #898 saw is gone.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -55,7 +62,7 @@ export const lesson: TutorialLesson = {
     "core-003", // Right-house defender
     "core-037", // Gravedigger
     "core-029", // GIGA Glowy Jelly Bean: costs (6), above the AI's 3 (+ The Coin), so it is never cast
-    "core-004", // Gary the Gambler
+    "core-015", // Me and Mr Token
     "core-056", // Jilliax
     "core-035", // Lunar Eclipse
     "core-030", // Archivist

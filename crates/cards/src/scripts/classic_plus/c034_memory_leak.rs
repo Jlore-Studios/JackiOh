@@ -20,7 +20,8 @@ fn opponent_played_unit_or_field_spell(ctx: &EffectContext<'_>, event: &GameEven
     let GameEvent::CardResolved { player, def_id, .. } = event else {
         return false;
     };
-    if *player == ctx.controller {
+    // R2179002: a card cast on draw is no play.
+    if *player == ctx.controller || cast_on_draw_event(event) {
         return false;
     }
     let type_ = def_of(Some(&*ctx.state), def_id).type_;
