@@ -26915,7 +26915,7 @@
         "min": 1
       }
     ],
-    "loc": 49,
+    "loc": 50,
     "base": {
       "keywords": [],
       "text": "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them."
@@ -27297,7 +27297,7 @@
         "min": 1
       }
     ],
-    "loc": 30,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 3,
@@ -27493,7 +27493,7 @@
         "min": 1
       }
     ],
-    "loc": 40,
+    "loc": 68,
     "base": {
       "keywords": [],
       "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."

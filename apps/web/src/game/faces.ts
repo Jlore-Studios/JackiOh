@@ -22,6 +22,7 @@ import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh
 
 import { marksOf } from "../cards/marks.ts";
 import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
+import type { NamedTally } from "../cards/tallies.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
 /** R97: the id and definition an event or a prompt carries in place of a card the viewer may not read. */
@@ -48,6 +49,8 @@ export type LiveFacts = {
   fieldPower?: RolledPower;
   /** B5 E14: the definition of the Spell a copier's `copies` names (`useCopiedDef`, `copiedDefOf`). */
   copied?: CardDef;
+  /** R2321000: the counts cards on the field keep on a unit, by their keepers' names (`useTallies`). */
+  tallies?: readonly NamedTally[];
 };
 
 /**
@@ -112,6 +115,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // R849000: the inspect notes spell it out.
   if (unit?.attackReason !== undefined) inPlay.attackReason = unit.attackReason;
+  // R2321000: and the counts the field keeps on the unit.
+  if (facts.tallies !== undefined && facts.tallies.length > 0) inPlay.tallies = facts.tallies;
   // R979000: a card in hand that cannot be played says why. Only a hand card or
   // (R1571000) a card in the viewer's own graveyard carries it, so every other card reads as before.
   if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;

@@ -855,7 +855,25 @@ pub type ConditionHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> bool + Send
 /// list is no preview at all.
 pub type PreviewHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<PreviewValue> + Send + Sync>;
 
-/// Builds a `ConditionHook` (`R = bool`) or a `PreviewHook` (`R = Vec<PreviewValue>`).
+/// R2321000, §10.8: one count a card on the field keeps toward what it will do to a Unit on the field,
+/// `value` of `goal` (TG #31 Level Up!'s attacks toward making the Unit Radiant). The Unit is named by
+/// its instance id.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnitTally {
+    pub instance_id: String,
+    pub value: i32,
+    pub goal: i32,
+}
+
+/// R2321000: the counts a card keeps on the Units of the field (`UnitTally`), which `view_for` surfaces on
+/// each Unit it names as `UnitView.tallies`. Asked with the context `preview` is, of a card acting on
+/// the field that the viewer may read (`preview::tallies_on`), and a PURE READ of the card's own
+/// memory and the board, so a count the card would forget (a Unit that left and came back, R174) is
+/// not shown. An empty list shows nothing.
+pub type TallyHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<UnitTally> + Send + Sync>;
+
+/// Builds a `ConditionHook` (`R = bool`), a `PreviewHook` (`R = Vec<PreviewValue>`) or a `TallyHook`
+/// (`R = Vec<UnitTally>`).
 #[allow(clippy::type_complexity)]
 pub fn condition_hook<R: 'static>(
     f: impl for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync + 'static,
@@ -1094,6 +1112,9 @@ pub struct Script {
     pub condition_met: Option<ConditionHook>,
     /// R280: the numbers the card's formula comes to now, which `view_for` surfaces as `preview` (§10.8).
     pub preview: Option<PreviewHook>,
+    /// R2321000: the counts the card keeps on Units of the field, which `view_for` surfaces on those
+    /// Units as `tallies` (§10.8).
+    pub tallies: Option<TallyHook>,
     // ---- Patch v0.2.0 ----
     /// B3.2, R384: the card's Activate abilities ("Activate:", "Activate N:", "Activate ♾️:"), used by
     /// the `activate` action while the card acts on the field (`subsystems::activate`).

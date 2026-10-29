@@ -2,7 +2,8 @@
 // preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
 // read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
 // quest line (B5 E33, R404) and a staged quest's stages (R1854000), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
-// attack now (R849000) and why a card in hand cannot be played now (R979000). `LocLine` is E36's
+// attack now (R849000), why a card in hand cannot be played now (R979000) and the counts cards on the
+// field keep on a unit (R2321000). `LocLine` is E36's
 // meta line.
 
 import type { ReactElement } from "react";
@@ -13,6 +14,7 @@ import { MARK_GLYPH, markWords } from "../marks.ts";
 import { Icon } from "../icons.tsx";
 import { locWords, type FaceModel } from "../model.ts";
 import { RulesText } from "../RulesText.tsx";
+import { TALLY_GLYPH, tallyWords } from "../tallies.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, WAY_GLYPH, changeWords } from "../tuning.ts";
 import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
@@ -46,7 +48,8 @@ export function hasStateNotes(face: FaceModel): boolean {
     (face.quest?.auras ?? []).length > 0 ||
     (face.copying ?? null) !== null ||
     face.attackReason !== undefined ||
-    face.playReason !== undefined
+    face.playReason !== undefined ||
+    (face.tallies ?? []).length > 0
   );
 }
 
@@ -90,7 +93,10 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   const auras = face.quest?.auras ?? [];
   const stages = face.quest?.stages ?? [];
   const copying = face.copying ?? null;
+  // R2321000: the counts the field keeps on a unit, which the board shows as "2/3" alone.
+  const tallies = face.tallies ?? [];
   const lines =
+    tallies.length +
     others.length +
     marks.length +
     quests.length +
@@ -121,6 +127,14 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
               <span className="inspect-state-words">{t(face.playReason)}</span>
             </li>
           )}
+          {tallies.map((tally, index) => (
+            <li key={`tally:${String(index)}`} className="inspect-state" data-state="tally" data-value={tally.value} data-goal={tally.goal}>
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {TALLY_GLYPH}
+              </span>
+              <span className="inspect-state-words">{tallyWords(tally)}</span>
+            </li>
+          ))}
           {copying === null ? null : (
             <li className="inspect-state" data-state="copies" data-copies={copying.defId}>
               <span className="inspect-state-glyph" aria-hidden="true">
