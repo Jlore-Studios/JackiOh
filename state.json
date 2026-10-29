@@ -7129,7 +7129,9 @@
     },
     "2304": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6501944981"
+      ],
       "ci_fixed_head": "27e9a6057c7850cca12e40cca6ed26d6e3b00fc4",
       "ci_fixes": 3,
       "ci_reruns": {
@@ -7178,9 +7180,7 @@
       "source": "request",
       "started_at": "2026-10-29T16:21:02Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6501944981"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [
