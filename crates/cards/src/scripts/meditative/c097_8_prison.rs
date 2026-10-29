@@ -233,7 +233,11 @@ mod tests {
             // §8.8: "After your opponent plays a Unit". Its condition was read for no trigger but a
             // trap's, so a sure capture took its own controller's Unit too.
             let mut s = prison_at_100(json!([VANILLA]), json!([FILLER]));
+            let cursor = s.state().rng_cursor;
             s.play(VANILLA, json!({ "zone": 2 }));
+            // Its condition declined, so its run never rolled: the play draws nothing from the rng, where
+            // a run would have rolled and only the capture's own check would have refused it.
+            assert_eq!(s.state().rng_cursor, cursor);
             assert_eq!(s.unit_at(P1, 2).def_id, VANILLA);
             assert_eq!(
                 jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
@@ -246,7 +250,11 @@ mod tests {
             // §8.8: "a Unit". A Field Spell stays in play (`permanent`) and is no Unit.
             let mut s = prison_at_100(json!([FILLER]), json!([FIELD_SPELL]));
             s.end_turn();
+            let cursor = s.state().rng_cursor;
             s.play(FIELD_SPELL, json!({ "zone": 1 }));
+            // Its condition declined, so its run never rolled: the play draws nothing from the rng, where
+            // a run would have rolled and only the capture's own check would have refused it.
+            assert_eq!(s.state().rng_cursor, cursor);
             assert_eq!(
                 s.backrow(P2, 1).map(|card| card.def_id),
                 Some(FIELD_SPELL.to_string())
@@ -408,7 +416,11 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
             }));
             set_param(s.card_mut(ID), "chance", 100);
+            let cursor = s.state().rng_cursor;
             s.play(VANILLA, json!({ "zone": 2 }));
+            // Its condition declined, so its run never rolled: the play draws nothing from the rng, where
+            // a run would have rolled and only the capture's own check would have refused it.
+            assert_eq!(s.state().rng_cursor, cursor);
             assert_eq!(s.unit_at(P1, 2).def_id, VANILLA);
             assert_eq!(
                 jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),

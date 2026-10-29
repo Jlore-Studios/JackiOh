@@ -238,13 +238,11 @@ pub enum Awaiting {
     CastX,
 }
 
-/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard; R1840003 — a
-/// Resource played from its player's Resource tray.
+/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum PlaySource {
     Graveyard,
-    Tray,
 }
 
 /// `PlayRun.repeat` (TS `NonNullable<PlayRun["repeat"]>`): the repeat being re-resolved, or a cast's
@@ -609,12 +607,11 @@ fn hand_card<'a>(state: &'a GameState, player: PlayerId, instance_id: &str) -> O
 enum PlayFrom {
     Hand,
     Graveyard,
-    Tray,
 }
 
-/// E11, R454: where a play takes its card from — the player's hand, their own Resource tray
-/// (R1840003), or their own graveyard, where a permission may let them play it (`graveyard_play.rs`).
-/// Undefined when the card is in none of them.
+/// E11, R454: where a play takes its card from — the player's hand (a Resource among its cards,
+/// R2250000), or their own graveyard, where a permission may let them play it (`graveyard_play.rs`).
+/// Undefined when the card is in neither.
 fn play_source_of(
     state: &GameState,
     player: PlayerId,
@@ -622,15 +619,6 @@ fn play_source_of(
 ) -> Option<(CardInstance, PlayFrom)> {
     if let Some(in_hand) = hand_card(state, player, instance_id) {
         return Some((in_hand.clone(), PlayFrom::Hand));
-    }
-    // R1840003: a Resource in the player's own tray is played as from hand.
-    if let Some(in_tray) = state.players[player]
-        .resource_tray
-        .iter()
-        .flatten()
-        .find(|card| card.id == instance_id)
-    {
-        return Some((in_tray.clone(), PlayFrom::Tray));
     }
     let in_graveyard = state.players[player]
         .graveyard
@@ -819,10 +807,6 @@ pub fn validate_play(
     // B5 E14, R546: a copier's copy is fixed as its play is checked, the choices with it.
     if copies_text(&card) {
         run.copied = Some(copied_text_of(state, &card));
-    }
-    // R1840003: a play from the tray takes its card from there at step 4.
-    if from == PlayFrom::Tray {
-        run.source = Some(PlaySource::Tray);
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
@@ -1274,8 +1258,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             }
         } else {
             match zone {
-                // R1840003: a play from the tray is a play as from hand, so its card is replaced there.
-                Zone::Hand { player } | Zone::Tray { player } => {
+                Zone::Hand { player } => {
                     if player != run.player {
                         return;
                     }
@@ -1284,10 +1267,9 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
                 _ => return,
             }
         }
-        // R177: a card replaced in a hand (or a Resource tray, R1840000) was never the other player's
-        // to read.
+        // R177: a card replaced in a hand was never the other player's to read.
         let hidden_from: Vec<PlayerId> = match zone {
-            Zone::Hand { player } | Zone::Tray { player } => vec![opponent_of(player)],
+            Zone::Hand { player } => vec![opponent_of(player)],
             _ => Vec::new(),
         };
 
@@ -1346,8 +1328,6 @@ fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
     };
     let playing = match run.source {
         Some(PlaySource::Graveyard) => in_own_graveyard(sink.state, run.player, &card),
-        // R1840003: a play from the tray takes its card from there.
-        Some(PlaySource::Tray) => card.zone == (Zone::Tray { player: run.player }),
         None => card.zone == (Zone::Hand { player: run.player }),
     };
     let embiggen_card = crate::play_choices::has_embiggen_price(sink.state, &card);
@@ -1576,16 +1556,17 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         embiggened: card.embiggened,
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so, for a client to animate it from there. Public: the
-        // graveyard is. R1840003: so does a play from the tray, which the tray's count already shows.
-        from: match run.source {
-            Some(PlaySource::Graveyard) => Some(PlayedFrom::Graveyard),
-            Some(PlaySource::Tray) => Some(PlayedFrom::Tray),
-            None => None,
-        },
+        // graveyard is.
+        from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
         on_draw: cast_on_draw(run).then_some(true),
     });
+    // R2250001: a Resource played pays its player its Credits, as the play is made; a cast is no play
+    // of theirs.
+    if run.cast != Some(true) {
+        crate::resources::pay_resource_credits(sink, run.player, card);
+    }
     if let Some(zone) = run.zone {
         sink.events.push(GameEvent::Summoned {
             // The side it lands on, which is the player's own unless R360 summoned it for the opponent.
@@ -1943,16 +1924,6 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         if run.flashback == Some(true) {
             card.flashback_spent = Some(true);
         }
-        return true;
-    }
-    // R1840003: a play from the tray takes the Resource out of its player's own tray.
-    if run.source == Some(PlaySource::Tray) {
-        let in_tray = find_instance(state, &card.id)
-            .is_some_and(|held| held.zone == (Zone::Tray { player: run.player }));
-        if !in_tray {
-            return false;
-        }
-        remove_from_any_zone(state, card);
         return true;
     }
     let side = &mut state.players[run.player];

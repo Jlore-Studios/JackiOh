@@ -700,10 +700,6 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
     for card in base.players[opponent].hand.iter_mut() {
         hide(card, HIDDEN_CARD_DEF_ID);
     }
-    // R1840000: the opponent's Resource tray is as hidden as their hand.
-    for card in base.players[opponent].resource_tray.iter_mut().flatten() {
-        hide(card, HIDDEN_CARD_DEF_ID);
-    }
     for player in [viewer, opponent] {
         for card in base.players[player].library.iter_mut() {
             hide(card, HIDDEN_CARD_DEF_ID);

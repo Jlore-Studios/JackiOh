@@ -10,12 +10,12 @@
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
 use jackioh_ai::{
-    AI_EVAL, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, evaluate, face_threat, face_threat_with, redact,
-    unit_worth,
+    AI_EVAL, AI_EXTRA_TURN_CARDS, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, evaluate, face_threat,
+    face_threat_with, redact, unit_worth,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
-    PlayerId, Value, Winner, json,
+    AI_DIFFICULTY, CardInstance, CardType, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword,
+    Phase, PlayerId, Value, Winner, json, registered_catalog,
 };
 
 use super::support::{AI, HUMAN, clone, register_cards, scenario};
@@ -896,6 +896,69 @@ mod banked_state_1086 {
         none.players[AI].extra_turns = None;
         assert_close(eval(&owed, AI) - eval(&none, AI), AI_EVAL.extra_turn, 9);
         assert!(eval(&owed, HUMAN) < eval(&none, HUMAN));
+    }
+
+    /// #1886: S #4.3 Event Horizon and S #4.1 Farewell, two (4) Terminus Spells Olivian Expanse offers.
+    const EVENT_HORIZON: &str = "stinkyscape-004-3";
+    const FAREWELL: &str = "stinkyscape-004-1";
+
+    #[test]
+    fn r846_a_card_that_owes_an_extra_turn_counts_its_share_in_hand() {
+        let turn = board(json!({ "p1": { "hand": [EVENT_HORIZON] }, "p2": { "hand": [VANILLA] } }));
+        let plain = board(json!({ "p1": { "hand": [FAREWELL] }, "p2": { "hand": [VANILLA] } }));
+        assert_close(
+            eval(&turn, AI) - eval(&plain, AI),
+            AI_EVAL.extra_turn_in_hand * AI_EVAL.extra_turn,
+            9,
+        );
+        // R185: the enemy's hand is unseen, so an extra-turn card there moves nothing.
+        let theirs = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [EVENT_HORIZON] } }));
+        let ours = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [FAREWELL] } }));
+        assert_eq!(eval(&theirs, AI), eval(&ours, AI));
+    }
+
+    #[test]
+    fn r846_every_card_priced_as_an_extra_turn_owes_one_when_cast() {
+        register_cards();
+        for &card in AI_EXTRA_TURN_CARDS {
+            let def = registered_catalog()[card].clone();
+            let mut s = scenario(json!({
+                "seed": "evaluate-extra-turn-cards",
+                "p1": { "mana": 10, "hand": [card, VANILLA] },
+                "p2": { "hand": [VANILLA] },
+            }));
+            if def.type_ == CardType::Trap {
+                // S #4.4 Last Word owes its turn as it reveals, on lethal damage; its cast sets it.
+                continue;
+            }
+            s.play(card, json!({}));
+            assert!(
+                s.state().players[AI].extra_turns.unwrap_or(0) >= 1,
+                "{card}: priced as an extra turn, but its cast owes none"
+            );
+        }
+    }
+
+    #[test]
+    fn banked_anomaly_misses_are_worth_ai_eval_anomaly_miss_each_on_the_own_side_only() {
+        let plain = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [VANILLA] } }));
+        let mut banked = clone(&plain);
+        banked.players[AI].anomaly_misses = Some(3);
+        assert_close(
+            eval(&banked, AI) - eval(&plain, AI),
+            3.0 * AI_EVAL.anomaly_miss,
+            9,
+        );
+        // A miss is silent: the enemy's count is no fact the seat has.
+        let mut theirs = clone(&plain);
+        theirs.players[HUMAN].anomaly_misses = Some(3);
+        assert_eq!(eval(&theirs, AI), eval(&plain, AI));
+        // The frozen baseline prices neither.
+        let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        assert_eq!(greedy(&banked), greedy(&plain));
+        let turn = board(json!({ "p1": { "hand": [EVENT_HORIZON] }, "p2": { "hand": [VANILLA] } }));
+        let farewell = board(json!({ "p1": { "hand": [FAREWELL] }, "p2": { "hand": [VANILLA] } }));
+        assert_eq!(greedy(&turn), greedy(&farewell));
     }
 
     #[test]

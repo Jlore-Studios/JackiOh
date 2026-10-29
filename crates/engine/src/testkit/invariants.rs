@@ -282,8 +282,6 @@ fn cards_of(state: &GameState) -> Vec<&CardInstance> {
         out.extend(side.backrow_piles.iter().flatten().flatten());
         out.extend(side.carried.iter().flatten().flatten());
         out.extend(side.resolving.iter());
-        // R1840000: a Resource in a Resource tray.
-        out.extend(side.resource_tray.iter().flatten());
     }
     // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
     out.extend(state.held.iter().flatten().map(|entry| &entry.card));
@@ -650,16 +648,6 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     if state.result.is_none() {
         for card in &state.players[rival].hand {
             hide(&mut ids, &card.id, &card.def_id, format!("{rival}'s hand"), true);
-        }
-        // R1840000: the rival's Resource tray is as hidden as their hand.
-        for card in state.players[rival].resource_tray.iter().flatten() {
-            hide(
-                &mut ids,
-                &card.id,
-                &card.def_id,
-                format!("{rival}'s Resource tray"),
-                true,
-            );
         }
     }
     for player in PLAYER_IDS {

@@ -14,7 +14,7 @@
   min-height: 28px;
   overflow: visible;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--pal-ember-500) 70%, transparent));
-  animation: jk-blocked-pop calc(420ms * var(--anim-scale, 1)) ease-out both;
+  animation: jk-blocked-pop calc(var(--motion-slow) * var(--anim-scale, 1)) var(--ease-out) both;
 }
 
 .drag-blocked-ring {

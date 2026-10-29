@@ -85,8 +85,7 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
 /// pile and the resolving zone everyone's (a play is public, R98).
 pub(crate) fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
-        // R1840000: a Resource tray is read as a hand is.
-        Zone::Hand { player } | Zone::Tray { player } => vec![player],
+        Zone::Hand { player } => vec![player],
         Zone::Library { .. } => Vec::new(),
         Zone::Field { .. } if is_face_down(state, card) => vec![card.controller],
         _ => PLAYER_IDS.to_vec(),
