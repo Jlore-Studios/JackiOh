@@ -7243,29 +7243,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40861038420",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40897793219",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "db143b0cea3b3ef4ae8e922f6eb2d751559fb206",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2309": {
