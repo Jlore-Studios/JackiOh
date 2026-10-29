@@ -1,6 +1,6 @@
 // The bar above a lesson's board (SPEC §9.10): which lesson this is, how far through its steps the
 // player is, the practice HUD's live status (modifiers, "AI is thinking…", the outcome), and Exit
-// tutorial, which nothing the coach draws is ever placed over. There is no Skip step (R314): a step
+// tutorial, which nothing the coach draws is ever placed over, and beside it the Field Guide (R2205002). There is no Skip step (R314): a step
 // moves on when it is done, by "Got it", or by itself (coach.ts).
 //
 // It replaces the practice HUD for a lesson and wears its look (`practice-hud`), so the board below
@@ -14,6 +14,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { OUTCOME_TITLE, type PracticeOutcome } from "../practice/PracticeResult.tsx";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
+import { FieldGuideButton } from "./FieldGuide.tsx";
 import type { TutorialLesson } from "./lessons.ts";
 import { tutorialTestid } from "./testids.ts";
 import type { CoachTracker } from "./tracker.ts";
@@ -104,6 +105,7 @@ export function TutorialHud({
           </button>
         )}
       </span>
+      <FieldGuideButton testid={tutorialTestid.fieldGuideHud} compact />
       <button
         type="button"
         className="tutorial-hud__exit"

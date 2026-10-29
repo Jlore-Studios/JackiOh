@@ -1,63 +1,54 @@
-// Lesson "traps" as data (SPEC §9.10, R291): ../lessons.ts says what every field means and the
-// rules every lesson keeps. Its coach script is ../scripts/traps.ts.
+// Lesson 3 data (SPEC §9.10, R291, R2205003); ../scripts/traps.ts is the coach. Training Grounds
+// cards only, none Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
+// (`scripts/lesson-deal.ts traps`). The player's lanes, neighbours, Auras, backrow and tokens each
+// meet a moment; the AI brings a Trap of its own, which this lesson is the first to allow (R291).
 
 import type { TutorialLesson } from "../lessons.ts";
 
 export const lesson: TutorialLesson = {
   id: "traps",
   number: 3,
-  title: "The backrow",
-  summary: "Set traps face-down, spring them on the AI, and watch out for its own.",
-  mechanics: ["The backrow", "Traps", "Field Spells", "Quickdraw", "Tokens"],
-  // This seed deals Bear Honeypot and Going Long in the opening hand, Rush Token Farm as the first
-  // draw and Tempo Timmy on turn 4, and the AI's Sheepish in its first draw: the AI sets it on its
-  // third turn, just before Tempo Timmy arrives to test it. Scanned with scripts/lesson-deal.ts.
-  // Since the opening hand grew from three cards to four (R1156000), the order deals Jlockeed
-  // Shredder-10 as the hand's fourth card: every card that came before it still arrives on the turn it
-  // did, and only the ones after it, past the lesson's turns, come a turn sooner.
-  seed: "tutorial-traps-2225",
+  title: "Lanes and the backrow",
+  summary: "Where a unit stands matters. Set Traps face-down, play Field Spells, and watch the AI's own backrow.",
+  discoveries: ["lanes", "adjacency", "aura", "trap", "enemy-backrow", "field-spell", "field-trap", "token"],
+  seed: "tg-traps-16",
   humanSeat: "p1",
+  poolHold: true,
   humanDeck: [
-    "core-084", // Going Long (Quickdraw)
-    "core-060", // Bear Honeypot
-    "core-041", // Sheepish
-    "core-013", // Jlockeed Shredder-10
-    "core-006", // Mana Well
-    "core-015", // Me and Mr Token
-    "core-068", // Twisted Sorcerer
-    "core-003", // Right-house defender
-    "core-020", // Pointmaster
-    "core-037", // Gravedigger
-    "core-011", // Tempo Timmy
-    "core-045", // Deft Duelist
-    "core-056", // Jilliax
-    "core-016", // Hit Job
-    "core-019", // Midrange Menace
-    "core-002", // Bigot
-    "core-025", // 4-mana 7/7
-    "core-044", // True Strike
-    "core-032", // Prem Panther
-    "core-058", // Rush Token Farm
+    "traininggrounds-005", // Midlane Menace, Common
+    "traininggrounds-014", // Explosive Trap, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-024", // Goliath Situation, Rare
+    "traininggrounds-003", // Group leader, Common
+    "traininggrounds-060", // Rush Token Farm, Common
+    "traininggrounds-019", // Extra Rations, Rare
+    "traininggrounds-021", // Flame Tongue Totem, Rare
+    "traininggrounds-013", // Explosive Runes, Common
+    "traininggrounds-016", // Celestial Caller, Rare
+    "traininggrounds-020", // Recruitment Posters, Rare
+    "traininggrounds-028", // Occidental, Epic
+    "traininggrounds-029", // Oriental, Epic
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-011", // Thwomp, Common
+    "traininggrounds-035", // Corpse Recycler, Epic
   ],
   aiDeck: [
-    "core-041", // Sheepish
-    "core-056", // Jilliax
-    "core-040", // Echoes of the Forgotten
-    "core-073", // Anti-oneshot Armor
-    "core-030", // Archivist
-    "core-077", // Professor Curvature
-    "core-091", // Fed Fauci
-    "core-061", // Prejudiced Postdoc
-    "core-012", // Duplicating Felinors
-    "core-045", // Deft Duelist
-    "core-032", // Prem Panther
-    "core-006", // Mana Well
+    "traininggrounds-014", // Explosive Trap, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-006", // Chosen by the Sun, Common
+    "traininggrounds-007", // Chosen by the Moon, Common
+    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-053", // Prejudiced Postdoc, Rare
+    "traininggrounds-019", // Extra Rations, Rare
+    "traininggrounds-005", // Midlane Menace, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-047", // Midrange Menace, Common
   ],
-  // Sheepish is the AI's only card that costs 1, so once it has three crystals it spends the last
-  // one setting the trap beside a 2-cost card (on its third turn, on the coach's line and on the
-  // autopilot's), rather than on a cheap unit or spell. No Gravedigger, which could hand the AI its
-  // fired trap back turn after turn. Fed Fauci holds Big D-fender's place (#898): once the AI counted
-  // Armor per hit, it saw that the Rush Tokens' 3 Attack never got past Big D-fender's Armor 3 walls
-  // and held them, so the lesson ran past its turns.
-  retryTip: "A face-down card could be a trap. Test it with a cheap unit before you play your best one.",
+  retryTip: "A face-down card could be a Trap. Test it with a cheap unit before you play your best one.",
 };

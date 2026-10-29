@@ -1,10 +1,13 @@
 // Device-local tutorial progress (SPEC §9.9, §9.10; R294, R320, R321, R322).
 // `accountSync.ts` merges known completions and the newest Hide/Show choice through
 // `adoptTutorialProgress`; unavailable or malformed storage means no saved progress.
+// R2205002: the Field Guide's found entries ride in the same record on the device only; the account
+// never sees them, and a lesson won anywhere counts its entries found.
 
 import { useSyncExternalStore } from "react";
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION } from "./config.ts";
+import { FIELD_GUIDE } from "./discoveries.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
 import { isRecord } from "../wire/json.ts";
 import { localStorageOrNull } from "../net/storage.ts";
@@ -17,6 +20,8 @@ export type TutorialHiddenChoice = {
 export type TutorialProgress = {
   readonly completed: readonly string[];
   readonly hiddenChoice: TutorialHiddenChoice | null;
+  /** R2205002: the Field Guide entries found on this device, in the guide's order. */
+  readonly found: readonly string[];
 };
 
 export type LessonStatus = "locked" | "unlocked" | "completed";
@@ -24,6 +29,7 @@ export type LessonStatus = "locked" | "unlocked" | "completed";
 const EMPTY: TutorialProgress = Object.freeze({
   completed: Object.freeze([]) as readonly string[],
   hiddenChoice: null,
+  found: Object.freeze([]) as readonly string[],
 });
 
 let snapshot: TutorialProgress | null = null;
@@ -38,12 +44,23 @@ function parseChoice(raw: unknown): TutorialHiddenChoice | null {
   return Object.freeze({ hidden, at });
 }
 
-function normalise(ids: Iterable<unknown>, hiddenChoice: TutorialHiddenChoice | null = null): TutorialProgress {
+function strings(ids: Iterable<unknown>): Set<string> {
   const wanted = new Set<string>();
   for (const id of ids) if (typeof id === "string") wanted.add(id);
+  return wanted;
+}
+
+function normalise(
+  ids: Iterable<unknown>,
+  hiddenChoice: TutorialHiddenChoice | null = null,
+  foundIds: Iterable<unknown> = [],
+): TutorialProgress {
+  const wanted = strings(ids);
   const completed = TUTORIAL_LESSONS.filter((lesson) => wanted.has(lesson.id)).map((lesson) => lesson.id);
-  if (completed.length === 0 && hiddenChoice === null) return EMPTY;
-  return Object.freeze({ completed: Object.freeze(completed), hiddenChoice });
+  const met = strings(foundIds);
+  const found = FIELD_GUIDE.filter((entry) => met.has(entry.id)).map((entry) => entry.id);
+  if (completed.length === 0 && hiddenChoice === null && found.length === 0) return EMPTY;
+  return Object.freeze({ completed: Object.freeze(completed), hiddenChoice, found: Object.freeze(found) });
 }
 
 /** Untrusted stored data must parse to the current shape or become no progress. */
@@ -58,7 +75,8 @@ export function parseTutorialProgress(raw: unknown): TutorialProgress {
       }
     }
     if (!isRecord(value) || value.v !== TUTORIAL_PROGRESS_VERSION || !Array.isArray(value.completed)) return EMPTY;
-    return normalise(value.completed as unknown[], parseChoice(value.hiddenChoice));
+    const found = Array.isArray(value.found) ? (value.found as unknown[]) : [];
+    return normalise(value.completed as unknown[], parseChoice(value.hiddenChoice), found);
   } catch {
     return EMPTY;
   }
@@ -82,6 +100,7 @@ function persist(progress: TutorialProgress): void {
         completed: progress.completed,
         // Omit an unmade choice to keep R294's stored shape.
         ...(progress.hiddenChoice === null ? {} : { hiddenChoice: progress.hiddenChoice }),
+        ...(progress.found.length === 0 ? {} : { found: progress.found }),
       }),
     );
   } catch {
@@ -93,12 +112,12 @@ function sameChoice(a: TutorialHiddenChoice | null, b: TutorialHiddenChoice | nu
   return a === null || b === null ? a === b : a.hidden === b.hidden && a.at === b.at;
 }
 
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, at) => b[at] === id);
+}
+
 function sameProgress(a: TutorialProgress, b: TutorialProgress): boolean {
-  return (
-    a.completed.length === b.completed.length &&
-    a.completed.every((id, at) => b.completed[at] === id) &&
-    sameChoice(a.hiddenChoice, b.hiddenChoice)
-  );
+  return sameList(a.completed, b.completed) && sameChoice(a.hiddenChoice, b.hiddenChoice) && sameList(a.found, b.found);
 }
 
 function notify(): void {
@@ -121,14 +140,32 @@ function commit(next: TutorialProgress): TutorialProgress {
 
 export function markLessonComplete(id: string): TutorialProgress {
   const current = readTutorialProgress();
-  return commit(normalise([...current.completed, id], current.hiddenChoice));
+  return commit(normalise([...current.completed, id], current.hiddenChoice, current.found));
+}
+
+/** R2205002: entries the game showed found, kept on this device only. */
+export function markFound(ids: readonly string[]): TutorialProgress {
+  const current = readTutorialProgress();
+  return commit(normalise(current.completed, current.hiddenChoice, [...current.found, ...ids]));
+}
+
+/**
+ * R2205002: what the Field Guide shows as met: the entries found on this device and every entry of a
+ * lesson won (on any device), since a win names whatever its game did not show found (R314).
+ */
+export function fieldGuideOf(progress: TutorialProgressLike, lessons: readonly TutorialLesson[] = TUTORIAL_LESSONS): readonly string[] {
+  const met = new Set(progress.found ?? []);
+  for (const lesson of lessons) {
+    if (progress.completed.includes(lesson.id)) for (const id of lesson.discoveries ?? []) met.add(id);
+  }
+  return FIELD_GUIDE.filter((entry) => met.has(entry.id)).map((entry) => entry.id);
 }
 
 /** R321, R322: stamp new choices after the old one even if this device clock steps back. */
 export function setTutorialHidden(hidden: boolean, now: number = Date.now()): TutorialProgress {
   const current = readTutorialProgress();
   const at = Math.max(Math.floor(now), (current.hiddenChoice?.at ?? -1) + 1);
-  return commit(normalise(current.completed, Object.freeze({ hidden, at })));
+  return commit(normalise(current.completed, Object.freeze({ hidden, at }), current.found));
 }
 
 export function isTutorialHidden(progress: TutorialProgress): boolean {
@@ -142,6 +179,8 @@ export function resetTutorialProgress(): TutorialProgress {
 export type TutorialProgressLike = {
   readonly completed: readonly string[];
   readonly hiddenChoice: TutorialHiddenChoice | null;
+  /** The device's alone: the account's copy never carries it (R2205002). */
+  readonly found?: readonly string[];
 };
 
 function newerChoice(a: TutorialHiddenChoice | null, b: TutorialHiddenChoice | null): TutorialHiddenChoice | null {
@@ -152,7 +191,11 @@ function newerChoice(a: TutorialHiddenChoice | null, b: TutorialHiddenChoice | n
 
 /** R321: merging copies cannot lose a completion or let an older choice win. */
 export function mergeTutorialProgress(a: TutorialProgressLike, b: TutorialProgressLike): TutorialProgress {
-  return normalise([...a.completed, ...b.completed], newerChoice(parseChoice(a.hiddenChoice), parseChoice(b.hiddenChoice)));
+  return normalise(
+    [...a.completed, ...b.completed],
+    newerChoice(parseChoice(a.hiddenChoice), parseChoice(b.hiddenChoice)),
+    [...(a.found ?? []), ...(b.found ?? [])],
+  );
 }
 
 /** R321: upload only missing completions or a later, conflicting choice. */
