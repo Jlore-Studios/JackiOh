@@ -8949,6 +8949,14 @@
       "started_at": "2026-10-29T18:15:37Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2405": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-29T17:57:33Z",
+      "issue": 2382,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
