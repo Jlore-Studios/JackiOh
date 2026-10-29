@@ -519,8 +519,7 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     };
     match &card.zone {
         Zone::Library { .. } => false,
-        // R1840000: a Resource tray is read as a hand is: its player's alone.
-        Zone::Hand { player } | Zone::Tray { player } => *player == viewer,
+        Zone::Hand { player } => *player == viewer,
         Zone::Field {
             row: Row::Backrow, ..
         } => backrow_is_public(state, card, viewer),
@@ -1592,21 +1591,6 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
-        // R1840000: the viewer's own Resource tray in full, the opponent's as a count, as the hand is,
-        // both in full once the game is over (R434); absent with no tray (D14).
-        resource_tray: side.resource_tray.as_ref().map(|tray| {
-            if player == viewer || state.result.is_some() {
-                HandView::Cards(
-                    tray.iter()
-                        .map(|card| hand_card_view(state, card, viewer))
-                        .collect(),
-                )
-            } else {
-                HandView::Count {
-                    count: tray.len() as i32,
-                }
-            }
-        }),
         // R1840005: public on both seats, and absent until first gained.
         market_credits: side.market_credits,
         // R846, R847: owed extra turns and the Rift flag, public on both seats.
@@ -2146,9 +2130,9 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it; R1853003:
-        // so does a card bought at the Marketplace.
-        GameEventType::ResourceGained | GameEventType::MarketBought => {
+        // R1853003: a card bought at the Marketplace is named as `addedToHand` names a card, its face
+        // with it.
+        GameEventType::MarketBought => {
             if hidden(&instance) {
                 shown.remove("radiant");
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2521,12 +2505,10 @@ fn redact_event(
         | GameEventType::AutopilotEngaged
         // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
         | GameEventType::Traded
-        // R1840001, R1840004: a sold or discarded Resource ceased to exist where both seats see it go,
-        // as a burned card is (R317); R1840005: Credits are a player and a number.
-        | GameEventType::ResourceSold
-        | GameEventType::ResourceDiscarded
+        // R1840005: Credits are a player and a number.
         | GameEventType::MarketCreditsChanged
-        // R1853003: so did a Resource sold at the Marketplace.
+        // R1853003, R1861000: a card sold at the Marketplace ceased to exist where both seats see it
+        // go, as a burned card is (R317).
         | GameEventType::MarketSold => event.clone(),
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
@@ -2778,8 +2760,7 @@ fn readable_where_stolen(
         return readable_from.contains(&viewer);
     }
     match zone {
-        // R1840000: a Resource tray is its holder's, as a hand is.
-        ZoneName::Hand | ZoneName::Tray => from == viewer,
+        ZoneName::Hand => from == viewer,
         ZoneName::Graveyard | ZoneName::Exile | ZoneName::Resolving => true,
         // A stolen card never comes out of "gone"; TS's switch had no case for it and answered nothing.
         ZoneName::Library | ZoneName::Field | ZoneName::Gone => false,

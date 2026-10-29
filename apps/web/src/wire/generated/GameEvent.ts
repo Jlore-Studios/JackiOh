@@ -45,7 +45,13 @@ arrivedDuring?: Array<string>,
  * response the loop hands this event later judges the played card's stay from the moment the
  * event happened. Engine bookkeeping: a view never forwards it.
  */
-exitsFrom?: number, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
+exitsFrom?: number, 
+/**
+ * R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
+ * nothing that counts plays counted it, and no trigger answers this event. Public, as the
+ * cast is. Only ever `Some(true)`.
+ */
+onDraw?: true, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
 /**
  * R119: the permanents that arrived on the field while this play resolved, whatever put them
  * there — a Recruit by its Cry (#98), #95's backrow, a Reborn body its own Cry brought back, a
@@ -67,7 +73,13 @@ exitsFrom?: number,
  * enemy, and the enemy it is cast at (Meditative+ #17 Dogpile). Engine bookkeeping, and it names
  * a hidden card: a view never forwards it.
  */
-answer?: SpellAnswer, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
+answer?: SpellAnswer, 
+/**
+ * R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
+ * text answers a play ("after you play", "when your opponent plays") passes this event by.
+ * Public, as the cast is. Only ever `Some(true)`.
+ */
+onDraw?: true, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
 /**
  * `formerId` (R227): as on `cardPlayed`, when this summon put an existing card face-down.
  */
@@ -150,23 +162,13 @@ carried?: true, } | { "type": "deanimated", player: PlayerId, instanceId: string
 /**
  * Always "field".
  */
-zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "scriptFailed", player: PlayerId, instanceId: string | null, defId: string, message: string, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "resourceGained", player: PlayerId, instanceId: string, defId: string, 
-/**
- * Set when the Resource is Radiant (a Radiant gain, R1840002). It is the card's, so a view
- * that hides the card hides this too (R97). Only ever `Some(true)`.
- */
-radiant?: true, } | { "type": "resourceSold", player: PlayerId, instanceId: string, defId: string, 
-/**
- * Set when the Resource sold is Radiant (R1840001: its Radiant face's price). Only ever
- * `Some(true)`.
- */
-radiant?: true, credits: number, } | { "type": "resourceDiscarded", player: PlayerId, instanceId: string, defId: string, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
+zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "scriptFailed", player: PlayerId, instanceId: string | null, defId: string, message: string, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
 /**
  * Set when the card bought is Radiant (a Radiant lot, R1853001). It is the card's, so a view
  * that hides the card hides this too (R97). Only ever `Some(true)`.
  */
 radiant?: true, credits: number, } | { "type": "marketSold", player: PlayerId, instanceId: string, defId: string, 
 /**
- * Set when the Resource sold is Radiant. Only ever `Some(true)`.
+ * Set when the card sold is Radiant. Only ever `Some(true)`.
  */
 radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, };

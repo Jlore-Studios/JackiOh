@@ -140,7 +140,7 @@ mod tests {
         assert!(s.state().pending.is_none());
         assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
         s.activate(host.as_str(), json!({ "ability": "mine" }));
-        assert_eq!(resource_tray_of(s.state(), P1).len(), 1);
+        assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
 
     #[test]
