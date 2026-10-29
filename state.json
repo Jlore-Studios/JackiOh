@@ -7959,6 +7959,7 @@
         "by": "`muse` (medium)",
         "sha": "a25ee764807436db68fed451bca92080718da735"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
       "failures": 0,
