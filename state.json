@@ -8338,8 +8338,10 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-29T14:31:29Z",
-    "notes": [],
+    "at": "2026-10-29T14:43:44Z",
+    "notes": [
+      "night_run: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/pulls/2310: HTTP 503: Service Unavailable\n)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -9044,7 +9046,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T14:31:29Z",
+  "loop_tick": "2026-10-29T14:43:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
