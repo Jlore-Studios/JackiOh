@@ -9199,13 +9199,15 @@
     "what": "revise #2309 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T20:45:14Z",
+    "at": "2026-10-29T20:56:19Z",
     "notes": [
-      "delivered build #2402 on claude-8 (run 40929117922): approved",
-      "started build #2385 on claude-8 (run 40952213335)",
-      "started build #2381 on claude-1 (run 40952321827)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered build #2381 on claude-1 (run 40952321827): interrupted",
+      "delivered revise #2341 on claude-3 (run 40939936654): approved",
+      "delivered build #2379 on muse (run 40917668019): approved",
+      "started review #2409 on claude-3 (run 40954041907)",
+      "started revise #2407 on muse (run 40954177241)",
+      "started revise #2309 on muse (run 40954312849)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 74%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-29T21:40:00Z; it can start a build or a plan again in 36m; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-29T21:50:00Z; it can start a build or a plan again in 46m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 24h 57m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it can start a build or a plan again in 31h 56m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9911,7 +9913,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T20:45:14Z",
+  "loop_tick": "2026-10-29T20:56:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
