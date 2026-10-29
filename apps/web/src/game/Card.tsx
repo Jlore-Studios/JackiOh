@@ -56,8 +56,11 @@
 // R1834004: any other card with an owner wears its owner's frozen loadout where the board carries
 // one (game/wearer.ts), its face and overlays below a `TheirCopy`, keyed on the owner as the device's
 // picks are. A back names no card (B16), so it wears its seat's card back alone (`backOf`).
+//
+// #2267: the viewer's own hand card wears its hand hints (`hintRow`, game/HandHints.tsx),
+// a child of the root like the badges below.
 
-import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
+import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
 import type { CardMark, CardType, CardView, PlayerId, RevealAt, UnitView } from "@jackioh/shared";
 
@@ -263,6 +266,8 @@ export type CardProps = {
   onClick?: (target: ClickTarget) => void;
   pops?: Pops;
   className?: string;
+  /** #2267: a hand card's hint row (HandHints.tsx), drawn as a child of the root so that a click on it is the card's. A back draws none. */
+  hintRow?: ReactNode;
 };
 
 /** Which face a card draws, straight from its props (docs/polish/6-cards.md, "Card.tsx"). */
@@ -546,6 +551,8 @@ export default function Card(props: CardProps): ReactElement {
           <span className="choices-truncated-sr">{t(CHOICES_TRUNCATED_NOTE)}</span>
         </span>
       )}
+      {/* #2267: the hint row takes no pointer event (handHints.css). */}
+      {props.hintRow}
       {position !== undefined && <span className="position-tag">{t(position)}</span>}
 
       {counters?.plague !== undefined && (
