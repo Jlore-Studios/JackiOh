@@ -6,7 +6,7 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
-use jackioh_engine::config::CN_TECH_MIN_GAMES;
+use jackioh_engine::config::{CN_TECH_MIN_GAMES, MARKETPLACE_CREDITS_PER_MANA};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -339,8 +339,9 @@ pub struct EvalWeights {
     /// B3.3: a card with a Brittle count n is worth (1 − brittleDiscount / n) of itself — half at
     /// Brittle 1, the next tick away from crumbling — on the board, in the backrow and in the own hand.
     pub brittle_discount: f64,
-    /// B3.1: a readable backrow card with Animated is a Unit in waiting, worth this share of its unit
-    /// face's `unitWorth` on top of its backrow value. Animated, it stands in a unit zone and is a unit.
+    /// B3.1: a readable backrow card with Animated and stats (R2280000) is a Unit in waiting, worth this
+    /// share of its unit face's `unitWorth` on top of its backrow value. Animated, it stands in a unit
+    /// zone and is a unit.
     pub animated_share: f64,
     /// Own hand card: handCard + handPerCost × min(queryCost(def), handCostCap).
     pub hand_card: f64,
@@ -385,6 +386,10 @@ pub struct EvalWeights {
     /// R1855003: per miss a side's Scanning Probes have banked (`PlayerState.anomaly_misses`), each
     /// adding its steps to every later scan's chances. Own side only: a miss is silent (#1886).
     pub anomaly_miss: f64,
+    /// R2250001, R1853002: per Credit the side holds (`PlayerState.market_credits`), priced at what it
+    /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
+    /// `hand_per_cost`. Own side only (#2389).
+    pub market_credit: f64,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -447,6 +452,10 @@ pub struct EvalWeights {
     pub closing_weight: f64,
 }
 
+/// `AI_EVAL.hand_per_cost`: an own hand card's worth per mana of its cost, which `market_credit` reads
+/// too (#2389).
+pub const AI_HAND_PER_COST: f64 = 0.3;
+
 pub const AI_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -500,7 +509,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     brittle_discount: 0.5,
     animated_share: 0.5,
     hand_card: 1.0,
-    hand_per_cost: 0.3,
+    hand_per_cost: AI_HAND_PER_COST,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
     radiant_chaos_effect: 1.0,
@@ -522,6 +531,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // over a couple of scans.
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
+    market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -704,6 +714,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     extra_turn: 0.0,
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
+    // #2389's Credits came after the gates were fixed: nothing, as it gave them.
+    market_credit: 0.0,
     // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
     // them.
     start_of_turn_effect: 0.0,

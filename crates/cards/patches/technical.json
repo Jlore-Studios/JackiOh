@@ -2931,5 +2931,69 @@
     "pr": 2358,
     "title": "the shadow ban swept again after a dispatch, over 10 card(s), with #2333's cards",
     "kind": "ai"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "55e115dfce9641ac48c72490bdbd589ad93f9e21",
+    "pr": 2360,
+    "title": "the Shop fits one screen again on a phone (R1580000)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "156aefc4c0390e8e6e36d50820d7d268b7758e52",
+    "pr": 2361,
+    "title": "spec 03's play after the trap is one Radiant Saintess's new cost allows",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "a27d3da93d9ce77ccb49eef978f605c9bb029db1",
+    "pr": 2362,
+    "title": "patches ship: v0.5.4, v0.5.5, v0.5.6",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "18f73763243e9eefa84d424273f2fb260fdc9b31",
+    "pr": 2336,
+    "title": "drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "2383d89363c56291ce540fa8beb483b68ecffa07",
+    "pr": 2364,
+    "title": "patches log: da5a454..0283f6d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "622a10b5bffdba2c1e5a35de7c2f68e8407bf8fd",
+    "pr": 2365,
+    "title": "I4 reads \"Animated on your turn\" as the animation had it, fuzz seed 2443",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "81e2bbb88be7a07829d8f660afbbd661424afdf2",
+    "pr": 2350,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-10-29",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "52bd29e11fb2cadaadebae69295d718b558d6cf8",
+    "pr": 2366,
+    "title": "main lands pull requests through a merge queue, so two green alone no longer land red together",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "82ab41de7ee91d4a15619ef70de703e2d009eb6d",
+    "pr": 2371,
+    "title": "a Tokens toggle on /stats with each token's win rate",
+    "kind": "app",
+    "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
   }
 ]

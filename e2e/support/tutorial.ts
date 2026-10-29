@@ -101,7 +101,7 @@ export type PracticeHandleLike = {
 
 /** `CoachDisplay` (apps/web/src/tutorial/coach.ts), as far as the specs read it. */
 export type CoachDisplayLike = {
-  mode: "finished" | "waiting" | "tip" | "step";
+  mode: "finished" | "waiting" | "tip" | "step" | "discovery";
   id?: string;
   ack?: boolean;
   stepNumber?: number;

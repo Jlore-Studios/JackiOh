@@ -1118,6 +1118,96 @@ describe("the death screen's rematch offers (R672)", () => {
       expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
     });
   });
+
+  /**
+   * The test above's held rematch answers, with the replay's pages served as `stubReplayFetch` below
+   * serves them and `/series` answering this series (or none). Returns the held answers' releases.
+   */
+  function stubHeldRematchFetch(series: Record<string, unknown> | null): Array<(body: string) => void> {
+    const steps = foldedReplaySteps();
+    const releaseRematch: Array<(body: string) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        const address = new URL(String(url), "http://localhost");
+        if (address.pathname === "/api/matches/m-1/rematch") {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () =>
+              new Promise<string>((resolve) => {
+                releaseRematch.push(resolve);
+              }),
+          } as unknown as Response);
+        }
+        const body = address.pathname === "/api/replays/m-1"
+          ? (() => {
+              const from = Number(address.searchParams.get("from") ?? "0");
+              const count = Number(address.searchParams.get("count") ?? "1");
+              return { matchId: "m-1", from, steps: steps.slice(from, from + count), total: steps.length };
+            })()
+          : address.pathname.endsWith("/series")
+            ? { series }
+            : { version: "v1", defs: {} };
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
+      }),
+    );
+    return releaseRematch;
+  }
+
+  /** Both seats' matching offers, as the rematch poll answers once they have made `match-2`. */
+  const AGREED = JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" });
+
+  it("takes the seat to the rematch even from the finished match's replay", async () => {
+    vi.mocked(navigate).mockClear();
+    // Held until the replay is open: the board's polls are then dropped by their unmount guard, so only
+    // a watcher mounted beside the replay can navigate.
+    const releaseRematch = stubHeldRematchFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+    });
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
+    });
+  });
+
+  it("takes a series game's seat to no rematch from the board or from its replay, and Back shows the result again", async () => {
+    vi.mocked(navigate).mockClear();
+    const releaseRematch = stubHeldRematchFetch(seriesIn("playing"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // The board: once the series is in, nothing that navigates is still polling, so the agreed answer goes nowhere.
+    await screen.findByTestId("series-banner");
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // The replay: no watcher mounts beside it either.
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // Back: the result panel again, still with no rematch on it.
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+  });
 });
 
 describe("a socket refused mid-game", () => {

@@ -16,6 +16,7 @@ import {
   SITE_FOOTER_ALMANAC,
   SITE_FOOTER_PATCH_NOTES,
   filterCostId,
+  poolCardId,
   ts,
 } from "../../support/testids.ts";
 
@@ -23,7 +24,56 @@ import {
 const COST = "1";
 const COST_WORDS = `(${COST}) Cost`;
 
+/** How many cards Tab walks in a row, past the rows the grid mounts at once. */
+const POOL_WALK = 120;
+
 const apiCalls: string[] = [];
+
+/**
+ * #2334: the grid mounts only the rows of cards near the view (PoolGrid's `virtual`), so a check of
+ * every card scrolls the pool from its top to its foot, a screen at a time, and meets the cards each
+ * screen mounts. `check` sees each card once; the ids come back in the grid's order, and there are as
+ * many as the result count says.
+ */
+function eachPoolCard(check: ($card: JQuery<HTMLElement>) => void): Cypress.Chainable<string[]> {
+  const ids: string[] = [];
+  /** The rows in view are mounted: the first card starts, and the last ends, at the view's edges, less the grid's padding. */
+  const coversView = (pool: HTMLElement): boolean => {
+    const view = pool.getBoundingClientRect();
+    const padding = Number.parseFloat(getComputedStyle(pool).paddingTop) + pool.clientTop;
+    const cards = [...pool.querySelectorAll<HTMLElement>(".db-card")].map((card) => card.getBoundingClientRect());
+    return (
+      cards.length > 0 &&
+      Math.min(...cards.map((card) => card.top)) <= view.top + padding + 1 &&
+      Math.max(...cards.map((card) => card.bottom)) >= view.bottom - padding - 1
+    );
+  };
+  const visit = (top: number): void => {
+    cy.get(ts(CARD_POOL)).then(($pool) => {
+      $pool.scrollTop(top);
+    });
+    cy.get(ts(CARD_POOL)).should(($pool) => {
+      expect(coversView($pool[0] as HTMLElement), `the rows in view at ${String(top)} px are mounted`).to.eq(true);
+    });
+    cy.get(ts(CARD_POOL)).then(($pool) => {
+      $pool.find(".db-card").each((_index, card) => {
+        const id = card.dataset.card ?? "";
+        if (ids.includes(id)) return;
+        ids.push(id);
+        check(Cypress.$(card));
+      });
+      const height = $pool.innerHeight() ?? 0;
+      if (top + height < ($pool[0] as HTMLElement).scrollHeight) visit(top + height);
+    });
+  };
+  visit(0);
+  cy.get(ts(DB_RESULT_COUNT))
+    .invoke("attr", "data-count")
+    .then((count) => {
+      expect(ids.length, "cards met while scrolling the pool through").to.eq(Number(count));
+    });
+  return cy.then(() => ids);
+}
 
 describe("Spec 33 — the Card Almanac (R630)", () => {
   // BUILD M8: the seed identifies this serverless scenario for CI re-runs.
@@ -71,20 +121,18 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
         cy.get(ts(filterCostId(COST))).click().should("have.attr", "aria-pressed", "true");
         cy.get(ts(DB_RESULT_COUNT)).invoke("attr", "data-count").then(Number).should("be.lessThan", Number(all)).and("be.greaterThan", 0);
       });
-    cy.get(ts(CARD_POOL))
-      .find(".db-card")
-      .each(($card) => {
-        expect($card.attr("aria-label"), $card.attr("data-card")).to.contain(COST_WORDS);
+    // Every card the filter keeps, which scrolling the pool through meets.
+    eachPoolCard(($card) => {
+      expect($card.attr("aria-label"), $card.attr("data-card")).to.contain(COST_WORDS);
+    }).then((ids) => {
+      // Back at its top, the first card opens its detail.
+      const id = ids[0] ?? "";
+      cy.get(ts(CARD_POOL)).then(($pool) => {
+        $pool.scrollTop(0);
       });
-
-    cy.get(ts(CARD_POOL))
-      .find(".db-card")
-      .first()
-      .then(($card) => {
-        const id = $card.attr("data-card") ?? "";
-        cy.wrap($card).click();
-        cy.get(ts(INSPECT_DETAIL)).should("be.visible").and("have.attr", "data-card", id);
-      });
+      cy.get(ts(poolCardId(id))).click();
+      cy.get(ts(INSPECT_DETAIL)).should("be.visible").and("have.attr", "data-card", id);
+    });
     cy.get(ts(DB_DETAIL_ADD)).should("not.exist");
     cy.get(ts(INSPECT_CLOSE)).click();
     cy.get(ts(INSPECT_DETAIL)).should("not.exist");
@@ -100,5 +148,37 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
     cy.get(ts(landingTestid.root)).should("be.visible");
+  });
+
+  it("#2334 mounts only the rows near the view, names every card, and Tab walks the cards in order past what was mounted", () => {
+    cy.visit("/almanac");
+    cy.get(ts(ALMANAC)).should("be.visible");
+    cy.get(ts(CARD_POOL)).find(".db-card").should("have.length.greaterThan", 0);
+
+    // Far fewer cards than the pool's count are in the page at once.
+    cy.get(ts(DB_RESULT_COUNT))
+      .invoke("attr", "data-count")
+      .then(Number)
+      .then((count) => {
+        cy.get(ts(CARD_POOL)).find(".db-card").its("length").should("be.lessThan", count / 2);
+      });
+
+    // Every card the pool holds is met by scrolling through it, each a button named "<card>. Show details".
+    eachPoolCard(($card) => {
+      expect($card.prop("tagName"), $card.attr("data-card")).to.eq("BUTTON");
+      expect($card.attr("aria-label"), $card.attr("data-card")).to.match(/\. Show details$/u);
+    }).then((ids) => {
+      expect(ids.length, "cards in the pool").to.be.greaterThan(POOL_WALK);
+      cy.get(ts(CARD_POOL)).then(($pool) => {
+        $pool.scrollTop(0);
+      });
+      cy.get(ts(poolCardId(ids[0] ?? ""))).focus();
+      cy.focused().should("have.attr", "data-card", ids[0]);
+      // More cards than a screen and its overscan mount at once: the keyboard goes past the rows that were.
+      for (let at = 1; at < POOL_WALK; at += 1) {
+        cy.press(Cypress.Keyboard.Keys.TAB);
+        cy.focused().should("have.attr", "data-card", ids[at]);
+      }
+    });
   });
 });

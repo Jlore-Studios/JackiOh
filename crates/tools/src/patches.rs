@@ -1524,7 +1524,9 @@ pub mod patches_io {
 /// R1366000: a patch's version, named from its tier when it ships, after the newest version in
 /// `patches.json` (the last entry, R388's order):
 ///
-/// - a **major** (a set reaches `SHIPPED_SETS`) is `v0.(Z+1).0`: after v0.3.17 it is v0.4.0;
+/// - a **major** (a set reaches `SHIPPED_SETS`, unless the owner wraps it into the current line,
+///   `classify::WRAPPED_SETS`, R2204000, when it earns its cards' tier) is `v0.(Z+1).0`: after
+///   v0.3.17 it is v0.4.0;
 /// - a **patch** (`PATCH_MIN_CARDS` or more families play differently, or a rule every game meets) is
 ///   `v0.Z.(X+1)`: after v0.3.17 or v0.3.17c it is v0.3.18;
 /// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
@@ -2583,6 +2585,39 @@ mod tests {
                 assert_eq!(name_by_tier(Tier::Major, "v0.3.17").unwrap(), "v0.4.0");
                 assert_eq!(name_by_tier(Tier::Major, "v0.3.17c").unwrap(), "v0.4.0");
                 assert_eq!(name_by_tier(Tier::Major, "v0.9.2").unwrap(), "v0.10.0");
+            }
+
+            // R2204000: a set wrapped into the current line ships as a patch of it, v0.5.0 then v0.5.1,
+            // while an unwrapped set still opens the next line.
+            #[test]
+            fn r2204000_a_wrapped_set_is_named_within_the_line_and_an_unwrapped_one_opens_the_next() {
+                use crate::patches::patches_io::{Catalog, PendingFragment};
+                let entry = |id: &str, set: &str| {
+                    let json = serde_json::json!({ "id": id, "name": id, "set": set, "cost": 1 });
+                    (id.to_string(), serde_json::from_value(json).expect("an entry"))
+                };
+                let previous: Catalog = [entry("core-001", "Core")].into_iter().collect();
+                let with = |set: &str, prefix: &str| -> Catalog {
+                    let mut catalog = previous.clone();
+                    catalog.extend(
+                        (1..=crate::classify::PATCH_MIN_CARDS)
+                            .map(|k| entry(&format!("{prefix}-{k:03}"), set)),
+                    );
+                    catalog
+                };
+                let fragment = PendingFragment::default();
+                let (tier, plays) = crate::patches::tier_of(
+                    &previous,
+                    &with("Training Grounds", "traininggrounds"),
+                    &fragment,
+                );
+                assert_eq!(tier, Tier::Patch);
+                assert_eq!(plays.len(), crate::classify::PATCH_MIN_CARDS);
+                assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.5.1");
+                assert_eq!(name_by_tier(tier, "v0.5.0d").unwrap(), "v0.5.1");
+                let (tier, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
+                assert_eq!(tier, Tier::Major);
+                assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
             }
 
             #[test]
