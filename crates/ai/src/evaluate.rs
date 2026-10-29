@@ -39,7 +39,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_EVAL, EvalWeights};
+use crate::config::{AI_EVAL, AI_EXTRA_TURN_CARDS, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -272,7 +272,13 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     } else {
         temporary
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift - shift)
+    // #1886: a card that owes an extra turn once cast (R846).
+    let turn = if AI_EXTRA_TURN_CARDS.contains(&card.def_id.as_str()) {
+        w.extra_turn_in_hand * w.extra_turn
+    } else {
+        0.0
+    };
+    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift + turn - shift)
         * brittle_share(card, w)
         * kept
 }
@@ -461,6 +467,11 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
     value += w.extra_turn * f64::from(side.extra_turns.unwrap_or(0));
+    // R1855003, #1886: the misses the side's Scanning Probes have banked. Own side only: a miss is
+    // silent, so the enemy's count is no fact the seat has.
+    if player == seat {
+        value += w.anomaly_miss * f64::from(side.anomaly_misses.unwrap_or(0));
+    }
     if w.marked_share != 0.0 {
         value += w.marked_share * marked_enemy_worth(state, player, w);
     }
