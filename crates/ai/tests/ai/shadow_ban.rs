@@ -1590,9 +1590,12 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
             assert!(
                 matches!(
                     def_of(None, def_id).set,
-                    SetName::Meditative | SetName::MeditativePlus | SetName::Stinkyscape
+                    SetName::Meditative
+                        | SetName::MeditativePlus
+                        | SetName::Stinkyscape
+                        | SetName::TrainingGrounds
                 ),
-                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000)"
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000, R2203000)"
             );
         }
         for (set, cards) in [
@@ -1620,6 +1623,25 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         assert!(
             banned <= STINKYSCAPE_BAN_CEILING,
             "{banned} Stinkyscape cards banned, more than {STINKYSCAPE_BAN_CEILING} (R1885000)"
+        );
+    }
+
+    #[test]
+    fn r2203000_the_shadow_ban_holds_at_most_half_the_training_grounds_set() {
+        jackioh_cards::register_all();
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        let cards = ai_pool()
+            .iter()
+            .filter(|id| def_of(None, id).set == SetName::TrainingGrounds)
+            .count();
+        assert!(cards > 0, "the previewed set deals its cards");
+        let banned = SHADOW_BAN
+            .iter()
+            .filter(|(def_id, _)| def_of(None, def_id).set == SetName::TrainingGrounds)
+            .count();
+        assert!(
+            banned <= cards / 2,
+            "{banned} of the {cards} Training Grounds cards banned, more than half (R2203000)"
         );
     }
 
