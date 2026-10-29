@@ -32,6 +32,8 @@ import {
   UNAUTHORIZED_CLOSE_CODE,
   VOIDED_CLOSE_CODE,
   WAKE_PROBE_MS,
+  browserSocket,
+  defaultMonotonic,
   defaultTimers,
   nextNonce,
   pageWake,
@@ -238,14 +240,6 @@ const INITIAL: DuosSnapshot = {
   teammate: null,
   pings: [],
 };
-
-function browserSocket(url: string, protocols: string[]): SocketLike {
-  return new WebSocket(url, protocols) as unknown as SocketLike;
-}
-
-function defaultMonotonic(): number {
-  return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-}
 
 function sessionToken(): string | null {
   return readSession()?.accessToken ?? null;

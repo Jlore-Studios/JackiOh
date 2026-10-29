@@ -4,11 +4,11 @@
 //! turn, "if cards played this turn >= grade, grade +1 and run every step from E up to the new
 //! grade" (§8 #93), the steps run in order and S is terminal (R27).
 
+use jackioh_engine::query::cards_played_this_turn;
 use jackioh_engine::subsystems::combo_index::{
     GRADES, Grade, RaiseGradeArgs, StartGradeArgs, cascade_effects, combo_index_end_of_turn, grade_name,
     grade_name_of, grade_of, grade_rises, grade_step_effects, grade_value, is_terminal_grade,
-    played_cards_this_turn, plays_this_turn, raise_grade, start_grade, step_a, step_b, step_c, step_d,
-    step_e,
+    played_cards_this_turn, raise_grade, start_grade, step_a, step_b, step_c, step_d, step_e,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -223,7 +223,7 @@ mod r27_combo_index_s8_93_m3_t7 {
 
         play(&mut sink, &trick().id, false);
         play(&mut sink, &trick().id, false);
-        assert_eq!(plays_this_turn(sink.state, P1), 2);
+        assert_eq!(cards_played_this_turn(sink.state, P1), 2);
 
         let card = super::card(sink.state, &card.id).clone();
         assert!(!grade_rises(sink.state, &card));
@@ -253,7 +253,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             play(sink, &trick().id, false);
             assert!(!grade_rises(sink.state, &at_d));
             play(sink, &trick().id, false);
-            assert_eq!(plays_this_turn(sink.state, P1), 2);
+            assert_eq!(cards_played_this_turn(sink.state, P1), 2);
             assert!(grade_rises(sink.state, &at_d));
             let effects = combo_index_end_of_turn(sink, &at_d);
             run(sink, &at_d, effects);
@@ -373,7 +373,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         let before: GameState = serde_json::from_value(json_of(&*sink.state)).unwrap();
         let events_before = sink.events.len();
 
-        assert_eq!(plays_this_turn(sink.state, P1), 10);
+        assert_eq!(cards_played_this_turn(sink.state, P1), 10);
         assert!(!grade_rises(sink.state, &card));
         let effects = combo_index_end_of_turn(&sink, &card);
         assert!(effects.is_empty());
@@ -727,7 +727,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         end_turn(&mut sink);
         assert_eq!(grade_now(sink.state, &card.id), Some(2));
         assert_eq!(sink.state.active, P1);
-        assert_eq!(plays_this_turn(sink.state, P1), 0);
+        assert_eq!(cards_played_this_turn(sink.state, P1), 0);
         let card = super::card(sink.state, &card.id).clone();
         assert!(!grade_rises(sink.state, &card));
     }

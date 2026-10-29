@@ -2577,10 +2577,6 @@ impl DuosInvariantMonitor {
         }
     }
 
-    pub fn duel_monitor(&self, duel: usize) -> &InvariantMonitor {
-        &self.monitors[duel]
-    }
-
     pub fn duel_monitor_mut(&mut self, duel: usize) -> &mut InvariantMonitor {
         &mut self.monitors[duel]
     }

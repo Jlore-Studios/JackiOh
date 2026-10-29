@@ -20,6 +20,7 @@ use serde_json::{Map, Value};
 use crate::config::{STATS_INTERVAL_Z, STATS_SHARE_PRECISION};
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
+use crate::wire::codes::utf16_len;
 use crate::wire::events::{GameOverReason, Winner};
 use crate::wire::string_union;
 
@@ -1728,19 +1729,14 @@ pub fn format_delta(delta: Option<f64>) -> String {
     if delta > 0.0 { format!("+{points}") } else { points }
 }
 
-/// JS `string.length`: UTF-16 code units, which `padEnd`/`padStart` count too ("Δ", "—").
-fn js_length(text: &str) -> usize {
-    text.encode_utf16().count()
-}
-
 fn pad_end(text: &str, width: usize) -> String {
     let mut out = text.to_string();
-    out.push_str(&" ".repeat(width.saturating_sub(js_length(text))));
+    out.push_str(&" ".repeat(width.saturating_sub(utf16_len(text))));
     out
 }
 
 fn pad_start(text: &str, width: usize) -> String {
-    let mut out = " ".repeat(width.saturating_sub(js_length(text)));
+    let mut out = " ".repeat(width.saturating_sub(utf16_len(text)));
     out.push_str(text);
     out
 }
@@ -1831,8 +1827,8 @@ fn table(header: &[String], rows: &[Vec<String>]) -> Vec<String> {
         .enumerate()
         .map(|(column, title)| {
             rows.iter()
-                .map(|row| js_length(row.get(column).map_or("", String::as_str)))
-                .fold(js_length(title), usize::max)
+                .map(|row| utf16_len(row.get(column).map_or("", String::as_str)))
+                .fold(utf16_len(title), usize::max)
         })
         .collect();
     let line = |cells: &[String]| -> String {
