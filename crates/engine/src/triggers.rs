@@ -200,9 +200,10 @@ fn zone_registers_hook(_state: &GameState, holder: &TriggerHolder, hook: HookNam
 }
 
 /// R1020, R2226000: a Trap's or Field Trap's text fused into a card that stands in a unit zone as no
-/// trap never fires from there, whatever fused it. Only `traps.rs` asks a trap's `when` (R99), so queued
-/// as a unit's trigger it would answer every event it names, its own side's included (#2226: 饕餮
-/// holding Wormhole countered and recast its own controller's Spell forever).
+/// trap never fires from there, whatever fused it. Queued as a unit's trigger it would answer every
+/// event its `when` admits (R2271000) for as long as the card stands, with nothing to arm or spend it
+/// (#2226: before that `when` was read, 饕餮 holding Wormhole countered and recast its own controller's
+/// Spell forever).
 fn is_fused_trap_text_in_unit_zone(
     state: &GameState,
     card: &CardInstance,
@@ -1302,6 +1303,13 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     );
     if event_stay.is_some() {
         ctx.event_stay = event_stay;
+    }
+    // R99, R2271000: a trigger's printed condition holds wherever it runs. The traps' dispatch reads a
+    // trap's (`traps::fire_trap`), and a trap on the field is never queued (`holder_of`, R383), so this
+    // reads every other trigger's, once, as it resolves and with the context its list is built from.
+    // Declining does nothing, as a trap that declines is not spent (R61).
+    if def.when.as_ref().is_some_and(|when| !when(&mut ctx, &event)) {
+        return;
     }
     let effects = (def.run)(&mut ctx, &event);
     crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);

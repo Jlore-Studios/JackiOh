@@ -339,5 +339,26 @@
     "blob": "2bba60cb7ef74783ed6f76804b3483e1135b5cba",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86",
     "cardMetricsBlob": "394df3e8ef680b503b069ffc2f9e5f4be18454d8"
+  },
+  {
+    "version": "v0.5.1",
+    "commit": "bf2908714fdb1f697f684f1ac784d4942d2caf55",
+    "blob": "493a99b6e62e08463e4b341f5ad39ab33f9676db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86",
+    "cardMetricsBlob": "9000248458815a5b00da12f073b045c0dcfc33fd"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "e69af8ff23ff239fefb4ccdbd1e26bdf21dee860",
+    "blob": "493a99b6e62e08463e4b341f5ad39ab33f9676db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86",
+    "cardMetricsBlob": "9000248458815a5b00da12f073b045c0dcfc33fd"
+  },
+  {
+    "version": "v0.5.2b",
+    "commit": "da5a454ec10200fdfe856ce52bc5a2d6b338d448",
+    "blob": "493a99b6e62e08463e4b341f5ad39ab33f9676db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86",
+    "cardMetricsBlob": "9000248458815a5b00da12f073b045c0dcfc33fd"
   }
 ]

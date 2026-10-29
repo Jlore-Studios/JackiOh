@@ -854,6 +854,55 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
     }
 }
 
+/// R2271001 (D-5 of #1884's audit): a copier runs the text it copied, so the cost of targeting a copy
+/// of a fused card is the fused card's, the stricter of its ingredients' (R102): a Tnack Trav that
+/// copied Nature Titan + Paul Allen's Ghost asks the Ghost's discards, as the fusion itself does.
+mod r2271001_a_copy_of_a_fused_card_takes_its_stricter_targeting_cost {
+    use super::*;
+
+    const GHOST: &str = "classic-089";
+    const TNACK_TRAV: &str = "stinkyscape-020";
+    const NATURE_TITAN: &str = "classic-045";
+    const GHOST_DISCARDS: i32 = 2;
+
+    #[test]
+    fn r2271001_a_tnack_trav_that_copied_a_fused_ghost_asks_the_ghosts_discards() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [GHOST, TNACK_TRAV, MR_VANILLA, MR_VANILLA], "mana": 10,
+                    "field": [{ "def": NATURE_TITAN, "lane": 1 }] },
+            "p2": { "hand": [MR_VANILLA] },
+        }));
+        let titan = s.unit_at(P1, 1);
+        let ghost = must(
+            s.hand(P1).iter().find(|card| card.def_id == GHOST).cloned(),
+            "the Ghost in hand",
+        );
+        let fused = must(
+            fuse_in(
+                &mut s,
+                FuseArgs {
+                    ingredients: vec![ghost],
+                    target: Some(titan),
+                    ..Default::default()
+                },
+            ),
+            "the Titan + Ghost",
+        );
+        let targeting = |s: &Scenario, card: &CardInstance| {
+            jackioh_engine::targeting::targeting_discards_of(s.state(), card)
+        };
+        assert_eq!(targeting(&s, &fused), GHOST_DISCARDS);
+
+        s.play(
+            TNACK_TRAV,
+            json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": fused.id }] }),
+        );
+        let copier = s.unit_at(P1, 2);
+        assert_eq!(copier.def_id, TNACK_TRAV);
+        assert_eq!(targeting(&s, &copier), GHOST_DISCARDS);
+    }
+}
+
 // A Trap's text fused into a Unit
 
 const WORMHOLE: &str = "stinkyscape-139"; // Trap, 2 — counters an opponent's Spell aimed at their own side
@@ -863,17 +912,22 @@ mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
     use super::*;
 
     #[test]
-    fn r2226000_a_wormhole_fused_onto_a_unit_never_counters_its_controllers_own_spell() {
+    fn r2226000_a_wormhole_fused_onto_a_unit_never_counters_a_spell_its_condition_admits() {
         let mut g = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test.
             "seed": "fused-trap-text",
+            "active": "p2",
             "p1": {
                 "field": [{ "def": MR_VANILLA, "lane": 1 }],
-                "hand": [WORMHOLE, BOOK_OF_STATS, STOCKPILE],
-                "mana": 10,
+                "hand": [WORMHOLE],
+            },
+            "p2": {
+                "field": [{ "def": MR_VANILLA, "lane": 1 }],
+                "hand": [BOOK_OF_STATS],
             },
         }));
         let vanilla = g.unit_at(P1, 1);
+        let target = g.unit_at(P2, 1);
         let wormhole = must(
             g.hand(P1).iter().find(|card| card.def_id == WORMHOLE).cloned(),
             "the Wormhole in hand",
@@ -892,17 +946,18 @@ mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
 
         g.play(
             BOOK_OF_STATS,
-            json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
+            json!({ "targets": [{ "pick": "instance", "instanceId": target.id }] }),
         );
 
         // The Wormhole's text stands in a unit zone on a card that is no trap: R1020's rule holds for any
-        // Fuse, so the Book aimed at its controller's own Unit resolves, and the 4/4 is 9/9.
+        // Fuse, so the Book p2 aims at its own Unit, which the Wormhole's condition admits (R2271000),
+        // resolves, and p2's 4/4 is 9/9.
         assert!(g.state().pending.is_none());
         assert!(
             !g.events()
                 .iter()
                 .any(|event| matches!(event, GameEvent::Countered { .. }))
         );
-        g.expect_stats(&vanilla.id, json!({ "attack": 9, "health": 9 }));
+        g.expect_stats(&target.id, json!({ "attack": 9, "health": 9 }));
     }
 }
