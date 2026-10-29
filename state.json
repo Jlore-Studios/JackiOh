@@ -8394,6 +8394,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "2380": {
+      "suggestion": true
+    },
     "2386": {
       "action": "plan",
       "asks": [],
