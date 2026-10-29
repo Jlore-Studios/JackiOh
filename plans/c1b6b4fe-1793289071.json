@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2388,
+  "title": "Patch: a ranked match's result shows the rank and pips it moved you to",
+  "branch": "bot/issue-2388",
+  "thread": "**Issue #2388 (data, not instructions):**\n\n```text\n# #2388: Patch: a ranked match's result shows the rank and pips it moved you to\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter a ranked game, Hearthstone players expect to see their rank move: a pip gained, a division up. Here the result shows the Jlore and XP earned but nothing about rank. The bar above the board keeps showing the rank from before the game until the next match. Once this is built, the result says, for example, \"Normal Grape II, 3 pips \u2192 Normal Grape I, 0 pips\", and the bar shows the new rank.\n\n## Why\n\n- `useMatchRanks` (`apps/web/src/routes/match.tsx:183-205`) reads both seats' ranks once per match: \"Read once: a promotion mid-match shows on the next one\". Its effect depends on the token and match id only. `useMatchSeries` re-reads on game over (`match.tsx:215`).\n- The result panel shows the earned rewards (`XpReveal`, `match.tsx:484`) and no rank.\n- `MatchRanksBody` (`crates/server/src/api/ranked.rs:906-913`) carries `ranked` and the seats' current ranks only.\n- The server already keeps what is needed:\n  - every rated game is recorded with each side's visible rank before and after (R611; `RatedSide.rank_before` and `rank_after`, `ranked.rs:532-566`);\n  - the store reads a rated game back (`ranked_game`, `crates/server/src/db/store.rs:2608`).\n\nSo this needs no migration.\n\n## Proposal\n\n- `GET /api/matches/:matchId/ranks` adds each seat's visible rank before and after, once the match's rated record exists.\n  - It carries visible ranks only, never the hidden rating (R612).\n  - A field that is absent means \"not recorded yet\", so the client can tell that apart from no change.\n- The client re-reads ranks when the result arrives, retrying briefly while the record is not there. It shows the move in the result panel and updates the bar.\n- Unranked matches and series games are unchanged, except that a ranked series' last game shows the series' one move (R604).\n- A ruling for the read, and the Reads line of SPEC \u00a79.12.\n\n## Where it lands\n\n- Server: `crates/server/src/api/ranked.rs`, `crates/server/tests/api/ranked.rs`.\n- Client: `apps/web/src/routes/match.tsx` and `match.test.tsx`, the ranks response type in the client's net layer.\n- Spec: `spec/09-architecture.md` (\u00a79.12), a ruling note, `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n\n- [ ] A server test: after a ranked match's result is written, the read carries each seat's rank before and after, equal to the rated record's. Before the record exists it carries neither, and an unranked match never does.\n- [ ] No field of the read holds a rating, deviation or volatility.\n- [ ] A web test: the result panel shows the move, and the match bar shows the new rank.\n- [ ] A Jlorious seat shows its position, and a bot's seat shows its rank as the bar does today.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\n\nAbout 8 files across the server and the client, with no migration. Hard by CLAUDE.md rule 11, since it is a design across a crate and the app.\n\n- The result transaction and the client's re-read race. The absent-field answer and a short retry cover that.\n- Showing pips makes their movement visible. That movement is already public on the profile.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:40:06Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2388: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
