@@ -8557,6 +8557,13 @@
     "2382": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T17:39:07Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "every easy line holds as far as I can see (2 files in apps/web, ~100 lines, unit-tested), but line 9 (no open PR on match.tsx) cannot be checked from here, and the new tests hang on held fetch promises whose timing a weak builder could get wrong"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
