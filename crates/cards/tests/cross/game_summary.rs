@@ -278,6 +278,9 @@ mod summarize_game_over_real_cards_s9_11 {
                     })
                     .collect();
                 let mut added_here: Vec<&str> = Vec::new();
+                // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
+                // trigger casts later in the step is played on the face it has by then (R1147000).
+                let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
                 for event in events {
                     match event {
                         GameEvent::AddedToHand { instance_id, .. }
@@ -309,6 +312,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         GameEvent::RadiantSet { instance_id, .. } => {
+                            radiant_here.insert(instance_id.clone(), true);
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].placed
                             {
@@ -316,6 +320,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         GameEvent::Deradianted { instance_id, .. } => {
+                            radiant_here.insert(instance_id.clone(), false);
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].placed
                             {
@@ -349,11 +354,13 @@ mod summarize_game_over_real_cards_s9_11 {
                                 // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
                                 // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
                                 // p2 draws its Dogpile in the very step that casts it, so a card the step
-                                // added to the hand counts the same way.
+                                // added to the hand counts the same way. Re-pinned for R2368000's
+                                // three-card opening hand: summary-cards-54's p1 casts a Created Dogpile
+                                // the same step made Radiant, so it is played Radiant.
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
-                                    radiant: card.radiant,
+                                    radiant: radiant_here.get(instance_id).copied().unwrap_or(card.radiant),
                                     created: card.created == Some(true),
                                     placed: true,
                                     open: false,
