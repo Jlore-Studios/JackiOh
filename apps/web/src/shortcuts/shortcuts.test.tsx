@@ -210,7 +210,6 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/Hero.tsx": 2,
   "game/MarketPrompt.tsx": 1,
   "game/Marketplace.tsx": 1,
-  "game/ModifierBadge.tsx": 1,
   "game/ModifierList.tsx": 1,
   "game/Prompt.tsx": 4,
   "game/Zone.tsx": 1,
