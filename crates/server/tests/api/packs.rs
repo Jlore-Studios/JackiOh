@@ -1827,9 +1827,9 @@ async fn r2378000_a_refused_or_failed_spend_gives_its_turn_back() {
         .await
         .expect("R111's grant");
     buy(&app, &token, "Core").await;
-    fail_on(&app, "economy.counters.grant").await;
+    fail_on(&app, "economy.counters.grant", "injected fault").await;
     let (status, _, body) = open_core().await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(app.spends.claims(PROFILE), 0, "so does a failure");
     open(&app, &token, "Core").await;
