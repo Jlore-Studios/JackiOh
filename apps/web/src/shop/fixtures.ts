@@ -3,6 +3,8 @@
 // server's JSON. No number is a shipped one where a test reads it, so a test that finds one on
 // screen has found the response's value and not a copy of the server's config.
 
+import { CATALOG } from "@jackioh/cards";
+
 import type {
   CollectionResponse,
   CosmeticPacksResponse,
@@ -63,6 +65,20 @@ export function collectionOf(
       { cardId: "core-051-1", quantity: 1 },
     ],
     ...over,
+  };
+}
+
+/**
+ * `GET /api/collection` owning every catalog card at `MAX_COPIES` but `free`: the token pick's pool
+ * stays a few faces, so a test that mounts the browse pane (about 570 faces from `collectionOf`)
+ * stays fast whatever the catalog holds.
+ */
+export function collectionOwningAllBut(...free: string[]): CollectionResponse {
+  return {
+    catalogVersion: "test",
+    entries: Object.keys(CATALOG)
+      .filter((id) => !free.includes(id))
+      .map((cardId) => ({ cardId, quantity: 1 })),
   };
 }
 
