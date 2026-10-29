@@ -622,7 +622,8 @@ mod tests {
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK], "field": [VANILLA] }, "p2": { "hand": [TRANSMOGULATE], "field": [TIMMY] } }));
             let timmy = unit(&s, P2, 1);
             s.end_turn();
-            s.play(TRANSMOGULATE, json!({}));
+            // Since #2179 only the Embiggened Transmogulate reaches the board.
+            s.play(TRANSMOGULATE, json!({ "embiggen": true }));
             let legend = unit(&s, P2, 1);
             assert_ne!(legend.id, timmy.id);
             s.expect_in_zone(&timmy, "gone");
@@ -767,7 +768,9 @@ mod tests {
             s.end_turn();
             s.play(ROCK, json!({ "zone": 2, "tributes": [timmy.id] }));
             let rock = unit(&s, P2, 2);
-            s.end_turn();
+            // p2 has no mana left, and the Indestructible Rock may not switch to Defense (R2179000), so
+            // their turn ends itself (R82).
+            assert_eq!(s.state().active, P1);
 
             play_rollback(&mut s, &["1"]);
             s.expect_in_zone(&rock, "hand");

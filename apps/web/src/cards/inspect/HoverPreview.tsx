@@ -13,6 +13,10 @@
 // `faceText`) has the whole text on its left (Extended.tsx), the two held together so the text stays
 // on the face's left whichever side of the anchor the preview opens on. A Summit in a game prints
 // its next Ascent line here too, from the level its view carries (R280).
+//
+// R2126000: a card whose trigger names a key (`keyHint`, "I") has it said under the face, "Focus the
+// card, then press I to inspect" (the key works only from the focused trigger, never a hovered one), on a
+// keyboard device; the face alone stays the group's last child otherwise.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
@@ -40,12 +44,15 @@ import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes, hasStateNotes } from "./StateNotes.tsx";
 import { namedCards, References } from "./References.tsx";
 import { useDefResolver } from "../refContext.tsx";
+import { t } from "../../i18n/i18n.ts";
+import { ShortcutHint } from "../../shortcuts/Kbd.tsx";
+import type { Shortcut } from "../../shortcuts/shortcuts.ts";
 import { ascentLevelOf } from "../shortText.ts";
 import { OVERLAY_ROOT_PROPS } from "./store.ts";
 import { INSPECT_FACE, INSPECT_HOVER } from "./testids.ts";
 import "./inspect.css";
 
-type HoverPreviewProps = { face: FaceModel; anchor: Rect; prefer?: PreviewPrefer; note?: string };
+type HoverPreviewProps = { face: FaceModel; anchor: Rect; prefer?: PreviewPrefer; note?: string; keyHint?: Shortcut };
 
 function viewportSize(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
@@ -61,7 +68,7 @@ function estimatedSize(withGlossary: boolean, withRefs: boolean, withExtended: b
   return { width: cardWidth + glossary + refs + extended, height };
 }
 
-export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPreviewProps): ReactElement {
+export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }: HoverPreviewProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
@@ -89,6 +96,13 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
     element.dataset.side = measured.side;
   });
 
+  const faceBox = (
+    <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
+      <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
+      <InspectNote note={note} />
+    </div>
+  );
+
   return createPortal(
     <div
       ref={ref}
@@ -101,10 +115,14 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
     >
       <div className="inspect-facegroup">
         <Extended face={face} ascentLevel={ascentLevel} />
-        <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
-          <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
-          <InspectNote note={note} />
-        </div>
+        {keyHint === undefined ? (
+          faceBox
+        ) : (
+          <div className="inspect-face-column">
+            {faceBox}
+            <ShortcutHint keys={[keyHint]} words={t("Focus the card, then press {keys} to inspect")} />
+          </div>
+        )}
       </div>
       {entries.length > 0 || side ? (
         <div className="inspect-side">

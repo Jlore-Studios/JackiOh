@@ -1192,7 +1192,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p2"
           data-position="DEF"
           data-testid="card-u7"
-          style="transform: rotate(90deg) scale(0.72);"
+          style="transform: rotate(90deg) scale(var(--def-scale, 1));"
           tabindex="0"
         >
           <span
@@ -2407,7 +2407,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p1"
           data-position="DEF"
           data-testid="card-u3"
-          style="transform: rotate(90deg) scale(0.72);"
+          style="transform: rotate(90deg) scale(var(--def-scale, 1));"
           tabindex="0"
         >
           <span

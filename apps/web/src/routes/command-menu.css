@@ -56,3 +56,17 @@
 .command-menu__kind {
   color: var(--text-dim);
 }
+
+/* R2126000: the Enter key on the selected entry, and the key legend at the menu's foot. */
+.command-menu__enter {
+  margin-right: 8px;
+}
+
+.command-menu__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}

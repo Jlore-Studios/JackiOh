@@ -169,6 +169,7 @@ fn guard_script() -> Script {
             vec![HeroGuard {
                 cap: Some(GUARD_CAP),
                 divisor: None,
+                guards_self: None,
             }]
         })),
         ..Script::default()
