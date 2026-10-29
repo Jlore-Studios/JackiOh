@@ -88,8 +88,10 @@ mod tests {
     /// Trap). Re-pinned for v0.3.5: the Meditative set joins the pool; for v0.3.10, where Classic #10
     /// Exile went to (2) and #63 Crop Dusting to (1); for the Stinkyscape release (#1884), where its #5
     /// Masochism Unmasked and #131 Spacerace Stimulus (Field Traps), #135 Sacked, #138 Pocket Peptides
-    /// and #144 Prepare For Liftoff join it; and for #2179, where Classic+ #22 Blood Moon went to (2).
-    const TRAP_POOL: [&str; 13] = [
+    /// and #144 Prepare For Liftoff join it; for #2179, where Classic+ #22 Blood Moon went to (2); and
+    /// for the Training Grounds release (#2204), where its #13 Explosive Runes, #14 Explosive Trap and
+    /// #24 Goliath Situation (a Field Trap) join it.
+    const TRAP_POOL: [&str; 16] = [
         "core-018",
         "core-041",
         "core-060",
@@ -103,6 +105,9 @@ mod tests {
         "stinkyscape-135",
         "stinkyscape-138",
         "stinkyscape-144",
+        "traininggrounds-013",
+        "traininggrounds-014",
+        "traininggrounds-024",
     ];
 
     fn query_ids(args: Value) -> Vec<String> {

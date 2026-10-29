@@ -31,7 +31,7 @@ use crate::zones::{
 };
 
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope};
-use super::summon::clone_of;
+use super::summon::{clone_of, row_of};
 use super::targets::{TargetSpec, instance_by_id_or_spec, instance_on_its_stay, resolve_target};
 
 /// Which card to rewrite: the pick the play or a prompt carried (R81), or an instance id a trigger
@@ -44,15 +44,6 @@ pub struct TransformTarget {
     pub target: Option<TargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
-}
-
-/// §5.1: the row a type lives in; a Spell is never a permanent, so it can never replace one.
-fn row_for(type_: CardType) -> Option<Row> {
-    match type_ {
-        CardType::Unit => Some(Row::Units),
-        CardType::Spell => None,
-        _ => Some(Row::Backrow),
-    }
 }
 
 /// §6.3 Replace: the same zone and position, with the old card's owner and controller. The new card
@@ -76,7 +67,7 @@ fn replace_on_field(
     } else {
         at.row
     };
-    if row_for(def.type_) != Some(row_here) {
+    if row_of(def.type_) != Some(row_here) {
         return None;
     }
 
@@ -390,9 +381,9 @@ pub fn vanilla(args: TransformTarget) -> Effect {
 fn can_replace(state: &GameState, old: &CardInstance, def: &CardDef) -> bool {
     match old.zone {
         Zone::Field { .. } if crate::zones::stands_in_backrow(state, old) => {
-            row_for(def.type_) == Some(Row::Units)
+            row_of(def.type_) == Some(Row::Units)
         }
-        Zone::Field { row, .. } => row_for(def.type_) == Some(row),
+        Zone::Field { row, .. } => row_of(def.type_) == Some(row),
         Zone::Graveyard { .. } | Zone::Exile { .. } => !(def.token && def.type_ == CardType::Unit),
         Zone::Hand { .. } | Zone::Library { .. } => true,
         _ => false,
@@ -447,14 +438,16 @@ pub struct TransformRandomArgs {
     pub arrives: Option<bool>,
 }
 
-/// E24, Classic+ #73.1 Classic Golem: "it transforms into a random Classic or Classic+ Unit". A §6.3
+/// E24, Classic+ #73.1 Classic Golem: "that Unit transforms into a random Classic or Classic+ Unit" (the
+/// Unit it attacks, R2285002). A §6.3
 /// Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
 /// card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on
 /// the field, one of its row (R35) — so the draw never lands on one the zone would refuse. Immutable
 /// refuses it (R23), and a refusal or an empty pool draws nothing (R129). `radiant` is the new card's
-/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` is Classic Golem's
-/// "the new Unit may attack again this turn" (R424): the new body on the field is not summoning sick
-/// this turn (a new instance's exertion is already fresh).
+/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` was Classic Golem's
+/// "the new Unit may attack again this turn" before it transformed its target instead (R424, R2285002):
+/// the new body on the field is not summoning sick this turn (a new instance's exertion is already
+/// fresh).
 ///
 /// MD-B10, R921 (Meditative #32): with `scope`, every card of the scope is replaced instead of the
 /// target's; with `same`, one definition is drawn for them all — from the definitions every one of

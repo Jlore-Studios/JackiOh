@@ -3443,7 +3443,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -10838,7 +10839,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -10879,7 +10881,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Rush, First Strike, Trample\nAfter attacking a Unit, this transforms into a random Classic or Classic+ Unit. If the Unit died, the new one may attack again."
+      "text": "Rush, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit. If it dies, this may attack again."
     },
     "radiant": {
       "attack": 20,
@@ -10895,7 +10897,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Trample, Divine Shield\nAfter attacking a Unit, this transforms into a random Radiant Classic or Classic+ Unit. If the Unit died, the new one may attack again."
+      "text": "Rush, Trample, Divine Shield\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit. If it dies, this may attack again."
     }
   },
   "classicplus-074": {
@@ -10929,8 +10931,6 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 0,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -10943,8 +10943,6 @@
       "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
-      "attack": 0,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -15859,7 +15857,8 @@
       "core-095",
       "classicplus-073",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -18120,7 +18119,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 37,
     "base": {
@@ -18873,8 +18873,6 @@
     ],
     "loc": 24,
     "base": {
-      "attack": 1,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -18886,8 +18884,6 @@
       "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -21054,7 +21050,7 @@
   "stinkyscape-068": {
     "id": "stinkyscape-068",
     "index": "68",
-    "name": "Startos",
+    "name": "Stratos",
     "set": "Stinkyscape",
     "type": "Unit",
     "tags": [],
@@ -24427,7 +24423,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 28,
     "base": {
@@ -24462,7 +24459,8 @@
       "stinkyscape-150",
       "stinkyscape-150-1",
       "stinkyscape-151",
-      "stinkyscape-159"
+      "stinkyscape-159",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -24556,7 +24554,8 @@
       "stinkyscape-t-drone-corvette",
       "stinkyscape-t-shield-layer",
       "stinkyscape-t-propagation-layer",
-      "stinkyscape-t-meltdown-layer"
+      "stinkyscape-t-meltdown-layer",
+      "traininggrounds-039"
     ],
     "loc": 77,
     "base": {
@@ -24810,11 +24809,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Startos."
+      "text": "Fill your board with Stratos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Startos."
+      "text": "Fill your board with Radiant Stratos."
     }
   },
   "stinkyscape-159": {
@@ -27442,7 +27441,7 @@
         "min": 1
       }
     ],
-    "loc": 60,
+    "loc": 68,
     "base": {
       "attack": 0,
       "health": 12,

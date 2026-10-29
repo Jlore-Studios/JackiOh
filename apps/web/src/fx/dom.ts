@@ -315,6 +315,8 @@ export function mountHold(
   el.className = "fx-hold";
   el.setAttribute("data-fx", "hold");
   el.setAttribute("data-look", parts.source !== null ? "card" : "glow");
+  // #2111, R2111000: a set lands flat and heavy (fx.css's fx-hold-set); `data-landing` is the drag layer's.
+  if (cue.set === true) el.setAttribute("data-land", "set");
   el.setAttribute("aria-hidden", "true");
   el.setAttribute("inert", "");
   el.style.setProperty("--fx-ms", `${Math.max(0, cue.durationMs)}ms`);

@@ -15,6 +15,7 @@ import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { navigate } from "../net/navigate.ts";
 import { findRoomLinkInText } from "../net/roomLink.ts";
@@ -64,6 +65,8 @@ type Outgoing = { key: string; body: string } & ({ state: "sending" } | { state:
 
 export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () => void }): ReactElement {
   useLocale();
+  // R2127000: Back closes the conversation as its ✕ does.
+  useBackLayer(onClose);
   const titleId = useId();
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   /** A read of the newest page has answered: before one has, no messages is no empty conversation (#1898). */

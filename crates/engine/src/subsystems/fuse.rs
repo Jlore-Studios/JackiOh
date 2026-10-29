@@ -216,7 +216,8 @@ fn union_refs(defs: &[CardDef]) -> Option<Vec<String>> {
 }
 
 /// A stat the fused face has only if some ingredient had it: two fused Spells or Traps keep a face
-/// with no attack and no health rather than gaining a printed 0/0 (§5, `CardFace`).
+/// with no attack and no health rather than gaining a printed 0/0 (§5, `CardFace`). A static flag
+/// that holds only a number (`echoGrant`, `luck`) is summed the same way.
 fn sum_defined(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     let defined: Vec<i32> = values.into_iter().flatten().collect();
     if defined.is_empty() {
@@ -1108,16 +1109,6 @@ fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> 
     })
 }
 
-/// `summed_count` for a flag that holds only a number (`echoGrant`).
-fn summed_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
-    let defined: Vec<i32> = values.into_iter().flatten().collect();
-    if defined.is_empty() {
-        None
-    } else {
-        Some(defined.iter().sum())
-    }
-}
-
 /// `staticFlags`, a nested object, combined key by key by the same rules: a flag is true when any
 /// ingredient set it, a number takes the larger, an amount adds up (`summed_count`), a list is the
 /// lists in order. One ingredient's flags stay exactly as they are.
@@ -1143,7 +1134,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 infinite_reserves: flags(|f| f.infinite_reserves),
                 never_defense: flags(|f| f.never_defense),
                 echo: numbers(|f| f.echo),
-                echo_grant: summed_number(defined.iter().map(|f| f.echo_grant)),
+                echo_grant: sum_defined(defined.iter().map(|f| f.echo_grant)),
                 quickstriker: summed_count(defined.iter().map(|f| f.quickstriker)),
                 gifted_program: numbers(|f| f.gifted_program),
                 tribute: numbers(|f| f.tribute),
@@ -1184,7 +1175,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 credit_lapses: flags(|f| f.credit_lapses),
                 no_natural_mana: flags(|f| f.no_natural_mana),
                 feng_shui: flags(|f| f.feng_shui),
-                luck: summed_number(defined.iter().map(|f| f.luck)),
+                luck: sum_defined(defined.iter().map(|f| f.luck)),
                 spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
@@ -1310,6 +1301,7 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: without_lent_piece(eager_read(
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
+        when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
@@ -2280,6 +2272,11 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
     }
 
     let state: &GameState = sink.state;
+    // R2280001: whether the kept card stood ready to animate before the fusion, so a fusion that first
+    // gives it both stats and Animated owes it its animation.
+    let was = target
+        .as_ref()
+        .is_some_and(|target| crate::animated::ready_to_animate(state, &target.id));
     // R874000: a fusion past FUSED_CARDS_CAP cards is not made, before any of it is built.
     let held: usize = ingredients
         .iter()
@@ -2361,6 +2358,9 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         )
     };
 
+    if target.is_some() {
+        crate::animated::owe_animation(sink.state, &result.id, was);
+    }
     sink.events.push(GameEvent::Fused {
         instance_ids: ingredients.iter().map(|card| card.id.clone()).collect(),
         result_instance_id: result.id.clone(),

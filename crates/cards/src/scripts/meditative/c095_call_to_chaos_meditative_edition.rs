@@ -57,7 +57,15 @@ mod tests {
     const PLUS_CHAOS: &str = "classicplus-073";
     /// The Call to Chaos pool of the sets that ship, in catalog order: #95, C+ #73, the Meditative set
     /// shipping, this card (R1240, R1420), and, the Stinkyscape set shipping (#1884), its #150 and #151.
-    const EDITIONS: [&str; 5] = [CORE_CHAOS, PLUS_CHAOS, ID, "stinkyscape-150", "stinkyscape-151"];
+    /// Re-pinned for the Training Grounds release (#2204): that set's #39 (R2200004).
+    const EDITIONS: [&str; 6] = [
+        CORE_CHAOS,
+        PLUS_CHAOS,
+        ID,
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+    ];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (patch
     /// v0.3.10, #831), M #91.1 and M+ #16.1 Jazakus Prime. Re-pinned for v0.3.15 (Meditative+ ships,
     /// #1187): M+ #16.1 joins the Prime pool; and for the Stinkyscape release (#1884): its #147.1 IN33DH3
@@ -483,7 +491,8 @@ mod tests {
         fn r1240_once_its_set_ships_the_pool_holds_this_card() {
             crate::register_all();
             // No preview: the Meditative set ships (R1420), so the pool that names no set holds
-            // every edition, in catalog order, the Stinkyscape set's two since its release.
+            // every edition, in catalog order, the Stinkyscape set's two since its release and the
+            // Training Grounds set's #39 since its own (#2204).
             let shipped: Vec<String> =
                 jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
                     .iter()

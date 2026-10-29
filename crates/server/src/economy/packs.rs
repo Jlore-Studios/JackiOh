@@ -2,8 +2,8 @@
 //! account page's opening (#1308): the store's grants around `economy::roll`'s pure roll, each in
 //! one transaction.
 //!
-//! - [`buy_pack`]: `PACK_PRICE_JLORE` out of the wallet and an unopened pack into the inventory;
-//!   a wallet that cannot cover it is refused and changes nothing (§14.1).
+//! - [`buy_pack_once`]: `PACK_PRICE_JLORE` out of the wallet and an unopened pack into the
+//!   inventory; a wallet that cannot cover it is refused and changes nothing (§14.1).
 //! - [`open_pack`]: under the account's lock, one unopened pack spent, its slots rolled from a
 //!   fresh seed and every grant written, its cards, cosmetics, pity counters and bars, a full bar
 //!   paying its tokens with the overflow kept (`economy::tokens::settle_bar`, R1305000, R1305001),
@@ -154,15 +154,10 @@ pub(crate) fn delta_of(count: usize) -> Result<i64, ApiError> {
 
 /// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction: the wallet's debit, then the
 /// pack, unopened, into the inventory, each with its ledger row. A wallet that cannot cover the
-/// price is 409 and writes nothing (§14.1). With no key, [`buy_pack_once`]'s spend.
-pub async fn buy_pack(app: &App, profile_id: &str, pack: PackKind) -> Result<BoughtPack, ApiError> {
-    buy_pack_once(app, profile_id, pack, None).await?.now()
-}
-
-/// [`buy_pack`] under an `Idempotency-Key` (R2124000): a keyed buy takes the account's lock first,
-/// so a retry racing its first try waits for it, then answers a key it already committed as it did
-/// then, and keeps the answer of one it buys in the same transaction. A buy with no key takes no
-/// lock and keeps nothing, as before keys.
+/// price is 409 and writes nothing (§14.1). Under an `Idempotency-Key` (R2124000): a keyed buy
+/// takes the account's lock first, so a retry racing its first try waits for it, then answers a
+/// key it already committed as it did then, and keeps the answer of one it buys in the same
+/// transaction. A buy with no key takes no lock and keeps nothing, as before keys.
 pub async fn buy_pack_once(
     app: &App,
     profile_id: &str,

@@ -57,6 +57,7 @@ import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { attempt, messageOf } from "../together/session.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -207,10 +208,6 @@ function collectionOf(entries: readonly { cardId: string; quantity: number }[]):
   return owned;
 }
 
-function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
-}
-
 /** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
 function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
@@ -336,11 +333,6 @@ export function verdictFor(
 }
 
 // Refusals
-
-function messageOf(cause: unknown): string {
-  if (cause instanceof ApiRequestError) return cause.message;
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 type LobbyError = {
   message: string;

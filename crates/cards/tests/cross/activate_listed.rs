@@ -1941,9 +1941,9 @@ mod stinkyscape {
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
-            const STARTOS: &str = "stinkyscape-068";
+            const STRATOS: &str = "stinkyscape-068";
             let mut s = scenario(json!({
-                "p1": { "field": [{ "def": STARTOS, "lane": 2 }], "hand": [HIT_JOB, STOCKPILE], "library": [X, X], "mana": 10 },
+                "p1": { "field": [{ "def": STRATOS, "lane": 2 }], "hand": [HIT_JOB, STOCKPILE], "library": [X, X], "mana": 10 },
                 "p2": { "hand": [FILLER], "library": [X, X] },
             }));
             let targets = pick::unit_at(&s, P1, 2);

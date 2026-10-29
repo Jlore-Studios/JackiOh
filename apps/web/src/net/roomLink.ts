@@ -94,8 +94,6 @@ export function forgetRoomLink(): void {
 
 export const COOP_LINK_STORAGE_KEY = "jackioh.together.coopLink";
 
-export type CoopRoomLink = { code: string };
-
 /** R2094000: the co-op room link, R767's twin for a co-op room: `/together?coop=<CODE>`. */
 export function coopLinkPath(code: string): string {
   const query = new URLSearchParams({ [COOP_PARAM]: code });

@@ -16,6 +16,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
     cancel_attack, damage, damage_all, damage_split, draw, forced_attack_own_hero, heal, set_health, steal,
+    transform,
 };
 use jackioh_engine::testkit::*;
 
@@ -167,6 +168,11 @@ pub static second_wind: LazyLock<CardDef> =
 pub static pile_on: LazyLock<CardDef> = LazyLock::new(|| def("pile-on", 4707, "Spell", json!({})));
 /// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
 pub static shadowstep: LazyLock<CardDef> = LazyLock::new(|| def("shadowstep", 4708, "Trap", json!({})));
+/// The same on a Field Trap, which no firing spends, as a fused Unit holding Classic #14's text is not.
+pub static echo_shadowstep: LazyLock<CardDef> =
+    LazyLock::new(|| def("echo-shadowstep", 4749, "Field Trap", json!({})));
+/// A 1/0 Unit: it dies at every state check, a flicker bringing it back dying again.
+pub static husk: LazyLock<CardDef> = LazyLock::new(|| plain_unit("husk", 4750, 1, 0));
 /// Classic+ #22's shape: an enemy's heal becomes Pierce damage, for the rest of the turn.
 pub static blood_moon: LazyLock<CardDef> = LazyLock::new(|| {
     def(
@@ -370,6 +376,15 @@ pub static ally_noter: LazyLock<CardDef> =
 /// R2199000: the same, whose hook asks its controller before it finishes.
 pub static ally_asker: LazyLock<CardDef> =
     LazyLock::new(|| def("ally-asker", 4748, "Field Spell", json!({})));
+/// R2285000: "When this attacks": notes the attack's target, whether it was forced, and the enemy
+/// hero's health as the hook runs (Classic #45 Nature Titan's shape).
+pub static striker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("striker", 4749, 2, 2));
+/// R2285000: the same, whose hook asks its controller before it finishes.
+pub static striker_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("striker-asker", 4750, 2, 2));
+/// R2285000: "When this attacks, destroy this": an attack whose attacker is gone does not fight.
+pub static kamikaze: LazyLock<CardDef> = LazyLock::new(|| plain_unit("kamikaze", 4751, 2, 2));
+/// R2285002: "When this attacks a Unit, transform it into a wall" (Classic+ #73.1 Classic Golem's shape).
+pub static shifter: LazyLock<CardDef> = LazyLock::new(|| plain_unit("shifter", 4752, 3, 3));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -381,6 +396,8 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         second_wind.clone(),
         pile_on.clone(),
         shadowstep.clone(),
+        echo_shadowstep.clone(),
+        husk.clone(),
         blood_moon.clone(),
         joro.clone(),
         argus.clone(),
@@ -422,6 +439,10 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         cancel_gambit.clone(),
         ally_noter.clone(),
         ally_asker.clone(),
+        striker.clone(),
+        striker_asker.clone(),
+        kamikaze.clone(),
+        shifter.clone(),
     ]
 });
 
@@ -517,6 +538,29 @@ fn after_attack_noter() -> Script {
         after_attack: Some(hook(|ctx| vec![note(attack_facts(&*ctx))])),
         ..Script::default()
     }
+}
+
+/// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
+fn shadowstep_script() -> CardScripts {
+    both(Script {
+        replacements: vec![ReplacementDef {
+            then: Some("copies".to_string()),
+            ..replacement("step", ReplacementMoment::WouldDie, json!({ "flicker": "yours" }))
+        }],
+        resume: IndexMap::from([(
+            "copies",
+            hook(|ctx| {
+                let flickered: Vec<String> = replacement_of(&*ctx)
+                    .and_then(|record| record.flickered.clone())
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|card| card.instance_id.clone())
+                    .collect();
+                vec![note(format!("shadowstep:{}", flickered.join(",")))]
+            }),
+        )]),
+        ..Script::default()
+    })
 }
 
 pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
@@ -627,28 +671,8 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                 },
             ),
         ),
-        (
-            shadowstep.id.clone(),
-            both(Script {
-                replacements: vec![ReplacementDef {
-                    then: Some("copies".to_string()),
-                    ..replacement("step", ReplacementMoment::WouldDie, json!({ "flicker": "yours" }))
-                }],
-                resume: IndexMap::from([(
-                    "copies",
-                    hook(|ctx| {
-                        let flickered: Vec<String> = replacement_of(&*ctx)
-                            .and_then(|record| record.flickered.clone())
-                            .unwrap_or_default()
-                            .iter()
-                            .map(|card| card.instance_id.clone())
-                            .collect();
-                        vec![note(format!("shadowstep:{}", flickered.join(",")))]
-                    }),
-                )]),
-                ..Script::default()
-            }),
-        ),
+        (shadowstep.id.clone(), shadowstep_script()),
+        (echo_shadowstep.id.clone(), shadowstep_script()),
         (
             blood_moon.id.clone(),
             both_of(
@@ -1032,6 +1056,58 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         vec![note(format!("attacked:answered:{survived}"))]
                     }),
                 )]),
+                ..Script::default()
+            }),
+        ),
+        (
+            striker.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|ctx| {
+                    let facts = when_attacks_of(&*ctx);
+                    let target = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.target_id.clone());
+                    let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
+                    let enemy = ctx.state.players[opponent_of(ctx.controller)].hero.health;
+                    vec![note(format!("when:{target}:{forced}:{enemy}"))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            striker_asker.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|_ctx| {
+                    vec![note("when:before"), ask_controller("answered"), note("when:tail")]
+                })),
+                resume: IndexMap::from([(
+                    "answered",
+                    hook(|ctx| {
+                        let forced = js_bool(when_attacks_of(&*ctx).map(|facts| facts.forced));
+                        vec![note(format!("when:answered:{forced}"))]
+                    }),
+                )]),
+                ..Script::default()
+            }),
+        ),
+        (
+            kamikaze.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|_ctx| {
+                    vec![damage(json_as(json!({ "to": { "of": "self" }, "amount": 99 })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            shifter.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|ctx| match when_attacks_of(&*ctx) {
+                    Some(facts) if !facts.target_id.starts_with("hero-") => vec![transform(json_as(
+                        json!({ "instanceId": facts.target_id, "defId": wall.id }),
+                    ))],
+                    _ => vec![],
+                })),
                 ..Script::default()
             }),
         ),

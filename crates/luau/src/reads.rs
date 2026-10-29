@@ -206,6 +206,9 @@ pub fn register_ctx(registry: &mut Readers<'_, &'static mut EffectContext<'stati
     });
 
     // ---- Combat & Activation facts ----
+    registry.add_method("when_attacks_of", |lua, ctx, ()| {
+        to_lua(lua, &when_attacks_of(ctx))
+    });
     registry.add_method("after_attack_of", |lua, ctx, ()| {
         to_lua(lua, &after_attack_of(ctx))
     });
