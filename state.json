@@ -8219,8 +8219,16 @@
     "what": "build #2334 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-29T11:17:10Z",
-    "notes": [],
+    "at": "2026-10-29T11:29:14Z",
+    "notes": [
+      "#2111 needs a plan",
+      "delivered revise #2310 on muse (run 40861205865): approved",
+      "delivered plan #2334 on claude-4 (run 40856706075): planned",
+      "started plan #2111 on claude-7 (run 40866097696)",
+      "started revise #2346 on muse (run 40866196520)",
+      "started build #2334 on claude-4 (run 40866278677)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -8925,7 +8933,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T11:17:10Z",
+  "loop_tick": "2026-10-29T11:29:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
