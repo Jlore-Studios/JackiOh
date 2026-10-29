@@ -608,6 +608,38 @@
   color: #1d5a1f;
 }
 
+/* R2249000: a Starship's box in play: the Starship term over its pieces, each a reference to hover. */
+.cf .cf-starship {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.cf .cf-starship-head {
+  display: block;
+  margin-bottom: 0.25em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cf .cf-starship-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2em 0.45em;
+}
+
+.cf .cf-starship-piece + .cf-starship-piece::before {
+  content: "·";
+  margin-right: 0.45em;
+  opacity: 0.6;
+}
+
+.cf .cf-starship-empty {
+  display: block;
+  font-style: italic;
+  opacity: 0.75;
+}
+
 .cf .cf-text-base:empty + .cf-text-gained {
   margin-top: 0;
   padding-top: 0;

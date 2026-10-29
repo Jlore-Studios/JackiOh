@@ -11,7 +11,7 @@ import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import type { MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
-import { stinkyscapeSvg } from "./stinkyscape.ts";
+import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
 import { trainingGroundsSvg } from "./traininggrounds.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -169,6 +169,17 @@ export function proceduralArtUri(
  * R2170000: a Stinkyscape face's picture (stinkyscape.ts), memoised beside the rest. Its key adds
  * the name, which picks the detail inside the card's family, as the motif does above.
  */
+/** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
+export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean): string {
+  const key = `starship|${pieces}|${launched}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(starshipSvg(pieces, launched, radiant))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
 export function stinkyscapeArtUri(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
   const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}`;
   const hit = proceduralCache.get(key);

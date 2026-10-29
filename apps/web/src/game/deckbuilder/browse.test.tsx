@@ -33,6 +33,7 @@ import {
 // The barrel re-exports the inspect testids but not the timing constants; this is the file the
 // Surface names for them.
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
+import { KBD_TESTID } from "../../shortcuts/Kbd.tsx";
 import { DECK_STATUS_MS } from "./DeckEditor.tsx";
 import DeckWorkshop from "./DeckWorkshop.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
@@ -1108,6 +1109,14 @@ describe("inspecting in the builder (B38)", () => {
     fireEvent.click(tile);
     expect(screen.queryByTestId(deckCardId("x-02"))).toBeNull();
     expect(poolCard("x-02")).not.toHaveAttribute("data-in-deck");
+  });
+
+  it("R2126000 a deck tile's hover preview shows the I key", () => {
+    vi.useFakeTimers();
+    mount(["x-02"]);
+    fireEvent.pointerEnter(screen.getByTestId(deckCardId("x-02")), pointer("mouse"));
+    advance(HOVER_DELAY_MS);
+    expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(KBD_TESTID)).toHaveTextContent("I");
   });
 
   it("B38 inspect-close closes the detail", () => {
