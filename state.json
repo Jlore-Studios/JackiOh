@@ -8798,6 +8798,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2343": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-29T04:42:15Z",
+      "issue": 2323,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
