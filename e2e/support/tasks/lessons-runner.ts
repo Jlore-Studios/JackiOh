@@ -11,6 +11,7 @@ type Lesson = {
   humanSeat: string;
   humanDeck: readonly string[];
   aiDeck: readonly string[];
+  poolHold: boolean;
 };
 
 type CatalogEntry = { id?: string; tags?: unknown };
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
         humanSeat: lesson.humanSeat,
         humanDeck: [...lesson.humanDeck],
         aiDeck: [...lesson.aiDeck],
+        poolHold: lesson.poolHold,
       })),
       aiTutorial: { ...AI_TUTORIAL },
       quickdraw,

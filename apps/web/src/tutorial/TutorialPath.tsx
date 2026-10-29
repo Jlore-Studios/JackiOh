@@ -65,17 +65,6 @@ function buttonLabel(status: LessonStatus): string {
 }
 
 function Chips({ lesson, met }: { lesson: TutorialLesson; met: readonly string[] }): ReactElement {
-  if (lesson.discoveries === undefined) {
-    return (
-      <ul className="tutorial-lesson__chips" aria-label={t("What it teaches")}>
-        {lesson.mechanics.map((mechanic) => (
-          <li key={mechanic} className="tutorial-lesson__chip">
-            {t(mechanic)}
-          </li>
-        ))}
-      </ul>
-    );
-  }
   return (
     <ul className="tutorial-lesson__chips" aria-label={t("What you can find")}>
       {lesson.discoveries.map((id) => {

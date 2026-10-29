@@ -205,6 +205,24 @@ describe("R2205000 the discovery coach", () => {
     expect(activeStep(script, fresh)?.id).toBe("again");
   });
 
+  it("R2205000 a moment waiting for its board lets a later moment whose board has come show first", () => {
+    const waits = moment({
+      id: "waits",
+      title: "Shields",
+      text: "That unit shimmers. What happens when it's hit?",
+      discovers: ["y"],
+      hints: ["Attack it and watch.", "Drag a unit onto it."],
+      when: () => false,
+    });
+    const script = scriptOf({ steps: [waits, ...scriptOf().steps] });
+    let state = coachObserve(script, COACH_START, ctx(myTurn(3)));
+    expect(activeStep(script, state)?.id, "the later moment shows while the first waits").toBe("ask");
+    state = coachObserve(script, state, ctx(myTurn(3), [played]));
+    expect(state.outcomes.ask).toBe("done");
+    expect(state.outcomes.waits, "the waiting moment is still to come").toBeUndefined();
+    expect(coachDisplay(script, coachAck(script, state, ctx(myTurn(3))), ctx(myTurn(3))).mode).toBe("waiting");
+  });
+
   it("R2205000 the coach records what the game's last view shows found, then finishes", () => {
     const script = scriptOf({ steps: [] });
     const over = baseView({ turn: 9, result: { winner: "p1", reason: "hero-death" } });
@@ -329,7 +347,10 @@ describe("R2205000 the Field Guide", () => {
     expect(found(view, [{ type: "cardPlayed", player: "p1", instanceId: "s2", defId: "crown", costPaid: 1 }], defs)).toEqual(
       expect.arrayContaining(["spell", "legendary"]),
     );
-    const theirTurn = baseView({ active: "p2" });
-    expect(found(theirTurn, [{ type: "cardPlayed", player: "p1", instanceId: "s1", defId: "bolt", costPaid: 0 }], defs)).toContain("quickdraw");
+    const quick = { ...defs, draw: defOf({ type: "Spell", tags: ["Quickdraw"] }) };
+    expect(found(view, [{ type: "cardPlayed", player: "p1", instanceId: "s3", defId: "draw", costPaid: 0 }], quick)).toEqual(
+      expect.arrayContaining(["spell", "quickdraw"]),
+    );
+    expect(found(view, [{ type: "cardPlayed", player: "p1", instanceId: "s1", defId: "bolt", costPaid: 0 }], defs)).not.toContain("quickdraw");
   });
 });

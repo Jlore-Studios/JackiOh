@@ -1,8 +1,7 @@
-// The discovery coach and the reckless player through the REAL practice core (harness.ts): R2205000
-// and R2205001. A fixture script of moments runs on today's lesson 1 (it proves the framework; the
-// lessons themselves are rewritten from Training Grounds in the part that ships them), and the
-// reckless player, who attacks into everything and plays nothing protective, still ends a lesson in
-// the human's win: the floor (R2201000) holds by rule, whatever the human does.
+// The discovery coach through the REAL practice core (harness.ts), and the reckless player's choices:
+// R2205000 and R2205001. A fixture script of moments runs on lesson 1's deal, apart from its own coach,
+// and the reckless player attacks into everything and plays nothing protective; every lesson's own
+// suite (scripts/testkit.ts) plays each lesson under it to the human's win.
 
 import { describe, expect, it } from "vitest";
 
@@ -11,7 +10,7 @@ import type { ActionBody, CardDef, PlayerView } from "@jackioh/shared";
 import { baseView, card, emptySide, resetIds, unit } from "../test/fixtures.ts";
 import type { CoachCtx, LessonScript } from "./coach.ts";
 import { LESSON_GAME_TIMEOUT_MS, playLesson, reckless } from "./harness.ts";
-import { TUTORIAL_LESSONS, lessonById } from "./lessons.ts";
+import { lessonById } from "./lessons.ts";
 import { TUTORIAL_BUBBLES_PER_MOVE_MAX } from "./config.ts";
 import { gotItRuns } from "./scripts/testkit.ts";
 import { heroTargetId, legalPlays, moment } from "./steps.ts";
@@ -147,18 +146,4 @@ describe("R2205001 the reckless player", () => {
     expect(reckless(ctxOf(view, guarded, defs))).toEqual({ type: "endTurn" });
     expect(legalPlays(ctxOf(view, legal, defs), "trap")).toHaveLength(1);
   });
-
-  it(
-    "R2205001 still ends each of today's lessons in the human's win, with no loss, draw or stall",
-    () => {
-      for (const each of TUTORIAL_LESSONS) {
-        const run = playLesson(each.id, { policy: "reckless" });
-        expect(run.winner, each.id).toBe(each.humanSeat);
-        expect(run.view.result?.reason, each.id).not.toBe("turn-cap");
-        expect(run.view.you.hero.health, `${each.id}: the floor holds`).toBeGreaterThanOrEqual(1);
-        expect(run.humanActions.some((entry) => entry.action.type === "switchPosition"), each.id).toBe(false);
-      }
-    },
-    LESSON_GAME_TIMEOUT_MS * 2,
-  );
 });

@@ -99,7 +99,7 @@ export function info(options: Common & { done?: CoachStep["done"]; moot?: CoachS
 
 /**
  * R2205000: pose a question and wait for the player to find what it sets up. Shows on the player's
- * own main phase unless `when` says otherwise; never holds the AI (R314).
+ * own main phase, or with `prompt` on their own open prompt, when `when` holds; never holds the AI (R314).
  */
 export function moment(
   options: Omit<Common, "holdAi"> & {
@@ -110,10 +110,14 @@ export function moment(
     done?: CoachStep["done"];
     moot?: CoachStep["moot"];
     revisit?: boolean;
+    /** Shows on the human's own open prompt (the mulligan) rather than their main phase. */
+    prompt?: boolean;
   },
 ): CoachStep {
-  const { when, ...rest } = options;
-  return { kind: "moment", ...rest, when: (ctx) => myMain(ctx) && (when === undefined || when(ctx)) };
+  const { when, prompt, ...rest } = options;
+  const ready = (ctx: CoachCtx): boolean =>
+    prompt === true ? ctx.view.pending !== null && ctx.view.pending.forYou : myMain(ctx);
+  return { kind: "moment", ...rest, when: (ctx) => ready(ctx) && (when === undefined || when(ctx)) };
 }
 
 export function tip(options: CoachTip): CoachTip {

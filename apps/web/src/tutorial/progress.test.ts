@@ -128,6 +128,7 @@ describe("R294 tutorial progress is kept on this device", () => {
       "locked",
       "locked",
       "locked",
+      "locked",
     ]);
     expect(nextLessonToPlay(progress)?.id).toBe(one.id);
 
@@ -158,6 +159,7 @@ describe("R294 tutorial progress is kept on this device", () => {
     progress = resetTutorialProgress();
     expect(TUTORIAL_LESSONS.map((each) => lessonStatus(progress, each))).toEqual([
       "unlocked",
+      "locked",
       "locked",
       "locked",
       "locked",
@@ -303,6 +305,18 @@ describe("R321 the device's copy merges with the account's, and never steps back
     }
     // A reset forgets the choice too.
     expect(resetTutorialProgress().hiddenChoice).toBeNull();
+  });
+});
+
+describe("R2205003 the remade tutorial keeps the old lessons' ids", () => {
+  it("R2205003 a player who won the four Core lessons sees them won and the fifth open", () => {
+    window.localStorage.setItem(
+      TUTORIAL_PROGRESS_KEY,
+      JSON.stringify({ v: TUTORIAL_PROGRESS_VERSION, completed: ["basics", "spells", "traps", "advanced"] }),
+    );
+    const progress = readTutorialProgress();
+    expect(TUTORIAL_LESSONS.map((each) => lessonStatus(progress, each))).toEqual(["completed", "completed", "completed", "completed", "unlocked"]);
+    expect(nextLessonToPlay(progress)?.id).toBe("finale");
   });
 });
 

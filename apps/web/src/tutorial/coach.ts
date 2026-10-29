@@ -124,6 +124,8 @@ export type CoachState = {
   hintsAsked: number;
   /** Discovery bubbles queued since the player's last own move (`TUTORIAL_BUBBLES_PER_MOVE_MAX`). */
   bubblesSinceMove: number;
+  /** The steps' order as the coach takes them, a later moment brought forward when its board comes first; empty is the script's. */
+  order: readonly number[];
 };
 
 export const COACH_START: CoachState = {
@@ -142,6 +144,7 @@ export const COACH_START: CoachState = {
   shownAt: 0,
   hintsAsked: 0,
   bubblesSinceMove: 0,
+  order: [],
 };
 
 /** The coach at a lesson's start, given what the player's Field Guide already holds (R2205002). */
@@ -169,6 +172,32 @@ function safely(test: () => boolean): boolean {
 }
 
 /** A script that lists no `teaches` is a step list with no moments, and watches for nothing. */
+/** The step the coach is on: the `index`-th in its order. */
+function stepAt(script: LessonScript, state: CoachState): CoachStep | undefined {
+  return script.steps[state.order[state.index] ?? state.index];
+}
+
+/**
+ * R2205000: a moment waits for its board, and a later moment whose board has come shows meanwhile. The
+ * run of moments after the current one (up to the next other step or the final one) is searched in
+ * order for the first that can show now; it swaps places with the current one, which waits behind it,
+ * whether it had shown or not.
+ */
+function bringForward(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachState | null {
+  const order = state.order.length === 0 ? script.steps.map((_step, at) => at) : [...state.order];
+  for (let at = state.index + 1; at < order.length; at += 1) {
+    const candidate = script.steps[order[at] ?? at];
+    if (candidate === undefined || candidate.kind !== "moment" || candidate.final === true) return null;
+    if (state.outcomes[candidate.id] !== undefined) continue;
+    if (candidate.when !== undefined && !safely(() => candidate.when?.(ctx) === true)) continue;
+    const here = order[state.index] ?? state.index;
+    order[state.index] = order[at] ?? at;
+    order[at] = here;
+    return { ...state, order, turnsOnStep: 0, currentFrom: null };
+  }
+  return null;
+}
+
 function guideOf(script: LessonScript): readonly Discovery[] {
   if (script.teaches === undefined) return [];
   return script.guide ?? FIELD_GUIDE;
@@ -204,7 +233,7 @@ function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): Co
   let state = start;
   // Each pass stops or retires a step, bounding the loop by `steps.length`.
   for (;;) {
-    const step = script.steps[state.index];
+    const step = stepAt(script, state);
     if (step === undefined) return state.since === null ? state : { ...state, since: null };
     if (state.currentFrom === null) state = { ...state, currentFrom: ctx.view.turn };
 
@@ -223,7 +252,12 @@ function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): Co
         state = retire(state, step, "done");
         continue;
       }
-      if (step.when !== undefined && !safely(() => step.when?.(ctx) === true)) return state;
+      if (step.when !== undefined && !safely(() => step.when?.(ctx) === true)) {
+        const ahead = step.kind === "moment" && step.final !== true ? bringForward(script, state, ctx) : null;
+        if (ahead === null) return state;
+        state = ahead;
+        continue;
+      }
       state = { ...state, since: ctx.view, shownAt: state.turnsOnStep };
     }
 
@@ -235,6 +269,15 @@ function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): Co
     if (isMoot(since)) {
       state = retire(state, step, "moot");
       continue;
+    }
+    // A shown moment whose board has gone (its card spent, its Trap set and waiting) steps back for a
+    // later moment whose board is here; it shows again when its own comes back, its find counted as ever.
+    if (step.kind === "moment" && step.final !== true && step.when !== undefined && !safely(() => step.when?.(ctx) === true)) {
+      const ahead = bringForward(script, { ...state, since: null, shownAt: 0, hintsAsked: 0 }, ctx);
+      if (ahead !== null) {
+        state = ahead;
+        continue;
+      }
     }
     return state;
   }
@@ -285,7 +328,7 @@ function discover(script: LessonScript, current: CoachState, ctx: CoachCtx): Coa
   if (fresh.length === 0) return state;
   const teaches = script.teaches ?? [];
   const wanted = fresh.filter((entry) => teaches.includes(entry.id) || !state.known.includes(entry.id)).map((entry) => entry.id);
-  const info = state.since !== null && script.steps[state.index]?.kind === "info" ? 1 : 0;
+  const info = state.since !== null && stepAt(script, state)?.kind === "info" ? 1 : 0;
   const room = Math.max(0, TUTORIAL_BUBBLES_PER_MOVE_MAX - state.bubblesSinceMove - state.tipQueue.length - info);
   const bubbles = wanted.slice(0, room);
   return {
@@ -306,7 +349,7 @@ export function coachObserve(script: LessonScript, current: CoachState, ctx: Coa
 
   if (ownTurnStarted(state, ctx.view)) {
     const turns = state.turnsOnStep + 1;
-    const step = script.steps[state.index];
+    const step = stepAt(script, state);
     if (step !== undefined && overdue(step, state, turns)) {
       state = retire(state, step, "expired");
     } else {
@@ -332,14 +375,14 @@ export function coachAck(script: LessonScript, state: CoachState, ctx: CoachCtx)
   if (state.finished) return state;
   if (state.discoveryQueue.length > 0) return { ...state, discoveryQueue: state.discoveryQueue.slice(1) };
   if (state.tipQueue.length > 0) return dropTip(state);
-  const step = script.steps[state.index];
+  const step = stepAt(script, state);
   if (step === undefined || state.since === null || step.kind !== "info") return state;
   return settleSteps(script, retire(state, step, "done"), ctx);
 }
 
 /** The shown moment's hint level: 0 is its question alone, the last its pointed hint (R2205000). */
 export function hintLevel(script: LessonScript, state: CoachState): number {
-  const step = script.steps[state.index];
+  const step = stepAt(script, state);
   if (step?.kind !== "moment" || state.since === null) return 0;
   const stalled = state.turnsOnStep - state.shownAt;
   return Math.min(stalled + state.hintsAsked, step.hints?.length ?? 0);
@@ -348,7 +391,7 @@ export function hintLevel(script: LessonScript, state: CoachState): number {
 /** The player asked for a hint: the shown moment's next one, if it has one left. */
 export function coachHint(script: LessonScript, state: CoachState): CoachState {
   if (state.finished || state.discoveryQueue.length > 0 || state.tipQueue.length > 0) return state;
-  const step = script.steps[state.index];
+  const step = stepAt(script, state);
   if (step?.kind !== "moment" || state.since === null) return state;
   if (hintLevel(script, state) >= (step.hints?.length ?? 0)) return state;
   return { ...state, hintsAsked: state.hintsAsked + 1 };
@@ -422,7 +465,7 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
     };
   }
 
-  const step = script.steps[state.index];
+  const step = stepAt(script, state);
   if (step === undefined) return { mode: "finished" };
   if (state.since === null) return { mode: "waiting", stepNumber, stepCount, aiToAct: ctx.aiToAct };
   const hints = step.kind === "moment" ? (step.hints ?? []) : [];
@@ -447,5 +490,5 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
 /** The displayed step for lesson tests. */
 export function activeStep(script: LessonScript, state: CoachState): CoachStep | null {
   if (state.finished || state.since === null || state.tipQueue.length > 0 || state.discoveryQueue.length > 0) return null;
-  return script.steps[state.index] ?? null;
+  return stepAt(script, state) ?? null;
 }

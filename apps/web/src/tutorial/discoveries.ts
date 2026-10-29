@@ -28,8 +28,6 @@ const RIGHT_HAND_FELINOR = "traininggrounds-022";
 const SEANCE = "traininggrounds-037";
 const BIG_FELINOR = "traininggrounds-051";
 const COIN = "core-t-coin";
-/** §3: the middle of the three lanes. */
-const MIDLANE = 1;
 const SHOWPIECES: readonly string[] = ["Legendary", "Mythic"];
 
 function defOf(ctx: CoachCtx, defId: string): CardDef | undefined {
@@ -247,9 +245,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "Lanes",
     rule: "where a unit stands can matter: some cards care which lane they are in.",
     lesson: "traps",
+    // Midlane Menace's Cry buffs it only in the middle lane (R685), so its buff is the lane found.
     found: (ctx) =>
-      freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.defId === MIDLANE_MENACE && event.lane === MIDLANE) &&
-      freshOf(ctx, "buffed").length > 0,
+      freshOf(ctx, "summoned").some(
+        (summon) =>
+          summon.player === ctx.view.viewer &&
+          summon.defId === MIDLANE_MENACE &&
+          freshOf(ctx, "buffed").some((buff) => buff.instanceId === summon.instanceId),
+      ),
   },
   {
     id: "adjacency",
@@ -315,7 +318,11 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "The mulligan",
     rule: "before the first turn you may swap any of your opening cards for new ones.",
     lesson: "advanced",
-    found: (ctx) => ctx.view.mulligan?.youReady === true,
+    // Once both players have answered, the mulligan's view is gone with the phase: the player's own
+    // answer at the game's start is the find too.
+    found: (ctx) =>
+      ctx.view.mulligan?.youReady === true ||
+      (ctx.view.turn <= 1 && freshOf(ctx, "promptAnswered").some((event) => event.player === ctx.view.viewer)),
   },
   {
     id: "the-coin",
@@ -397,9 +404,9 @@ export const FIELD_GUIDE: readonly Discovery[] = [
   {
     id: "quickdraw",
     name: "Quickdraw",
-    rule: "a Quickdraw card can be played on the enemy's turn too.",
+    rule: "a Quickdraw card always starts in your opening hand.",
     lesson: "finale",
-    found: (ctx) => ctx.view.active !== ctx.view.viewer && myPlays(ctx).length > 0,
+    found: (ctx) => myPlays(ctx).some(({ def }) => def?.tags.includes("Quickdraw") === true),
   },
   {
     id: "copying",
