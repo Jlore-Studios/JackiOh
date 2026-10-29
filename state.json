@@ -8641,7 +8641,25 @@
       "feedback_since": "2026-10-29T03:15:45Z",
       "issue": 2126,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40811147962",
+            "tier": "strong"
+          }
+        ],
+        "sha": "79149d65c19611c4203ef1f20b53f5c138712ce3",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
