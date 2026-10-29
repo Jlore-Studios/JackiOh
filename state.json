@@ -7860,9 +7860,12 @@
         "resolved_by": "`muse` (medium)",
         "sha": "8c208640aeff00775198c3298395778bedc1c58b"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T07:59:15Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2268,
       "kind": "revise",
       "last_findings": [],
