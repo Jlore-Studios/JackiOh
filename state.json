@@ -8987,9 +8987,12 @@
         "resolved_by": "`muse` (medium)",
         "sha": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T07:10:04Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2327,
       "kind": "revise",
       "last_findings": [],
