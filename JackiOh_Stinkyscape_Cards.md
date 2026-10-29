@@ -992,7 +992,7 @@ Add 6 **Radiant** random **Drone Cores** to your hand, they cost (1) less
 **Equip**  
 **Start of your turn:** Gain a random **Radiant** **Stinkyscape** resource.
 
-**(1) Startos, Unit, Common, Stinkyscape, \#68**  
+**(1) Stratos, Unit, Common, Stinkyscape, \#68**  
 **Starship Piece**  
 **Flying**  
 \[3/3\]  
@@ -1877,9 +1877,9 @@ The middle 3 unit lanes are trapped in a Gauntlet. No other unit can target them
 **Activate:** Choose to either to add **Brittle** **\+2** to this or **Tribute** this
 
 **(3) Stratos Swarm, Spell, Rare, Stinkyscape, \#158**  
-Fill your board with **Startos**  
+Fill your board with **Stratos**  
 \~\~\~  
-Fill your board with **Radiant Startos**
+Fill your board with **Radiant Stratos**
 
 **(3) ETHICS, Spell, Rare, Stinkyscape, \#159**  
 Add **iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka,** and **Tylannt** to your hand  

@@ -53,7 +53,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const CAPSULE: &str = "stinkyscape-040"; // (3) 2/2 Starship Piece, "Cry: Place 2 Plague Counters."
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const MONKEY: &str = "classic-077"; // (2) 5/5 Stack, "Aura: Spells cost (1) more."
@@ -61,13 +61,13 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1's Dormant Starship holding one Startos, standing in lane 2 beside a Vanilla in lane 1.
+    /// p1's Dormant Starship holding one Stratos, standing in lane 2 beside a Vanilla in lane 1.
     fn one_piece(seed: &str, p1: Value, p2: Value) -> (Scenario, String) {
         let mut p1 = p1;
         let mut field = vec![json!({ "def": VANILLA, "lane": 1 })];
         field.extend(p1["field"].as_array().cloned().unwrap_or_default());
         p1["field"] = json!(field);
-        built_starship(seed, json!([{ "def": STARTOS, "lane": 2 }]), p1, p2)
+        built_starship(seed, json!([{ "def": STRATOS, "lane": 2 }]), p1, p2)
     }
 
     fn launched_name(s: &Scenario, ship: &str) -> Option<String> {
@@ -97,8 +97,8 @@ mod tests {
     fn r1859013_a_dying_piece_summons_it_holding_the_copy_and_its_launch_is_offered_at_3() {
         let (mut s, ship) = built_starship(
             "r1859013-hull",
-            json!([{ "def": STARTOS, "lane": 2 }]),
-            json!({ "field": [{ "def": STARTOS, "lane": 1 }] }),
+            json!([{ "def": STRATOS, "lane": 2 }]),
+            json!({ "field": [{ "def": STRATOS, "lane": 1 }] }),
             json!({}),
         );
         let card = s.card(ship.as_str()).clone();
@@ -134,9 +134,9 @@ mod tests {
                 "library": crate::filler(4),
                 "mana": 10,
             },
-            "p2": { "hand": [FILLER], "field": [STARTOS], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "field": [STRATOS], "library": crate::filler(4) },
         }));
-        // p1's Startos, stolen: its death fuses into its owner's Starship (R1852002), p1's row full.
+        // p1's Stratos, stolen: its death fuses into its owner's Starship (R1852002), p1's row full.
         let piece = s.unit_at(P2, 1).id;
         s.card_mut(piece.as_str()).owner = P1;
         let beneath = s.unit_at(P1, STARSHIP_FULL_ROW_LANE).id;
@@ -214,7 +214,7 @@ mod tests {
         assert_eq!(launched_name(&s, &ship), None);
         launch_starship(&mut s, &ship);
         let name = launched_name(&s, &ship).expect("a name");
-        // A Startos holds no tag, so the name is one that suits any ship.
+        // A Stratos holds no tag, so the name is one that suits any ship.
         let untagged: Vec<&str> = STARSHIP_NAMES
             .iter()
             .filter(|(_, tag)| tag.is_none())
