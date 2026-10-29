@@ -1,8 +1,9 @@
-// A cosmetic, input-transparent fidget layer for the empty playmat. It reads neither rules nor
-// hidden state: the board owns the cards above it, and this layer only records pointer marks in
-// gaps which did not belong to a card or a board control. #1954: one press is one tap, in the
-// look and sound of the playmat's family; holding or dragging adds nothing. #2015: a tap takes the
-// playmat of the half it lands on, the opponent's above the centre line.
+// A cosmetic, input-transparent fidget layer for the playmat. It reads neither rules nor hidden
+// state: the board owns the cards above it, and this layer only records pointer marks where a
+// press landed on neither a card nor a board control. #2332: a zone's own margin, around the unit
+// or trap it holds, is playmat too. #1954: one press is one tap, in the look and sound of the
+// playmat's family; holding or dragging adds nothing. #2015: a tap takes the playmat of the half
+// it lands on, the opponent's above the centre line.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
@@ -111,10 +112,9 @@ export type SandSurfaceProps = {
 
 function isEmptySurfaceTarget(target: EventTarget | null): target is Element {
   if (!(target instanceof Element)) return false;
-  if (target.closest(".card, button, input, select, textarea, [role=button], .hero, .seat, .control-bar") !== null) return false;
-  const zone = target.closest<HTMLElement>("[data-testid^='zone-']");
-  // A blank lane slot is part of the sand; a slot containing a card always belongs to that card.
-  return zone === null || zone.querySelector(".card") === null;
+  // #2332: every bit of the playmat taps, an occupied zone's margin included. Only a card, a board
+  // control or a legal zone (a button: the press plays into it) keeps the press.
+  return target.closest(".card, button, input, select, textarea, [role=button], .hero, .seat, .control-bar") === null;
 }
 
 function variationFor(x: number, y: number, sequence: number): number {

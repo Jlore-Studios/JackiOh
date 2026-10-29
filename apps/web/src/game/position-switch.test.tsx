@@ -25,6 +25,14 @@ function readSheet(fromWeb: string): string {
 }
 
 const css = readSheet("src/game/animations.css");
+const board = readSheet("src/game/board.css");
+
+/** The first `.lane { … }` rule at or after `from` in board.css, up to its closing brace. */
+function laneRule(from: number): string {
+  const start = board.indexOf(".lane {", from);
+  if (start < 0) throw new Error(".lane rule not found in board.css");
+  return board.slice(start, board.indexOf("}", start));
+}
 
 /** The transform at one keyframe stop of `@keyframes <name>`. */
 function stop(name: string, at: "0%" | "100%"): string {
@@ -55,7 +63,7 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   it("a unit at rest in ATK has no transform, and in DEF is turned and scaled", () => {
     expect(renderUnit("ATK").style.transform).toBe("");
     cleanup();
-    expect(renderUnit("DEF").style.transform).toBe("rotate(90deg) scale(0.72)");
+    expect(renderUnit("DEF").style.transform).toBe("rotate(90deg) scale(var(--def-scale, 1))");
   });
 
   it("jk-rotate-def (ATK to DEF) starts upright and ends on the DEF transform the new view rests on", () => {
@@ -71,5 +79,15 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   it("the card still showing DEF turns back to ATK; any other turns into DEF", () => {
     expect(animationNameFor('[data-animating="positionSwitched"]')).toBe("jk-rotate-def");
     expect(animationNameFor('[data-animating="positionSwitched"][data-position="DEF"]')).toBe("jk-rotate-atk");
+  });
+});
+
+describe("#2330 a DEF card is scaled only as far as its lane needs", () => {
+  it("the inline scale is the lane's --def-scale: 0.72 on a phone, 1 on a desktop or a tablet", () => {
+    expect(renderUnit("DEF").style.transform).toContain("scale(var(--def-scale, 1))");
+    expect(laneRule(0)).toContain("--def-scale: 0.72;");
+    const roomy = board.indexOf("@media (min-width: 761px) and (min-height: 501px) {");
+    expect(roomy).toBeGreaterThan(-1);
+    expect(laneRule(roomy)).toContain("--def-scale: 1;");
   });
 });

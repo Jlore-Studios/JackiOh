@@ -723,8 +723,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
         // Every pin was re-dealt for #1704, whose costs move the builder's curve again.
         // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
-        // deal the decks unchanged. And for the Training Grounds release (#2204): the literals gate it
-        // as well, so the decks are still the ones dealt before it was in any pool.
+        // deal the decks unchanged. Every pin was re-dealt again for #2179, whose costs move the curve.
+        // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
+        // still the ones dealt before it was in any pool.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -748,10 +749,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-012",
                     "core-010",
                     "core-055",
-                    "classicplus-005",
-                    "classicplus-035",
+                    "classicplus-007",
+                    "classicplus-031",
                     "core-076",
-                    "classicplus-011",
+                    "classicplus-008",
                 ],
             ),
             (
@@ -770,16 +771,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-015",
                     "core-004",
                     "core-052",
-                    "core-092",
+                    "core-091",
                     "classicplus-001",
                     "classicplus-044",
-                    "core-031",
-                    "classic-048",
+                    "core-032",
+                    "classic-049",
                     "classicplus-067",
                     "classic-004",
                     "classicplus-066",
-                    "core-040",
-                    "core-053",
+                    "core-045",
+                    "core-054",
                 ],
             ),
             (
@@ -807,15 +808,15 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-020",
                     "classic-066",
                     "classicplus-012",
-                    "classic-080",
+                    "classic-079",
                     "classic-020",
                     "classicplus-003",
-                    "classic-060",
-                    "classicplus-007",
-                    "classicplus-038",
-                    "core-028",
-                    "classic-010",
-                    "classic-009",
+                    "classic-061",
+                    "classicplus-005",
+                    "classicplus-046",
+                    "core-032",
+                    "classic-006",
+                    "core-095",
                     "core-094",
                     "classicplus-017",
                 ],
@@ -839,13 +840,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-066",
                     "classicplus-037",
                     "core-001",
-                    "core-081",
-                    "core-061",
+                    "core-082",
                     "core-066",
+                    "core-070",
                     "classicplus-063",
-                    "core-088",
-                    "classic-088",
-                    "classicplus-026",
+                    "core-093",
+                    "classic-075",
+                    "classicplus-013",
                 ],
             ),
         ];

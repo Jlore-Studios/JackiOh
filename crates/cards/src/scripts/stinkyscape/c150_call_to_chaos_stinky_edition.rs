@@ -271,7 +271,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882001_the_pool_holds_the_held_set_s_field_spells_and_no_spell() {
+        fn r1882001_the_pool_holds_every_set_s_quest_field_spells_and_no_spell() {
             let mut seen: Vec<String> = Vec::new();
             for n in 0..GAMES {
                 let seed = format!("{SEED}-quests-{n}");
@@ -562,7 +562,7 @@ mod tests {
             let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
             assert!(!cast.is_empty());
             assert_eq!(cast[0]["costPaid"], json!(0));
-            // R1420: the held set's own two are in no pool that names no set.
+            // R1420: the pool is the shipped sets' editions, this set's own two among them since it shipped.
             assert!(SHIPPED_EDITIONS.contains(&cast[0]["defId"].as_str().unwrap_or("")));
         }
     }

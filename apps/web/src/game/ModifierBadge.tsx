@@ -4,10 +4,11 @@
 // phone), so a long label ("Add a random Call to Chaos …") is cut with an ellipsis, and its `title`
 // is a hover a touch screen never shows. So the badge is a button: a tap, a click, Enter or Space
 // opens its whole label in a bubble beside it, laid on the page (the hero row clips, and a label
-// wrapped in place would push the row apart), and Escape, a tap elsewhere or the badge again closes
-// it. The press stops at the badge, so it never reaches the hero's own click (an emote menu, R1449);
-// an attack or a drag still lands on the portrait. It reads the label the view gives and nothing
-// else (§10.8, CLAUDE.md rule 7).
+// wrapped in place would push the row apart). The badge again (a tap, or Enter or Space on it), a tap
+// elsewhere, or focus leaving it (Tab) closes it. It adds no key handler: the board's are frozen
+// (R2126000), and Enter and Space are the button's own click. The press stops at the badge, so it
+// never reaches the hero's own click (an emote menu, R1449); an attack or a drag still lands on the
+// portrait. It reads the label the view gives and nothing else (§10.8, CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -50,21 +51,16 @@ export function ModifierBadge({ modifier }: { modifier: ModifierView }): ReactEl
     function close(): void {
       setAt(null);
     }
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") close();
-    }
     function onPointer(event: PointerEvent): void {
       if (!(event.target instanceof Node)) return;
       if (badge.current?.contains(event.target) === true || bubble.current?.contains(event.target) === true) return;
       close();
     }
-    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onPointer);
     // The bubble is placed once; a scroll or a resize would leave it behind, so it goes.
     window.addEventListener("resize", close);
     window.addEventListener("scroll", close, true);
     return () => {
-      window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onPointer);
       window.removeEventListener("resize", close);
       window.removeEventListener("scroll", close, true);
@@ -87,13 +83,19 @@ export function ModifierBadge({ modifier }: { modifier: ModifierView }): ReactEl
           const rect = badge.current?.getBoundingClientRect();
           setAt(open || rect === undefined ? null : placement(rect));
         }}
+        // Focus leaving for anything but the bubble (Tab away) closes it; a touch screen may never
+        // focus the button, and there the tap elsewhere closes it instead.
+        onBlur={(event) => {
+          if (open && !(event.relatedTarget instanceof Node && bubble.current?.contains(event.relatedTarget) === true)) setAt(null);
+        }}
       >
         {label}
       </button>
       {at === null
         ? null
         : createPortal(
-            <span ref={bubble} id={bubbleId} className="modifier-full" data-testid={modifierFullTestid(modifier.id)} role="note" style={at}>
+            // tabIndex -1: a click on the bubble focuses it, so reading it is no blur that closes it.
+            <span ref={bubble} id={bubbleId} className="modifier-full" data-testid={modifierFullTestid(modifier.id)} role="note" tabIndex={-1} style={at}>
               {label}
             </span>,
             document.body,

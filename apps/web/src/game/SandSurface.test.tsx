@@ -1,6 +1,7 @@
 // #1954: one press on the empty field is one tap — one mark set and one sound — and each
 // playmat taps in its family's look and sound. The drag trail is gone: holding or dragging
 // after a press adds no mark and no `playSfx` call.
+// #2332: an occupied zone's own element taps too; only its card and the board's controls keep a press.
 
 import { useRef, type ReactElement } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -12,8 +13,9 @@ import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.t
 import type { SfxId } from "../audio/types.ts";
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
-import { fullBoardView } from "../test/fixtures.ts";
+import { baseView, fullBoardView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
+import { testid } from "./contract.ts";
 import SandSurface, {
   TAP_FAMILY,
   TAP_FEEL,
@@ -103,6 +105,17 @@ function markCount(field: HTMLElement): number {
 
 function playedIds(): SfxId[] {
   return audio.playSfx.mock.calls.map(([id]) => id);
+}
+
+/** #2332: `fullBoardView`, every zone holding a card, on the marble playmat; returns its stubbed field. */
+function boardField(): HTMLElement {
+  const mounted = render(
+    <Board view={fullBoardView()} wearCosmetics deckCosmetics={{ table: "table-marble", field: null, cardBack: null }} />,
+  );
+  const field = mounted.container.querySelector<HTMLElement>(".field");
+  if (field === null) throw new Error("fixture must draw a field");
+  stubBounds(field);
+  return field;
 }
 
 describe("SandSurface taps", () => {
@@ -271,5 +284,40 @@ describe("SandSurface taps", () => {
       expect(Math.hypot(star.dx ?? Number.NaN, star.dy ?? Number.NaN)).toBeLessThanOrEqual(TAP_FEEL.astralSpreadPx);
     }
     expect(new Set(astral.map((star) => star.dx)).size).toBeGreaterThan(1);
+  });
+
+  it("#2332 a press on an occupied zone's own element, beside its card, taps in that half's playmat", () => {
+    const field = boardField();
+    const zone = screen.getByTestId(testid.zone("you", "units", 1));
+    expect(zone.querySelector(".card")).not.toBeNull();
+
+    press(zone);
+    expect(field.querySelector(".tap-mark--stone")).not.toBeNull();
+    expect(playedIds()).toEqual([TAP_SFX[TAP_FAMILY["table-marble"]]]);
+  });
+
+  it("#2332 a press inside an occupied zone's card does not tap", () => {
+    const field = boardField();
+    const zone = screen.getByTestId(testid.zone("you", "units", 1));
+    const sprite = zone.querySelector<HTMLElement>(".card")?.querySelector<HTMLElement>("*");
+    if (sprite === null || sprite === undefined) throw new Error("a unit's card must draw its face");
+
+    press(sprite);
+    expect(markCount(field)).toBe(0);
+    expect(audio.playSfx).not.toHaveBeenCalled();
+  });
+
+  it("#2332 a press on a legal zone does not tap: the press plays into it", () => {
+    const legal = testid.zone("you", "units", 1);
+    const mounted = render(<Board view={baseView()} highlight={{ legal: new Set([legal]), selected: new Set() }} />);
+    const field = mounted.container.querySelector<HTMLElement>(".field");
+    if (field === null) throw new Error("fixture must draw a field");
+    stubBounds(field);
+    const zone = screen.getByTestId(legal);
+    expect(zone.getAttribute("role")).toBe("button");
+
+    press(zone);
+    expect(markCount(field)).toBe(0);
+    expect(audio.playSfx).not.toHaveBeenCalled();
   });
 });
