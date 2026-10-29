@@ -864,6 +864,50 @@ mod r1062_fiery_waraxe_reanimated {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 
+    /// Fuzz seed 2443: the autopilot's turn animates The Cane at its controller's start of turn, then
+    /// plays Knowledge Breaker, whose Nerf takes its "Animated on your turn" in the same action. The
+    /// animation entered nothing (R1062), so I4 reads the keyword as the animation had it, off the
+    /// change the later event names, and not off the state the action left.
+    #[test]
+    fn r1062_i4_reads_animated_on_your_turn_as_the_animation_had_it_though_a_nerf_later_in_the_action_takes_it()
+     {
+        let _open = preview_sets(&[SetName::Meditative]);
+        let nerfed = |announced: bool| {
+            let mut g = scenario(json!({
+                "p1": { "hand": ["meditative-066", "core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let mut monitor = create_invariant_monitor(g.state());
+            g.play("meditative-066", json!({ "zone": 1 }));
+            assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+            g.end_turn();
+            assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+            g.end_turn();
+            let waraxe = g.unit(PlayerId::P1, 1).expect("the waraxe animated").clone();
+            find_instance_mut(g.state_mut(), &waraxe.id)
+                .expect("the waraxe")
+                .tuning
+                .get_or_insert_default()
+                .remove_keywords = Some(vec![KeywordKind::AnimatedOnYourTurn]);
+            let mut events = g.last_events().to_vec();
+            if announced {
+                events.push(event(json!({
+                    "type": "degraded", "instanceId": waraxe.id, "defId": waraxe.def_id,
+                    "change": { "kind": "keyword", "keyword": { "kind": "Animated on your turn" }, "added": false },
+                })));
+            }
+            monitor.after(&events, g.state())
+        };
+        assert_eq!(nerfed(true), no_violations());
+        // With no event naming the change, the keyword is read where the action left it: I4 still fires.
+        assert!(
+            nerfed(false)
+                .iter()
+                .any(|found| found.starts_with("I4 entry mismatch")),
+            "an animation the state alone shows without the keyword is still an entry"
+        );
+    }
+
     /// Fuzz seed 5644 (#1216): a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn,
     /// fires on its controller's turn and animates as its firing's last step, face-up for the first
     /// time: an entry (R383), as the engine's `summonedTurn` says, not the start-of-turn animation
@@ -1309,21 +1353,21 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     }
 }
 
-/// R1122, R424: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
-/// combat is fought there, so a Classic Golem that kills the Unit it was re-aimed at killed its
-/// defender (R42) and its transform may attack again: the new Unit carries no `summonedTurn` and I4
-/// reads it as readied. Fuzz seed 9123 of the handicapped wave (#1645).
-mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
+/// R1122, R2285002: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
+/// combat is fought there, so a Classic Golem's "when this attacks" transforms the Unit it was re-aimed
+/// at, and a Golem that kills the Unit that took its place killed its defender (R42) and may attack
+/// again: I4 reads it as readied through the redirect and the transform both. Fuzz seed 9123 of the
+/// handicapped wave (#1645) was the redirect; R424's self-transform was its first shape.
+mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     use super::*;
 
     const GOLEM: &str = "classicplus-073-1";
     const TRAITOROUS_BLOOD: &str = "meditative-064";
     const MENACE: &str = "core-019";
 
-    #[test]
-    fn r1122_r424_i4_reads_a_golem_that_killed_the_unit_its_attack_was_redirected_to_as_readied() {
-        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
-        let mut g = scenario(json!({
+    fn board(seed: &str) -> Scenario {
+        scenario(json!({
+            "seed": seed,
             "p1": {
                 "field": [{ "def": GOLEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }],
                 "library": [VANILLA, VANILLA],
@@ -1333,7 +1377,40 @@ mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
                 "backrow": [{ "def": TRAITOROUS_BLOOD, "faceDown": true }],
                 "library": [VANILLA, VANILLA],
             },
-        }));
+        }))
+    }
+
+    /// The Unit the re-aimed attack's target became, when the Golem destroyed it and survived.
+    fn killed_and_survived(g: &Scenario, golem: &str, ally: &str) -> Option<String> {
+        let made = g.last_events().iter().find_map(|event| match event {
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } if *instance_id == ally => Some(new_instance_id.clone()),
+            _ => None,
+        })?;
+        let killed = g.last_events().iter().any(|event| {
+            matches!(event, GameEvent::Destroyed { instance_id, killer_id: Some(killer), .. }
+                if *instance_id == made && *killer == golem)
+        });
+        let alive = g.unit(PlayerId::P1, 2).is_some_and(|unit| unit.id == golem);
+        (killed && alive).then_some(made)
+    }
+
+    #[test]
+    fn r1122_r2285002_i4_reads_a_golem_that_killed_the_unit_its_redirected_attack_was_transformed_into_as_readied()
+     {
+        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
+        let seed = seed_where("redirected-golem", |seed| {
+            let mut g = board(seed);
+            let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;
+            let ally = g.unit(PlayerId::P1, 3).expect("p1's Vanilla").id;
+            let menace = g.unit(PlayerId::P2, 2).expect("p2's Menace").id;
+            g.attack(golem.as_str(), menace.as_str());
+            killed_and_survived(&g, &golem, &ally).is_some()
+        });
+        let mut g = board(&seed);
         let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;
         let ally = g.unit(PlayerId::P1, 3).expect("p1's Vanilla").id;
         let menace = g.unit(PlayerId::P2, 2).expect("p2's Menace").id;
@@ -1348,22 +1425,10 @@ mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
             "the trap re-aimed the attack at the Golem's neighbour: {:?}",
             g.last_events()
         );
-        let readied = g
-            .last_events()
-            .iter()
-            .find_map(|event| match event {
-                GameEvent::Transformed {
-                    instance_id,
-                    new_instance_id,
-                    ..
-                } if *instance_id == golem => Some(new_instance_id.clone()),
-                _ => None,
-            })
-            .expect("the Golem transformed");
-        assert_eq!(
-            g.card(readied.as_str()).summoned_turn,
-            None,
-            "R424: it may attack again"
+        assert!(killed_and_survived(&g, &golem, &ally).is_some());
+        assert!(
+            !g.card(golem.as_str()).exertion.attacked,
+            "R2285002: it may attack again"
         );
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }

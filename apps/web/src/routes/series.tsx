@@ -8,9 +8,10 @@ import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { t } from "../i18n/i18n.ts";
 import { pageWake } from "../game/net.ts";
-import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
+import { forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { attempt, messageOf } from "../together/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
 import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
@@ -99,16 +100,6 @@ export function ratingWords(result: SeriesResult): string {
     return t("Unrated: no rating changed.");
   }
   return t("Ranked series: counted as one rated game.");
-}
-
-function messageOf(cause: unknown): string {
-  if (cause instanceof ApiRequestError) return cause.message;
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
-/** Normalize synchronous test stubs as promises. */
-function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
 }
 
 type Received = { view: SeriesView; receivedAt: number };
