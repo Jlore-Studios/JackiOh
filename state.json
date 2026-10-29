@@ -9001,6 +9001,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2348": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-29T03:40:04Z",
+      "issue": 2269,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
