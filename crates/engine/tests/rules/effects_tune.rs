@@ -1994,3 +1994,50 @@ mod r1748000_in_play {
         assert_eq!(live(&state, &unit.id).cost_mod, 0);
     }
 }
+
+mod r2261000_tribute_in_play {
+    use super::*;
+
+    #[test]
+    fn r2261000_r386_a_tribute_on_the_field_is_never_moved_one_in_a_hand_is_and_its_play_asks_that() {
+        let mut state = game("tribute-in-play");
+        let held = card(&mut state, &instance_fx::tributer.id);
+        assert_eq!(
+            rows(&state, &held.id, TuneDirection::Upgrade),
+            json!(["cost", "stats", "keyword", "x"])
+        );
+        assert_eq!(
+            rows(&state, &held.id, TuneDirection::Degrade),
+            json!(["cost", "stats", "x"])
+        );
+        assert_eq!(play_choices::tribute_cost_of(&state, &live(&state, &held.id)), 2);
+        // R386: Buffs in hand until one lands on its Tribute, 2 down to 1, which is what its play asks.
+        for _ in 0..60 {
+            if x_tuning(&live(&state, &held.id), "Tribute").is_some() {
+                break;
+            }
+            once(&mut state, &held.id, TuneDirection::Upgrade);
+        }
+        assert_eq!(x_tuning(&live(&state, &held.id), "Tribute"), Some(-1));
+        assert_eq!(play_choices::tribute_cost_of(&state, &live(&state, &held.id)), 1);
+        // On the field its Tribute 2, its only numbered keyword, was paid: the X row is gone.
+        let unit = put(
+            &mut state,
+            &instance_fx::tributer.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
+        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
+        // Ten Buffs and ten Nerfs on the field leave its Tribute as it was.
+        for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+            for _ in 0..10 {
+                once(&mut state, &unit.id, direction);
+            }
+        }
+        assert_eq!(x_tuning(&live(&state, &unit.id), "Tribute"), None);
+    }
+}

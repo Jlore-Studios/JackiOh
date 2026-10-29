@@ -27,8 +27,10 @@ import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { navigate, paths } from "../../net/navigate.ts";
 import { followInApp } from "../../routes/nav.tsx";
+import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
+import DeckPatchBadge from "./DeckPatchBadge.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import { FILTER_SETS, visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
@@ -67,6 +69,7 @@ import {
   deckVerdict,
   holdersOf,
   joinNames,
+  pairHolders,
   practiceOnly,
   removeCard,
   trioLabel,
@@ -98,6 +101,8 @@ export type DeckEditorProps = {
   refusal: string | null;
   /** #1991: where "Practice with this deck" goes (`practiceDeckPath`), or null to offer none. */
   practicePath: string | null;
+  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
+  patch: NewestChanges | null;
   filter: PoolFilter;
   onFilter: (next: PoolFilter) => void;
   sort: PoolSort;
@@ -130,7 +135,7 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
 }
 
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
-  const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath } = props;
+  const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath, patch } = props;
   const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack } = props;
 
   useLocale();
@@ -172,6 +177,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const compared = useMemo(() => comparedDecks(compare, deck.id, decks, trios), [compare, deck.id, decks, trios]);
   const holders = useMemo(() => holdersOf(compared, limits.nameLength), [compared, limits.nameLength]);
+  // R2195000: the other of each Core card and snapshot pair the deck holds, unavailable as a compared
+  // deck's cards are; a compared deck's holder names it first.
+  const poolHolders = useMemo(
+    () => new Map([...pairHolders(deck.id, deck.cards, catalog), ...holders]),
+    [deck.id, deck.cards, catalog, holders],
+  );
   const inDeck = useMemo(() => new Set(deck.cards), [deck.cards]);
   const conflicts = useMemo(() => {
     const clashing = new Map<string, Holder>();
@@ -220,7 +231,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const add = useCallback(
     (cardId: string) => {
-      const move = addCard(deck.cards, cardId, holders);
+      const move = addCard(deck.cards, cardId, poolHolders);
       if (!move.ok) {
         setRefusedCardId(cardId);
         if (move.reason === "here") setStatus({ say: () => t("{card} is already in this deck.", { card: nameOf(cardId) }) });
@@ -237,7 +248,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
         onSaveNow();
       }
     },
-    [deck.cards, holders, label, nameOf, onCards, onSaveNow],
+    [deck.cards, poolHolders, label, nameOf, onCards, onSaveNow],
   );
 
   const remove = useCallback(
@@ -316,7 +327,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const others = decks.filter((candidate) => candidate.id !== deck.id);
   const errors = verdict.ok ? [] : verdict.errors;
   const detailPlace: "deck" | Holder | null =
-    detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (holders.get(detailCardId) ?? null);
+    detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (poolHolders.get(detailCardId) ?? null);
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
   const atCap = decks.length >= limits.decks;
@@ -399,7 +410,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           collection={collection}
           conflicts={conflicts}
           issues={cardIssues}
-          head={head}
+          head={
+            <>
+              {head}
+              {patch === null ? null : <DeckPatchBadge deckId={deck.id} cards={deckChanges(deck, patch)} version={patch.version} />}
+            </>
+          }
           onDropCard={drop}
           onRemove={remove}
           onInspect={openDetail}
@@ -589,7 +605,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             deckName: label,
             collection,
             inDeck,
-            holders,
+            holders: poolHolders,
             refusedCardId,
             onAdd: add,
             onDragStart: startDrag,

@@ -517,8 +517,9 @@ pub fn plays_equip(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R1086: the host an Equip play onto `slot` fuses into — the top card of the zone when it is a
-/// Unit its controller acts with that is not Immutable (R23), and not one this same play tributes.
-/// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
+/// Unit its controller acts with that is not Immutable (R23), not Dormant (R2260000: nothing reaches a
+/// Dormant card, R1839000), and not one this same play tributes. Both the legal-action listing and the
+/// refusal read this one function, so the two cannot disagree.
 pub fn equip_host_at(
     state: &GameState,
     player: PlayerId,
@@ -538,6 +539,9 @@ pub fn equip_host_at(
         return None;
     }
     if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+        return None;
+    }
+    if crate::slumber::is_slumbering(top) {
         return None;
     }
     if top.controller != player {
@@ -853,8 +857,8 @@ pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<boo
 // declares `tribute_enemies` itself, so the flags are read directly. The flag defaults to false,
 // which is every other card.
 
-/// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, less
-/// what its owner's Floats took off (R1841003).
+/// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, as a
+/// Nerf or a Buff in a hand or a deck left it (R386), less what its owner's Floats took off (R1841003).
 pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
     let declared = declared_targets(state, card)
         .into_iter()
@@ -862,8 +866,10 @@ pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
         .and_then(|decl| decl.amount);
     let flagged = crate::scripts::script_of(state, card).flags();
     let printed = declared.or(flagged.tribute).unwrap_or(0).max(0);
+    // R386: a Nerf or a Buff in a hand or a deck moved it (`tuning.x`), never below 1.
+    let tuned = crate::tuning::tuned_count(card, crate::numbers::NumberedKey::Tribute.as_str(), printed);
     // R1841003: each of its owner's Floats took one off, never below 0.
-    (printed - crate::float::tribute_lowered(card)).max(0)
+    (tuned - crate::float::tribute_lowered(card)).max(0)
 }
 
 pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {

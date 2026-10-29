@@ -4,8 +4,8 @@
 //!            among all enemies." ({damage} 10)
 //!   Radiant: the same text, {damage} 20.
 //! Engine: Pierce (R346) is catalog data. Dormant (R1839000), `StaticFlags.slumber { turns: 2 }`,
-//! awake at the start of its controller's second turn after it arrived, not summoning sick
-//! (R1839001). `when_this_awakens` (R1839002): C+ #3's `damage_split`, {damage} hits of 1, each on an
+//! awake at the start of its controller's second turn after it arrived, summoning sick that turn
+//! (R1839001, R2259000). `when_this_awakens` (R1839002): C+ #3's `damage_split`, {damage} hits of 1, each on an
 //! enemy drawn from the match rng among the enemy hero and the enemy Units still standing (R60), with
 //! no state check between the hits (R59); each hit's source is this Unit, so each pierces Armor
 //! (R346). Both faces run this script; the number is the face's declared `damage` (R386).
@@ -161,11 +161,13 @@ mod tests {
         }
 
         #[test]
-        fn r1839001_awake_it_is_not_summoning_sick_and_attacks_that_turn() {
+        fn r1839001_r2259000_awake_it_is_summoning_sick_that_turn_and_attacks_the_next() {
             let mut s = played(false, json!({}), "cosmality");
             to_its_awakening(&mut s);
             s.expect_health(P2, HERO_HEALTH - 10);
 
+            s.expect_refused(|s| s.attack(ID, "hero"));
+            s.end_turn().end_turn();
             s.attack(ID, "hero");
             s.expect_health(P2, HERO_HEALTH - 10 - 10);
         }
