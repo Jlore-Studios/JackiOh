@@ -3,12 +3,13 @@ import type { MarketOfferView } from "./MarketOfferView";
 import type { MarketSaleView } from "./MarketSaleView";
 
 /**
- * R1853000–R1853003, §10.8: the open Marketplace as the viewer reads it (`marketplace::marketplace_view`):
- * the lots offered to them and the sale prices of their own Resources and hand sales (R1861000). Which
- * buys and sales are offered stays `legal_actions`' answer.
+ * R1853000–R1853003, R2250002, §10.8: the open Marketplace as the viewer reads it
+ * (`marketplace::marketplace_view`): the lots offered to them and the sale prices of their own hand
+ * sales (R1861000). Which buys and sales are offered stays `legal_actions`' answer.
  */
 export type MarketplaceView = { 
 /**
- * The turn the offering next re-rolls on (R1853001).
+ * The viewer's own offers (R2250002): the three rolled at the start of their turn, then the lots
+ * an effect added for them (R1853005).
  */
-rerollsOn: number, offers: Array<MarketOfferView>, sales: Array<MarketSaleView>, };
+offers: Array<MarketOfferView>, sales: Array<MarketSaleView>, };

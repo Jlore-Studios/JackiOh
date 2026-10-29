@@ -3,16 +3,14 @@ import type { MarketOffer } from "./MarketOffer";
 import type { ResourceQuote } from "./ResourceQuote";
 
 /**
- * R1853000–R1853005: Stinkyscape's Marketplace (`marketplace.rs`), one for both players: the offering
- * rolled `rolled_turn` and the quotes the tray's Resources sell for this turn.
+ * R1853000–R1853005, R2250002: Stinkyscape's Marketplace (`marketplace.rs`), one for both players:
+ * each player's offers, rolled at the start of their turn, the lots effects added, and the quotes the
+ * Resources and the cards that sell from the hand fetch this turn.
  */
 export type Marketplace = { 
 /**
- * R1853001: the turn the offering was last rolled (`GameState.turn`).
- */
-rolledTurn: number, 
-/**
- * The lots on offer, rolled lots in table order then the lots effects added, by their index.
+ * The lots on offer, by their index: each player's rolled offers and the lots effects added, in
+ * the order they were made.
  */
 offers: Array<MarketOffer>, 
 /**
