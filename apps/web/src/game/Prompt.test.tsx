@@ -573,6 +573,69 @@ describe("the R81 kinds render the same picker when the engine does open them as
     });
   }
 
+  // Each of the five answers its PendingChoice: the picker's answer is the `answer` action, with the
+  // selection the engine stored for the option picked (`selectionForOption`).
+  const answers: [string, Parameters<typeof pendingFor>[1], () => void, ActionBody][] = [
+    [
+      "zone",
+      [
+        { key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 },
+        { key: "zone:p1:units:2", label: "Unit lane 2", player: "p1", row: "units", lane: 2 },
+      ],
+      () => fireEvent.click(screen.getByTestId("prompt-option-zone:p1:units:2")),
+      { type: "answer", choiceId: "ch1", selection: [{ pick: "zone", player: "p1", row: "units", lane: 2 }] },
+    ],
+    [
+      "tribute",
+      [
+        { key: "instance:u1", label: "One", instanceId: "u1" },
+        { key: "instance:u2", label: "Two", instanceId: "u2" },
+      ],
+      () => {
+        fireEvent.click(screen.getByTestId("prompt-option-instance:u2"));
+        fireEvent.click(screen.getByTestId("prompt-submit"));
+      },
+      { type: "answer", choiceId: "ch1", selection: [{ pick: "instance", instanceId: "u2" }] },
+    ],
+    [
+      "direction",
+      [{ key: "mode:left", label: "left" }, { key: "mode:right", label: "right" }],
+      () => fireEvent.click(screen.getByTestId("direction-right")),
+      { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "right" }] },
+    ],
+    [
+      "x",
+      Array.from({ length: X_CARD_LIMIT + 1 }, (_, x) => ({ key: String(x), label: String(x) })),
+      () => {
+        fireEvent.click(screen.getByTestId("x-plus"));
+        fireEvent.click(screen.getByTestId("x-plus"));
+        fireEvent.click(screen.getByTestId("prompt-submit"));
+      },
+      { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "2" }] },
+    ],
+    [
+      "embiggen",
+      [{ key: "false", label: "Normal" }, { key: "true", label: "Embiggened" }],
+      () => fireEvent.click(screen.getByTestId("prompt-option-true")),
+      { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "true" }] },
+    ],
+  ];
+
+  for (const [kind, options, pick, action] of answers) {
+    it(`${kind} as a prompt submits its answer`, () => {
+      const onAction = vi.fn();
+      const view = viewWith({
+        pending: pendingFor(kind as Parameters<typeof pendingFor>[0], options),
+      });
+
+      render(<Prompt view={view} onAction={onAction} />);
+      pick();
+
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledWith(action);
+    });
+  }
+
   it("R880 a craft prompt opens the block editor", () => {
     const onAction = vi.fn();
     const recipe: CraftRecipe = {

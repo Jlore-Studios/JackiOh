@@ -1,5 +1,4 @@
-//! Stinkyscape #141 Fruit Launcher (SPEC §8.10 row 141). Unit 0/4 → 0/8, Weapon, cost 2, Rare; held
-//! (R1420).
+//! Stinkyscape #141 Fruit Launcher (SPEC §8.10 row 141). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Choose a permanent. Cast a random Fruit on it."
 //!   Radiant: "Starship Piece, Equip

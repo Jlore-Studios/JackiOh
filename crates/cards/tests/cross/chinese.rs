@@ -116,7 +116,7 @@ fn names_word(text: &str, phrase: &str) -> bool {
 
 /// R1303, R279: `text` with the names of the cards its card names (`refs`) blanked, each as R279 links
 /// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
-/// term inside a name ("Shadow Word Death", the held Stinkyscape set's S #12 token, holds "Death") asks
+/// term inside a name ("Shadow Word Death", the Stinkyscape set's S #12 token, holds "Death") asks
 /// its face for no Chinese term: such a name is held to its Chinese name instead
 /// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`). Only a name the card's `refs` list
 /// is blanked, so a term the text says outside one is still read.
@@ -381,14 +381,25 @@ mod r1303_the_chinese_tables {
         assert_eq!(problems, Vec::<String>::new());
     }
 
+    /// R1303, R2195001: no two cards share a Chinese name, but a Training Grounds snapshot and the
+    /// Core card it copies, which share their English name too.
     #[test]
     fn r1303_names_are_unique() {
-        let mut seen: IndexMap<String, Vec<String>> = IndexMap::new();
+        let mut seen: IndexMap<String, IndexSet<String>> = IndexMap::new();
         for (id, entry) in table() {
-            seen.entry(text(&entry, "name").to_string()).or_default().push(id);
+            // R2195001: a snapshot is named under its Core card's id.
+            let named = CATALOG.get(id.as_str()).and_then(|card| card.snapshot_of.clone());
+            seen.entry(text(&entry, "name").to_string())
+                .or_default()
+                .insert(named.unwrap_or(id));
         }
-        let shared: Vec<(String, Vec<String>)> = seen.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
-        assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
+        let shared: Vec<(String, IndexSet<String>)> =
+            seen.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
+        assert_eq!(shared, Vec::<(String, IndexSet<String>)>::new());
+        assert_eq!(
+            text(&table()["traininggrounds-041"], "name"),
+            text(&table()["core-002"], "name")
+        );
     }
 
     #[test]

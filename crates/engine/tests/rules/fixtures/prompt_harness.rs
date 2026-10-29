@@ -76,14 +76,6 @@ pub fn cast_now(state: &mut GameState, def_id: &str, player: PlayerId, radiant: 
     SinkResult { events }
 }
 
-/// `value`, or a panic naming what was expected.
-pub fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(found) => found,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// What `answer_keys` answers: the sink's events, and the refusal (`null` when accepted).
 pub struct AnswerResult {
     pub events: Vec<GameEvent>,

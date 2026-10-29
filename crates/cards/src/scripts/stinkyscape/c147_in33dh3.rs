@@ -1,5 +1,5 @@
-//! S #147 IN33DH3 (SPEC §8.10 row 147): (0) Unit, Catalyst, Human, Legendary, 1/2 → 2/4, a card of the
-//! held Stinkyscape set (R1420).
+//! S #147 IN33DH3 (SPEC §8.10 row 147): (0) Unit, Catalyst, Human, Legendary, 1/2 → 2/4, a card of
+//! the Stinkyscape set.
 //!   Base:    "Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions.
 //!             Death: Shuffle an IN33DH3 Prime into your deck."
 //!   Radiant: "Cry: For the rest of your turn, an AI helps you make the Pareto Optimal decisions.

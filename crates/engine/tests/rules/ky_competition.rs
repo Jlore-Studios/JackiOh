@@ -15,7 +15,7 @@ use crate::rules::fixtures::harness::{act, act_logged, json_of, run_effect, setu
 use crate::rules::fixtures::ky_competition::{
     KENNY_RUSH_AT, competition, competition_qd, kenny, register_ky_competition_fixtures,
 };
-use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
 
 /// p1's main phase with the fixture Competition cast and its first question open.
 fn asked(seed: &str, radiant: bool) -> GameState {

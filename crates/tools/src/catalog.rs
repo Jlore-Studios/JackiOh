@@ -6,7 +6,7 @@
 //! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
 //!
 //! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative, Meditative+, and the held Stinkyscape set, R1857000): that it holds every card and every token exactly once, that every enum value is in
+//! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
 //! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
 //! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and
@@ -1521,6 +1521,35 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             refs_by_card.insert(key.as_str(), refs);
         }
 
+        // R2195000: a snapshot (Training Grounds #41–#60) names the Core card it copies, and keeps its
+        // name (R2195001).
+        if let Some(of) = value.get("snapshotOf") {
+            let original = of
+                .as_str()
+                .and_then(|id| catalog.get(id))
+                .and_then(Json::as_object);
+            let is_core_card = original.is_some_and(|o| {
+                o.get("set").and_then(Json::as_str) == Some("Core")
+                    && o.get("token") == Some(&Json::Bool(false))
+            });
+            if value.get("set").and_then(Json::as_str) != Some("Training Grounds") || !is_core_card {
+                fail(
+                    &mut failures,
+                    &at,
+                    &format!(
+                        "`snapshotOf` marks a Training Grounds card and names a Core card (got {})",
+                        describe(Some(of))
+                    ),
+                );
+            } else if original.and_then(|o| o.get("name")) != value.get("name") {
+                fail(
+                    &mut failures,
+                    &at,
+                    "a snapshot keeps its Core card's name (R2195001)",
+                );
+            }
+        }
+
         // R349: a card that prints no Radiant form carries `radiantFallback: true`, and its `radiant`
         // face is exactly the fallback the rule gives it: the base face with its attack and health
         // doubled, the same keywords and the same text.
@@ -1551,6 +1580,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "resource",
             "loc",
             "radiantFallback",
+            // R2195000: the Core card a Training Grounds snapshot copies (`CardDef.snapshot_of`).
+            "snapshotOf",
             "base",
             "radiant",
         ];

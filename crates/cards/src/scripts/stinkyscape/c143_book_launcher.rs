@@ -1,5 +1,4 @@
-//! Stinkyscape #143 Book Launcher (SPEC §8.10 row 143). Unit 0/6 → 0/12, Weapon, cost 3, Epic; held
-//! (R1420).
+//! Stinkyscape #143 Book Launcher (SPEC §8.10 row 143). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Cast a random harmful Book on an enemy.
 //!            Activate: Cast a random helpful Book on an ally."

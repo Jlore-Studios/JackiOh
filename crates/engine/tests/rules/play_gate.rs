@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 use super::fixtures::copied_text::{CT, register_copied_text};
 use super::fixtures::harness::{act, in_hand, put, slot};
 use super::fixtures::play_gate::{dummy, gated, gated_cloaked, gated_echo, plain_spell, register_play_gate};
-use super::fixtures::prompt_harness::{board, must};
+use super::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
