@@ -210,6 +210,8 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/Hero.tsx": 2,
   "game/MarketPrompt.tsx": 1,
   "game/Marketplace.tsx": 1,
+  // The Escape that closes a badge's bubble (#2321), on main before this table was (#2329).
+  "game/ModifierBadge.tsx": 1,
   "game/ModifierList.tsx": 1,
   "game/Prompt.tsx": 4,
   "game/Zone.tsx": 1,
