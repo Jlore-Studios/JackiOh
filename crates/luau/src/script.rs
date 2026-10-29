@@ -501,6 +501,9 @@ pub fn build_script(
             bytecode,
         ));
     }
+    if let Some(hook) = direct_hook("whenAttacks") {
+        script.when_attacks = Some(hook);
+    }
     if let Some(hook) = direct_hook("afterAttack") {
         script.after_attack = Some(hook);
     }

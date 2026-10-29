@@ -84,20 +84,20 @@ mod tests {
     const SIPHON_SQUAD: &str = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
 
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
-    /// #71, #96, Classic #63 Crop Dusting, Classic+ #22 Blood Moon, the one new Cost (1) Trap
-    /// (docs/classic-sets.md B2.6), and Meditative #64 Traitorous Blood and #68 Catnip (a Field Trap).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.10, where Classic #10 Exile
-    /// went to (2) and #63 Crop Dusting to (1); and for the Stinkyscape release (#1884), where its #5
+    /// #71, #96, Classic #63 Crop Dusting, and Meditative #64 Traitorous Blood and #68 Catnip (a Field
+    /// Trap). Re-pinned for v0.3.5: the Meditative set joins the pool; for v0.3.10, where Classic #10
+    /// Exile went to (2) and #63 Crop Dusting to (1); for the Stinkyscape release (#1884), where its #5
     /// Masochism Unmasked and #131 Spacerace Stimulus (Field Traps), #135 Sacked, #138 Pocket Peptides
-    /// and #144 Prepare For Liftoff join it.
-    const TRAP_POOL: [&str; 14] = [
+    /// and #144 Prepare For Liftoff join it; for #2179, where Classic+ #22 Blood Moon went to (2); and
+    /// for the Training Grounds release (#2204), where its #13 Explosive Runes, #14 Explosive Trap and
+    /// #24 Goliath Situation (a Field Trap) join it.
+    const TRAP_POOL: [&str; 16] = [
         "core-018",
         "core-041",
         "core-060",
         "core-071",
         "core-096",
         "classic-063",
-        "classicplus-022",
         "meditative-064",
         "meditative-068",
         "stinkyscape-005",
@@ -105,6 +105,9 @@ mod tests {
         "stinkyscape-135",
         "stinkyscape-138",
         "stinkyscape-144",
+        "traininggrounds-013",
+        "traininggrounds-014",
+        "traininggrounds-024",
     ];
 
     fn query_ids(args: Value) -> Vec<String> {

@@ -141,20 +141,24 @@ pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hand_cap.unwrap_or(HAND_CAP)
 }
 
-/// R1840000: a copy of this player's Resource tray, oldest first; empty while it holds none. Its
-/// owner reads it, the other player its count (§10.8), so a hook asks it of its own controller.
-pub fn resource_tray_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    state.players[player].resource_tray.clone().unwrap_or_default()
+/// R2250000: whether this player's hand holds a card of one of these definitions ("if you have a
+/// Narcor", Stinkyscape #39's Activate).
+pub fn hand_holds_any(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
+    state.players[player]
+        .hand
+        .iter()
+        .any(|card| def_ids.contains(&card.def_id.as_str()))
 }
 
-/// R1840000: whether this player's Resource tray holds a Resource of one of these definitions
-/// ("if you have a Narcor").
-pub fn tray_holds(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
+/// R2250000: copies of the Resources in this player's hand, in hand order. Its owner reads them, the
+/// other player the hand's count (§10.8), so a hook asks it of its own controller.
+pub fn resources_in_hand_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     state.players[player]
-        .resource_tray
+        .hand
         .iter()
-        .flatten()
-        .any(|card| def_ids.contains(&card.def_id.as_str()))
+        .filter(|card| crate::resources::is_resource_card(state, card))
+        .cloned()
+        .collect()
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution for this player (§10.5: a
@@ -217,7 +221,7 @@ pub fn played_earlier<'a>(state: &GameState, player: PlayerId, card: impl Into<C
         CardOrId::Card(card) => (card.id.as_str(), Some(card)),
         CardOrId::Id(id) => (id, find_instance(state, id)),
     };
-    if instance.is_some_and(|instance| matches!(instance.zone, Zone::Hand { .. } | Zone::Tray { .. })) {
+    if instance.is_some_and(|instance| matches!(instance.zone, Zone::Hand { .. })) {
         return log.cards_played;
     }
     match log.played_ids.iter().rposition(|played| played == id) {
@@ -270,6 +274,22 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
         } => crate::stays::left_field_after(state, *mark, instance_id),
         _ => false,
     }
+}
+
+/// R2179002: whether a `cardPlayed` or a `cardResolved` reports a card cast on draw, a cast that is no
+/// play, which a card answering a play ("after you play", "when your opponent plays") passes by. Any
+/// other event: false.
+pub fn cast_on_draw_event(event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::CardPlayed {
+            on_draw: Some(true),
+            ..
+        } | GameEvent::CardResolved {
+            on_draw: Some(true),
+            ..
+        }
+    )
 }
 
 /// R174, R2199007: the field's departures so far, a mark a card keeps to ask later, through

@@ -1,8 +1,8 @@
-// R1853003: the Marketplace's shop (Marketplace.tsx), mounted by Game and read off the view and `legal`
-// alone. The view is a fixture shaped as the engine's `marketplace_view` builds it (each lot's index,
-// face, price and copies left, the engine's `reason` on a lot it refuses, the viewer's priced tray
-// Resources); the shop must send exactly the `marketBuy` or `marketSell` `legal` lists, and nothing
-// for a lot or a sale it does not (CLAUDE.md rule 7).
+// R1853003, R2250002: the Marketplace's shop (Marketplace.tsx), mounted by Game and read off the view and
+// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it (each of the
+// viewer's offers' index, face, price and copies left, the engine's `reason` on one it refuses, the
+// viewer's priced hand cards that sell, R1861000); the shop must send exactly the `marketBuy` or
+// `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -24,9 +24,8 @@ const SELL_R9: ActionBody = { type: "marketSell", instanceId: "r9" };
 const END_TURN: ActionBody = { type: "endTurn" };
 const REASON = "Zao Gao costs 60 Credits and you have 45";
 
-/** Mr. Vanilla at 40 Credits, a Radiant Zao Gao at 60 the engine refuses, and the tray's `r9` quoted at 2. */
+/** Mr. Vanilla at 40 Credits, a Radiant Zao Gao at 60 the engine refuses, and the hand's `r9` quoted at 2. */
 const MARKET: MarketplaceView = {
-  rerollsOn: 15,
   offers: [
     { offer: 0, defId: "core-008", price: 40, left: 2 },
     { offer: 1, defId: "core-080", radiant: true, price: 60, left: 1, reason: REASON },
@@ -34,10 +33,10 @@ const MARKET: MarketplaceView = {
   sales: [{ instanceId: "r9", defId: "fx-res-rare", credits: 2 }],
 };
 
-/** p1's main phase with 45 Credits and a Resource in the tray, at `market` (absent: still closed). */
+/** p1's main phase with 45 Credits and a card that sells in hand, at `market` (absent: still closed). */
 function marketView(market?: MarketplaceView): PlayerView {
   return baseView({
-    you: emptySide("p1", { resourceTray: [card({ instanceId: "r9", defId: "fx-res-rare" })], marketCredits: 45 }),
+    you: emptySide("p1", { hand: [card({ instanceId: "r9", defId: "fx-res-rare" })], marketCredits: 45 }),
     ...(market === undefined ? {} : { marketplace: market }),
   });
 }
@@ -77,11 +76,11 @@ describe("R1853003 the Marketplace's shop", () => {
 
   it("R1853003 a listed offer's Buy sends exactly its marketBuy", () => {
     const onAction = renderGame(marketView(MARKET), [BUY_0, SELL_R9, END_TURN]);
-    // Closed until the toggle opens it; it says the Credits and the next re-roll the view gives.
+    // Closed until the toggle opens it; it says the Credits and that the offers renew each turn.
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
     const panel = openShop();
     expect(panel).toHaveTextContent("45 Credits");
-    expect(panel).toHaveTextContent("New stock on turn 15");
+    expect(panel).toHaveTextContent("New offers at the start of each of your turns");
     const buy = button(testid.marketBuy(0));
     expect(buy.disabled).toBe(false);
     expect(buy.getAttribute("data-legal")).toBe("true");
@@ -125,7 +124,7 @@ describe("R1853003 the Marketplace's shop", () => {
     expect(marketSent(waiting)).toEqual([]);
   });
 
-  it("R1853003 a priced tray Resource's Sell sends its marketSell", () => {
+  it("R1853003 R1861000 a priced hand card's Sell sends its marketSell", () => {
     const onAction = renderGame(marketView(MARKET), [BUY_0, SELL_R9, END_TURN]);
     openShop();
     const sell = button(testid.marketSell("r9"));

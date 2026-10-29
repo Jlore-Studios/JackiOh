@@ -35,12 +35,13 @@ afterEach(() => {
 });
 
 describe("R1371 the newest set that ships", () => {
-  it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Stinkyscape since the patch that ships it", () => {
+  it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Training Grounds since the patch that ships it", () => {
     expect(newestShippedSet()).toBe(SHIPPED_SETS[SHIPPED_SETS.length - 1]);
     expect(setShips(newestShippedSet())).toBe(true);
     // Meditative from the patch that shipped it (issue #553), Meditative+ from the one that shipped it
-    // (v0.3.15, issue #1187), and Stinkyscape from its release (issue #1884), with no other line to change.
-    expect(newestShippedSet()).toBe("Stinkyscape");
+    // (v0.3.15, issue #1187), Stinkyscape from its release (issue #1884) and Training Grounds from its
+    // release (issue #2204), with no other line to change.
+    expect(newestShippedSet()).toBe("Training Grounds");
   });
 
   it("R1371 the picker's newest choice names it, and the share it asks for is the deck builder's own number", () => {

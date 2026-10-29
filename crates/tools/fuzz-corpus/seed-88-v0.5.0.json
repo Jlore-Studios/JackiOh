@@ -1,0 +1,9 @@
+{
+  "seed": 88,
+  "catalogVersion": "v0.5.0",
+  "decks": [
+    ["stinkyscape-175", "meditativeplus-018", "core-088", "stinkyscape-065", "core-084", "meditative-010", "core-033", "core-071", "stinkyscape-145", "classic-044", "classic-045", "core-073", "meditative-060", "classic-085", "stinkyscape-104", "classic-012", "stinkyscape-074", "stinkyscape-035", "core-047", "stinkyscape-029", "stinkyscape-152", "meditativeplus-023", "meditative-085", "classicplus-023", "stinkyscape-022"],
+    ["classicplus-028", "stinkyscape-077", "meditative-044", "classicplus-017", "classicplus-069", "classicplus-015", "meditative-099", "stinkyscape-082", "traininggrounds-002", "meditativeplus-016", "classic-048", "stinkyscape-005", "meditative-068", "classic-065", "stinkyscape-046", "core-039", "classicplus-058", "meditative-065", "stinkyscape-169", "core-034", "classicplus-073", "classic-011", "traininggrounds-055", "classicplus-003", "classic-055"]
+  ],
+  "found": "The 200-seed gate of #2250's build (Resources in the hand), before its fix: I4 on turn 48, 202 actions in: c149 (classicplus-026 Tommy Tempo, p2's) had no summonedTurn on the turn it entered. A Classic Golem's attack had killed its target and transformed it into Tommy Tempo, ready to attack again (R424), but the attack had paused on the Discover prompts of the trap its declaration fired (stinkyscape-022), and the monitor dropped its record of the attack at the start of each action, so it never saw the kill. Fixed in the monitor by #2243 (testkit/invariants.rs `attack_open`: the record survives an action that leaves a prompt or work owed), which #2250 had fixed the same way until main carried it. The decks are decks_for_seed(88) over the 631-card pool, every set previewed (R1420), at #2250's build."
+}

@@ -53,7 +53,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
     fn has_deft(s: &Scenario, id: &str) -> bool {
@@ -63,12 +63,12 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::Deft)
     }
 
-    /// p1's Starship (two Startos, 6/6), launched if `launch`, with 2 damage on it; p1's hero at 20, a
+    /// p1's Starship (two Stratos, 6/6), launched if `launch`, with 2 damage on it; p1's hero at 20, a
     /// Mr. Vanilla of p1's in lane 3 and the Doctrine (Radiant if `radiant`) in hand, not yet cast.
     fn board(seed: &str, radiant: bool, launch: bool) -> Scenario {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STARTOS, "lane": 1 }, { "def": STARTOS, "lane": 2 }]),
+            json!([{ "def": STRATOS, "lane": 1 }, { "def": STRATOS, "lane": 2 }]),
             json!({
                 "hand": [{ "def": ID, "radiant": radiant }],
                 "field": [{ "def": VANILLA, "lane": 3 }],

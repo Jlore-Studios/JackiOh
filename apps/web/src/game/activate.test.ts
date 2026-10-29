@@ -481,30 +481,28 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
   });
 });
 
-describe("R1840003 a Resource in your tray that legal lists is played from the tray", () => {
-  const trayView = (): PlayerView => {
+describe("R1840003 R2250000 a Resource in your hand that legal lists is played as any hand card is", () => {
+  const handView = (): PlayerView => {
     const view = activateView();
     return {
       ...view,
-      you: { ...view.you, resourceTray: [card({ instanceId: "r1", defId: "core-t-coin", cost: 0 }), card({ instanceId: "r2", defId: "core-t-coin", cost: 0 })] },
+      you: { ...view.you, hand: [card({ instanceId: "r1", defId: "core-t-coin", cost: 0 }), card({ instanceId: "r2", defId: "core-t-coin", cost: 0 })] },
     };
   };
 
-  it("R1840003 the tray card is lit from legal alone, and one candidate is sent on a click", () => {
-    const view = trayView();
+  it("R1840003 R2250000 the hand card is lit from legal alone, and one candidate is sent on a click", () => {
+    const view = handView();
     const play: ActionBody = { type: "play", instanceId: "r1" };
 
-    const { legal: lit, glow } = highlightFor(view, [play], IDLE);
-    expect(playSourceTestid(view, "r1")).toBe(testid.trayCard("r1"));
-    expect(lit.has(testid.trayCard("r1"))).toBe(true);
-    expect(glow?.has(testid.trayCard("r1"))).toBe(true);
-    expect(lit.has(testid.handCard("r1"))).toBe(false);
-    // A tray card legal does not list is not lit.
-    expect(lit.has(testid.trayCard("r2"))).toBe(false);
+    const { legal: lit } = highlightFor(view, [play], IDLE);
+    expect(playSourceTestid(view, "r1")).toBe(testid.handCard("r1"));
+    expect(lit.has(testid.handCard("r1"))).toBe(true);
+    // A hand card legal does not list is not lit.
+    expect(lit.has(testid.handCard("r2"))).toBe(false);
 
-    expect(onClickTarget(view, [play], IDLE, { on: "tray", instanceId: "r1" }).action).toEqual(play);
+    expect(onClickTarget(view, [play], IDLE, { on: "hand", instanceId: "r1" }).action).toEqual(play);
     // One legal does not list is not picked up.
-    expect(onClickTarget(view, [play], IDLE, { on: "tray", instanceId: "r2" }).interaction).toEqual(IDLE);
+    expect(onClickTarget(view, [play], IDLE, { on: "hand", instanceId: "r2" }).interaction).toEqual(IDLE);
   });
 });
 

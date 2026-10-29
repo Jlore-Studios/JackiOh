@@ -163,7 +163,7 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
   it("R434 the flip is scaled by --anim-scale and stopped under reduced motion, which leaves the face up", () => {
     const rules = boardRules();
     const flip = rules.find((rule) => rule.selectors.includes(".hand-flip") && rule.body.includes("animation:"));
-    expect(flip?.body).toContain("hand-reveal calc(560ms * var(--anim-scale))");
+    expect(flip?.body).toContain("hand-reveal calc(var(--motion-slow) * var(--anim-scale))");
     expect(flip?.body).toContain("calc(var(--i, 0) * 90ms * var(--anim-scale))");
     // The keyframes end on the face (the back is turned away behind it).
     const css = readFileSync(join(HERE, "board.css"), "utf8").replace(/\s+/g, " ");

@@ -12,7 +12,8 @@
 //!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
 //!     stepping from its backrow zone into a unit zone enters it on that turn, R383, except an
 //!     "Animated on your turn" card animating at its controller's start of turn that has been on
-//!     that side since the turn began: that enters nothing, R1062; one animating on the other
+//!     that side since the turn began, the keyword read as the animation had it (a later event in the
+//!     action may change it): that enters nothing, R1062; one animating on the other
 //!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters, and so does one
 //!     that fired as a trap this turn, animating as its firing's last step), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77),
@@ -282,8 +283,6 @@ fn cards_of(state: &GameState) -> Vec<&CardInstance> {
         out.extend(side.backrow_piles.iter().flatten().flatten());
         out.extend(side.carried.iter().flatten().flatten());
         out.extend(side.resolving.iter());
-        // R1840000: a Resource in a Resource tray.
-        out.extend(side.resource_tray.iter().flatten());
     }
     // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
     out.extend(state.held.iter().flatten().map(|entry| &entry.card));
@@ -650,16 +649,6 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     if state.result.is_none() {
         for card in &state.players[rival].hand {
             hide(&mut ids, &card.id, &card.def_id, format!("{rival}'s hand"), true);
-        }
-        // R1840000: the rival's Resource tray is as hidden as their hand.
-        for card in state.players[rival].resource_tray.iter().flatten() {
-            hide(
-                &mut ids,
-                &card.id,
-                &card.def_id,
-                format!("{rival}'s Resource tray"),
-                true,
-            );
         }
     }
     for player in PLAYER_IDS {
@@ -1730,14 +1719,51 @@ impl InvariantMonitor {
     /// R1062: an "Animated on your turn" card whose latest entry was on an earlier turn enters nothing as it
     /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
     /// `side` is the side it animated on: on the other player's turn (R1126's Cane) it is an entry, R383's.
-    fn on_its_side_before_this_turn(&self, id: &str, side: PlayerId, state: &GameState) -> bool {
+    /// The keyword is read as the animation had it: `later`, the action's events after it, may change it
+    /// before the state is read (a Knowledge Breaker the autopilot plays on that turn Nerfs it off the
+    /// Cane, fuzz seed 2443), and the first such change says what it was.
+    fn on_its_side_before_this_turn(
+        &self,
+        id: &str,
+        side: PlayerId,
+        state: &GameState,
+        later: &[GameEvent],
+    ) -> bool {
         if side != self.active {
             return false;
         }
         let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {
             return false;
         };
-        at < self.turn && has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn)
+        let changed = later.iter().find_map(|event| match event {
+            GameEvent::Degraded {
+                instance_id,
+                change: TuningChange::Keyword { keyword, added, also },
+                ..
+            }
+            | GameEvent::Upgraded {
+                instance_id,
+                change: TuningChange::Keyword { keyword, added, also },
+                ..
+            } if instance_id == id
+                && std::iter::once(keyword)
+                    .chain(also.iter().flatten())
+                    .any(|keyword| keyword.kind() == KeywordKind::AnimatedOnYourTurn) =>
+            {
+                Some(!*added)
+            }
+            GameEvent::KeywordGranted {
+                instance_id,
+                keyword,
+                lost,
+            } if instance_id == id && keyword.kind() == KeywordKind::AnimatedOnYourTurn => {
+                Some(lost.is_some())
+            }
+            _ => None,
+        });
+        let had = changed
+            .unwrap_or_else(|| has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn));
+        at < self.turn && had
     }
 
     /// R1829000: the entries one action made by uncovering cards in their Stack piles, which no event
@@ -2072,7 +2098,7 @@ impl InvariantMonitor {
             ));
         }
 
-        for event in events {
+        for (index, event) in events.iter().enumerate() {
             match event {
                 GameEvent::TurnStarted { player, turn, .. } => {
                     self.turn = *turn;
@@ -2172,7 +2198,12 @@ impl InvariantMonitor {
                     // fused with Fiery Waraxe, set on an earlier turn, fired on its controller's turn).
                     if *carried != Some(true)
                         && (self.fired.contains(instance_id)
-                            || !self.on_its_side_before_this_turn(instance_id, *player, state))
+                            || !self.on_its_side_before_this_turn(
+                                instance_id,
+                                *player,
+                                state,
+                                &events[index + 1..],
+                            ))
                     {
                         let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
                             crate::catalog::def_of(Some(state), &card.def_id).type_
@@ -2192,6 +2223,14 @@ impl InvariantMonitor {
                     if new_instance_id != instance_id {
                         self.enter(new_instance_id);
                         self.note_entry_windfury(new_instance_id, state);
+                    }
+                    // R2285002: an attack whose target its attacker's "when this attacks" transformed is
+                    // fought at the Unit that took its place, so that Unit is the one its kill names.
+                    if let Some(attack) = self.attack.as_mut()
+                        && attack.target_id == *instance_id
+                        && !attack.killed
+                    {
+                        attack.target_id = new_instance_id.clone();
                     }
                     if self.attack.as_ref().is_some_and(|attack| {
                         attack.killed && !attack.forced && attack.attacker_id == *instance_id
@@ -2536,10 +2575,6 @@ impl DuosInvariantMonitor {
             ],
             view_tamper: None,
         }
-    }
-
-    pub fn duel_monitor(&self, duel: usize) -> &InvariantMonitor {
-        &self.monitors[duel]
     }
 
     pub fn duel_monitor_mut(&mut self, duel: usize) -> &mut InvariantMonitor {

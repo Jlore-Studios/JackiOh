@@ -56,7 +56,7 @@ fn lane_index(lane: i32) -> Option<usize> {
 
 /// The card under `card`'s id as it stands in the state now, or `card` itself when it is in no zone
 /// (TS held the live object; a caller holds a copy, which may be older than the state).
-fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
+pub(crate) fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone())
@@ -1217,18 +1217,6 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
         let resolving = &mut state.players[player].resolving;
         if let Some(at) = resolving.iter().position(|card| card.id == instance.id) {
             resolving.remove(at);
-            note_moved(state, &instance.id);
-            return;
-        }
-        // R1840000: a Resource leaves its tray the same way, and an emptied tray is absent again (D14).
-        let side = &mut state.players[player];
-        if let Some(tray) = side.resource_tray.as_mut()
-            && let Some(at) = tray.iter().position(|card| card.id == instance.id)
-        {
-            tray.remove(at);
-            if tray.is_empty() {
-                side.resource_tray = None;
-            }
             note_moved(state, &instance.id);
             return;
         }

@@ -23,12 +23,13 @@
 //! are passed explicitly.
 
 use jackioh_engine::config::{
-    DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
+    TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, UnitView,
+    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Tag, UnitView,
     acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
     attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
     credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
@@ -39,7 +40,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_EVAL, EvalWeights};
+use crate::config::{AI_EVAL, AI_EXTRA_TURN_CARDS, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -249,7 +250,17 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         None => w.opponent_hand_cost,
         Some(def) => f64::from(query_cost(def)),
     };
-    let radiant = if card.radiant { w.radiant_in_hand } else { 0.0 };
+    let radiant = match def {
+        _ if !card.radiant => 0.0,
+        // R423: a Radiant Call to Chaos rolls CALL_TO_CHAOS_RADIANT_EFFECTS where its base face rolls one.
+        Some(def) if def.tags.contains(&Tag::CallToChaos) => w.radiant_in_hand.max(
+            w.radiant_chaos_effect
+                * f64::from(CALL_TO_CHAOS_RADIANT_EFFECTS - 1)
+                * w.hand_per_cost
+                * cost.min(w.hand_cost_cap),
+        ),
+        _ => w.radiant_in_hand,
+    };
     let shift = if def.is_none() {
         0.0
     } else {
@@ -272,7 +283,13 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     } else {
         temporary
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift - shift)
+    // #1886: a card that owes an extra turn once cast (R846).
+    let turn = if AI_EXTRA_TURN_CARDS.contains(&card.def_id.as_str()) {
+        w.extra_turn_in_hand * w.extra_turn
+    } else {
+        0.0
+    };
+    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift + turn - shift)
         * brittle_share(card, w)
         * kept
 }
@@ -461,6 +478,11 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
     value += w.extra_turn * f64::from(side.extra_turns.unwrap_or(0));
+    // R1855003, #1886: the misses the side's Scanning Probes have banked. Own side only: a miss is
+    // silent, so the enemy's count is no fact the seat has.
+    if player == seat {
+        value += w.anomaly_miss * f64::from(side.anomaly_misses.unwrap_or(0));
+    }
     if w.marked_share != 0.0 {
         value += w.marked_share * marked_enemy_worth(state, player, w);
     }

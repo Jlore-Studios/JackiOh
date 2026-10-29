@@ -6,9 +6,7 @@
 //  - Sets: each set's cards on the patch (below).
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
-//  - Provisional banner while the current patch is below the publication gate (R654). It, like the
-//    rest of the page, names no data source and none of the gate's workings (R661); its one games
-//    tile counts the patch's games, never the gate's live count.
+//  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
 //    for a Played vs held the server withholds until both its sides reach the floor (R654).
 //  - URL search params for shareable views.
@@ -23,8 +21,10 @@
 //    (stats/GamesPanel.tsx).
 //  - Created cards (R2089000): below the Cards tab's table, the cards made during games, apart from the deck
 //    cards and answering the same search box (stats/CreatedPanel.tsx).
+//  - Tokens (R2370000): behind the Cards tab's Show tokens toggle, off by default, the tokens alone with each
+//    one's win rate, above the Created cards (stats/TokensPanel.tsx).
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
@@ -57,6 +57,7 @@ import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/se
 import { usePlayerStats } from "../stats/store.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
+import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -116,11 +117,6 @@ function tokensOf(def: CardDef): CardDef[] {
 }
 
 /**
- * A translated sentence with an element inside it: the sentence is one dictionary entry, written with
- * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
- * needs and English reads as it always did.
- */
-/**
  * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
  */
@@ -140,13 +136,6 @@ function setPercent(rate: number, signed = false): string {
     minimumFractionDigits: SET_STATS_DIGITS,
     maximumFractionDigits: SET_STATS_DIGITS,
     signDisplay: signed ? "exceptZero" : "auto",
-  });
-}
-
-function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>): ReactNode[] {
-  return sentence.split(/(\{\w+\})/).map((part, index) => {
-    const token = /^\{(\w+)\}$/.exec(part)?.[1];
-    return <Fragment key={index}>{token !== undefined && token in nodes ? nodes[token] : part}</Fragment>;
   });
 }
 
@@ -232,6 +221,8 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
+  // R2370000: the Tokens section, off unless the address asks for it.
+  const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
   const [mode, setMode] = useState<string>(
     ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
       ? (initialParams.get("mode") as string)
@@ -312,11 +303,12 @@ export default function StatsRoute(): ReactElement {
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode) params.set("mode", mode);
+    if (showTokens) params.set("tokens", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showTokens]);
 
   useEffect(() => {
     updateUrl();
@@ -616,6 +608,8 @@ export default function StatsRoute(): ReactElement {
 
   // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
+  // R2370000: of those, the catalog's tokens.
+  const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
 
   const summary = cardStatsData?.summary;
 
@@ -626,8 +620,6 @@ export default function StatsRoute(): ReactElement {
   const pickable = offeredPatches(patchList, shownPatch);
   const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
   const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
-  const fallback = cardStatsData ? previousPatchOf(cardStatsData) : null;
-  const isProvisional = cardStatsData?.source === "provisional";
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
@@ -697,72 +689,6 @@ export default function StatsRoute(): ReactElement {
             </button>
           </nav>
         )}
-
-        {/* Provisional banner */}
-        {isProvisional && (
-          <div className="stats-provisional-banner" data-testid={statsTestid.provisionalBanner} role="alert">
-            <div className="stats-provisional-info">
-              <span className="stats-provisional-title">{t("Provisional statistics")}</span>
-            </div>
-            {fallback && (
-              <button
-                type="button"
-                className="stats-fallback-btn link-button"
-                data-testid={statsTestid.fallbackToggle}
-                onClick={() => setPatch(fallback.target)}
-              >
-                {t("View previous patch ({patch}) →", { patch: fallback.name })}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* How to read this */}
-        <details className="stats-info-accordion">
-          <summary className="stats-info-summary">{t("How to read these statistics")}</summary>
-          <div className="stats-info-content">
-            <p>
-              <strong>{t("Too few games:")}</strong>{" "}
-              {withNodes(
-                t("A card with fewer than {minSample} games shows {phrase} instead of a percentage, since so few games can mislead.", {
-                  minSample,
-                }),
-                { phrase: <em>{t("“not enough games”")}</em> },
-              )}{" "}
-              {withNodes(
-                t("Played vs held needs {minSample} games on each side, played and drawn but not played, and shows {phrase} until then.", {
-                  minSample,
-                }),
-                { phrase: <em>{t("“not enough data”")}</em> },
-              )}
-            </p>
-            <p>
-              <strong>{t("When drawn vs Play rate:")}</strong>{" "}
-              {withNodes(
-                t(
-                  "{whenDrawn} shows win rate when the card was in hand or played; {playRate} shows the percentage of all recorded decks containing the card.",
-                ),
-                { whenDrawn: <em>{t("When drawn")}</em>, playRate: <em>{t("Play rate")}</em> },
-              )}
-            </p>
-            <p>
-              <strong>{t("Patches:")}</strong>{" "}
-              {t(
-                "A card's figures start again at each patch. A micro patch starts again only the cards it changed, and every other card keeps all its games; a patch nobody played before the next one shipped counts as a micro.",
-              )}
-            </p>
-            <p>
-              <strong>{t("Radiant vs Normal:")}</strong>{" "}
-              {withNodes(
-                t(
-                  "{radiant} shows win rate for decks that played the card Radiant at least once; {normal} shows decks that played it but never Radiant. Each needs {minSample} games.",
-                  { minSample },
-                ),
-                { radiant: <em>{t("Radiant")}</em>, normal: <em>{t("Normal")}</em> },
-              )}
-            </p>
-          </div>
-        </details>
 
         {/* Tabs */}
         <div className="stats-tabs" role="tablist" aria-label={t("Statistics views")}>
@@ -951,6 +877,19 @@ export default function StatsRoute(): ReactElement {
                 >
                   {t("Grid")}
                 </button>
+              </div>
+
+              {/* R2370000: the Tokens section, off by default */}
+              <div className="stats-col-toggles">
+                <label className="stats-col-toggle">
+                  <input
+                    type="checkbox"
+                    data-testid={statsTestid.tokensToggle}
+                    checked={showTokens}
+                    onChange={(e) => setShowTokens(e.target.checked)}
+                  />
+                  {t("Show tokens")}
+                </label>
               </div>
 
               {/* Column visibility toggles */}
@@ -1403,6 +1342,11 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </TableScroll>
+            )}
+
+            {/* R2370000: the tokens alone, each with its win rate */}
+            {showTokens && !cardStatsLoading && !cardStatsError && (
+              <TokensPanel tokens={tokenCards} minSample={minSample} nameOf={shownName} />
             )}
 
             {/* R2089000: the Created cards, apart from the deck cards above */}

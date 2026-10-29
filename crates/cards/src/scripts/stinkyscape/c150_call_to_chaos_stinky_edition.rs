@@ -54,9 +54,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos pool of the sets that ship (R380, R1420).
-    const SHIPPED_EDITIONS: [&str; 5] =
-        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
+    /// The Call to Chaos pool of the sets that ship (R380, R1420). Re-pinned for the Training Grounds
+    /// release (#2204): its #39 joins it (R2200004).
+    const SHIPPED_EDITIONS: [&str; 6] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+    ];
     const ETHICS: &str = "stinkyscape-159";
     const VANGUARD: &str = "stinkyscape-095";
     const DANDY_LAD: &str = "stinkyscape-113";
@@ -264,7 +271,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882001_the_pool_holds_the_held_set_s_field_spells_and_no_spell() {
+        fn r1882001_the_pool_holds_every_set_s_quest_field_spells_and_no_spell() {
             let mut seen: Vec<String> = Vec::new();
             for n in 0..GAMES {
                 let seed = format!("{SEED}-quests-{n}");
@@ -555,7 +562,7 @@ mod tests {
             let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
             assert!(!cast.is_empty());
             assert_eq!(cast[0]["costPaid"], json!(0));
-            // R1420: the held set's own two are in no pool that names no set.
+            // R1420: the pool is the shipped sets' editions, this set's own two among them since it shipped.
             assert!(SHIPPED_EDITIONS.contains(&cast[0]["defId"].as_str().unwrap_or("")));
         }
     }

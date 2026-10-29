@@ -4,23 +4,25 @@
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
 //! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, then the set's own two, named by id, so the pool reaches them whether or not the set ships
-//! (R1420). Each is a play for every rule, its choices its caster's (R70), rolling and naming its own
-//! effects to both players (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and
-//! `RANDOM_CAST_CHAIN_CAP` (R452); each lands in its caster's graveyard after it resolves (R87). The
-//! Radiant face casts each Radiant, three effects each (R423) (R1870006).
+//! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
+//! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
+//! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
+//! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
+//! (R452); each lands in its caster's graveyard after it resolves (R87). The Radiant face casts each
+//! Radiant, three effects each (R423) (R1870006).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004-6";
 
 /// Every Call to Chaos the catalog holds, in its order.
-pub const EDITIONS: [&str; 5] = [
+pub const EDITIONS: [&str; 6] = [
     "core-095",
     "classicplus-073",
     "meditative-095",
     "stinkyscape-150",
     "stinkyscape-151",
+    "traininggrounds-039",
 ];
 
 fn crunch(radiant: bool) -> Hook {
@@ -56,7 +58,8 @@ pub fn script() -> CardScripts {
 
 // S #4.6 The Big Crunch — SPEC §8.10 row S 4.6, BUILD M12 row S 4.6: "casts Core 95, C+ 73, M 95, S
 // 150 and S 151 once each, in that order, each rolling one effect named to both players; the nested
-// casts stop at the cap; radiant each is Radiant and rolls three" (R1870006).
+// casts stop at the cap; radiant each is Radiant and rolls three" (R1870006). Training Grounds #39
+// joins the list last once its set ships (issue #2204).
 #[cfg(test)]
 mod tests {
     use super::EDITIONS;
@@ -157,6 +160,17 @@ mod tests {
             for def_id in EDITIONS.iter().chain([&CRUNCH]) {
                 assert!(graveyard.iter().any(|held| held == def_id), "{def_id} in the graveyard");
             }
+        }
+
+        // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
+        // it is the sixth cast, after Stinkyscape's two.
+        #[test]
+        fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
+            assert!(set_ships(SetName::TrainingGrounds));
+            let s = played(&plain_seed("big-crunch-training-grounds", false), false);
+            let plays = chaos_plays(&s);
+            assert_eq!(plays.len(), 6);
+            assert_eq!(plays.last().map(String::as_str), Some("traininggrounds-039"));
         }
 
         #[test]

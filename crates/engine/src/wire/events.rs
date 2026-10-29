@@ -21,11 +21,9 @@ string_union! {
 }
 
 string_union! {
-    /// `cardPlayed.from`: B5 E11, R454 — the card was played from its player's graveyard; R1840003 —
-    /// a Resource played from its player's Resource tray.
+    /// `cardPlayed.from`: B5 E11, R454 — the card was played from its player's graveyard.
     pub enum PlayedFrom {
         Graveyard = "graveyard",
-        Tray = "tray",
     }
 }
 
@@ -254,6 +252,12 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
+        /// R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
+        /// nothing that counts plays counted it, and no trigger answers this event. Public, as the
+        /// cast is. Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        on_draw: Option<bool>,
     },
     /// §10.5 step 7: the card has finished resolving — after its Cry and any Echo repeats, and after a
     /// Spell has reached the graveyard or exile. R17 keys the post-resolution traps on this moment
@@ -302,6 +306,12 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         answer: Option<SpellAnswer>,
+        /// R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
+        /// text answers a play ("after you play", "when your opponent plays") passes this event by.
+        /// Public, as the cast is. Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        on_draw: Option<bool>,
     },
     Summoned {
         player: PlayerId,
@@ -980,50 +990,17 @@ pub enum GameEvent {
         player: PlayerId,
     },
     // -------------------------------------------------------------------------------------------
-    // Stinkyscape's Resources and Credits (#1840, `resources`) and its Marketplace (#1853,
-    // `marketplace`). Their BUILD M5-T4 rows, `ANIMATIONS` and `SOUND_CUES` rows came with them.
+    // Stinkyscape's Credits (#1840, `resources`) and its Marketplace (#1853, `marketplace`). Their
+    // BUILD M5-T4 rows, `ANIMATIONS` and `SOUND_CUES` rows came with them. A Resource is a hand card
+    // since #2250 (R2250000), so its gains, sales and discards are a hand's events.
     // -------------------------------------------------------------------------------------------
-    /// R1840000: `player` gained a Resource into their Resource tray. It names the card as
-    /// `addedToHand` does, so a view hides the card where the viewer may not read it, its face with
-    /// it (R97): the other player learns that a Resource was gained and not which.
-    ResourceGained {
-        player: PlayerId,
-        instance_id: String,
-        def_id: String,
-        /// Set when the Resource is Radiant (a Radiant gain, R1840002). It is the card's, so a view
-        /// that hides the card hides this too (R97). Only ever `Some(true)`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
-        radiant: Option<bool>,
-    },
-    /// R1840001: a Resource `player` gained past `RESOURCE_TRAY_CAP` was sold at once for `credits`
-    /// Credits and ceased to exist; the `marketCreditsChanged` after it says the new count. Public,
-    /// as a card a full hand burns is (R317): it never entered the tray.
-    ResourceSold {
-        player: PlayerId,
-        instance_id: String,
-        def_id: String,
-        /// Set when the Resource sold is Radiant (R1840001: its Radiant face's price). Only ever
-        /// `Some(true)`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
-        radiant: Option<bool>,
-        credits: i32,
-    },
-    /// R1840004: `player` discarded a Resource from their Resource tray, and it ceased to exist.
-    /// Public: a discarded card is shown as it goes.
-    ResourceDiscarded {
-        player: PlayerId,
-        instance_id: String,
-        def_id: String,
-    },
     /// R1840005: `player`'s Credits are now `value`. Public: a player and a number.
     MarketCreditsChanged {
         player: PlayerId,
         value: i32,
     },
     /// R1853003: `player` bought a fresh card at the Marketplace for `credits` Credits; it reaches
-    /// their hand (`addedToHand`) or, a Resource, their tray (`resourceGained`) next. It names the card
+    /// their hand (`addedToHand`) next. It names the card
     /// as `addedToHand` does, so a view hides the card where the viewer may not read it, its face with
     /// it (R97). The price is public, as Credits are.
     MarketBought {
@@ -1037,14 +1014,14 @@ pub enum GameEvent {
         radiant: Option<bool>,
         credits: i32,
     },
-    /// R1853003: `player` sold a Resource from their tray at the Marketplace for `credits` Credits, and
-    /// it ceased to exist; the `marketCreditsChanged` after it says the new count. Public, as a
-    /// Resource sold from a full tray is (R1840001).
+    /// R1853003, R1861000: `player` sold a card that sells from the hand at the Marketplace for
+    /// `credits` Credits, and it ceased to exist; the `marketCreditsChanged` after it says the new
+    /// count. Public, as a discarded card is.
     MarketSold {
         player: PlayerId,
         instance_id: String,
         def_id: String,
-        /// Set when the Resource sold is Radiant. Only ever `Some(true)`.
+        /// Set when the card sold is Radiant. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
@@ -1263,9 +1240,6 @@ string_union! {
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
         Traded = "traded",
-        ResourceGained = "resourceGained",
-        ResourceSold = "resourceSold",
-        ResourceDiscarded = "resourceDiscarded",
         MarketCreditsChanged = "marketCreditsChanged",
         MarketBought = "marketBought",
         MarketSold = "marketSold",
@@ -1491,9 +1465,6 @@ impl GameEvent {
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
             GameEvent::Traded { .. } => GameEventType::Traded,
-            GameEvent::ResourceGained { .. } => GameEventType::ResourceGained,
-            GameEvent::ResourceSold { .. } => GameEventType::ResourceSold,
-            GameEvent::ResourceDiscarded { .. } => GameEventType::ResourceDiscarded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
             GameEvent::MarketBought { .. } => GameEventType::MarketBought,
             GameEvent::MarketSold { .. } => GameEventType::MarketSold,
@@ -1588,13 +1559,13 @@ mod tests {
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
-        // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
-        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
+        // (R1838001); its Credits' `marketCreditsChanged` (R1840005), the Resource tray's three
+        // events gone with it (R2250000); the
         // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 95);
+        assert_eq!(GAME_EVENT_TYPES.len(), 92);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

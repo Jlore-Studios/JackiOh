@@ -51,6 +51,7 @@ use crate::echo::{
     EXILE_ON_LANDING, ResolvedCard, add_echo_repeats, drop_echo_repeats, echo_repeats_owed, exile_on_landing,
     land_after_resolution, queue_echo_repeats, take_echo_repeat,
 };
+use crate::enchantments::{EnchantmentKind, has_enchantment};
 use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
 use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent};
@@ -67,6 +68,7 @@ use crate::prompts::{
     AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, close_prompt, hero_option_label,
     in_offered_order, open_prompt, run_hook_resumable, why_answer_refused,
 };
+use crate::query::played_earlier;
 use crate::random_cast::{
     count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode,
 };
@@ -93,14 +95,13 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, CounterKind, Enchantment, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS,
-    PlagueSpend, PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone,
-    opponent_of,
+    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, PlagueSpend,
+    PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, cease_to_exist, first_free_zone, fresh_face_down_id, is_open,
-    lands_face_down, place_on_field, place_standing_on_field, release_zone, remove_from_any_zone,
+    lands_face_down, live_or, place_on_field, place_standing_on_field, release_zone, remove_from_any_zone,
     reserve_zone,
 };
 
@@ -112,32 +113,10 @@ pub use crate::play_choices::PlayAction;
 // Private copies of small helpers other modules own (fullsend rule 5)
 // ---------------------------------------------------------------------------
 
-/// TS `enchantments.hasEnchantment(card, "returnAfterResolve")`.
-fn has_return_after_resolve(card: &CardInstance) -> bool {
-    card.enchantments
-        .iter()
-        .flatten()
-        .any(|entry| matches!(entry, Enchantment::ReturnAfterResolve { .. }))
-}
-
-/// TS `enchantments.hasEnchantment(card, "targetEnemies")`.
-fn has_target_enemies(card: &CardInstance) -> bool {
-    card.enchantments
-        .iter()
-        .flatten()
-        .any(|entry| matches!(entry, Enchantment::TargetEnemies))
-}
-
 /// The card as it stands now, by id. TS handed the live object around; Rust reads it again at each
 /// point TS read the object, and hands a copy to calls that take the card beside a `&mut` state.
 fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
     find_instance(state, instance_id).cloned()
-}
-
-/// The card as it stands now, or `card` itself when it is no longer anywhere (TS's object kept its
-/// last fields after it left every pile).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    snapshot(state, &card.id).unwrap_or_else(|| card.clone())
 }
 
 /// TS `card.x = value` on the live instance.
@@ -259,13 +238,11 @@ pub enum Awaiting {
     CastX,
 }
 
-/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard; R1840003 — a
-/// Resource played from its player's Resource tray.
+/// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum PlaySource {
     Graveyard,
-    Tray,
 }
 
 /// `PlayRun.repeat` (TS `NonNullable<PlayRun["repeat"]>`): the repeat being re-resolved, or a cast's
@@ -630,12 +607,11 @@ fn hand_card<'a>(state: &'a GameState, player: PlayerId, instance_id: &str) -> O
 enum PlayFrom {
     Hand,
     Graveyard,
-    Tray,
 }
 
-/// E11, R454: where a play takes its card from — the player's hand, their own Resource tray
-/// (R1840003), or their own graveyard, where a permission may let them play it (`graveyard_play.rs`).
-/// Undefined when the card is in none of them.
+/// E11, R454: where a play takes its card from — the player's hand (a Resource among its cards,
+/// R2250000), or their own graveyard, where a permission may let them play it (`graveyard_play.rs`).
+/// Undefined when the card is in neither.
 fn play_source_of(
     state: &GameState,
     player: PlayerId,
@@ -643,15 +619,6 @@ fn play_source_of(
 ) -> Option<(CardInstance, PlayFrom)> {
     if let Some(in_hand) = hand_card(state, player, instance_id) {
         return Some((in_hand.clone(), PlayFrom::Hand));
-    }
-    // R1840003: a Resource in the player's own tray is played as from hand.
-    if let Some(in_tray) = state.players[player]
-        .resource_tray
-        .iter()
-        .flatten()
-        .find(|card| card.id == instance_id)
-    {
-        return Some((in_tray.clone(), PlayFrom::Tray));
     }
     let in_graveyard = state.players[player]
         .graveyard
@@ -762,7 +729,7 @@ pub fn validate_play(
             });
         }
     }
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     let state: &GameState = sink.state;
 
     // R65, R454, R455: the price of this play, the player's prices included wherever the card lies.
@@ -840,10 +807,6 @@ pub fn validate_play(
     // B5 E14, R546: a copier's copy is fixed as its play is checked, the choices with it.
     if copies_text(&card) {
         run.copied = Some(copied_text_of(state, &card));
-    }
-    // R1840003: a play from the tray takes its card from there at step 4.
-    if from == PlayFrom::Tray {
-        run.source = Some(PlaySource::Tray);
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
@@ -957,7 +920,7 @@ fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Op
 /// `{ until: "used" }`, so the play it applied to spends it; an X-cost card ignores discounts and so
 /// spends none (R65), and Professor Curvature's is not a one-shot but a next-turn modifier (R48).
 fn consume_used_discounts(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance) {
-    let card = live(sink.state, card);
+    let card = live_or(sink.state, card);
     if is_x_cost(sink.state, &card) {
         return;
     }
@@ -1221,6 +1184,11 @@ fn feng_shui_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 /// only ran now could not tell it. Setting the flag is §6.3's Make Radiant: in hand the card's stats
 /// and text swap on the next read (§5.2, R74), and the event says so.
 fn gifted_program_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    // R2179002: a cast on draw is no card played, so it is not the first one (and is not recorded as
+    // one, so the first card played is still to come) and spends no "next card you play".
+    if cast_on_draw(run) {
+        return;
+    }
     let Some(card) = snapshot(sink.state, &run.instance_id) else {
         return;
     };
@@ -1290,8 +1258,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             }
         } else {
             match zone {
-                // R1840003: a play from the tray is a play as from hand, so its card is replaced there.
-                Zone::Hand { player } | Zone::Tray { player } => {
+                Zone::Hand { player } => {
                     if player != run.player {
                         return;
                     }
@@ -1300,10 +1267,9 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
                 _ => return,
             }
         }
-        // R177: a card replaced in a hand (or a Resource tray, R1840000) was never the other player's
-        // to read.
+        // R177: a card replaced in a hand was never the other player's to read.
         let hidden_from: Vec<PlayerId> = match zone {
-            Zone::Hand { player } | Zone::Tray { player } => vec![opponent_of(player)],
+            Zone::Hand { player } => vec![opponent_of(player)],
             _ => Vec::new(),
         };
 
@@ -1362,8 +1328,6 @@ fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
     };
     let playing = match run.source {
         Some(PlaySource::Graveyard) => in_own_graveyard(sink.state, run.player, &card),
-        // R1840003: a play from the tray takes its card from there.
-        Some(PlaySource::Tray) => card.zone == (Zone::Tray { player: run.player }),
         None => card.zone == (Zone::Hand { player: run.player }),
     };
     let embiggen_card = crate::play_choices::has_embiggen_price(sink.state, &card);
@@ -1431,7 +1395,7 @@ fn announce_play(sink: &mut EngineSink<'_>, run: &PlayRun) -> bool {
         // B5 E14, R546: the copy step 1 checked the choices against is the one the card resolves.
         if let Some(copied) = &run.copied {
             fix_copied_text(sink.state, &card.id, Some(copied.clone()));
-            card = live(sink.state, &card);
+            card = live_or(sink.state, &card);
         }
     }
 
@@ -1565,6 +1529,12 @@ fn claim_win_on_play(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &
     sink.state.players[player].won_by_effect = Some(true);
 }
 
+/// R2179002: whether this run is a cast on draw — the cast §2.4's draw makes of the card it drew
+/// (`PlayRun.drawn_as`), which is a cast and no play: it is counted as none and answered as none.
+pub(crate) fn cast_on_draw(run: &PlayRun) -> bool {
+    run.drawn_as.is_some()
+}
+
 fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, former_id: Option<String>) {
     // R119: what has already arrived on the field during the play — a tributed unit's Death at step 2
     // (#22's copies of a Sheepish) — does not answer it, which the step-4 pair names, as step 7's does.
@@ -1586,15 +1556,17 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         embiggened: card.embiggened,
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so, for a client to animate it from there. Public: the
-        // graveyard is. R1840003: so does a play from the tray, which the tray's count already shows.
-        from: match run.source {
-            Some(PlaySource::Graveyard) => Some(PlayedFrom::Graveyard),
-            Some(PlaySource::Tray) => Some(PlayedFrom::Tray),
-            None => None,
-        },
+        // graveyard is.
+        from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
+        on_draw: cast_on_draw(run).then_some(true),
     });
+    // R2250001: a Resource played pays its player its Credits, as the play is made; a cast is no play
+    // of theirs.
+    if run.cast != Some(true) {
+        crate::resources::pay_resource_credits(sink, run.player, card);
+    }
     if let Some(zone) = run.zone {
         sink.events.push(GameEvent::Summoned {
             // The side it lands on, which is the player's own unless R360 summoned it for the opponent.
@@ -1836,7 +1808,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         card.zone = Zone::Resolving { player: run.player };
         sink.state.players[run.player].resolving.push(card.clone());
     }
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     // R453: a cast Field Spell, Trap or Field Trap with no zone fizzles; a cast permanent on the field
     // has no landing for "then exile it" to change (Classic #56's rider is a Spell's).
     if run.cast == Some(true) {
@@ -1849,26 +1821,31 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         run.standing_from = Some(exit_mark(sink.state));
     }
 
-    {
-        let side = &mut sink.state.players[run.player];
-        side.turn_log.played_ids.push(card.id.clone());
-        side.turn_log.cards_played += 1;
-        // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
-        let mut costs = side.turn_log.costs_paid.clone().unwrap_or_default();
-        costs.push(run.cost_paid);
-        side.turn_log.costs_paid = Some(costs);
+    // R2179002: a cast on draw is a cast and no play, so none of a play's counts and records takes it.
+    if !cast_on_draw(run) {
+        {
+            let side = &mut sink.state.players[run.player];
+            side.turn_log.played_ids.push(card.id.clone());
+            side.turn_log.cards_played += 1;
+            // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
+            let mut costs = side.turn_log.costs_paid.clone().unwrap_or_default();
+            costs.push(run.cost_paid);
+            side.turn_log.costs_paid = Some(costs);
+        }
+        sink.state.counters.played += 1;
+        // R429: a card that counts its own plays counts this one here, with every other count of it.
+        crate::times_played::count_play(sink.state, &card);
     }
-    sink.state.counters.played += 1;
-    // R429: a card that counts its own plays counts this one here, with every other count of it.
-    crate::times_played::count_play(sink.state, &card);
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     // R673: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
     if run.cast != Some(true) {
         count_system_play(sink.state, &card);
     }
     run.radiant = Some(card.radiant);
     // B5 E4, R451: the per-turn types, the per-game tags and the "last" records.
-    record_play(sink.state, run.player, &card);
+    if !cast_on_draw(run) {
+        record_play(sink.state, run.player, &card);
+    }
 
     played_events(sink, run, &card, former_id);
     // R1870000: a card carrying the win wins its player the game as it is played, a cast too (R70); the
@@ -1916,13 +1893,13 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // board swap) or out of play took nothing, and Twinspell stayed for the other player's next one.
     // The repeats still resolve at step 6, which only takes what is queued.
     run.echo_queued = true;
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     queue_play_echo(sink, run, &card);
     // E39 (Classic+ #14): "the next Spell you play gains …" is gained as it is played, as Echo is (R178).
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     stamp_next_spell(sink, &card, run.player);
     // R1848002: "your next Spell this turn has Poisonous" is had as it is played, as Forever&'s is.
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     give_next_spell_keywords(sink, &card, run.player);
     true
 }
@@ -1947,16 +1924,6 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         if run.flashback == Some(true) {
             card.flashback_spent = Some(true);
         }
-        return true;
-    }
-    // R1840003: a play from the tray takes the Resource out of its player's own tray.
-    if run.source == Some(PlaySource::Tray) {
-        let in_tray = find_instance(state, &card.id)
-            .is_some_and(|held| held.zone == (Zone::Tray { player: run.player }));
-        if !in_tray {
-            return false;
-        }
-        remove_from_any_zone(state, card);
         return true;
     }
     let side = &mut state.players[run.player];
@@ -2051,22 +2018,6 @@ fn give_next_spell_keywords(sink: &mut EngineSink<'_>, card: &CardInstance, play
 // Step 5 — resolve the card (§10.5 step 5)
 // ---------------------------------------------------------------------------
 
-/// §6.2 Combo X: "cards you played earlier this turn", so the card being played does not count, and
-/// nor does a card its own step 5 casts — the count is the one at play time (`query::played_earlier`,
-/// asked by the card's id, whose body is copied here: fullsend rule 5).
-fn played_earlier_this_turn(state: &GameState, run: &PlayRun) -> i32 {
-    let log = &state.players[run.player].turn_log;
-    let id = &run.instance_id;
-    if find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Hand { .. } | Zone::Tray { .. }))
-    {
-        return log.cards_played;
-    }
-    match log.played_ids.iter().rposition(|played| played == id) {
-        Some(at) => at as i32,
-        None => log.cards_played,
-    }
-}
-
 /// The card as step 4 left it, or null when it is no longer there to resolve: Sheepish transformed
 /// it, a trap countered it, or it has ceased to exist (R11's `{ z: "gone" }`). R17: the Cry is lost.
 fn still_resolving(state: &GameState, run: &PlayRun) -> Option<CardInstance> {
@@ -2134,7 +2085,7 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
 /// (§4.4), so Armor and the Anti-oneshot cap apply to a Radiant one's 2X once; the grants go in board
 /// order, each its own hit. A `quickstrikerDamage` modifier counts as one more grant of X.
 fn quickstriker_combo(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance) {
-    let amount = played_earlier_this_turn(sink.state, run);
+    let amount = played_earlier(sink.state, run.player, &run.instance_id);
     if amount <= 0 {
         return;
     }
@@ -2150,7 +2101,7 @@ fn quickstriker_combo(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInsta
     let mut multiples = quickstriker_grants(sink.state, run, card);
     multiples.extend(std::iter::repeat_n(QUICKSTRIKER_COMBO_MULTIPLE.base, riders));
     for multiple in multiples {
-        let source = live(sink.state, card);
+        let source = live_or(sink.state, card);
         deal_damage(
             sink,
             DamageArgs {
@@ -2170,7 +2121,7 @@ fn quickstriker_combo(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInsta
 /// one `draw` of their total: a draw that pauses owes the rest to the answer (R113), and one whose
 /// cast ended the game ends the rest with it (R216) — looping over the riders drew on over both.
 fn combo_draw_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
-    if played_earlier_this_turn(sink.state, run) < 1 {
+    if played_earlier(sink.state, run.player, &run.instance_id) < 1 {
         return;
     }
     let mut draws = 0;
@@ -2340,7 +2291,7 @@ fn cast_choices_made(sink: &mut EngineSink<'_>, run: &mut PlayRun, step: PlaySte
     if !cast_x_chosen(sink, run, &card, step) {
         return false;
     }
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     if run.repeat.is_none() {
         // B5 E14, R399: a copier's choices are its copied text's.
         let face = text_face_of(sink.state, &card);
@@ -2365,7 +2316,7 @@ fn cast_choices_made(sink: &mut EngineSink<'_>, run: &mut PlayRun, step: PlaySte
     // R174: the cast's choices were made against the board as its caster answered.
     run.exits_from = Some(exit_mark(sink.state));
     // A fused card's Cry splits the choices by its ingredients' declarations (R90, R102).
-    let card = live(sink.state, &card);
+    let card = live_or(sink.state, &card);
     if let Some(slices) = slices_for(
         sink.state,
         run.player,
@@ -2772,7 +2723,7 @@ fn resolve_echo_repeats(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             run.repeat = Some(RepeatRecord::default());
         }
 
-        let card = live(sink.state, &card);
+        let card = live_or(sink.state, &card);
         if !ask_repeat_choices(sink, run, &card, PlayStepName::Echo) {
             return;
         }
@@ -2885,6 +2836,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             placed_from: run.placed_from,
             arrived_during: Some(arrived),
             targeted,
+            on_draw: cast_on_draw(run),
         },
     );
     if landing {
@@ -2974,7 +2926,9 @@ fn return_after_resolving(sink: &mut EngineSink<'_>, run: &PlayRun) {
     if !matches!(card.zone, Zone::Graveyard { .. } | Zone::Exile { .. }) {
         return;
     }
-    if card_type_of(sink.state, &card) != CardType::Spell || !has_return_after_resolve(&card) {
+    if card_type_of(sink.state, &card) != CardType::Spell
+        || !has_enchantment(&card, EnchantmentKind::ReturnAfterResolve)
+    {
         return;
     }
     add_to_hand(sink, &mut card);
@@ -3237,12 +3191,13 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     sink.state.players[player].resolving.push(card.clone());
     // B5 E14, R546: a copier cast resolves the Spell that is last as the cast begins.
     fix_copied_text(sink.state, &card.id, None);
-    let mut card = live(sink.state, &card);
+    let mut card = live_or(sink.state, &card);
 
     // R452: a cast made while a random cast of its caster's resolves is random too, and counts in that
     // cast's chain; a card that targets enemies (E39's enchantment) is cast so, whoever casts it.
     let random = options.random == Some(true) || random_cast_of(sink.state, player).is_some();
-    let target_enemies = options.target_enemies == Some(true) || has_target_enemies(&card);
+    let target_enemies =
+        options.target_enemies == Some(true) || has_enchantment(&card, EnchantmentKind::TargetEnemies);
     if random {
         count_chain_cast(sink.state, player);
     }
