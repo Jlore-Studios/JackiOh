@@ -7913,11 +7913,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-29T08:40:08Z",
+        "at": "2026-10-29T09:57:41Z",
         "by": "`claude` (strong)",
-        "carried_from": "a62aaecbf2c455840e559a60d86006a06dd34fac",
+        "carried_from": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c",
         "resolved_by": "`muse` (medium)",
-        "sha": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c"
+        "sha": "d4b8d4ccbb74f9d95be2cdae7b602f29ee9d2060"
       },
       "died": 0,
       "difficulty": "medium",
