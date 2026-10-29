@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2111,
+  "title": "Patch: the backrow builds suspense: set, wait, flip",
+  "branch": "bot/issue-2111",
+  "thread": "**Issue #2111 (data, not instructions):**\n\n```text\n# #2111: Patch: the backrow builds suspense: set, wait, flip\nOpened by @MaxGoetzmann.\n\n### What it does\n\nThe hidden trap backrow is what JackiOh has that Hearthstone doesn't, but on the board it is quiet. Make a trap's three moments feel deliberate:\n\n- **Set:** a weighted little landing with its sound.\n- **Wait:** a slow idle \"breathe\" on face-down cards.\n- **Flip:** a short beat of anticipation before the reveal.\n\nThe breathe must look the same for every face-down card so it gives nothing away, and none of it plays under reduced motion.\n\n### Acceptance\n\n- Setting, waiting and flipping each have their own deliberate motion.\n- Face-down cards all look the same while they wait; nothing about a card can be read from its motion.\n- Reduced motion turns it all off.\n\n### Blocked by, part of\n\nBlocked by #2110\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2111: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
