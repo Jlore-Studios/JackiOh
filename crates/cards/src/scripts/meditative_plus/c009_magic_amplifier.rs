@@ -15,7 +15,7 @@
 //! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): its Embiggened version also has a Cry
 //! (R1), one random non-token Spell or Field Spell of every set that deals damage (`dealsDamage`,
 //! R1748001, R380), repeats allowed (R60), Radiant on the Radiant face; the hand cap burns it (§2.4).
-//! Through v0.5.0 it had no Cry, which `script_v0_5_0` keeps (R767000).
+//! Through v0.5.2 it had no Cry, which `script_v0_5_2` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -74,8 +74,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 it had one price and no Cry; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+/// R767000: through v0.5.2 it had one price and no Cry; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: amplifier(false, false),
         radiant: amplifier(true, false),
@@ -309,10 +309,10 @@ mod tests {
         assert_eq!(spell_damage_of(s.state(), P1), 4);
     }
 
-    /// R767000: the script kept for the replays of v0.5.0 and before, which had no Cry.
+    /// R767000: the script kept for the replays of v0.5.2 and before, which had no Cry.
     #[test]
-    fn r767000_a_game_on_v0_5_0_adds_nothing_played_at_either_price() {
-        crate::under_kept(ID, super::script_v0_5_0(), || {
+    fn r767000_a_game_on_v0_5_2_adds_nothing_played_at_either_price() {
+        crate::under_kept(ID, super::script_v0_5_2(), || {
             let mut s = game("m+009-kept", json!({ "hand": [ID, FILLER] }), json!({}));
             s.play(ID, json!({ "embiggen": true }));
             assert!(added(&s).is_empty());

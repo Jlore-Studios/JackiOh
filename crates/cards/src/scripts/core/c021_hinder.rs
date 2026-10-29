@@ -4,7 +4,7 @@
 //!
 //! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The
 //! engine casts it and repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the free cast is no card
-//! played (R40, R2179002; through v0.5.0 it counted as one, R70). The floor is not this card's either: `nextTurnMana` moves
+//! played (R40, R2179002; through v0.5.2 it counted as one, R70). The floor is not this card's either: `nextTurnMana` moves
 //! `mana.nextTurnMod`, which the refresh adds to §2.3's max, floors at 0 and clears; max mana is untouched.
 //!
 //! THE DISCARD (R431, R682, R70). "Discard 1" names no "of your choice", so it is random from the

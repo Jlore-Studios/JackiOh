@@ -6,7 +6,7 @@
 //! Engine (MD-G3, R1439):
 //! - **Two rolls:** the Cry rolls how many cards to draw, 1 or 2, as C+ #53 Book of Tokens rolls its
 //!   count, then how much to add, uniform over 1–2 (1–4 on the Radiant face; 1–3 and 1–6 through
-//!   v0.5.0, which `script_v0_5_0` keeps, R767000, issue #2179). Each is its own
+//!   v0.5.2, which `script_v0_5_2` keeps, R767000, issue #2179). Each is its own
 //!   `rng.lucky` roll, higher better, with the card's Lucky as it stands (printed, as a Nerf or a
 //!   Buff has moved it, plus any given, R386, R1438: `lucky_on`) and its controller's Luck (R987).
 //! - **The draws** are §2.4's: the hand cap burns the extra card and an empty deck deals fatigue.
@@ -29,9 +29,9 @@ const MAX_DRAWS: i32 = 2;
 pub const MIN_JADE: i32 = 1;
 pub const MAX_JADE: i32 = 2;
 pub const MAX_JADE_RADIANT: i32 = 4;
-/// Through v0.5.0: "Add 1-3" and "Add 1-6".
-pub const MAX_JADE_V0_5_0: i32 = 3;
-pub const MAX_JADE_RADIANT_V0_5_0: i32 = 6;
+/// Through v0.5.2: "Add 1-3" and "Add 1-6".
+pub const MAX_JADE_V0_5_2: i32 = 3;
+pub const MAX_JADE_RADIANT_V0_5_2: i32 = 6;
 
 /// One uniform roll over `low..=high`.
 fn uniform(rng: &mut Rng, low: i32, high: i32) -> i32 {
@@ -70,11 +70,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 it added 1-3 (Radiant 1-6); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+/// R767000: through v0.5.2 it added 1-3 (Radiant 1-6); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: catboy_maid(MAX_JADE_V0_5_0),
-        radiant: catboy_maid(MAX_JADE_RADIANT_V0_5_0),
+        base: catboy_maid(MAX_JADE_V0_5_2),
+        radiant: catboy_maid(MAX_JADE_RADIANT_V0_5_2),
     }
 }
 
@@ -86,7 +86,7 @@ pub fn script_v0_5_0() -> CardScripts {
 // Radiant".
 #[cfg(test)]
 mod tests {
-    use super::{ID, MAX_DRAWS, MAX_JADE, MAX_JADE_RADIANT, MAX_JADE_V0_5_0, MIN_DRAWS, MIN_JADE};
+    use super::{ID, MAX_DRAWS, MAX_JADE, MAX_JADE_RADIANT, MAX_JADE_V0_5_2, MIN_DRAWS, MIN_JADE};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -336,17 +336,17 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.0 and before, which added 1 to 3.
-    mod v0_5_0 {
+    /// R767000: the script kept for the replays of v0.5.2 and before, which added 1 to 3.
+    mod v0_5_2 {
         use super::*;
 
         #[test]
-        fn r767000_a_game_on_v0_5_0_adds_1_to_3() {
-            crate::under_kept(ID, super::super::script_v0_5_0(), || {
+        fn r767000_a_game_on_v0_5_2_adds_1_to_3() {
+            crate::under_kept(ID, super::super::script_v0_5_2(), || {
                 let mut jade_seen: Vec<i32> = Vec::new();
                 for n in 0..60 {
                     let (_, jade, _) = cry(holding(&format!("catboy-maid-kept-{n}"), false));
-                    assert!((MIN_JADE..=MAX_JADE_V0_5_0).contains(&jade), "{jade}");
+                    assert!((MIN_JADE..=MAX_JADE_V0_5_2).contains(&jade), "{jade}");
                     if !jade_seen.contains(&jade) {
                         jade_seen.push(jade);
                     }

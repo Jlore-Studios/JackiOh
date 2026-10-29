@@ -181,7 +181,7 @@ mod tests {
                     false,
                 );
                 s.play(VANILLA, json!({ "zone": 1 })).play(STOCKPILE, json!({}));
-                // Through v0.5.0 the Hinder was their 3rd play and ended the turn (R70).
+                // Through v0.5.2 the Hinder was their 3rd play and ended the turn (R70).
                 s.expect_in_zone(RATE_LIMIT, "field");
                 assert_eq!(s.state().active, P2);
                 // Stockpile's whole list resolved: both draws (the cast one and its replacement) and the heal.

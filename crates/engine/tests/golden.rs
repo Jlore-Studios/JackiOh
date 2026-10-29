@@ -189,20 +189,26 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use jackioh_engine::{CreateGameArgs, begin_game, create_recorded_game, reduce};
 
     /// The cards that read the lists (R1846001), as `jackioh_cards::code_lines::reads_card_lists`
-    /// finds them.
-    const READERS: [&str; 2] = ["\"stinkyscape-109\"", "\"stinkyscape-111\""];
+    /// finds them in their scripts: the cards build's `LIST_READERS`, each quoted as a game's line
+    /// names it.
+    fn readers() -> Vec<String> {
+        jackioh_cards::LIST_READERS
+            .iter()
+            .map(|id| format!("{id:?}"))
+            .collect()
+    }
 
     /// Whether any event of the game, replayed under the build's own lists, names a reader: one its
     /// deck holds, or one a random effect makes mid-game (a random Legendary, a Discover), which the
     /// line's text never names.
-    fn names_a_reader(line: &str) -> bool {
+    fn names_a_reader(line: &str, readers: &[String]) -> bool {
         let game: Value = serde_json::from_str(line).expect("a golden line");
         let args: CreateGameArgs =
             serde_json::from_value(game["args"].clone()).expect("createGame's options");
         let begun = begin_game(&create_recorded_game(&args));
         let names = |events: &[jackioh_engine::GameEvent]| {
             let text = events_text(events);
-            READERS.iter().any(|reader| text.contains(reader))
+            readers.iter().any(|reader| text.contains(reader.as_str()))
         };
         if names(&begun.events) {
             return true;
@@ -220,15 +226,25 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     }
 
     #[test]
+    fn r1846003_the_readers_are_derived_from_the_scripts() {
+        assert_eq!(
+            jackioh_cards::LIST_READERS,
+            ["stinkyscape-109", "stinkyscape-111"],
+            "S #109 xxFreshJack and #111 Shockwave447 read the lists (R2173001)"
+        );
+    }
+
+    #[test]
     fn r1846003_a_shard_without_a_reader_replays_alike_with_every_card_or_none_busted_and_complicated() {
         register_all();
         let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
+        let readers = readers();
         let games: Vec<(usize, &str)> = golden_lines()
             .into_iter()
             .enumerate()
             .step_by(GOLDEN_SHARDS)
-            .filter(|(_, line)| !READERS.iter().any(|reader| line.contains(reader)))
-            .filter(|(_, line)| !names_a_reader(line))
+            .filter(|(_, line)| !readers.iter().any(|reader| line.contains(reader.as_str())))
+            .filter(|(_, line)| !names_a_reader(line, &readers))
             .collect();
         assert!(!games.is_empty(), "the shard holds games with no reader");
         for lines in [every, Vec::new()] {

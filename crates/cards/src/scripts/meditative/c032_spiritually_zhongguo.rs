@@ -1,4 +1,4 @@
-//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (4) Spell, CN, Epic ((3) through v0.5.0).
+//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (4) Spell, CN, Epic ((3) through v0.5.2).
 //!
 //! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
 //!           card, which costs (0). Summon {units} random CN Units."
@@ -6,8 +6,8 @@
 //!           English since issue #2179 (in Chinese before, MD-B13).
 //! Engine:
 //! - **All three, in order** since #2179: the learning, then the hand, then the summon. Through
-//!   v0.5.0 one uniform pick of the three by the match rng as the Spell resolved (MD-B9, R920),
-//!   Call to Chaos's single-effect shape, which `script_v0_5_0` keeps (R767000).
+//!   v0.5.2 one uniform pick of the three by the match rng as the Spell resolved (MD-B9, R920),
+//!   Call to Chaos's single-effect shape, which `script_v0_5_2` keeps (R767000).
 //! - **Get ready to learn Chinese** (ME-CN) sets `chinese` on every card in both hands and both
 //!   libraries, silently (R440); on the Radiant face only the opponent's. As the designer asked,
 //!   the printed text never says what it does.
@@ -22,7 +22,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-032";
 
-/// The three effects, in the order the text prints them; v0.5.0's match rng picked among them as
+/// The three effects, in the order the text prints them; v0.5.2's match rng picked among them as
 /// the Spell resolved (MD-B9, R920).
 const EFFECTS: i32 = 3;
 
@@ -70,8 +70,8 @@ fn spiritually(radiant: bool) -> Script {
     }
 }
 
-/// v0.5.0's face: one random effect of the three (MD-B9, R920).
-fn spiritually_v0_5_0(radiant: bool) -> Script {
+/// v0.5.2's face: one random effect of the three (MD-B9, R920).
+fn spiritually_v0_5_2(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let which = ctx.rng.int(EFFECTS);
@@ -89,12 +89,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.0 it did one of the three at random; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.2 it did one of the three at random; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_5_0() -> CardScripts {
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: spiritually_v0_5_0(false),
-        radiant: spiritually_v0_5_0(true),
+        base: spiritually_v0_5_2(false),
+        radiant: spiritually_v0_5_2(true),
     }
 }
 
@@ -304,14 +304,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.0 and before, which did one of the three
+        /// R767000: the script kept for the replays of v0.5.2 and before, which did one of the three
         /// at random (MD-B9, R920).
-        mod v0_5_0 {
+        mod v0_5_2 {
             use super::*;
 
             #[test]
-            fn r767000_r920_a_game_on_v0_5_0_does_one_effect_by_one_roll() {
-                crate::under_kept(SPIRITUALLY, script_v0_5_0(), || {
+            fn r767000_r920_a_game_on_v0_5_2_does_one_effect_by_one_roll() {
+                crate::under_kept(SPIRITUALLY, script_v0_5_2(), || {
                     let mut saw = [false; 3];
                     for n in 0..32 {
                         let seed = format!("spiritually-rolls-{n}");

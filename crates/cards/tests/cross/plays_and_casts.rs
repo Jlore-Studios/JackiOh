@@ -122,7 +122,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         // p1 has Quickstriker. At p1's start of turn the draw casts Hinder, the draw repeats and casts a
         // second Hinder, and the draw repeats again into Mr. Vanilla (§2.4, R58). §8 #38's X is "cards you
         // played earlier this turn", and a cast on draw is no play (R2179002), so X is 0 for both and p2's
-        // hero takes nothing (through v0.5.0 each was a play, R70, and the second dealt 1).
+        // hero takes nothing (through v0.5.2 each was a play, R70, and the second dealt 1).
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -143,7 +143,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         register_all();
         // Gifted Program: "The first card costing 1 or less you play each turn becomes Radiant as it is
         // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002; through
-        // v0.5.0 it was the first, R70, and resolved Radiant), so it stays base and the first card p1
+        // v0.5.2 it was the first, R70, and resolved Radiant), so it stays base and the first card p1
         // plays after it is the one made Radiant.
         let mut g = scenario(json!({
             "active": "p2",
@@ -186,7 +186,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.play(FULLSEND, json!({}));
         g.play(VANILLA, json!({}));
 
-        // Through v0.5.0 the Hinder was the 3rd (R70).
+        // Through v0.5.2 the Hinder was the 3rd (R70).
         assert_eq!(g.state().players.p1.turn_log.cards_played, 2);
         g.expect_in_zone(HINDER, "graveyard");
         assert_eq!(g.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 1);
@@ -203,7 +203,7 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
     fn r2179002_unstable_clone_machine_copies_no_card_cast_on_draw_and_copies_the_next_card_played() {
         register_all();
         // "After you play a card, shuffle 3 copies of it into your library": the Hinder p1's start-of-turn
-        // draw casts is no play, so nothing copies it (through v0.5.0 it was a play, R70, and copied).
+        // draw casts is no play, so nothing copies it (through v0.5.2 it was a play, R70, and copied).
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,

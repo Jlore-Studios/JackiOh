@@ -111,7 +111,7 @@ pub fn four_digit_problem(rng: &mut Rng) -> KyTestProblem {
 /// R2179003: which Easy problems a KY's Test generates.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KyTestEasy {
-    /// R580, through v0.5.0: a + b with two-digit addends (`easy_problem`).
+    /// R580, through v0.5.2: a + b with two-digit addends (`easy_problem`).
     Sums,
     /// R2179003, since issue #2179: a four-digit sum or difference (`four_digit_problem`).
     FourDigits,
@@ -162,7 +162,7 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
     ky_test_script_with(bank, KyTestEasy::FourDigits)
 }
 
-/// `ky_test_script` with the Easy problems `easy` names: v0.5.0's kept script asks two-digit sums.
+/// `ky_test_script` with the Easy problems `easy` names: v0.5.2's kept script asks two-digit sums.
 pub fn ky_test_script_with(bank: &[KyTestProblem], easy: KyTestEasy) -> KyTestScript {
     let bank: Arc<Vec<KyTestProblem>> = Arc::new(bank.to_vec());
 

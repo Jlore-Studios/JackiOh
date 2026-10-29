@@ -50,8 +50,8 @@ fn opponent_emoted(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     *player == opponent_of(ctx.controller)
 }
 
-/// A Field Spell's trigger: the engine consults `when` for traps alone (R99, `traps.rs`), so the run
-/// checks the same predicate and answers nothing when it does not hold.
+/// A Field Spell's trigger: its `when` is read as it resolves (R2271000), and the run checks the same
+/// predicate and answers nothing when it does not hold.
 fn answering(
     id: &str,
     on: GameEventType,

@@ -239,7 +239,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
                 // #21 Hinder is cast on draw: drawing it casts it (§2.4, R58), for 0, and the cast is no
-                // play (R2179002; through v0.5.0 it was, R70, and set the trap off). Its Radiant face
+                // play (R2179002; through v0.5.2 it was, R70, and set the trap off). Its Radiant face
                 // discards nothing (R431), so the cast asks no question.
                 "p2": { "hand": ["core-005"], "library": [{ "def": "core-021", "radiant": true }, "core-011"] },
             }));

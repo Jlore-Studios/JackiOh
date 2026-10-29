@@ -90,7 +90,7 @@ mod tests {
             // Then you draw again: the next card arrived in hand.
             assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, FILLER]);
             assert_eq!(s.pile(P1, "library").len(), 1);
-            // It is no play and paid nothing (R2179002; through v0.5.0 it was a play, R70).
+            // It is no play and paid nothing (R2179002; through v0.5.2 it was a play, R70).
             let id = s.card(BONE_STORM).id.clone();
             assert!(!s.state().players.p1.turn_log.played_ids.contains(&id));
             s.expect_mana(P1, 4);

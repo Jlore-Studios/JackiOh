@@ -58,7 +58,7 @@ mod tests {
     const TRIBUTE_A: &str = "core-011"; // Tempo Timmy: (1) 3/3, tribute fodder.
     const TRIBUTE_B: &str = "core-020"; // Pointmaster: (2) 7/1, tribute fodder.
     const LAR: &str = "classicplus-076"; // Brother Lar: (1) 1/1 CN Human.
-    const BREAKER: &str = "meditative-045"; // Cry: Nerf every other CN or KY card, field and hands (decks too through v0.5.0).
+    const BREAKER: &str = "meditative-045"; // Cry: Nerf every other CN or KY card, field and hands (decks too through v0.5.2).
     const PRIME: &str = "meditative-045-1"; // Cry: destroy (radiant: exile) every other CN or KY permanent.
     const FLAGBEARER: &str = "classicplus-046"; // Aura: your other Felinors have +1/+1.
     const FIENDER: &str = "core-092"; // Also has the stats of all your Felinors.

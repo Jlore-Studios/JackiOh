@@ -8,7 +8,7 @@
 //! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit.
 //! Each Discover offers three different non-token Felinor-tagged Units of every set (R380, R405) whose
 //! printed cost (R65) is (2) or less, (3) or less on the Radiant face, never Felinor Fuser itself (R387).
-//! Through v0.5.0 the pool had no cost limit, which `script_v0_5_0` keeps (R767000).
+//! Through v0.5.2 the pool had no cost limit, which `script_v0_5_2` keeps (R767000).
 //!
 //! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,
 //! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
@@ -119,9 +119,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 its Discovers offered a Felinor Unit of any cost; `KEPT_SCRIPTS` folds
+/// R767000: through v0.5.2 its Discovers offered a Felinor Unit of any cost; `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: felinor_fuser(
             false,
@@ -455,13 +455,13 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.0 and before, whose Discovers had no cost limit.
-        mod v0_5_0 {
+        /// R767000: the script kept for the replays of v0.5.2 and before, whose Discovers had no cost limit.
+        mod v0_5_2 {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_5_0_may_offer_a_felinor_that_costs_4() {
-                crate::under_kept(FUSER, crate::scripts::classic_plus::c030_felinor_fuser::script_v0_5_0(), || {
+            fn r767000_a_game_on_v0_5_2_may_offer_a_felinor_that_costs_4() {
+                crate::under_kept(FUSER, crate::scripts::classic_plus::c030_felinor_fuser::script_v0_5_2(), || {
                     let mut costly = false;
                     for n in 0..30 {
                         let mut s = scenario(json!({ "seed": format!("fuser-kept-{n}"), "p1": { "hand": [FUSER, FILLER] } }));

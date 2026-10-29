@@ -8,7 +8,7 @@
 //! C+ #72 `classicplus-072` by the match rng (R2179004, issue #2179), then `add_to_hand` of {books}
 //! copies of the one picked (Radiant: `radiant: true`). Both are real cards, named, so no pool and no
 //! R387. No prompt opens; the opponent sees a hidden card arrive.
-//! Through v0.5.0 its controller chose the Book by a mode prompt (R1161), which `script_v0_5_0`
+//! Through v0.5.2 its controller chose the Book by a mode prompt (R1161), which `script_v0_5_2`
 //! keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
@@ -23,11 +23,11 @@ const NERF_BOOK: &str = "classicplus-072";
 /// R2179004: the two Books one pick is made among, in the order the text names them.
 const BOOKS: [&str; 2] = [BUFF_BOOK, NERF_BOOK];
 
-/// The two modes of v0.5.0's prompt, worded as the faces printed them. The same labels on both faces.
+/// The two modes of v0.5.2's prompt, worded as the faces printed them. The same labels on both faces.
 const BUFF: &str = "Book of Buff";
 const NERF: &str = "Book of Nerf";
 
-/// The resume step v0.5.0's mode prompt re-entered (§10.6).
+/// The resume step v0.5.2's mode prompt re-entered (§10.6).
 const STEP_BOOK: &str = "book";
 
 /// {books} copies of the Book `id`, Radiant on the Radiant face.
@@ -51,8 +51,8 @@ fn playtester(radiant: bool) -> Script {
     }
 }
 
-/// v0.5.0's face: a mode prompt for its controller (R1161), then the Book chosen.
-fn playtester_v0_5_0(radiant: bool) -> Script {
+/// v0.5.2's face: a mode prompt for its controller (R1161), then the Book chosen.
+fn playtester_v0_5_2(radiant: bool) -> Script {
     Script {
         start_of_turn: Some(hook(|_ctx| {
             vec![choose_mode(json_as(json!({
@@ -81,9 +81,9 @@ pub fn script() -> CardScripts {
     CardScripts { base: playtester(false), radiant: playtester(true) }
 }
 
-/// R767000: through v0.5.0 its controller chose the Book; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
-    CardScripts { base: playtester_v0_5_0(false), radiant: playtester_v0_5_0(true) }
+/// R767000: through v0.5.2 its controller chose the Book; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_2() -> CardScripts {
+    CardScripts { base: playtester_v0_5_2(false), radiant: playtester_v0_5_2(true) }
 }
 
 // M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85: "At your start of turn only, Book of Buff
@@ -236,13 +236,13 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.0 and before, whose controller chose the Book.
-        mod v0_5_0 {
+        /// R767000: the script kept for the replays of v0.5.2 and before, whose controller chose the Book.
+        mod v0_5_2 {
             use super::*;
 
             #[test]
-            fn r767000_r1161_a_game_on_v0_5_0_asks_its_controller_and_adds_the_book_chosen() {
-                crate::under_kept(PLAYTESTER, script_v0_5_0(), || {
+            fn r767000_r1161_a_game_on_v0_5_2_asks_its_controller_and_adds_the_book_chosen() {
+                crate::under_kept(PLAYTESTER, script_v0_5_2(), || {
                     let mut s = standing("playtester-kept", false);
                     let before = ids(&s);
                     s.start_turn();

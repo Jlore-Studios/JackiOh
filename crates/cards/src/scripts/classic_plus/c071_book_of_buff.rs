@@ -3,8 +3,8 @@
 //!   Radiant: "Buff a card {times|time|times}. It may be a card in your hand." — times 8
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
-//! hand (a broader scope, R275, as C+ #72 Book of Nerf's). Through v0.5.0 the base face could take a
-//! hand card too, which `script_v0_5_0` keeps (R767000, issue #2179). `times` separate Upgrades, each
+//! hand (a broader scope, R275, as C+ #72 Book of Nerf's). Through v0.5.2 the base face could take a
+//! hand card too, which `script_v0_5_2` keeps (R767000, issue #2179). `times` separate Upgrades, each
 //! its own draw (R386); an Immutable card is left alone. The Radiant eight is the declared `times`.
 
 use jackioh_engine::effects::upgrade;
@@ -33,9 +33,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 both faces could take a card in your hand; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.2 both faces could take a card in your hand; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: book(true),
         radiant: book(true),
@@ -221,14 +221,14 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.0 and before, whose base face could take a
+    /// R767000: the script kept for the replays of v0.5.2 and before, whose base face could take a
     /// card in your hand.
-    mod v0_5_0 {
+    mod v0_5_2 {
         use super::*;
 
         #[test]
-        fn r767000_a_game_on_v0_5_0_buffs_a_card_in_your_hand_on_the_base_face() {
-            crate::under_kept(BOOK, script_v0_5_0(), || {
+        fn r767000_a_game_on_v0_5_2_buffs_a_card_in_your_hand_on_the_base_face() {
+            crate::under_kept(BOOK, script_v0_5_2(), || {
                 let mut s = book(false);
                 let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
                 s.play(BOOK, json!({ "targets": pick::id(&held.id) }));

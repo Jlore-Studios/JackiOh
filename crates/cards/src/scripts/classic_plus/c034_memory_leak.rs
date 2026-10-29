@@ -42,7 +42,7 @@ where
             }
         })),
         triggers: vec![TriggerDef::new("memory-leak", &[GameEventType::CardResolved], move |ctx, event| {
-            // A trigger that is no trap reads its condition in `run` (only traps consult `when`, R99).
+            // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
             if has(&*ctx, AFTER_PLAY) && opponent_played_unit_or_field_spell(&*ctx, event) {
                 vec![lock_played_zone(json_as(json!({ "event": event })))]
             } else {

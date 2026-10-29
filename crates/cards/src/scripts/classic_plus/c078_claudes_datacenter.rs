@@ -10,8 +10,8 @@
 //! Each card is its own pick (R60) through §6.3's Add to hand, so a full hand burns it, and the opponent
 //! sees the sentinel (R97).
 //!
-//! Issue #2179 made it an Activate; through v0.5.0 it added the card at its controller's end of turn
-//! (R62), which `script_v0_5_0` keeps, and through v0.4.4b that end of turn's (0) was printed, not
+//! Issue #2179 made it an Activate; through v0.5.2 it added the card at its controller's end of turn
+//! (R62), which `script_v0_5_2` keeps, and through v0.4.4b that end of turn's (0) was printed, not
 //! declared, which `script_v0_4_4b` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -27,7 +27,7 @@ fn ai_pool() -> Value {
 /// §8.7: "It costs (0)", as v0.4.4b printed it before it was the declared `setCost` (R1748003).
 const FREE: i32 = 0;
 
-/// The printed "a random AI generated card": one card per Activate (per end of turn through v0.5.0).
+/// The printed "a random AI generated card": one card per Activate (per end of turn through v0.5.2).
 const CARDS: i32 = 1;
 
 /// The add; the card's price is the declared `setCost`, or the printed (0) when `declared` is off.
@@ -62,7 +62,7 @@ fn datacenter(radiant: bool) -> Script {
     }
 }
 
-/// One face through v0.5.0: the add at its controller's end of turn (R62).
+/// One face through v0.5.2: the add at its controller's end of turn (R62).
 fn datacenter_at_end_of_turn(radiant: bool, declared: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| add_ai_card(ctx, radiant, declared))),
@@ -77,9 +77,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 it added its card at the end of its controller's turn; `KEPT_SCRIPTS`
+/// R767000: through v0.5.2 it added its card at the end of its controller's turn; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: datacenter_at_end_of_turn(false, true),
         radiant: datacenter_at_end_of_turn(true, true),
@@ -323,14 +323,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.0 and before, which added at its controller's
+        /// R767000: the script kept for the replays of v0.5.2 and before, which added at its controller's
         /// end of turn.
-        mod v0_5_0 {
+        mod v0_5_2 {
             use super::*;
 
             #[test]
-            fn r767000_r62_a_game_on_v0_5_0_adds_at_the_end_of_your_turn_only() {
-                crate::under_kept(DATACENTER, super::super::super::script_v0_5_0(), || {
+            fn r767000_r62_a_game_on_v0_5_2_adds_at_the_end_of_your_turn_only() {
+                crate::under_kept(DATACENTER, super::super::super::script_v0_5_2(), || {
                     let mut s = setup(false, 1, None);
                     s.end_turn();
                     assert_eq!(ai_cards_in(&s).len(), 1);

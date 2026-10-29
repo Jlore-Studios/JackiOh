@@ -9,7 +9,7 @@
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
 //! - Cry: `degrade` over every other CN or KY card on fields and in hands, `times`; a card in
-//!   Chinese is CN (R1176000). Through v0.5.0 it reached the decks too, which `script_v0_5_0`
+//!   Chinese is CN (R1176000). Through v0.5.2 it reached the decks too, which `script_v0_5_2`
 //!   keeps for those replays (R767000, issue #2179).
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
 //! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040);
@@ -24,8 +24,8 @@ const PRIME: &str = "meditative-045-1";
 
 /// The zones the Cry Nerfs in: the fields and the hands since #2179.
 const NERFED_ZONES: &[&str] = &["field", "hand"];
-/// Through v0.5.0: the decks too.
-const NERFED_ZONES_V0_5_0: &[&str] = &["field", "hand", "library"];
+/// Through v0.5.2: the decks too.
+const NERFED_ZONES_V0_5_2: &[&str] = &["field", "hand", "library"];
 
 fn breaker(radiant: bool, zones: &'static [&'static str]) -> Script {
     Script {
@@ -60,11 +60,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 the Cry Nerfed the decks too; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+/// R767000: through v0.5.2 the Cry Nerfed the decks too; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: breaker(false, NERFED_ZONES_V0_5_0),
-        radiant: breaker(true, NERFED_ZONES_V0_5_0),
+        base: breaker(false, NERFED_ZONES_V0_5_2),
+        radiant: breaker(true, NERFED_ZONES_V0_5_2),
     }
 }
 
@@ -272,10 +272,10 @@ mod tests {
             }));
         }
 
-        /// R767000: the script kept for the replays of v0.5.0 and before, whose Cry reached the decks.
+        /// R767000: the script kept for the replays of v0.5.2 and before, whose Cry reached the decks.
         #[test]
-        fn r767000_a_game_on_v0_5_0_nerfs_the_decks_too() {
-            crate::under_kept(BREAKER, crate::scripts::meditative::c045_knowledge_breaker::script_v0_5_0(), || {
+        fn r767000_a_game_on_v0_5_2_nerfs_the_decks_too() {
+            crate::under_kept(BREAKER, crate::scripts::meditative::c045_knowledge_breaker::script_v0_5_2(), || {
                 let mut s = spread_board("breaker-cry-kept", false);
                 let decks: Vec<String> = deck_cnky(&s, P1).into_iter().chain(deck_cnky(&s, P2)).collect();
                 s.play(BREAKER, json!({ "zone": 2 }));

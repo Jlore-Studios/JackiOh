@@ -7,14 +7,14 @@
 //! card data (`crate::ky_test_bank`). Both faces run the same script: the grade step reads the face
 //! that asked, so the Radiant face's reward cards are Radiant.
 //!
-//! Issue #2179 (R2179003): the Easy problems are four-digit sums and differences, v0.5.0's whole bank
-//! is Medium, and the Hard bank is graduate mathematics. `script_v0_5_0` asks v0.5.0's two-digit
+//! Issue #2179 (R2179003): the Easy problems are four-digit sums and differences, v0.5.2's whole bank
+//! is Medium, and the Hard bank is graduate mathematics. `script_v0_5_2` asks v0.5.2's two-digit
 //! sums from its bank, for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::subsystems::ky_test::{KyTestEasy, KyTestProblem, ky_test_script_with};
 
-use crate::ky_test_bank::{KY_TEST_BANK, KY_TEST_BANK_V0_5_0};
+use crate::ky_test_bank::{KY_TEST_BANK, KY_TEST_BANK_V0_5_2};
 
 pub const ID: &str = "classicplus-042";
 
@@ -34,10 +34,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.0 its Easy problems were two-digit sums and its bank v0.5.0's;
+/// R767000: through v0.5.2 its Easy problems were two-digit sums and its bank v0.5.2's;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_0() -> CardScripts {
-    let base = ky_test(&KY_TEST_BANK_V0_5_0, KyTestEasy::Sums);
+pub fn script_v0_5_2() -> CardScripts {
+    let base = ky_test(&KY_TEST_BANK_V0_5_2, KyTestEasy::Sums);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -52,7 +52,7 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
-    use crate::ky_test_bank::{KY_TEST_BANK, KY_TEST_BANK_V0_5_0};
+    use crate::ky_test_bank::{KY_TEST_BANK, KY_TEST_BANK_V0_5_2};
     use jackioh_engine::subsystems::ky_test::KyTestProblem;
 
     const P1: PlayerId = PlayerId::P1;
@@ -173,7 +173,7 @@ mod tests {
 
         #[test]
         fn r420_holds_at_least_ky_test_min_problems_medium_and_hard_problems_easy_ones_being_generated_r580() {
-            for bank in [&*KY_TEST_BANK, &*KY_TEST_BANK_V0_5_0] {
+            for bank in [&*KY_TEST_BANK, &*KY_TEST_BANK_V0_5_2] {
                 for difficulty in ["Medium", "Hard"] {
                     let count = bank.iter().filter(|problem| problem.difficulty.to_string() == difficulty).count();
                     assert!(count >= KY_TEST_MIN_PROBLEMS as usize);
@@ -183,25 +183,25 @@ mod tests {
         }
 
         #[test]
-        fn r2179003_every_v0_5_0_problem_is_medium_now_ids_kept_and_the_hard_ones_are_the_graduate_bank() {
+        fn r2179003_every_v0_5_2_problem_is_medium_now_ids_kept_and_the_hard_ones_are_the_graduate_bank() {
             let medium: Vec<&KyTestProblem> =
                 KY_TEST_BANK.iter().filter(|problem| problem.difficulty == KyTestDifficulty::Medium).collect();
-            assert_eq!(medium.len(), KY_TEST_BANK_V0_5_0.len());
-            for (now, then) in medium.iter().zip(KY_TEST_BANK_V0_5_0.iter()) {
+            assert_eq!(medium.len(), KY_TEST_BANK_V0_5_2.len());
+            for (now, then) in medium.iter().zip(KY_TEST_BANK_V0_5_2.iter()) {
                 assert_eq!((&now.id, &now.statement, &now.answer), (&then.id, &then.statement, &then.answer));
             }
             let hard: Vec<&KyTestProblem> =
                 KY_TEST_BANK.iter().filter(|problem| problem.difficulty == KyTestDifficulty::Hard).collect();
             assert!(hard.len() >= KY_TEST_MIN_PROBLEMS as usize);
             assert!(hard.iter().all(|problem| problem.id.starts_with('g')));
-            assert!(!hard.iter().any(|problem| KY_TEST_BANK_V0_5_0.iter().any(|then| then.id == problem.id)));
+            assert!(!hard.iter().any(|problem| KY_TEST_BANK_V0_5_2.iter().any(|then| then.id == problem.id)));
         }
 
         #[test]
         fn r420_every_id_is_unique_every_problem_has_four_distinct_options_one_of_them_its_answer() {
             let ids: IndexSet<String> = KY_TEST_BANK.iter().map(|problem| problem.id.to_string()).collect();
             assert_eq!(ids.len(), KY_TEST_BANK.len());
-            for problem in KY_TEST_BANK.iter().chain(KY_TEST_BANK_V0_5_0.iter()) {
+            for problem in KY_TEST_BANK.iter().chain(KY_TEST_BANK_V0_5_2.iter()) {
                 let options: Vec<String> = problem.options.iter().map(|option| option.to_string()).collect();
                 assert_eq!(options.len(), KY_TEST_OPTIONS as usize, "{}", problem.id);
                 assert_eq!(options.iter().collect::<IndexSet<_>>().len(), KY_TEST_OPTIONS as usize, "{}", problem.id);
@@ -672,14 +672,14 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.0 and before, whose Easy problems were
-    /// two-digit sums (R580) and whose Hard ones were v0.5.0's.
-    mod v0_5_0 {
+    /// R767000: the script kept for the replays of v0.5.2 and before, whose Easy problems were
+    /// two-digit sums (R580) and whose Hard ones were v0.5.2's.
+    mod v0_5_2 {
         use super::*;
 
         #[test]
-        fn r767000_r580_a_game_on_v0_5_0_asks_a_two_digit_sum_and_its_hard_bank_is_v0_5_0_s() {
-            crate::under_kept(TEST, super::super::script_v0_5_0(), || {
+        fn r767000_r580_a_game_on_v0_5_2_asks_a_two_digit_sum_and_its_hard_bank_is_v0_5_2_s() {
+            crate::under_kept(TEST, super::super::script_v0_5_2(), || {
                 let mut s = cast("kys-test-kept-easy", false, &[FILLER]);
                 s.answer(json!("Easy"));
                 let prompt = pending_prompt(&s);
@@ -695,7 +695,7 @@ mod tests {
                 let mut hard = cast("kys-test-kept-hard", false, &[FILLER]);
                 hard.answer(json!("Hard"));
                 let prompt = pending_prompt(&hard);
-                let problem = KY_TEST_BANK_V0_5_0.iter().find(|entry| entry.statement == prompt);
+                let problem = KY_TEST_BANK_V0_5_2.iter().find(|entry| entry.statement == prompt);
                 assert_eq!(problem.map(|entry| entry.difficulty.to_string()), Some("Hard".to_string()));
             });
         }

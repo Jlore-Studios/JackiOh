@@ -259,7 +259,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
     // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
     // Potion's less its Tribute, with #12 Living Armor Potion's and #13 Living Health Potion's
-    // The held Stinkyscape set's #9 Ticketed drops its Brittle 3, and #149 Wildar the Call to Chaos it
+    // The Stinkyscape set's #9 Ticketed drops its Brittle 3, and #149 Wildar the Call to Chaos it
     // gives the opponent (radiantDiff.test.ts names all fourteen).
     const pureDeletions = new Set([
       "core-055",

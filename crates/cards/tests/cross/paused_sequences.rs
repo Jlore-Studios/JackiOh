@@ -76,13 +76,6 @@ const RIGHT_HOUSE_DEFENDER: &str = "core-003";
 const UNLICENSED_EXPERIMENTATION: &str = "core-085";
 const HIT_JOB: &str = "core-016";
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 /// TS `sinkFor(s)`: `{ state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) }`.
 /// The sink writes the scenario's state in place; the events it collects and the draws it makes go
 /// nowhere, as in TS.
@@ -1781,7 +1774,7 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
         // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
         // not with the resolution loop. A cast on draw is no play (R2179002), so p2's Bear Honeypot
-        // answers neither cast (through v0.5.0 it met the first at the sweep's announce and its
+        // answers neither cast (through v0.5.2 it met the first at the sweep's announce and its
         // tokens took the sweep's 1 damage).
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let types = types_of(&events);
@@ -3239,7 +3232,7 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
         g.play("core-005", json!({}));
 
         // One play, Stockpile: the cast Unit is logged (`cardPlayed`) but is no play and wakes no trigger
-        // (R2179002; through v0.5.0 it was the second, R70). So one hit, not two.
+        // (R2179002; through v0.5.2 it was the second, R70). So one hit, not two.
         let played: Vec<String> = g
             .events()
             .iter()

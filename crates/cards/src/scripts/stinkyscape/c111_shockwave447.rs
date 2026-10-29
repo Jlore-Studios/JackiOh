@@ -1,5 +1,4 @@
-//! Stinkyscape #111 Shockwave447 (SPEC §8.10 row 111). (4) Unit, Human, Acclaimed, Mythic, 4/7 → 8/14;
-//! held (R1420).
+//! Stinkyscape #111 Shockwave447 (SPEC §8.10 row 111). (4) Unit, Human, Acclaimed, Mythic, 4/7 → 8/14.
 //!   Base:    "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both
 //!            players' hands with random complicated cards." — keywords 3
 //!   Radiant: "… Cry: Replace both players' hands with random complicated cards. Make yours Radiant." — 3

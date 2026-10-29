@@ -1,5 +1,5 @@
 //! S #147.1 IN33DH3 Prime (SPEC §7 row 147.1, §8.10 row 147.1): (4) Unit, Prime, Human, Token (printed
-//! Legendary), 9/5 → 18/10, a token of the held Stinkyscape set (R1420).
+//! Legendary), 9/5 → 18/10, a token of the Stinkyscape set.
 //!   Base:    "Cry: Summon a Wardrum Blob."
 //!   Radiant: "Cry: Summon a Radiant Wardrum Blob."
 //! Engine: Cry (R1), played or cast (R70): a summon of S #147.2 Wardrum Blob, a Field Spell, into its

@@ -124,10 +124,6 @@ mod tests {
             .collect()
     }
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("expected {what}"))
-    }
-
     /// The open prompt, as its JSON.
     fn open(s: &Scenario) -> Value {
         crate::js(must(s.state().pending.as_ref(), "an open prompt"))
@@ -195,7 +191,7 @@ mod tests {
                 })),
                 "p2": side(json!({})),
             }));
-            // The draw casts the Jelly Bean free, no play (through v0.5.0 the turn's first card, R70).
+            // The draw casts the Jelly Bean free, no play (through v0.5.2 the turn's first card, R70).
             let jelly = s.card(JELLY).id.clone();
             s.start_turn();
             s.expect_in_zone(&jelly, "graveyard");

@@ -1,12 +1,13 @@
-//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 4/5 → 8/10, a card of the held
-//! Stinkyscape set (R1420).
+//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 4/5 → 8/10, a card of the
+//! Stinkyscape set.
 //!   Base:    "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your
 //!            hand." — cards 1
 //!   Radiant: the same words — cards 2
 //! Engine: Cry (R1), so a summon (a Recruit, a Reborn) adds nothing. It picks from S #41's Drone Core pool
 //!   (the non-token cards tagged Drone Core, R380), one draw of the match rng per card (R60), each added
 //!   Radiant on both faces (§5.2); a full hand burns it (§2.4). The count is the declared `cards`, a Cry
-//!   number (R386, R1748000). The pool names no set, so while the set is held it reaches no card (R1420).
+//!   number (R386, R1748000). The pool names no set, so it reaches the set's Drone Cores because the set
+//!   ships (R1420).
 
 use jackioh_engine::prelude::*;
 

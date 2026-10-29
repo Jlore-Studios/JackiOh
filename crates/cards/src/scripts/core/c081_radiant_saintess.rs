@@ -1,12 +1,12 @@
 //! #81 Radiant Saintess (SPEC §8.4 row 81; R22, R78, R177, R275, R276): Unit, Human, cost 2 (1 through
-//! v0.5.0), Epic, 2/2 → 4/4.
+//! v0.5.2), Epic, 2/2 → 4/4.
 //!   Base:    "Death: Make your other Units Radiant."
 //!   Radiant: "Reborn
 //!             Death: Make your other Units Radiant."
 //!
 //! Since issue #2179 the Radiant face's upgrade is Reborn (catalog data), so she dies twice and her
-//! Death radiates the board each time; through v0.5.0 it widened the scope to your hand instead,
-//! one `setRadiant` per card named by id, as #29 does, which `script_v0_5_0` keeps (R767000). A hand
+//! Death radiates the board each time; through v0.5.2 it widened the scope to your hand instead,
+//! one `setRadiant` per card named by id, as #29 does, which `script_v0_5_2` keeps (R767000). A hand
 //! is its owner's alone (§9.1), so R177 had `setRadiant` report a `radiantSet` for a named hidden card
 //! whether or not the flag changed, and the cue told nothing.
 //! R22: `setRadiant` sets the `radiant` flag and nothing else, so §10.4's printed-stat layer swaps on
@@ -47,7 +47,7 @@ fn death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     radiate_your_units(ctx, false)
 }
 
-/// "…and every card in your hand", v0.5.0's Radiant face: the controller's hand, read through
+/// "…and every card in your hand", v0.5.2's Radiant face: the controller's hand, read through
 /// `zoneCards` (a copy) and named card by card, as #29 does. Every card, so no rng is drawn (§9.3),
 /// and a card already Radiant is still named — `setRadiant` cues it without changing it (R177), which
 /// is what hides the hand's faces from the opponent.
@@ -58,8 +58,8 @@ fn radiate_your_hand(ctx: &EffectContext<'_>) -> Vec<Effect> {
         .collect()
 }
 
-/// v0.5.0's Radiant Death: the board first, in the order the text names it, then the hand.
-fn radiant_death_v0_5_0(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// v0.5.2's Radiant Death: the board first, in the order the text names it, then the hand.
+fn radiant_death_v0_5_2(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let mut effects = radiate_your_units(ctx, false);
     effects.extend(radiate_your_hand(ctx));
     effects
@@ -77,16 +77,16 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.0 the Radiant face's Death radiated the hand too; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.2 the Radiant face's Death radiated the hand too; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_5_0() -> CardScripts {
+pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: Script {
             death: Some(hook(death)),
             ..Script::default()
         },
         radiant: Script {
-            death: Some(hook(radiant_death_v0_5_0)),
+            death: Some(hook(radiant_death_v0_5_2)),
             ..Script::default()
         },
     }
@@ -94,7 +94,7 @@ pub fn script_v0_5_0() -> CardScripts {
 
 // BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn on the base
 // face, so she dies once; radiant she has Reborn and dies twice, each Death radiating the board, and
-// never the hand (issue #2179; through v0.5.0 her Radiant Death radiated the hand, hidden from the
+// never the hand (issue #2179; through v0.5.2 her Radiant Death radiated the hand, hidden from the
 // opponent, R177)". Her Cry is cut (§8's row); R64 and R83 are the engine's, not this file's.
 //
 // Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
@@ -421,14 +421,14 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.0 and before, whose Radiant Death radiated the
+    /// R767000: the script kept for the replays of v0.5.2 and before, whose Radiant Death radiated the
     /// hand too.
-    mod n81_radiant_saintess_v0_5_0 {
+    mod n81_radiant_saintess_v0_5_2 {
         use super::*;
 
         #[test]
-        fn r767000_r275_a_game_on_v0_5_0_radiates_every_other_unit_and_every_card_in_your_hand() {
-            crate::under_kept(SAINTESS, script_v0_5_0(), || {
+        fn r767000_r275_a_game_on_v0_5_2_radiates_every_other_unit_and_every_card_in_your_hand() {
+            crate::under_kept(SAINTESS, script_v0_5_2(), || {
                 let mut s = scenario(json!({
                     "seed": "saintess-radiant-hand",
                     "p1": {
@@ -447,7 +447,7 @@ mod tests {
 
         #[test]
         fn r767000_r177_the_opponent_s_view_does_not_learn_which_of_her_owner_s_hand_cards_were_base_face() {
-            crate::under_kept(SAINTESS, script_v0_5_0(), || {
+            crate::under_kept(SAINTESS, script_v0_5_2(), || {
                 // Two games that differ only in the face p1's hand Timmy had while p2 could not read it.
                 // After her Death both hands are wholly Radiant; a cue only for the cards that changed
                 // would count, for p2, how many were Radiant before.

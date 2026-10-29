@@ -334,7 +334,7 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                // Through v0.5.0 the Hinder was their 1st play (R70).
+                // Through v0.5.2 the Hinder was their 1st play (R70).
                 assert_eq!(plays_of(&s), 0);
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
@@ -379,7 +379,7 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                // The Hinder is logged as cast (`onDraw`), but it is no play: through v0.5.0 it was the 2nd (R70).
+                // The Hinder is logged as cast (`onDraw`), but it is no play: through v0.5.2 it was the 2nd (R70).
                 assert_eq!(played, vec![STOCKPILE, HINDER]);
                 assert_eq!(plays_of(&s), 1);
                 assert_eq!(fused_events(&s), 0);

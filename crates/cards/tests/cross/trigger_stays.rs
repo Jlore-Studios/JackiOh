@@ -236,13 +236,6 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
 
 // The traps answer an event as the board stood when it happened
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
@@ -335,7 +328,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         }));
         let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
         // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Cast a Hinder, then take
-        // control of the enemy's backrow card in lane 2." (It drew a cast-on-draw Hinder through v0.5.0;
+        // control of the enemy's backrow card in lane 2." (It drew a cast-on-draw Hinder through v0.5.2;
         // a cast on draw is no play since #2179, R2179002, so no trap answers it.)
         costed_fixture(
             &mut s,
@@ -593,7 +586,7 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             "p2": { "backrow": [{ "def": HONEYPOT, "lane": 1 }], "hand": [RENO], "library": [RENO, RENO] },
         }));
         // A Unit with Reborn, and a 2-cost Spell whose list casts one (E12, R453) and then destroys every
-        // unit. (It drew a cast-on-draw one through v0.5.0; a cast on draw is no play since #2179,
+        // unit. (It drew a cast-on-draw one through v0.5.2; a cast on draw is no play since #2179,
         // R2179002, so no trap answers it.)
         unit_fixture(
             &mut s,

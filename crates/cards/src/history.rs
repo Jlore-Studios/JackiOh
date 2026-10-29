@@ -82,7 +82,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// summoned a Radiant body (R1828003). #1851's ran its through v0.4.11: Prestige could be played on
 /// either face with nothing to De-Radiant (R1103, R1851003). #1803's Shadowstep ran through v0.4.12b
 /// with its definition-remade hand cards carrying none of the flickered unit's stats, Armor or tuning.
-/// #2020's Infinite Reserves ran its through v0.4.12c. #2179's seventeen ran theirs through v0.5.0:
+/// #2020's Infinite Reserves ran its through v0.4.12c. #2179's seventeen ran theirs through v0.5.2:
 /// Tranquility went to the graveyard; Knowledge Breaker Nerfed the decks too; Felinor Fuser's Discovers
 /// had no cost limit; Transmogulate had one price and replaced the board, graveyard and exile too; Devil's
 /// Pact's Radiant Book of Flame was Radiant; Playtester's controller chose the Book (R1161); Catboy Maid
@@ -90,7 +90,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.0's bank (R2179003).
+/// asked two-digit sums (R580) from v0.5.2's bank (R2179003).
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -254,59 +254,59 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.12c",
         c075_infinite_reserves::script_v0_4_12c,
     ),
-    (c048_tranquility::ID, "v0.5.0", c048_tranquility::script_v0_5_0),
+    (c048_tranquility::ID, "v0.5.2", c048_tranquility::script_v0_5_2),
     (
         c045_knowledge_breaker::ID,
-        "v0.5.0",
-        c045_knowledge_breaker::script_v0_5_0,
+        "v0.5.2",
+        c045_knowledge_breaker::script_v0_5_2,
     ),
     (
         c030_felinor_fuser::ID,
-        "v0.5.0",
-        c030_felinor_fuser::script_v0_5_0,
+        "v0.5.2",
+        c030_felinor_fuser::script_v0_5_2,
     ),
     (
         c083_transmogulate::ID,
-        "v0.5.0",
-        c083_transmogulate::script_v0_5_0,
+        "v0.5.2",
+        c083_transmogulate::script_v0_5_2,
     ),
-    (c023_devils_pact::ID, "v0.5.0", c023_devils_pact::script_v0_5_0),
-    (c085_playtester::ID, "v0.5.0", c085_playtester::script_v0_5_0),
+    (c023_devils_pact::ID, "v0.5.2", c023_devils_pact::script_v0_5_2),
+    (c085_playtester::ID, "v0.5.2", c085_playtester::script_v0_5_2),
     (
         c102_catboy_maid_ssr::ID,
-        "v0.5.0",
-        c102_catboy_maid_ssr::script_v0_5_0,
+        "v0.5.2",
+        c102_catboy_maid_ssr::script_v0_5_2,
     ),
     (
         c009_magic_amplifier::ID,
-        "v0.5.0",
-        c009_magic_amplifier::script_v0_5_0,
+        "v0.5.2",
+        c009_magic_amplifier::script_v0_5_2,
     ),
-    (c035_prep::ID, "v0.5.0", c035_prep::script_v0_5_0),
-    (c011_anime_armor::ID, "v0.5.0", c011_anime_armor::script_v0_5_0),
-    (c023_dropshipping::ID, "v0.5.0", c023_dropshipping::script_v0_5_0),
+    (c035_prep::ID, "v0.5.2", c035_prep::script_v0_5_2),
+    (c011_anime_armor::ID, "v0.5.2", c011_anime_armor::script_v0_5_2),
+    (c023_dropshipping::ID, "v0.5.2", c023_dropshipping::script_v0_5_2),
     (
         c020_the_power_to_punish::ID,
-        "v0.5.0",
-        c020_the_power_to_punish::script_v0_5_0,
+        "v0.5.2",
+        c020_the_power_to_punish::script_v0_5_2,
     ),
     (
         c032_spiritually_zhongguo::ID,
-        "v0.5.0",
-        c032_spiritually_zhongguo::script_v0_5_0,
+        "v0.5.2",
+        c032_spiritually_zhongguo::script_v0_5_2,
     ),
     (
         c081_radiant_saintess::ID,
-        "v0.5.0",
-        c081_radiant_saintess::script_v0_5_0,
+        "v0.5.2",
+        c081_radiant_saintess::script_v0_5_2,
     ),
-    (c071_book_of_buff::ID, "v0.5.0", c071_book_of_buff::script_v0_5_0),
+    (c071_book_of_buff::ID, "v0.5.2", c071_book_of_buff::script_v0_5_2),
     (
         c078_claudes_datacenter::ID,
-        "v0.5.0",
-        c078_claudes_datacenter::script_v0_5_0,
+        "v0.5.2",
+        c078_claudes_datacenter::script_v0_5_2,
     ),
-    (c042_kys_test::ID, "v0.5.0", c042_kys_test::script_v0_5_0),
+    (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

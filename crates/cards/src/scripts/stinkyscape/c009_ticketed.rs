@@ -1,5 +1,4 @@
-//! S #9 Ticketed (SPEC §8.10 row 9; R1850003, R1875001): (2) Field Spell, Common, of the held Stinkyscape
-//! set (R1420).
+//! S #9 Ticketed (SPEC §8.10 row 9; R1850003, R1875001): (2) Field Spell, Common, of the Stinkyscape set.
 //!   Base:    "Brittle 3 / Cry: Hold another permanent beneath this. / When this leaves the field, the
 //!            permanent beneath it returns to its controller."
 //!   Radiant: the same without Brittle 3.

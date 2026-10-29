@@ -1,5 +1,4 @@
-//! S #22 Gatinsir (SPEC §8.10 row 22; R1849009, R1875002): (4) Trap, Epic, of the held Stinkyscape set
-//! (R1420).
+//! S #22 Gatinsir (SPEC §8.10 row 22; R1849009, R1875002): (4) Trap, Epic, of the Stinkyscape set.
 //!   Base:    "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp
 //!            Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
 //!   Radiant: the same, every summon Radiant.

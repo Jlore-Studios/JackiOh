@@ -89,10 +89,6 @@ fn events_of(view: &PlayerView, type_: GameEventType) -> Vec<GameEvent> {
         .collect()
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("missing {what}"))
-}
-
 /// R1074000: the game as one duel of a Duos match sees it, both sides on Duos life (§13.4), where a
 /// hand card can leave by a pass (B20).
 fn as_a_duel(s: &mut Scenario) {

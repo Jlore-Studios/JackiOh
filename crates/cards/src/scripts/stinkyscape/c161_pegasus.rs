@@ -5,7 +5,7 @@
 //! Engine: one `add_to_hand` per card named, S #113 A Very Dandy Lad, S #94 Tmack Trav, S #123 Gokugains, S
 //! #114 Arctic Citadel, in the order printed (S #10 Otherworldly Endurance's pattern), each a new card on its
 //! own face at its own price, a full hand burning what does not fit, in that order (§2.4). Radiant: each
-//! `radiant: true` (§5.2, R1880000). The cards are named, so they reach the hand while the set is held
+//! `radiant: true` (§5.2, R1880000). The cards are named, so they reach the hand whether or not the set ships
 //! (R1420). Declares no numbers.
 
 use jackioh_engine::effects::add_to_hand;

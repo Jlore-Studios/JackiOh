@@ -143,6 +143,7 @@ mod tests {
     const FIENDER: &str = "core-092"; // (2) Unit: Stack.
     const FELINORS: &str = "core-012"; // (2) Unit: Cry summons a copy.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const FIELD_SPELL: &str = "core-073"; // Field Spell: Anti-oneshot Armor.
 
     fn slot(player: PlayerId, lane: i32) -> ZoneSlot {
         ZoneSlot {
@@ -213,6 +214,47 @@ mod tests {
 
             // P2 lane 2 is empty!
             assert!(s.unit(P2, 2).is_none());
+        }
+
+        /// A board with Prison at chance 100 in p1's lane 1 and `p1_hand` and `p2_hand` to play.
+        fn prison_at_100(p1_hand: Value, p2_hand: Value) -> jackioh_engine::testkit::Scenario {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": p1_hand,
+                        "library": [SPARE, SPARE], "mana": 10 },
+                "p2": { "hand": p2_hand, "library": [SPARE, SPARE], "mana": 10 },
+            }));
+            set_param(s.card_mut(ID), "chance", 100);
+            s
+        }
+
+        #[test]
+        fn r2271000_its_own_controllers_unit_is_not_captured() {
+            // §8.8: "After your opponent plays a Unit". Its condition was read for no trigger but a
+            // trap's, so a sure capture took its own controller's Unit too.
+            let mut s = prison_at_100(json!([VANILLA]), json!([FILLER]));
+            s.play(VANILLA, json!({ "zone": 2 }));
+            assert_eq!(s.unit_at(P1, 2).def_id, VANILLA);
+            assert_eq!(
+                jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
+                Some(1)
+            );
+        }
+
+        #[test]
+        fn r2271000_the_opponents_field_spell_is_not_captured() {
+            // §8.8: "a Unit". A Field Spell stays in play (`permanent`) and is no Unit.
+            let mut s = prison_at_100(json!([FILLER]), json!([FIELD_SPELL]));
+            s.end_turn();
+            s.play(FIELD_SPELL, json!({ "zone": 1 }));
+            assert_eq!(
+                s.backrow(P2, 1).map(|card| card.def_id),
+                Some(FIELD_SPELL.to_string())
+            );
+            assert_eq!(
+                jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
+                Some(1)
+            );
         }
 
         #[test]
@@ -356,6 +398,23 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r2271000_its_own_controllers_unit_is_not_captured_on_the_radiant_face() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [{ "def": ID, "lane": 1, "radiant": true }], "hand": [VANILLA],
+                        "library": [SPARE, SPARE], "mana": 10 },
+                "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
+            }));
+            set_param(s.card_mut(ID), "chance", 100);
+            s.play(VANILLA, json!({ "zone": 2 }));
+            assert_eq!(s.unit_at(P1, 2).def_id, VANILLA);
+            assert_eq!(
+                jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
+                Some(1)
+            );
+        }
 
         #[test]
         fn r1284_radiant_face_has_lucky_1() {

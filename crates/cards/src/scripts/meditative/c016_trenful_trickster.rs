@@ -1,5 +1,5 @@
 //! M #16 Trenful Trickster (SPEC §8.8 row 16, R33, R60, R64, R129, R351, R386): (2) Unit, Rare, 1/4 → 2/8
-//! (1/5 → 2/10 through v0.5.0, issue #2179).
+//! (1/5 → 2/10 through v0.5.2, issue #2179).
 //!
 //! Base:    "End of turn: Summon {traps|random Trap|random Traps}."
 //! Radiant: the same, traps 2.

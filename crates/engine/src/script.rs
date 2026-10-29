@@ -313,7 +313,9 @@ pub struct TriggerDef {
     pub on: Vec<GameEventType>,
     /// R99: the trigger's condition, kept out of `run` so a trap can decline an event without being
     /// spent — R61 makes an empty effect list mean "fired and did nothing". Absent, the `on` match
-    /// alone arms it, so a trap with no predicate answers every event it names on either side.
+    /// alone arms it, so a trap with no predicate answers every event it names on either side. The
+    /// traps' dispatch reads a trap's; every other trigger's is read as its queued entry resolves
+    /// (R2271000).
     pub when: Option<TriggerWhen>,
     /// Reads the event and the state; returns the effects to queue, or none.
     pub run: TriggerRun,

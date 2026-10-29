@@ -97,13 +97,6 @@ mod tests {
     /// R55's four game counters.
     type Counters = GameCounters;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("expected {what}"),
-        }
-    }
-
     fn events_of(s: &Scenario, event_type: GameEventType) -> Vec<GameEvent> {
         s.events()
             .iter()
@@ -393,7 +386,7 @@ mod tests {
         #[test]
         fn r2179002_a_cast_on_draw_is_no_play_so_only_its_draw_makes_the_void_cheaper() {
             crate::register_all();
-            // #21 Hinder casts itself on the draw: through v0.5.0 that counted as a play (R70), now as
+            // #21 Hinder casts itself on the draw: through v0.5.2 that counted as a play (R70), now as
             // none (R2179002).
             let mut s = scenario(json!({
                 "seed": "void-cast",
