@@ -292,8 +292,9 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
     cy.get(POOL_ITEMS).last().should(($item) => {
       expect($item.find(".db-card-face").css("content-visibility"), "the face may be skipped").to.eq("auto");
+      // A face far off the screen is not drawn yet (PoolGrid's PoolFace), so it has no text to fit.
       const text = $item[0]?.querySelector<HTMLElement>(".card-text");
-      expect(text === null || text === undefined ? null : fitted(text), "the last card's text waits").to.eq(false);
+      expect(text === null || text === undefined ? false : fitted(text), "the last card's text waits").to.eq(false);
     });
     cy.get(POOL_ITEMS).last().scrollIntoView();
     cy.get(POOL_ITEMS).last().find(".card-text").should(($text) => {
@@ -305,7 +306,8 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   it("every pool card prints its keywords in bold in the rules box's ink (#85)", () => {
     cy.viewport(1280, 720);
     cy.get(ts(WORKSHOP)).should("have.class", "tavern");
-    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+    // Each face is drawn once it nears the screen (PoolGrid's PoolFace), so every card is visited.
+    fitEveryPoolCard();
     cy.document().should((doc) => {
       const missing: string[] = [];
       const faint: string[] = [];
