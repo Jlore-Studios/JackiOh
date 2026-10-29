@@ -7204,9 +7204,7 @@
       "source": "request",
       "started_at": "2026-10-29T19:25:54Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6501944981"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [
