@@ -99,13 +99,15 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="modifiers-opponent"
         role="group"
       >
-        <span
+        <button
+          aria-expanded="false"
           class="modifier-badge"
           data-modifier-id="m3"
           title="Next Spell gains Echo +1"
+          type="button"
         >
           Next Spell gains Echo +1
-        </span>
+        </button>
       </span>
     </div>
     <span
@@ -1190,7 +1192,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p2"
           data-position="DEF"
           data-testid="card-u7"
-          style="transform: rotate(90deg) scale(0.72);"
+          style="transform: rotate(90deg) scale(var(--def-scale, 1));"
           tabindex="0"
         >
           <span
@@ -2405,7 +2407,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           data-owner="p1"
           data-position="DEF"
           data-testid="card-u3"
-          style="transform: rotate(90deg) scale(0.72);"
+          style="transform: rotate(90deg) scale(var(--def-scale, 1));"
           tabindex="0"
         >
           <span
@@ -3589,20 +3591,24 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-testid="modifiers-you"
         role="group"
       >
-        <span
+        <button
+          aria-expanded="false"
           class="modifier-badge"
           data-modifier-id="m1"
           title="(4)+ Cost cards cost (1) less (next turn)"
+          type="button"
         >
           (4)+ Cost cards cost (1) less (next turn)
-        </span>
-        <span
+        </button>
+        <button
+          aria-expanded="false"
           class="modifier-badge"
           data-modifier-id="m2"
           title="Your cards gain "Combo: draw 1""
+          type="button"
         >
           Your cards gain "Combo: draw 1"
-        </span>
+        </button>
       </span>
     </div>
     <span
