@@ -7596,6 +7596,7 @@
       "provider": "claude-1",
       "queued_at": "2026-10-29T04:36:35Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "40836632343",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T07:37:26Z",
@@ -7604,7 +7605,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2335": {
       "action": "revise",
