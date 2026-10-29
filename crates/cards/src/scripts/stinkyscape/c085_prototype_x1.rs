@@ -6,8 +6,8 @@
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
 //! Tribute (R366). R1862002: the Cry is `equip_picks` (R1841002), 2 Discovers of three in turn from the
-//! Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them while the set is held
-//! (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
+//! Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them whether or not the
+//! set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
 //! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host wears (R77),
 //! so a Radiant Prototype wields its Weapons' Radiant faces. Starship Piece is a catalog keyword the engine
 //! plays: this one's death fuses a copy into its owner's Dormant Starship (R1852000), and the Weapons it

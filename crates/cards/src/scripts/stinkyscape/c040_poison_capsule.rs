@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 40 Poison Capsule, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 40 Poison Capsule, a card of the Stinkyscape set.
 //! (3) Unit, Plague, Rare, 2/2 → 4/4: Starship Piece.
 //! "Cry: Place {counters|Plague Counter|Plague Counters}." (counters 2, Radiant 4) /
 //! "End of turn: Deal {damage} damage to all enemies for each Plague Counter on this."

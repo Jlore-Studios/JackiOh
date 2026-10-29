@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-korrelite Korrelite, a Resource token of the Stinkyscape set (R1857000).
+//! SPEC §7 Stinkyscape T-korrelite Korrelite, a Resource token of the Stinkyscape set.
 //!   Base:    "Deal {damage} damage to a random enemy." (1)
 //!   Radiant: "Echo 1\nDeal {damage} damage to a random enemy." (1)
 //!

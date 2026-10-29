@@ -236,13 +236,6 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
 
 // The traps answer an event as the board stood when it happened
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }

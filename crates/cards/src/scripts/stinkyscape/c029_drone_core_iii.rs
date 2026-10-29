@@ -1,5 +1,5 @@
 //! S #29 Drone Core III (SPEC §8.10 row 29): (2) Spell, Drone Core, Common, a card of the
-//! Stinkyscape set (R1857000).
+//! Stinkyscape set.
 //!   Base:    "Summon {interceptors|Drone Interceptor|Drone Interceptors}." — interceptors 2
 //!   Radiant: "Summon {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}." — interceptors 2
 //! Engine: one summon per Interceptor, each into the caster's leftmost open unit zone in turn (R64), no Cry

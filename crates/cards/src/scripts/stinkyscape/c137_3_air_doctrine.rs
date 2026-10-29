@@ -1,6 +1,6 @@
 //! S #137.3 Air Doctrine (SPEC §8.10 row 137.3; R59, R60, R1748001, R1852005, R1859007, R1859010):
 //! (4) Spell, War Doctrine, Token (printed Legendary), `dealsDamage`, a token of the Stinkyscape
-//! set (R1857000), which #137 Firststrike Capability Discovers and casts.
+//! set, which #137 Firststrike Capability Discovers and casts.
 //!
 //! Base and Radiant: "For the rest of the game, your Units have Rush. Deal damage equal to
 //! {multiplier}× your Starship's Attack, split randomly among all enemies." Multiplier 1, Radiant 2.

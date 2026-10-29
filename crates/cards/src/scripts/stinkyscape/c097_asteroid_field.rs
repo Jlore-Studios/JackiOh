@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 97 Asteroid Field, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 97 Asteroid Field, a card of the Stinkyscape set.
 //!   Base:    "Cast on draw: Deal {damage} damage to both heroes and all Units. Gain {resources|random
 //!            Stinkyscape Resource|random Stinkyscape Resources}." (2, 2)
 //!   Radiant: "Cast on draw: Deal {damage} damage to all enemies. Gain {resources|random Radiant

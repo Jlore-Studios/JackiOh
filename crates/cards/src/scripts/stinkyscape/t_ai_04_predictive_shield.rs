@@ -1,6 +1,6 @@
 //! S T-AI-4 Predictive Shield (SPEC §7, §8.10 row T-AI-4; §4.2 step 4, R44, R61, R482, R1174000,
-//! R1881002): (1) Trap, AI, Token (no printed rarity), an AI generated token of the Stinkyscape set
-//! (R1857000), built by S21.
+//! R1881002): (1) Trap, AI, Token (no printed rarity), an AI generated token of the Stinkyscape
+//! set, built by S21.
 //!   Base:    "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the
 //!            attacker."
 //!   Radiant: "Reveals when an enemy Unit attacks you or one of your Units: Cancel the attack and Freeze

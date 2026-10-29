@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 116 Megabase, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 116 Megabase, a card of the Stinkyscape set.
 //!   Base:    "Animated, Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in
 //!            Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath:
 //!            Both players gain 100 Credits." (0/20)

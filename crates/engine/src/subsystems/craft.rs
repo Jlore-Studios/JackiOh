@@ -756,6 +756,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
         radiant_fallback: None,
         ingredients: None,
         craft: Some(recipe.clone()),
+        snapshot_of: None,
         base: face(false),
         radiant: face(true),
     }

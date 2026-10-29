@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 101 Overdrive Module, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 101 Overdrive Module, a card of the Stinkyscape set.
 //! (2) Unit, Rare, 5/5 → 10/10: Starship Piece, Equip, Brittle 2, Reborn.
 //! Radiant: Starship Piece, Equip, Brittle 4, Reborn.
 //!

@@ -1,5 +1,5 @@
 //! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 9/9 → 18/18, of the Stinkyscape
-//! set (R1857000). Not Tnack Trav, S #20 (ST9).
+//! set. Not Tnack Trav, S #20 (ST9).
 //!   Base:    "Rush / After this destroys a Unit, it may attack again."
 //!   Radiant: "Rush, Pierce / After this destroys a Unit, it may attack again."
 //! Engine: Rush and Pierce (its hits ignore Armor, R346) are catalog keywords. `after_attack` (§4.2, R1869002): when it survived

@@ -1,6 +1,6 @@
 //! S T-AI-10 Salvage Protocol (SPEC §7, §8.10 row T-AI-10; §2.4, §6.2, R482, R1852000, R1878000,
 //! R1881001): (1) Unit, AI, Token (no printed rarity), 1/2 → 2/4, Starship Piece, an AI generated token of
-//! the Stinkyscape set (R1857000), built by S21.
+//! the Stinkyscape set, built by S21.
 //!   Base:    "Starship Piece\nDeath: Add a random Starship Piece to your hand."
 //!   Radiant: "Starship Piece\nDeath: Add a random Radiant Starship Piece to your hand."
 //! Engine: Starship Piece is catalog data: its death also fuses a copy into its owner's Dormant Starship

@@ -1,5 +1,5 @@
 //! S T-shield-layer Drone Battleship (Shield Layer) (SPEC §8.10 row T-shield-layer): (5) Unit, Token
-//! (printed Mythic), 12/12 with Armor 4 → 24/24 with Armor 8, a token of the Stinkyscape set (R1857000).
+//! (printed Mythic), 12/12 with Armor 4 → 24/24 with Armor 8, a token of the Stinkyscape set.
 //!   Both faces: "Starship, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would
 //!   take is redirected to this." (Armor 8 on the Radiant face)
 //! Engine: the top of the Drone Battleship's pile (S #36, R1842000). Starship, Can't attack, Taunt and Armor

@@ -1,5 +1,5 @@
 //! S #148.1 Edge of the Universe (SPEC §7 row 148.1, §8.10 row S 148.1; §6.3 Escape the Universe, R850,
-//! R1843002–R1843004): (0) Spell, Wincon, a token (printed Mythic) of the Stinkyscape set (R1857000),
+//! R1843002–R1843004): (0) Spell, Wincon, a token (printed Mythic) of the Stinkyscape set,
 //! S #148 Alteran Reach's at the edge of its starscape map (R1847001).
 //!   Base:    "Escape the Universe: you win the game, and it is a draw for your opponent."
 //!   Radiant: "Escape the Universe: you win the game, and you choose whether it is a draw or a loss for
@@ -9,8 +9,7 @@
 //! that closes its list, a hero at 0 losing first (R850). The game ends `fled`, a win for the caster and
 //! a draw for the other player on the ladder, the record and every seat's result (R1843004). Radiant: a
 //! `mode` prompt as it resolves, a draw or a loss for the opponent, the loss ending it `fled-decisive`
-//! (R1843003), which the AI, the random policy and a timeout answer like any other. Declares no
-//! numbers.
+//! (R1843003), which the AI, the random policy and a timeout answer like any other. Declares no numbers.
 
 use jackioh_engine::prelude::*;
 

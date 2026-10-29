@@ -1,11 +1,10 @@
-//! SPEC §7 Stinkyscape T-narcor Narcor, a Resource token of the Stinkyscape set (R1857000).
+//! SPEC §7 Stinkyscape T-narcor Narcor, a Resource token of the Stinkyscape set.
 //!   Base:    "Add a random Rare card to your hand."
 //!   Radiant: "Add a random Radiant Rare card to your hand."
 //!
 //! A Legendary Resource (R1840000), played from its owner's tray at (0) (R1840003) or sold (R1853003);
 //! S #39 The Narcor Project makes them. The pool is every non-token Rare card of the sets that ship
-//! (R380, R1420), drawn uniformly (R60); a full hand burns the card (§2.4). Radiant: the card is
-//! Radiant.
+//! (R380, R1420), drawn uniformly (R60); a full hand burns the card (§2.4). Radiant: the card is Radiant.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;

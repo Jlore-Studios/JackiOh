@@ -1,5 +1,5 @@
 //! S T-propagation-layer Drone Battleship (Propagation Layer) (SPEC §8.10 row T-propagation-layer): (5)
-//! Unit, Token (printed Mythic), 12/12 → 24/24, a token of the Stinkyscape set (R1857000).
+//! Unit, Token (printed Mythic), 12/12 → 24/24, a token of the Stinkyscape set.
 //!   Base:    "Starship, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone
 //!            Corvette."
 //!   Radiant: "Starship, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a

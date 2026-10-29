@@ -1,5 +1,5 @@
 //! S #135.1 Sack (SPEC §7, §8.10 row 135.1; R1850003, R1875005): (1) Unit, Token (printed Common),
-//! 0/4 → 0/8, of the Stinkyscape set (R1857000).
+//! 0/4 → 0/8, of the Stinkyscape set.
 //!   Base:    "When this leaves the field, summon the Unit stuffed into it."
 //!   Radiant: "Brittle 1 / When this leaves the field, summon the Unit stuffed into it."
 //! Engine: a holder (R1850003): the Unit S #135 Sacked stuffs into it waits in `state.held`, and at the

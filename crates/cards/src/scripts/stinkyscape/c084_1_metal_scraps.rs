@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 84.1 Metal Scraps, a token of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 84.1 Metal Scraps, a token of the Stinkyscape set.
 //!   Base:    "Cast on draw: Gain a random Stinkyscape Resource."
 //!   Radiant: "Cast on draw: Gain a random Radiant Stinkyscape Resource."
 //!

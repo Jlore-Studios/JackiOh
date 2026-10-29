@@ -1,5 +1,5 @@
 //! S #137.4 Space Doctrine (SPEC §8.10 row 137.4; §2.4, R65, R824000, R1852005, R1859007, R1859011):
-//! (4) Spell, War Doctrine, Token (printed Legendary), a token of the Stinkyscape set (R1857000),
+//! (4) Spell, War Doctrine, Token (printed Legendary), a token of the Stinkyscape set,
 //! which #137 Firststrike Capability Discovers and casts.
 //!
 //! Base:    "For the rest of the game, your Units have Flying. Fill your hand with copies of the

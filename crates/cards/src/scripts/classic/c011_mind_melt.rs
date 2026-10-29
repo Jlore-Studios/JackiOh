@@ -86,13 +86,6 @@ mod tests {
     const BIGOT: &str = "core-002"; // (2) Unit 6/1
     const THEIR_HAND: [&str; 5] = [MENACE, SEVEN, FELINORS, VANILLA, REPLENISH];
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(value) => value,
-            None => panic!("the scenario has no {what}"),
-        }
-    }
-
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")
     }

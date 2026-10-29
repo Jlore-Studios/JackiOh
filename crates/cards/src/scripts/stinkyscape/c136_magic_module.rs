@@ -1,6 +1,6 @@
 //! S #136 Magic Module (SPEC §8.10 row 136; R380, R1086, R1748001, R1852000, R1852003, R1859001,
 //! R1859005): (2) Unit, Common, 4/3 → 8/6, Starship Piece, Equip, Spell Damage +2 (Radiant +4), a card
-//! of the Stinkyscape set (R1857000).
+//! of the Stinkyscape set.
 //!
 //! Base and Radiant: "Starship Piece, Equip, Spell Damage +N\nWhen launched, add {spells|random Spell
 //! that deals damage|random Spells that deal damage} to your hand." Spells 1, Radiant 2.

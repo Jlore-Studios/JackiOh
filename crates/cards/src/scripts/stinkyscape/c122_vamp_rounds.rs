@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 122 Vamp Rounds, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 122 Vamp Rounds, a card of the Stinkyscape set.
 //! (1) Unit, Common, 2/1 → 4/2: Starship Piece, Equip, Lifesteal.
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it

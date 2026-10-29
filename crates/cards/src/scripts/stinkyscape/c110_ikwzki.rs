@@ -1,5 +1,5 @@
 //! S #110 iKwzki (SPEC §8.10 row 110): (2) Unit, Human, Acclaimed, Mythic, 6/6 → 12/12, of the
-//! Stinkyscape set (R1857000).
+//! Stinkyscape set.
 //!   Base:    "Cry: Duo with a permanent and make it Radiant next turn."
 //!   Radiant: "Cry: Squad with all your permanents and make them Radiant next turn."
 //! Engine: Cry (R1): `duo_radiant` (R1850001) on a declared permanent (R81), either side, face-down or

@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 175 Frost Module, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 175 Frost Module, a card of the Stinkyscape set.
 //! (1) Unit, Common, 2/1 → 4/2: Starship Piece, Equip.
 //! "Activate: Freeze an enemy Unit." / Radiant: "Activate 2: Freeze an enemy Unit." (R1860009).
 //!
@@ -6,8 +6,7 @@
 //! and taking its stats, keywords and text (R77, R102), Starship Piece only into a piece
 //! (R1852001); played alone its death fuses a copy into its owner's Dormant Starship (R1852000);
 //! an equipped host takes the Activate. Activate (R384; Radiant Activate 2, R1751000): `freeze`
-//! on a declared enemy Unit (§6.3 Freeze, R1174000), its thaw stamped as it lands; a hero is never
-//! Frozen.
+//! on a declared enemy Unit (§6.3 Freeze, R1174000), its thaw stamped as it lands; a hero is never Frozen.
 
 use jackioh_engine::prelude::*;
 

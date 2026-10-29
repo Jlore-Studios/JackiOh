@@ -1,5 +1,5 @@
-//! S #20 Tnack Trav (SPEC §8.10 row 20): (2) Unit, Epic, 6/6 → 12/12, of the Stinkyscape set
-//! (R1857000). Not Tmack Trav, S #94 (ST9).
+//! S #20 Tnack Trav (SPEC §8.10 row 20): (2) Unit, Epic, 6/6 → 12/12, of the Stinkyscape
+//! set. Not Tmack Trav, S #94 (ST9).
 //!   Base:    "Cry: Copy the text of a Legendary or Mythic Unit on the field."
 //!   Radiant: "Cry: Copy the Radiant text of a Legendary or Mythic Unit on the field."
 //! Engine: Cry (R1): a declared target (R81), a Unit on the field, either side, not itself, whose rarity

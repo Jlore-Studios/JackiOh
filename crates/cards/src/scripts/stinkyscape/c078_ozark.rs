@@ -5,12 +5,13 @@
 //!            Cry: Equip a random Radiant Miner into this, twice."
 //!
 //! R1872001: the Cry is `equip_picks` (R1841002), a random pick from the five Miners, S #62 Miner v1 to
-//! S #66 Miner v5, named by id so that the pool reaches them while the set is held (R1420): a fresh copy
-//! fused straight into this, as an Equip play fuses its card (R1086, R77), with no hand, no play and no
-//! Cry, its Activate with it (R1751000). The Radiant face picks twice, each pick on its Radiant face
-//! (R469), the second from the Miners it does not hold yet. Off the field, Immutable, or holding every
-//! Miner, nothing (R129). Starship Piece is a catalog keyword the engine plays: it stays a piece, the
-//! kept card being one (R1852001), and its death fuses a copy into its owner's Dormant Starship (R1852000).
+//! S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420): a
+//! fresh copy fused straight into this, as an Equip play fuses its card (R1086, R77), with no hand, no
+//! play and no Cry, its Activate with it (R1751000). The Radiant face picks twice, each pick on its
+//! Radiant face (R469), the second from the Miners it does not hold yet. Off the field, Immutable, or
+//! holding every Miner, nothing (R129). Starship Piece is a catalog keyword the engine plays: it stays a
+//! piece, the kept card being one (R1852001), and its death fuses a copy into its owner's Dormant
+//! Starship (R1852000).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;

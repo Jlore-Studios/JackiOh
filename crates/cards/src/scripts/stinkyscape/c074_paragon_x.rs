@@ -1,5 +1,4 @@
-//! S #74 Paragon-X (SPEC §8.10 row 74): (4) Unit, Mythic, 10/1 → 20/2, of the Stinkyscape set
-//! (R1857000).
+//! S #74 Paragon-X (SPEC §8.10 row 74): (4) Unit, Mythic, 10/1 → 20/2, of the Stinkyscape set.
 //!   Base:    "Tribute 2, Starship Piece, Charge, Flying, Ranged, Divine Shield, Immutable / Immune to
 //!            Spell Damage."
 //!   Radiant: "Tribute 2, Starship Piece, Charge, Flying, Ranged, Divine Shield, Immutable, Pierce /

@@ -1,5 +1,5 @@
 //! S #16 Rod of Ages (SPEC §8.10 row 16): (1) Field Spell, Quickdraw, Mythic, 1/1 → 2/2, of the
-//! Stinkyscape set (R1857000).
+//! Stinkyscape set.
 //!   Base:    "Animated, Flying / The first Unit you play onto this is Equipped into it. / End of turn:
 //!            Gain {keywords|random combat keyword|random combat keywords}. / Upon reaching 10 keywords,
 //!            make this Radiant."

@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 169 Tiny Asteroid, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 169 Tiny Asteroid, a card of the Stinkyscape set.
 //!   Base:    "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape
 //!            Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute
 //!            this." (0/4; 1, 2)

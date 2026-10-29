@@ -7523,7 +7523,7 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
 /// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion, #1837's Terminus, Quest,
-/// Otherworldly, Other-Origins and Jelly Bean (R1837000) and the held Stinkyscape set's Drone Core,
+/// Otherworldly, Other-Origins and Jelly Bean (R1837000) and the Stinkyscape set's Drone Core,
 /// Weapon, War Doctrine and Swarm (R1857000): the only tags any entry may carry.
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
@@ -8594,19 +8594,90 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert!(position("classic-060") >= position("core-069"));
     }
 
+    /// R739, R2195001: the names two non-token cards share, as "name (first, second)", but a Training
+    /// Grounds snapshot (#41–#60) and the Core card its `snapshotOf` names, which share the Core
+    /// card's name by the owner's decision (#2195).
+    fn shared_names(cards: &[&CardDef]) -> Vec<String> {
+        let snapshot_pair = |a: &CardDef, b: &CardDef| {
+            let is_snapshot = |card: &CardDef| {
+                card.set == SetName::TrainingGrounds
+                    && card.index.parse::<u32>().is_ok_and(|n| (41..=60).contains(&n))
+            };
+            [(a, b), (b, a)].into_iter().any(|(snapshot, core)| {
+                is_snapshot(snapshot)
+                    && core.set == SetName::Core
+                    && snapshot.snapshot_of.as_deref() == Some(core.id.as_str())
+            })
+        };
+        let mut seen: IndexMap<&str, Vec<&CardDef>> = IndexMap::new();
+        let mut dupes: Vec<String> = Vec::new();
+        for card in cards.iter().copied().filter(|card| !card.token) {
+            let named = seen.entry(card.name.as_str()).or_default();
+            if let Some(first) = named.iter().find(|first| !snapshot_pair(first, card)) {
+                dupes.push(format!("{} ({}, {})", card.name, first.id, card.id));
+            }
+            named.push(card);
+        }
+        dupes
+    }
+
     #[test]
     fn r739_one_name_names_one_card() {
-        let mut seen: IndexMap<String, String> = IndexMap::new();
-        let mut dupes: Vec<String> = Vec::new();
-        for entry in entries().into_iter().filter(|entry| !entry.token) {
-            match seen.get(&entry.name) {
-                None => {
-                    seen.insert(entry.name.clone(), entry.id.clone());
-                }
-                Some(first) => dupes.push(format!("{} ({first}, {})", entry.name, entry.id)),
-            }
+        assert_eq!(
+            shared_names(&entries()),
+            Vec::<String>::new(),
+            "cards sharing a name"
+        );
+    }
+
+    #[test]
+    fn r2195001_a_snapshot_shares_its_core_card_s_name_and_no_other_two_cards_do() {
+        let core = &CATALOG["core-002"];
+        let snapshot = CardDef {
+            id: "traininggrounds-041".to_string(),
+            index: "41".to_string(),
+            set: SetName::TrainingGrounds,
+            snapshot_of: Some(core.id.clone()),
+            ..core.clone()
+        };
+        assert_eq!(shared_names(&[core, &snapshot]), Vec::<String>::new());
+
+        // A Training Grounds card that names no Core card, or another one, or sits outside #41–#60.
+        let unmarked = CardDef {
+            snapshot_of: None,
+            ..snapshot.clone()
+        };
+        let wrong_core = CardDef {
+            snapshot_of: Some("core-005".to_string()),
+            ..snapshot.clone()
+        };
+        let outside = CardDef {
+            index: "40".to_string(),
+            ..snapshot.clone()
+        };
+        for card in [&unmarked, &wrong_core, &outside] {
+            assert_eq!(
+                shared_names(&[core, card]),
+                [format!("Bigot (core-002, {})", card.id)]
+            );
         }
-        assert_eq!(dupes, Vec::<String>::new(), "cards sharing a name");
+        // Two snapshots of one Core card, and two cards of other sets.
+        let twin = CardDef {
+            id: "traininggrounds-042".to_string(),
+            index: "42".to_string(),
+            ..snapshot.clone()
+        };
+        assert_eq!(
+            shared_names(&[core, &snapshot, &twin]),
+            ["Bigot (traininggrounds-041, traininggrounds-042)"]
+        );
+        let classic = CardDef {
+            id: "classic-002".to_string(),
+            set: SetName::Classic,
+            snapshot_of: None,
+            ..core.clone()
+        };
+        assert_eq!(shared_names(&[core, &classic]), ["Bigot (core-002, classic-002)"]);
     }
 
     #[test]
@@ -8927,7 +8998,14 @@ mod names_r381_b2_8 {
                 .or_default()
                 .push(entry.id.clone());
         }
-        let shared: Vec<(String, Vec<String>)> = names.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
+        // R2195001: a Training Grounds snapshot and the Core card it copies share a name.
+        let snapshot_pair = |ids: &[String]| {
+            ids.len() == 2 && CATALOG[ids[1].as_str()].snapshot_of.as_deref() == Some(ids[0].as_str())
+        };
+        let shared: Vec<(String, Vec<String>)> = names
+            .into_iter()
+            .filter(|(_, ids)| ids.len() > 1 && !snapshot_pair(ids))
+            .collect();
         assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
         assert_eq!(name_of("classic-016").as_deref(), Some("Book of Flame"));
         assert_eq!(name_of("classic-055").as_deref(), Some("Book of Wildfire"));
@@ -9009,7 +9087,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             ])
             .into_iter()
             .chain(landed(&["meditativeplus-004"]))
-            // R1857000: the held Stinkyscape set's seven, #124 to #130, each named for the faction.
+            // R1857000: the Stinkyscape set's seven, #124 to #130, each named for the faction.
             .chain(landed(&[
                 "stinkyscape-124",
                 "stinkyscape-125",
@@ -9019,6 +9097,8 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "stinkyscape-129",
                 "stinkyscape-130",
             ]))
+            // R2195003: the held Training Grounds set's snapshots of Core #14 and #13 (TG #45, #48).
+            .chain(landed(&["traininggrounds-045", "traininggrounds-048"]))
             .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );
@@ -9199,7 +9279,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                     "meditative-049",
                     "meditative-049-1",
                 ]),
-                // R1857000: the held Stinkyscape set's nine.
+                // R1857000: the Stinkyscape set's nine.
                 landed(&[
                     "stinkyscape-006",
                     "stinkyscape-026",
@@ -9233,7 +9313,7 @@ mod the_tags_issue_1837_moves_r1837000 {
     #[test]
     fn r1837000_tags_core_100_terminus_classic_90_quest_classic_plus_32_otherworldly_its_three_tokens_other_origins_and_core_26_to_29_jelly_bean_and_no_other_entry()
      {
-        // R1857000: and the held Stinkyscape set's, once each has landed: its #4's six Terminus
+        // R1857000: and the Stinkyscape set's, once each has landed: its #4's six Terminus
         // tokens, #7 and #112 (Quest), #10 to #12 (Otherworldly) and their nine Other-Origins tokens.
         assert_eq!(
             tagged(Tag::Terminus),
@@ -9387,7 +9467,7 @@ mod every_entry_has_a_radiant_face_of_its_own_spec_5_2_r276 {
             .filter(|entry| entry.radiant_fallback == Some(true))
             .map(|entry| entry.id.clone())
             .collect();
-        // R1857001: and the held Stinkyscape set's Dormant Starship, which prints no Radiant form.
+        // R1857001: and the Stinkyscape set's Dormant Starship, which prints no Radiant form.
         assert_eq!(
             fallbacks,
             [

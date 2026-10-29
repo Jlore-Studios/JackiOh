@@ -9,12 +9,12 @@
 //! Tribute 5 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
 //! Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand or deck, never below 0
 //! (`float_lowers_tribute`, R1841003). R1862002: the Cry is `equip_picks` (R1841002), 3 Discovers of three in
-//! turn from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them while the
-//! set is held (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its
-//! Activate (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
-//! wears (R77), so a Radiant Prototype wields its Weapons' Radiant faces. Starship Piece is a catalog keyword
-//! the engine plays: this one's death fuses a copy into its owner's Dormant Starship (R1852000), and the
-//! Weapons it takes leave it a piece (R1852001).
+//! turn from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them
+//! whether or not the set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused
+//! into this with its Activate (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the
+//! face its kept host wears (R77), so a Radiant Prototype wields its Weapons' Radiant faces. Starship
+//! Piece is a catalog keyword the engine plays: this one's death fuses a copy into its owner's Dormant
+//! Starship (R1852000), and the Weapons it takes leave it a piece (R1852001).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;

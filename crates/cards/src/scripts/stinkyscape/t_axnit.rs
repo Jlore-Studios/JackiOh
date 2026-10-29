@@ -1,4 +1,4 @@
-//! SPEC §7 Stinkyscape T-axnit Axnit, a Resource token of the Stinkyscape set (R1857000).
+//! SPEC §7 Stinkyscape T-axnit Axnit, a Resource token of the Stinkyscape set.
 //!   Base:    "Deal {damage} damage to an enemy, with Lifesteal." (3)
 //!   Radiant: "Echo 1\nDeal {damage} damage to an enemy, with Lifesteal." (3)
 //!

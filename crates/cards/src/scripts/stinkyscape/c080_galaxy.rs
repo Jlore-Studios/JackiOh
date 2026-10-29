@@ -6,11 +6,11 @@
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
 //! printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the five Miners, S #62 Miner v1
-//! to S #66 Miner v5, named by id so that the pool reaches them while the set is held (R1420), each pick a
-//! fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate with it
-//! (R1751000): two Discovers of three in turn, the second without the first; the Radiant face fuses all
-//! five, v1 first, asking nothing. Starship Piece and Flying are catalog keywords the engine plays; it
-//! stays a piece, the kept card being one (R1852001).
+//! to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420),
+//! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
+//! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
+//! fuses all five, v1 first, asking nothing. Starship Piece and Flying are catalog keywords the engine
+//! plays; it stays a piece, the kept card being one (R1852001).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;

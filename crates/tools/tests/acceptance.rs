@@ -963,7 +963,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997).
+/// rather than copying (#1777, #1826, #1997, #2023).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -981,8 +981,8 @@ struct SharedHelpers {
     more_than: usize,
 }
 
-/// The test trees that read the engine testkit, where neither `unit_at` nor a one-instance pick
-/// builder may be copied.
+/// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-instance
+/// pick builder may be copied.
 const KIT_READERS: &[&str] = &[
     "crates/engine/tests",
     "crates/cards",
@@ -1018,7 +1018,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
-        names: &["unit_at"],
+        names: &["unit_at", "must"],
         statics: &[],
         structs: &[],
         dirs: KIT_READERS,
@@ -1258,7 +1258,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2024): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 

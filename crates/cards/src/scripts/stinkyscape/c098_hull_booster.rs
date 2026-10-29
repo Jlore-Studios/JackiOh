@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 98 Hull Booster, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 98 Hull Booster, a card of the Stinkyscape set.
 //! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Equip, Armor 2 (Radiant Armor 4).
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it

@@ -1,5 +1,5 @@
 //! S #34 Drone Core VIII (SPEC §8.10 row 34): (6) Spell, Drone Core, Legendary, a card of the
-//! Stinkyscape set (R1857000).
+//! Stinkyscape set.
 //!   Base:    "Float reduces cost.\nFill your board with Drone Interceptors."
 //!   Radiant: "Float reduces cost.\nFill your board with Radiant Drone Interceptors."
 //! Engine: "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a

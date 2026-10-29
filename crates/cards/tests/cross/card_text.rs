@@ -67,7 +67,7 @@ fn keyword_label(keyword: &Keyword) -> String {
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
 /// embiggen card's Embiggened version is labelled with its Embiggened cost, one label per cost a card
-/// prints (R1175000). The held Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
+/// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
 /// "Activate 3:" to "Activate 6:" (R1857003).
 pub(super) const LABELS: &[&str] = &[
     "Cry:",
@@ -117,6 +117,9 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "meditative-008 radiant",
     "meditative-057 base",
     "meditative-057 radiant",
+    // R2195003: Core #23's snapshot, TG #49.
+    "traininggrounds-049 base",
+    "traininggrounds-049 radiant",
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -1761,7 +1764,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     }
 }
 
-/// R1857003: the held Stinkyscape set prints five labels no shipped card does, "Activate 3:" to
+/// R1857003: the Stinkyscape set prints five labels no other set's card does, "Activate 3:" to
 /// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):".
 /// Each starts a line as R366's labels do, in English and in Chinese.
 mod r1857003_five_labels_the_stinkyscape_set_prints {

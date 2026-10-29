@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 87 Siva 1, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 87 Siva 1, a card of the Stinkyscape set.
 //!   (2) Unit, Felinor, Acclaimed, Legendary, 2/2 → 4/4.
 //!   Base:    "Tradable / Cry: Allure a random enemy Acclaimed Unit."
 //!   Radiant: "Tradable / Cry: Allure a random enemy Acclaimed Unit. If there isn't one, summon a random

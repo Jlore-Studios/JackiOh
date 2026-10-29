@@ -1,5 +1,4 @@
-//! S #70 Z'Zoth (SPEC §8.10 row 70): (4) Unit, Legendary, 5/7 → 10/14, of the Stinkyscape set
-//! (R1857000).
+//! S #70 Z'Zoth (SPEC §8.10 row 70): (4) Unit, Legendary, 5/7 → 10/14, of the Stinkyscape set.
 //!   Base:    "Cry: Summon every Unit with a Death from your graveyard."
 //!   Radiant: "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn."
 //! Engine: Cry (R1), R1869001: C #44 Back from the GY's Radiant summon from the graveyard (`for_each_card`

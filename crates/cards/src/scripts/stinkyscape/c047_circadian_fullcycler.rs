@@ -1,5 +1,4 @@
-//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (2) Field Spell, Epic, a card of the Stinkyscape
-//! set (R1857000).
+//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (2) Field Spell, Epic, a card of the Stinkyscape set.
 //!   Base:    "Brittle 5. Aura: The AI plays each of your turns. End of turn: Summon a Drone Corvette."
 //!   Radiant: "Brittle 5. Aura: The AI plays each of your turns. End of turn: Summon a Radiant Drone
 //!             Corvette."

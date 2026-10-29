@@ -1,5 +1,5 @@
 //! S T-AI-9 Honeypot (SPEC §7, §8.10 row T-AI-9; §10.5 step 4, R61, R64, R482, R1881005): (1) Trap, AI,
-//! Token (no printed rarity), an AI generated token of the Stinkyscape set (R1857000), built by S21.
+//! Token (no printed rarity), an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Reveals when your opponent plays a Unit: Summon a Drone Interceptor. Give it Taunt."
 //!   Radiant: "Reveals when your opponent plays a Unit: Summon 2 Drone Interceptors. Give them Taunt."
 //! Engine: a face-down Trap on the opponent's Unit play (`cardPlayed`, §10.5 step 4); a Spell, a backrow

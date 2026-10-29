@@ -5,13 +5,13 @@
 //!
 //! Engine: `discover_from_catalog` over the Terminus cards (`TERMINUS_CARDS`), three different options
 //! shown to its caster alone: the set's six Terminus tokens (R1857002) and Core #100 Ceaseless Void
-//! (tagged Terminus since R1837000). Terminus is no `POOL_TOKEN_TAGS` tag (R382), so the pool names
-//! its cards by id while the set is held (R1420). The pick reaches the hand on its base face. Both
-//! conditions are read as the Spell resolves and carried to the answer in its data: an empty library
-//! gives the pick a `costOverride` of 0, and on the Radiant face an empty hand as well (this card is
-//! out of it by then) puts the win on that one instance (`effects::WIN_ON_PLAY_KEY`), so its play, a
-//! cast too (R70), wins the game at the state check that closes it, a hero at 0 losing first (R850).
-//! A full hand burns the pick, the win with it (§2.4) (R1870000).
+//! (tagged Terminus since R1837000). Terminus is no `POOL_TOKEN_TAGS` tag (R382), so the pool names its
+//! cards by id, which reaches them whether or not the set ships (R1420). The pick reaches the hand on its
+//! base face. Both conditions are read as the Spell resolves and carried to the answer in its data: an
+//! empty library gives the pick a `costOverride` of 0, and on the Radiant face an empty hand as well
+//! (this card is out of it by then) puts the win on that one instance (`effects::WIN_ON_PLAY_KEY`), so
+//! its play, a cast too (R70), wins the game at the state check that closes it, a hero at 0 losing first
+//! (R850). A full hand burns the pick, the win with it (§2.4) (R1870000).
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};

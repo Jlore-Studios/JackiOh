@@ -4,8 +4,9 @@
 //!
 //! R1878000: the pool is `query::starship_pieces()`, every non-token card that prints Starship Piece on
 //! its base face, so never the Dormant Starship (R1857001), from the one set that prints the keyword,
-//! named so that it reaches the pieces while the set is held (R1420). One draw of the match rng per card
-//! (R60), repeats allowed; a full hand burns the rest (§2.4). The count is the declared `cards` (R386).
+//! named so that it reaches the pieces whether or not the set ships (R1420). One draw of the match rng
+//! per card (R60), repeats allowed; a full hand burns the rest (§2.4). The count is the declared `cards`
+//! (R386).
 
 use jackioh_engine::prelude::*;
 

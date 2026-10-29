@@ -1,5 +1,5 @@
 //! S T-drone-interceptor Drone Interceptor (SPEC §8.10 row T-drone-interceptor): (1) Unit, Token
-//! (printed Common), 2/2 → 4/4, a token of the Stinkyscape set (R1857000).
+//! (printed Common), 2/2 → 4/4, a token of the Stinkyscape set.
 //!   Both faces: "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}." — 1
 //!   on the base face, 2 on the Radiant face (the declared number `keywords`, R386).
 //! Engine: Ranged and Flying are catalog keywords (§6.1). The Aura is Keymaster Keenus's (R781004): §10.4's

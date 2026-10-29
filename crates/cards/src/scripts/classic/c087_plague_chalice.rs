@@ -96,13 +96,6 @@ mod tests {
 
     use crate::js;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
-    }
-
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]
     }

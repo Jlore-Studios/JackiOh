@@ -645,3 +645,154 @@ describe("the Starship's fuse line in the log", () => {
     expect(line(fused(3))?.text).toMatch(/Dormant Starship \(3 pieces\)$/);
   });
 });
+
+describe("#2252 a play names what it aimed at, and a hit off combat what dealt it", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
+  const SPELL = "core-044";
+  const PANTHER = "core-032";
+  const VANILLA = "core-008";
+  const P = nameOf(PANTHER);
+  const V = nameOf(VANILLA);
+
+  /** Your Panther `u1` and the opponent's Vanilla `e1`. */
+  const board = (): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", defId: PANTHER }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1", defId: VANILLA }), null, null, null, null] }),
+    });
+  const announce = (targets: string[], over: Partial<Extract<GameEvent, { type: "cardAnnounced" }>> = {}): GameEvent => ({
+    type: "cardAnnounced",
+    player: "p2",
+    instanceId: "s1",
+    defId: SPELL,
+    cardType: "Spell",
+    costPaid: 1,
+    targets,
+    ...over,
+  });
+  const play = (over: Partial<Extract<GameEvent, { type: "cardPlayed" }>> = {}): GameEvent => ({
+    type: "cardPlayed",
+    player: "p2",
+    instanceId: "s1",
+    defId: SPELL,
+    costPaid: 1,
+    ...over,
+  });
+  const hit = (over: Partial<Extract<GameEvent, { type: "damage" }>> = {}): GameEvent => ({
+    type: "damage",
+    sourceId: "s1",
+    targetId: "u1",
+    amount: 4,
+    combat: false,
+    ...over,
+  });
+  const absorbedHit = (over: Partial<Extract<GameEvent, { type: "damageAbsorbed" }>> = {}): GameEvent => ({
+    type: "damageAbsorbed",
+    sourceId: "e1",
+    targetId: "u1",
+    absorbed: 3,
+    combat: false,
+    ...over,
+  });
+  const AIMED = `Opponent played ${nameOf(SPELL)} for 1, aiming at ${P}`;
+  const DEALT = `${nameOf(SPELL)} dealt 4 damage to ${P}`;
+
+  function lines(view: PlayerView): string[] {
+    cleanup();
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Log view={view} />
+      </CatalogContext.Provider>,
+    );
+    return [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
+  }
+
+  it("a spell played at an enemy unit logs one play line naming it, and its hit names the spell", () => {
+    expect(lines(withEvents(board(), [announce(["u1"]), play(), hit()]))).toEqual([AIMED, DEALT]);
+    expect([...screen.getAllByTestId(LOG_CARD_TESTID)].map((button) => button.getAttribute("data-def-id"))).toEqual([SPELL, PANTHER]);
+  });
+
+  it("names each target the viewer may read, a hero among them, joined as the reader's list", () => {
+    expect(
+      lines(
+        withEvents(board(), [
+          announce(["e1", "hero-p2", "hidden"], { player: "p1", instanceId: "s2" }),
+          play({ player: "p1", instanceId: "s2" }),
+        ]),
+      ),
+    ).toEqual([`You played ${nameOf(SPELL)} for 1, aiming at ${V}; the opponent's hero`]);
+  });
+
+  it("R97 a face-down set, a play with no targets, and targets the view hid log as they did", () => {
+    expect(
+      lines(
+        withEvents(board(), [
+          announce(["hidden"], { instanceId: "hidden", defId: "hidden", cardType: "Trap", costPaid: 2, row: "backrow", lane: 3, faceDown: true }),
+          play({ instanceId: "hidden", defId: "hidden", costPaid: 2 }),
+          // The same id on both on purpose: `faceDown` alone has to stop the pairing.
+          announce(["e1"], { player: "p1", instanceId: "t1", defId: "core-041", cardType: "Trap", row: "backrow", lane: 1, faceDown: true }),
+          play({ player: "p1", instanceId: "t1", defId: "core-041" }),
+          announce([], { instanceId: "s3" }),
+          play({ instanceId: "s3" }),
+          announce(["hidden"], { instanceId: "s4" }),
+          play({ instanceId: "s4" }),
+          announce(["c99"], { instanceId: "s5" }),
+          play({ instanceId: "s5" }),
+        ]),
+      ),
+    ).toEqual([
+      "Opponent played a hidden card for 2",
+      `You played ${nameOf("core-041")} for 1`,
+      `Opponent played ${nameOf(SPELL)} for 1`,
+      `Opponent played ${nameOf(SPELL)} for 1`,
+      `Opponent played ${nameOf(SPELL)} for 1`,
+    ]);
+  });
+
+  it("R97 a hit names its source off combat only, and only where the view names it", () => {
+    expect(
+      lines(
+        withEvents(board(), [
+          hit({ sourceId: "e1", amount: 3, combat: true }),
+          hit({ sourceId: "hidden", amount: 2 }),
+          hit({ sourceId: null, targetId: "hero-p1", amount: 3 }),
+          hit({ sourceId: "c99", amount: 1 }),
+          hit({ sourceId: "e1", amount: 1, absorbed: 2 }),
+          hit({ sourceId: "hero-p2", targetId: "hero-p1", amount: 2 }),
+          absorbedHit(),
+          absorbedHit({ combat: true }),
+          absorbedHit({ sourceId: "hidden" }),
+        ]),
+      ),
+    ).toEqual([
+      `${P} took 3 damage in combat`,
+      `${P} took 2 damage`,
+      "Your hero took 3 damage",
+      `${P} took 1 damage`,
+      `${V} dealt 1 damage to ${P}, 2 absorbed by Armor`,
+      "The opponent's hero dealt 2 damage to your hero",
+      `${P}'s Armor absorbed 3 damage from ${V}`,
+      `${P}'s Armor absorbed 3 damage in combat`,
+      `${P}'s Armor absorbed 3 damage`,
+    ]);
+  });
+
+  it("R745 keeps a play's aim once it leaves the window, pairs each play with its own announce, and reads as before when its announce is out of reach", () => {
+    // (a) The aim survives into history: the turn's own lines are kept as they arrived.
+    const filler: GameEvent[] = Array.from({ length: 32 }, (_, i) => ({ type: "healthLost", player: "p1", amount: i + 1 }));
+    const turn = [announce(["u1"]), play(), hit()];
+    const views = [withEvents(board(), turn), withEvents(board(), [...turn, ...filler.slice(0, 29)]), withEvents(board(), filler)];
+    const history = views.reduce((kept, view) => advanceLogHistory(kept, view, keptLineFor(view, lookup)), EMPTY_LOG_HISTORY);
+    expect(history.seats.p1?.kept.map((line) => line.text)).toEqual([AIMED, DEALT]);
+
+    // (b) Each play pairs with its own announce, by the event itself.
+    expect(lines(withEvents(board(), [announce(["u1"]), play(), announce(["hero-p1"]), { ...play() }]))).toEqual([
+      AIMED,
+      `Opponent played ${nameOf(SPELL)} for 1, aiming at your hero`,
+    ]);
+
+    // (c) The announce out of reach: the play reads as it always did, the hit still names the spell it was played as.
+    expect(lines(withEvents(board(), [play(), hit()]))).toEqual([`Opponent played ${nameOf(SPELL)} for 1`, DEALT]);
+  });
+});

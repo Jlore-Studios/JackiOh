@@ -1,5 +1,4 @@
-//! S #71 A'Zoth (SPEC §8.10 row 71): (4) Unit, Legendary, 7/5 → 14/10, of the Stinkyscape set
-//! (R1857000).
+//! S #71 A'Zoth (SPEC §8.10 row 71): (4) Unit, Legendary, 7/5 → 14/10, of the Stinkyscape set.
 //!   Base:    "Cry: Summon every Unit with a Cry from your graveyard. Trigger each of their Cries with
 //!            random targets."
 //!   Radiant: "Cry: Summon every Unit with a Cry from your graveyard. Trigger each of their Cries

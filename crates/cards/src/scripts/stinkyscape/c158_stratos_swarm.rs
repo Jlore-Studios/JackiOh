@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 158 Stratos Swarm, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 158 Stratos Swarm, a card of the Stinkyscape set.
 //! (3) Spell, Rare: "Fill your board with Startos." / Radiant: "Fill your board with Radiant
 //! Startos." (R1860008).
 //!

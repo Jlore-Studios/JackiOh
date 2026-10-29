@@ -1,10 +1,10 @@
-//! S #27 Drone Core I (SPEC §8.10 row 27): (0) Spell, Drone Core, Common, a card of the Stinkyscape
-//! set (R1857000).
+//! S #27 Drone Core I (SPEC §8.10 row 27): (0) Spell, Drone Core, Common, a card of the Stinkyscape set.
 //!   Base:    "Discard a random card. Summon a Drone Interceptor."
 //!   Radiant: "Discard a random card. Summon a Radiant Drone Interceptor."
 //! Engine: a random discard of its caster's hand (R682), nothing with an empty hand, then a summon of the
-//!   Drone Interceptor into the caster's leftmost open unit zone (R64), no Cry (R1); with no open zone
-//!   nothing is summoned and the discard is still made. Radiant: the Interceptor is summoned Radiant.
+//!   Drone Interceptor into the caster's leftmost open unit zone (R64), no Cry (R1); with a full unit row
+//!   it flies into the leftmost open backrow zone (R2248000), with no open zone nothing is summoned, and
+//!   the discard is made either way. Radiant: the Interceptor is summoned Radiant.
 //!   Drone Core is a family tag no rule reads (R1857000).
 
 use jackioh_engine::prelude::*;
@@ -35,8 +35,8 @@ pub fn script() -> CardScripts {
 
 // S #27 Drone Core I — SPEC §8.10 row 27, BUILD M12 row S 27: "discards one random card of its caster's
 // hand (none with an empty hand, the summon still made) and summons a Drone Interceptor into the leftmost
-// open unit zone; a full unit row summons nothing; radiant the Interceptor is Radiant (4/4, two random
-// combat keywords)".
+// open unit zone; a full unit row puts it in the backrow (R2248000); radiant the Interceptor is Radiant
+// (4/4, two random combat keywords)".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;
@@ -96,14 +96,15 @@ mod tests {
     }
 
     #[test]
-    fn a_full_unit_row_summons_nothing_but_still_discards() {
+    fn r2248000_a_full_unit_row_puts_the_interceptor_in_the_backrow_and_still_discards() {
         let s = cast(false, json!([FILLER]), json!(vec![VANILLA; 5]));
         assert_eq!(discarded(&s), 1);
         assert!(s.hand(P1).is_empty());
         for lane in 1..=5 {
             assert_eq!(s.unit(P1, lane).expect("a Vanilla").def_id, VANILLA);
         }
-        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })));
+        let drone = s.backrow(P1, 1).expect("the Interceptor in backrow lane 1");
+        assert_eq!(drone.def_id, INTERCEPTOR);
     }
 
     #[test]

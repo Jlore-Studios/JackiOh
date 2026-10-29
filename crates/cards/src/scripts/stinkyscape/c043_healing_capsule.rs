@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 43 Healing Capsule, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 43 Healing Capsule, a card of the Stinkyscape set.
 //! (1) Unit, Rare, 2/2 → 4/4: Starship Piece.
 //! "End of turn: Heal your hero and each of your Units {heal}." — heal 2, Radiant 4 (R1860003).
 //!

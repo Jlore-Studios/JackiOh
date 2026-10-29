@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 173 Abandoned Spice Tower, a card of the Stinkyscape set (R1857000).
+//! SPEC §8.10 Stinkyscape 173 Abandoned Spice Tower, a card of the Stinkyscape set.
 //!   Base:    "Can't attack\nCan't be in Defense Position.\nDeath: Add {spices|Spice|Spices} to your
 //!            hand.\nActivate: Take {selfDamage} damage. Tribute this." (0/8; 3, 4)
 //!   Radiant: "… Death: Add {spices|Radiant Spice|Radiant Spices} to your hand.\nActivate: Take
