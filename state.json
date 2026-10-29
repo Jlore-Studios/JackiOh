@@ -8152,7 +8152,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-29T01:30:36Z",
+      "feedback_since": "2026-10-29T07:10:55Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2279,
@@ -8169,11 +8169,11 @@
       "run_id": "40833789586",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-29T07:10:55Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
