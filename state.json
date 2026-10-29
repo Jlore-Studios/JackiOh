@@ -8120,15 +8120,14 @@
     "what": "revise #2309 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T09:16:33Z",
+    "at": "2026-10-29T09:32:07Z",
     "notes": [
-      "#2353 needs a plan",
-      "delivered revise #2309 on muse (run 40833789586): built",
-      "started plan #2353 on claude-3 (run 40848653196)",
-      "started revise #2309 on muse (run 40848743112)",
-      "started revise #2350 on claude-3 (run 40848843523)",
-      "nothing more to start: nothing is queued",
-      "#2353: typed it Task"
+      "delivered revise #2309 on muse (run 40848743112): built",
+      "delivered revise #2348 on claude-4 (run 40847443845): blocked",
+      "delivered revise #2307 on muse (run 40821958997): approved",
+      "started review #2307 on claude-4 (run 40851030156)",
+      "started revise #2309 on muse (run 40851121338)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -8834,7 +8833,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T09:16:33Z",
+  "loop_tick": "2026-10-29T09:32:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
