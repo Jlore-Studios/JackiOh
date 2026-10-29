@@ -8412,7 +8412,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-29T15:45:21Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:54b8c990-1793289179",
+      "run_id": "40906094569",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T15:53:22Z",
       "stop_requested": false,
