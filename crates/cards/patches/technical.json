@@ -2477,5 +2477,40 @@
     "pr": 2230,
     "title": "a replay shows what each of your own choices offered, read-only",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "c13acd234d80d63ae2f76158204fb241d7ca17ba",
+    "pr": 2231,
+    "title": "a practice game that earns lets the AI finish every move, so a slow device no longer forfeits the reward",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "152874293d620a1c9e49e517dfbb0627f66d5b0a",
+    "pr": 2233,
+    "title": "spec check passes again, R2102000's cards line writes its issue as an issue",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "d81bce9f9af10877b66c5749d0874b432f1ef3e3",
+    "pr": 2234,
+    "title": "one loading state and one empty state, with the tavern's look",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "c7211eadca7736507a49075c41bcdf7bd1cf251b",
+    "pr": 2221,
+    "title": "one type scale for the client's text",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.0",
+    "commit": "eba63924d1a62b58560b8f0ab8e7c93f59c0357e",
+    "pr": 2232,
+    "title": "patches ship: v0.5.0",
+    "kind": "app"
   }
 ]

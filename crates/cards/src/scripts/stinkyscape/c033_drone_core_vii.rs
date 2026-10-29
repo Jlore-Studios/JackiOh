@@ -1,5 +1,4 @@
-//! S #33 Drone Core VII (SPEC §8.10 row 33): (4) Spell, Drone Core, Epic, a card of the held Stinkyscape
-//! set (R1420).
+//! S #33 Drone Core VII (SPEC §8.10 row 33): (4) Spell, Drone Core, Epic, a card of the Stinkyscape set.
 //!   Base:    "Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
 //!            — interceptors 2
 //!   Radiant: "Summon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone

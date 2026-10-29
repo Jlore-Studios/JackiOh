@@ -290,10 +290,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-fn must(card: Option<CardInstance>, what: &str) -> CardInstance {
-    card.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 fn keyword_kinds(keywords: &[Keyword]) -> Vec<String> {
     let mut kinds: Vec<String> = keywords
         .iter()

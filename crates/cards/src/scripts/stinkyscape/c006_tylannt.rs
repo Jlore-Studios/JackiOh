@@ -1,5 +1,4 @@
-//! Stinkyscape #6 Tylannt (SPEC §8.10 row 6). Unit 6/4 → 12/8, cost 2, Acclaimed, Human, Mythic; held
-//! (R1420).
+//! Stinkyscape #6 Tylannt (SPEC §8.10 row 6). Unit 6/4 → 12/8, cost 2, Acclaimed, Human, Mythic.
 //!   Base:    "Tradable
 //!            Cry: Complete the current stage on all your Quests."
 //!   Radiant: "Tradable

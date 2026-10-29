@@ -198,13 +198,6 @@ fn run(
     events
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    match value {
-        Some(value) => value,
-        None => panic!("expected {what}"),
-    }
-}
-
 fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .hand

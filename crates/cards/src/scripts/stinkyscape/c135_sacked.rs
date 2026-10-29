@@ -1,5 +1,5 @@
-//! S #135 Sacked (SPEC §8.10 row 135; R17, R427, R1850003, R1875004): (1) Trap, Common, of the held
-//! Stinkyscape set (R1420).
+//! S #135 Sacked (SPEC §8.10 row 135; R17, R427, R1850003, R1875004): (1) Trap, Common, of the
+//! Stinkyscape set.
 //!   Base:    "Reveals when your opponent plays a Unit: After it resolves, stuff it into a Sack they
 //!            control."
 //!   Radiant: the same, "a Sack you control".

@@ -235,7 +235,8 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         );
         assert_eq!(preflight.header("access-control-allow-credentials"), None);
         assert_eq!(preflight.header("vary").as_deref(), Some("Origin"));
-        // The methods the router allows and the two headers `apps/web/src/net/api.ts` sends.
+        // The methods the router allows and the three headers `apps/web/src/net/api.ts` sends, a
+        // spend's `Idempotency-Key` among them (R2124000).
         assert!(
             preflight
                 .header("access-control-allow-methods")
@@ -244,7 +245,7 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         );
         assert_eq!(
             preflight.header("access-control-allow-headers").as_deref(),
-            Some("authorization, content-type")
+            Some("authorization, content-type, idempotency-key")
         );
     }
 
