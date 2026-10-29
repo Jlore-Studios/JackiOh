@@ -8501,6 +8501,13 @@
     "2380": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T19:14:12Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the hard line: the change is in crates/ai/src (the AI's evaluation), AI work by CLAUDE.md rule 11, though the plan leaves no design choice"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
