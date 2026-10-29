@@ -2,8 +2,8 @@
 //! set (R1420).
 //!   Base:    "Summon a Drone Corvette."
 //!   Radiant: "Summon a Radiant Drone Corvette."
-//! Engine: a summon of the Drone Corvette into the caster's leftmost open unit zone (R64), no Cry (R1);
-//!   with no open zone nothing. The Corvette draws its own two combat keywords as it arrives (R781004).
+//! Engine: a summon of the Drone Corvette into the caster's leftmost open unit zone (R64), no Cry (R1),
+//!   with a full unit row the leftmost open backrow zone (R2248000); with no open zone nothing. The Corvette draws its own two combat keywords as it arrives (R781004).
 //!   Radiant: summoned Radiant.
 
 use jackioh_engine::prelude::*;
@@ -71,9 +71,10 @@ mod tests {
     }
 
     #[test]
-    fn a_full_unit_row_summons_nothing() {
+    fn r2248000_a_full_unit_row_puts_the_corvette_in_the_backrow() {
         let mut s = cast(false, json!(vec![VANILLA; 5]));
-        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })));
+        let drone = s.backrow(P1, 1).expect("the Corvette in backrow lane 1");
+        assert_eq!(drone.def_id, CORVETTE);
         s.expect_in_zone(CORE, "graveyard");
     }
 
