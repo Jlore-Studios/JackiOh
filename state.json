@@ -8653,6 +8653,13 @@
     "2387": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T17:18:06Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 2 fails (docs/ADDING_CARDS.md is outside the tools crate) and fuzz.rs plus its tests come to about 350 lines, close to the 400 limit; rule 8 also needed a design call (a set has 32 to 205 cards, a deck 25), which the plan settles"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
