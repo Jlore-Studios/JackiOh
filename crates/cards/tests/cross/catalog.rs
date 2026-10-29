@@ -8597,19 +8597,90 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert!(position("classic-060") >= position("core-069"));
     }
 
+    /// R739, R2195001: the names two non-token cards share, as "name (first, second)", but a Training
+    /// Grounds snapshot (#41–#60) and the Core card its `snapshotOf` names, which share the Core
+    /// card's name by the owner's decision (#2195).
+    fn shared_names(cards: &[&CardDef]) -> Vec<String> {
+        let snapshot_pair = |a: &CardDef, b: &CardDef| {
+            let is_snapshot = |card: &CardDef| {
+                card.set == SetName::TrainingGrounds
+                    && card.index.parse::<u32>().is_ok_and(|n| (41..=60).contains(&n))
+            };
+            [(a, b), (b, a)].into_iter().any(|(snapshot, core)| {
+                is_snapshot(snapshot)
+                    && core.set == SetName::Core
+                    && snapshot.snapshot_of.as_deref() == Some(core.id.as_str())
+            })
+        };
+        let mut seen: IndexMap<&str, Vec<&CardDef>> = IndexMap::new();
+        let mut dupes: Vec<String> = Vec::new();
+        for card in cards.iter().copied().filter(|card| !card.token) {
+            let named = seen.entry(card.name.as_str()).or_default();
+            if let Some(first) = named.iter().find(|first| !snapshot_pair(first, card)) {
+                dupes.push(format!("{} ({}, {})", card.name, first.id, card.id));
+            }
+            named.push(card);
+        }
+        dupes
+    }
+
     #[test]
     fn r739_one_name_names_one_card() {
-        let mut seen: IndexMap<String, String> = IndexMap::new();
-        let mut dupes: Vec<String> = Vec::new();
-        for entry in entries().into_iter().filter(|entry| !entry.token) {
-            match seen.get(&entry.name) {
-                None => {
-                    seen.insert(entry.name.clone(), entry.id.clone());
-                }
-                Some(first) => dupes.push(format!("{} ({first}, {})", entry.name, entry.id)),
-            }
+        assert_eq!(
+            shared_names(&entries()),
+            Vec::<String>::new(),
+            "cards sharing a name"
+        );
+    }
+
+    #[test]
+    fn r2195001_a_snapshot_shares_its_core_card_s_name_and_no_other_two_cards_do() {
+        let core = &CATALOG["core-002"];
+        let snapshot = CardDef {
+            id: "traininggrounds-041".to_string(),
+            index: "41".to_string(),
+            set: SetName::TrainingGrounds,
+            snapshot_of: Some(core.id.clone()),
+            ..core.clone()
+        };
+        assert_eq!(shared_names(&[core, &snapshot]), Vec::<String>::new());
+
+        // A Training Grounds card that names no Core card, or another one, or sits outside #41–#60.
+        let unmarked = CardDef {
+            snapshot_of: None,
+            ..snapshot.clone()
+        };
+        let wrong_core = CardDef {
+            snapshot_of: Some("core-005".to_string()),
+            ..snapshot.clone()
+        };
+        let outside = CardDef {
+            index: "40".to_string(),
+            ..snapshot.clone()
+        };
+        for card in [&unmarked, &wrong_core, &outside] {
+            assert_eq!(
+                shared_names(&[core, card]),
+                [format!("Bigot (core-002, {})", card.id)]
+            );
         }
-        assert_eq!(dupes, Vec::<String>::new(), "cards sharing a name");
+        // Two snapshots of one Core card, and two cards of other sets.
+        let twin = CardDef {
+            id: "traininggrounds-042".to_string(),
+            index: "42".to_string(),
+            ..snapshot.clone()
+        };
+        assert_eq!(
+            shared_names(&[core, &snapshot, &twin]),
+            ["Bigot (traininggrounds-041, traininggrounds-042)"]
+        );
+        let classic = CardDef {
+            id: "classic-002".to_string(),
+            set: SetName::Classic,
+            snapshot_of: None,
+            ..core.clone()
+        };
+        assert_eq!(shared_names(&[core, &classic]), ["Bigot (core-002, classic-002)"]);
     }
 
     #[test]
@@ -8930,7 +9001,14 @@ mod names_r381_b2_8 {
                 .or_default()
                 .push(entry.id.clone());
         }
-        let shared: Vec<(String, Vec<String>)> = names.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
+        // R2195001: a Training Grounds snapshot and the Core card it copies share a name.
+        let snapshot_pair = |ids: &[String]| {
+            ids.len() == 2 && CATALOG[ids[1].as_str()].snapshot_of.as_deref() == Some(ids[0].as_str())
+        };
+        let shared: Vec<(String, Vec<String>)> = names
+            .into_iter()
+            .filter(|(_, ids)| ids.len() > 1 && !snapshot_pair(ids))
+            .collect();
         assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
         assert_eq!(name_of("classic-016").as_deref(), Some("Book of Flame"));
         assert_eq!(name_of("classic-055").as_deref(), Some("Book of Wildfire"));
@@ -9022,6 +9100,8 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "stinkyscape-129",
                 "stinkyscape-130",
             ]))
+            // R2195003: the held Training Grounds set's snapshots of Core #14 and #13 (TG #45, #48).
+            .chain(landed(&["traininggrounds-045", "traininggrounds-048"]))
             .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );

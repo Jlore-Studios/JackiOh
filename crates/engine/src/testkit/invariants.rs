@@ -31,9 +31,9 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
-//!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` on the turn it entered is
-//!     readied too (R1839002: a Dormant Starship summoned and launched in one turn, fuzz seed 2), and
-//!     `slumber::awaken_card` leaves it with no `summonedTurn`;
+//!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` enters afresh: summoning sick
+//!     for the rest of that turn, its `summonedTurn` the turn it awakened in (R2259000; before it, R1839002
+//!     readied one awakened on the turn it entered, fuzz seed 2);
 //!   - `kill_credits`, the fresh exertion a kill gives without a transform (B5 E35's `mayAttackAgain`,
 //!     Stinkyscape #94 Tmack Trav, R1869002): an attacker that destroyed the Unit its attack targeted,
 //!     declared or forced, and whose running text answers its attacks (`afterAttack`, the only text that
@@ -1710,13 +1710,31 @@ impl InvariantMonitor {
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
     /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
     /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
-    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// uncover, followed one step through a rotation the action made, R14) takes `summonedTurn`'s word
+    /// only when it names a turn of the action.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
+        // §8 #52: the rotating player is the one whose card played (`RotationArgs.perspective`).
+        let mut playing: Option<PlayerId> = None;
         for event in events {
             match event {
+                GameEvent::CardPlayed { player, .. } => playing = Some(*player),
+                // R14: the rings turn with every pile on them, so a zone a play covered is one step on.
+                GameEvent::Rotated { direction } => {
+                    if let Some(perspective) = playing {
+                        for (player, row, lane) in landed.iter_mut() {
+                            let from = crate::zones::ZoneSlot {
+                                player: *player,
+                                row: *row,
+                                lane: *lane,
+                            };
+                            let to = crate::zones::ring_neighbor(from, *direction, perspective);
+                            (*player, *row, *lane) = (to.player, to.row, to.lane);
+                        }
+                    }
+                }
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
                 GameEvent::Summoned {
                     player, row, lane, ..
@@ -2068,11 +2086,9 @@ impl InvariantMonitor {
                     self.fired.insert(instance_id.clone());
                 }
                 GameEvent::Awakened { instance_id, .. } => {
-                    // R1839002: a card awakened on the turn it entered is not summoning sick, and
-                    // `awaken_card` takes its `summonedTurn` off, as R424's readying transform does.
-                    if self.entered.get(instance_id) == Some(&self.turn) {
-                        self.readied.insert(instance_id.clone());
-                    }
+                    // R2259000: a card that awakens is summoning sick for the rest of the turn, as one
+                    // that entered the field now is, and `awaken_card` stamps its `summonedTurn` so.
+                    self.enter(instance_id);
                 }
                 GameEvent::Animated {
                     player,

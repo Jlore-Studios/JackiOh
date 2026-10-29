@@ -517,7 +517,8 @@ pub fn plays_equip(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R1086: the host an Equip play onto `slot` fuses into — the top card of the zone when it is a
-/// Unit its controller acts with that is not Immutable (R23), and not one this same play tributes.
+/// Unit its controller acts with that is not Immutable (R23), not Dormant (R2260000: nothing reaches a
+/// Dormant card, R1839000), and not one this same play tributes.
 /// R1869000: a host that lends Equip hosts in its backrow zone too, a Unit or not.
 /// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
 pub fn equip_host_at(
@@ -541,6 +542,9 @@ pub fn equip_host_at(
         }
     }
     if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+        return None;
+    }
+    if crate::slumber::is_slumbering(top) {
         return None;
     }
     if top.controller != player {

@@ -967,6 +967,13 @@ pub fn deckable(def: &CardDef) -> bool {
     !def.is_token() && !made_by_a_rule(def) && set_is_open(def.set)
 }
 
+/// R2195000: the card a deck holds one of. A Training Grounds snapshot and the Core card it copies
+/// (`CardDef.snapshot_of`) share one key, the Core card's id, so §2.6 L3 lets a deck hold either but
+/// not both; every other card is its own key. The validators and every random deck read it.
+pub fn pair_key(def: &CardDef) -> &str {
+    def.snapshot_of.as_deref().unwrap_or(&def.id)
+}
+
 /// §5.1's single source of random pools and Discover: every definition the filters allow, set by set
 /// (catalog order, `CATALOG_SETS`: Core, Classic, Classic+, Meditative), each set in §5 index order. The order is a strict total order (set, index as a
 /// number, then the index itself, then the unique catalog id), so it never depends on the order the

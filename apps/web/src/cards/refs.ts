@@ -43,18 +43,22 @@ function isWordChar(char: string | undefined): boolean {
 
 /**
  * Rules phrases that hold a card's name without naming it (R961): "Jade Counter" holds "Jade"
- * (Meditative #39.2), which names nothing inside it.
+ * (Meditative #39.2), which names nothing inside it; "Fortify Mind" (M #22.1) holds "Fortify"
+ * (Training Grounds #12) and still names itself (R2198004).
  */
-const RULES_PHRASES: readonly string[] = ["Jade Counter"];
+const RULES_PHRASES: readonly string[] = ["Jade Counter", "Fortify Mind"];
 
-/** Whether the match at [start, end) lies inside a rules phrase, which reads as the phrase's word. */
+/**
+ * Whether the match at [start, end) lies inside a rules phrase, which reads as the phrase's word. A
+ * match that is the whole phrase is not inside it (R2198004).
+ */
 function insideRulesPhrase(text: string, start: number, end: number): boolean {
   return RULES_PHRASES.some((phrase) => {
     let from = 0;
     for (;;) {
       const at = text.indexOf(phrase, from);
       if (at < 0) return false;
-      if (at <= start && end <= at + phrase.length) return true;
+      if (at <= start && end <= at + phrase.length && !(at === start && end === at + phrase.length)) return true;
       from = at + 1;
     }
   });

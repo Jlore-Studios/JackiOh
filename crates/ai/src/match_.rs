@@ -23,7 +23,7 @@ use crate::baselines::{greedy_action, random_action};
 use crate::config::{AI_BUDGET, AI_SKILL_MAX};
 use crate::decide::decide;
 use crate::observe::ai_to_act;
-use crate::skill::plays_best;
+use crate::skill::{plays_best, skill_miss_action};
 use crate::types::{AiOptions, Decision, DecisionReason, SearchBudget};
 
 /// `AI_MATCH`'s shape (module-private in TS).
@@ -44,7 +44,7 @@ pub enum SeatController {
     Ai {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         budget: Option<SearchBudget>,
-        /// R747000: the chance each decision follows the AI, the rest a random legal action
+        /// R747000: the chance each decision follows the AI, the rest the skill miss (R2214000)
         /// (`skill::plays_best`); `None` is `AI_SKILL_MAX`, which takes no extra draw.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         skill: Option<f64>,
@@ -211,7 +211,7 @@ fn choose_for(
         SeatController::Ai { budget, skill } => {
             if !plays_best(skill.unwrap_or(AI_SKILL_MAX), rng) {
                 return ControllerChoice {
-                    action: random_action(state, seat, rng),
+                    action: skill_miss_action(state, seat, rng),
                     decision: None,
                 };
             }
