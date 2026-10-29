@@ -8771,7 +8771,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-29T07:46:55Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:42022777-1793260068",
+      "run_id": "40837811718",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
