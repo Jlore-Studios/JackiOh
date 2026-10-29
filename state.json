@@ -7167,7 +7167,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T15:37:33Z",
+      "feedback_since": "2026-10-28T21:43:13Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-28T21:23:25Z",
@@ -7184,6 +7184,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-10-28T17:50:56Z",
       "review_floor": "",
       "review_notes": "",
@@ -7191,11 +7192,11 @@
       "run_id": "40774268855",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-28T21:43:13Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
