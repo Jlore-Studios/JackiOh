@@ -1,9 +1,10 @@
-// The Marketplace (R1853000–R1853003, SPEC §10.10): Stinkyscape's shop, open for the rest of the game
-// once either player gains a Resource or Credits.
+// The Marketplace (R1853000–R1853003, R2250002, SPEC §10.10): Stinkyscape's shop, open for the rest of
+// the game once either player gains a Resource or Credits.
 //
 // A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
-// turn the offering next re-rolls on, each lot on the face it is sold on with its price and the copies
-// the viewer may still buy, and each priced Resource in the viewer's own tray with its quote. "Buy" is
+// offers rolled for them at the start of their turn (R2250002), each on the face it is sold on with its
+// price and the copies the viewer may still buy, and each card in their hand that sells from there
+// (R1861000) with its quote. "Buy" is
 // live exactly when `legal` lists that lot's `marketBuy`, and a sale exactly when `legal` lists its
 // `marketSell`; each sends the listed body. Otherwise the button is greyed, a lot's tooltip the
 // engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
@@ -77,7 +78,7 @@ function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; o
   );
 }
 
-/** One sale: a Resource in the viewer's own tray, for this turn's quote. */
+/** One sale: a card in the viewer's hand that sells from there (R1861000), for this turn's quote. */
 function Sale(props: { sale: MarketSaleView; listed: MarketSell | undefined; onAction: (action: ActionBody) => void }) {
   useLocale();
   const { sale, listed } = props;
@@ -145,7 +146,7 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
             <p className="market-purse" role="status">
               {t("{n} Credits", { n: view.you.marketCredits ?? 0 })}
             </p>
-            <p className="marketplace-restock">{t("New stock on turn {turn}", { turn: market.rerollsOn })}</p>
+            <p className="marketplace-restock">{t("New offers at the start of each of your turns")}</p>
           </header>
           {market.offers.length === 0 ? (
             <p className="market-empty">{t("Nothing on offer")}</p>
@@ -157,8 +158,8 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
             </ul>
           )}
           {market.sales.length === 0 ? null : (
-            <section className="marketplace-sales" aria-label={t("Resources")}>
-              <h3>{t("Resources")}</h3>
+            <section className="marketplace-sales" aria-label={t("Sell")}>
+              <h3>{t("Sell")}</h3>
               <ul className="market-barter-list">
                 {market.sales.map((sale) => (
                   <Sale key={sale.instanceId} sale={sale} listed={sells.get(sale.instanceId)} onAction={onAction} />

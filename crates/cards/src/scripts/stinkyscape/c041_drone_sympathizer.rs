@@ -31,9 +31,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #41 Drone Sympathizer — SPEC §8.10 row 41, BUILD M12 row S 41: "with the set previewed, adds 2 Drone
-// Core cards (each of S 27 to S 36 seen over the seeds), a full hand burning the second; with the set held
-// the pool is empty and nothing is added (R1420); cards reads through `param()`; radiant both Radiant".
+// S #41 Drone Sympathizer — SPEC §8.10 row 41, BUILD M12 row S 41: "adds 2 Drone Core cards (each of S 27
+// to S 36 seen over the seeds), a full hand burning the second; the pool names no set, so they arrive now
+// the set ships (R1420); cards reads through `param()`; radiant both Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

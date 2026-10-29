@@ -30,7 +30,8 @@ fn your_other_play<'e>(ctx: &EffectContext<'_>, event: &'e GameEvent) -> Option<
     let GameEvent::CardResolved { player, instance_id, .. } = event else {
         return None;
     };
-    if *player != ctx.controller {
+    // R2179002: a card cast on draw is no play.
+    if *player != ctx.controller || cast_on_draw_event(event) {
         return None;
     }
     if ctx.self_.as_ref().is_some_and(|me| me.id == *instance_id) {
