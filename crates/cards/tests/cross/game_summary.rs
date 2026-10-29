@@ -267,8 +267,23 @@ mod summarize_game_over_real_cards_s9_11 {
                         .or_else(|| find_instance(&state, id))
                         .is_none_or(|card| card.created == Some(true))
                 };
+                // The cards this step added to a hand, which the summary follows into that hand too; a
+                // card a Counter sent there is its countering player's cast, never a play (R831001).
+                let stolen_here: Vec<&str> = events
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::Countered { instance_id, .. } => Some(instance_id.as_str()),
+                        _ => None,
+                    })
+                    .collect();
+                let mut added_here: Vec<&str> = Vec::new();
                 for event in events {
                     match event {
+                        GameEvent::AddedToHand { instance_id, .. }
+                            if !stolen_here.contains(&instance_id.as_str()) =>
+                        {
+                            added_here.push(instance_id)
+                        }
                         GameEvent::CardAnnounced { instance_id, .. } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id) {
                                 plays[seat][at].announced = true;
@@ -321,10 +336,19 @@ mod summarize_game_over_real_cards_s9_11 {
                                 .hand
                                 .iter()
                                 .find(|card| card.id == *instance_id)
+                                .or_else(|| {
+                                    added_here
+                                        .contains(&instance_id.as_str())
+                                        .then(|| find_instance(&result.state, instance_id))
+                                        .flatten()
+                                })
                             {
                                 // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
                                 // it from the hand it stood in as the step began, counted as a play
                                 // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
+                                // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
+                                // p2 draws its Dogpile in the very step that casts it, so a card the step
+                                // added to the hand counts the same way.
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
