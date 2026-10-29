@@ -915,7 +915,7 @@ describe("R2388000 a ranked match's result shows the rank it moved each seat to"
     expect(moves[0]).toHaveTextContent("Max#3 (you): Jlorious #12 → Jlorious #9");
     expect(moves[1]).toHaveTextContent("Rowan: Mythic Grape I · 4/5 pips → Mythic Grape I · 3/5 pips");
     const full = screen.getByTestId("match-ranks").querySelector(".match-ranks__full");
-    expect(full).toHaveTextContent("Max#3 (you) Jlorious");
+    expect(full).toHaveTextContent("Max#3 (you) #9 Jlorious");
     expect(full).toHaveTextContent("Rowan Mythic Grape I");
   });
 

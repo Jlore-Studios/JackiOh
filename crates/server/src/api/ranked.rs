@@ -983,8 +983,8 @@ pub async fn match_ranks(
                 .map(|standing| standing.rank.streak as i64)
                 .unwrap_or(0),
             you: profile_id == viewer_id,
-            rank_before: side.and_then(|side| side.rank_before.clone()),
-            rank_after: side.and_then(|side| side.rank_after.clone()),
+            rank_before: side.and_then(|side| side.rank_before),
+            rank_after: side.and_then(|side| side.rank_after),
         }
     };
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.
