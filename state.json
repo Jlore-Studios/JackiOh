@@ -7362,7 +7362,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-28T17:55:48Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:da98440e-1793247974",
+      "run_id": "40817785367",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T04:26:40Z",
       "stop_requested": false,
