@@ -216,10 +216,11 @@ cargo jackioh spec check
 cargo test -p jackioh-cards c006_wrong_house_attacker    # your card's own tests first
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 cargo jackioh fuzz --seeds 200                            # CI's wave; plain `cargo jackioh fuzz` plays 1,000
+cargo jackioh fuzz --seeds 200 --cards core-006           # your card in both decks of every seed (a set's name: its cards in turn)
 pnpm --dir apps/web test                                  # the voice lines and the flavour line
 ```
 
-Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`.
+A plain wave deals any one card in fewer than one seed in ten, so for card work run the `--cards` wave too, with `--handicap` as well. Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`, or a `--cards` failure with its `reproduce:` line.
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
