@@ -176,6 +176,7 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
     use super::*;
 
     const RHINO: &str = "meditative-002";
+    const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
 
     /// The events of `unit` entering p1's unit zone 1 and declaring twice at p2's hero.
     fn entered_and_declared_twice(unit: &CardInstance) -> Vec<GameEvent> {
@@ -248,6 +249,100 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
         let found = monitor.after(&entered_and_declared_twice(&card), g.state());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    /// p1's Vanilla on the field fused with p1's hand Vanilla, Buffed into `gained` there when given
+    /// (R386), the hand card gone into it by the action's end (an Equip play, R1086), then two
+    /// declarations at p2's hero.
+    fn fused_into_and_declared_twice(gained: Option<&str>) -> Vec<String> {
+        let mut g = scenario(json!({
+            "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let held = g.state().players.p1.hand[0].clone();
+        if let Some(kind) = gained {
+            find_instance_mut(g.state_mut(), &held.id)
+                .expect("the hand card")
+                .tuning = Some(json_as(json!({ "addKeywords": [{ "kind": kind }] })));
+        }
+        let mut monitor = create_invariant_monitor(g.state());
+        // Read between actions for what the hand card carries (R636); its other checks are not this test's.
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        g.state_mut().players.p1.hand.clear();
+        let declared = json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false });
+        let events = vec![
+            event(json!({
+                "type": "fused", "instanceIds": [unit.id, held.id], "resultInstanceId": unit.id,
+                "defId": "t-1:core-008+core-008",
+            })),
+            event(declared.clone()),
+            event(declared),
+        ];
+        monitor.after(&events, g.state())
+    }
+
+    /// #2226's fuzz waves: an Equip carried Windfury from the hand into the Unit it fused into, which
+    /// attacked twice inside the one action (R77's union of keywords, R636).
+    #[test]
+    fn r636_r77_a_fusion_whose_ingredient_carried_windfury_may_declare_twice_in_one_action() {
+        assert_eq!(fused_into_and_declared_twice(Some("Windfury")), no_violations());
+    }
+
+    #[test]
+    fn r636_r77_a_fusion_whose_ingredients_carried_no_windfury_still_declares_once() {
+        let found = fused_into_and_declared_twice(None);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    /// R781004: Keymaster Keenus's Aura, fused in by its Equip, draws the kept card's keywords as it
+    /// fuses, and no event says what it drew; the action leaves the card holding Windfury.
+    #[test]
+    fn r636_r781004_a_fusion_left_with_the_windfury_it_drew_as_it_fused_may_declare_twice_in_one_action() {
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        find_instance_mut(g.state_mut(), &unit.id)
+            .expect("the unit")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Windfury" }))];
+        let declared = json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false });
+        let events = vec![
+            event(json!({
+                "type": "fused", "instanceIds": [unit.id, "c900"], "resultInstanceId": unit.id,
+                "defId": "t-1:core-008+meditative-065",
+            })),
+            event(declared.clone()),
+            event(declared),
+        ];
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+    }
+
+    /// Plain fuzz seed 8567 (#2226): a Drone Corvette drew its keywords as it arrived (R781004), attacked
+    /// twice and was gone by the action's end, so no state said it drew Windfury. It may attack twice,
+    /// never three times.
+    #[test]
+    fn r636_r781004_a_unit_that_drew_its_keywords_and_is_gone_by_the_actions_end_declares_twice_never_thrice()
+    {
+        let (g, card) = hand_card(None);
+        // An id no state holds: the token has ceased to exist.
+        let corvette = CardInstance {
+            id: "c900".to_string(),
+            def_id: DRONE_CORVETTE.to_string(),
+            ..card
+        };
+        let mut monitor = create_invariant_monitor(g.state());
+        assert_eq!(
+            monitor.after(&entered_and_declared_twice(&corvette), g.state()),
+            no_violations()
+        );
+
+        let mut thrice = entered_and_declared_twice(&corvette);
+        thrice.push(event(
+            json!({ "type": "attackDeclared", "attackerId": corvette.id, "targetId": "hero-p2", "forced": false }),
+        ));
+        let found = create_invariant_monitor(g.state()).after(&thrice, g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("attack number 3"), "{}", found[0]);
     }
 }
 
@@ -1540,6 +1635,50 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             assert!(mismatches[0].contains(&fiender.id), "{found:?}");
         }
     }
+
+    /// Fuzz seed 128 (#2226): Silly Silas played onto ZolarKeth's pile turned the rings (R14) before a
+    /// trap destroyed him, so ZolarKeth was uncovered a zone away from the one Silas's play was announced
+    /// into. The zone a card stood in as the last state read it counts, as the zone it ends in does.
+    #[test]
+    fn r1829000_r14_i4_takes_the_turn_of_a_unit_uncovered_in_a_pile_a_rotation_moved_inside_one_action() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let now = g.state().turn;
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(now);
+        // One step to the right from p1's side carries the pile along it, from lane 1 to lane 2.
+        let mut rotated: Vec<GameEvent> = Vec::new();
+        {
+            let mut rng = Rng::new(&g.state().seed, g.state().rng_cursor);
+            let mut sink = EngineSink::new(g.state_mut(), &mut rotated, &mut rng);
+            subsystems::rotation::rotate_rings(
+                &mut sink,
+                &subsystems::rotation::RotationArgs {
+                    direction: subsystems::rotation::RotationDirection::Right,
+                    perspective: PlayerId::P1,
+                    radiant: None,
+                },
+            );
+        }
+        assert_eq!(g.unit_at(PlayerId::P1, 2).id, fiender.id);
+        let announced_then_rotated = |lane: i32| {
+            let mut events = vec![event(json!({
+                "type": "cardAnnounced", "player": "p1", "instanceId": "a-stack-card", "defId": FIENDER,
+                "cardType": "Unit", "costPaid": 2, "targets": [], "row": "units", "lane": lane,
+            }))];
+            events.extend(rotated.iter().cloned());
+            events
+        };
+
+        assert_eq!(
+            monitor.clone().after(&announced_then_rotated(1), g.state()),
+            no_violations()
+        );
+        let found = monitor.clone().after(&announced_then_rotated(3), g.state());
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+    }
 }
 
 /// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
@@ -1673,6 +1812,70 @@ mod r1869002_i2_a_kill_credit {
             event(declared),
         ];
         let found = monitor.after(&events, g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    /// p1's Tmack Trav declares at p2's Vanilla, the prey reported destroyed by it in the next action and
+    /// a declaration at p2's hero in the one after; when `paused`, the first action left a prompt open
+    /// (R113), so its combat resolved in the second. Every finding of the three.
+    fn kill_after_the_declaration(paused: bool) -> Vec<String> {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        if paused {
+            g.state_mut().pending = Some(json_as(json!({
+                "id": "r1869002-prompt",
+                "playerId": "p2",
+                "kind": "target",
+                "prompt": "Choose a target",
+                "options": [{
+                    "key": format!("instance:{}", prey.id),
+                    "label": "a unit",
+                    "selection": { "pick": "instance", "instanceId": prey.id },
+                }],
+                "min": 1,
+                "max": 1,
+                "resume": { "defId": "", "hook": "resume", "step": "none", "radiant": false, "data": {} },
+            })));
+        }
+        let mut found = monitor.after(
+            &[event(
+                json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": prey.id, "forced": false }),
+            )],
+            g.state(),
+        );
+        g.state_mut().pending = None;
+        found.extend(monitor.after(
+            &[event(json!({
+                "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+                "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+            }))],
+            g.state(),
+        ));
+        found.extend(monitor.after(
+            &[event(
+                json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": "hero-p2", "forced": false }),
+            )],
+            g.state(),
+        ));
+        found
+    }
+
+    /// #2226's fuzz waves: a prompt paused Tmack Trav's combat, and the action answering it resolved the
+    /// combat, the kill with it.
+    #[test]
+    fn r1869002_a_kill_in_the_action_answering_the_prompt_its_combat_opened_still_frees_it() {
+        assert_eq!(kill_after_the_declaration(true), no_violations());
+    }
+
+    #[test]
+    fn r1869002_a_kill_reported_after_a_combat_that_had_ended_earns_no_credit() {
+        let found = kill_after_the_declaration(false);
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
     }

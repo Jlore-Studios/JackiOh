@@ -1,0 +1,27 @@
+{
+  "title": "A Trap fused into a Unit stays quiet, and a copier's targeting cost is its copied text's",
+  "sources": "#2226",
+  "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship), where the engine queued it as a unit's trigger without its condition and 饕餮 holding Wormhole countered and recast its own controller's Spell for ever. R1850000: a copier's targeting cost is read from the text it runs, so a fused Paul Allen's Ghost and Tnack Trav that copied Nature Titan no longer panics on a discard number Titan never declares. The classifier's unforced games show Conjure Rush Token+ (classicplus-016), Tnack Trav (stinkyscape-020), Beam v3, Repeater v3 and Cannon v3 (stinkyscape-050 to 052), Phalanx (stinkyscape-082), Spacerace Stimulus (stinkyscape-131) and the Stinkyscape tokens' family (stinkyscape-t) playing differently; that family is claimed through the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in.",
+  "player": {
+    "title": "A Trap fused into a Unit stays quiet",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A Trap fused into a Unit no longer fires from it; Wormhole eaten by 饕餮 could counter its owner's own Spells forever.",
+      "Targeting a fused copier costs what its copied text asks."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "classicplus-016",
+    "stinkyscape-020",
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
+    "stinkyscape-082",
+    "stinkyscape-131",
+    "stinkyscape-t-dormant-starship"
+  ]
+}

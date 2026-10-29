@@ -21,8 +21,9 @@
 //!     acts now, on a side no `rolledBack` restored and not the card a `fused` kept, entered inside the
 //!     action, its stint kept, on the turn of the action its `summonedTurn` names (the last when it
 //!     names none); one that may have been uncovered inside the action (dormant before, or in a zone
-//!     an entry event or a `cardAnnounced` named) takes `summonedTurn`'s word when it names a turn of
-//!     the action, as a `readied` stint does;
+//!     an entry event or a `cardAnnounced` named, at the action's end or in the last state read, since
+//!     a rotation inside the action moves a pile it covered, R14) takes `summonedTurn`'s word when it
+//!     names a turn of the action, as a `readied` stint does;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
 //!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
 //!     barred from the target reads as this stint's spend (R1202);
@@ -1493,6 +1494,17 @@ fn field_cards(state: &GameState) -> Vec<&CardInstance> {
     out
 }
 
+/// R1829000, R14: the zone of every card `field_cards` holds.
+fn field_zones(state: &GameState) -> IndexMap<String, (PlayerId, Row, i32)> {
+    field_cards(state)
+        .into_iter()
+        .filter_map(|card| match card.zone {
+            Zone::Field { player, row, lane } => Some((card.id.clone(), (player, row, lane))),
+            _ => None,
+        })
+        .collect()
+}
+
 /// R1829000: the cards dormant beneath the top of a unit pile or a backrow pile (§3.2, R13).
 fn dormant_cards(state: &GameState) -> IndexSet<String> {
     let mut out = IndexSet::new();
@@ -1550,6 +1562,9 @@ pub struct InvariantMonitor {
     /// the autopilot plays a whole turn in one action (R1183002; fuzz seeds 5325, 6431, 9388, and 6732
     /// and 7295 of the handicapped wave, #1216).
     carried_windfury: IndexSet<String>,
+    /// R781004: the instances seen entering with a text that draws its keywords as it arrives
+    /// (`conditionalKeywords`), unreported by any event.
+    keyword_drawers: IndexSet<String>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -1561,6 +1576,9 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R1869002: whether the last state `after` read was paused (R113): its combat resolves in the next
+    /// action, which keeps `attack`.
+    paused: bool,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
@@ -1568,6 +1586,8 @@ pub struct InvariantMonitor {
     fatigue: PerPlayer<i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
+    /// R1829000, R14: the zone each card on the field stood in, in the last state read.
+    field_zones: IndexMap<String, (PlayerId, Row, i32)>,
 }
 
 /// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
@@ -1588,14 +1608,17 @@ impl InvariantMonitor {
             last_attack: IndexMap::new(),
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            keyword_drawers: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            paused: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
+            field_zones: field_zones(start),
         }
     }
 
@@ -1613,9 +1636,23 @@ impl InvariantMonitor {
     }
 
     /// R636: a unit that just entered and carries Windfury, as it was before the action
-    /// (`carried_windfury`) or as the action left it, has it in this stint.
-    fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
-        let left_with = find_instance(state, id).is_some_and(|card| {
+    /// (`carried_windfury`) or as the action left it, has it in this stint. R781004: one whose text draws
+    /// its keywords as it arrives and that the action took off the field again leaves no state that says
+    /// what it drew, so it is read as having drawn Windfury: two declarations, never a third.
+    fn note_entry_windfury(&mut self, id: &str, def_id: Option<&str>, state: &GameState) {
+        let card = find_instance(state, id);
+        let draws = def_id
+            .or(card.map(|card| card.def_id.as_str()))
+            .is_some_and(|def_id| {
+                let scripts = crate::scripts::scripts_ref(state, def_id);
+                scripts.base.conditional_keywords.is_some() || scripts.radiant.conditional_keywords.is_some()
+            });
+        if draws {
+            self.keyword_drawers.insert(id.to_string());
+        }
+        let unread =
+            card.is_none_or(|card| card.zone.z() != ZoneName::Field) && self.keyword_drawers.contains(id);
+        let left_with = card.is_some_and(|card| {
             let keywords = if card.zone.z() == ZoneName::Field {
                 keywords_now(state, card)
             } else {
@@ -1623,7 +1660,7 @@ impl InvariantMonitor {
             };
             has_keyword(&keywords, KeywordKind::Windfury)
         });
-        if left_with || self.carried_windfury.contains(id) {
+        if left_with || unread || self.carried_windfury.contains(id) {
             let stint = self.stint_of(id);
             self.windfury.insert(id.to_string(), stint);
         }
@@ -1710,7 +1747,10 @@ impl InvariantMonitor {
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
     /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
     /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
-    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action. That zone is the
+    /// card's as the action leaves it or as the last state read it: a rotation inside the action (R14)
+    /// carries a pile a play covered to its neighbouring zone before a trap's kill uncovers it there
+    /// (fuzz seed 128, #2226: Silly Silas played onto ZolarKeth's pile).
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
@@ -1759,7 +1799,11 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let stood_in_landed = self
+                .field_zones
+                .get(&card.id)
+                .is_some_and(|zone| landed.contains(zone));
+            let may_have_been = was_dormant || landed.contains(&(player, row, lane)) || stood_in_landed;
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
@@ -1994,7 +2038,10 @@ impl InvariantMonitor {
         let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
         // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
-        self.attack = None;
+        // R1869002: unless that action left the combat paused on a prompt, which this one answers.
+        if !self.paused {
+            self.attack = None;
+        }
 
         // I5: the check that ends the game is the last thing that happens (§2.5, R216).
         if let Some(over) = events
@@ -2058,11 +2105,37 @@ impl InvariantMonitor {
                         ));
                     }
                 }
-                GameEvent::CardPlayed { instance_id, .. }
-                | GameEvent::Summoned { instance_id, .. }
-                | GameEvent::ControlChanged { instance_id, .. } => {
+                GameEvent::CardPlayed {
+                    instance_id, def_id, ..
+                }
+                | GameEvent::Summoned {
+                    instance_id, def_id, ..
+                } => {
                     self.enter(instance_id);
-                    self.note_entry_windfury(instance_id, state);
+                    self.note_entry_windfury(instance_id, Some(def_id), state);
+                }
+                GameEvent::ControlChanged { instance_id, .. } => {
+                    self.enter(instance_id);
+                    self.note_entry_windfury(instance_id, None, state);
+                }
+                GameEvent::Fused {
+                    instance_ids,
+                    result_instance_id,
+                    ..
+                } => {
+                    // R77, R636: a fusion unions its ingredients' keywords, so an ingredient that carried
+                    // Windfury into it (an Equip from the hand, R1086) gives the kept card Windfury in its
+                    // stint, though the action may take it off the field before any state shows it; and
+                    // R781004's Aura fused in draws the kept card's own keywords, which no event reports.
+                    let brought = instance_ids.iter().any(|id| {
+                        self.carried_windfury.contains(id)
+                            || self.windfury.get(id) == Some(&self.stint_of(id))
+                    });
+                    if brought {
+                        let stint = self.stint_of(result_instance_id);
+                        self.windfury.insert(result_instance_id.clone(), stint);
+                    }
+                    self.note_entry_windfury(result_instance_id, None, state);
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
@@ -2099,7 +2172,7 @@ impl InvariantMonitor {
                         });
                         if !is_unit_def {
                             self.enter(instance_id);
-                            self.note_entry_windfury(instance_id, state);
+                            self.note_entry_windfury(instance_id, None, state);
                         }
                     }
                 }
@@ -2110,7 +2183,7 @@ impl InvariantMonitor {
                 } => {
                     if new_instance_id != instance_id {
                         self.enter(new_instance_id);
-                        self.note_entry_windfury(new_instance_id, state);
+                        self.note_entry_windfury(new_instance_id, None, state);
                     }
                     if self.attack.as_ref().is_some_and(|attack| {
                         attack.killed && !attack.forced && attack.attacker_id == *instance_id
@@ -2256,6 +2329,7 @@ impl InvariantMonitor {
 
         self.note_windfury(state);
         self.settle_kill_credits(state);
+        self.paused = state.pending.is_some() || !state.work.is_empty();
 
         // I9: what the action announced is the state it left (§10.3); a Glitch's reset moves `resets` (R676).
         let reset = state.resets != self.resets;
@@ -2268,6 +2342,7 @@ impl InvariantMonitor {
             self.note_uncoverings(events, state, began_on);
         }
         self.dormant = dormant_cards(state);
+        self.field_zones = field_zones(state);
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {

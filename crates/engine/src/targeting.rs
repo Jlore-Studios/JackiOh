@@ -30,23 +30,16 @@ fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
     count.max(0)
 }
 
-/// R102: a fused card carries every ingredient's text, so the stricter of their costs holds.
-fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
+/// R102: a fused card carries every ingredient's text, so the stricter of their costs holds, each read
+/// on `radiant`, the face of the text the card runs (R1850000).
+fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str, radiant: bool) -> i32 {
     let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
         let entry = crate::scripts::scripts_ref(state, def_id);
-        return face_cost(
-            if self_.radiant {
-                &entry.radiant
-            } else {
-                &entry.base
-            },
-            state,
-            self_,
-        );
+        return face_cost(if radiant { &entry.radiant } else { &entry.base }, state, self_);
     };
     parts
         .iter()
-        .map(|part| fused_cost(state, self_, part))
+        .map(|part| fused_cost(state, self_, part, radiant))
         .fold(0, i32::max)
 }
 
@@ -61,8 +54,10 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     {
         return 0;
     }
-    if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {
-        return fused_cost(state, card, &card.def_id);
+    // R1850000: the cost is the text the card runs, a copier's the copied Unit's, never its own fusion's.
+    let (text_def, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    if crate::catalog::fused_id_parts(Some(state), text_def).is_some() {
+        return fused_cost(state, card, text_def, radiant);
     }
     face_cost(&crate::scripts::script_of(state, card), state, card)
 }

@@ -860,3 +860,56 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         assert_eq!(paid, vec![false, true]);
     }
 }
+
+// A Trap's text fused into a Unit
+
+const WORMHOLE: &str = "stinkyscape-139"; // Trap, 2 — counters an opponent's Spell aimed at their own side
+const BOOK_OF_STATS: &str = "classicplus-057"; // Spell, 1 — "Give a Unit +5/+5."
+
+mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
+    use super::*;
+
+    #[test]
+    fn r2226000_a_wormhole_fused_onto_a_unit_never_counters_its_controllers_own_spell() {
+        let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test.
+            "seed": "fused-trap-text",
+            "p1": {
+                "field": [{ "def": MR_VANILLA, "lane": 1 }],
+                "hand": [WORMHOLE, BOOK_OF_STATS, STOCKPILE],
+                "mana": 10,
+            },
+        }));
+        let vanilla = g.unit_at(P1, 1);
+        let wormhole = must(
+            g.hand(P1).iter().find(|card| card.def_id == WORMHOLE).cloned(),
+            "the Wormhole in hand",
+        );
+        must(
+            fuse_in(
+                &mut g,
+                FuseArgs {
+                    ingredients: vec![vanilla.clone(), wormhole],
+                    target: Some(vanilla.clone()),
+                    ..Default::default()
+                },
+            ),
+            "the Vanilla carrying the Wormhole's text",
+        );
+
+        g.play(
+            BOOK_OF_STATS,
+            json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
+        );
+
+        // The Wormhole's text stands in a unit zone on a card that is no trap: R1020's rule holds for any
+        // Fuse, so the Book aimed at its controller's own Unit resolves, and the 4/4 is 9/9.
+        assert!(g.state().pending.is_none());
+        assert!(
+            !g.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Countered { .. }))
+        );
+        g.expect_stats(&vanilla.id, json!({ "attack": 9, "health": 9 }));
+    }
+}

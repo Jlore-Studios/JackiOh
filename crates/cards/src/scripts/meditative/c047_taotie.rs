@@ -74,6 +74,8 @@ mod tests {
     const FIENDER: &str = "core-092"; // Felinor Fiender, Stack, the pile's top.
     const WALL: &str = "meditative-097-7"; // The Great Wall, printed Immutable.
     const ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
+    const WORMHOLE: &str = "stinkyscape-139"; // a Trap: counters an opponent's Spell aimed at their own side.
+    const BOOK: &str = "classicplus-057"; // Book of Stats: "Give a Unit +5/+5."
 
     fn meal(n: i32) -> Value {
         json!([{ "def": BODY, "lane": n }])
@@ -351,6 +353,42 @@ mod tests {
                 // 饕餮 died, and the Saintess's Death it carried made p1's other Unit Radiant.
                 s.expect_in_zone(id.as_str(), "graveyard");
                 assert!(s.card(&felinor).radiant);
+            }
+
+            #[test]
+            fn r1020_r2226000_an_eaten_traps_reveal_never_fires_from_its_unit_zone() {
+                let mut s = scenario(json!({
+                    "seed": "taotie-trap",
+                    "p1": {
+                        "field": [{ "def": TAOTIE, "lane": 1 }],
+                        "hand": [BOOK],
+                        "library": [FILLER, FILLER, FILLER],
+                    },
+                    "p2": {
+                        "backrow": [{ "def": WORMHOLE, "lane": 1 }],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER, FILLER],
+                    },
+                }));
+                let id = s.unit(P1, 1).expect("taotie").id;
+
+                s.end_turn(); // p1's end: 饕餮 eats the Wormhole.
+                assert!(fused(&s));
+                s.end_turn(); // p2's turn passes.
+                s.play(
+                    BOOK,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
+                );
+
+                // The eaten Wormhole's text never answers its new controller's own Spell: no counter,
+                // no prompt, and the Book's +5/+5 lands on the 2/2.
+                assert!(s.state().pending.is_none());
+                assert!(!s
+                    .events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Countered { .. })));
+                let taotie = s.unit(P1, 1).expect("taotie");
+                s.expect_stats(&taotie, json!({ "attack": 7, "health": 7 }));
             }
 
             #[test]

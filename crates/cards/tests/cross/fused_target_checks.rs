@@ -98,3 +98,35 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         assert!(!plays_of(&s, &fused).is_empty());
     }
 }
+
+const GHOST: &str = "classic-089"; // (2) Unit: "To target this … a player must also discard {discard}."
+const TNACK: &str = "stinkyscape-020"; // (2) Unit: "Cry: Copy the text of a Legendary or Mythic Unit on the field."
+const TITAN: &str = "classic-045"; // (2) Unit, Legendary: Nature Titan, which declares no `discard`.
+
+mod r1850000_a_fused_copier_is_targeted_at_the_cost_of_the_text_it_copied {
+    use super::*;
+
+    #[test]
+    fn r1850000_a_fused_ghost_that_copied_nature_titans_text_costs_no_discard_to_target() {
+        let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test.
+            "seed": "fused-copier-cost",
+            "p1": { "hand": [GHOST, TNACK, ANCHOR], "field": [{ "def": TITAN, "lane": 1 }], "mana": 10 },
+        }));
+        let ghost = s.card(GHOST).clone();
+        let tnack = s.card(TNACK).clone();
+        let titan = s.unit_at(P1, 1);
+        let fused = craft(&mut s, [ghost, tnack]);
+
+        s.play(
+            &fused.id,
+            json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": titan.id }] }),
+        );
+
+        // The fused card runs Nature Titan's text now, so targeting it costs what that text asks: nothing.
+        // Read off its own fusion, the Ghost's cost asked Titan's text for a `discard` it never declared.
+        let copier = s.card(&fused.id).clone();
+        assert_eq!(subsystems::unit_text::text_def_of(&copier).0, TITAN);
+        assert_eq!(targeting::targeting_discards_of(s.state(), &copier), 0);
+    }
+}
