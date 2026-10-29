@@ -8,7 +8,7 @@
 //! A mining node (R1840006): Can't attack is printed, and `StaticFlags.never_defense` keeps it out of
 //! Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes `selfDamage`
 //! (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `gain_resources` of `resources`
-//! random Resources into its controller's tray (R1840000, R1840002). Any other death pays too; an exile
+//! random Resources into its controller's hand (R1840000, R1840002). Any other death pays too; an exile
 //! or a Bounce nothing. Radiant: the Activate is the Sacrifice alone, and the Resources are Radiant.
 //! The numbers are declared (R386), `selfDamage` on the base face only (R1431).
 
@@ -76,7 +76,7 @@ pub fn script() -> CardScripts {
 }
 
 // S 172 Huge Asteroid — SPEC §8.10 row 172, BUILD M12 row S 172: "its Activate deals 5 damage to its
-// controller's hero, then tributes it, and its Death gains 5 random Stinkyscape Resources into the tray;
+// controller's hero, then tributes it, and its Death gains 5 random Stinkyscape Resources into the hand;
 // destroyed in combat or by an effect it pays the same; it never attacks or switches to Defense;
 // resources and selfDamage read through `param()`; radiant 0/20, the Activate dealing no damage, Radiant
 // Resources".
@@ -117,16 +117,16 @@ mod tests {
         mined(&mut s);
         s.expect_health(P1, 30 - SELF_DAMAGE);
         s.expect_in_zone(ID, "graveyard");
-        let tray = s.pile(P1, "tray");
-        assert_eq!(tray.len(), RESOURCES);
-        assert!(tray.iter().all(|card| !card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), RESOURCES);
+        assert!(in_hand.iter().all(|card| !card.radiant));
     }
 
     #[test]
     fn destroyed_in_combat_or_by_twisting_nether_it_pays() {
         let mut s = node(false);
         s.play(NETHER, json!({}));
-        assert_eq!(s.pile(P1, "tray").len(), RESOURCES, "Twisting Nether");
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "Twisting Nether");
 
         let mut s = scenario(json!({
             "active": "p2",
@@ -137,8 +137,8 @@ mod tests {
         let node = s.unit_at(P1, 1);
         s.attack(&attacker, &node);
         s.expect_in_zone(&node, "graveyard");
-        assert_eq!(s.pile(P1, "tray").len(), RESOURCES, "in combat");
-        assert!(s.pile(P2, "tray").is_empty());
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "in combat");
+        assert!(crate::resources_in_hand(&s, P2).is_empty());
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         set_param(s.card_mut(ID), "selfDamage", 1);
         mined(&mut s);
         s.expect_health(P1, 29);
-        assert_eq!(s.pile(P1, "tray").len(), 3);
+        assert_eq!(crate::resources_in_hand(&s, P1).len(), 3);
     }
 
     #[test]
@@ -166,8 +166,8 @@ mod tests {
         mined(&mut s);
         s.expect_health(P1, 30);
         s.expect_in_zone(ID, "graveyard");
-        let tray = s.pile(P1, "tray");
-        assert_eq!(tray.len(), RESOURCES);
-        assert!(tray.iter().all(|card| card.radiant));
+        let in_hand = crate::resources_in_hand(&s, P1);
+        assert_eq!(in_hand.len(), RESOURCES);
+        assert!(in_hand.iter().all(|card| card.radiant));
     }
 }

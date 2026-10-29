@@ -505,7 +505,7 @@ with these attributes:
 | `class`: `card`, `card-unit` or `card-spell`, `radiant`, `props.className`; `card-back` on backs | `class` also gets `cf-host cf-host--<minion\|full\|compact>` |
 | `data-testid`, `data-legal` (clickable only), `data-selected`, `data-animating`, `aria-disabled`, `tabIndex`, `draggable`, `onClick`, `onKeyDown`, `onDragStart`, `onDragOver`, `onDrop` | the eight inspect handlers, spread after the drag props |
 | `data-def-id`, `data-radiant`, `data-owner`, `data-controller`, `data-position`, `data-can-act`; `data-face-down="true"` and `aria-label` on backs | `data-face`, `data-rarity` (when known), `data-card-type` (`props.type ?? face.type`), `data-field-trap="true"` on a Field Trap. animations.css already reads `data-field-trap`. |
-| inline `style={{ transform: "rotate(90deg) scale(0.72)" }}` for DEF, and no `style` attribute otherwise | nothing: faces put inline styles on inner elements only |
+| inline `style={{ transform: "rotate(90deg) scale(var(--def-scale, 1))" }}` for DEF, and no `style` attribute otherwise | nothing: faces put inline styles on inner elements only |
 | `title={name}` | kept only while `hoverPreviews` is off, because the preview replaces it |
 
 Descendants kept with the same meaning:

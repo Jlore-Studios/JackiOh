@@ -127,6 +127,10 @@ mod tests {
     /// best-scored card is the Vanilla.
     const GOOD: &str = "core-008";
     const BAD: &str = "core-t-felinor";
+    /// A (0) Spell p1 never plays: with it in hand p1's turn does not end by itself once Pareto is out
+    /// (R82), which it did before #2179 only because the new Cane could switch to Defense, which an
+    /// Indestructible card may not since (R2179000).
+    const SPARE: &str = "core-010";
 
     /// The Cane `pareto` remembers.
     fn remembered_cane(s: &Scenario, pareto: &str) -> Option<String> {
@@ -149,7 +153,7 @@ mod tests {
     fn pareto_game(radiant: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": { "mana": 10, "hand": [{ "def": ID, "radiant": radiant }] },
+            "p1": { "mana": 10, "hand": [{ "def": ID, "radiant": radiant }, SPARE] },
             "p2": { "mana": 10, "hand": [GOOD, BAD], "field": ["core-007"] },
         }));
         s.play(ID, json!({}));
@@ -163,7 +167,7 @@ mod tests {
         // p2's Scarab gives p2 something to do, so its turn does not end by itself (R82) and hand
         // the turn straight back.
         let mut s = scenario(json!({
-            "p1": { "mana": 10, "hand": [ID] },
+            "p1": { "mana": 10, "hand": [ID, SPARE] },
             "p2": { "field": ["core-007"] },
         }));
         s.play(ID, json!({}));
@@ -334,7 +338,7 @@ mod tests {
     fn a_play_tied_with_the_best_does_nothing() {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": { "mana": 10, "hand": [ID] },
+            "p1": { "mana": 10, "hand": [ID, SPARE] },
             "p2": { "mana": 10, "hand": [GOOD, GOOD, BAD], "field": ["core-007"] },
         }));
         s.play(ID, json!({}));
@@ -367,7 +371,7 @@ mod tests {
     fn a_countered_play_is_not_judged() {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": { "mana": 10, "hand": [ID], "backrow": [{ "def": COUNTERSPELL, "faceDown": true }] },
+            "p1": { "mana": 10, "hand": [ID, SPARE], "backrow": [{ "def": COUNTERSPELL, "faceDown": true }] },
             "p2": { "mana": 10, "hand": [GOOD, SPELL], "field": ["core-007"] },
         }));
         s.play(ID, json!({}));
