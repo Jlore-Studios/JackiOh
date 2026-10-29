@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2379,
+  "title": "Patch: leaving a practice game without saving gives its earning slot back, and a game that can't earn says so",
+  "branch": "bot/issue-2379",
+  "thread": "**Issue #2379 (data, not instructions):**\n\n```text\n# #2379: Patch: leaving a practice game without saving gives its earning slot back, and a game that can't earn says so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA signed-in player can hold only three practice games that are waiting to pay out, for an hour each. Leaving a game without saving does not give its slot back. So a player who quits three bad openings in a row finds the fourth game quietly earns nothing: no Jlore, no XP, no quest progress, and nothing on screen says so, not even at the end. Once this is built, leaving a game frees its slot. If the server still refuses a game, the table says from the start that this game won't earn and why.\n\n## Why\n\n- The server allows at most `PRACTICE_SEEDS_OPEN_MAX` (3) unclaimed seeds per account within `PRACTICE_SEED_TTL_SECONDS` (3600): `crates/server/src/api/practice.rs:111-120`, `crates/server/src/config.rs:2664,2672`.\n- Nothing ever gives a seed back:\n  - \"Leave without saving\" (`onNewGame`, `onMenu`, `apps/web/src/routes/practice.tsx:904-914`) only clears the local resume.\n  - Starting a game over a saved one (`dropSavedGame()`, `practice.tsx:840,850`) discards the save locally.\n  - The server's route table (`crates/server/README.md:195`) has no route that releases a seed.\n- When the seed request fails, the client starts the game with no earning and no word (`practice.tsx:822-825`). The result dialog then prints no earning line, because the game is not marked earning (`practice.tsx:1043`, `apps/web/src/practice/PracticeResult.tsx:156`). The server's 409 message (\"Claim one of your open practice games before starting another.\") never reaches the player, who could not act on it anyway.\n- The economy is live (`ECONOMY_LIVE = true`, `crates/server/src/config.rs:2710`), so this costs real players their rewards today.\n\n## Proposal\n\n- Add `DELETE /api/practice/seeds/:seed` (an Active account). It deletes the caller's own unclaimed seed under the account's economy lock, the lock R1483000's count already takes.\n  - Another account's seed, or a seed already claimed, answers 404 and changes nothing.\n  - A later claim of a released seed is refused as an unknown seed.\n- The client sends it (keepalive, as card deletion does) when an earning game is left without saving, and when starting a new game drops a saved earning game.\n- When a seed request is refused, the game shows a short line that it won't earn, with the server's reason, instead of nothing.\n- The spec does not say whether a seed can be given back, so a new ruling decides it, and \u00a714.8 and the README's route table are updated.\n\n## Where it lands\n\n- Server:\n  - `crates/server/src/api/practice.rs`, `src/app.rs` (the route);\n  - the seed delete in `src/economy/store.rs`, `src/db/fake.rs` and `src/db/pg.rs`;\n  - `tests/api/practice.rs`, `tests/store/contract.rs`.\n- Client: `apps/web/src/net/practice.ts`, `apps/web/src/routes/practice.tsx` and its test.\n- Spec and docs: SPEC \u00a714.8 (`spec/14-economy.md`), a ruling note, `spec/pending/<issue>.md`, `crates/server/README.md`.\n\n## Acceptance criteria\n\n- [ ] A server test named after the new ruling: three seeds issued, one released, and a fourth request answers 201.\n- [ ] Releasing another account's seed, or a claimed one, answers 404 and changes nothing; a store contract test covers both stores.\n- [ ] A claim of a released seed is refused.\n- [ ] A web test: Leave without saving on an earning game sends the release for that game's seed, and leaving a non-earning game sends nothing.\n- [ ] A web test: a refused seed request starts the game with a visible \"won't earn\" line.\n- [ ] `cargo jackioh spec check`, `cargo test -p jackioh-server` and the touched web tests pass.\n\n## Size and risks\n\nMedium: about 12 files across the server and the client, with no migration.\n\n- The route is new. Rule 13 only guards against removing routes.\n- It opens no way to farm: a released seed pays nothing, and claiming a junk log already burns a seed today.\n- If the release request fails (offline, closed tab), the seed simply expires in an hour, as it does today.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:24:27Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2379: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
