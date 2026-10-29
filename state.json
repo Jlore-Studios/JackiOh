@@ -7429,23 +7429,15 @@
           "muse"
         ],
         "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "2bd828277ea70e0a98be29107ea9e6508e9183c2",
-          "main": "156aefc4c0390e8e6e36d50820d7d268b7758e52"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "40873595199",
+            "run": "40896137182",
             "tier": "medium"
           }
         ],
-        "sha": "bf8fc316739db7f239ddf5f1628462763abd34b4",
+        "sha": "c68b83e9ce742c0bae1562ad78a96c2b4e6f95bd",
         "tiers": {
           "muse": "medium"
         }
