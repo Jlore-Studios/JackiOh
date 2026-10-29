@@ -8296,6 +8296,14 @@
       "queued_at": "2026-10-29T13:32:08Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "2373": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-29T12:10:45Z",
+      "issue": 2111,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
