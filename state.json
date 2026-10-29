@@ -7186,7 +7186,7 @@
       "verdict_rounds": 1
     },
     "2307": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "db143b0cea3b3ef4ae8e922f6eb2d751559fb206",
       "ci_fixes": 3,
@@ -7213,18 +7213,18 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-29T15:56:46Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40897793219",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:cbabf496-1793289970",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-29T15:04:08Z",
+      "started_at": "2026-10-29T16:06:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -8488,9 +8488,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T15:53:22Z",
+    "at": "2026-10-29T16:06:43Z",
     "url": "",
-    "what": "plan #2380 on claude-3"
+    "what": "revise #2307 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T15:49:58Z",
