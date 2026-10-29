@@ -141,6 +141,19 @@ export const DECK_COMPARE_SELECT = "deck-compare-select";
  */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
 
+/**
+ * R2100000: the open deck's History, a button in the editor's head after the name, and its panel:
+ * one `deck-history-row` per kept version, newest first (`data-version`), each but the newest with
+ * its Restore, `deck-history-restore-<versionId>`.
+ */
+export const DECK_HISTORY_BUTTON = "deck-history-button";
+export const DECK_HISTORY_PANEL = "deck-history-panel";
+export const DECK_HISTORY_ROW = "deck-history-row";
+
+export function deckHistoryRestoreId(versionId: string): string {
+  return `deck-history-restore-${versionId}`;
+}
+
 /** #2099: the open deck's Undo and Redo, in the top bar; each is off with nothing to move. */
 export const DECK_UNDO = "deck-undo";
 export const DECK_REDO = "deck-redo";

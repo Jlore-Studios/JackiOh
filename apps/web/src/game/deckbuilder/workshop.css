@@ -531,6 +531,88 @@
   box-shadow: 0 10px 30px rgb(0 0 0 / 60%);
 }
 
+/* --- the deck's history popover (R2100000) ------------------------------------------------------- */
+/*
+ * The cosmetics popover's button and panel, in the deck editor's head after the name: the top bar
+ * has no room left for a button on a phone's first screen (BUILD M5-T1). The panel hangs from the
+ * head and spans it, so it stays inside the sidebar, which clips what overflows it, and its list of
+ * kept versions scrolls inside it, so the page keeps its height (R1581000). Where the head wraps (a
+ * desktop's narrow sidebar), the name takes a narrower start so the button wraps with it rather than
+ * alone, and a button that wraps anyway sits at the row's end, under the name.
+ */
+
+.ws-editor--deck .ws-editor-head {
+  position: relative;
+}
+
+@media (min-width: 761px) {
+  .ws-editor--deck .ws-name {
+    flex-basis: 150px;
+  }
+}
+
+.ws-cosmetics.ws-versions {
+  position: static;
+  flex: none;
+  margin-left: auto;
+}
+
+.ws-cosmetics-panel.ws-versions-panel {
+  left: 0;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ws-versions-list,
+.ws-versions-change {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ws-versions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.ws-versions-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.ws-versions-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
+  width: 100%;
+}
+
+.ws-versions-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ws-versions-date,
+.ws-versions-latest {
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}
+
+.ws-versions-change {
+  font-size: var(--type-md);
+  overflow-wrap: anywhere;
+}
+
 /* --- the deck editor's comparison, verdict, code and confirm ------------------------------------- */
 
 .ws-compare {
@@ -1031,7 +1113,8 @@
     min-height: 44px;
   }
 
-  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square, and Undo and Redo (#2099). */
+  /* The deck cosmetics button sits in the header row beside the gear, which is 44 px square, and Undo and Redo (#2099); the
+     deck's History button, in the editor's head, is the cosmetics button too (R2100000). */
   .deckbuilder.app-shell .ws-cosmetics-button,
   .deckbuilder.app-shell .ws-history-button {
     min-width: 44px;

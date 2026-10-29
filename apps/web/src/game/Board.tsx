@@ -743,7 +743,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

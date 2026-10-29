@@ -216,6 +216,15 @@ the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
+**Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
+under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
+(`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
+and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
+hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
+The list ships empty.
+
 ## Commands
 
 ```
@@ -303,7 +312,12 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
-                        one POST /api/trios/import, never the autosave (R341);
+                        one POST /api/trios/import, never the autosave (R341); the open deck's History
+                        popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
+                        kept, newest first, each with its date and the cards in and out since the one
+                        before (deckHistory.ts), and Restore on all but the newest, one POST that the
+                        server keeps as a new version, never the autosave; unsaved edits go first, and a
+                        deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
                         under it (DeckPatchBadge.tsx, R2097000)

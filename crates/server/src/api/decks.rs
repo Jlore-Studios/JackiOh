@@ -20,6 +20,12 @@
 //!
 //! R257's legacy queue body (no `mode`, or a `deckIndex`) is refused: `read_mode_choice` requires
 //! `mode` (docs/v0.3.0/SURFACE.md §11.3).
+//!
+//! R2100000: every save of a deck, a trio import's included, keeps a version of its name and cards
+//! (`Tx::deck_versions_keep`, which decides what one save keeps). A restore saves a version's name
+//! and cards as the deck's, checked by D1–D5 as any save is, and always keeps a new version, so the
+//! one it replaced stays. The deck's portrait and cosmetic picks are no part of a version: a
+//! restore keeps the deck's own, which were owned when they were saved (R1827000, R1833000).
 
 use std::sync::Arc;
 
@@ -37,10 +43,14 @@ use crate::api::http::{
     string_list, to_json,
 };
 use crate::app::App;
-use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use crate::config::{
+    DECK_NAME_MAX_LENGTH, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, DRAFT_ISSUES_REPORTED_MAX,
+    MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+};
 use crate::cosmetics::{self, CosmeticKind};
 use crate::db::store::{
-    FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
+    DeckVersion, FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx,
+    UpsertOutcome,
 };
 use crate::loadout::DeckSlots;
 use crate::seats::Seat;
@@ -146,6 +156,37 @@ const UNOWNED_PORTRAIT: &str = "\"portrait\" is a portrait this account does not
 /// A trio's three slots, in slot order.
 fn slots_in(slots: &TrioSlots) -> Vec<Option<String>> {
     vec![slots.0.clone(), slots.1.clone(), slots.2.clone()]
+}
+
+/// R2100000: `DeckVersion` in `apps/web/src/net/api.ts`: one earlier version of the caller's deck.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeckVersionView {
+    pub id: String,
+    pub name: String,
+    pub cards: Vec<String>,
+    pub saved_at: i64,
+}
+
+fn version_view(version: &DeckVersion) -> DeckVersionView {
+    DeckVersionView {
+        id: version.id.clone(),
+        name: version.name.clone(),
+        cards: version.cards.clone(),
+        saved_at: version.saved_at,
+    }
+}
+
+/// R2100000: the version one save of a deck keeps, under an id the server mints.
+fn deck_version_of(deck_id: &str, profile_id: &str, name: &str, cards: &[String], at: i64) -> DeckVersion {
+    DeckVersion {
+        id: uuid::Uuid::new_v4().to_string(),
+        deck_id: deck_id.to_string(),
+        profile_id: profile_id.to_string(),
+        name: name.to_string(),
+        cards: cards.to_vec(),
+        saved_at: at,
+    }
 }
 
 fn trio_view(trio: &SavedTrio) -> TrioView {
@@ -443,7 +484,7 @@ fn trio_outcome_name(outcome: &TrioUpsertOutcome) -> &'static str {
 
 // Routes
 
-// All six routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403
+// All eight routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403
 // (§9.4: "no collection, loadout, queue or match").
 
 /// `GET /api/decks`. Everything the builder opens on, oldest first, with the server's catalog
@@ -552,6 +593,14 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
         }
         UpsertOutcome::Created | UpsertOutcome::Updated => {}
     }
+    // R2100000: the save keeps a version, or replaces the newest within the window.
+    let kept = tx
+        .deck_versions_keep(
+            &deck_version_of(&id, &profile.id, &name, &cards, now),
+            Some(DECK_VERSION_DEBOUNCE_MS),
+            DECK_VERSIONS_KEPT as i64,
+        )
+        .await?;
 
     // Read back rather than echo the request, so the answer carries the kept `created_at`.
     let saved = tx.decks_get(&id).await?;
@@ -562,7 +611,13 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     };
     log_info(
         "deck.saved",
-        json!({ "profileId": profile.id, "deckId": id, "outcome": upsert_outcome_name(&outcome), "cards": cards.len() }),
+        json!({
+            "profileId": profile.id,
+            "deckId": id,
+            "outcome": upsert_outcome_name(&outcome),
+            "cards": cards.len(),
+            "version": kept.as_str(),
+        }),
     );
     ok_of(&json!({ "deck": deck_view(&saved) }))
 }
@@ -580,6 +635,83 @@ pub async fn delete_deck(app: &Arc<App>, req: Req) -> ApiResult {
         log_info("deck.deleted", json!({ "profileId": profile.id, "deckId": id }));
     }
     ok_of(&json!({ "deleted": deleted }))
+}
+
+/// `GET /api/decks/:id/versions`. R2100000: the deck's earlier versions, newest first. Another
+/// profile's deck is answered as a missing one, so an id reveals nothing about anyone else's.
+pub async fn list_deck_versions(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let id = path_id_of(req.params.get("id"), "deck")?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    if own_deck(&mut tx, &profile.id, &id).await?.is_none() {
+        return Err(not_found("deck"));
+    }
+    let versions = tx.deck_versions_list(&profile.id, &id).await?;
+    tx.commit().await?;
+    ok_of(&json!({ "versions": versions.iter().map(version_view).collect::<Vec<_>>() }))
+}
+
+/// `POST /api/decks/:id/versions/:versionId/restore`. R2100000: saves the version's name and cards
+/// as the deck's, checked as a save is (the catalog version, then D1–D5), and keeps them as a new
+/// version that never replaces the newest, so the restore can itself be undone. The deck keeps its
+/// portrait and cosmetic picks. Answers the deck and its versions.
+pub async fn restore_deck_version(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let id = path_id_of(req.params.get("id"), "deck")?;
+    let version_id = path_id_of(req.params.get("versionId"), "version")?;
+    let catalog_version = str(&req.body, "catalogVersion")?;
+    assert_current_catalog(app, &catalog_version)?;
+
+    let now = now_ms();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let Some(deck) = own_deck(&mut tx, &profile.id, &id).await? else {
+        return Err(not_found("deck"));
+    };
+    let versions = tx.deck_versions_list(&profile.id, &id).await?;
+    let Some(version) = versions.into_iter().find(|version| version.id == version_id) else {
+        return Err(not_found("version"));
+    };
+    // A version's cards were deckable when it was saved; today's catalog judges them again (D3).
+    let issues = deck_draft_issues(app, &version.name, &version.cards, deck.portrait.as_deref(), true)?;
+    if let Some(first) = first_message(&issues) {
+        return Err(draft_refused(&first, &issues));
+    }
+    let outcome = tx
+        .decks_upsert(
+            &SavedDeck {
+                name: version.name.clone(),
+                cards: version.cards.clone(),
+                catalog_version,
+                updated_at: now,
+                ..deck
+            },
+            MAX_SAVED_DECKS as i64,
+        )
+        .await?;
+    if outcome != UpsertOutcome::Updated {
+        return Err(not_found("deck"));
+    }
+    let kept = tx
+        .deck_versions_keep(
+            &deck_version_of(&id, &profile.id, &version.name, &version.cards, now),
+            None,
+            DECK_VERSIONS_KEPT as i64,
+        )
+        .await?;
+    let saved = tx.decks_get(&id).await?;
+    let versions = tx.deck_versions_list(&profile.id, &id).await?;
+    tx.commit().await?;
+    let Some(saved) = saved.filter(|deck| deck.profile_id == profile.id) else {
+        return Err(not_found("deck"));
+    };
+    log_info(
+        "deck.restored",
+        json!({ "profileId": profile.id, "deckId": id, "versionId": version_id, "version": kept.as_str() }),
+    );
+    ok_of(&json!({
+        "deck": deck_view(&saved),
+        "versions": versions.iter().map(version_view).collect::<Vec<_>>(),
+    }))
 }
 
 /// `PUT /api/trios/:id`. R252, R256: create or replace one trio. T1–T3 only: its decks may be
@@ -717,6 +849,13 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
             // Dropping `tx` rolls back every write made before this one.
             return Err(import_outcome_refused("deck", upsert_outcome_name(&outcome)));
         }
+        // R2100000: an imported deck is saved, so it keeps a version as any save does.
+        tx.deck_versions_keep(
+            &deck_version_of(&deck.id, &profile.id, &deck.name, &deck.cards, at),
+            Some(DECK_VERSION_DEBOUNCE_MS),
+            DECK_VERSIONS_KEPT as i64,
+        )
+        .await?;
     }
     let outcome = tx
         .trios_upsert(
