@@ -8197,7 +8197,7 @@
       "stop_requested": false
     },
     "2348": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixes": 2,
       "ci_reruns": {
@@ -8218,21 +8218,21 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2269,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-29T17:55:16Z",
       "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40910480414",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:4a77ea1b-1793297179",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-29T16:19:42Z",
+      "started_at": "2026-10-29T18:06:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -8856,9 +8856,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T17:57:33Z",
+    "at": "2026-10-29T18:06:43Z",
     "url": "",
-    "what": "build #2382 on muse"
+    "what": "review #2348 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-29T17:53:33Z",
