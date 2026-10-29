@@ -242,8 +242,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     (
         c049_3_ai_girlfriend::ID,
-        "v0.5.0",
-        c049_3_ai_girlfriend::script_v0_5_0,
+        "v0.5.2",
+        c049_3_ai_girlfriend::script_v0_5_2,
     ),
 ];
 
