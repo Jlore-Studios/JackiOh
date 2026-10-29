@@ -9,8 +9,8 @@ use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, GameState, KeywordKind, PlayerId,
     Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
-    find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces, row_size, slot_of,
-    subsystems, takes_strike_back, unit_view,
+    find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces,
+    row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -98,28 +98,54 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
     .join("/")
 }
 
-/// Per otherwise-identical play, keep the first lane of each placement (`placement_key`), in
-/// legal_actions order (lane order), until `cap` lanes are kept (`None`: every placement, the search
-/// root's, #1635); a lane whose placement an earlier one has, or past the cap, goes. Everything else
-/// keeps legal_actions order.
+/// Per otherwise-identical play, keep one lane of each placement (`placement_key`): its first in
+/// legal_actions order (lane order), or its first in the seat's midlane when it has one, which a Cry may
+/// read (R685: C #22 Mid Runner, TG #5 Midlane Menace; R2203001), until `cap` lanes are kept in lane
+/// order (`None`: every placement, the search root's, #1635); every other lane of a placement, or one
+/// past the cap, goes. Everything else keeps legal_actions order.
 fn collapse_zones(
     state: &GameState,
     seat: PlayerId,
     actions: &[ActionBody],
     cap: Option<usize>,
 ) -> Vec<ActionBody> {
-    let mut kept: IndexMap<ActionBody, IndexSet<String>> = IndexMap::new();
+    let midlane = midlane_lanes_of(state, seat);
+    // The index of each placement's lane, per otherwise-identical play.
+    let mut chosen: IndexMap<(ActionBody, String), usize> = IndexMap::new();
+    for (index, action) in actions.iter().enumerate() {
+        let Some(zone) = play_zone(action) else {
+            continue;
+        };
+        let key = (zone_group_key(action), placement_key(state, seat, zone));
+        let in_midlane =
+            |index: usize| play_zone(&actions[index]).is_some_and(|zone| midlane.contains(&zone.lane));
+        match chosen.get(&key) {
+            Some(&kept) if in_midlane(kept) || !in_midlane(index) => {}
+            _ => {
+                chosen.insert(key, index);
+            }
+        }
+    }
+    let mut kept: IndexMap<ActionBody, usize> = IndexMap::new();
     actions
         .iter()
-        .filter(|action| {
+        .enumerate()
+        .filter(|(index, action)| {
             let Some(zone) = play_zone(action) else {
                 return true;
             };
-            let placements = kept.entry(zone_group_key(action)).or_default();
-            cap.is_none_or(|cap| placements.len() < cap)
-                && placements.insert(placement_key(state, seat, zone))
+            let group = zone_group_key(action);
+            if chosen.get(&(group.clone(), placement_key(state, seat, zone))) != Some(index) {
+                return false;
+            }
+            let placements = kept.entry(group).or_default();
+            if cap.is_some_and(|cap| *placements >= cap) {
+                return false;
+            }
+            *placements += 1;
+            true
         })
-        .cloned()
+        .map(|(_, action)| action.clone())
         .collect()
 }
 
@@ -721,7 +747,7 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
 
 /// The candidates' membership, before their order is fixed: legal_actions(state, seat) minus
 /// AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus `mulligan`, with `play` zone
-/// variants collapsed (per otherwise-identical play the lowest lane of each placement, at most
+/// variants collapsed (per otherwise-identical play the lowest lane of each placement (its midlane lane when it has one, R2203001), at most
 /// AI_SEARCH.zone_variants, `collapse_zones`). `candidate_actions` orders this list; a caller that only
 /// needs to know whether an action is among the candidates is spared the ordering's reads of the layers.
 pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {

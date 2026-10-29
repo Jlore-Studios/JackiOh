@@ -176,7 +176,7 @@
       "instanceId": "c29",
       "type": "play",
       "zone": {
-        "lane": 4,
+        "lane": 3,
         "row": "units"
       },
       "playerId": "p2",
@@ -202,11 +202,11 @@
       "nonce": "h8"
     },
     {
-      "instanceId": "c46",
+      "instanceId": "c36",
       "type": "play",
       "zone": {
-        "lane": 5,
-        "row": "backrow"
+        "lane": 1,
+        "row": "units"
       },
       "playerId": "p2",
       "nonce": "h9"
@@ -222,10 +222,17 @@
       "nonce": "h10"
     },
     {
+      "attackerId": "c36",
+      "targetId": "c62",
+      "type": "attack",
+      "playerId": "p2",
+      "nonce": "h11"
+    },
+    {
       "instanceId": "c43",
       "type": "switchPosition",
       "playerId": "p2",
-      "nonce": "h11"
+      "nonce": "h12"
     },
     {
       "instanceId": "c59",
@@ -273,16 +280,6 @@
       "type": "attack",
       "playerId": "p1",
       "nonce": "a20"
-    },
-    {
-      "instanceId": "c35",
-      "type": "play",
-      "zone": {
-        "lane": 3,
-        "row": "backrow"
-      },
-      "playerId": "p2",
-      "nonce": "h12"
     },
     {
       "type": "endTurn",
