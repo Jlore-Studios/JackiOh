@@ -9096,9 +9096,12 @@
     "2348": {
       "action": "review",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "cd348ec46f4369c48a8dc882150be800f1234277": 1
       },
+      "ci_run_id": 40836462319,
+      "ci_sha": "cd348ec46f4369c48a8dc882150be800f1234277",
       "cleared": {
         "at": "2026-10-29T07:57:10Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -9112,15 +9115,17 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2269,
-      "kind": "review",
+      "kind": "revise",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-10-29T07:36:08Z",
+      "queued_at": "2026-10-29T09:04:25Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "40836714368",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "ci",
       "started_at": "2026-10-29T07:38:14Z",
       "stop_requested": false,
       "taken_asks": [],
