@@ -538,7 +538,7 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
 
     #[test]
     fn r748_one_other_card_and_two_cast_on_draw_cards_fill_the_hand_and_each_seats_are_cast_player_1s_first()
-     {
+    {
         let begun = start(
             "r748-one",
             (deck_of(0, DECK_SIZE - 1, None), deck_of(0, DECK_SIZE - 2, None)),

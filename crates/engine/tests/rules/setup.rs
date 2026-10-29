@@ -348,7 +348,11 @@ mod the_coin_r244 {
         assert_eq!(dealt.phase, Phase::Mulligan);
         for (player, opening) in [(PlayerId::P1, 3), (PlayerId::P2, 4)] {
             assert_eq!(dealt.players[player].hand.len(), opening, "{player:?}");
-            assert_eq!(dealt.players[player].library.len(), DECK_SIZE as usize - opening, "{player:?}");
+            assert_eq!(
+                dealt.players[player].library.len(),
+                DECK_SIZE as usize - opening,
+                "{player:?}"
+            );
             let prompt = mulligan_prompt_for(&dealt, player).expect("an open mulligan");
             assert_eq!(prompt.options.len(), opening, "{player:?}");
         }
