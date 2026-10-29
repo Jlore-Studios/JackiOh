@@ -6932,7 +6932,7 @@
       "queued_at": "2026-10-29T09:41:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:4bb3d9bc-1793267254",
+      "run_id": "40852490075",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
