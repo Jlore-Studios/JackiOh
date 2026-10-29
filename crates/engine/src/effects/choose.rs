@@ -1176,7 +1176,7 @@ impl std::fmt::Debug for DiscoverFromCatalogArgs {
 }
 
 /// §6.3 Discover: choose 1 of 3, drawn without replacement from the stated pool and shown only to
-/// the chooser. The options are definitions, so the resume step decides what to do with the pick —
+/// the chooser, never both cards of a Core-or-snapshot pair (R2204001). The options are definitions, so the resume step decides what to do with the pick —
 /// or, with `offer: "index"`, their numbers (R247).
 ///
 /// `query` may be a function of the context, read when the effect applies rather than when the hook
@@ -1209,7 +1209,22 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             return;
         }
 
-        let shuffled = ctx.rng.shuffle(&pool);
+        // R2204001: one offer never shows both cards of a Core-or-snapshot pair; the shuffle draws as
+        // it always did, and the other of a pair already offered is passed over.
+        let mut shown_pairs: Vec<&'static str> = Vec::new();
+        let shuffled: Vec<_> = ctx
+            .rng
+            .shuffle(&pool)
+            .into_iter()
+            .filter(|def| {
+                let key = crate::catalog::pair_key(def);
+                let fresh = !shown_pairs.contains(&key);
+                if fresh {
+                    shown_pairs.push(key);
+                }
+                fresh
+            })
+            .collect();
         let end = slice_end(shuffled.len(), args.count.unwrap_or(DISCOVER_OPTIONS));
         let by_index = args.offer == Some(DiscoverOffer::Index);
         let mut data = args.data.clone().unwrap_or_default();

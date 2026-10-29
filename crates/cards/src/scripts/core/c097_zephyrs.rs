@@ -378,7 +378,10 @@ mod tests {
     }
 
     /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
-    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446).
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). Re-pinned for the
+    /// Training Grounds release (#2204): the top three pass over a card whose Core-or-snapshot pair a
+    /// better card holds (`subsystems::top_three`, R2204001), as facing three 7/7s Core #43 Big Felinor and its
+    /// snapshot TG #51 both rank at "clear".
     fn offers_rank_at(setup: &Value, priorities: &[&str]) {
         let top = subsystems::top_three(&resolving(setup), P1, &options(None));
         for scored in &top {
@@ -393,6 +396,12 @@ mod tests {
         let mut s = scenario(setup.clone());
         s.play(ZEPHYRS, json!({}));
         assert_eq!(sorted(&offered_ids(&s)), sorted(&top));
+        // R29: three cards, no two of one pair.
+        let pairs: IndexSet<String> = top
+            .iter()
+            .map(|id| jackioh_engine::catalog::pair_key(&crate::card_def(id)).to_string())
+            .collect();
+        assert_eq!(pairs.len(), OFFERED as usize);
     }
 
     mod n97_zephyrs_s10_7_s_dry_run_reads_what_a_card_s_text_does {

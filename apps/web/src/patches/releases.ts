@@ -37,7 +37,8 @@ export const EARLIER_RELEASE: Release = { id: "earlier", name: "Earlier patches"
 
 /**
  * R724000, R1369000: the release lines, oldest first, the n-th opened by the n-th major. A major
- * version that brings a set adds its line here.
+ * version that brings a set adds its line here; a set the owner wraps into a line (R2204000) renames
+ * the line it joins instead, as Training Grounds did Stinkyscape's.
  */
 export const RELEASES: readonly Release[] = [
   {
@@ -93,15 +94,17 @@ export const RELEASES: readonly Release[] = [
   },
   {
     id: "stinkyscape",
-    name: "Stinkyscape",
+    name: "Stinkyscape & Training Grounds",
     summary:
-      "The Stinkyscape set, 176 cards and 52 tokens, with four new tags: Drone Core, Weapon, War Doctrine and Swarm.",
+      "The Stinkyscape set, 176 cards and 52 tokens, with four new tags: Drone Core, Weapon, War Doctrine and Swarm. Then the Training Grounds set, 40 cards, a token and 20 Core cards made again as cards of its own, joined the line as a patch.",
     technical: [
       "Dormant cards wait on the field, out of reach, until they awaken.",
       "The Starship: each Starship Piece that dies fuses into your Dormant Starship, and you launch it for (3).",
       "An economy inside the match: Resources to mine and trade, Credits to spend, and the Marketplace to spend them at, with its own table of ten AI cards.",
       "Anomalies swap your board for a preset one, and Alteran Reach opens a map of the starscape.",
       "Every Stinkyscape card wears the set's mark, a ringed green planet, and every Legendary and Mythic of the set opens its play with a few bars of its own.",
+      "A deck holds a Core card or its Training Grounds copy, never both, and the deck builder says which one it holds.",
+      "Every Training Grounds card wears the set's mark, a straw archery target over crossed practice swords, and its Legendaries and its Mythic open their play with a few bars of their own.",
     ],
   },
 ];

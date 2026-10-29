@@ -348,6 +348,11 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// R423: per effect a Radiant Call to Chaos rolls past its base face's one, the share of the card's
+    /// per-cost hand price (`hand_per_cost` × min(cost, `hand_cost_cap`)) it adds. Its Radiant text is
+    /// then priced at what it does, two more casts of the base face, in place of `radiant_in_hand`'s flat
+    /// price when that is more (#1886: Wildar's Radiant Call to Chaos).
+    pub radiant_chaos_effect: f64,
     /// #1143: when both faces of an own hand card are Units, the share that counts of what the face
     /// it will enter with (its Radiant face when it is Radiant, its buffs and tuning) is worth over its
     /// printed base face, by the stat and keyword weights above and none of the field's layers. On top
@@ -498,6 +503,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    radiant_chaos_effect: 1.0,
     // #1143: an untuned start for the training lanes, as `animated_share` and `marked_share` are.
     radiant_face_share: 0.5,
     plague_counter: 0.5,
@@ -682,6 +688,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // #1886's Radiant Call to Chaos reading came after the gates were fixed: the flat price, as it gave.
+    radiant_chaos_effect: 0.0,
     // The baseline is frozen: it read no hand card's face when the gates were fixed, as it did.
     radiant_face_share: 0.0,
     // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,

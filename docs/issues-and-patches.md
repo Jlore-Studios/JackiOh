@@ -117,7 +117,11 @@ do (#1360, R1365000, R1366000). Nothing guesses it: when a patch ships, `patches
 does to the cards through the classifier and names it:
 
 - **Major, `v0.(Z+1).0`**: a set reaches `SHIPPED_SETS` (R1420). Nothing else makes one: no title,
-  flag or label. v1.0.0 waits until the owner asks for it.
+  flag or label. v1.0.0 waits until the owner asks for it. The one exception is a set the owner
+  **wraps** into the current line (`WRAPPED_SETS` in `crates/tools/src/classify.rs`, R2204000): its
+  arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
+  Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
+  never a builder's.
 - **Patch, `v0.Z.(X+1)`**: 10 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
   every game meets changed.
 - **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
@@ -291,8 +295,9 @@ part that narrows the task shows the gap instead of hiding it.
   R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
 - **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
   (`apps/web/src/patches/releases.ts`), with a summary and its technical changes. The line opens at
-  its major, the n-th major the n-th line (R1369000), so no version is written there. The page shows
-  one bubble per line, newest open.
+  its major, the n-th major the n-th line (R1369000), so no version is written there. A set the owner
+  wraps into the current line (R2204000) adds no line: it renames the line it joins and adds its own
+  summary sentence and technical changes there. The page shows one bubble per line, newest open.
 - **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
   the engine, sound) adds one line to the `technical` of its major version's line, the newest, in its
   own pull request, in the style of the lines there ("Background music and a main menu theme."). A

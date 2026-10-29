@@ -1205,7 +1205,7 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.2 D, on the card the viewer reads", () => {
+  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.3 D, on the card the viewer reads", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
       const holy = FLAVOR_LOOKS.Holy;
