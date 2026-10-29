@@ -88,6 +88,7 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
+use crate::plague::plague_on;
 use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated};
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
@@ -1000,12 +1001,6 @@ fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
         && state.active == card.controller
 }
 
-/// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). A private
-/// copy of `plague::plague_on` (fullsend rule 5).
-fn plague_tokens_on(card: &CardInstance) -> i32 {
-    card.counters.plague.unwrap_or(0).max(0)
-}
-
 /// A public backrow card names its owner and its controller, since R33's readability and #87's board
 /// swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
 /// face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
@@ -1021,7 +1016,7 @@ fn backrow_view(
     let card = card?;
     // B5 E19, R471: Plague Counters are public wherever they sit, a face-down card's included; B5 E21: a
     // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
-    let plague = plague_tokens_on(card);
+    let plague = plague_on(card);
     let under: i32 = match slot_of(state, card) {
         None => 0,
         Some(slot) => beneath_at(state, slot).len() as i32,

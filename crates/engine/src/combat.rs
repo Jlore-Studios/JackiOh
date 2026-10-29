@@ -36,6 +36,7 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
+use crate::zones::live_or;
 
 /// What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
 /// damage pipeline's own target type, so a declared attack hands its target straight to `deal_damage`.
@@ -80,17 +81,11 @@ fn live_card(state: &GameState, card: &CardInstance) -> Option<CardInstance> {
     find_instance(state, &card.id).cloned()
 }
 
-/// The card as it stands now, or the one given when it is nowhere: for reads that TS made off the
-/// object it was handed whatever became of it.
-fn live_or_given(state: &GameState, card: &CardInstance) -> CardInstance {
-    live_card(state, card).unwrap_or_else(|| card.clone())
-}
-
 /// The target with its unit read as it stands now (the hero as it is).
 fn live_target_or_given(state: &GameState, target: &AttackTarget) -> AttackTarget {
     match target {
         DamageTarget::Unit { instance } => DamageTarget::Unit {
-            instance: live_or_given(state, instance),
+            instance: live_or(state, instance),
         },
         DamageTarget::Hero { player } => DamageTarget::Hero { player: *player },
     }
@@ -690,7 +685,7 @@ fn strike(
     cleave_amount: i32,
     poisonous: bool,
 ) {
-    let source = live_or_given(sink.state, attacker);
+    let source = live_or(sink.state, attacker);
     deal_damage(
         sink,
         DamageArgs {
@@ -700,14 +695,14 @@ fn strike(
             flags: attack_flags(poisonous),
         },
     );
-    let source = live_or_given(sink.state, attacker);
+    let source = live_or(sink.state, attacker);
     cleave(sink, &source, target, cleave_amount, poisonous);
 }
 
 /// The defender's hit back on the attacker.
 fn strike_back(sink: &mut EngineSink<'_>, defender: &CardInstance, attacker: &CardInstance, attack: i32) {
-    let source = live_or_given(sink.state, defender);
-    let target = live_or_given(sink.state, attacker);
+    let source = live_or(sink.state, defender);
+    let target = live_or(sink.state, attacker);
     deal_damage(
         sink,
         DamageArgs {
@@ -1211,7 +1206,7 @@ pub fn declare_attack(
     attacker: &CardInstance,
     chosen: &AttackTarget,
 ) -> CombatResult {
-    let attacker = live_or_given(sink.state, attacker);
+    let attacker = live_or(sink.state, attacker);
     let chosen = live_target_or_given(sink.state, chosen);
     why_cannot_attack(sink.state, &attacker, &chosen)?;
 
@@ -1272,7 +1267,7 @@ pub(crate) fn declare_instead(
     instead_of: Option<&str>,
     bounce: bool,
 ) -> CombatResult {
-    let attacker = live_or_given(sink.state, attacker);
+    let attacker = live_or(sink.state, attacker);
     let target = live_target_or_given(sink.state, target);
     if instead_of.is_some()
         && crate::restrictions::attack_restriction(sink.state, &attacker, &target).is_err()
@@ -2006,11 +2001,11 @@ fn close_combat(
     forced: bool,
     copies_for: Option<PlayerId>,
 ) {
-    let snapshot = live_or_given(sink.state, attacker);
+    let snapshot = live_or(sink.state, attacker);
     // MD-C26: the defender as it fought, read before the check that closes its combat — a pure
     // read, with no rng, so a combat with no hook on either side replays exactly as before.
     let defender_snapshot = match target {
-        DamageTarget::Unit { instance } => Some(live_or_given(sink.state, instance)),
+        DamageTarget::Unit { instance } => Some(live_or(sink.state, instance)),
         DamageTarget::Hero { .. } => None,
     };
     let since = crate::stays::exit_mark(sink.state);

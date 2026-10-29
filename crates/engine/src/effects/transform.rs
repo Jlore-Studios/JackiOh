@@ -31,7 +31,7 @@ use crate::zones::{
 };
 
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope};
-use super::summon::clone_of;
+use super::summon::{clone_of, row_of};
 use super::targets::{TargetSpec, instance_by_id_or_spec, instance_on_its_stay, resolve_target};
 
 /// Which card to rewrite: the pick the play or a prompt carried (R81), or an instance id a trigger
@@ -44,15 +44,6 @@ pub struct TransformTarget {
     pub target: Option<TargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
-}
-
-/// §5.1: the row a type lives in; a Spell is never a permanent, so it can never replace one.
-fn row_for(type_: CardType) -> Option<Row> {
-    match type_ {
-        CardType::Unit => Some(Row::Units),
-        CardType::Spell => None,
-        _ => Some(Row::Backrow),
-    }
 }
 
 /// §6.3 Replace: the same zone and position, with the old card's owner and controller. The new card
@@ -76,7 +67,7 @@ fn replace_on_field(
     } else {
         at.row
     };
-    if row_for(def.type_) != Some(row_here) {
+    if row_of(def.type_) != Some(row_here) {
         return None;
     }
 
@@ -392,9 +383,9 @@ pub fn vanilla(args: TransformTarget) -> Effect {
 fn can_replace(state: &GameState, old: &CardInstance, def: &CardDef) -> bool {
     match old.zone {
         Zone::Field { .. } if crate::zones::stands_in_backrow(state, old) => {
-            row_for(def.type_) == Some(Row::Units)
+            row_of(def.type_) == Some(Row::Units)
         }
-        Zone::Field { row, .. } => row_for(def.type_) == Some(row),
+        Zone::Field { row, .. } => row_of(def.type_) == Some(row),
         Zone::Graveyard { .. } | Zone::Exile { .. } => !(def.token && def.type_ == CardType::Unit),
         Zone::Hand { .. } | Zone::Library { .. } => true,
         _ => false,

@@ -56,7 +56,7 @@ fn lane_index(lane: i32) -> Option<usize> {
 
 /// The card under `card`'s id as it stands in the state now, or `card` itself when it is in no zone
 /// (TS held the live object; a caller holds a copy, which may be older than the state).
-fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
+pub(crate) fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone())

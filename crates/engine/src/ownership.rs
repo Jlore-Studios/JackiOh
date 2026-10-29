@@ -30,8 +30,9 @@ use crate::draw::DrawOutcome;
 use crate::own_library::hide_from_owner;
 use crate::preview::is_face_down;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
+use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Zone, ZoneName};
+use crate::zones::live_or;
 
 /// `Extract<GameEvent, { type: "stolen" }>["zone"]`: every zone name but "gone".
 type StolenFrom = ZoneName;
@@ -41,21 +42,13 @@ fn stolen_from(instance: &CardInstance) -> Option<StolenFrom> {
     if zone == ZoneName::Gone { None } else { Some(zone) }
 }
 
-/// The card as it stands in the state now, or as the caller holds it when the state has no card of
-/// its id (TS read the live object either way).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone())
-}
-
 /// E2, E16: `card` becomes `thief`'s — owner and controller — and `stolen` says so, naming the pile it
 /// came from and both players. It does not move the card: the caller puts it in the hand, or draws it.
 /// R311's record of what the old owner was shown of the card was theirs, so it goes; R466: a card taken
 /// out of the other player's library leaves the rest of that library unknown to them. Returns false,
 /// changing nothing, for a card that has ceased to exist.
 pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: PlayerId) -> bool {
-    let card = live(sink.state, card);
+    let card = live_or(sink.state, card);
     let Some(zone) = stolen_from(&card) else {
         return false;
     };
@@ -125,7 +118,7 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
     if !change_owner(sink, card, thief) {
         return None;
     }
-    let mut card = live(sink.state, card);
+    let mut card = live_or(sink.state, card);
     if card.zone.z() == ZoneName::Field && crate::zones::is_unit_token(sink.state, &card) {
         crate::zones::move_to_zone(
             sink.state,
