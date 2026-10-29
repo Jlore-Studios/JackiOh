@@ -248,6 +248,13 @@ the body is kept as an HMAC under `<CODE_PEPPER>:body`. CORS allows the header (
 which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` mints a key per press and
 sends it again on that press's retries.
 
+**One spend at a time** (SPEC §14.11, R2378000). The six economy spends above (not the invite code's
+redemption) claim the account's turn before they read the store (`economy/spend_slots.rs`, `App::spends`)
+and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at once; the next ones wait their turn in
+the process, in the order sent, holding no database connection, so a burst never holds the pool's
+connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
+`rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
+
 **Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
 `CUSTOM_CARDS_PER_ACCOUNT` (50) custom cards in `public.custom_cards`, whose row-level security lets
 only the owner read its rows; no client role writes one, and the server writes through
