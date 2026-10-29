@@ -184,8 +184,8 @@ mod r1849001_evolve {
         assert!(!types_of(s.last_events()).contains(&GameEventType::KeywordGranted));
         assert!(!has_flying(&s, &grunt));
 
-        // A wasp that died attacking still leaves its copy, made from the snapshot it fought with
-        // (R89), but it is off the field, so nothing evolves.
+        // R2285001: a wasp that died attacking runs no `afterAttack`, so it leaves no copy and nothing
+        // evolves.
         let mut s = board(
             "r1849001-dead",
             json!({ "field": [WASP] }),
@@ -195,9 +195,7 @@ mod r1849001_evolve {
         let grunt = id_at(&s, P2, 1);
         s.attack(wasp.as_str(), grunt.as_str());
         s.expect_in_zone(wasp.as_str(), "graveyard");
-        let copy = s.unit(P1, 1).expect("the copy takes the zone the wasp left");
-        assert_eq!(copy.def_id, WASP);
-        assert!(!has_flying(&s, &copy.id));
+        assert!(s.unit(P1, 1).is_none(), "no copy takes the zone the wasp left");
         assert!(!types_of(s.last_events()).contains(&GameEventType::KeywordGranted));
     }
 }
