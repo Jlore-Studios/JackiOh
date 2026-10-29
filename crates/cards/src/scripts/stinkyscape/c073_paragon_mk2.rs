@@ -28,7 +28,7 @@ mod tests {
     use crate::filler;
 
     const PARAGON: &str = "stinkyscape-073";
-    const STARTOS: &str = "stinkyscape-068"; // 3/3 Flying Starship Piece.
+    const STRATOS: &str = "stinkyscape-068"; // 3/3 Flying Starship Piece.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
@@ -74,17 +74,17 @@ mod tests {
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [PARAGON], "library": filler(4) },
-            "p2": { "hand": [ANCHOR], "field": [STARTOS, MENACE], "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "field": [STRATOS, MENACE], "library": filler(4) },
         }));
         // A Unit without Flying or Ranged cannot attack it (R783002); a Flying one can, and its
         // 3-attack hit takes the Divine Shield instead: the Paragon stands undamaged, while the
-        // Startos dies to the 7-attack strike back.
+        // Stratos dies to the 7-attack strike back.
         s.expect_refused(|s| s.attack(MENACE, PARAGON));
-        s.attack(STARTOS, PARAGON);
+        s.attack(STRATOS, PARAGON);
         s.expect_in_zone(PARAGON, "field");
         assert_eq!(s.card(PARAGON).damage, 0);
         assert!(!live_kinds(&s, PARAGON).contains(&"Divine Shield".to_string()));
-        s.expect_in_zone(STARTOS, "graveyard");
+        s.expect_in_zone(STRATOS, "graveyard");
 
         // With the shield gone, Ranged still takes no strike back from the 9/9 (R783000).
         s.end_turn();

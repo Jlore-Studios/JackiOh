@@ -54,13 +54,13 @@ mod tests {
     use crate::{built_starship, launch_starship};
     use jackioh_engine::testkit::*;
 
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
 
-    /// p1's Starship holding the Capacitor (lane 1) and `others` Startos, launched; its stats before
+    /// p1's Starship holding the Capacitor (lane 1) and `others` Stratos, launched; its stats before
     /// and after the launch.
     fn launched(seed: &str, radiant: bool, others: i32) -> ((i32, i32), (i32, i32)) {
         let mut pieces = vec![json!({ "def": ID, "lane": 1, "radiant": radiant })];
-        pieces.extend((2..2 + others).map(|lane| json!({ "def": STARTOS, "lane": lane })));
+        pieces.extend((2..2 + others).map(|lane| json!({ "def": STRATOS, "lane": lane })));
         let (mut s, ship) = built_starship(seed, json!(pieces), json!({}), json!({}));
         let before = s.stats(ship.as_str());
         launch_starship(&mut s, &ship);

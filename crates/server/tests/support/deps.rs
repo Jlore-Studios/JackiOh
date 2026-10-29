@@ -11,8 +11,8 @@
 //!   costs no real time, as `createVirtualTimers` arranged.
 //! - **Auth.** TS's `createFakeAuth` is the fixture provider itself (`auth::E2eAuth`): the three
 //!   fixture tokens verify from the start, `add_user` registers more (token `token-<userId>`, as
-//!   TS's), `set_email_verified` flips one, and the test app's provider deletes users (TS's fake had
-//!   `deleteUser`; `E2eDeletion` chooses otherwise).
+//!   TS's), and the test app's provider deletes users (TS's fake had `deleteUser`; `E2eDeletion`
+//!   chooses otherwise).
 //! - **The catalog.** The real one (`crates/cards/catalog.json`), at the compiled-in version: the
 //!   server runs the real validator (`jackioh_engine::validator`), so TS's synthetic 24-card
 //!   catalog and its permissive and strict validators have no port to plug into. A test that wants
