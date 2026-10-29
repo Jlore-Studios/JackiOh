@@ -287,6 +287,32 @@
   font-size: var(--type-2xs-em);
 }
 
+/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label. */
+button.modifier-badge {
+  text-align: left;
+}
+
+button.modifier-badge[data-open="true"] {
+  border-color: var(--mana);
+  color: var(--text);
+}
+
+/* The whole label, laid on the page beside its badge (ModifierBadge.tsx places it, inside a 16px
+   gutter), so a long one is read on touch without pushing the hero row apart. */
+.modifier-full {
+  position: fixed;
+  z-index: var(--z-drag);
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--mana) 55%, var(--line-bright));
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-size: var(--type-sm);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 /* ------------------------------------------------------------------------- mana and piles --- */
 
 .mana {

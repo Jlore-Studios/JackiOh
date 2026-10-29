@@ -2,7 +2,7 @@
 //!
 //! B14: `candidateActions` is `legalActions` minus the four action types the AI never searches
 //! (R84's concede, offerDraw and answerDraw, and the mulligan), with plays that differ only in their
-//! lane collapsed to the lowest lane of each placement, at most `AI_SEARCH.zone_variants` of them
+//! lane collapsed to the lowest lane of each placement (its midlane lane when it has one, R2203001), at most `AI_SEARCH.zone_variants` of them
 //! (#1014; the search's root keeps every placement, #1635), and endTurn last whenever it is legal.
 //!
 //! B15: `decide` is a pure function of (state, seat, rng seed, budget): the same inputs give a
@@ -228,7 +228,7 @@ mod candidate_actions_b14 {
             );
         }
 
-        // Plays: per otherwise-identical play, the lowest lane of each placement, in legal order, up to
+        // Plays: per otherwise-identical play, the lowest lane of each placement (its midlane lane when it has one, R2203001), in legal order, up to
         // AI_SEARCH.zone_variants of them, and no other lane (#1014).
         let cap = AI_SEARCH.zone_variants as usize;
         let mut groups: IndexMap<String, Vec<ActionBody>> = IndexMap::new();
@@ -317,14 +317,14 @@ mod candidate_actions_b14 {
         assert_eq!(two_lanes, vec![Some(4), Some(5)]);
     }
 
-    /// B14: a play keeps the lowest lane of each placement: every one at the search's root (#1635), none
+    /// B14: a play keeps one lane of each placement (the lowest, or its midlane lane, R2203001): every one at the search's root (#1635), none
     /// past AI_SEARCH.zone_variants deeper (#1014)
     #[test]
-    fn b14_a_play_keeps_the_lowest_lane_of_each_placement_every_one_at_the_root_none_past_the_cap_deeper() {
+    fn b14_a_play_keeps_one_lane_of_each_placement_every_one_at_the_root_none_past_the_cap_deeper() {
         jackioh_cards::register_all();
         let cap = AI_SEARCH.zone_variants as usize;
         // An empty row: lane 1 has the edge on its left, lane 5 on its right, and lanes 2 to 4 are one
-        // placement.
+        // placement, played in the midlane (R2203001).
         let empty = scenario(json!({
             "seed": "search-empty-row",
             "p1": { "hand": ["core-008"] },
@@ -332,10 +332,10 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let mut expected: Vec<i32> = [1, 2, 5].into_iter().take(cap).collect();
+        let mut expected: Vec<i32> = [1, 3, 5].into_iter().take(cap).collect();
         expected.sort();
         assert_eq!(offered_lanes(&empty, "core-008"), expected);
-        assert_eq!(root_offered_lanes(&empty, "core-008"), vec![1, 2, 5]);
+        assert_eq!(root_offered_lanes(&empty, "core-008"), vec![1, 3, 5]);
 
         // A unit opposite every lane: each lane is its own placement, so the root keeps all five and a
         // deeper level the lowest ones up to the cap.
@@ -970,12 +970,12 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: C #71 Lane Eater with the enemy's 9/9 Taunt opposite lane 4 and nothing else on the
-    /// board. Lanes 1, 2, 4 and 5 are its placements (2 and 3 are one), so the capped candidates stop
-    /// short of lane 4; the search's root offers it, and `decide` plays it there.
+    /// board. Lanes 1, 3, 4 and 5 are its placements (2 and 3 are one, played in the midlane, R2203001),
+    /// so the capped candidates stop short of lane 4; the search's root offers it, and `decide` plays it there.
     #[test]
     fn lane_eater_is_tried_opposite_a_taunt_past_the_first_two_placements_and_decide_plays_it_there() {
         let state = lane_eater_board();
-        let placements = vec![1, 2, 4, 5];
+        let placements = vec![1, 3, 4, 5];
         let cap = AI_SEARCH.zone_variants as usize;
         assert_eq!(
             offered_lanes(&state, "classic-071"),
@@ -1110,7 +1110,8 @@ mod lanes_that_play_differently {
 
     /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
     /// At 3 mana with Midrange Menace (core-019, 3) and a vanilla (1) in hand and a beam one line wide,
-    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 2 is a line,
+    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 3 (lanes 2 to 4
+    /// are one placement, played in the midlane, R2203001) is a line,
     /// below lane 1's, and no line plays the vanilla at all. The same one depth deep, where lane 1's
     /// line is still open when the loop ends and is closed after it.
     #[test]
@@ -1145,7 +1146,7 @@ mod lanes_that_play_differently {
                 .flat_map(|line| lanes_of(&state, "core-019", line.actions.get(..1).unwrap_or_default()))
                 .collect();
             assert_eq!(menace_openings.first(), Some(&1), "{keys}");
-            assert!(menace_openings.contains(&2), "{keys}");
+            assert!(menace_openings.contains(&3), "{keys}");
             assert!(
                 lines
                     .iter()
