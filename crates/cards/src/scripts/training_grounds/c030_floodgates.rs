@@ -1,5 +1,5 @@
-//! TG #30 Floodgates (SPEC §8.11 row 30; R2197003): (3) Unit, Epic, 0/12 → 0/24, a card of the held
-//! Training Grounds set (R1420, R2194000).
+//! TG #30 Floodgates (SPEC §8.11 row 30; R2197003, R2197005): (3) Unit, Epic, 0/12 → 0/24, a card of the
+//! held Training Grounds set (R1420, R2194000).
 //!   Base:    "Armor 3 / Whenever a Unit is summoned, this gains +{armorGain} Armor. / Death: Destroy all your
 //!            Units." — armorGain 1
 //!   Radiant: the same with Armor 6 — armorGain 2
@@ -9,6 +9,11 @@
 //!   Unit. Each grants Armor {armorGain} (`grant_keyword`; Armor stacks), kept until it leaves the field
 //!   (R78). Death: every Unit its controller has as it died is destroyed (`destroy_all`, R89), an
 //!   Indestructible one staying, the opponent's untouched. Tunes: armorGain 1 ↑.
+//! The end (REVIEW A3.6, R2197005): the Death never takes the body it dies on, so a fused self-resummon
+//!   (S #112 Job Application's, the same card) stays; and run on a body that is not Floodgates itself (a
+//!   fusion, a granted text) that arrived this turn it destroys nothing, so two such bodies on one side
+//!   cannot destroy each other's return forever. A printed Floodgates is never such a body: it plays
+//!   as before.
 
 use jackioh_engine::prelude::*;
 
@@ -69,7 +74,19 @@ fn floodgates() -> Script {
     Script {
         triggers: vec![gain],
         // R89: "your Units" are its controller's as it died.
-        death: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "self" })))])),
+        death: Some(hook(|ctx| {
+            let Some(this) = ctx.self_.as_ref() else {
+                return vec![];
+            };
+            // R2197005: on a body that is not Floodgates itself (a fusion, a granted text) and arrived
+            // this turn, the Death destroys nothing, so a body that resummons itself ends.
+            if this.def_id != ID && this.summoned_turn == Some(ctx.state.turn) {
+                return vec![];
+            }
+            // R2197005: the body it dies on is not among them, so its own resummon (S #112 Job
+            // Application's, the same card) stays.
+            vec![destroy_all(json_as(json!({ "side": "self", "excludeSelf": true })))]
+        })),
         ..Script::default()
     }
 }
@@ -86,7 +103,8 @@ pub fn script() -> CardScripts {
 // a Unit you play: +1 Armor (Armor 4); an enemy's played Unit: +1; a token summon, a Recruit and a copy:
 // +1 each; a Field Spell or Trap placed: nothing; its own arrival: nothing; destroyed: every other Unit you
 // control is destroyed, an Indestructible one staying, the enemy's untouched; bounced or exiled: no Death;
-// the gain reads through `param()`. radiant 0/24, Armor 6, +2 per arrival, the same Death". The copy is
+// fused with S #112 Job Application, its body resummons and stays, and two such bodies on one side end
+// (R2197005); the gain reads through `param()`. radiant 0/24, Armor 6, +2 per arrival, the same Death". The copy is
 // Core #12 Duplicating Felinors' (TG #23 being another part's, #2196): played, it and its copy give +2.
 #[cfg(test)]
 mod tests {
@@ -244,6 +262,79 @@ mod tests {
             assert_eq!(crate::upgrade_number(&mut s, &me, "armorGain"), 2);
             s.play(VANILLA, json!({ "zone": 1 }));
             assert_eq!(armor(&s), 5);
+        }
+    }
+
+    /// R2197005: Floodgates' Death on a body that resummons itself (S #112 Job Application's "Death:
+    /// Resummon this at Stage 1", fused in, as the AI sweep's `sweep:hard:traininggrounds-014:6` found).
+    mod r2197005_a_fused_self_resummon_ends {
+        use super::*;
+
+        const JOB_APPLICATION: &str = "stinkyscape-112";
+
+        /// Fuses Job Application into the Unit `id` on the field, as `fuseCards` does (R77).
+        fn fuse_job_application(s: &mut Scenario, id: &str, controller: PlayerId) -> String {
+            fuse_into(s, id, &[JOB_APPLICATION], controller)
+        }
+
+        /// Fuses `defs`, in that order, into the Unit `id` on the field (R77): their scripts run after
+        /// the Unit's own, in this order.
+        fn fuse_into(s: &mut Scenario, id: &str, defs: &[&str], controller: PlayerId) -> String {
+            let effect = jackioh_engine::effects::fuse_cards(json_as(json!({
+                "instanceIds": [id],
+                "defIds": defs,
+                "targetInstanceId": id,
+            })));
+            crate::run_as(s, effect, controller);
+            let fused = s.card(id).clone();
+            assert!(fused.def_id.starts_with("t-"), "fused into a new definition: {}", fused.def_id);
+            fused.id
+        }
+
+        fn deaths_of(s: &Scenario, id: &str) -> usize {
+            s.last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == id))
+                .count()
+        }
+
+        #[test]
+        fn r2197005_a_fused_body_resummons_once_and_stays() {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 1 }]), json!([HIT_JOB, FILLER]), json!([]));
+            let id = gates(&s);
+            let me = fuse_job_application(&mut s, &id, P1);
+            let mine = s.unit_at(P1, 1).id;
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": me }] }));
+            assert_eq!(deaths_of(&s, &me), 1, "it died once");
+            s.expect_in_zone(me.as_str(), "field");
+            s.expect_in_zone(mine.as_str(), "graveyard");
+        }
+
+        /// The sweep's order: Job Application's resummon before Floodgates' sweep, on a third Unit.
+        #[test]
+        fn r2197005_a_resummon_before_the_sweep_ends() {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 1 }]), json!([HIT_JOB, FILLER]), json!([]));
+            let host = s.unit_at(P1, 1).id;
+            let me = fuse_into(&mut s, &host, &[JOB_APPLICATION, super::ID], P1);
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": me }] }));
+            assert!(deaths_of(&s, &me) <= 2, "it died at most twice");
+            s.expect_in_zone(me.as_str(), "field");
+        }
+
+        #[test]
+        fn r2197005_two_fused_bodies_on_one_side_end() {
+            let mut s = board(
+                false,
+                json!([{ "def": super::ID, "lane": 1 }]),
+                json!([HIT_JOB, FILLER]),
+                json!([]),
+            );
+            let (a, b) = (gates(&s), s.unit_at(P1, 1).id);
+            let first = fuse_job_application(&mut s, &a, P1);
+            let second = fuse_job_application(&mut s, &b, P1);
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": first }] }));
+            assert!(deaths_of(&s, &first) <= 2 && deaths_of(&s, &second) <= 2, "each dies at most twice");
+            assert!(s.state().result.is_none());
         }
     }
 
