@@ -8386,6 +8386,7 @@
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
       "provider": "claude-8",
+      "question": "Way 3 (an AI that looks ahead and casts Wildar's Call to Chaos within its search) was built and measured, and a local sweep still bans Wildar at Hard: 0 plays in 40 affordable turns, exactly as main does. So no AI change can lift this ban honestly, and the change was withdrawn. The owner (@jgoetzmann) must choose on #2367: (1) leave the ban and close the issue as not planned, since one ban is well inside R1885000's ceiling; or (2) a design change to Wildar (S #149), e.g. a lower cost or the opponent's copy at its printed cost, followed by `gh workflow run sweep.yml -f ids=\"stinkyscape-149\"`. Comet Crash (S #155), added in a later comment, needs the same choice; nothing here touches it.",
       "queued_at": "2026-10-29T13:32:08Z",
       "requested_by": "jgoetzmann",
       "run_id": "40944406714",
