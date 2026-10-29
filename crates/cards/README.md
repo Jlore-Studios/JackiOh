@@ -195,6 +195,9 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
+- `snapshotOf`: on a Training Grounds snapshot (#41–#60) only, the Core card it copies. The two
+  share a name (R2195001) and a deck holds one of them (R2195000); the snapshot's script is a copy of
+  the Core card's code, not a re-export (R2195003).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.

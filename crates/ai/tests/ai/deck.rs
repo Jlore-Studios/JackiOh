@@ -1705,3 +1705,49 @@ mod r976000_shaping_is_an_option {
         );
     }
 }
+
+/// R2195000: a random deck holds a Core card or its Training Grounds snapshot, never both, and an
+/// included one keeps the other out. The set is held, so the deals are made under its preview, leaning
+/// on it so the snapshots are dealt often.
+mod r2195000_a_random_deck_holds_a_core_card_or_its_snapshot {
+    use super::*;
+    use jackioh_engine::testkit::{SetName, preview_sets};
+
+    /// The Core cards `deck` holds beside their snapshots.
+    fn both_in(deck: &[String]) -> Vec<String> {
+        deck.iter()
+            .filter_map(|id| def_of(None, id).snapshot_of.clone())
+            .filter(|core| deck.contains(core))
+            .collect()
+    }
+
+    #[test]
+    fn r2195000_no_random_deck_holds_both_and_an_included_one_keeps_the_other_out() {
+        register_cards();
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        let leaning = json!({ "banned": [], "gatedSets": [], "leanSet": "Training Grounds" });
+        let mut snapshots = 0;
+        for n in 0..SEEDS {
+            let seed = format!("r2195000:{n}");
+            let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(leaning.clone()));
+            snapshots += deck
+                .iter()
+                .filter(|id| def_of(None, id).snapshot_of.is_some())
+                .count();
+            assert_eq!(both_in(&deck), Vec::<String>::new(), "{seed}: {deck:?}");
+
+            let mut including = leaning.clone();
+            including["include"] = json!(["core-002"]);
+            let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(including));
+            assert!(deck.contains(&"core-002".to_string()), "{seed}");
+            assert!(
+                !deck.contains(&"traininggrounds-041".to_string()),
+                "{seed}: {deck:?}"
+            );
+        }
+        assert!(
+            snapshots > 0,
+            "no deck held a snapshot, so the deals measured nothing"
+        );
+    }
+}

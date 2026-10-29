@@ -23,6 +23,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "Duplicating Felinors summons a copy of this unit (rule 4: copies are not generation)",
     ),
     (
+        "traininggrounds-044",
+        "Duplicating Felinors (TG #44, the snapshot of Core #12, R2195003) summons a copy of this unit (rule 4)",
+    ),
+    (
         "core-087",
         "Pocket Chaos names itself: \"add a Pocket Chaos with a base cost (1) less …\" (rule 3)",
     ),
