@@ -8760,7 +8760,7 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
-      "run_id": "pending:428a1744-1793257667",
+      "run_id": "40833510475",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T07:08:19Z",
       "stop_requested": false,
