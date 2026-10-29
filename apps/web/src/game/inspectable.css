@@ -5,7 +5,7 @@
 .pile--browsable {
   position: relative;
   cursor: var(--cursor-glove-point, pointer);
-  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+  transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
 
 .pile--browsable:hover {
