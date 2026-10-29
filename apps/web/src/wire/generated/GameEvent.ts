@@ -45,7 +45,13 @@ arrivedDuring?: Array<string>,
  * response the loop hands this event later judges the played card's stay from the moment the
  * event happened. Engine bookkeeping: a view never forwards it.
  */
-exitsFrom?: number, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
+exitsFrom?: number, 
+/**
+ * R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
+ * nothing that counts plays counted it, and no trigger answers this event. Public, as the
+ * cast is. Only ever `Some(true)`.
+ */
+onDraw?: true, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
 /**
  * R119: the permanents that arrived on the field while this play resolved, whatever put them
  * there — a Recruit by its Cry (#98), #95's backrow, a Reborn body its own Cry brought back, a
@@ -67,7 +73,13 @@ exitsFrom?: number,
  * enemy, and the enemy it is cast at (Meditative+ #17 Dogpile). Engine bookkeeping, and it names
  * a hidden card: a view never forwards it.
  */
-answer?: SpellAnswer, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
+answer?: SpellAnswer, 
+/**
+ * R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
+ * text answers a play ("after you play", "when your opponent plays") passes this event by.
+ * Public, as the cast is. Only ever `Some(true)`.
+ */
+onDraw?: true, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
 /**
  * `formerId` (R227): as on `cardPlayed`, when this summon put an existing card face-down.
  */
