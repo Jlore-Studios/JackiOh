@@ -8358,13 +8358,19 @@
     "what": "build #2325 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T02:25:17Z",
+    "at": "2026-10-29T02:38:21Z",
     "notes": [
-      "delivered revise #2310 on muse (run 40805553656): built",
-      "delivered revise #2301 on muse (run 40792002764): blocked",
-      "started revise #2310 on muse (run 40806464119)",
+      "CI on #2301: #2301: queued a CI fix",
+      "#2325 needs a plan",
+      "delivered plan #2110 on claude-8 (run 40804605070): planned",
+      "delivered plan #2318 on claude-4 (run 40803741959): interrupted",
+      "started plan #2127 on claude-8 (run 40807750119)",
+      "started plan #2318 on claude-5 (run 40807803239)",
+      "started plan #2126 on claude-3 (run 40807853748)",
+      "started build #2110 on muse (run 40807908696)",
+      "started build #2325 on muse (run 40807964143)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9070,7 +9076,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T02:25:17Z",
+  "loop_tick": "2026-10-29T02:38:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
