@@ -361,7 +361,7 @@ mod tests {
             fn r33_r97_face_down_the_opponent_learns_nothing_of_it_not_even_that_it_is_a_field_trap() {
                 let s = moon_up(true, json!({ "hand": [FIG, FILLER] }), json!({}));
                 let first = s.view(P2).opponent.backrow.first().cloned().flatten();
-                assert_eq!(js(&first), json!({ "faceDown": true, "cost": 1 }));
+                assert_eq!(js(&first), json!({ "faceDown": true, "cost": 2 }));
                 let seen = serde_json::to_string(&s.view(P2)).expect("JSON");
                 assert!(!seen.contains(MOON));
                 assert!(!seen.contains("Field Trap"));

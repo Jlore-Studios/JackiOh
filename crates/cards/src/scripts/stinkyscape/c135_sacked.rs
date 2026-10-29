@@ -33,7 +33,9 @@ fn answers(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     else {
         return false;
     };
+    // R2179002: a card cast on draw is no play.
     *player != ctx.controller
+        && !cast_on_draw_event(event)
         && def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit
         && (*permanent || !left_field_since_resolved(&*ctx.state, event))
 }

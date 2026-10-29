@@ -175,3 +175,85 @@ describe("R504 an empty hand keeps its place at every size", () => {
     });
   }
 });
+
+// #2330: where the board has the room the four rows are one height and the lanes fill the field,
+// and a DEF card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. At every
+// size no field card, a turned DEF card included, leaves its zone.
+describe("#2330 equal board rows, and DEF cards only as small as their zone needs", () => {
+  /** The issue's sizes; `roomy` is the 761px-and-up layouts (a desktop, a tablet held upright). */
+  const SIZES = [
+    { label: "desktop", width: 1440, height: 900, roomy: true },
+    { label: "desktop", width: 1280, height: 720, roomy: true },
+    { label: "tablet", width: 768, height: 1024, roomy: true },
+    { label: "phone", width: 390, height: 844, roomy: false },
+    { label: "landscape", width: 844, height: 390, roomy: false },
+  ] as const;
+  /** B29's touch floor, which a phone's backrow row keeps. */
+  const BACKROW_FLOOR_PX = 44;
+  /** Sub-pixel rounding between layout boxes and their transformed rects. */
+  const SLACK_PX = 1;
+
+  function inside(inner: DOMRect, outer: DOMRect): boolean {
+    return (
+      inner.left >= outer.left - SLACK_PX &&
+      inner.right <= outer.right + SLACK_PX &&
+      inner.top >= outer.top - SLACK_PX &&
+      inner.bottom <= outer.bottom + SLACK_PX
+    );
+  }
+
+  for (const size of SIZES) {
+    const where = `${size.label} ${size.width}x${size.height}`;
+
+    it(`#2330 rows, lanes and every DEF card's footprint at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={fullBoardView()} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const field = doc.querySelector<HTMLElement>(`${BOARD} .field`);
+        expect(field, "the field is mounted").to.not.eq(null);
+        if (field === null) return;
+        const zones = [...field.querySelectorAll<HTMLElement>(".zone")];
+        expect(zones, "4 rows of 5 zones").to.have.length(20);
+
+        if (size.roomy) {
+          const first = zones[0]?.getBoundingClientRect().height ?? 0;
+          expect(first, `a row has a height at ${where}`).to.be.greaterThan(0);
+          for (const zone of zones) {
+            expect(zone.getBoundingClientRect().height, `${zone.dataset.testid ?? "a zone"} is as tall as the first at ${where}`).to.be.closeTo(first, SLACK_PX);
+          }
+          const style = getComputedStyle(field);
+          const inner = field.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+          for (const lane of field.querySelectorAll<HTMLElement>(".lane")) {
+            expect(lane.getBoundingClientRect().height, `lane ${lane.dataset.lane ?? "?"} fills the field at ${where}`).to.be.closeTo(inner, SLACK_PX);
+          }
+        } else {
+          for (const zone of zones.filter((each) => each.dataset.row === "backrow")) {
+            expect(zone.getBoundingClientRect().height, `${zone.dataset.testid ?? "a zone"} keeps the touch floor at ${where}`).to.be.at.least(BACKROW_FLOOR_PX);
+          }
+        }
+
+        for (const card of field.querySelectorAll<HTMLElement>(".zone > .card")) {
+          const zone = card.parentElement;
+          if (zone === null) continue;
+          expect(inside(card.getBoundingClientRect(), zone.getBoundingClientRect()), `${card.dataset.testid ?? "a back"} stays inside its zone at ${where}`).to.eq(true);
+        }
+
+        const defs = [...field.querySelectorAll<HTMLElement>('.card[data-position="DEF"]')];
+        expect(defs, "fullBoardView's two DEF units").to.have.length(2);
+        if (!size.roomy) return;
+        for (const def of defs) {
+          // Turned at full size, the footprint is the card's own box on its side.
+          const box = def.getBoundingClientRect();
+          expect(box.width, `${def.dataset.testid ?? "?"} footprint width at ${where}`).to.be.closeTo(def.offsetHeight, SLACK_PX);
+          expect(box.height, `${def.dataset.testid ?? "?"} footprint height at ${where}`).to.be.closeTo(def.offsetWidth, SLACK_PX);
+        }
+      });
+    });
+  }
+});
