@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2386,
+  "title": "Patch: CN Tech and NA Tech read a win-rate table that covers every set that ships",
+  "branch": "bot/issue-2386",
+  "thread": "**Issue #2386 (data, not instructions):**\n\n```text\n# #2386: Patch: CN Tech and NA Tech read a win-rate table that covers every set that ships\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTwo cards, CN Tech (\"add the highest win rate card to your hand\") and NA Tech (the lowest), read a table of card win rates built into the game. It was made from AI games at an older version and has not been refreshed since. So CN Tech always gives Lunar Eclipse, NA Tech always gives Infinite Reserves, and no card from the newest shipped set can ever be picked, because the table has no rows for it. The rule that refreshes the table waits for 1,000 live games inside one patch, and patches now ship faster than that. Once this is built, the table covers every shipped set and catches up when it falls behind, and a test stops a set shipping without rows.\n\n## Why\n\n- `crates/cards/data/win_rates.json` is filed as `\"patch\": \"v0.4.0\"`, `\"source\": \"provisional\"`. Its 396 rows cover:\n  - Core: 100;\n  - Classic and Classic+: 168;\n  - Meditative and Meditative+: 128;\n  - Stinkyscape: none of its 176 cards.\n- Its data last changed in `13829ca76` (#1317, 2026-10-19).\n- Over `CN_TECH_MIN_GAMES` (20, `crates/engine/src/config.rs:70`), its leader is `core-035` Lunar Eclipse (33 of 48) and its trailer is `core-075` Infinite Reserves (7 of 43), computed from the file. The picks go through `ranked_end` in `crates/engine/src/win_rates.rs:79`.\n- R1368000 (`crates/tools/src/winrates.rs:14-20`, `refresh_due` at `:73-90`) makes a refresh due only when the newest patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` (1,000) live games. Each patch opens a new window (R1365000), and v0.5.4, v0.5.5 and v0.5.6 shipped within days (#2351, #2357, #2362), so the refresh has not fired since.\n\n## Proposal\n\n- A new ruling amends R1368000: a refresh is also due, built from development records and filed as provisional, when a shipped set has no rows. The alternative, that the table stays live-only, is the owner's to choose instead.\n- `cargo jackioh winrates --refresh` learns that rule, with unit tests beside `refresh_due`'s.\n- A cards test fails when a shipped set has no row in the table, so the next set cannot ship without them.\n- The PR plays a development stats run over every shipped set and writes the refreshed table with the pending fragment `refresh_fragment` already builds. That fragment claims CN Tech and NA Tech, so it ships as a micro.\n\n## Where it lands\n\n- `crates/tools/src/winrates.rs`, `crates/tools/README.md`.\n- `crates/cards/data/win_rates.json`, a test in `crates/cards`, a pending patch fragment.\n- `spec/rulings/R1368000.md`, a new ruling note, `spec/pending/<issue>.md`. SPEC \u00a78.8 row 50 and \u00a78.9 row 2.\n\n## Acceptance criteria\n\n- [ ] A `winrates` unit test: a table missing a shipped set is due from development records even though the live window is short, and a complete table is not.\n- [ ] The cards test fails on today's table and passes on the refreshed one.\n- [ ] The refreshed table has rows for every shipped set.\n- [ ] `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n- [ ] `cargo jackioh golden check` passes, or the PR names each trace it re-blessed and why.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about 6 files, plus a development stats run that takes compute time.\n\n- AI-against-AI win rates are noisy, and the table stays marked provisional.\n- Golden traces that hold CN Tech or NA Tech may move.\n- The held Training Grounds set would need rows when it ships, and the new test makes that explicit.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:39:40Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2386: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
