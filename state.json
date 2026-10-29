@@ -8888,6 +8888,8 @@
       }
     },
     "2401": {
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "f2996149ec04e8b2eb706c3c8d744250788874fd": 1
@@ -8907,11 +8909,16 @@
       "issue": 2378,
       "kind": "revise",
       "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-10-29T18:39:21Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:8a212bd1-1793301845",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
+      "started_at": "2026-10-29T19:24:37Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -8946,9 +8953,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T19:23:49Z",
+    "at": "2026-10-29T19:24:37Z",
     "url": "",
-    "what": "plan #2385 on claude-3"
+    "what": "revise #2401 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-29T19:12:40Z",
