@@ -7861,6 +7861,7 @@
     "2340": {
       "action": "build",
       "asks": [],
+      "forced": false,
       "handoff": {
         "at": "2026-10-29T12:29:19Z",
         "family": "claude",
@@ -7883,7 +7884,9 @@
       "run_id": "40874830903",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T12:37:41Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-29T12:58:32Z",
+      "stopped_by": "jgoetzmann",
       "taken_asks": [],
       "verdict_rounds": 3
     },
