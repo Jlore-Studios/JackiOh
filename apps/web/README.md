@@ -355,6 +355,11 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
+net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
+                        its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
+                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack wait on it,
+                        Buy, Open and Open all turning economy/spend.css's wheel, and a 429 keeps its
+                        press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
@@ -424,7 +429,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         level by level with each level's rewards, and its quests, from the server's
                         `economy` answer (the match and Duos results, a paid practice game's); `bars.ts`
                         the pure stages; Reduce motion (the setting or the system's) shows every end state
-                        at once, and the effects' intensity off flies and pulses nothing
+                        at once, and the effects' intensity off flies and pulses nothing; `spend.css`, the
+                        loading wheel a spend button turns while one of the tab's spends is out (R2378000)
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown

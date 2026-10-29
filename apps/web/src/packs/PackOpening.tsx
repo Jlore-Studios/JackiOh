@@ -22,6 +22,11 @@
 // THE KEYBOARD (#1757): the scene is a modal overlay as the inspect views are (`useModalOverlay`): its
 // root takes the focus when it opens and gives it back to the opener when it closes, Tab and Shift+Tab
 // stay inside it, and Escape closes it unless an open request is out, when Close is disabled too.
+//
+// ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), a Shop buy
+// or this panel's own open, Open and Open all wait, disabled and turning a loading wheel
+// (`economy/spend.css`), and the sealed pack, Reveal all on it and Next pack wait too, so a press
+// sends nothing until the spend out has its answer.
 
 import {
   useEffect,
@@ -42,6 +47,7 @@ import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
+import "../economy/spend.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
@@ -54,6 +60,7 @@ import { reducedMotionNow } from "../game/animations.ts";
 import { t } from "../i18n/i18n.ts";
 import { getPacks, keptPaths, openPack, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import { useSetting } from "../settings/store.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
@@ -105,6 +112,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const [flipped, setFlipped] = useState<ReadonlySet<number>>(new Set());
   const [holding, setHolding] = useState<number | null>(null);
   const [pressing, setPressing] = useState(false);
+  const spendOut = useSpendOut();
 
   const holdTimer = useRef<number | null>(null);
   const swipeFrom = useRef<number | null>(null);
@@ -252,7 +260,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           data-testid={packTestid.pack}
           data-state={opened === null ? "sealed" : "tearing"}
           data-best={opened === null ? undefined : bestRarity(opened.slots)}
-          disabled={busy || opened !== null}
+          disabled={busy || spendOut || opened !== null}
           onClick={onTear}
           onPointerDown={onPackDown}
           onPointerUp={onPackUp}
@@ -354,12 +362,12 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 
       <div className="pack-actions">
         {all ? null : (
-          <button type="button" data-testid={packTestid.skipAll} disabled={busy} onClick={skipAll}>
+          <button type="button" data-testid={packTestid.skipAll} disabled={busy || (spendOut && opened === null)} onClick={skipAll}>
             {t("Reveal all")}
           </button>
         )}
         {all && left > 0 ? (
-          <button type="button" data-testid={packTestid.next} onClick={onNext}>
+          <button type="button" data-testid={packTestid.next} disabled={spendOut} onClick={onNext}>
             {t("Next pack ({left} left)", { left })}
           </button>
         ) : null}
@@ -413,6 +421,7 @@ export default function PackOpening({
   const [reading, setReading] = useState(true);
   // A swipe's pointerup is followed by a click, and both ask to open: the ref answers the second at once.
   const inFlight = useRef(false);
+  const spendOut = useSpendOut();
 
   useEffect(() => {
     let cancelled = false;
@@ -456,7 +465,7 @@ export default function PackOpening({
   };
 
   const tear = (): void => {
-    if (scene === null || inFlight.current || opened !== null) return;
+    if (scene === null || inFlight.current || opened !== null || spendOutNow()) return;
     inFlight.current = true;
     setBusy(true);
     setOpenError(null);
@@ -480,7 +489,7 @@ export default function PackOpening({
   const left = scene === null ? 0 : opened === null ? scene.left : Math.min(scene.left, opened.unopened);
 
   const next = (): void => {
-    if (scene === null || left < 1) return;
+    if (scene === null || left < 1 || spendOutNow()) return;
     begin({ pack: scene.pack, left: left - 1 });
     setRound((before) => before + 1);
   };
@@ -516,7 +525,7 @@ export default function PackOpening({
       ) : null}
       {info === null ? null : (
         <>
-          <PacksHeld info={info} onOpen={start} />
+          <PacksHeld info={info} waiting={spendOut} onOpen={start} />
         </>
       )}
       {scene === null ? null : (
@@ -536,8 +545,19 @@ export default function PackOpening({
   );
 }
 
-/** The unopened packs the account holds, each opened alone or, from two, all in a row. */
-function PacksHeld({ info, onOpen }: { info: PacksResponse; onOpen: (pack: string, count: number) => void }): ReactElement {
+/**
+ * The unopened packs the account holds, each opened alone or, from two, all in a row; `waiting` while
+ * one of the tab's spends is out (R2378000).
+ */
+function PacksHeld({
+  info,
+  waiting,
+  onOpen,
+}: {
+  info: PacksResponse;
+  waiting: boolean;
+  onOpen: (pack: string, count: number) => void;
+}): ReactElement {
   if (info.unopened.length === 0) {
     return <EmptyState text={t("No unopened packs.")} testId={packTestid.none} />;
   }
@@ -549,7 +569,10 @@ function PacksHeld({ info, onOpen }: { info: PacksResponse; onOpen: (pack: strin
           <div className="account-actions">
             <button
               type="button"
+              className="spend-wait"
               data-testid={packTestid.open(pack)}
+              disabled={waiting}
+              aria-busy={waiting}
               onClick={() => {
                 onOpen(pack, 1);
               }}
@@ -559,7 +582,10 @@ function PacksHeld({ info, onOpen }: { info: PacksResponse; onOpen: (pack: strin
             {count > 1 ? (
               <button
                 type="button"
+                className="spend-wait"
                 data-testid={packTestid.openAll(pack)}
+                disabled={waiting}
+                aria-busy={waiting}
                 onClick={() => {
                   onOpen(pack, count);
                 }}
