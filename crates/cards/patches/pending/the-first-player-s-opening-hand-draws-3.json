@@ -1,7 +1,7 @@
 {
   "title": "The first player's opening hand draws 3",
   "sources": "#2368",
-  "notes": "The owner's ask (#2368): Player 1, who goes first, opens on three cards again and Player 2 on four, OPENING_DRAW [3, 4], Hearthstone's split, superseding #1156's four for both (R2368000, superseding R1156000). The plays are the families classify's second stage finds against main's build: every game's opening deal moves, and each divergence touches the cards it deals.",
+  "notes": "The owner's ask (#2368): Player 1, who goes first, opens on three cards again and Player 2 on four, OPENING_DRAW [3, 4], Hearthstone's split, superseding #1156's four for both (R2368000, superseding R1156000). The plays are the 176 families classify's second stage finds against main's build: every game's opening deal moves, and each divergence touches the cards it deals.",
   "player": {
     "title": "The first player opens on three cards",
     "new": [],
@@ -112,6 +112,7 @@
     "meditative-081",
     "meditative-087",
     "meditative-092",
+    "meditative-095",
     "meditative-096",
     "meditative-098",
     "meditative-102",
@@ -154,6 +155,7 @@
     "stinkyscape-087",
     "stinkyscape-094",
     "stinkyscape-099",
+    "stinkyscape-111",
     "stinkyscape-112",
     "stinkyscape-117",
     "stinkyscape-120",
@@ -174,7 +176,20 @@
     "stinkyscape-163",
     "stinkyscape-167",
     "stinkyscape-169",
-    "stinkyscape-174"
+    "stinkyscape-174",
+    "traininggrounds-001",
+    "traininggrounds-005",
+    "traininggrounds-006",
+    "traininggrounds-011",
+    "traininggrounds-022",
+    "traininggrounds-033",
+    "traininggrounds-037",
+    "traininggrounds-038",
+    "traininggrounds-039",
+    "traininggrounds-046",
+    "traininggrounds-049",
+    "traininggrounds-051",
+    "traininggrounds-058"
   ],
   "rule": false
 }
