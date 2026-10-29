@@ -8650,7 +8650,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-29T15:46:33Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:37f9b949-1793304664",
+      "run_id": "40946808489",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T20:11:31Z",
       "stop_requested": false,
