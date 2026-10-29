@@ -8042,6 +8042,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "845148ecd4b5e0251d8aafac6651e671aba28e22"
       },
+      "closed_at": "2026-10-29T14:28:59Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -8052,6 +8053,7 @@
       "issue": 2327,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
