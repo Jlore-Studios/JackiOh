@@ -1,5 +1,6 @@
 // BUILD M8: P2's Sheepish interrupts then resumes P1's play (R1, R17, R23, R118, R427; §10.3).
-// #15 Me and Mr Token triggers it; #19 Midrange Menace and #81 Radiant Saintess verify later plays.
+// #15 Me and Mr Token triggers it; #3 Right-house defender verifies a later play (#81 Radiant Saintess
+// did until #2220 made it cost (2), more than the one mana Me and Mr Token leaves on player-turn 2).
 // The trap validates hidden information (R33; CLAUDE.md rule 7, §10.8); the modifier validates face-up views (R169).
 // R48's discount is dormant until its controller's next turn, then expires.
 
@@ -21,6 +22,9 @@ const SEED = seedFor("03-sheep-19");
 
 /** §8 seed brings #77 in on player-turn 3. */
 const CURVATURE_SEED = seedFor("03-curvature-4");
+
+/** #3, a choice-free (1) Unit in player 1's hand on player-turn 2: the play after the trap fired (R118). */
+const LATER_PLAY = "Right-house defender";
 
 /** §8 #77's card label. */
 const CURVATURE = "Professor Curvature";
@@ -114,14 +118,14 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           cy.get(ts(cardId(trap))).should("not.exist");
           cy.get(ts(graveyardCountId("opponent"))).should("have.text", "1");
 
-          // R118 resumes player 1's turn.
+          // R118 resumes player 1's turn: the one mana left plays the next Unit.
           cy.get(ts(END_TURN)).should("not.be.disabled");
-          cy.playByName("Radiant Saintess", { zone: { side: "you", row: "units", lane: 3 } });
-          cy.fieldCardByName("Radiant Saintess").should("exist");
+          cy.playByName(LATER_PLAY, { zone: { side: "you", row: "units", lane: 3 } });
+          cy.fieldCardByName(LATER_PLAY).should("exist");
 
           cy.get(ts(cardId(sheep))).should("not.have.attr", "data-radiant", "true");
-          cy.fieldCardByName("Radiant Saintess").then((saintess) => {
-            cy.get(ts(cardId(saintess))).should("not.have.attr", "data-radiant", "true");
+          cy.fieldCardByName(LATER_PLAY).then((later) => {
+            cy.get(ts(cardId(later))).should("not.have.attr", "data-radiant", "true");
           });
 
           advanceToTurn(4);

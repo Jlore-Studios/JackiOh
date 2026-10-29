@@ -447,14 +447,16 @@ pub struct TransformRandomArgs {
     pub arrives: Option<bool>,
 }
 
-/// E24, Classic+ #73.1 Classic Golem: "it transforms into a random Classic or Classic+ Unit". A §6.3
+/// E24, Classic+ #73.1 Classic Golem: "that Unit transforms into a random Classic or Classic+ Unit" (the
+/// Unit it attacks, R2285002). A §6.3
 /// Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
 /// card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on
 /// the field, one of its row (R35) — so the draw never lands on one the zone would refuse. Immutable
 /// refuses it (R23), and a refusal or an empty pool draws nothing (R129). `radiant` is the new card's
-/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` is Classic Golem's
-/// "the new Unit may attack again this turn" (R424): the new body on the field is not summoning sick
-/// this turn (a new instance's exertion is already fresh).
+/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` was Classic Golem's
+/// "the new Unit may attack again this turn" before it transformed its target instead (R424, R2285002):
+/// the new body on the field is not summoning sick this turn (a new instance's exertion is already
+/// fresh).
 ///
 /// MD-B10, R921 (Meditative #32): with `scope`, every card of the scope is replaced instead of the
 /// target's; with `same`, one definition is drawn for them all — from the definitions every one of
