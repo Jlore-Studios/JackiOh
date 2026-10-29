@@ -23,12 +23,13 @@
 //! are passed explicitly.
 
 use jackioh_engine::config::{
-    DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
+    TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, UnitView,
+    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Tag, UnitView,
     acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
     attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
     credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
@@ -249,7 +250,17 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         None => w.opponent_hand_cost,
         Some(def) => f64::from(query_cost(def)),
     };
-    let radiant = if card.radiant { w.radiant_in_hand } else { 0.0 };
+    let radiant = match def {
+        _ if !card.radiant => 0.0,
+        // R423: a Radiant Call to Chaos rolls CALL_TO_CHAOS_RADIANT_EFFECTS where its base face rolls one.
+        Some(def) if def.tags.contains(&Tag::CallToChaos) => w.radiant_in_hand.max(
+            w.radiant_chaos_effect
+                * f64::from(CALL_TO_CHAOS_RADIANT_EFFECTS - 1)
+                * w.hand_per_cost
+                * cost.min(w.hand_cost_cap),
+        ),
+        _ => w.radiant_in_hand,
+    };
     let shift = if def.is_none() {
         0.0
     } else {
@@ -471,6 +482,9 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // silent, so the enemy's count is no fact the seat has.
     if player == seat {
         value += w.anomaly_miss * f64::from(side.anomaly_misses.unwrap_or(0));
+        // #2389: the Credits the side holds, at what they buy at the Marketplace (R1853002), so a
+        // Resource's quote (R2250001) and a buy's price count. Own side only, as the anomaly misses.
+        value += w.market_credit * f64::from(side.market_credits.unwrap_or(0));
     }
     if w.marked_share != 0.0 {
         value += w.marked_share * marked_enemy_worth(state, player, w);

@@ -1,7 +1,7 @@
 // "Concede this game?": what the board's Concede control opens, in every mode. A concede ends the
 // game at once and cannot be taken back, and the control sits one stray tap from End turn, so it
 // asks first. Only "Concede" sends the action; "Keep playing" is the default: it takes the focus,
-// and Escape or a click outside the panel means the same.
+// and Escape, Back (R2127000) or a click outside the panel means the same.
 //
 // It decides nothing (CLAUDE.md rule 7): the caller dispatches `{ type: "concede" }`.
 //
@@ -13,12 +13,13 @@ import { useEffect, useId, useRef, type ReactElement } from "react";
 
 import { testid } from "./contract.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import "./notices.css";
 
 export type ConfirmConcedeProps = {
   /** "Concede": send the concede. */
   onConfirm(): void;
-  /** "Keep playing", Escape or a click outside the panel. */
+  /** "Keep playing", Escape, Back or a click outside the panel. */
   onCancel(): void;
 };
 
@@ -31,6 +32,7 @@ export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedePr
   const bodyId = useId();
   const stay = useRef<HTMLButtonElement>(null);
   const concede = useRef<HTMLButtonElement>(null);
+  useBackLayer(onCancel);
 
   // The safe choice has the focus from the start, so a stray Enter or Space keeps the game going.
   useEffect(() => {

@@ -21,6 +21,7 @@ export type IconName =
   | "castOnDraw"
   | "target"
   | "cog"
+  | "trade"
   | "altar";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -116,6 +117,17 @@ const COG = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='6' fill='none' stroke='#e8ecf8' stroke-width='3.5'/>
 </svg>`;
 
+// #2269: two opposing horizontal arrows, the Tradable swap mark (R1838000). A pale outline on a
+// dark disc, so it reads by shape on any frame and to a colour-blind player alike, as the struck
+// eye does.
+const TRADE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M12 24 H44' fill='none' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>
+<path d='M36 17 L46 24 L36 31 Z' fill='#e8ecf8'/>
+<path d='M52 40 H20' fill='none' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>
+<path d='M28 33 L18 40 L28 47 Z' fill='#e8ecf8'/>
+</svg>`;
+
 // #2268, R2268000: a flame on an altar (Tribute, R373), the Tribute hand hint's pip.
 const ALTAR = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
@@ -139,6 +151,7 @@ const ICON_URI: Readonly<Record<IconName, string>> = {
   castOnDraw: dataUri(CAST_ON_DRAW),
   target: dataUri(TARGET),
   cog: dataUri(COG),
+  trade: dataUri(TRADE),
   altar: dataUri(ALTAR),
 };
 

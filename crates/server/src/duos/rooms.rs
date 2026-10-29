@@ -33,8 +33,6 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use axum::body::Body;
-use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::Response;
 use indexmap::IndexMap;
 use serde_json::{Value, json};
@@ -60,6 +58,7 @@ use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
 use crate::seats::{Seat, Taken};
+use crate::social::no_content;
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -153,16 +152,6 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
 /// S6's 409: the error body every route answers with, under S6's code.
 fn refusal(status: u16, code: &str, message: &str) -> Response {
     json_response(status, json!({ "error": { "code": code, "message": message } }))
-}
-
-/// 204, no body.
-fn no_content() -> Response {
-    let mut response = Response::new(Body::empty());
-    *response.status_mut() = StatusCode::NO_CONTENT;
-    response
-        .headers_mut()
-        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
-    response
 }
 
 /// The code a path names, normalised, or none when it could never be a room code.

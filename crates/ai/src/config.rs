@@ -6,7 +6,7 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
-use jackioh_engine::config::CN_TECH_MIN_GAMES;
+use jackioh_engine::config::{CN_TECH_MIN_GAMES, MARKETPLACE_CREDITS_PER_MANA};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -348,6 +348,11 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// R423: per effect a Radiant Call to Chaos rolls past its base face's one, the share of the card's
+    /// per-cost hand price (`hand_per_cost` × min(cost, `hand_cost_cap`)) it adds. Its Radiant text is
+    /// then priced at what it does, two more casts of the base face, in place of `radiant_in_hand`'s flat
+    /// price when that is more (#1886: Wildar's Radiant Call to Chaos).
+    pub radiant_chaos_effect: f64,
     /// #1143: when both faces of an own hand card are Units, the share that counts of what the face
     /// it will enter with (its Radiant face when it is Radiant, its buffs and tuning) is worth over its
     /// printed base face, by the stat and keyword weights above and none of the field's layers. On top
@@ -380,6 +385,10 @@ pub struct EvalWeights {
     /// R1855003: per miss a side's Scanning Probes have banked (`PlayerState.anomaly_misses`), each
     /// adding its steps to every later scan's chances. Own side only: a miss is silent (#1886).
     pub anomaly_miss: f64,
+    /// R2250001, R1853002: per Credit the side holds (`PlayerState.market_credits`), priced at what it
+    /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
+    /// `hand_per_cost`. Own side only (#2389).
+    pub market_credit: f64,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -442,6 +451,10 @@ pub struct EvalWeights {
     pub closing_weight: f64,
 }
 
+/// `AI_EVAL.hand_per_cost`: an own hand card's worth per mana of its cost, which `market_credit` reads
+/// too (#2389).
+pub const AI_HAND_PER_COST: f64 = 0.3;
+
 pub const AI_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -495,9 +508,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     brittle_discount: 0.5,
     animated_share: 0.5,
     hand_card: 1.0,
-    hand_per_cost: 0.3,
+    hand_per_cost: AI_HAND_PER_COST,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    radiant_chaos_effect: 1.0,
     // #1143: an untuned start for the training lanes, as `animated_share` and `marked_share` are.
     radiant_face_share: 0.5,
     plague_counter: 0.5,
@@ -516,6 +530,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // over a couple of scans.
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
+    market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -682,6 +697,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // #1886's Radiant Call to Chaos reading came after the gates were fixed: the flat price, as it gave.
+    radiant_chaos_effect: 0.0,
     // The baseline is frozen: it read no hand card's face when the gates were fixed, as it did.
     radiant_face_share: 0.0,
     // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
@@ -696,6 +713,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     extra_turn: 0.0,
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
+    // #2389's Credits came after the gates were fixed: nothing, as it gave them.
+    market_credit: 0.0,
     // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
     // them.
     start_of_turn_effect: 0.0,

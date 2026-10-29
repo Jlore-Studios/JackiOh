@@ -27,13 +27,14 @@
 use crate::catalog::{find_def, set_is_open};
 use crate::config::{SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX};
 use crate::draw::{draw, put_into_library};
+use crate::effects::summon::row_of;
 use crate::effects::{AddToHandArgs, DestroyArgs, ExileArgs, PlayerSpec, SummonArgs, TargetSpec};
 use crate::faces::card_type_of_face;
 use crate::ownership::LibraryEnd;
 use crate::resolve::{HookOptions, apply_effects, make_context};
 use crate::script::EngineSink;
 use crate::state::{EngineError, GameState, find_instance, new_instance};
-use crate::wire::{CardDef, CardType, GameEvent, PlayerId, Row, SandboxOp, SpawnZone, Zone, ZoneName};
+use crate::wire::{CardDef, GameEvent, PlayerId, Row, SandboxOp, SpawnZone, Zone, ZoneName};
 use crate::zones::{is_empty, is_reserved, row_size};
 
 /// R923000: whether `state` is a sandbox game, whose tools it alone accepts.
@@ -52,16 +53,6 @@ fn spawnable<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
         return state.custom_defs.get(def_id);
     }
     find_def(Some(state), def_id).filter(|def| set_is_open(def.set))
-}
-
-/// R923001: the row a card of this type stands in on the field, or `None` for a Spell, which is cast
-/// and never stands there (§5.1).
-fn row_for(card_type: CardType) -> Option<Row> {
-    match card_type {
-        CardType::Unit => Some(Row::Units),
-        CardType::Spell => None,
-        _ => Some(Row::Backrow),
-    }
 }
 
 fn bounded(what: &str, value: Option<i32>, min: i32, max: i32) -> Result<(), EngineError> {
@@ -92,7 +83,7 @@ pub fn why_sandbox_refused(state: &GameState, op: &SandboxOp) -> Result<(), Engi
             };
             if let SpawnZone::Field { row, lane } = to {
                 let card_type = card_type_of_face(state, &def.id, *radiant == Some(true));
-                let Some(wanted) = row_for(card_type) else {
+                let Some(wanted) = row_of(card_type) else {
                     return Err(EngineError::new(format!(
                         "{} is a Spell, which is cast and never stands on the field",
                         def.name

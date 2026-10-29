@@ -928,7 +928,7 @@ pub fn excluding_def_id(
 
 /// §5's index as a number, so "2" sorts before "10" and a token index ("T-rush") sorts last.
 /// (`Number.parseFloat`, SURFACE §4.4.4: no catalog index hits JS's lenient-prefix case.)
-fn index_rank(index: &str) -> f64 {
+pub(crate) fn index_rank(index: &str) -> f64 {
     match index.parse::<f64>() {
         Ok(parsed) if parsed.is_finite() => parsed,
         _ => f64::INFINITY,

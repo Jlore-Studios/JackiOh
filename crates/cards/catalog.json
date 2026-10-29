@@ -3443,7 +3443,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -10838,7 +10839,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -15865,7 +15867,8 @@
       "core-095",
       "classicplus-073",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -18126,7 +18129,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 37,
     "base": {
@@ -21060,7 +21064,7 @@
   "stinkyscape-068": {
     "id": "stinkyscape-068",
     "index": "68",
-    "name": "Startos",
+    "name": "Stratos",
     "set": "Stinkyscape",
     "type": "Unit",
     "tags": [],
@@ -24433,7 +24437,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 28,
     "base": {
@@ -24468,7 +24473,8 @@
       "stinkyscape-150",
       "stinkyscape-150-1",
       "stinkyscape-151",
-      "stinkyscape-159"
+      "stinkyscape-159",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -24562,7 +24568,8 @@
       "stinkyscape-t-drone-corvette",
       "stinkyscape-t-shield-layer",
       "stinkyscape-t-propagation-layer",
-      "stinkyscape-t-meltdown-layer"
+      "stinkyscape-t-meltdown-layer",
+      "traininggrounds-039"
     ],
     "loc": 77,
     "base": {
@@ -24816,11 +24823,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Startos."
+      "text": "Fill your board with Stratos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Startos."
+      "text": "Fill your board with Radiant Stratos."
     }
   },
   "stinkyscape-159": {

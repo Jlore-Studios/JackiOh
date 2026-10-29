@@ -94,6 +94,8 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
 `commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
@@ -149,7 +151,7 @@ present for exactly that window.
 **Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
-focus on open and is what Escape and a click outside do; Tab stays in the dialog, and the focus goes
+focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
@@ -233,11 +235,15 @@ sale the view lists, tray Resources then hand cards such as Spice (R1861000). Ea
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
-in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
-and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
+`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
-The list ships one hint, `tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`, which the engine sets on the viewer's own hand cards only and never at 0.
+The list ships the Tradable hint (#2269): a small swap-mark pip on each of the viewer's own
+hand cards with the Tradable keyword, dimmed once the turn's Trade is spent. It also ships
+`tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`,
+which the engine sets on the viewer's own hand cards only and never at 0.
 
 ## Commands
 
@@ -257,7 +263,8 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
-mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
+(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 
@@ -319,7 +326,8 @@ WASM), the module the server runs at queue, and the server's refusal, when it co
 ```
 routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
-                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
+                        browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
+                        grid mounting only the rows of its 700 cards near the view, poolWindow.ts, #2334),
                         the trio editor that marks every card two of its decks share (R251),
                         deck codes (deckCode.ts, R255), trio codes (trioCode.ts, built on deckCode.ts's
                         parts, R339) with Copy trio code in the trio editor and Import trio
@@ -674,28 +682,36 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 ## The tutorial
 
-The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322): four lessons on a path, each
-a practice game with two fixed decks, a fixed seed and seat, and the tutorial handicap on the AI
-seat (`AI_TUTORIAL`, the tier below Easy). A lesson is a practice config whose `lesson` names it
+The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003): five
+lessons on a path, each a practice game with two fixed decks of Training Grounds cards, a fixed seed and
+seat, the tutorial handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on
+the human's, with the pool hold in lessons 1–4 (`lessonHandicaps`). A lesson is a practice config whose `lesson` names it
 (`tutorial/start.ts`), so the same worker, controller and board play it; the worker reads the
 decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes them (R291).
 
 ```
 src/tutorial/
-  lessons.ts lessons/*.ts   each lesson as data: title, mechanics, seed, seat, both decks, retry tip
-  scripts/*.ts              each lesson's coach script: steps in order and reactive tips (page only)
-  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, display (R292, R314)
+  lessons.ts lessons/*.ts   each lesson as data: title, its Field Guide entries, seed, seat, both decks, pool hold, retry tip
+  scripts/*.ts              each lesson's coach script: its moments, built with scripts/kit.ts (page only);
+                            scripts/testkit.ts's lessonSuite is every lesson's test
+  coach.ts                  the coach machine, pure: coachObserve per snapshot, ack, hint, display (R292, R314,
+                            R2205000: moments, discoveries, escalating hints)
+  discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
   Coach.tsx layout.ts       the ring, and the bubble placed clear of what it points at (a panel above the board on phones)
   TutorialPath.tsx          the lesson path at the top of the lobby (locked / open / done), with Hide / Show
                             tutorial (R322; its look in path-visibility.css)
-  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Exit tutorial) and its result dialog
-  progress.ts               completed lessons and the Hide/Show choice in localStorage `jackioh.tutorial.v1`,
-                            try/catch (R294), and R321's merge with another copy (a union, the newest choice)
+  TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Field Guide, Exit tutorial) and its result
+                            dialog, which names what the game did not show found (R314)
+  FieldGuide.tsx            the Field Guide's button and dialog, from the HUD and the path's header (R2205002)
+  progress.ts               completed lessons, the Hide/Show choice and the Field Guide's found entries (the
+                            device's alone, R2205002) in localStorage `jackioh.tutorial.v1`, try/catch (R294),
+                            and R321's merge with another copy (a union, the newest choice)
   accountSync.ts            an active account's copy (`GET`/`PUT /api/tutorial`, R320) kept level with the
                             device's (R321); the practice route mounts it
-  harness.ts                test support only: a lesson played through the real core by a policy (R293)
+  harness.ts                test support only: a lesson played through the real core by a policy: coach,
+                            coach-passive, autopilot, random or reckless (R293, R2205001)
   config.ts testids.ts devHandle.ts   the numbers, the testids (mirrored in e2e), `window.__jackiohTutorial`
 ```
 
@@ -705,6 +721,12 @@ src/tutorial/
   a tip or an `info` step holds the AI, and each shows "Got it"; an action step never holds it; a
   step expires after `TUTORIAL_STEP_TURNS_MAX` of the player's own turns (the lesson's `final` step
   ends with the game); and Exit tutorial is in the HUD throughout. Nothing strands a lesson.
+- A `moment` step (R2205000) asks a question with nothing pointed at, and is done once the view
+  shows the player found what it sets up (`discoveries.ts`, read from the fresh events, the view
+  and the public catalog). Its hint escalates a level per own turn it stays unfound, or per Hint
+  press: the nudge, then the pointed hint with its ring; past `TUTORIAL_MOMENT_TURNS_MAX` it
+  retires. It never holds the AI. Each entry found for the first time shows a discovery bubble with
+  Got it, and the tracker hands it to the device's Field Guide (`markFound`).
 - The bubble adopts a new step only once the board has caught up (no `data-animating`), so it never
   points at a card the board has not drawn; a step or tip with `holdAi` holds the AI through
   `setHold("coach", …)` until its "Got it".

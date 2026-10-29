@@ -2237,13 +2237,14 @@ mod tests {
         // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
         // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
         // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4; and from its release (#1884) the
-        // Stinkyscape set's 176 and 52 (R1857000).
+        // Stinkyscape set's 176 and 52 (R1857000); and from its release (#2204) the Training Grounds
+        // set's 60 and 1 (R2194000).
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
             (
-                318 + meditative(132) + meditative_plus(32) + stinkyscape(228),
-                268 + meditative(102) + meditative_plus(26) + stinkyscape(176),
-                50 + meditative(30) + meditative_plus(6) + stinkyscape(52)
+                318 + meditative(132) + meditative_plus(32) + stinkyscape(228) + training_grounds(61),
+                268 + meditative(102) + meditative_plus(26) + stinkyscape(176) + training_grounds(60),
+                50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1)
             )
         );
     }

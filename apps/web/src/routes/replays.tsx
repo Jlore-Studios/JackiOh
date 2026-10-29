@@ -53,6 +53,7 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
+import { messageOf } from "../together/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "./replays.css";
@@ -109,10 +110,6 @@ const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
   bo3: "Conquest",
   random: "All Random",
 };
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 /** The worker's card data and the games it kept, asked in turn (its answers arrive in order). */
 async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; replays: PracticeReplayListing[] }> {

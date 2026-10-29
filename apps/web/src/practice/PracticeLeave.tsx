@@ -2,7 +2,7 @@
 //
 // A game against the AI costs nothing to abandon, but it is still minutes of play one stray tap
 // from gone, and "New game" sits in the HUD beside the board. Staying is the default: it has the
-// focus, and Escape or a click outside the panel means stay.
+// focus, and Escape, Back (R2127000) or a click outside the panel means stay.
 //
 // R765: a free game is the player's to keep. Its question offers Save and leave, which keeps the
 // game for the practice menu's banner, beside Leave without saving, which gives it up. A tutorial
@@ -11,6 +11,7 @@
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import { practiceTestid } from "./testids.ts";
 import "./practice.css";
 
@@ -51,6 +52,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
   const titleId = useId();
   const stay = useRef<HTMLButtonElement>(null);
   const canSave = onSaveAndLeave !== undefined;
+  useBackLayer(onStay);
 
   useEffect(() => {
     stay.current?.focus();

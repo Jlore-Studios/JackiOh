@@ -1,6 +1,7 @@
-// R291 lessons are deterministic R187 practice games with the R290 handicap. #53 Reno and #70
-// Spiteful Stab would over-reward its 20-health opponent, so their decks respect R186 and taught
-// mechanics; the practice core exposes only the human's view (rule 7).
+// R291 lessons are deterministic R187 practice games with the R290 handicap; the practice core exposes
+// only the human's view (rule 7). R2205003: five lessons dealt from Training Grounds alone, no
+// Legendary or Mythic card in either deck before the last and the human's pool hold on, and the last
+// lesson's human deck holding the set's Legendary and Mythic cards.
 
 import { describe, expect, it } from "vitest";
 
@@ -12,14 +13,21 @@ import { opponentOf, type CardDef, type PlayerId } from "@jackioh/shared";
 import { PRACTICE_SEED_MAX_LENGTH } from "../practice/config.ts";
 import { createPracticeCore } from "../practice/core.ts";
 import type { PracticeResponse } from "../practice/protocol.ts";
-import { TUTORIAL_LESSONS, lessonById, nextLessonOf, type TutorialLesson } from "./lessons.ts";
+import zhCN from "../i18n/zh-CN.json";
+import { FIELD_GUIDE } from "./discoveries.ts";
+import { TUTORIAL_LESSONS, lessonById, lessonHandicaps, nextLessonOf, type TutorialLesson } from "./lessons.ts";
 import { lessonStartConfig } from "./start.ts";
 import { scriptFor } from "./scripts/index.ts";
 
 const catalog = registeredCatalog();
 
-const HUMAN_SHOWPIECES_MAX = 2;
 const SHOWPIECE_RARITIES: readonly string[] = ["Legendary", "Mythic"];
+/** R2205003: the set every lesson's cards come from. */
+const LESSON_SET = "Training Grounds";
+/** R2205003: the lesson ids, the four kept from the Core tutorial so progress carries over, and the fifth. */
+const LESSON_IDS: readonly string[] = ["basics", "spells", "traps", "advanced", "finale"];
+/** R2205003: the Legendary and Mythic cards the last lesson's human holds, at the least. */
+const FINALE_SHOWPIECES: readonly string[] = ["traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-040"];
 
 // R291: the AI gets each mechanic only after its lesson teaches it.
 const BACKROW_TYPES: readonly string[] = ["Trap", "Field Trap", "Field Spell"];
@@ -42,8 +50,6 @@ const COMBAT_KEYWORDS: readonly string[] = [
   "Can't attack",
 ];
 
-// R290/R291: health readers assume §2's 30; that misreads the tutorial hero's 20 (R72).
-const READS_THIRTY: readonly string[] = ["core-053", "core-070"];
 
 function def(id: string): CardDef {
   const found = catalog[id];
@@ -57,22 +63,21 @@ function decksOf(lesson: TutorialLesson): [string[], string[]] {
 
 function dealOf(lesson: TutorialLesson, seed = lesson.seed) {
   const aiSeat = opponentOf(lesson.humanSeat);
-  return beginGame(
-    createGame({ seed, decks: decksOf(lesson), handicaps: { [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: TUTORIAL_HUMAN } }),
-  ).state;
+  const { human, ai } = lessonHandicaps(lesson);
+  return beginGame(createGame({ seed, decks: decksOf(lesson), handicaps: { [aiSeat]: ai, [lesson.humanSeat]: human } })).state;
 }
 
 describe("R291 the tutorial's lessons", () => {
-  it("R291 are three or four, numbered in path order, each with a script whose last step is final", () => {
-    expect(TUTORIAL_LESSONS.length).toBeGreaterThanOrEqual(3);
-    expect(TUTORIAL_LESSONS.length).toBeLessThanOrEqual(4);
+  it("R291 R2205003 are the five lessons, in path order, each with a script whose last step is final", () => {
+    expect(TUTORIAL_LESSONS.map((lesson) => lesson.id)).toEqual(LESSON_IDS);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.number)).toEqual(TUTORIAL_LESSONS.map((_lesson, index) => index + 1));
     expect(new Set(TUTORIAL_LESSONS.map((lesson) => lesson.id)).size).toBe(TUTORIAL_LESSONS.length);
 
     for (const lesson of TUTORIAL_LESSONS) {
       expect(lessonById(lesson.id)).toBe(lesson);
       expect(lesson.title.length, lesson.id).toBeGreaterThan(0);
-      expect(lesson.mechanics.length, lesson.id).toBeGreaterThan(0);
+      expect(lesson.discoveries.length, lesson.id).toBeGreaterThan(0);
+      for (const id of lesson.discoveries) expect(FIELD_GUIDE.map((entry) => entry.id), `${lesson.id}: ${id}`).toContain(id);
       expect(lesson.retryTip.length, lesson.id).toBeGreaterThan(0);
       expect(lesson.seed.length, lesson.id).toBeGreaterThan(0);
       expect(lesson.seed.length, lesson.id).toBeLessThanOrEqual(PRACTICE_SEED_MAX_LENGTH);
@@ -93,13 +98,21 @@ describe("R291 the tutorial's lessons", () => {
     expect(nextLessonOf(TUTORIAL_LESSONS.at(-1)?.id ?? "")).toBeUndefined();
   });
 
-  it("R291 give the human a legal deck of TUTORIAL_HUMAN's size, mostly Commons, Rares and Epics", () => {
+  it("R291 R2205003 give the human a deck of TUTORIAL_HUMAN's size from Training Grounds, its Legendary and Mythic cards only in the last lesson", () => {
     for (const lesson of TUTORIAL_LESSONS) {
       expect(lesson.humanDeck.length, lesson.id).toBe(TUTORIAL_HUMAN.deckSize);
       expect(new Set(lesson.humanDeck).size, `${lesson.id}: no duplicates (§2.6)`).toBe(TUTORIAL_HUMAN.deckSize);
-      for (const id of lesson.humanDeck) expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
+      for (const id of [...lesson.humanDeck, ...lesson.aiDeck]) {
+        expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
+        expect(def(id).set, `${lesson.id}: ${id} is a Training Grounds card`).toBe(LESSON_SET);
+      }
       const showpieces = lesson.humanDeck.filter((id) => SHOWPIECE_RARITIES.includes(def(id).rarity));
-      expect(showpieces.length, `${lesson.id}: ${showpieces.join(", ")}`).toBeLessThanOrEqual(HUMAN_SHOWPIECES_MAX);
+      const last = lesson.number === TUTORIAL_LESSONS.length;
+      if (last) for (const id of FINALE_SHOWPIECES) expect(lesson.humanDeck, `${lesson.id} deals ${id}`).toContain(id);
+      else expect(showpieces, `${lesson.id}: none before the last lesson`).toEqual([]);
+      // The pool hold is on exactly where the decks hold none, so nothing random brings one in.
+      expect(lesson.poolHold, `${lesson.id}: the pool hold`).toBe(!last);
+      expect(lessonHandicaps(lesson).human.poolHold === true, lesson.id).toBe(!last);
     }
   });
 
@@ -114,7 +127,6 @@ describe("R291 the tutorial's lessons", () => {
         expect(card.token, where).toBe(false);
         if (lesson.aiShadowBanned?.[id] === undefined) expect(SHADOW_BAN_IDS, where).not.toContain(id);
         expect(SHOWPIECE_RARITIES, where).not.toContain(card.rarity);
-        expect(READS_THIRTY, `${where}: reads its hero's health against 30`).not.toContain(id);
         if (lesson.number < BACKROW_LESSON) expect(BACKROW_TYPES, `${where}: no backrow card before lesson ${String(BACKROW_LESSON)}`).not.toContain(card.type);
         if (lesson.number < SPELL_LESSON) {
           expect(card.type, `${where}: units only in lesson 1`).toBe("Unit");
@@ -169,7 +181,8 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.lesson).toBe(lesson.id);
       expect(debug.debug.seed).toBe(lesson.seed);
       expect(debug.debug.decks).toEqual(decksOf(lesson));
-      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: TUTORIAL_HUMAN });
+      const handicaps = lessonHandicaps(lesson);
+      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: handicaps.human });
     }
   });
 
@@ -183,8 +196,20 @@ describe("R291 the tutorial's lessons", () => {
 
   it("R291 seat the human second in the lesson that teaches The Coin, and first before it", () => {
     for (const lesson of TUTORIAL_LESSONS) {
-      const coin = lesson.mechanics.includes("The Coin");
+      const coin = lesson.discoveries.includes("the-coin");
       expect(lesson.humanSeat, lesson.id).toBe(coin ? "p2" : "p1");
     }
+  });
+
+  it("R2205003 prints every lesson's words and every line its coach can show in zh-CN too (R711000)", () => {
+    const lines: string[] = [];
+    for (const lesson of TUTORIAL_LESSONS) {
+      lines.push(lesson.title, lesson.summary, lesson.retryTip);
+      const script = scriptFor(lesson.id);
+      for (const step of [...(script?.steps ?? []), ...(script?.tips ?? [])]) {
+        for (const text of [step.title, step.text, ...("hints" in step ? (step.hints ?? []) : [])]) if (typeof text === "string") lines.push(text);
+      }
+    }
+    expect(lines.filter((line) => !Object.hasOwn(zhCN, line))).toEqual([]);
   });
 });

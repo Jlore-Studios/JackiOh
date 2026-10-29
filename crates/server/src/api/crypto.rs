@@ -145,11 +145,6 @@ impl SystemIds {
     pub fn seed(&self) -> String {
         hex(&random_bytes(16))
     }
-
-    /// `length` characters from the invite-code alphabet.
-    pub fn code(&self, length: usize) -> String {
-        random_code(length)
-    }
 }
 
 /// TS `systemIds`, under its TS name (SURFACE §4.2).

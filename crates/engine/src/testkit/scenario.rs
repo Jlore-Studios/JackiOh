@@ -148,7 +148,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::config::{BACKROW_ZONES, DECK_SIZE, UNIT_ZONES};
+use crate::config::DECK_SIZE;
 use crate::layers::{UnitView, unit_view};
 use crate::own_library::show_to_owner;
 use crate::rng::Rng;
@@ -162,7 +162,7 @@ use crate::wire::{
     PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::{
-    LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot,
+    LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, row_size,
 };
 
 pub const DEFAULT_SEED: &str = "jackioh-harness";
@@ -860,14 +860,6 @@ struct Placement {
     lane: Option<i32>,
 }
 
-fn row_size_of(row: Row) -> i32 {
-    if row == Row::Units {
-        UNIT_ZONES
-    } else {
-        BACKROW_ZONES
-    }
-}
-
 /// §3.2: a Unit goes in the unit zones and a Field Spell, Trap or Field Trap in the backrow, so the
 /// def's type picks the row and `row` on the entry overrides it. `field` and `backrow` therefore
 /// accept the same entries: naming the list is a convenience, not a second rule.
@@ -1198,7 +1190,7 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
             .iter()
             .map(|&at| (placements[at].lane, placements[at].entry.stack == Some(true)))
             .collect();
-        let lanes = assign_lanes(&entries, row_size_of(row), &format!("{seat}.{}", row.as_str()))?;
+        let lanes = assign_lanes(&entries, row_size(row), &format!("{seat}.{}", row.as_str()))?;
         for (at, &index) in in_row.iter().enumerate() {
             placements[index].lane = lanes.get(at).copied();
         }
@@ -1640,7 +1632,7 @@ impl Scenario {
             } else {
                 Row::Backrow
             });
-            let size = row_size_of(row);
+            let size = row_size(row);
             if lane < 1 || lane > size {
                 panic!(
                     "{what}: zone {lane} is out of range; {} lanes are 1..{size}",
@@ -1904,7 +1896,7 @@ impl Scenario {
     }
 
     fn check_lane(what: &str, row: Row, lane: i32) {
-        let size = row_size_of(row);
+        let size = row_size(row);
         if lane < 1 || lane > size {
             panic!(
                 "{what}(): lane {lane} is out of range; {} lanes are 1..{size}",

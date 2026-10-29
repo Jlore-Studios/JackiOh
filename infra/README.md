@@ -11,7 +11,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records, and the `jackioh` Worker's custom domains (`jackioh.com`, and `www.jackioh.com` once it serves) | `cloudflare.tf` | `wrangler.jsonc` (the Worker, its assets, its workers.dev route), deployed by `promote-production.yml` |
 | Supabase (`exmjdaswedxhnzmpzqrq`) | Authentication's Site URL and Redirect URLs | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
-| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, and the `production` ruleset | `github.tf` | `bot/harness/config.py` `LABELS` (the labels, which the sweep restores) |
+| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/harness/config.py` `LABELS` (the labels, which the sweep restores) |
 | Render | nothing | | `render.yaml`, the Blueprint: a Terraform-managed service would fight it |
 | Vercel | nothing | | `vercel.json`: its build, routes and headers |
 
@@ -110,3 +110,20 @@ from.
    you would rather not publish (none of it is a secret) redacted.
 6. **The drift test.** Remove one Redirect URL in Supabase's dashboard (Authentication -> URL
    Configuration). `plan` shows `uri_allow_list` changing back, and `apply` puts it back.
+
+## The merge queue
+
+`main-merge-queue` is a ruleset of its own, beside the branch protection, so the five checks stay
+where the bots read them (`bot/harness/gh.py` `required_checks`). It did not exist, so its first
+`apply` creates it (`Plan: 1 to add`), and from then on nothing merges into `main` except through the
+queue: a merge button, `gh pr merge --auto` and the bots' auto-merge all put the pull request in the
+queue once its own checks pass, and the queue lands it after ci.yml's `merge_group` run passes on
+`main` with it on top. Take the `merge_group` trigger in ci.yml to `main` before applying it: a
+queue whose checks never report takes every pull request out at the timeout.
+
+After the first `apply`, watch the first few merges. Each queued pull request shows a
+`gh-readonly-queue/main/pr-<n>-<sha>` run of CI; the squash commit on `main` should be the pull
+request's title and number, as before (if it is the bot's own commit message instead, set Settings
+-> General -> Pull Requests -> Allow squash merging -> Default commit message to "Pull request
+title"). To undo it, delete the `main_merge_queue` resource and apply, or set its `enforcement` to
+`disabled`: pull requests then merge as before, straight onto `main`.

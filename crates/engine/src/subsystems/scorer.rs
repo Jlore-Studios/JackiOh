@@ -34,6 +34,7 @@ use std::cmp::Ordering;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use crate::catalog::index_rank;
 use crate::config::{DISCOVER_OPTIONS, SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
 use crate::damage::DamageTarget;
 use crate::layers::AuraTable;
@@ -903,15 +904,6 @@ fn score_parts(
     }
 }
 
-/// §5's index as a number, so "2" sorts before "10" and a token suffix still has a place.
-fn index_rank(index: &str) -> f64 {
-    // SURFACE §4.4.4: `Number.parseFloat` on catalog indexes, non-finite as +Infinity.
-    match index.parse::<f64>() {
-        Ok(parsed) if parsed.is_finite() => parsed,
-        _ => f64::INFINITY,
-    }
-}
-
 /// The order two candidates sit in: higher score first, then the §5 index, then the catalog id.
 /// Ids are unique, so this is a strict total order whatever the weights are — `rank` never leaves
 /// two candidates tied and never depends on the order the catalog handed them over.
@@ -961,10 +953,21 @@ pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec
     scored
 }
 
-/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`.
+/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`. R2204001: one offer never holds both
+/// cards of a Core-or-snapshot pair, so a card whose pair a better-ranked card holds is passed over for
+/// the next; a ranking with no pair in it offers what it always did.
 pub fn top_three(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
+    let mut pairs: Vec<String> = Vec::new();
     rank(state, viewer, options)
         .into_iter()
+        .filter(|scored| {
+            let key = crate::catalog::pair_key(&scored.def).to_string();
+            let fresh = !pairs.contains(&key);
+            if fresh {
+                pairs.push(key);
+            }
+            fresh
+        })
         .take(DISCOVER_OPTIONS as usize)
         .collect()
 }

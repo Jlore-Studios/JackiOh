@@ -1,20 +1,22 @@
 // Test-only full-lesson runner on the real practice core; its coach reads browser-equivalent
 // snapshots (R293). A frozen clock and fixed node budget make replays deterministic. Policies cover
-// coached, coached-passive (spec 22), autonomous, and robust random play.
+// coached, coached-passive (spec 22), autonomous, robust random play, and the reckless player who
+// attacks into everything and plays nothing protective (R2205001).
 
 import { AI_GATE_BUDGET, type SearchBudget } from "@jackioh/ai";
 import { createRng } from "@jackioh/engine";
-import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CardDef, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "../game/animations.ts";
 import { createPracticeCore, type PracticeCore } from "../practice/core.ts";
 import type { PracticeDebug, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "../practice/protocol.ts";
 import {
-  COACH_START,
   activeStep,
   coachAck,
   coachDisplay,
   coachObserve,
+  coachStart,
+  isBubble,
   type CoachCtx,
   type CoachState,
   type LessonScript,
@@ -45,7 +47,10 @@ export const LESSON_GAME_MS = 90_000;
 /** Per-game budget for multi-game random-policy tests. */
 export const RANDOM_GAME_MS = 45_000;
 
-export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random";
+export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random" | "reckless";
+
+/** Every policy a lesson must be won under (R2205001). */
+export const LESSON_POLICIES: readonly LessonPolicy[] = ["coach", "coach-passive", "autopilot", "random", "reckless"];
 
 export type LessonRun = {
   lesson: TutorialLesson;
@@ -57,6 +62,8 @@ export type LessonRun = {
   outcomes: Readonly<Record<string, StepOutcome>>;
   shown: { id: string; turn: number }[];
   tips: string[];
+  /** R2205000: the discovery bubbles shown, in order. */
+  discoveries: string[];
   coach: CoachState;
   debug: PracticeDebug;
   humanActions: { action: ActionBody; refused: string | null; byCoach: boolean }[];
@@ -68,6 +75,10 @@ type Options = {
   seed?: string;
   policySeed?: string;
   budget?: SearchBudget;
+  /** A fixture script in place of the lesson's own (the coach framework's tests). */
+  script?: LessonScript;
+  /** What the player's Field Guide holds as the lesson starts (R2205002). */
+  known?: readonly string[];
 };
 
 function isPlay(action: ActionBody): action is Extract<ActionBody, { type: "play" }> {
@@ -131,6 +142,49 @@ export function passive(ctx: CoachCtx): ActionBody | null {
   );
 }
 
+const PROTECTIVE_KEYWORDS: readonly string[] = ["Taunt", "Divine Shield", "Armor"];
+
+/** A card the reckless player never plays: a Trap, a Field Trap, or a unit that guards. */
+function protective(def: CardDef | undefined): boolean {
+  if (def === undefined) return false;
+  if (def.type === "Trap" || def.type === "Field Trap") return true;
+  return def.type === "Unit" && def.base.keywords.some((keyword) => PROTECTIVE_KEYWORDS.includes(keyword.kind));
+}
+
+/**
+ * R2205001: the reckless player keeps its hand, answers each prompt with its first option, attacks
+ * with everything into the enemy unit with the most Attack (the hero when no unit can be hit), then
+ * plays its cheapest card that guards nothing and aims at nothing of its own, and ends the turn. It
+ * never switches a unit to Defense Position.
+ */
+export function reckless(ctx: CoachCtx): ActionBody | null {
+  const { view, legal } = ctx;
+  if (mulliganOpen(view) || (view.pending !== null && view.pending.forYou)) return autopilot(ctx);
+  if (!myMain(ctx)) return null;
+
+  const attacks = legal.filter((action): action is Extract<ActionBody, { type: "attack" }> => action.type === "attack");
+  const enemyAttack = (targetId: string): number =>
+    view.opponent.units.find((unit) => unit !== null && unit.instanceId === targetId)?.attack ?? -1;
+  attacks.sort((a, b) => enemyAttack(b.targetId) - enemyAttack(a.targetId));
+  const attack = attacks[0];
+  if (attack !== undefined) return attack;
+
+  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+  const cardOf = (instanceId: string) => hand.find((card) => card.instanceId === instanceId);
+  const plays = legal
+    .filter(isPlay)
+    .filter((action) => !hitsOwnSide(view, action))
+    .filter((action) => {
+      const card = cardOf(action.instanceId);
+      return card === undefined || !protective(ctx.defOf?.(card.defId));
+    });
+  plays.sort((a, b) => (cardOf(a.instanceId)?.cost ?? 0) - (cardOf(b.instanceId)?.cost ?? 0));
+  const play = plays[0];
+  if (play !== undefined) return play;
+
+  return legal.find((action) => action.type === "endTurn") ?? null;
+}
+
 function randomPolicy(ctx: CoachCtx, pick: (n: number) => number): ActionBody | null {
   const choices = ctx.legal.filter((action) => action.type !== "concede" && action.type !== "offerDraw" && action.type !== "answerDraw");
   if (choices.length === 0) return null;
@@ -149,7 +203,7 @@ function snapshotOf(response: PracticeResponse): PracticeSnapshot {
 
 export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   const lesson = lessonById(lessonId);
-  const script = scriptFor(lessonId);
+  const script = options.script ?? scriptFor(lessonId);
   if (lesson === undefined || script === undefined) throw new Error(`no lesson "${lessonId}"`);
   const policy = options.policy ?? "coach";
   const rng = createRng(options.policySeed ?? `${lessonId}:policy`);
@@ -170,10 +224,11 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   let snapshot = snapshotOf(startedResponse);
   const defs = startedResponse.type === "started" ? startedResponse.defs : {};
 
-  let coach: CoachState = COACH_START;
+  let coach: CoachState = coachStart(options.known ?? []);
   let previous: PlayerView | null = null;
   const shown: { id: string; turn: number }[] = [];
   const tips: string[] = [];
+  const discoveries: string[] = [];
   const humanActions: LessonRun["humanActions"] = [];
   let humanTurns = 0;
   let lastTurn = -1;
@@ -184,6 +239,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     fresh: previous === null ? [] : newEventsSince(previous.events, snap.view.events),
     aiToAct: snap.aiToAct,
     nameOf: (defId) => snap.view.defs?.[defId]?.name ?? defs[defId]?.name,
+    defOf: (defId) => snap.view.defs?.[defId] ?? defs[defId],
   });
 
   for (;;) {
@@ -197,9 +253,10 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     }
 
     let display = coachDisplay(script, coach, ctx);
-    while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
+    while (isBubble(display) && display.ack) {
       const id = display.id;
       if (display.mode === "tip") tips.push(id);
+      else if (display.mode === "discovery") discoveries.push(id);
       else if (!shown.some((entry) => entry.id === id)) shown.push({ id, turn: snapshot.view.turn });
       coach = coachAck(script, coach, ctx);
       display = coachDisplay(script, coach, ctx);
@@ -220,7 +277,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     let byCoach = false;
     if (policy === "coach") {
       const step = activeStep(script, coach);
-      if (step?.kind === "act" && step.expect !== undefined) {
+      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;
@@ -228,7 +285,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action ??= autopilot(ctx);
     } else if (policy === "coach-passive") {
       const step = activeStep(script, coach);
-      if (step?.kind === "act" && step.expect !== undefined) {
+      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;
@@ -236,6 +293,8 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action ??= passive(ctx);
     } else if (policy === "autopilot") {
       action = autopilot(ctx);
+    } else if (policy === "reckless") {
+      action = reckless(ctx);
     } else {
       action = randomPolicy(ctx, (n) => rng.int(n));
     }
@@ -258,6 +317,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     outcomes: coach.outcomes,
     shown,
     tips,
+    discoveries,
     coach,
     debug: debugResponse.debug,
     humanActions,
