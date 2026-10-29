@@ -8707,6 +8707,16 @@
       "taken_asks": [
         "c:6501229462"
       ]
+    },
+    "2396": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-29T17:07:12Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
