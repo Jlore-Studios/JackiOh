@@ -8107,29 +8107,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40792073497",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40796046650",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "2cb549424beb26e528c3f8d3fbacd7554c9d3ad4",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2314": {
