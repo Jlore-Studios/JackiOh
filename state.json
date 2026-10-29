@@ -7855,15 +7855,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/cards/src/scripts/stinkyscape/c158_stratos_swarm.rs"
+          ],
+          "from": "9f851edbce96da054776cb6d72ca81be74052488",
+          "main": "bf53671d42e02406fbaca4dd24b17d16a1a2830a"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40800926912",
+            "run": "40830441928",
             "tier": "strong"
           }
         ],
-        "sha": "9f851edbce96da054776cb6d72ca81be74052488",
+        "sha": "ada5267a0f84fc5f6931ba64f76821b8311ee7ba",
         "tiers": {
           "claude": "strong"
         }
