@@ -1867,6 +1867,50 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(monitor.after(&[event(again)], g.state()), no_violations());
     }
 
+    /// A kill whose victim's Death steals the attacker (Core #86) gives it a new stint before its
+    /// `afterAttack` frees it, and the prompt the action leaves open holds the credit unsettled: the
+    /// lifted sickness is the credit's, not an entry mismatch (handicapped fuzz seed 4737 of the release).
+    #[test]
+    fn r1869002_r12_a_kill_credit_unsettled_across_a_steal_reads_as_readied() {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let tmack = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        find_instance_mut(g.state_mut(), &tmack.id)
+            .expect("Tmack Trav")
+            .summoned_turn = None;
+        let mut paused = g.state().clone();
+        paused.pending = Some(json_as(json!({
+            "id": "q1", "playerId": "p1", "kind": "mode", "prompt": "Choose", "options": [],
+            "min": 1, "max": 1,
+            "resume": { "defId": "core-086", "hook": "death", "step": "steal", "radiant": false, "data": {} },
+        })));
+        let events = [
+            event(
+                json!({ "type": "attackDeclared", "attackerId": tmack.id, "targetId": prey.id, "forced": false }),
+            ),
+            event(json!({
+                "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+                "controller": "p2", "attack": 4, "maxHealth": 4, "killerId": tmack.id,
+            })),
+            event(json!({
+                "type": "controlChanged", "instanceId": tmack.id, "controller": "p1", "row": "units", "lane": 1,
+                "how": "steal",
+            })),
+        ];
+        let found = monitor.after(&events, &paused);
+        assert!(
+            !found
+                .iter()
+                .any(|message| message.starts_with("I4 entry mismatch")),
+            "{found:?}"
+        );
+    }
+
     #[test]
     fn r1869002_a_kill_that_left_its_attack_spent_readied_nothing_and_its_credit_is_taken_back() {
         // The Wasp's text answers its attacks (it copies itself), but readies nothing: its kill leaves
@@ -1887,5 +1931,60 @@ mod r1869002_i2_a_kill_credit {
         let found = monitor.after(&[event(again)], g.state());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// R678: a Glitch's boards outcome deals both fields again and places their cards with no `summoned`,
+/// so the `glitched` event is the entry of every card the field holds after it (a Glitch played from
+/// the graveyard mid-game: handicapped fuzz seed 7613 of the Stinkyscape release).
+mod r678_a_glitch_s_boards_are_entered {
+    use super::*;
+
+    #[test]
+    fn r678_i3_reads_the_cards_a_glitch_s_boards_placed_as_entered() {
+        let mut g = scenario(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [VANILLA] } }));
+        let monitor = create_invariant_monitor(g.state());
+        let turn = g.state().turn;
+        let placed = {
+            let state = g.state_mut();
+            let mut card = new_instance(
+                &mut *state,
+                VANILLA,
+                PlayerId::P1,
+                Zone::Resolving { player: PlayerId::P1 },
+            );
+            let slot = jackioh_engine::zones::ZoneSlot {
+                player: PlayerId::P1,
+                row: jackioh_engine::wire::Row::Units,
+                lane: 1,
+            };
+            assert!(jackioh_engine::zones::place_on_field(
+                state,
+                &mut card,
+                slot,
+                Default::default()
+            ));
+            find_instance_mut(state, &card.id)
+                .expect("the placed card")
+                .summoned_turn = Some(turn);
+            card.id
+        };
+        let glitched = event(json!({ "type": "glitched", "player": "p2", "outcome": "boards" }));
+        let silent = |found: &[String]| {
+            found
+                .iter()
+                .filter(|message| message.starts_with("I3 silent arrival") && message.contains(&placed))
+                .count()
+        };
+
+        let mut boards = monitor.clone();
+        let mut found = boards.after(&[glitched], g.state());
+        found.extend(boards.before(g.state(), PlayerId::P1, &ActionBody::EndTurn));
+        assert_eq!(silent(&found), 0, "{found:?}");
+
+        let mut none = monitor.clone();
+        let mut found = none.after(&[], g.state());
+        found.extend(none.before(g.state(), PlayerId::P1, &ActionBody::EndTurn));
+        assert_eq!(silent(&found), 1, "{found:?}");
     }
 }

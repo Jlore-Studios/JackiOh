@@ -1664,7 +1664,12 @@ impl InvariantMonitor {
     /// R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it;
     /// R1869002: or `mayAttackAgain` does, for a stint holding a kill credit no state has settled yet.
     fn is_readied(&self, card: &CardInstance) -> bool {
-        (self.readied.contains(&card.id) || self.credited_at(&card.id).is_some())
+        // R1869002: a kill credit still unsettled (a prompt the action left open, a steal that gave the
+        // attacker a new stint before its `afterAttack` freed it: handicapped fuzz seed 4737) may have
+        // readied it; `settle_kill_credits` takes it back once nothing is owed if its attack stayed spent.
+        (self.readied.contains(&card.id)
+            || self.credited_at(&card.id).is_some()
+            || self.unsettled_credits.contains(&card.id))
             && card.summoned_turn.is_none()
     }
 
@@ -2132,6 +2137,18 @@ impl InvariantMonitor {
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
+                }
+                // R678: a Glitch's boards outcome deals both fields again, its cards placed with no
+                // `summoned` (`glitch::place_glitch_boards`), so each card the field holds once the
+                // action is over entered on this turn (a Glitch played from the graveyard mid-game:
+                // handicapped fuzz seed 7613 of the Stinkyscape release).
+                GameEvent::Glitched {
+                    outcome: crate::wire::GlitchOutcome::Boards,
+                    ..
+                } => {
+                    for card in field_cards(state) {
+                        self.enter(&card.id);
+                    }
                 }
                 GameEvent::Awakened { instance_id, .. } => {
                     // R2259000: a card that awakens is summoning sick for the rest of the turn, as one
