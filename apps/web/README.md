@@ -221,7 +221,7 @@ in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only 
 and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
-The list ships empty.
+The list ships one hint, `tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`, which the engine sets on the viewer's own hand cards only and never at 0.
 
 ## Commands
 

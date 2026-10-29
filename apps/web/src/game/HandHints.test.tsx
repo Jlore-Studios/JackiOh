@@ -1,5 +1,5 @@
-// #2267: the hand hints and their row (HandHints.tsx, handHints.ts). The shipped list is
-// empty, so the hints below are this file's own: nothing a player sees changes yet.
+// #2267: the hand hints and their row (HandHints.tsx, handHints.ts). The hints below are this
+// file's own; the shipped Tribute hint (#2268) is tested at the end.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,7 +12,7 @@ import { resetLocaleForTests, setLocale, t } from "../i18n/i18n.ts";
 import { baseView, card } from "../test/fixtures.ts";
 import Hand from "./Hand.tsx";
 import HandHints, { handHintsTestid } from "./HandHints.tsx";
-import { HAND_HINTS, hintsFor, type HandHint } from "./handHints.ts";
+import { HAND_HINTS, TRIBUTE_HINT, hintsFor, type HandHint } from "./handHints.ts";
 import { testid } from "./contract.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -51,8 +51,8 @@ afterEach(() => {
 });
 
 describe("#2267 the hand hints and their row", () => {
-  it("#2267 the shipped list starts empty, so no hand card wears a hint yet", () => {
-    expect(HAND_HINTS).toEqual([]);
+  it("#2267 #2268 the shipped list is the Tribute hint alone, so a card without a Tribute wears no row", () => {
+    expect(HAND_HINTS.map((hint) => hint.id)).toEqual(["tribute"]);
     const { container } = render(<HandHints card={card()} view={VIEW} />);
     expect(container.firstChild).toBeNull();
   });
@@ -164,5 +164,29 @@ describe("#2267 Hand.tsx draws the row on the viewer's own hand cards only", () 
     fireEvent.click(screen.getByTestId(handHintsTestid("h1")).querySelector(".hand-hint") as Element);
     expect(screen.getByTestId(testid.handCard("h1")).closest(".hand-slot")).toHaveAttribute("data-lifted", "true");
     expect(onClick).toHaveBeenCalledWith({ on: "hand", instanceId: "h1" });
+  });
+});
+
+describe("R2268000 the Tribute hint reads the engine's number", () => {
+  it("R2268000 a hand card whose view has tribute: 2 wears the Tribute pip showing 2", () => {
+    const c = card({ tribute: 2 });
+    expect(hintsFor(c, VIEW).map(({ hint, shown }) => [hint.id, shown.n])).toEqual([["tribute", 2]]);
+    const { container } = render(<HandHints card={c} view={VIEW} />);
+    expect(container.querySelector('[data-hint="tribute"] .hand-hint-n')).toHaveTextContent("2");
+    expect(container.querySelector('[data-hint="tribute"] img.cf-icon--altar')).not.toBeNull();
+    expect(screen.getByRole("img", { name: "Tribute" })).toBeInTheDocument();
+  });
+
+  it("R2268000 a hand card whose view has no tribute wears no Tribute pip", () => {
+    const c = card();
+    expect(TRIBUTE_HINT.applies(c, VIEW)).toBeNull();
+    const { container } = render(<HandHints card={c} view={VIEW} />);
+    expect(container.querySelector('[data-hint="tribute"]')).toBeNull();
+  });
+
+  it("R2268000 the viewer's own hand card wears it with the shipped list", () => {
+    render(<Hand side="you" view={VIEW} hand={[card({ instanceId: "tr", tribute: 1 })]} />);
+    const pip = screen.getByTestId(testid.handCard("tr")).querySelector('[data-hint="tribute"] .hand-hint-n');
+    expect(pip).toHaveTextContent("1");
   });
 });
