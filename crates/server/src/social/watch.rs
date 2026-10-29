@@ -29,7 +29,6 @@
 //! S7's `Friend.watchable`, for the friends list, is `social::presence::standings`'s, which judges
 //! what this module's checks judge for every friend at once (`Tx::presence_watchable`).
 
-use std::future::Future;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -86,18 +85,6 @@ pub type WatchListener = HelloGate<WatchHello>;
 /// gone frees itself; the actor's handlers replace them once it takes the socket.
 pub fn listen(socket: &Socket) -> WatchListener {
     HelloGate::install(socket, parse_watch_hello)
-}
-
-/// `listen`, then `serve`. The handlers go on when this is called, before the future it answers
-/// first runs, so a hello sent straight after the call is heard. `token` is the upgrade's
-/// (R1379000).
-pub fn handle_watch_socket<'a>(
-    app: &'a Arc<App>,
-    socket: &'a Socket,
-    token: Option<String>,
-) -> impl Future<Output = ()> + Send + 'a {
-    let listener = listen(socket);
-    serve(app, socket, token, listener)
 }
 
 /// Why a watch socket was not handed to the actor.

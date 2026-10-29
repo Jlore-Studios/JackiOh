@@ -76,7 +76,7 @@ mod tests {
         assert_eq!(s.hand(P1).len(), 3, "the filler and two draws");
     }
 
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
     const CAPABILITY: &str = "stinkyscape-137"; // Cry: launches your Dormant Starship free.
 
@@ -86,7 +86,7 @@ mod tests {
             "seed": "launch-sequencer-later",
             "p1": {
                 "hand": [SEQUENCER, HIT_JOB, FILLER],
-                "field": [STARTOS],
+                "field": [STRATOS],
                 "library": filler(4),
                 "mana": 10,
             },
@@ -121,7 +121,7 @@ mod tests {
     fn r1881003_a_launch_by_an_effect_spends_none() {
         let (mut s, ship) = crate::built_starship(
             "launch-sequencer-effect",
-            json!([{ "def": STARTOS, "lane": 1 }]),
+            json!([{ "def": STRATOS, "lane": 1 }]),
             json!({ "hand": [SEQUENCER, CAPABILITY] }),
             json!({}),
         );

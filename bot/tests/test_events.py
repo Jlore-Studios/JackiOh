@@ -6,7 +6,7 @@ import unittest
 
 from datetime import timedelta
 
-from harness import events, status
+from harness import events, plan, status
 from harness.clock import iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_WORKING, MARKER)
@@ -375,6 +375,78 @@ class ReviewAndCiTests(unittest.TestCase):
         events.handle(self.ctx, "pull_request_target", {"action": "closed", "sender": OPERATOR,
                                                          "pull_request": pull})
         self.assertIn("closed without merging", self.gh.bot_comments(5)[-1])
+
+
+class MergeQueueTests(unittest.TestCase):
+    """`main`'s merge queue (infra/github.tf): a cleared head its build took out gets a CI fix at
+    once; one still queued is the queue's; one taken out with no failed build goes back once per
+    commit of `main`; a queued pull request is held by taking it out."""
+
+    QUEUE = {"actor": "github-merge-queue", "type": "Bot", "reason": "CONFLICT"}
+
+    def setUp(self):
+        self.gh = FakeGitHub()
+        self.gh.add_issue(5, labels=(LABEL_PR_OPEN,))
+        self.gh.add_pull(9, "bot/issue-5", body="Closes #5", labels=(LABEL_PR,), sha="s1")
+        self.ctx = make_ctx(self.gh, at=DAY, trust_text=TRUST)
+        self.ctx.store.update(lambda s: state_item(s, 9).update(cleared={"sha": "s1"}))
+
+    def queue_ci(self, branch="gh-readonly-queue/main/pr-9-abc", conclusion="cancelled"):
+        # A merge group's run names no pull request; its branch does. It ends cancelled once a
+        # required check failed (ci.yml's `queue-cancel-*`).
+        run = {"name": "CI", "conclusion": conclusion, "head_branch": branch, "head_sha": "mg",
+               "id": 77, "html_url": "q", "pull_requests": [], "event": "merge_group"}
+        return events.handle(self.ctx, "workflow_run",
+                             {"action": "completed", "sender": BOT, "workflow_run": run})
+
+    def housekeeping(self):
+        return plan.housekeeping(self.ctx, self.ctx.store.load())
+
+    def test_a_cleared_head_its_build_took_out_gets_a_ci_fix_at_once(self):
+        self.queue_ci()
+        self.assertEqual((self.gh.auto_merge, self.gh.reruns), ({}, []))
+        self.assertIn(LABEL_REVISE, self.gh.label_names(9))
+        record = self.ctx.store.load()["items"]["9"]
+        self.assertEqual((record["source"], record["ci_run_id"], record["ci_fixes"]), ("ci", 77, 1))
+        self.assertIn("The merge queue took this out", self.gh.bot_comments(9)[-1])
+
+    def test_one_still_queued_a_held_one_or_an_uncleared_head_is_left_alone(self):
+        self.gh.merge_queue = {"PR_9"}  # built again without a pull request ahead that failed
+        self.queue_ci()
+        self.gh.merge_queue = set()
+        self.ctx.store.update(lambda s: state_item(s, 9).update(stop_requested=True))
+        self.queue_ci()
+        self.ctx.store.update(lambda s: state_item(s, 9).update(stop_requested=False,
+                                                                cleared={"sha": "s0"}))
+        self.queue_ci(conclusion="failure")
+        self.gh.add_pull(10, "people/x", labels=(), sha="p1")
+        self.queue_ci(branch="gh-readonly-queue/main/pr-10-abc")
+        self.assertEqual((self.gh.auto_merge, self.gh.label_names(9)), ({}, {LABEL_PR}))
+        self.assertEqual((self.gh.bot_comments(9), self.gh.reruns), ([], []))
+
+    def test_one_taken_out_with_no_failed_build_goes_back_once_per_commit_of_main(self):
+        self.gh.queue_removals["PR_9"] = dict(self.QUEUE)
+        self.assertIn("#9: back in the merge queue (taken out: CONFLICT)", self.housekeeping())
+        self.assertEqual(self.gh.auto_merge_heads["PR_9"], "s1")
+        self.gh.disable_auto_merge("PR_9")  # queued, and out again on the same `main`
+        self.assertNotIn("#9: back", " ".join(self.housekeeping()))
+        self.gh.branch_sha = lambda branch: "main-2"  # `main` moved on
+        self.housekeeping()
+        self.assertIn("PR_9", self.gh.auto_merge)
+
+    def test_a_person_who_took_it_out_or_a_head_never_cleared_keeps_it_out(self):
+        self.gh.queue_removals["PR_9"] = {"actor": "jgoetzmann", "type": "User", "reason": "MANUAL"}
+        self.housekeeping()
+        self.gh.queue_removals["PR_9"] = dict(self.QUEUE)
+        self.ctx.store.update(lambda s: state_item(s, 9).update(cleared={"sha": "s0"}))
+        self.housekeeping()
+        self.assertEqual(self.gh.auto_merge, {})
+
+    def test_a_revision_or_a_stop_takes_a_queued_pull_request_out(self):
+        for body in ("/harness revise name it better", "/harness stop"):
+            self.gh.merge_queue = {"PR_9"}  # queued: REST `auto_merge` reads null
+            events.handle(self.ctx, "issue_comment", comment_event(9, body, pr=True))
+            self.assertEqual(self.gh.merge_queue, set(), body)
 
 
 class StatusTests(unittest.TestCase):

@@ -56,7 +56,7 @@ use crate::state::{
     find_instance_mut,
 };
 use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, ZoneName, opponent_of};
-use crate::zones::GraveyardRedirect;
+use crate::zones::{GraveyardRedirect, live_or};
 
 // ---------------------------------------------------------------------------
 // What a card declares
@@ -128,13 +128,6 @@ struct Candidate {
     card: CardInstance,
     controller: PlayerId,
     zone: CandidateZone,
-}
-
-/// The card as it stands now, found again by id (TS held the live object), or as it was handed over.
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone())
 }
 
 fn add_candidate(
@@ -345,7 +338,7 @@ fn spend(
     record: &ReplacementRecord,
     fired: bool,
 ) -> Option<Resume> {
-    let mut card = live(sink.state, &cand.card);
+    let mut card = live_or(sink.state, &cand.card);
     if fired
         && crate::faces::card_type_of(sink.state, &card) == CardType::Trap
         && card.zone.z() == ZoneName::Field
@@ -356,7 +349,7 @@ fn spend(
             crate::zones::OffFieldZone::Graveyard,
             Default::default(),
         );
-        card = live(sink.state, &card);
+        card = live_or(sink.state, &card);
         crate::zones::report_graveyard_landing(sink, &card, result);
     }
     let then = def.then.as_ref()?;
@@ -432,7 +425,7 @@ pub fn lethal_hit_window(
         // a fusion) cancels one hit a turn, so its follow-up's own fatigue cannot be cancelled for ever.
         if def.instead.cancel == Some(true) {
             let turn = sink.state.turn;
-            let cancelled_this_turn = live(sink.state, &cand.card)
+            let cancelled_this_turn = live_or(sink.state, &cand.card)
                 .memory
                 .get(CANCELLED_MEMORY_KEY)
                 .and_then(Value::as_i64)
@@ -466,7 +459,7 @@ pub fn lethal_hit_window(
                     continue;
                 }
                 DamageTarget::Unit {
-                    instance: live(sink.state, &cand.card),
+                    instance: live_or(sink.state, &cand.card),
                 }
             } else {
                 if !matches!(target, DamageTarget::Hero { .. }) {
@@ -606,7 +599,7 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
             continue;
         }
         if converts_by_text(sink.state, &cand) {
-            let converter = live(sink.state, &cand.card);
+            let converter = live_or(sink.state, &cand.card);
             convert(sink, Some(converter), target, amount);
             return true;
         }
@@ -625,7 +618,7 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
                 },
             );
         }
-        let converter = live(sink.state, &cand.card);
+        let converter = live_or(sink.state, &cand.card);
         convert(sink, Some(converter), target, amount);
         let record = ReplacementRecord {
             event: event.clone(),
@@ -909,7 +902,7 @@ pub fn answer_targeting(
             flickered: None,
         };
         finish(sink, &cand, &def, &record, false);
-        return Some(live(sink.state, &card));
+        return Some(live_or(sink.state, &card));
     }
     None
 }
