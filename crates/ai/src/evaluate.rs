@@ -482,6 +482,9 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // silent, so the enemy's count is no fact the seat has.
     if player == seat {
         value += w.anomaly_miss * f64::from(side.anomaly_misses.unwrap_or(0));
+        // #2389: the Credits the side holds, at what they buy at the Marketplace (R1853002), so a
+        // Resource's quote (R2250001) and a buy's price count. Own side only, as the anomaly misses.
+        value += w.market_credit * f64::from(side.market_credits.unwrap_or(0));
     }
     if w.marked_share != 0.0 {
         value += w.marked_share * marked_enemy_worth(state, player, w);
