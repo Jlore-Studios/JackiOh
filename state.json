@@ -7156,7 +7156,7 @@
       "verdict_rounds": 1
     },
     "2307": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixed_head": "db143b0cea3b3ef4ae8e922f6eb2d751559fb206",
       "ci_fixes": 2,
@@ -7179,21 +7179,21 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2253,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-29T15:03:26Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40861038420",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:5e707c9f-1793286225",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-29T10:52:55Z",
+      "started_at": "2026-10-29T15:04:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -8349,9 +8349,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T14:54:54Z",
+    "at": "2026-10-29T15:04:08Z",
     "url": "",
-    "what": "build #2334 on claude-4"
+    "what": "review #2307 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-29T14:51:18Z",
