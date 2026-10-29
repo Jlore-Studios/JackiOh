@@ -1,13 +1,13 @@
 //! Stinkyscape's Marketplace table, S21's data (`config::MARKETPLACE_TABLE`; R1853001, R1881006,
-//! docs/stinkyscape-set.md ST3): every lot's pool resolves to cards the catalog holds, each the kind ST3
-//! names, and an offering rolled from it holds every lot at its count and stock.
+//! R2250002, docs/stinkyscape-set.md ST3): every lot's pool resolves to cards the catalog holds, each
+//! the kind ST3 names, each weighted by its ST3 count, and a player's offers rolled from it are three
+//! different cards of its lots, one copy each, and no Resource.
 
 use jackioh_cards::{card_def, register_all};
 use jackioh_engine::config::{
-    MARKETPLACE_AI_CARDS, MARKETPLACE_CARD_STOCK_MAX, MARKETPLACE_CARD_STOCK_MIN, MARKETPLACE_DRONE_CORES,
-    MARKETPLACE_LAUNCHERS, MARKETPLACE_PROBE_MK1, MARKETPLACE_PROBE_MK1_STOCK, MARKETPLACE_PROBE_MK2,
-    MARKETPLACE_PROBE_MK2_STOCK, MARKETPLACE_RESOURCE_STOCK_MAX, MARKETPLACE_RESOURCE_STOCK_MIN,
-    MARKETPLACE_TABLE, MARKETPLACE_WARP_DISRUPTORS, MARKETPLACE_WEAPONS, MarketPool,
+    MARKETPLACE_AI_CARDS, MARKETPLACE_DRONE_CORES, MARKETPLACE_LAUNCHERS, MARKETPLACE_OFFER_STOCK,
+    MARKETPLACE_OFFERS_PER_TURN, MARKETPLACE_PROBE_MK1, MARKETPLACE_PROBE_MK2, MARKETPLACE_TABLE,
+    MARKETPLACE_WARP_DISRUPTORS, MARKETPLACE_WEAPONS, MarketPool,
 };
 use jackioh_engine::testkit::scenario;
 use jackioh_engine::{
@@ -20,11 +20,6 @@ use serde_json::json;
 /// lot's no token and no card only a rule makes (R1857001).
 fn pool(pool: MarketPool) -> Vec<String> {
     match pool {
-        MarketPool::Resources => registered_catalog()
-            .values()
-            .filter(|def| def.resource.is_some())
-            .map(|def| def.id.clone())
-            .collect(),
         MarketPool::Ids(ids) => ids.iter().map(|id| (*id).to_string()).collect(),
         MarketPool::Set(set) => registered_catalog()
             .values()
@@ -47,7 +42,11 @@ fn pool(pool: MarketPool) -> Vec<String> {
 #[test]
 fn r1881006_every_lots_pool_resolves_to_cards_the_catalog_holds_at_least_its_count() {
     register_all();
-    assert_eq!(MARKETPLACE_TABLE.len(), 10, "ST3's ten lots");
+    assert_eq!(
+        MARKETPLACE_TABLE.len(),
+        9,
+        "ST3's lots but its Resources (R2250002)"
+    );
     for lot in MARKETPLACE_TABLE {
         if let MarketPool::Ids(ids) = lot.pool {
             for id in ids {
@@ -62,7 +61,11 @@ fn r1881006_every_lots_pool_resolves_to_cards_the_catalog_holds_at_least_its_cou
             ids.len(),
             lot.count
         );
-        assert!(lot.stock_min >= 1 && lot.stock_min <= lot.stock_max, "{lot:?}");
+        assert!(
+            ids.iter().all(|id| card_def(id).resource.is_none()),
+            "{:?} holds no Resource",
+            lot.pool
+        );
     }
 }
 
@@ -117,59 +120,36 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
 }
 
 #[test]
-fn r1881006_an_offering_rolled_from_it_holds_each_lot_at_its_count_and_stock() {
+fn r1881006_r2250002_a_roll_from_it_offers_three_different_cards_of_its_lots() {
     register_all();
     let s = scenario(json!({ "seed": "s21-table" }));
     let state = s.state();
+    let pools: Vec<Vec<String>> = MARKETPLACE_TABLE.iter().map(|lot| pool(lot.pool)).collect();
     for seed in 0..20 {
         let mut rng = Rng::new(&format!("s21-table-{seed}"), 0);
-        let offers = roll_offers(state, &mut rng, MARKETPLACE_TABLE);
-        let counts: i32 = MARKETPLACE_TABLE.iter().map(|lot| lot.count).sum();
-        assert_eq!(offers.len(), counts as usize, "every lot fills its count");
-        let mut at = 0;
-        for lot in MARKETPLACE_TABLE {
-            let ids = pool(lot.pool);
-            for offer in &offers[at..at + lot.count as usize] {
-                assert!(ids.contains(&offer.def_id), "{} in {:?}", offer.def_id, lot.pool);
-                assert!(
-                    (lot.stock_min..=lot.stock_max).contains(&offer.stock),
-                    "{offer:?}"
-                );
-                assert_eq!(offer.bought[PlayerId::P1], 0);
-            }
-            at += lot.count as usize;
+        let offers = roll_offers(state, &mut rng, MARKETPLACE_TABLE, PlayerId::P1);
+        assert_eq!(offers.len() as i32, MARKETPLACE_OFFERS_PER_TURN);
+        for (at, offer) in offers.iter().enumerate() {
+            assert!(
+                pools.iter().any(|ids| ids.contains(&offer.def_id)),
+                "{} is in a lot",
+                offer.def_id
+            );
+            assert!(
+                offers[..at].iter().all(|before| before.def_id != offer.def_id),
+                "the offers differ"
+            );
+            assert_eq!(offer.stock, MARKETPLACE_OFFER_STOCK, "{offer:?}");
+            assert_eq!(offer.owner, Some(PlayerId::P1));
+            assert_eq!(offer.bought[PlayerId::P1], 0);
         }
     }
 }
 
 #[test]
-fn r1881006_the_stocks_are_st3s() {
-    let stocks: Vec<(i32, i32)> = MARKETPLACE_TABLE
-        .iter()
-        .map(|lot| (lot.stock_min, lot.stock_max))
-        .collect();
-    let card = (MARKETPLACE_CARD_STOCK_MIN, MARKETPLACE_CARD_STOCK_MAX);
-    assert_eq!(
-        (MARKETPLACE_RESOURCE_STOCK_MIN, MARKETPLACE_RESOURCE_STOCK_MAX),
-        (4, 8)
-    );
-    assert_eq!((MARKETPLACE_PROBE_MK1_STOCK, MARKETPLACE_PROBE_MK2_STOCK), (6, 3));
-    assert_eq!(card, (1, 3));
-    assert_eq!(
-        stocks,
-        vec![
-            (MARKETPLACE_RESOURCE_STOCK_MIN, MARKETPLACE_RESOURCE_STOCK_MAX),
-            card,
-            card,
-            (MARKETPLACE_PROBE_MK1_STOCK, MARKETPLACE_PROBE_MK1_STOCK),
-            (MARKETPLACE_PROBE_MK2_STOCK, MARKETPLACE_PROBE_MK2_STOCK),
-            card,
-            card,
-            card,
-            card,
-            card,
-        ]
-    );
+fn r1881006_r2250002_the_lots_weigh_st3s_counts() {
+    let counts: Vec<i32> = MARKETPLACE_TABLE.iter().map(|lot| lot.count).collect();
+    assert_eq!(counts, vec![3, 2, 1, 1, 2, 1, 2, 2, 1]);
 }
 
 #[test]
@@ -189,7 +169,7 @@ fn r1857001_the_marketplace_never_offers_the_dormant_starship() {
     let s = scenario(json!({ "seed": "r1857001-market" }));
     for seed in 0..200 {
         let mut rng = Rng::new(&format!("r1857001-market-{seed}"), 0);
-        let offers = roll_offers(s.state(), &mut rng, MARKETPLACE_TABLE);
+        let offers = roll_offers(s.state(), &mut rng, MARKETPLACE_TABLE, PlayerId::P1);
         assert!(
             offers.iter().all(|offer| offer.def_id != DORMANT_STARSHIP_DEF_ID),
             "seed {seed} offers the Dormant Starship"

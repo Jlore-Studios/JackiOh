@@ -2,7 +2,8 @@
 //!   Base:    "Add a random Rare card to your hand."
 //!   Radiant: "Add a random Radiant Rare card to your hand."
 //!
-//! A Legendary Resource (R1840000), played from its owner's tray at (0) (R1840003) or sold (R1853003);
+//! A Legendary Resource (R1840000), played from its owner's hand at (0), which pays its quote in Credits
+//! (R2250000, R2250001);
 //! S #39 The Narcor Project makes them. The pool is every non-token Rare card of the sets that ship
 //! (R380, R1420), drawn uniformly (R60); a full hand burns the card (§2.4). Radiant: the card is Radiant.
 
@@ -30,23 +31,26 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-narcor — SPEC §7, BUILD M12 row S T-narcor: "played from the tray, adds one random non-token Rare
+// S T-narcor — SPEC §7, BUILD M12 row S T-narcor: "played from the hand, adds one random non-token Rare
 // card to the hand, a full hand burning it; radiant a Radiant one".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, filler, play_from_tray, scenario};
+    use crate::{card_def, filler, play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
 
+    /// The Narcor first in a hand of it and `hand` fillers (R2250000), played.
     fn played(seed: &str, radiant: bool, hand: usize) -> Scenario {
+        let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
+        cards.extend(filler(hand).as_array().cloned().unwrap_or_default());
         let mut s = scenario(json!({
             "seed": seed,
-            "p1": { "tray": [{ "def": ID, "radiant": radiant }], "hand": filler(hand) },
+            "p1": { "hand": cards },
         }));
-        play_from_tray(&mut s, P1, ID, Value::Null);
+        play_resource(&mut s, P1, ID, Value::Null);
         s
     }
 
@@ -67,6 +71,7 @@ mod tests {
 
     #[test]
     fn full_hand_burns() {
+        // A hand past its cap, which a setup may hold: the Narcor played, it is still full.
         let s = played("narcor-full", false, HAND_CAP as usize);
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         let burned: Vec<CardInstance> = s

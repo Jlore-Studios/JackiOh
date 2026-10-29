@@ -220,20 +220,28 @@ pub(crate) fn run_as(
     events
 }
 
-/// R1840003: `player` plays the oldest Resource of `def_id` in their tray, with `targets` declared
-/// (`Value::Null` for none). Panics when the tray holds none or `reduce` refuses the play.
+/// R2250000: the Resources in `player`'s hand, in hand order.
 #[cfg(test)]
-pub(crate) fn play_from_tray<'a>(
+pub(crate) fn resources_in_hand(
+    s: &jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+) -> Vec<jackioh_engine::CardInstance> {
+    jackioh_engine::resources_in_hand_of(s.state(), player)
+}
+
+/// R2250000: `player` plays the Resource of `def_id` longest in their hand, with `targets` declared
+/// (`Value::Null` for none). Panics when the hand holds none or `reduce` refuses the play.
+#[cfg(test)]
+pub(crate) fn play_resource<'a>(
     s: &'a mut jackioh_engine::testkit::Scenario,
     player: jackioh_engine::PlayerId,
     def_id: &str,
     targets: serde_json::Value,
 ) -> &'a mut jackioh_engine::testkit::Scenario {
-    let instance_id = s
-        .pile(player, "tray")
+    let instance_id = resources_in_hand(s, player)
         .into_iter()
         .find(|card| card.def_id == def_id)
-        .unwrap_or_else(|| panic!("{player}'s tray holds a {def_id}"))
+        .unwrap_or_else(|| panic!("{player}'s hand holds a {def_id}"))
         .id;
     s.act(
         jackioh_engine::ActionBody::Play {
@@ -249,7 +257,7 @@ pub(crate) fn play_from_tray<'a>(
             face_down: None,
         },
         player,
-        "play from the tray",
+        "play the Resource",
     )
 }
 
@@ -277,6 +285,26 @@ pub(crate) fn under_kept<T>(id: &str, scripts: CardScripts, run: impl FnOnce() -
             CATALOG.clone(),
             IndexMap::from([(id.to_string(), scripts)]),
         )));
+    jackioh_engine::with_shipped(Some(shipped), run)
+}
+
+/// `under_kept` with the kept version's own definition of `id`: `old` rewrites the build's into it (a
+/// declared number renamed since, which the kept script reads by its old name).
+#[cfg(test)]
+pub(crate) fn under_kept_as<T>(
+    id: &str,
+    scripts: CardScripts,
+    old: impl FnOnce(&mut CardDef),
+    run: impl FnOnce() -> T,
+) -> T {
+    register_all();
+    let mut defs = CATALOG.clone();
+    if let Some(def) = defs.get_mut(id) {
+        old(def);
+    }
+    let shipped: &'static jackioh_engine::ShippedCatalog = Box::leak(Box::new(
+        jackioh_engine::ShippedCatalog::new("kept", defs, IndexMap::from([(id.to_string(), scripts)])),
+    ));
     jackioh_engine::with_shipped(Some(shipped), run)
 }
 

@@ -133,7 +133,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 ### B3 Card conformance (SPEC §8, BUILD §3 M4)
 
 1. `cargo build -p jackioh-cards` succeeds: `crates/cards/build.rs` refuses a catalog id with no script file and a script whose `ID` the catalog lacks.
-2. Count script files: one per catalog entry, 710 for the shipped sets since the Stinkyscape set shipped (issue #1884; `ls crates/cards/src/scripts/*/*.rs | wc -l`: 111 in `core/`, 91 in `classic/`, 116 in `classic_plus/`, 132 in `meditative/`, 32 in `meditative_plus/` and 228 in `stinkyscape/`), and one per entry of the held Training Grounds set in `training_grounds/` (41 at #2273, more as its parts land, R2194000), 751 in all. Each holds its tests in a `#[cfg(test)] mod tests`; `grep -L "mod tests" crates/cards/src/scripts/*/*.rs` lists the files without one, and each listed token must be tested in the file of the card that makes it.
+2. Count script files: one per catalog entry, 710 for the shipped sets since the Stinkyscape set shipped (issue #1884; `ls crates/cards/src/scripts/*/*.rs | wc -l`: 111 in `core/`, 91 in `classic/`, 116 in `classic_plus/`, 132 in `meditative/`, 32 in `meditative_plus/` and 228 in `stinkyscape/`), and one per entry of the held Training Grounds set in `training_grounds/` (61 on main at 9bfd8ae, more as its parts land, R2194000), 771 in all. Each holds its tests in a `#[cfg(test)] mod tests`; `grep -L "mod tests" crates/cards/src/scripts/*/*.rs` lists the files without one, and each listed token must be tested in the file of the card that makes it.
 3. For every card in the BUILD M4-T4 table, open its script file and confirm each "must-pass" clause is a distinct `#[test]` in its `mod tests`, base and radiant both present (a clause naming only printed cost, stats, type or tags is proved by `crates/cards/tests/cross/catalog.rs` instead, BUILD M4-T4). A card whose tests skip a clause is MAJOR; a card whose implementation contradicts its §8 row is BLOCKER.
 4. Deep-read 15 scripts against their §8 rows: the fixed set #3, #9, #12, #18, #22, #31, #41, #52, #60, #85, #92, #93, #95, #96, #98, plus 5 more chosen with `seed % 100` from the current commit hash. Record for each: hook used, primitives used, prompt kinds declared, any behaviour not in the spec.
 5. Subsystems: `fuse`, `rotation`, `scorer`, `ai_policy`, `hero_power`, `combo_index`, `call_to_chaos`, `lethal` (`crates/engine/src/subsystems/`) each have a test module in `crates/engine/tests/rules/` and the acceptance cases in BUILD M3-T7.
@@ -165,7 +165,7 @@ Every spec BUILD M8 lists exists under `e2e/cypress/e2e/` with the listed assert
 
 - `cargo jackioh fuzz` green: it reports 1,000 seeds, 0 panics, 0 replay mismatches, 0 invariant violations, 0 games over the action bound; `cargo jackioh fuzz --handicap` the same.
 - `cargo jackioh golden check` green: the 240 traces recorded from the TypeScript engine and the hotseat fixture replay with the same hashes.
-- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `7044d528`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
+- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `5b8b57a7`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
 
 ---
 

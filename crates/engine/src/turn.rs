@@ -426,8 +426,8 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
     });
     // R1844000: an autopilot aura takes the turn as it begins, so the start's prompts are its too.
     crate::subsystems::autopilot::engage_aura(sink, player);
-    // R1853001, R1853002: an open Marketplace moves its prices and quotes, and re-rolls each cycle.
-    crate::marketplace::marketplace_turn_start(sink);
+    // R2250002, R1853002: an open Marketplace rolls the player their offers and quotes its prices.
+    crate::marketplace::marketplace_turn_start(sink, player);
     // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
     let natural = crate::mana::natural_mana_on(sink.state);
     let side = &mut sink.state.players[player];
@@ -680,18 +680,27 @@ pub fn run_owed_start_of_turn(sink: &mut EngineSink, item: &WorkItem) {
 /// about. Leaving it set would make the card return from the graveyard on every later turn it
 /// happened to be in one, including after it was merely discarded or milled (R153).
 pub fn clear_return_flags(state: &mut GameState) {
-    // The cards played this turn are exactly the ones step 7 could have flagged: it writes the flag on
-    // the card it just landed, and step 4 logged that same card on its player's turn log. Both logs:
-    // a Spell cast on the other player's turn (a cast on draw, R70) is flagged too, and §6.2 makes an
-    // "End of turn" its controller's own turn end, which this is not — so its return is over with this
-    // turn as well (R155). `start_turn` empties both logs, so these are still this turn's lists.
+    // The cards played this turn are the ones step 7 could have flagged: it writes the flag on the card
+    // it just landed, and step 4 logged that same card on its player's turn log. Both logs: a Spell cast
+    // on the other player's turn is flagged too, and §6.2 makes an "End of turn" its controller's own
+    // turn end, which this is not — so its return is over with this turn as well (R155). `start_turn`
+    // empties both logs, so these are still this turn's lists. A card cast on draw is flagged as it
+    // lands and logged as no play (R2179002), so the graveyards' flagged cards are cleared too: the flag
+    // lives only on a card in a graveyard (leaving one clears it), and every flag left is this turn's.
     for player in PLAYER_IDS {
-        let ids: IndexSet<String> = state.players[player]
+        let mut ids: IndexSet<String> = state.players[player]
             .turn_log
             .played_ids
             .iter()
             .cloned()
             .collect();
+        ids.extend(
+            state.players[player]
+                .graveyard
+                .iter()
+                .filter(|card| card.return_to_hand_at_end_of_turn == Some(true))
+                .map(|card| card.id.clone()),
+        );
         for id in ids {
             if let Some(card) = find_instance_mut(state, &id)
                 && card.return_to_hand_at_end_of_turn == Some(true)

@@ -1,9 +1,8 @@
-//! Test-only cards and a table for Stinkyscape's Marketplace (#1853, R1853000–R1853005): a (0) Spell, a
-//! (4) and a (5) Unit and a (1) Spell standing in for Call to Chaos (Scape Edition)'s lot, all of the
-//! Boss-X set so a set lot draws among them, and `MARKET_TABLE`, the fixture table in the shape of the
-//! set's (S21): Resources, a pool of named cards, one named card at a fixed stock, and a set. No shipped
-//! card reaches the Marketplace yet, so the engine never imports `crates/cards` for this; the Resources
-//! are `fixtures/resources.rs`'.
+//! Test-only cards and a table for Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250,
+//! R2250002): a (0) Spell, a (4) and a (5) Unit and a (1) Spell standing in for Call to Chaos (Scape
+//! Edition)'s lot, all of the Boss-X set so a set lot draws among them, and `MARKET_TABLE`, the fixture
+//! table in the shape of the set's (S21): a pool of named cards, one named card, and a set. The engine
+//! never imports `crates/cards` for this; the Resources are `fixtures/resources.rs`'.
 //!
 //! Ids are prefixed `fx-mkt-` and indexed from 18530, so they collide with no other fixture file's; the
 //! hand-sale card (R1861000), kept apart from the table's cards, is 18610.
@@ -57,32 +56,20 @@ pub fn marketplace_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// The fixture table: two Resources at stock 4–8, two of the named three at 1–3, the (4) Unit at 6, and
-/// one card of the Boss-X set at 2 — six offers.
+/// The fixture table: the named three weighted 2, the (4) Unit alone 1, and the Boss-X set 1, so a
+/// roll of three offers draws its lots by 2 : 1 : 1 (R2250002).
 pub static MARKET_TABLE: &[MarketLot] = &[
-    MarketLot {
-        pool: MarketPool::Resources,
-        count: 2,
-        stock_min: 4,
-        stock_max: 8,
-    },
     MarketLot {
         pool: MarketPool::Ids(&[FREE, FOUR, FIVE]),
         count: 2,
-        stock_min: 1,
-        stock_max: 3,
     },
     MarketLot {
         pool: MarketPool::Ids(&[FOUR]),
         count: 1,
-        stock_min: 6,
-        stock_max: 6,
     },
     MarketLot {
         pool: MarketPool::Set(SetName::BossX),
         count: 1,
-        stock_min: 2,
-        stock_max: 2,
     },
 ];
 
