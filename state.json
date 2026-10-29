@@ -8071,6 +8071,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2315": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-28T21:03:35Z",
+      "issue": 2280,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
