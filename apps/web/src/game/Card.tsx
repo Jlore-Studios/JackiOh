@@ -97,6 +97,7 @@ import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlig
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 
 import "./facedown.css";
 import "./countered.css";
@@ -344,7 +345,12 @@ export default function Card(props: CardProps): ReactElement {
           }
         : null;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold, showLoc: false });
+  const inspect = useInspectTrigger(subject, {
+    prefer: form === "full" ? "above" : "beside",
+    touchHold: props.touchHold,
+    showLoc: false,
+    keyHint: SHORTCUTS.inspect,
+  });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);

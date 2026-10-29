@@ -1206,6 +1206,14 @@ describe("issue #2099 undo and redo", () => {
     expect(server.decks.get("a")?.cards).toEqual([fixtureCardId(1)]);
   });
 
+  it("R2126000 Undo and Redo name their keys in their tooltips and aria-keyshortcuts", () => {
+    mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(undoButton().getAttribute("title")).toBe("Undo (Ctrl+Z)");
+    expect(undoButton().getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
+    expect(redoButton().getAttribute("title")).toBe("Redo (Ctrl+Shift+Z)");
+    expect(redoButton().getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z");
+  });
+
   it("issue #2099 a rename is one step however many keys it takes", async () => {
     const { server, tick } = mount({ decks: [savedDeck("a", "Aggro", [], 1)], initialOpen: { kind: "deck", id: "a" } });
     const input = screen.getByTestId(DECK_NAME_INPUT);

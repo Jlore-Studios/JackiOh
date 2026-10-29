@@ -69,6 +69,23 @@
   gap: 10px; /* PREVIEW_GLOSSARY_GAP_PX */
 }
 
+/* R2126000: the face with the key that opens it, "Press I to inspect", under it. */
+.inspect-face-column {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspect-face-column .shortcut-hint {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: var(--type-sm);
+}
+
 .inspect-hover .inspect-extended {
   width: 280px; /* PREVIEW_EXTENDED_WIDTH_PX */
   max-height: 80vh;

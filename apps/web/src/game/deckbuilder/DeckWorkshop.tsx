@@ -22,6 +22,8 @@ import type { DecksResponse } from "../../net/api.ts";
 import { navigate, paths, practiceDeckPath, useSearch, wantsNewDeck } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
+import { useShortcutHints } from "../../shortcuts/Kbd.tsx";
+import { ariaKeyshortcuts, SHORTCUTS, shortcutTitle } from "../../shortcuts/shortcuts.ts";
 import { useUndoHold } from "../../undo/hold.ts";
 import { UndoToast } from "../../undo/UndoToast.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
@@ -432,6 +434,7 @@ function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | nu
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
   useLocale();
+  const hints = useShortcutHints();
   const patch = useNewestChanges(catalog.version);
 
   const [store] = useState<DeckStore>(() =>
@@ -758,8 +761,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
               className="ws-history-button"
               data-testid={DECK_UNDO}
               aria-label={t("Undo")}
-              title={t("Undo")}
-              aria-keyshortcuts="Control+Z Meta+Z"
+              title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
+              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.undo)}
               disabled={history.past.length === 0}
               onClick={undo}
             >
@@ -774,8 +777,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
               className="ws-history-button"
               data-testid={DECK_REDO}
               aria-label={t("Redo")}
-              title={t("Redo")}
-              aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+              title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}
+              aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.redo)}
               disabled={history.future.length === 0}
               onClick={redo}
             >
