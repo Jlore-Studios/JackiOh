@@ -8212,11 +8212,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40806464119",
+      "run_id": "pending:fc092ea0-1793259510",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-29T02:27:30Z",
+      "started_at": "2026-10-29T07:39:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -9058,9 +9058,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T07:38:14Z",
+    "at": "2026-10-29T07:39:02Z",
     "url": "",
-    "what": "review #2348 on claude-8"
+    "what": "revise #2310 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T07:19:40Z",
