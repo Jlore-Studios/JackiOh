@@ -7660,31 +7660,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T17:42:37Z",
+      "feedback_since": "2026-10-28T21:42:34Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2251,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "In a real browser the Unlock confirm is drawn underneath the card's detail modal, so the player cannot see or click Confirm while the detail is open, and the economy e2e spec's Confirm click will fail.",
-          "evidence": "The confirm `<div role=\"alertdialog\" className=\"token-confirm\">` sits in the token panel's normal flow. Its new CSS (shop.css) gives it no position and no z-index. Clicking Unlock only calls `setConfirmId`; the detail closes on Confirm alone. CardDetail (cards/inspect/CardDetail.tsx:138-146) is portalled to document.body as `.inspect-layer`, which is `position: fixed; inset: 0; z-index: var(--z-inspect-modal)` (inspect.css:192-196), and its `.inspect-scrim` covers the whole viewport and closes the detail when clicked. useModalOverlay's trapTab (store.ts) keeps Tab inside the detail's role=dialog, so the keyboard cannot reach Confirm either. In e2e/cypress/e2e/45-economy-loop.cy.ts:497, `cy.get(ts(TOKEN_CARD_CONFIRM)).click()` runs while the detail is still open, so Cypress's actionability check finds it covered by `.inspect-scrim` and fails. The vitest suite passes only because jsdom has no layout or hit-testing. The only way a player can spend a token is to click the dimmed scrim, which closes the detail, and then find the confirm on the page. That fails the issue's 'Unlock opens a confirm' criterion and the 'economy e2e spec still passes' criterion. collection.css:158-159 shows the pattern the repo uses for layering around --z-inspect-modal; closing the detail on Unlock, or putting the confirm in the detail's own actions slot, would also fix it.",
-          "severity": "blocking",
-          "where": "apps/web/src/shop/TokenPicker.tsx:257"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-28T21:39:31Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "40774181612",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-28T21:42:34Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
