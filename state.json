@@ -9008,7 +9008,25 @@
       "feedback_since": "2026-10-29T03:40:04Z",
       "issue": 2269,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40813424180",
+            "tier": "medium"
+          }
+        ],
+        "sha": "cd348ec46f4369c48a8dc882150be800f1234277",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
