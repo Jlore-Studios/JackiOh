@@ -9234,11 +9234,13 @@
         "by": "`claude` (strong)",
         "sha": "e8243d317acea7689733fa9bd19be37d1649ea20"
       },
+      "closed_at": "2026-10-29T23:14:35Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T21:19:09Z",
       "issue": 2381,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
