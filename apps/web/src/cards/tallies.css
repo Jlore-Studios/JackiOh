@@ -1,0 +1,50 @@
+/* R2321000: a count a card on the field keeps on a Unit (cards/Tallies.tsx), in the Training Grounds
+   yard's straw and wood (R2202001): a straw pill, a wooden rim, a chevron and the count. It is a
+   sibling of the face, so it takes no pointer and the card under it still answers. */
+
+.tallies {
+  position: absolute;
+  z-index: var(--z-hover);
+  top: -6px;
+  right: -6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.tally-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--pal-wood-800);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-white));
+  box-shadow: var(--shadow-1);
+  color: var(--pal-wood-950);
+  font-size: var(--type-3xs-em);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.tally-badge__glyph {
+  font-size: 0.85em;
+}
+
+/* The goal reached: the chevron goes gold, the Radiant it brought. */
+.tally-badge[data-reached="true"] {
+  border-color: var(--pal-brass-600);
+  background: color-mix(in srgb, var(--pal-brass-500) 40%, var(--pal-white));
+}
+
+.tally-badge__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
