@@ -297,7 +297,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         before (deckHistory.ts), and Restore on all but the newest, one POST that the
                         server keeps as a new version, never the autosave; unsaved edits go first, and a
                         deck whose edit has not landed restores nothing;
-                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
+                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
+                        a deck holding a card the newest patch changed wears a badge listing them until saved
+                        under it (DeckPatchBadge.tsx, R2097000)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online

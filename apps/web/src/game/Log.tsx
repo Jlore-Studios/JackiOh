@@ -9,6 +9,9 @@
 // A line never prints an id. A card is named from the board as it stands, else from what the
 // window's own public events said it was (`summoned`, `cardPlayed`, a move to the graveyard …),
 // else as "a unit" or "a card". The R154 sentinel reads as "a face-down trap", never as "hidden".
+// A play names the targets its announce declared (`announcedAims`), and a hit off combat the card that
+// dealt it, each only where the view names it: a face-down set, a target or source the view hid, and an
+// announce that has left the window leave the line as it read without them (R97, R227).
 // `cardResolved` gets no line: it is bookkeeping, and "… finished resolving" read like a debug
 // trace between the lines that matter.
 //
@@ -96,6 +99,8 @@ type Naming = {
   card: (instanceId: string, defId: string) => string;
   /** A card by name where it is public, else "a unit" (or `unknown`). Heroes read as a seat's. */
   instance: (instanceId: string, unknown?: string) => string;
+  /** A card as `instance` names it, a hero as a seat's; null where nothing public names it (R97: never the sentinel). */
+  known: (instanceId: string) => string | null;
   seat: (player: PlayerId) => string;
   /** "your" or "the opponent's". */
   whose: (player: PlayerId) => string;
@@ -166,6 +171,31 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
   return names;
 }
 
+/** Each `cardPlayed` in a window → the targets its announce declared (B5 E1): see `announcedAims`. */
+type Aims = ReadonlyMap<GameEvent, readonly string[]>;
+
+/**
+ * Each play in the window → what its `cardAnnounced` declared: the latest announce of the same instance
+ * before it, keyed by the `cardPlayed` event itself so a card played twice in one window pairs each play
+ * with its own. A face-down set (the other seat reads its targets as the sentinel, and its play takes a
+ * fresh id, R97, R227) and a hidden announce pair with nothing, nor does a play whose announce has left
+ * the window: each reads as it always did.
+ */
+function announcedAims(events: readonly GameEvent[]): Aims {
+  const declared = new Map<string, readonly string[]>();
+  const aims = new Map<GameEvent, readonly string[]>();
+  for (const event of events) {
+    if (event.type === "cardAnnounced") {
+      if (event.instanceId !== HIDDEN_CARD && event.faceDown !== true) declared.set(event.instanceId, event.targets);
+    } else if (event.type === "cardPlayed") {
+      const targets = declared.get(event.instanceId);
+      if (targets !== undefined) aims.set(event, targets);
+      declared.delete(event.instanceId);
+    }
+  }
+  return aims;
+}
+
 function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
   for (const seat of [view.you, view.opponent]) {
     for (const unit of seat.units) {
@@ -221,14 +251,23 @@ const ROTATED_LINE: Readonly<Record<Extract<GameEvent, { type: "rotated" }>["dir
   right: "The board rotated right",
 };
 
-function describe(event: GameEvent, view: PlayerView, name: Naming): string | null {
+function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims): string | null {
   /** A card an overflow names: by name where the viewer reads it, else "a card" (R97). */
   const named = (defId: string): string => (defId === HIDDEN_CARD ? t("a card") : name.def(defId));
   /** The same, naming the card as the board shows that instance (R1301's Chinese name included). */
   const namedCard = (instanceId: string, defId: string): string => (defId === HIDDEN_CARD ? t("a card") : name.card(instanceId, defId));
   switch (event.type) {
-    case "cardPlayed":
-      return t("{seat} played {card} for {cost}", { seat: name.seat(event.player), card: name.def(event.defId), cost: event.costPaid });
+    case "cardPlayed": {
+      const play = { seat: name.seat(event.player), card: name.def(event.defId), cost: event.costPaid };
+      // B5 E1: the targets its announce declared, each where the viewer may name it (R97).
+      const targets = (aims.get(event) ?? []).flatMap((id) => {
+        const target = name.known(id);
+        return target === null ? [] : [target];
+      });
+      return targets.length === 0
+        ? t("{seat} played {card} for {cost}", play)
+        : t("{seat} played {card} for {cost}, aiming at {targets}", { ...play, targets: targets.join(listSeparator()) });
+    }
     case "summoned": {
       // R370: a card set face down is a trap the viewer may not read; the line says so, with the
       // cost its back shows while it still stands there.
@@ -246,6 +285,14 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "damage": {
       // R1360: the Armor's part of the hit, where it took one.
       const absorbed = event.absorbed ?? 0;
+      // A hit off combat names what dealt it where the viewer may name it; a hidden or null source names none (R97).
+      const source = event.combat || event.sourceId === null ? null : name.known(event.sourceId);
+      if (source !== null) {
+        const dealt = { source: capitalised(source), target: name.instance(event.targetId), amount: event.amount, absorbed };
+        return absorbed > 0
+          ? t("{source} dealt {amount} damage to {target}, {absorbed} absorbed by Armor", dealt)
+          : t("{source} dealt {amount} damage to {target}", dealt);
+      }
       const hit = { target: capitalised(name.instance(event.targetId)), amount: event.amount, absorbed };
       if (absorbed > 0) {
         return event.combat
@@ -257,6 +304,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "damageAbsorbed": {
       // R1361: the Armor took the whole hit, so nothing was dealt.
       const hit = { target: capitalised(name.instance(event.targetId)), absorbed: event.absorbed };
+      const source = event.combat || event.sourceId === null ? null : name.known(event.sourceId);
+      if (source !== null) return t("{target}'s Armor absorbed {absorbed} damage from {source}", { ...hit, source });
       return event.combat ? t("{target}'s Armor absorbed {absorbed} damage in combat", hit) : t("{target}'s Armor absorbed {absorbed} damage", hit);
     }
     case "secretChosen":
@@ -416,7 +465,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     }
     // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
     case "cardAnnounced":
-      // The play's own line is its `cardPlayed`; a countered one has its `countered` line.
+      // The play's own line is its `cardPlayed`, which names what this declared (`announcedAims`); a countered one has its `countered` line.
       return null;
     case "countered":
       return event.to === "hand"
@@ -606,6 +655,17 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
     const english = info?.name ?? defId;
     return drawnInChinese(false) ? chineseName(defId, english, info?.def) : english;
   };
+  const known = (instanceId: string): string | null => {
+    if (instanceId === `hero-${view.you.player}`) return t("your hero");
+    if (instanceId === `hero-${view.opponent.player}`) return t("the opponent's hero");
+    if (instanceId === HIDDEN_CARD) return null;
+    const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
+    if (defId === undefined) return null;
+    const info = lookup?.(defId, false);
+    const english = info?.name ?? defId;
+    // R1301, R711000: a card the view shows in Chinese is named in Chinese.
+    return drawnInChinese(cardInView(view, instanceId)?.chinese === true) ? chineseName(defId, english, info?.def) : english;
+  };
   return {
     def,
     card: (instanceId, defId) => {
@@ -615,16 +675,8 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
       const info = lookup?.(defId, false);
       return chineseName(defId, info?.name ?? defId, info?.def);
     },
-    instance: (instanceId, unknown) => {
-      if (instanceId === `hero-${view.you.player}`) return t("your hero");
-      if (instanceId === `hero-${view.opponent.player}`) return t("the opponent's hero");
-      const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
-      if (defId === undefined) return unknown ?? t("a unit");
-      const info = lookup?.(defId, false);
-      const english = info?.name ?? defId;
-      // R1301, R711000: a card the view shows in Chinese is named in Chinese.
-      return drawnInChinese(cardInView(view, instanceId)?.chinese === true) ? chineseName(defId, english, info?.def) : english;
-    },
+    instance: (instanceId, unknown) => known(instanceId) ?? unknown ?? t("a unit"),
+    known,
     seat: (player) => seatLabel(view, player),
     whose: (player) => whoseLabel(view, player),
   };
@@ -738,8 +790,9 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
 export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event: GameEvent) => LoggedLine | null {
   const remembered = publicNames(view.events);
   const name = namingFor(view, lookup, remembered);
+  const aims = announcedAims(view.events);
   return (event) => {
-    const text = describe(event, view, name);
+    const text = describe(event, view, name, aims);
     if (text === null) return null;
     const card = cardOf(event, view, remembered);
     return {
@@ -792,6 +845,7 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   const lookup = withMatchDefs(useContext(CatalogContext), view.defs);
   const remembered = publicNames(view.events);
   const name = namingFor(view, lookup, remembered);
+  const aims = announcedAims(view.events);
   // R745: the lines that have left the window, and the key each window event keeps as it slides.
   const history = useLogHistory(view, keptLineFor(view, lookup));
 
@@ -805,7 +859,7 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   }, [view.events, revealed]);
 
   const windowLines = view.events.flatMap((event, index): Line[] => {
-    const text = describe(event, view, name);
+    const text = describe(event, view, name, aims);
     if (text === null) return [];
     const card = cardOf(event, view, remembered);
     const face = card === null ? null : namedFace(lookup, view, card);

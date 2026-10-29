@@ -9,6 +9,7 @@
 //!   2. Who and when: the card's controller, in their own main phase, with no prompt open and the game
 //!      not over, while the card acts on the field — the top of its pile, or a face-up backrow card
 //!      (`is_acting_on_field`). Summoning sickness and exertion do not apply: activating is not attacking.
+//!      A Frozen card uses none until it thaws (R2246000).
 //!   3. Uses are counted per ability per turn on the instance (`memory.activations`, R1751000,
 //!      SPEC §6.2), which R78's reset clears when the card leaves the field, so a card bounced and
 //!      played again, or a copy, starts fresh. Each ability on a card tracks its uses independently.
@@ -45,6 +46,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::combat::FROZEN_REFUSAL;
 use crate::config::{ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP};
 use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
@@ -524,6 +526,12 @@ fn why_ability_unusable(
         == Some(&Value::Bool(true))
     {
         return Err("that card can't use its own Activate".into());
+    }
+    // R2246000: a Frozen card uses no Activate until it thaws, forever-Frozen ones never; its uses are
+    // untouched, and an effect that runs its ability (S #26 ZolarKeth's) still does, as R20 lets an
+    // effect's attack happen to a Frozen Unit.
+    if card.frozen.is_some() {
+        return Err(FROZEN_REFUSAL.into());
     }
 
     let allowed = uses_allowed(card, decl);

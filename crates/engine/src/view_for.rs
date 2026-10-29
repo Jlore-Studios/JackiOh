@@ -550,6 +550,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         attack: None,
         health: None,
         power: None,
+        label: None,
         condition_active: None,
         countered_on_play: None,
         pareto_optimal: None,
@@ -618,7 +619,7 @@ fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
 /// face as well. A Unit's stats are its face plus the permanent buffs it gained in hand (§10.4
 /// layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
 /// floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
-/// R151), which its cost alone does not.
+/// R151), which its cost alone does not, and a card with a label shows it (R2247000).
 fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     let mut view = with_copies(card_view(state, card, viewer), state, card);
     let stats = if card_type_of(state, card) == CardType::Unit {
@@ -636,6 +637,12 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
     if let Some(power) = power {
         view.power = Some(power.name.to_string());
     }
+    // R2247000: the word it shows in place of its text, held in its memory.
+    view.label = card
+        .memory
+        .get(crate::effects::CARD_LABEL_KEY)
+        .and_then(Value::as_str)
+        .map(str::to_string);
     if let Some(keywords) = keywords {
         view.keywords = Some(keywords);
     }
