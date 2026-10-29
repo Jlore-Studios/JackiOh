@@ -7293,7 +7293,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
-      "question": "",
+      "question": "placeholder - awaiting test result, do not hand to people",
       "queued_at": "2026-10-29T16:17:33Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
