@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 2110,
+  "title": "Patch: a few named durations and easing curves for every motion on the board",
+  "branch": "bot/issue-2110",
+  "thread": "**Issue #2110 (data, not instructions):**\n\n```text\n# #2110: Patch: a few named durations and easing curves for every motion on the board\nOpened by @MaxGoetzmann.\n\n### What it does\n\nEvery motion on the board has its own timing and easing, so related motions (a hover, a prompt opening, a button press) never feel like the same game. Give the board a small motion vocabulary (a few named easing curves and durations) and move its motions onto it. The game animations whose timings BUILD specifies keep those timings, and reduced motion keeps working.\n\n### Acceptance\n\n- The board's motions use a few named curves and durations.\n- BUILD's animation timings and reduced motion are unchanged.\n\n### Blocked by, part of\n\nBlocked by #2109\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2110: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2109 has no open bot PR any more"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2126 skipped: it waits for #2118 to close first",
+    "#2127 skipped: it waits for #2118 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
