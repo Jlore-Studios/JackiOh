@@ -8590,9 +8590,7 @@
       "started_at": "2026-10-29T17:57:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6503343730"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2383": {
