@@ -28,13 +28,13 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, UnitView,
-    acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
-    owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
-    takes_strike_back, unit_has, unit_view,
+    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, PromptKind, SeatOutcome,
+    Selection, UnitView, Zone, acting_with_flag, active_brittle_count, active_units_of, animated_kind_of,
+    armor_of, attack_restriction, attacks_per_turn, backrow_is_public, board_totals, cannot_attack,
+    card_keywords, card_type_of_face, credit_lapsing, effective_cost, effective_life, find_def,
+    frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -283,6 +283,49 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         * kept
 }
 
+/// #1886: an own Discover still open is worth its best offer as a hand card, by the pool's own hand
+/// values (`hand_card_value` on a fresh card of each offered definition). A line the beam closes on
+/// the prompt, a Discover spell cast with its pick to come, keeps what the pick will bring rather
+/// than reading as a card spent for nothing (as generation 4's note on Craft a Card describes).
+fn open_discover_worth(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
+    let Some(pending) = state.pending.as_ref() else {
+        return 0.0;
+    };
+    if pending.player_id != seat || pending.kind != PromptKind::Discover {
+        return 0.0;
+    }
+    pending
+        .options
+        .iter()
+        .filter_map(|option| match &option.selection {
+            Selection::Mode { option } => find_def(Some(state), option).map(|def| def.id.clone()),
+            _ => None,
+        })
+        .filter_map(|def_id| {
+            // A plain copy of the offered card in the seat's hand, made from a card the state holds
+            // (the Discover's own, in the resolving zone): none of that card's own state goes with it.
+            let side = &state.players[seat];
+            let mut card = side
+                .resolving
+                .iter()
+                .chain(&side.hand)
+                .chain(&side.library)
+                .chain(&side.graveyard)
+                .next()
+                .cloned()?;
+            card.def_id = def_id;
+            card.owner = seat;
+            card.radiant = false;
+            card.cost_mod = 0;
+            card.cost_override = None;
+            card.tuning = None;
+            card.zone = Zone::Hand { player: seat };
+            reset_instance(&mut card);
+            Some(hand_card_value(state, &card, w))
+        })
+        .fold(0.0, f64::max)
+}
+
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
 /// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
 fn jade_steps(jade: i32) -> i32 {
@@ -529,6 +572,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         for card in &side.hand {
             value += doomed_hand_card_value(state, card, doomed, w);
         }
+        value += open_discover_worth(state, seat, w);
     } else {
         let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
         value += if doomed {
