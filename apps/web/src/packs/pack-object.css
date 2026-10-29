@@ -82,6 +82,15 @@
   --pack-crimp-b: var(--pal-green-900);
 }
 
+/* Training Grounds (#2204): the set mark's practice-sword wood, its straw target and the target's red rings. */
+.pack-object[data-pack="Training Grounds"] {
+  --pack-foil-a: var(--pal-wood-600);
+  --pack-foil-b: var(--pal-wood-900);
+  --pack-accent: var(--pal-gold-300);
+  --pack-crimp-a: var(--pal-red-500);
+  --pack-crimp-b: var(--pal-red-900);
+}
+
 .pack-object[data-pack="global"] {
   --pack-foil-a: #5b3fa0;
   --pack-foil-b: #1d1530;

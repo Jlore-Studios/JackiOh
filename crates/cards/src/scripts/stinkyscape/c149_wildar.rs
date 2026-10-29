@@ -61,9 +61,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     /// The Call to Chaos editions of the sets that ship, in catalog order: the set's own two joined
-    /// them as it shipped (#1884, R1420).
-    const SHIPPED_EDITIONS: [&str; 5] =
-        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
+    /// them as it shipped (#1884, R1420). Re-pinned for the Training Grounds release (#2204): its #39
+    /// joins them (R2200004).
+    const SHIPPED_EDITIONS: [&str; 6] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+    ];
     /// A (1) Unit that keeps p1's turn from ending by itself.
     const ANCHOR: &str = "core-008";
     /// How many cursors the sweeps walk.

@@ -54,9 +54,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos pool of the sets that ship (R380, R1420).
-    const SHIPPED_EDITIONS: [&str; 5] =
-        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
+    /// The Call to Chaos pool of the sets that ship (R380, R1420). Re-pinned for the Training Grounds
+    /// release (#2204): its #39 joins it (R2200004).
+    const SHIPPED_EDITIONS: [&str; 6] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+    ];
     const ETHICS: &str = "stinkyscape-159";
     const VANGUARD: &str = "stinkyscape-095";
     const DANDY_LAD: &str = "stinkyscape-113";

@@ -626,7 +626,8 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]);
+    // Re-pinned for the Training Grounds release (#2204): the set ships, so its chip follows Stinkyscape's.
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
@@ -634,6 +635,7 @@ describe("the set chips (R380: one format, every set)", () => {
       "db-filter-set-meditative",
       "db-filter-set-meditative-plus",
       "db-filter-set-stinkyscape",
+      "db-filter-set-training-grounds",
     ]);
   });
 
@@ -656,7 +658,13 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
     expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
     expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
-    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]));
+    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Core snapshots
+    // (#41 to #60) among them, join the pool; its token never does.
+    expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
+    expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
+    expect(pool([])).toHaveLength(
+      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]),
+    );
   });
 });
 
@@ -678,6 +686,9 @@ describe("the Jlockeed tag (R278)", () => {
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
+    // Re-pinned for the Training Grounds release (#2204): its snapshots of Core #14 and #13, #45
+    // Jlockeed's Weapons and #48 Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
+    const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -688,6 +699,7 @@ describe("the Jlockeed tag (R278)", () => {
       ...meditative,
       ...meditativePlus,
       ...stinkyscape,
+      ...trainingGrounds,
     ]);
   });
 });
