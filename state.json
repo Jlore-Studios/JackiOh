@@ -9168,9 +9168,12 @@
         "sha": "87525715be4d4508aadf8ebcaba831eb95bce6f6"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-29T17:03:41Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2379,
       "kind": "review",
       "pending_request": false,
