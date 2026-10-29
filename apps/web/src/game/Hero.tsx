@@ -53,6 +53,7 @@ import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx"
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { animTestid } from "./animations.ts";
+import { ModifierBadge } from "./ModifierBadge.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
 import {
   sideView,
@@ -275,15 +276,9 @@ export default function Hero(props: HeroProps): ReactElement {
         role="group"
         aria-label={side === "you" ? t("Your modifiers") : t("Opponent modifiers")}
       >
+        {/* #2321: each opens its whole label on a tap, which a touch screen's missing hover cannot. */}
         {modifiers.map((modifier) => (
-          <span
-            key={modifier.id}
-            className="modifier-badge"
-            data-modifier-id={modifier.id}
-            title={t(modifier.label)}
-          >
-            {t(modifier.label)}
-          </span>
+          <ModifierBadge key={modifier.id} modifier={modifier} />
         ))}
       </span>
 

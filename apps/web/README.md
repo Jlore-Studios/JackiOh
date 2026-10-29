@@ -92,6 +92,28 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
+`routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
+`commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
+shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animation). It is never
+mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
+marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
+opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
+
+**Shortcut hints** (R2126000): the shortcuts the client has, shown and never added.
+`shortcuts/shortcuts.ts` (no React) names each once in `SHORTCUTS` and writes it: `shortcutText`
+(⌘⇧Z on an Apple device, Ctrl+Shift+Z elsewhere, by user agent), `ariaKeyshortcuts`
+("Control+Z Meta+Z") and `shortcutTitle` (a tooltip's "Undo (Ctrl+Z)"), with `touchOnly` and
+`subscribeTouchOnly` for `TOUCH_ONLY_QUERY`. `shortcuts/Kbd.tsx` draws them: `useShortcutHints`,
+`Kbd` (one keycap) and `ShortcutHint` (a sentence around some, `t("Focus the card, then press {keys} to inspect")`).
+They show in the hover preview of a card (`keyHint` on `useInspectTrigger`, "Focus the card, then press I to inspect"),
+in the Undo, Redo and replay step and turn buttons' tooltips, in the command menu (Enter on the
+selected entry, a legend of its keys) and in the site footer (Ctrl/⌘+K). A touch-only device
+(`(hover: none) and (pointer: coarse)`) shows no hint, though `aria-keyshortcuts` stays. A widget's
+own keys (Enter, Space, Escape in a dialog) are unhinted, and no hint adds a key:
+`shortcuts/shortcuts.test.tsx`'s `BOARD_KEY_HANDLERS` freezes the key handlers of the board's sources,
+so a new one fails it (there is no End-turn key). Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -206,6 +228,15 @@ the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
+**Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
+under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
+(`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
+and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
+hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
+The list ships empty.
+
 ## Commands
 
 ```
@@ -293,7 +324,12 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
-                        one POST /api/trios/import, never the autosave (R341);
+                        one POST /api/trios/import, never the autosave (R341); the open deck's History
+                        popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
+                        kept, newest first, each with its date and the cards in and out since the one
+                        before (deckHistory.ts), and Restore on all but the newest, one POST that the
+                        server keeps as a new version, never the autosave; unsaved edits go first, and a
+                        deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
                         under it (DeckPatchBadge.tsx, R2097000)
@@ -495,7 +531,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short. Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
+snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
   only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);

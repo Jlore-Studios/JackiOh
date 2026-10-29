@@ -24,6 +24,7 @@ import { useCosmeticAttributes } from "../../cards/cosmetics.ts";
 import { useOwnCopy } from "../../cards/fullArt.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { ariaKeyshortcuts, SHORTCUTS } from "../../shortcuts/shortcuts.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder } from "./filters.ts";
 import ManaCurve from "./ManaCurve.tsx";
@@ -144,6 +145,7 @@ function DeckTile({ deckName, cardId, def, owned, conflict, issue, onRemove, onI
     onContextMenu: () => {
       onInspect(cardId);
     },
+    keyHint: SHORTCUTS.inspect,
   });
   const problem = issue === undefined ? undefined : t(issue.message);
   const label =
@@ -174,7 +176,7 @@ function DeckTile({ deckName, cardId, def, owned, conflict, issue, onRemove, onI
         data-issue={issue?.rule}
         aria-label={label}
         title={title}
-        aria-keyshortcuts="I"
+        aria-keyshortcuts={ariaKeyshortcuts(SHORTCUTS.inspect)}
         onClick={() => {
           onRemove(cardId);
         }}

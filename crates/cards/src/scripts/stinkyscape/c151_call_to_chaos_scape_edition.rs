@@ -451,15 +451,7 @@ mod tests {
             );
             // The ship is summoned first and launched for nothing: no mana beyond this card's (4).
             assert_eq!(events_of(&s, "summoned")[0]["defId"], json!(DORMANT_STARSHIP));
-            let ship = s
-                .state()
-                .players
-                .p1
-                .units
-                .iter()
-                .flatten()
-                .flatten()
-                .find(|card| card.starship.is_some())
+            let ship = launched_starship_of(s.state(), PlayerId::P1)
                 .cloned()
                 .expect("a Starship");
             assert!(ship.starship.as_ref().is_some_and(|memory| memory.launched.is_some()));

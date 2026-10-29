@@ -304,6 +304,14 @@ fn resummon(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(me) = ctx.self_.as_ref() else {
         return vec![];
     };
+    // R1884004: a Unit that died for want of health, its text fused onto a Unit the board holds at 0
+    // max health (Core #46 Suppressive Aura's −2/−2 on a 2/2), would come back to the same board and
+    // die again, without end: it stays dead. It is read as it died (R89).
+    if card_type_of(&*ctx.state, me) == CardType::Unit
+        && unit_view_as_it_died(&*ctx.state, me).max_health <= 0
+    {
+        return vec![];
+    }
     vec![summon(SummonArgs {
         instance: Some(TargetSpec::Instance {
             instance_id: me.id.clone(),
@@ -1022,5 +1030,44 @@ mod tests {
             s.pile(P1, "exile").iter().any(|card| card.id == resume.id),
             "its resume exiled too"
         );
+    }
+    /// R1884004: Job Application's text fused onto a 2/2 that Core #46 Suppressive Aura, Embiggened,
+    /// holds at 0/0 dies at once, and its Death does not bring it back to die again without end
+    /// (handicapped fuzz seed 5555 of the Stinkyscape release): it stays in the graveyard.
+    #[test]
+    fn r1884004_fused_onto_a_unit_the_board_holds_at_0_health_it_stays_dead() {
+        const TAOTIE: &str = "meditative-047"; // (4) 2/2.
+        const SUPPRESSIVE_AURA: &str = "core-046"; // −1/−1 to all Units, −2/−2 Embiggened.
+        let library = vec![MENACE; LIBRARY];
+        let mut s = scenario(json!({
+            "seed": "ja-fused-at-0",
+            "p1": { "library": library, "mana": MANA },
+            "p2": { "backrow": [{ "def": SUPPRESSIVE_AURA, "lane": 1 }], "library": library },
+        }));
+        let aura = s.backrow(P2, 1).expect("the Suppressive Aura").id;
+        find_instance_mut(s.state_mut(), &aura).expect("the aura").embiggened = Some(true);
+        // 饕餮 and Job Application fused into p1's hand, as Craft a Card fuses (R77): a 2/2 Unit.
+        let mut events: Vec<GameEvent> = vec![];
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        let fused = {
+            let state = s.state_mut();
+            let ingredients: Vec<CardInstance> = [TAOTIE, ID]
+                .iter()
+                .map(|def_id| new_instance(&mut *state, def_id, P1, Zone::Gone { player: P1 }))
+                .collect();
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            subsystems::fuse(
+                &mut sink,
+                subsystems::FuseArgs {
+                    ingredients,
+                    to_hand: Some(P1),
+                    ..subsystems::FuseArgs::default()
+                },
+            )
+        }
+        .expect("the fused card");
+        s.state_mut().rng_cursor = rng.cursor();
+        s.play(&fused.id, json!({ "zone": 1 }));
+        s.expect_in_zone(&fused, "graveyard");
     }
 }
