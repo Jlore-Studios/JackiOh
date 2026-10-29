@@ -8115,6 +8115,13 @@
     "2353": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T09:56:47Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 6 fails: the only file to change is .github/workflows/ci.yml, a forbidden path, so it cannot be easy; one file and no rules work keep it from hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
