@@ -8207,12 +8207,31 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
+        "carried": {
+          "by": "`muse` (medium), `claude` (strong)",
+          "conflicts": [
+            "crates/cards/src/scripts/stinkyscape/c116_megabase.rs",
+            "crates/engine/tests/golden/games.jsonl"
+          ],
+          "from": "2cb549424beb26e528c3f8d3fbacd7554c9d3ad4",
+          "main": "8c65cabcd3b8ead0c8abc32656cf0c47151aa28a"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "2cb549424beb26e528c3f8d3fbacd7554c9d3ad4",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40806464119",
+            "tier": "medium"
+          }
+        ],
+        "sha": "b8631ed393b78674a9c2537cabaf9ad6dc1f3ff0",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2314": {
