@@ -9,6 +9,7 @@ import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
@@ -147,6 +148,21 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(CARDS.length));
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
+  });
+
+  it("#2334 draws the whole pool in the grid's first render", () => {
+    const drawn: number[] = [];
+    render(
+      <Profiler
+        id="almanac"
+        onRender={() => {
+          drawn.push(document.querySelectorAll(".db-card").length);
+        }}
+      >
+        <AlmanacRoute />
+      </Profiler>,
+    );
+    expect(drawn[0]).toBe(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT).length);
   });
 
   it("R674 never shows Glitch, though the catalog holds it", () => {

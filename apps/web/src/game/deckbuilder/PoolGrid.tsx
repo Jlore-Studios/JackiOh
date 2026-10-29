@@ -39,7 +39,9 @@
 // change, an opened detail or a card the deck takes re-renders only the cards it changes. A pool
 // that grows (the first render, a cleared search) keeps the cards it drew until a background render
 // (`useDeferredValue`), which yields to input, has drawn the rest. The first render draws
-// POOL_FIRST_CARDS at once.
+// POOL_FIRST_CARDS at once, or the whole pool with `wholeFirst` (#2334): the Almanac's pool mounts with
+// its route, whose first render React holds behind the route chunk's loading panel on a first visit
+// whatever it costs, so a staged mount there only delayed the rest of the grid.
 
 import {
   memo,
@@ -112,6 +114,11 @@ type PoolGridBaseProps = {
   ribbon?: SetName | null;
   /** R1956000: the cards drawn as the viewer's own copies (the signed-in Almanac's); none when absent. */
   own?: OwnCopies;
+  /**
+   * #2334: the first render draws the whole pool, not POOL_FIRST_CARDS of it (the Almanac's). A pool
+   * that grows later still keeps what it drew until the background render has drawn the rest.
+   */
+  wholeFirst?: boolean;
 };
 
 /** The deck editor's half: the open deck, ownership, the "+" and the drag. */
@@ -366,7 +373,7 @@ function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers):
 }
 
 export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, ribbon = NEW_RIBBON_SET, own } = props;
+  const { ids, catalog, ribbon = NEW_RIBBON_SET, own, wholeFirst = false } = props;
 
   // The screen's handlers change more often than its cards do (DeckEditor's `add` with every card
   // the deck takes), so the cards get these, which never change and call the latest.
@@ -395,7 +402,8 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
   // background render has drawn the rest, so the grid never shows a card the pool no longer holds;
   // one that shrinks or reorders is drawn at once (a plain deferred list made a narrowing search
   // slower).
-  const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
+  // #2334: no initial value for `wholeFirst`, since any initial value schedules a background render.
+  const deferred = useDeferredValue(ids, wholeFirst ? undefined : ids.slice(0, POOL_FIRST_CARDS));
   const shown = ids.length > deferred.length ? ids.slice(0, deferred.length) : ids;
 
   return (

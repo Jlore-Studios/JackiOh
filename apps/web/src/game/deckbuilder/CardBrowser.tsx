@@ -53,6 +53,8 @@ export type CardBrowserProps = {
   deck?: PoolGridDeckProps;
   /** R1956000: a read-only grid's cards that are the viewer's own copies, and what they own on them. */
   own?: OwnCopies;
+  /** PoolGrid's: the grid's first render draws the whole pool (#2334, the Almanac's). */
+  wholeFirst?: boolean;
   /** Under the filters, over the pool: the deck editor's status toast. */
   status?: ReactNode;
   /** A click, right-click or long-press on a pool card. */
@@ -69,7 +71,7 @@ export type CardBrowserProps = {
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
   const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, setsAfter, showStats } = props;
-  const { deck, own, status, onInspect, detail, onCloseDetail, winRates } = props;
+  const { deck, own, status, onInspect, detail, onCloseDetail, winRates, wholeFirst } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
   return (
@@ -111,9 +113,9 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
           height is whatever the filters above leave, and two rows of cards fill it. */}
       <div className="db-pool-frame">
         {deck === undefined ? (
-          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} own={own} />
+          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} own={own} wholeFirst={wholeFirst} />
         ) : (
-          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} {...deck} />
+          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} wholeFirst={wholeFirst} {...deck} />
         )}
         {pool.length === 0 ? (
           <p className="db-empty" data-testid={DB_EMPTY}>

@@ -119,6 +119,9 @@ export default function AlmanacRoute(): ReactElement {
             tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}
             own={own ?? undefined}
+            // #2334: the pool mounts with the route, and on a first visit React holds that first
+            // render behind the route chunk's loading panel anyway, so every card is drawn in it.
+            wholeFirst
             detail={
               detailCardId === null || detailDef === undefined
                 ? null
