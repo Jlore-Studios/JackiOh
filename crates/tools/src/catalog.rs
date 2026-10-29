@@ -8,9 +8,9 @@
 //! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
 //! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
-//! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
-//! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and
-//! `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
+//! B3.1, which print a whole line or none, R2280000) and nowhere else, that the rarity distribution
+//! each set prints is the one the file carries, and that the v0.2.0 fields (`printedRarity`, `params`,
+//! `loc`, a face's `type` and `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
 //! an independent transcription. The pending-fragment proof is its own command, `patches check`
 //! (TS's `pnpm validate:catalog` ran both).
 //!
@@ -588,11 +588,18 @@ fn validate_face(
             .is_some_and(|kind| ANIMATED_KEYWORDS.contains(&kind))
     });
 
-    // Stats: present on both faces of every Unit and every Animated backrow card (B3.1), absent on
-    // every other non-Unit (§5, §8).
+    // Stats: present on both faces of every Unit, on an Animated backrow card's as a whole line or not
+    // at all (B3.1, R2280000: it becomes a Unit only with stats), absent on every other non-Unit (§5, §8).
+    if !is_unit && animated && face.get("attack").is_some() != face.get("health").is_some() {
+        fail(
+            failures,
+            &at,
+            "an Animated face prints both `attack` and `health` or neither (R2280000)",
+        );
+    }
     for stat in ["attack", "health"] {
         let value = face.get(stat);
-        if is_unit || animated {
+        if is_unit || (animated && value.is_some()) {
             if !is_int(value) {
                 let what = if is_unit { "Unit" } else { "Animated" };
                 fail(
@@ -604,7 +611,7 @@ fn validate_face(
                     ),
                 );
             }
-        } else if value.is_some() {
+        } else if !animated && value.is_some() {
             fail(
                 failures,
                 &at,
@@ -2577,6 +2584,25 @@ mod tests {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
         assert_eq!(failures.len(), 3, "{failures:#?}");
+    }
+
+    #[test]
+    fn r2280000_an_animated_face_may_print_no_stats_but_not_half_a_line() {
+        // The shipped catalog's statless Animated faces (S #16 Rod of Ages, C+ #74) pass.
+        assert_eq!(check_catalog(&shipped_catalog()).failures, Vec::<String>::new());
+        let mut catalog = shipped_catalog();
+        // C #5 Tesla, an Animated Field Trap, with its base face's attack gone and its health kept.
+        let mut entry = catalog["classic-005"].as_object().expect("classic-005").clone();
+        if let Some(Json::Object(base)) = entry.get_mut("base") {
+            base.shift_remove("attack");
+        }
+        catalog.insert("classic-005".to_string(), Json::Object(entry));
+        assert_eq!(
+            check_catalog(&catalog).failures,
+            [
+                "catalog[\"classic-005\"].base: an Animated face prints both `attack` and `health` or neither (R2280000)"
+            ]
+        );
     }
 
     // R1437000: a flavor is one of the fifteen names, and every entry carries one since
