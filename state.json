@@ -9051,6 +9051,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-10-29T07:36:08Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40836714368",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
