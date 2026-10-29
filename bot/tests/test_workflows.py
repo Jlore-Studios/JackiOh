@@ -539,6 +539,20 @@ class RequiredChecksTests(unittest.TestCase):
                       " || github.event.merge_group.head_sha }}", scope)
         self.assertIn('if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then', scope)
 
+    def test_a_failed_queue_build_is_cancelled_only_after_its_check_reported(self):
+        """Each required check's own job cancels the rest of a merge-queue build that it failed. A
+        cancel that ran before a summary job would leave that check skipped, which counts as
+        passing, so each waits on the summary itself and runs only on its failure."""
+        text = read("ci.yml")
+        jobs = {"rust": "rust", "web": "web", "e2e-smoke": "e2e smoke", "db": "db",
+                "bot-selftest": "bot selftest"}
+        self.assertEqual(set(jobs.values()), set(config.load(env={}).required_checks))
+        for summary in jobs:
+            cancel = job(text, f"queue-cancel-{summary}")
+            self.assertIn(f"needs: {summary}\n", cancel)
+            self.assertIn("if: ${{ failure() && github.event_name == 'merge_group' }}", cancel)
+            self.assertIn('gh run cancel "$RUN"', cancel)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,7 @@ from harness.config import (IDENTITY, LABEL_BLOCKED, LABEL_BUILD, LABEL_PERSON_M
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.providers import Provider
-from harness.queue import (cleared, is_human, label_names, merge_title, queue_build, queue_review,
+from harness.queue import (cleared, is_human, label_names, queue_build, queue_review,
                            queue_revise, set_state_label, stop, wip_branch)
 from harness.state import item as state_item
 from harness import threads
@@ -649,10 +649,12 @@ def on_queue_ci(ctx: Context, run: dict[str, Any]) -> list[str]:
     """CI failed on the merge queue's build of a pull request (infra/github.tf): `main` with every
     pull request ahead of it and this one on top. Its own CI ran on an older `main`, so the rest
     of `on_ci` never hears of it. One still in the queue was built again without a pull request
-    ahead of it that failed, and is left to the queue. One taken out failed itself: as a red head
-    is re-run once, the cleared head goes back in the queue once (a flake); the next time it is a
-    CI fix with this run's logs, whose revision merges `main` first. A held pull request (a
-    revision, a stop, `queue.hold_merge`) and a head the reviews never cleared are left alone."""
+    ahead of it that failed, and is left to the queue. One taken out failed itself, and gets a CI
+    fix with this run's logs at once, with no re-run: its own CI already passed, so what failed is
+    nearly always what `main` and it do together, which fails the same way again (four of the five
+    red runs on main of 2026-10-29). The revision merges `main` first and is reviewed as any, and
+    its auto-merge queues it again at the back. A held pull request (a revision, a stop,
+    `queue.hold_merge`) and a head the reviews never cleared are left alone."""
     found = re.match(rf"{QUEUE_BRANCH}{re.escape(ctx.cfg.default_branch)}/pr-(\d+)-",
                      str(run.get("head_branch") or ""))
     if not found:
@@ -677,19 +679,5 @@ def on_queue_ci(ctx: Context, run: dict[str, Any]) -> list[str]:
     sha = str((pull.get("head") or {}).get("sha") or "")
     if cleared(record).get("sha") != sha:
         return [f"#{number}: out of the merge queue, and its head is not the cleared one"]
-    tries = dict(record.get("queue_tries") or {})
-    if int(tries.get(sha, 0)) < ctx.cfg.ci_reruns:
-        try:
-            ctx.gh.enable_auto_merge(pull["node_id"], ctx.cfg.merge_method, sha,
-                                     merge_title(pull, ctx.cfg.merge_method))
-        except GitHubError as exc:
-            ctx.gh.create_comment(number, f"The merge queue took this out ([run]("
-                                  f"{run.get('html_url')})), and GitHub would not queue it again "
-                                  f"({exc}). It needs a person.")
-            return [f"#{number}: out of the merge queue, and could not queue it again"]
-        tries[sha] = int(tries.get(sha, 0)) + 1
-        ctx.store.update(lambda s: state_item(s, number).update(queue_tries=tries),
-                         f"queue again #{number}")
-        return [f"#{number}: out of the merge queue; queued it again"]
     return [_fix_ci(ctx, number, pull, names, record, run, sha,
-                    "The merge queue took this out again: CI failed on `main` with it on top")]
+                    "The merge queue took this out: CI failed on `main` with it on top")]

@@ -26,7 +26,8 @@ from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIF
                             LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
                             LABEL_HUMAN_REQUIRED, LABEL_PR,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
-                            LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
+                            LABEL_PERSON_MERGES, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_TREE,
                             LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR, SLASH,
                             UNRATED_PLAN_FLOOR)
 from harness.context import Context
@@ -392,6 +393,36 @@ def hold_merge(ctx: Context, pull: dict[str, Any]) -> None:
             action(node)
         except GitHubError:
             pass  # nothing to turn off, or not in the queue
+
+
+def requeue_cleared(ctx: Context, pull: dict[str, Any], record: dict[str, Any]) -> str:
+    """Put a bot pull request back in `main`'s merge queue when the queue took its cleared head
+    out and no failed build of it says why, so `events.on_queue_ci` never heard: it conflicted
+    with a pull request ahead of it that then failed, or its checks ran past the queue's timeout.
+    Only when the queue's removal is the last thing that touched its auto-merge and no person
+    did it, and once for each commit `main` is at, so one that conflicts again waits for `main`
+    to move. The housekeeping pass calls it. A note of what it did, or ""."""
+    head = str((pull.get("head") or {}).get("sha") or "")
+    node = str(pull.get("node_id") or "")
+    if (pull.get("auto_merge") or pull.get("state") != "open" or not node
+            or pull.get("mergeable_state") == "dirty" or cleared(record).get("sha") != head
+            or label_names(pull) & {LABEL_READY, LABEL_PERSON_MERGES}
+            or record.get("stop_requested")):
+        return ""
+    removal = ctx.gh.queue_removal(node)
+    if removal is None or (removal["type"] == "User"
+                           and removal["actor"].lower() != ctx.cfg.bot_login.lower()):
+        return ""
+    main = ctx.gh.branch_sha(ctx.cfg.default_branch) or ""
+    tried = dict(record.get("requeued") or {})
+    if tried.get(head) == main:
+        return ""
+    ctx.gh.enable_auto_merge(node, ctx.cfg.merge_method, head,
+                             merge_title(pull, ctx.cfg.merge_method))
+    number = int(pull["number"])
+    tried[head] = main
+    ctx.store.update(lambda s: state_item(s, number).update(requeued=tried), f"requeue #{number}")
+    return f"#{number}: back in the merge queue (taken out: {removal['reason'] or 'no reason'})"
 
 
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",

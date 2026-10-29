@@ -44,6 +44,8 @@ class FakeGitHub:
         self.auto_merge_heads: dict[str, str] = {}
         #: Pull requests in `main`'s merge queue, by node id (`queue.hold_merge`).
         self.merge_queue: set[str] = set()
+        #: How the queue last took a pull request out, by node id (`GitHub.queue_removal`).
+        self.queue_removals: dict[str, dict[str, str]] = {}
         self.blockers: dict[int, list[int]] = {}
         #: The merge commit title asked for, by pull request node id.
         self.merge_titles: dict[str, str] = {}
@@ -350,6 +352,11 @@ class FakeGitHub:
 
     def in_merge_queue(self, node_id: str) -> bool:
         return node_id in self.merge_queue
+
+    def queue_removal(self, node_id: str) -> dict[str, str] | None:
+        if node_id in self.merge_queue or self._pull_by_node(node_id).get("auto_merge"):
+            return None
+        return self.queue_removals.get(node_id)
 
     def dequeue(self, node_id: str) -> None:
         if node_id not in self.merge_queue:
