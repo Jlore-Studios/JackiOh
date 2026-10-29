@@ -16,6 +16,8 @@
 //!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
 //!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept. The
 //!    loop folds any record written before the totals first (`game_records::fold_pending`).
+//!  - a spend's idempotency key and its kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written
+//!    (R2124000; `economy::idempotency::sweep_expired`, its own transaction).
 //!
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every
 //! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
@@ -143,6 +145,15 @@ pub async fn run_purge(app: Arc<App>) {
             Ok(0) => {}
             Ok(purged) => log_info("duos.logs.purged", json!({ "actions": purged })),
             Err(error) => log_warn("duos.logs.purge_failed", json!({ "message": error.to_string() })),
+        }
+        // R2124000: the spends' idempotency keys past their time, apart too.
+        match crate::economy::idempotency::sweep_expired(&app).await {
+            Ok(0) => {}
+            Ok(swept) => log_info("idempotency.swept", json!({ "keys": swept })),
+            Err(error) => log_warn(
+                "idempotency.sweep_failed",
+                json!({ "message": error.to_string() }),
+            ),
         }
         tokio::time::sleep(Duration::from_secs(RETENTION_PURGE_INTERVAL_SECONDS as u64)).await;
     }
