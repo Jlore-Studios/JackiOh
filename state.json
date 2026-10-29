@@ -7488,7 +7488,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-29T13:35:35Z",
+      "feedback_since": "2026-10-29T15:43:08Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2280,
@@ -7502,11 +7502,11 @@
       "run_id": "40904398987",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-29T15:43:08Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 7,
+      "verdict_rounds": 8,
       "votes": {
         "approvals": [
           "claude"
