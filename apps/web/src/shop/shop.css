@@ -221,9 +221,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(201, 149, 63, 0.3);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(239, 224, 191, 0.05);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
 .token-confirm > p {
