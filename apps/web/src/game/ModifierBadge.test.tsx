@@ -62,8 +62,9 @@ describe("R169 a modifier badge read in full on touch", () => {
       vi.spyOn(badge, "getBoundingClientRect").mockReturnValue(rect(100));
       fireEvent.click(badge);
       let full = screen.getByTestId(modifierFullTestid(LONG.id));
-      expect(full.style.left).toBe("16px");
-      expect(full.style.maxWidth).toBe("358px");
+      // 320 wide at most, so a badge at the right edge pulls it in to end 16px short of 390.
+      expect(full.style.left).toBe("54px");
+      expect(full.style.maxWidth).toBe("320px");
       expect(full.style.top).toBe("126px");
       fireEvent.click(badge);
 
@@ -72,6 +73,15 @@ describe("R169 a modifier badge read in full on touch", () => {
       full = screen.getByTestId(modifierFullTestid(LONG.id));
       expect(full.style.top).toBe("");
       expect(full.style.bottom).toBe("150px");
+      fireEvent.click(badge);
+
+      // A phone narrower than the bubble: it takes the width between the two gutters.
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+      vi.spyOn(badge, "getBoundingClientRect").mockReturnValue(rect(100));
+      fireEvent.click(badge);
+      full = screen.getByTestId(modifierFullTestid(LONG.id));
+      expect(full.style.left).toBe("16px");
+      expect(full.style.maxWidth).toBe("288px");
     } finally {
       Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
       Object.defineProperty(window, "innerHeight", { configurable: true, value: height });
