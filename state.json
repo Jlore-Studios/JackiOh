@@ -8963,18 +8963,24 @@
     "2402": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-29T20:46:18Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
+      "pr": 2408,
       "provider": "claude-8",
+      "question": "",
+      "round_tier": "strong",
       "run_id": "40929117922",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T18:15:37Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "2405": {
       "action": "review",
