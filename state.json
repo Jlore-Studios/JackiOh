@@ -8027,11 +8027,11 @@
       "question": "",
       "queued_at": "2026-10-29T00:07:19Z",
       "round_tier": "medium",
-      "run_id": "40785018510",
+      "run_id": "pending:9830efa9-1793232479",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-28T23:06:53Z",
+      "started_at": "2026-10-29T00:08:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -8057,9 +8057,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T00:07:47Z",
+    "at": "2026-10-29T00:08:24Z",
     "url": "",
-    "what": "revise #2301 on muse"
+    "what": "revise #2310 on muse"
   },
   "last_sweep": {
     "at": "2026-10-28T23:58:06Z",
