@@ -14608,14 +14608,18 @@
         {
           "at": "2026-10-29T00:06:33Z",
           "minutes": 38.8
+        },
+        {
+          "at": "2026-10-29T00:43:02Z",
+          "minutes": 18.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T02:59:00Z",
-          "utilization": 0.07
+          "utilization": 0.1
         },
-        "observed_at": "2026-10-29T00:06:33Z",
+        "observed_at": "2026-10-29T00:43:02Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.4
