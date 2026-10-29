@@ -308,6 +308,12 @@
       "lines": [
         "Approve"
       ]
+    },
+    "c:6497294031": {
+      "at": "2026-10-29T12:58:26Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
