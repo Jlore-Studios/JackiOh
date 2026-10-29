@@ -1,4 +1,4 @@
-//! Stinkyscape #61 Flak v5 (SPEC §8.10 row 61). Unit 0/8 → 0/16, Weapon, cost 4, Legendary; held (R1420).
+//! Stinkyscape #61 Flak v5 (SPEC §8.10 row 61). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to all enemies, three times." — damage 2
 //!   Radiant: "Starship Piece, Equip

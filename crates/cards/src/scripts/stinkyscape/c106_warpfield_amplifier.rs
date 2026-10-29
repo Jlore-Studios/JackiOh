@@ -1,5 +1,5 @@
 //! S #106 Warpfield Amplifier (SPEC §8.10 row 106; R20, R91, R1852000, R1852003, R1859001, R1859002):
-//! (1) Unit, Rare, 2/3 → 4/6, Starship Piece, a card of the held Stinkyscape set (R1420).
+//! (1) Unit, Rare, 2/3 → 4/6, Starship Piece, a card of the Stinkyscape set.
 //!
 //! Base and Radiant: "Starship Piece\nWhen launched, switch each of your Units to Attack Position and
 //! give it +{attackGain} Attack." AttackGain 2, Radiant 4.

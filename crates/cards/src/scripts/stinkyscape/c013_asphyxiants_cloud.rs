@@ -1,5 +1,4 @@
-//! S #13 Asphyxiants Cloud (SPEC §8.10 row S 13; §4.4, §6.2, §10.5, R59, R346, R1848002): (2) Spell,
-//! Rare.
+//! S #13 Asphyxiants Cloud (SPEC §8.10 row S 13; §4.4, §6.2, §10.5, R59, R346, R1848002): (2) Spell, Rare.
 //!   Base:    "Poisonous / Your next Spell this turn has Poisonous. Deal {damage} damage to all
 //!            enemies. Draw {draw|card|cards}." — 1, 1.
 //!   Radiant: "Echo 1, Poisonous" and the same text: it resolves a second time.

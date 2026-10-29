@@ -5,7 +5,7 @@
 
 .board .activate-controls {
   position: absolute;
-  z-index: 5;
+  z-index: var(--z-popover);
   top: 50%;
   left: 2px;
   display: flex;
@@ -23,8 +23,8 @@
   height: 20px;
   padding: 0 4px 0 2px;
   border: 1px solid var(--pal-gold-300);
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--pal-brass-800), var(--pal-brass-950));
+  border-radius: var(--radius-pill);
+  background: var(--pal-brass-800);
   color: var(--pal-gold-200);
   font-size: var(--type-xs);
   font-weight: 700;

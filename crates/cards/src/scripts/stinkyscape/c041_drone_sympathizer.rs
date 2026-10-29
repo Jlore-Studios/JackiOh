@@ -1,12 +1,11 @@
-//! S #41 Drone Sympathizer (SPEC §8.10 row 41): (1) Spell, Common, a card of the held Stinkyscape set
-//! (R1420).
+//! S #41 Drone Sympathizer (SPEC §8.10 row 41): (1) Spell, Common, a card of the Stinkyscape set.
 //!   Base:    "Add {cards|random Drone Core card|random Drone Core cards} to your hand." — cards 2
 //!   Radiant: "Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
 //!            — cards 2
 //! Engine: `add_random_from_catalog` over the Drone Core tag (S #27–#36, non-token, R380), one draw of the
 //!   match rng per card, repeats allowed, every tier as likely (R60), each on its base face at its printed
 //!   cost; a full hand burns the overflow (§2.4). The count is the declared `cards` (R386). The pool names
-//!   no set, so while the set is held it reaches no card (R1420). Radiant: added Radiant.
+//!   no set, so it reaches the set's Drone Cores because the set ships (R1420). Radiant: added Radiant.
 
 use jackioh_engine::prelude::*;
 

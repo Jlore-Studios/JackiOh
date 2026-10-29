@@ -1,4 +1,4 @@
-//! Stinkyscape #52 Cannon v3 (SPEC §8.10 row 52). Unit 0/4 → 0/8, Weapon, cost 2, Rare; held (R1420).
+//! Stinkyscape #52 Cannon v3 (SPEC §8.10 row 52). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy. Deals half damage to heroes." — damage 5
 //!   Radiant: the same text — damage 10

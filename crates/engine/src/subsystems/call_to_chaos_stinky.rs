@@ -235,6 +235,11 @@ pub fn death_watch_step() -> Hook {
         if count >= CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN {
             return vec![];
         }
+        // The count is written here, in the engine's own step, rather than through an Effect: CLAUDE.md
+        // rule 5 binds card files, and this step is no card's (`work::script_step_for` answers the hook
+        // whatever card made the watcher). It is written as it is read, so the record and the decision
+        // it gates are one step: the cast returned below, and every death it causes, read the count
+        // that already holds this cast (R2176001), as `draws` is counted as each draw is made.
         let turn = ctx.state.turn;
         ctx.state.players[player].death_watch_casts = Some(crate::state::DrawCount {
             turn,

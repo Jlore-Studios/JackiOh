@@ -553,7 +553,7 @@ function earnAFullArt(loop: Loop): void {
   // Gated, an owned card whose full art the account lacks prints its normal face.
   cy.then(() => {
     openDeckGated(loop.deckId);
-    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
+    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 
   // R1310003: two fills of the cosmetic token bar, from the cycle's start, pay a Rare token then an Epic one.
@@ -600,8 +600,8 @@ function earnAFullArt(loop: Loop): void {
   // The next load reads the ownership again: the owned full art prints, the other still does not.
   cy.then(() => {
     openDeckGated(loop.deckId);
-    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).find(CARD_FACE).should("have.attr", "data-full-art", "true");
-    cy.get(ts(poolCardId(unearned().card))).find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
+    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("have.attr", "data-full-art", "true");
+    cy.get(ts(poolCardId(unearned().card))).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 }
 

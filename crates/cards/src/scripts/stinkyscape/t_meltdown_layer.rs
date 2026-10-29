@@ -1,5 +1,5 @@
 //! S T-meltdown-layer Drone Battleship (Meltdown Layer) (SPEC §8.10 row T-meltdown-layer): (5) Unit,
-//! Token (printed Mythic), 12/12 → 24/24, a token of the held Stinkyscape set (R1420).
+//! Token (printed Mythic), 12/12 → 24/24, a token of the Stinkyscape set.
 //!   Both faces: "Starship, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage}
 //!   damage." — selfDamage 6 (Brittle 6 on the Radiant face)
 //! Engine: the bottom of the Drone Battleship's pile (S #36, R1842000): it acts once both layers above are

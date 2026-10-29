@@ -64,7 +64,7 @@ fn frostspatula(radiant: bool) -> Script {
         triggers: vec![TriggerDef::new(
             "frostspatula-kill",
             &[GameEventType::Destroyed],
-            // Not a trap, so the condition is read in `run` (only traps consult `when`, R99).
+            // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
             |ctx, event| {
                 let view: &EffectContext = ctx;
                 match kill_in(view, event) {

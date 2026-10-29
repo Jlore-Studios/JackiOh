@@ -186,18 +186,34 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use jackioh_engine::testkit::{clear_overrides, register_code_lines};
 
     /// The cards that read the lists (R1846001), as `jackioh_cards::code_lines::reads_card_lists`
-    /// finds them.
-    const READERS: [&str; 2] = ["\"stinkyscape-109\"", "\"stinkyscape-111\""];
+    /// finds them in their scripts: the cards build's `LIST_READERS`, each quoted as a game's line
+    /// names it.
+    fn readers() -> Vec<String> {
+        jackioh_cards::LIST_READERS
+            .iter()
+            .map(|id| format!("{id:?}"))
+            .collect()
+    }
+
+    #[test]
+    fn r1846003_the_readers_are_derived_from_the_scripts() {
+        assert_eq!(
+            jackioh_cards::LIST_READERS,
+            ["stinkyscape-109", "stinkyscape-111"],
+            "S #109 xxFreshJack and #111 Shockwave447 read the lists (R2173001)"
+        );
+    }
 
     #[test]
     fn r1846003_a_shard_without_a_reader_replays_alike_with_every_card_or_none_busted_and_complicated() {
         register_all();
         let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
+        let readers = readers();
         let games: Vec<(usize, &str)> = golden_lines()
             .into_iter()
             .enumerate()
             .step_by(GOLDEN_SHARDS)
-            .filter(|(_, line)| !READERS.iter().any(|reader| line.contains(reader)))
+            .filter(|(_, line)| !readers.iter().any(|reader| line.contains(reader.as_str())))
             .collect();
         assert!(!games.is_empty(), "the shard holds games with no reader");
         for lines in [every, Vec::new()] {
