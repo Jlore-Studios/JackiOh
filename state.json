@@ -8023,11 +8023,11 @@
       "queued_at": "2026-10-29T12:58:54Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "40874912029",
+      "run_id": "pending:72d5b6d9-1793278725",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-29T12:38:16Z",
+      "started_at": "2026-10-29T12:59:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -8225,7 +8225,7 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T12:38:16Z",
+    "at": "2026-10-29T12:59:14Z",
     "url": "",
     "what": "revise #2346 on muse"
   },
