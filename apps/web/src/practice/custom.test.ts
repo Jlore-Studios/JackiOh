@@ -148,7 +148,9 @@ describe("R915006 a practice game with custom cards resumes and replays", () => 
 describe("R962000 a sandbox game spawns the custom cards it carries", () => {
   it("R962000 a sandbox game with a custom card spawns it on the Luau module, plays it as the dealt one, and folds with both", async () => {
     const send = workerOver(memorySaveStore());
-    const seed = "r962000-web";
+    // Re-pinned for R2368000's three-card opening hand: "r962000-web" deals the human nothing to play on
+    // turn 1, so R82 ends it and the AI's board is lethal on its own by the human's first main phase.
+    const seed = "r962000-web-1";
     let last = snapshotOf(await send({ type: "start", config: { ...CONFIG, seed, sandbox: true } }));
     expect(luauModuleInUse()).toBe(true);
 
