@@ -8129,6 +8129,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "a person edits `.github/workflows/ci.yml`. In the `rust-test` matrix, the `cards lib` entry gets `--config` flags that build the engine at opt-level 1 and the cards at 0, plus one comment line in the job's header (exact lines below). The bot may not change `.github/`, and nothing outside it can honestly shorten this job.",
       "run_id": "40848653196",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T09:18:47Z",
