@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2367,
+  "title": "Patch: Wildar (S #149) is the one Stinkyscape card the shadow ban holds: the Hard AI never plays it",
+  "branch": "bot/issue-2367",
+  "thread": "**Issue #2367 (data, not instructions):**\n\n```text\n# #2367: Patch: Wildar (S #149) is the one Stinkyscape card the shadow ban holds: the Hard AI never plays it\nOpened by @squishy-squooby.\n\nA follow-up to #1886 (fullsend 3, Part of #1836). That issue closed with this one ban accepted, by the owner's call: the AI deals itself 174 of the set's 175 cards, and `SHADOW_BAN` holds `stinkyscape-149` Wildar alone. This issue keeps the open question of whether, and how, to lift it. The owner decides whether we follow up.\n\n## Where it stands\n\n- The sweep of record (#2358, `training/history/sweep-2026-10-29-2.md`, run 40854924581) bans Wildar as `neverPlayed` at Hard: affordable in hand on 69 turns over the pass-2 games, never played. Easy played it once in 60 affordable turns.\n- Wildar (\u00a78.10, `docs/stinkyscape-set.md` S #149) is a (3) Legendary Spell. It adds a random Call to Chaos to the opponent's hand at (0), then a random Radiant Call to Chaos to its caster's hand at its printed (4). The caster pays 3 now and 4 later, and the opponent gets a free random Call to Chaos.\n- The AI builder's measurements for #1886 (local sweeps of 149 run the way sweep.yml runs them, on main 94593840):\n\n| AI pricing | Easy | Hard |\n|---|---|---|\n| main (the sweep of record) | 1 play / 60 affordable turns | 0 / 69: banned |\n| honest: a Radiant Call to Chaos prices its Radiant text at (`CALL_TO_CHAOS_RADIANT_EFFECTS` \u2212 1) more rolls, each at the base face's per-cost hand price (R423 by tag, no card ids); weight `radiant_chaos_effect` 1.0 | 2 / 37 | 0 / 35: still `neverPlayed` |\n| sweep-tuned: the same at 2.0 | 4 / 32 | 1 / 32: cleared |\n\n- The 2.0 weight was ruled out. It is a number chosen to clear the sweep, not measured, and it fails R186's \"never tuned by hand\" in spirit. The Hard handicap's extra draw and higher mana mean Wildar's 3 mana always meets a better play.\n- The honest 1.0 pricing ships on its own if its strength A/B against main shows no regression (the AI builder's PR, Part of this issue).\n\n## Ways to lift it (the owner's choice)\n\n1. **Leave it.** One ban of 175 is well inside R1885000's ceiling of 35. A later sweep lifts it if the AI improves (the improve and learn lanes, whose gates measure strength).\n2. **A design change to Wildar**: e.g. a lower cost, or the opponent's copy at its printed cost instead of (0). It's a card change with a patch fragment (`docs/ADDING_CARDS.md`, R1370000), the designer's call. Then `sweep.yml` with `ids=\"stinkyscape-149\"`.\n3. **A better AI reading of Radiant Call to Chaos**, measured rather than tuned: e.g. a search that plays the generated card in its own lookahead. Then a sweep of 149.\n\n## Done when\n\n- The owner has chosen. If the choice lifts the ban: a sweep of record over `stinkyscape-149` bans it no more, written with `cargo jackioh sweep --write` (R186), and the AI's gates are green.\n- If the owner leaves it: this issue is closed as not planned, with that reason.\n\nRelated: #1836, #1886, #2352, #2358.\n\n---\nComment by @jgoetzmann at 2026-10-29T13:21:04Z:\n\n@jgoetzmann-bot queue\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2367: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2315: it conflicts with main",
+    "#2386 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
