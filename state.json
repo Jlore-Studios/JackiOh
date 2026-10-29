@@ -9232,9 +9232,10 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T21:45:07Z",
+    "at": "2026-10-29T21:59:32Z",
     "notes": [
-      "started revise #2409 on claude-1 (run 40960639298)",
+      "delivered revise #2310 on muse (run 40959410462): built",
+      "started revise #2310 on muse (run 40962645882)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -9941,7 +9942,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T21:45:07Z",
+  "loop_tick": "2026-10-29T21:59:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
