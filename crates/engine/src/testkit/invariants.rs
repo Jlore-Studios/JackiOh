@@ -2181,6 +2181,14 @@ impl InvariantMonitor {
                         self.enter(new_instance_id);
                         self.note_entry_windfury(new_instance_id, state);
                     }
+                    // R2285002: an attack whose target its attacker's "when this attacks" transformed is
+                    // fought at the Unit that took its place, so that Unit is the one its kill names.
+                    if let Some(attack) = self.attack.as_mut()
+                        && attack.target_id == *instance_id
+                        && !attack.killed
+                    {
+                        attack.target_id = new_instance_id.clone();
+                    }
                     if self.attack.as_ref().is_some_and(|attack| {
                         attack.killed && !attack.forced && attack.attacker_id == *instance_id
                     }) {

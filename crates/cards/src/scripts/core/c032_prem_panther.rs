@@ -1,14 +1,15 @@
 //! #32 Prem Panther (SPEC §8.2 row 32): 5/4 "Rush / After this attacks, draw 2 for each Unit that
-//! attack destroyed", radiant 10/8 "Rush, Cleave / the same"; the draw happens even when the Panther
-//! died in the combat (R426).
+//! attack destroyed", radiant 10/8 "Rush, Cleave / the same"; a Panther that died in the combat draws
+//! nothing (R2285001).
 //!
 //! Rush and Cleave are printed on the catalog faces, so §10.4 layer 1 grants them. The text is the
 //! engine's `afterAttack` hook, which runs once the state check that closes each combat the Panther
 //! attacked in (declared or forced, R53, R59) has run, with the combat's facts (`afterAttackOf`): the
 //! Units whose lethal hit it dealt there (its strike and its Cleave's; a defender's strike back is the
-//! defender's, and a defending Panther runs no hook). Survival is not asked (R212: a Panther back
-//! through Reborn draws for its last stay's kill, a defending one draws nothing). The hook acts for
-//! the player who controlled it in that combat, though a Death in the check (#86 Mrow's) took it since.
+//! defender's, and a defending Panther runs no hook). The engine runs it only for a Panther still on the
+//! field on the stay it attacked from (R2285001), so one that traded itself away draws nothing, nor
+//! does one back through Reborn, a new stay (R83). The hook acts for the player who controlled it in
+//! that combat, though a Death in the check (#86 Mrow's) took it since.
 
 use jackioh_engine::combat::after_attack_of;
 use jackioh_engine::effects::draw;
@@ -122,7 +123,7 @@ mod tests {
         }
 
         #[test]
-        fn r426_draws_2_when_it_dies_in_that_combat_for_the_unit_it_destroyed_in_the_trade() {
+        fn r2285001_draws_nothing_when_it_dies_in_that_combat_though_its_attack_destroyed_a_unit() {
             let mut s = scn(json!({
                 "seed": "panther-trade",
                 "p1": { "field": ["32", "15"], "library": ["15", "15", "15"] },
@@ -131,15 +132,15 @@ mod tests {
             let panther = must(s.unit("p1", 1), "p1's Panther");
             let other = must(s.unit("p2", 1), "p2's Panther");
 
-            // 5 into a 5/4 and 5 back into a 5/4: both die. The hook is owed on the snapshot the Panther
-            // fought with, so it still draws 2 for the Unit its attack destroyed (balance patch 1).
+            // 5 into a 5/4 and 5 back into a 5/4: both die. "After this attacks" runs only for a Panther
+            // that survived the combat, so the trade draws nothing (issue #2285 reverses balance patch 1).
             s.attack(&panther, &other);
 
             s.expect_in_zone(&panther, "graveyard");
             s.expect_in_zone(&other, "graveyard");
-            assert_eq!(s.hand("p1").len(), 2);
-            assert_eq!(s.pile("p1", "library").len(), 1);
-            assert!(drew(s.last_events()));
+            assert_eq!(s.hand("p1").len(), 0);
+            assert_eq!(s.pile("p1", "library").len(), 3);
+            assert!(!drew(s.last_events()));
             // The death names the Panther as its killer (R42).
             let death = destroyed_event(&s, &other.id);
             assert_eq!(death["killerId"], json!(panther.id));
@@ -238,7 +239,7 @@ mod tests {
         }
 
         #[test]
-        fn r426_r83_a_panther_that_dies_in_the_combat_and_comes_back_through_reborn_still_draws_2_the_hook_is_owed_on_the_snapshot_it_fought_with_not_answered_by_the_new_stay()
+        fn r2285001_r83_a_panther_that_dies_in_the_combat_and_comes_back_through_reborn_draws_nothing_the_reborn_body_is_a_new_stay()
         {
             let mut s = scn(json!({
                 "seed": "panther-reborn",
@@ -252,8 +253,7 @@ mod tests {
                 .push(json_as(json!({ "kind": "Reborn" })));
 
             // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health. The Reborn body
-            // is a new arrival (R83, R174) that destroyed nothing — but the draw is the dead stay's hook,
-            // owed on the snapshot (R426), so p1 still draws 2 for the kill of its last stay.
+            // is a new arrival (R83, R174), not the Panther that attacked, so nothing is drawn.
             let other = must(s.unit("p2", 1), "p2's Panther");
             s.attack(&panther, &other);
 
@@ -262,9 +262,9 @@ mod tests {
                 GameEvent::Destroyed { instance_id, .. } if *instance_id == panther.id
             )));
             s.expect_in_zone(&panther, "field");
-            assert!(drew(s.last_events()));
-            assert_eq!(s.hand("p1").len(), 3);
-            assert_eq!(s.pile("p1", "library").len(), 1);
+            assert!(!drew(s.last_events()));
+            assert_eq!(s.hand("p1").len(), 1);
+            assert_eq!(s.pile("p1", "library").len(), 3);
         }
 
         #[test]
@@ -345,7 +345,7 @@ mod tests {
         }
 
         #[test]
-        fn r426_radiant_cleave_kills_draw_6_even_when_the_panther_dies_in_that_combat() {
+        fn r2285001_radiant_cleave_kills_draw_nothing_when_the_panther_dies_in_that_combat() {
             let mut s = scn(json!({
                 "seed": "panther-cleave-dies",
                 "p1": {
@@ -358,7 +358,7 @@ mod tests {
             let panther = must(s.unit("p1", 1), "the radiant Panther");
 
             // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
-            // kills the attack destroyed, so p1 draws 6 though the Panther died (balance patch 1).
+            // kills the attack destroyed, but the Panther died, so p1 draws nothing.
             let shredder = must(s.unit("p2", 2), "p2's Shredder");
             s.attack(&panther, &shredder);
 
@@ -366,9 +366,9 @@ mod tests {
             for lane in 1..=3 {
                 assert!(s.unit("p2", lane).is_none(), "p2 lane {lane} should be empty");
             }
-            assert!(drew(s.last_events()));
-            assert_eq!(s.hand("p1").len(), 7);
-            assert_eq!(s.pile("p1", "library").len(), 2);
+            assert!(!drew(s.last_events()));
+            assert_eq!(s.hand("p1").len(), 1);
+            assert_eq!(s.pile("p1", "library").len(), 8);
         }
 
         #[test]

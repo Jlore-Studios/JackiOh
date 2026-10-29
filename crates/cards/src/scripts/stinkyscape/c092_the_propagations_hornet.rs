@@ -6,8 +6,8 @@
 //! (R1849001): once the state check closing each of its combats has run, declared or forced,
 //! `summon_copy` of it (R57, into R64's zone, no Cry, R1), made from it before it evolves, then `evolve`
 //! on it, which runs its `Script.evolve` hook: Gain Flying (`grant_keyword`). The copy has no Flying and
-//! the original has it; one that died attacking leaves its copy, made from the snapshot it fought with
-//! (R89), and evolves into nothing; a full unit row summons no copy. The copy has Rush too, a copy of
+//! the original has it; one that died attacking does nothing, neither copy nor evolve (R2285001); a
+//! full unit row summons no copy. The copy has Rush too, a copy of
 //! the card, so it may attack a Unit that turn and copy again. Radiant: the same text, the copy of a
 //! Radiant Hornet a Radiant 8/8.
 
@@ -96,7 +96,7 @@ mod tests {
         fn has_rush() {
             let mut s = crate::scenario(json!({
                 "p1": { "hand": [ID, FILLER], "library": crate::filler(4) },
-                "p2": { "hand": [FILLER], "field": [VANILLA], "library": crate::filler(4) },
+                "p2": { "hand": [FILLER], "field": [MOTHS], "library": crate::filler(4) },
             }));
             s.play(ID, json!({ "zone": 1 }));
             let hornet = s.unit_at(P1, 1);
@@ -125,15 +125,12 @@ mod tests {
         }
 
         #[test]
-        fn one_that_died_attacking_leaves_the_copy_only() {
+        fn r2285001_one_that_died_attacking_leaves_no_copy() {
             let mut s = board(false, json!([]), json!([MENACE]));
             let hornet = s.unit_at(P1, 1);
             s.attack(&hornet, s.unit_at(P2, 1));
             s.expect_in_zone(&hornet, "graveyard");
-            let copies = copies(&s);
-            assert_eq!(copies.len(), 1);
-            s.expect_in_zone(&copies[0], "field");
-            assert!(!flies(&s, &copies[0]));
+            assert!(copies(&s).is_empty());
         }
 
         #[test]
