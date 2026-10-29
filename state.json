@@ -8786,13 +8786,13 @@
     "what": "plan #2340 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-29T06:09:16Z",
+    "at": "2026-10-29T06:20:23Z",
     "notes": [
-      "CI on #2298: #2298: re-ran the failed jobs of run 40814894522",
-      "delivered build #2127 on claude-8 (run 40817723416): approved",
-      "started revise #2298 on claude-8 (run 40827794917)",
+      "#2340 needs a plan",
+      "delivered build #2268 on claude-6 (run 40817785367): approved",
+      "started plan #2340 on claude-6 (run 40828892013)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9498,7 +9498,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T06:09:16Z",
+  "loop_tick": "2026-10-29T06:20:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
