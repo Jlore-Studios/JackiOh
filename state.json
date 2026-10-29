@@ -8468,7 +8468,9 @@
     },
     "2386": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6501218235"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -8492,9 +8494,7 @@
       "started_at": "2026-10-29T15:52:10Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6501218235"
-      ]
+      "taken_asks": []
     },
     "2387": {
       "asks": [
