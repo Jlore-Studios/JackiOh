@@ -101,9 +101,24 @@ describe("B46 stand-ins are planned for every card the burst moves onto the boar
       { type: "summoned", player: "p1", instanceId: "c99", defId: "core-041", row: "backrow", lane: 2, formerId: HAND },
     ];
     expect(stage(set, D)).toEqual([
-      { kind: "hold", from: tid(`hand-card-${HAND}`), to: tid("zone-you-backrow-2"), delayMs: 0, landMs: Math.round(FX_SLAM_AT * D), durationMs: FX_HOLD_MAX_MS },
+      { kind: "hold", from: tid(`hand-card-${HAND}`), to: tid("zone-you-backrow-2"), delayMs: 0, landMs: Math.round(FX_SLAM_AT * D), durationMs: FX_HOLD_MAX_MS, set: true },
       { kind: "conceal", testid: `hand-card-${HAND}`, mode: "now", delayMs: 0, durationMs: FX_HOLD_MAX_MS },
     ]);
+  });
+
+  it("R2111000 a card landing in a backrow zone is laid down: its hold says set, and a unit's does not", () => {
+    expect(
+      stage(
+        [
+          { type: "cardPlayed", player: "p2", instanceId: "hidden", defId: "hidden", costPaid: 1 },
+          { type: "summoned", player: "p2", instanceId: "hidden", defId: "hidden", row: "backrow", lane: 3 },
+        ],
+        400,
+      ),
+    ).toEqual([
+      { kind: "hold", from: tid("hand-opponent"), to: tid("zone-opponent-backrow-3"), delayMs: 0, landMs: Math.round(FX_SLAM_AT * 400), durationMs: FX_HOLD_MAX_MS, set: true },
+    ]);
+    for (const cue of stage([play("p2", "c99"), summon("p2", "c99", 2)])) expect(cue).not.toHaveProperty("set");
   });
 
   it("B46 the opponent's unit flies from the opponent's hand of backs (R202: a back, never a face)", () => {
@@ -329,6 +344,28 @@ describe("B46 the stand-in in the page", () => {
     expect(hand.getAttribute("data-fx-concealed")).toBe("now");
     // Exactly one element with the card's testid is left in the document.
     expect(document.querySelectorAll(`[data-testid="hand-card-${HAND}"]`)).toHaveLength(1);
+  });
+
+  it('R2111000 a stand-in landing in a backrow zone carries data-land="set", one in a unit zone none', () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-backrow-2", ZONE_BOX);
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const h = directorHarness();
+
+    h.director.play(
+      stage([
+        { type: "cardPlayed", player: "p1", instanceId: "c99", defId: "core-041", costPaid: 1, formerId: HAND },
+        { type: "summoned", player: "p1", instanceId: "c99", defId: "core-041", row: "backrow", lane: 2, formerId: HAND },
+      ]),
+    );
+    expect(h.root.querySelector('[data-fx="hold"]')?.getAttribute("data-land")).toBe("set");
+
+    h.director.release();
+    h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    const hold = h.root.querySelector('[data-fx="hold"]');
+    expect(hold).not.toBeNull();
+    expect(hold?.hasAttribute("data-land")).toBe(false);
   });
 
   it("B46 release() removes every stand-in and un-hides every card at once; the rest keeps running", () => {
