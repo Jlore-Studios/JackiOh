@@ -1,8 +1,9 @@
 // R2118000: Ctrl+K (Cmd+K) opens a command menu on every menu screen, never over a board:
 // the common actions, every menu page and the Almanac shelf's cards by name, each a `navigate`
-// move, with the focus moving in, staying inside and going back on close.
+// move, with the focus moving in, staying inside and going back on close. R2126000: the selected
+// entry shows Enter, and the menu's foot names its keys.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -14,6 +15,7 @@ import Game from "../game/Game.tsx";
 import { almanacShelf } from "../game/deckbuilder/shelf.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { guardLeaving, paths } from "../net/navigate.ts";
+import { KBD_TESTID } from "../shortcuts/Kbd.tsx";
 import { baseView } from "../test/fixtures.ts";
 import { at } from "../test/stubServer.ts";
 import CommandMenu, { commandEntryTestid, commandMenuTestid } from "./CommandMenu.tsx";
@@ -299,5 +301,25 @@ describe("R2118000 the command menu", () => {
     expect(screen.getByTestId(commandMenuTestid.input)).toHaveFocus();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab", shiftKey: true });
     expect(screen.getByTestId(commandMenuTestid.close)).toHaveFocus();
+  });
+});
+
+describe("R2126000 the command menu's keys", () => {
+  it("R2126000 the selected entry shows Enter, and the menu's foot names its keys", () => {
+    render(<CommandMenu path="/" />);
+    const input = openMenu();
+    const first = screen.getByTestId(commandEntryTestid("action-new-deck"));
+    const second = screen.getByTestId(commandEntryTestid("action-practice"));
+    expect(within(first).getByTestId(KBD_TESTID).textContent).toBe("Enter");
+    expect(within(second).queryByTestId(KBD_TESTID)).toBeNull();
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(within(first).queryByTestId(KBD_TESTID)).toBeNull();
+    expect(within(second).getByTestId(KBD_TESTID).textContent).toBe("Enter");
+
+    const keys = within(screen.getByTestId(commandMenuTestid.keys))
+      .getAllByTestId(KBD_TESTID)
+      .map((key) => key.textContent);
+    expect(keys).toEqual(["↑", "↓", "Enter", "Esc"]);
   });
 });

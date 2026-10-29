@@ -7,7 +7,7 @@
 //!          End of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent
 //!          Unit."
 //! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of its owner's play, a cast
-//! included (R70), whose running face carries a tribal tag (TRIBAL_TAGS, R1424): `summon_this` into
+//! included (R70) but not a cast on draw (R2179002), whose running face carries a tribal tag (TRIBAL_TAGS, R1424): `summon_this` into
 //! the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with no
 //! open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: `upgrade({ scope: { side: "self", zones: ["hand", "library"] },
@@ -19,13 +19,14 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-087";
 
-/// Whether this resolution summons Tatches: its owner's play or cast (R70) of a card whose running
+/// Whether this resolution summons Tatches: its owner's play or cast (R70; not on draw, R2179002) of a card whose running
 /// face is neither Trap nor Field Trap and carries a tribal tag (R1424, MD-E11).
 fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
         return false;
     };
-    if *player != ctx.controller {
+    // R2179002: a card cast on draw is no play.
+    if *player != ctx.controller || cast_on_draw_event(event) {
         return false;
     }
     let state: &GameState = ctx.state;

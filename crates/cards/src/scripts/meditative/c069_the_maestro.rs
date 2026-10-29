@@ -43,7 +43,8 @@ fn exile_ability() -> ActivationDecl {
         targets: Vec::new(),
         modes: Vec::new(),
         can_activate: Some(condition_hook(move |c| {
-            plague_on(c.self_) >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
+            // R1850000, R1884005: `param` reads a copier's copied text, where the Activate came from.
+            plague_on(c.self_) >= param(&c, "price")
         })),
         has: None,
         run: hook(move |ctx| {
@@ -373,5 +374,51 @@ mod tests {
                 .count();
             assert_eq!(exiled, 3);
         }
+    }
+    /// R1850000, R1884005: a copier running the Maestro's text (S #20 Tnack Trav copying a Legendary
+    /// fusion of the Maestro and Core #92 Felinor Fiender) reads the Activate's price off the copied
+    /// text, as `param` does, and its legality check no longer panics on the copier's own card
+    /// (handicapped fuzz seed 1087 of the Stinkyscape release).
+    #[test]
+    fn r1884005_a_copier_of_the_maestro_s_text_reads_its_price_off_the_copy() {
+        const TNACK_TRAV: &str = "stinkyscape-020";
+        const FIENDER: &str = "core-092"; // Legendary, so the fusion is.
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "maestro-copied",
+            "p1": { "hand": [TNACK_TRAV, FILLER], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let mut events: Vec<GameEvent> = vec![];
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        let fused = {
+            let state = s.state_mut();
+            let ingredients: Vec<CardInstance> = [MAESTRO, FIENDER]
+                .iter()
+                .map(|def_id| new_instance(&mut *state, def_id, PlayerId::P1, Zone::Gone { player: PlayerId::P1 }))
+                .collect();
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            subsystems::fuse(
+                &mut sink,
+                subsystems::FuseArgs {
+                    ingredients,
+                    to_hand: Some(PlayerId::P1),
+                    ..subsystems::FuseArgs::default()
+                },
+            )
+        }
+        .expect("the fused card");
+        s.state_mut().rng_cursor = rng.cursor();
+        s.play(&fused.id, json!({ "zone": 1 }));
+        let fusion = s.unit_at(PlayerId::P1, 1);
+        s.play(TNACK_TRAV, json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": fusion.id }] }));
+        let copier = s.unit_at(PlayerId::P1, 2);
+        assert!(subsystems::unit_text::unit_text_of(&copier).is_some(), "Tnack Trav copied the fusion");
+        // The legality check reads the copied Activate's price: no panic, and no use without counters.
+        let actions = legal_actions(s.state(), PlayerId::P1);
+        assert!(!actions.iter().any(|action| matches!(
+            action,
+            ActionBody::Activate { instance_id, .. } if *instance_id == copier.id
+        )));
     }
 }

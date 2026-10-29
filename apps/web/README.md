@@ -100,6 +100,20 @@ mounted on a board route, nor over a board sharing a menu's path, which `game/bo
 marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
 opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
 
+**Shortcut hints** (R2126000): the shortcuts the client has, shown and never added.
+`shortcuts/shortcuts.ts` (no React) names each once in `SHORTCUTS` and writes it: `shortcutText`
+(⌘⇧Z on an Apple device, Ctrl+Shift+Z elsewhere, by user agent), `ariaKeyshortcuts`
+("Control+Z Meta+Z") and `shortcutTitle` (a tooltip's "Undo (Ctrl+Z)"), with `touchOnly` and
+`subscribeTouchOnly` for `TOUCH_ONLY_QUERY`. `shortcuts/Kbd.tsx` draws them: `useShortcutHints`,
+`Kbd` (one keycap) and `ShortcutHint` (a sentence around some, `t("Focus the card, then press {keys} to inspect")`).
+They show in the hover preview of a card (`keyHint` on `useInspectTrigger`, "Focus the card, then press I to inspect"),
+in the Undo, Redo and replay step and turn buttons' tooltips, in the command menu (Enter on the
+selected entry, a legend of its keys) and in the site footer (Ctrl/⌘+K). A touch-only device
+(`(hover: none) and (pointer: coarse)`) shows no hint, though `aria-keyshortcuts` stays. A widget's
+own keys (Enter, Space, Escape in a dialog) are unhinted, and no hint adds a key:
+`shortcuts/shortcuts.test.tsx`'s `BOARD_KEY_HANDLERS` freezes the key handlers of the board's sources,
+so a new one fails it (there is no End-turn key). Presentation only (rule 7).
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

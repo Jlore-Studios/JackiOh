@@ -1550,6 +1550,9 @@ pub struct InvariantMonitor {
     /// the autopilot plays a whole turn in one action (R1183002; fuzz seeds 5325, 6431, 9388, and 6732
     /// and 7295 of the handicapped wave, #1216).
     carried_windfury: IndexSet<String>,
+    /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
+    /// change of control keeps (the card stays on the field).
+    drawn_windfury: IndexSet<String>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -1561,6 +1564,9 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R424, R1869002: whether the last action left a prompt or work owed, so a combat it declared may
+    /// still be resolving (an ambush's Discovers, S #22) and its attack is kept for the next action.
+    attack_open: bool,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
@@ -1588,11 +1594,13 @@ impl InvariantMonitor {
             last_attack: IndexMap::new(),
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
@@ -1609,6 +1617,30 @@ impl InvariantMonitor {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
             }
+        }
+    }
+
+    /// R636, R781004: a unit whose text draws its keywords as it arrives or fuses (M #65 Keymaster
+    /// Keenus' Aura, the Stinkyscape Drones', a `conditionalKeywords` text) keeps them in its memory,
+    /// which leaving the field resets (R78) and ceasing to exist takes with it. One gone from the field
+    /// by the action's end leaves no state to say whether it drew Windfury, so its attacks in this stint
+    /// count as Windfury's (Keenus equipped onto C+ #26 and exiled: Duos fuzz seed 679; a Drone
+    /// Corvette summoned and killed inside one autopilot action: fuzz seed 8567).
+    fn note_drawn_windfury(&mut self, id: &str, def_id: &str, state: &GameState) {
+        let draws = match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field => false,
+            Some(card) => crate::scripts::script_of(state, card)
+                .conditional_keywords
+                .is_some(),
+            None => crate::scripts::script_of(state, def_id)
+                .base
+                .conditional_keywords
+                .is_some(),
+        };
+        if draws {
+            let stint = self.stint_of(id);
+            self.windfury.insert(id.to_string(), stint);
+            self.drawn_windfury.insert(id.to_string());
         }
     }
 
@@ -1632,7 +1664,12 @@ impl InvariantMonitor {
     /// R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it;
     /// R1869002: or `mayAttackAgain` does, for a stint holding a kill credit no state has settled yet.
     fn is_readied(&self, card: &CardInstance) -> bool {
-        (self.readied.contains(&card.id) || self.credited_at(&card.id).is_some())
+        // R1869002: a kill credit still unsettled (a prompt the action left open, a steal that gave the
+        // attacker a new stint before its `afterAttack` freed it: handicapped fuzz seed 4737) may have
+        // readied it; `settle_kill_credits` takes it back once nothing is owed if its attack stayed spent.
+        (self.readied.contains(&card.id)
+            || self.credited_at(&card.id).is_some()
+            || self.unsettled_credits.contains(&card.id))
             && card.summoned_turn.is_none()
     }
 
@@ -2012,7 +2049,11 @@ impl InvariantMonitor {
         let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
         // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
-        self.attack = None;
+        // An action that left a prompt or work owed is the attack's own still resolving (R1869002: a kill
+        // an ambush's Discovers delayed credits its attacker when it lands), so the attack is kept then.
+        if !self.attack_open {
+            self.attack = None;
+        }
 
         // I5: the check that ends the game is the last thing that happens (§2.5, R216).
         if let Some(over) = events
@@ -2081,9 +2122,33 @@ impl InvariantMonitor {
                 | GameEvent::ControlChanged { instance_id, .. } => {
                     self.enter(instance_id);
                     self.note_entry_windfury(instance_id, state);
+                    if let GameEvent::Summoned { def_id, .. } = event {
+                        self.note_drawn_windfury(instance_id, def_id, state);
+                    }
+                    // R12, R781004: a steal keeps the card on the field, its drawn keywords with it
+                    // (a Drone Corvette summoned, stolen and bounced inside one AI turn: handicapped
+                    // fuzz seed 1358).
+                    if matches!(event, GameEvent::ControlChanged { .. })
+                        && self.drawn_windfury.contains(instance_id)
+                    {
+                        let stint = self.stint_of(instance_id);
+                        self.windfury.insert(instance_id.clone(), stint);
+                    }
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
+                }
+                // R678: a Glitch's boards outcome deals both fields again, its cards placed with no
+                // `summoned` (`glitch::place_glitch_boards`), so each card the field holds once the
+                // action is over entered on this turn (a Glitch played from the graveyard mid-game:
+                // handicapped fuzz seed 7613 of the Stinkyscape release).
+                GameEvent::Glitched {
+                    outcome: crate::wire::GlitchOutcome::Boards,
+                    ..
+                } => {
+                    for card in field_cards(state) {
+                        self.enter(&card.id);
+                    }
                 }
                 GameEvent::Awakened { instance_id, .. } => {
                     // R2259000: a card that awakens is summoning sick for the rest of the turn, as one
@@ -2176,6 +2241,19 @@ impl InvariantMonitor {
                     {
                         attack.target_id = to_id.clone();
                     }
+                }
+                // R636, R1086: a Fuse (an Equip among them) brings its ingredients' text, and with it a
+                // Windfury an aura of theirs gives, which no `keywordGranted` reports; a unit that holds
+                // it as the action leaves it has it from the fuse on (M #65 Keymaster Keenus' random
+                // keywords, equipped onto S #113: handicapped fuzz seed 7566), and one gone by the action's
+                // end may have drawn it (`note_drawn_windfury`).
+                GameEvent::Fused {
+                    result_instance_id,
+                    def_id,
+                    ..
+                } => {
+                    self.note_entry_windfury(result_instance_id, state);
+                    self.note_drawn_windfury(result_instance_id, def_id, state);
                 }
                 GameEvent::KeywordGranted {
                     instance_id,
@@ -2292,6 +2370,7 @@ impl InvariantMonitor {
             self.note_uncoverings(events, state, began_on);
         }
         self.dormant = dormant_cards(state);
+        self.attack_open = state.pending.is_some() || !state.work.is_empty();
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {

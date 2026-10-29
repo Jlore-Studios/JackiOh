@@ -333,7 +333,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
       const id = root.getAttribute("data-testid") ?? "";
       if (defIds.has(id)) {
         expect(root.style.length, id).toBe(1);
-        expect(root.style.transform, id).toBe("rotate(90deg) scale(0.72)");
+        expect(root.style.transform, id).toBe("rotate(90deg) scale(var(--def-scale, 1))");
       } else {
         expect(root.getAttribute("style"), id).toBeNull();
       }

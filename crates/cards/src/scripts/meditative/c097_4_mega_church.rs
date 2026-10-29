@@ -96,7 +96,8 @@ mod tests {
     const CHEAP_SPELL: &str = "core-041"; // (1) Trap.
     const VANILLA: &str = "core-008";
     const SHEEP: &str = "core-t-sheep"; // Worth 2 Tributes.
-    const SAINTESS: &str = "core-081"; // (1) 2/2, Death: make your other Units Radiant.
+    const LAR: &str = "classicplus-076"; // (1) Brother Lar, Death: summon a Brother Ping.
+    const PING: &str = "classicplus-076-1";
     const TWO_COST: &str = "core-056"; // (2) Jilliax.
 
     #[test]
@@ -354,16 +355,17 @@ mod tests {
 
         #[test]
         fn r1282_each_payment_is_a_sacrifice_its_death_runs() {
-            // The enemy Radiant Saintess (1): "Death: Make your other Units Radiant."
-            let mut s = four_and(json!({ "field": [SAINTESS, DEAR_UNIT] }));
-            let saintess = s.unit(P2, 1).unwrap().id;
+            // The enemy Brother Lar (1): "Death: Summon a Brother Ping." (Core #81 Radiant Saintess,
+            // which this test used, costs (2) since #2179.)
+            let mut s = four_and(json!({ "field": [LAR, DEAR_UNIT] }));
+            let lar = s.unit(P2, 1).unwrap().id;
             let mut tributes = own_four(&s);
-            tributes.push(saintess.clone());
+            tributes.push(lar.clone());
             s.play(ID, json!({ "zone": 5, "tributes": tributes }));
-            s.expect_in_zone(&saintess, "graveyard");
+            s.expect_in_zone(&lar, "graveyard");
             assert!(
-                s.unit(P2, 2).unwrap().radiant,
-                "the sacrificed Saintess's Death ran"
+                (1..=5).any(|lane| s.unit(P2, lane).is_some_and(|unit| unit.def_id == PING)),
+                "the sacrificed Brother Lar's Death ran"
             );
         }
 
