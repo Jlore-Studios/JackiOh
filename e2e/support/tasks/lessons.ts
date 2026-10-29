@@ -20,6 +20,8 @@ export type TutorialLessonData = {
   humanSeat: "p1" | "p2";
   humanDeck: string[];
   aiDeck: string[];
+  /** R2201001, R2205003: the human's pool hold (lessons 1–4). */
+  poolHold: boolean;
 };
 
 export type TutorialData = {

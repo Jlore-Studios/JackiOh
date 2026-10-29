@@ -7,8 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TUTORIAL_PROGRESS_KEY } from "./config.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
+import { discoveryById } from "./discoveries.ts";
 import {
   __resetTutorialProgressForTests,
+  markFound,
   markLessonComplete,
   readTutorialProgress,
   setTutorialHidden,
@@ -55,9 +57,22 @@ describe("the lesson path", () => {
       expect(item).toHaveTextContent(`Lesson ${String(each.number)}`);
       expect(within(item).getByRole("heading", { level: 3, name: each.title })).toBeInTheDocument();
       expect(item).toHaveTextContent(each.summary);
-      const chips = within(within(item).getByRole("list", { name: "What it teaches" })).getAllByRole("listitem");
-      expect(chips.map((chip) => chip.textContent)).toEqual([...each.mechanics]);
+      const chips = within(within(item).getByRole("list", { name: "What you can find" })).getAllByRole("listitem");
+      expect(chips.map((chip) => chip.textContent)).toEqual(each.discoveries.map((id) => discoveryById(id)?.name));
+      for (const chip of chips) expect(chip).toHaveAttribute("data-found", "false");
     }
+  });
+
+  it("R2205002 a chip reads found once the Field Guide holds its mechanic, and every chip of a lesson won does", () => {
+    markFound(["mana"]);
+    markLessonComplete(lesson(2).id);
+    render(<TutorialPath onStart={vi.fn()} />);
+    const chipsOf = (each: TutorialLesson): HTMLElement[] =>
+      within(within(node(each)).getByRole("list", { name: "What you can find" })).getAllByRole("listitem");
+    const first = chipsOf(lesson(1));
+    expect(first.filter((chip) => chip.getAttribute("data-found") === "true").map((chip) => chip.textContent)).toEqual(["Found: ManaMana"]);
+    for (const chip of chipsOf(lesson(2))) expect(chip).toHaveAttribute("data-found", "true");
+    expect(screen.getByTestId(tutorialTestid.fieldGuidePath)).toBeInTheDocument();
   });
 
   it("with no progress: lesson 1 is open and up next, the rest are locked and say why", () => {
@@ -79,7 +94,7 @@ describe("the lesson path", () => {
       fireEvent.click(button(each));
     }
     expect(onStart).not.toHaveBeenCalled();
-    expect(screen.getByTestId(tutorialTestid.path)).toHaveTextContent("0 of 4 lessons complete");
+    expect(screen.getByTestId(tutorialTestid.path)).toHaveTextContent(`0 of ${String(TUTORIAL_LESSONS.length)} lessons complete`);
     expect(screen.queryByTestId(tutorialTestid.continue)).toBeNull();
   });
 
@@ -135,7 +150,7 @@ describe("the lesson path", () => {
     render(<TutorialPath onStart={vi.fn()} />);
     const path = screen.getByTestId(tutorialTestid.path);
     expect(path).toHaveAttribute("data-complete", "true");
-    expect(path).toHaveTextContent("4 of 4 lessons complete");
+    expect(path).toHaveTextContent(`${String(TUTORIAL_LESSONS.length)} of ${String(TUTORIAL_LESSONS.length)} lessons complete`);
     const toggle = screen.getByTestId(tutorialTestid.pathToggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(node(lesson(1)).closest("ol")).not.toBeVisible();
@@ -160,7 +175,7 @@ describe("R322 Hide tutorial and Show tutorial", () => {
     const bar = screen.getByTestId(tutorialTestid.hidden);
     expect(bar).toHaveAttribute("data-complete", "false");
     expect(bar).toHaveTextContent("Tutorial hidden");
-    expect(bar).toHaveTextContent("1 of 4 lessons complete");
+    expect(bar).toHaveTextContent(`1 of ${String(TUTORIAL_LESSONS.length)} lessons complete`);
 
     fireEvent.click(screen.getByTestId(tutorialTestid.show));
     expect(screen.queryByTestId(tutorialTestid.hidden)).toBeNull();
@@ -226,7 +241,7 @@ describe("R322 Hide tutorial and Show tutorial", () => {
     });
     const bar = screen.getByTestId(tutorialTestid.hidden);
     expect(bar).toHaveAttribute("data-complete", "true");
-    expect(bar).toHaveTextContent("4 of 4 lessons complete");
+    expect(bar).toHaveTextContent(`${String(TUTORIAL_LESSONS.length)} of ${String(TUTORIAL_LESSONS.length)} lessons complete`);
 
     fireEvent.click(screen.getByTestId(tutorialTestid.show));
     const path = screen.getByTestId(tutorialTestid.path);

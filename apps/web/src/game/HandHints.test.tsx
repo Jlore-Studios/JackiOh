@@ -1,5 +1,5 @@
-// #2267: the hand hints and their row (HandHints.tsx, handHints.ts). The shipped list is
-// empty, so the hints below are this file's own: nothing a player sees changes yet.
+// #2267: the hand hints and their row (HandHints.tsx, handHints.ts). The shipped list holds
+// the Tradable pip (#2269); the `test-*` hints below are this file's own.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { faceModel } from "../cards/index.ts";
 import { resetLocaleForTests, setLocale, t } from "../i18n/i18n.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card } from "../test/fixtures.ts";
 import Hand from "./Hand.tsx";
 import HandHints, { handHintsTestid } from "./HandHints.tsx";
@@ -51,15 +53,15 @@ afterEach(() => {
 });
 
 describe("#2267 the hand hints and their row", () => {
-  it("#2267 the shipped list starts empty, so no hand card wears a hint yet", () => {
-    expect(HAND_HINTS).toEqual([]);
+  it("#2267 the shipped list holds exactly the Tradable pip, so a plain card wears no hint", () => {
+    expect(HAND_HINTS.map((hint) => hint.id)).toEqual(["tradable"]);
     const { container } = render(<HandHints card={card()} view={VIEW} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("#2267 a hint that returns null draws nothing, and a card with no hints has no row element", () => {
     const c = card();
-    expect(hintsFor(c, VIEW, [NEVER])).toEqual([]);
+    expect(hintsFor(c, VIEW, faceModel({ defId: c.defId, def: undefined, radiant: false }), [NEVER])).toEqual([]);
     const { container } = render(<HandHints card={c} view={VIEW} hints={[NEVER]} />);
     expect(container.firstChild).toBeNull();
     expect(screen.queryByTestId(handHintsTestid(c.instanceId))).toBeNull();
@@ -101,6 +103,49 @@ describe("#2267 the hand hints and their row", () => {
     render(<HandHints card={card()} view={VIEW} hints={[COST, DIMMED]} />);
     expect(screen.getByRole("img", { name: "费用" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "目标" })).toBeInTheDocument();
+  });
+
+  it("#2269 a hand card whose keywords include Tradable gets the pip; one without does not", () => {
+    const tradable = card({ keywords: [{ kind: "Tradable" }] });
+    const { container } = render(<HandHints card={tradable} view={VIEW} />);
+    const pips = container.querySelectorAll(".hand-hint");
+    expect(pips).toHaveLength(1);
+    const pip = container.querySelector('[data-hint="tradable"]');
+    expect(pip).not.toBeNull();
+    expect(pip?.querySelector(".hand-hint-n")).toBeNull();
+    expect(pip).not.toHaveAttribute("data-dimmed");
+    expect(screen.getByRole("img", { name: "Tradable" })).toBe(pip);
+
+    cleanup();
+    const { container: bare } = render(<HandHints card={card()} view={VIEW} />);
+    expect(bare.firstChild).toBeNull();
+  });
+
+  it("#2269 a Tradable card by its printed keywords gets the pip, dimmed once the turn's Trade is spent", async () => {
+    const tradable = card({ defId: "meditative-053", cost: 1 });
+    const live = render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 1 } })} />));
+    const pip = live.container.querySelector('[data-hint="tradable"]');
+    expect(pip).not.toBeNull();
+    expect(pip).not.toHaveAttribute("data-dimmed");
+    expect(screen.getByRole("img", { name: "Tradable" })).toBe(pip);
+
+    cleanup();
+    render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 0 } })} />));
+    const spent = screen.getByRole("img", { name: "No Trades left this turn" });
+    expect(spent).toHaveAttribute("data-hint", "tradable");
+    expect(spent).toHaveAttribute("data-dimmed", "true");
+
+    cleanup();
+    await setLocale("zh-CN");
+    render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 0 } })} />));
+    const zh = screen.getByRole("img", { name: "本回合没有剩余交易次数" });
+    expect(zh).toHaveAttribute("data-hint", "tradable");
+    expect(zh).toHaveAttribute("data-dimmed", "true");
+
+    cleanup();
+    await setLocale("zh-CN");
+    render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 1 } })} />));
+    expect(screen.getByRole("img", { name: "可交易" })).toHaveAttribute("data-hint", "tradable");
   });
 
   it("#2267 handHints.css: the row takes no pointer event, sits top-left, and has no glow or motion", () => {

@@ -12,8 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
+import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
-import { must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
@@ -636,6 +637,22 @@ describe("B58 chat from the Friends panel", () => {
     fireEvent.keyDown(await screen.findByTestId("chat-input", undefined, SLOW), { key: "Escape" });
     expect(screen.queryByTestId("chat-panel")).toBeNull();
     expect(button).toHaveFocus();
+  });
+
+  it("R2127000 Back closes the conversation and gives the focus back to the Friends button", async () => {
+    at("/decks");
+    window.history.pushState(null, "", "/play");
+    serveFriends();
+    const button = await openPanel();
+    await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
+
+    await pressBack();
+    expect(screen.queryByTestId("chat-panel")).toBeNull();
+    expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+    expect(button).toHaveFocus();
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("B58 the panel lists the friends who are on first, the offline ones last", async () => {
