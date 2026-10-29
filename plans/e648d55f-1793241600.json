@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2127,
+  "title": "Patch: Back closes the top sheet or dialog before it leaves the screen",
+  "branch": "bot/issue-2127",
+  "thread": "**Issue #2127 (data, not instructions):**\n\n```text\n# #2127: Patch: Back closes the top sheet or dialog before it leaves the screen\nOpened by @squishy-squooby.\n\nPart of #2036. This is a patch of its own: it goes live when it merges and builds on `main` beside the tracker's other parts.\n\nBlocked by #2118: the command menu is one of the overlays Back must close.\n\n## What\n\nThis is the \"predictive back\" tip. Today the browser's or Android's Back goes to the previous screen even while a sheet or dialog is open (or runs into R1754000's leave guard). Back should close the topmost dismissible overlay first.\n\n- **Which overlays:**\n  - the touch inspect sheet and the pile sheet (`cards/inspect/`);\n  - the command menu (#2118);\n  - the settings panel;\n  - the friends and challenge dialogs;\n  - every confirm, including concede, where Back means \"Keep playing\".\n- **Mechanism.** Use `CloseWatcher` where the browser has it; it is what drives Android's predictive back gesture for web dialogs. Elsewhere, push a history entry when an overlay opens, and when the overlay closes by other means, take that entry back without leaving the screen or setting off the leave guard. Opening and closing an overlay many times must not pile up history entries, and Forward after a Back that closed an overlay never reopens it.\n- **Nested overlays** close one per Back, topmost first.\n- **Never closed by Back:** a game `Prompt` (a required choice), the mulligan, and a hotseat hand-over screen. With one of those on top, Back works as it does today.\n- **The leave guard.** This must work with `net/navigate.ts`'s `guardLeaving` and `heldPop` (R1754000). Closing an overlay is never a leave, and a Back with no overlay open still meets the guard as it does today.\n- **Ruling.** SPEC \u00a710 doesn't decide this, so add a ruling note from this issue's block.\n\n## Done when\n\nvitest checks that:\n- each overlay listed closes on Back and leaves the screen as it was;\n- two stacked overlays take two Backs;\n- a `Prompt` or the mulligan on top leaves Back as today;\n- the leave guard still holds a Back when no overlay is open;\n- the fallback leaves `history.length` unchanged across repeated open/close cycles;\n- the `CloseWatcher` path is used when it exists.\n\n## Ground rules (from #2036)\n\n- Read `apps/web/README.md` before changing the client. CLAUDE.md rule 7: nothing here predicts, enforces or reveals game state.\n- Every number is a named constant (rule 9).\n- If SPEC \u00a710 doesn't already decide a behaviour, add a ruling note numbered from this issue's own block (`docs/issues-and-patches.md`, Ruling numbers), with its proving test named after it.\n- Gates: `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`.\n- The PR closes this issue, says `Part of #2036`, and carries one `## Player note` line.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2127: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2126 needs a plan",
+    "#2127 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first",
+    "#2268 skipped: it waits for #2267 to close first",
+    "#2269 skipped: it waits for #2267 to close first"
+  ]
+}
