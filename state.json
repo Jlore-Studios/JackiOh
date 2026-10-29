@@ -8772,13 +8772,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-29T00:36:41Z",
-      "free": 79445528576,
-      "percent": 36,
-      "total": 123690532864
+      "at": "2026-10-29T00:45:34Z",
+      "free": 51589242880,
+      "percent": 50,
+      "total": 102888095744
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40792073497",
-    "runner": "night-vm-muse",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40786742761",
+    "runner": "night-vm-muse-3-b2",
     "shown": null
   },
   "machine_memory": [
