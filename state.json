@@ -7922,6 +7922,7 @@
         "by": "`muse` (medium)",
         "sha": "5a964af1f95e8c2648dab7e237f79b411258a3ae"
       },
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-29T01:07:31Z",
