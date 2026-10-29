@@ -8023,7 +8023,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-28T23:06:53Z",
+      "feedback_since": "2026-10-29T00:08:24Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2278,
@@ -8037,11 +8037,11 @@
       "run_id": "40792073497",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-29T00:08:24Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
