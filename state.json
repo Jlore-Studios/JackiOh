@@ -8559,6 +8559,13 @@
     "2383": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T17:18:44Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 1 fails on breadth: 9 files across components and tests in one app. 'Switching back without a reload' needs `locale` added to the memo deps in 4 components (DeckEditor, DeckSidebar, almanac, TokenPicker), not only filters.ts"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
