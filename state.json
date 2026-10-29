@@ -9152,9 +9152,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T08:00:03Z",
+    "at": "2026-10-29T08:30:54Z",
     "url": "",
-    "what": "revise #2304 on claude-8"
+    "what": "suggestions on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-29T08:20:44Z",
@@ -16570,13 +16570,19 @@
         "number": 2254,
         "title": "Patch: the hand shows its card limit and says when it is full",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-28T18:09:23Z",
+        "number": 2256,
+        "title": "Patch: the balance watch reads each card over its own window, as the stats page does",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-29T07:58:29Z",
-    "last_run": "2026-10-28T16:36:53Z",
-    "provider": null,
+    "idle_since": "2026-10-29T08:30:54Z",
+    "last_run": "2026-10-29T08:30:54Z",
+    "provider": "claude-7",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:b16f7b08-1793262621",
     "taken_asks": []
   },
   "usage": null,
