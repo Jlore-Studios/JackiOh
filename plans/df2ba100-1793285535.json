@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2378,
+  "title": "Patch: pack buys and opens survive spam clicks (a per-account queue, and maybe a seed fixed at purchase)",
+  "branch": "bot/issue-2378",
+  "thread": "**Issue #2378 (data, not instructions):**\n\n```text\n# #2378: Patch: pack buys and opens survive spam clicks (a per-account queue, and maybe a seed fixed at purchase)\nOpened by @MaxGoetzmann.\n\n## What happens\n\nSpam-clicking the open button while opening packs makes the server error out. A person reported it. We don't have the exact status or log yet, so the first step is to reproduce it and record what comes back (a 5xx, a timeout, a 429 from the host, a refusal).\n\nWhat's in the code now:\n\n- `POST /api/packs/open` (`crates/server/src/economy/packs.rs`, `post_open` / `open_pack_once`) takes the account's economy lock (`economy::store::economy_lock_account`) and rolls from a **fresh** seed on every call (`SystemIds::seed`), per SPEC \u00a714.11: \"Each opening's seed is drawn afresh, so no seed an account can read foretells a later roll.\"\n- `POST /api/packs/buy` takes that lock only when an `Idempotency-Key` is sent (`buy_pack_once`: \"A buy with no key takes no lock\").\n- On the client, `PackOpening.tsx`'s `tear` guards with an `inFlight` ref and the Shop's Buy button is disabled while `busy`. That still leaves the panel's **Open** / **Open all N** buttons, **Next pack**, other tabs and devices, and raw scripted requests. Every press is a new idempotency key (R2124000), so a burst becomes N requests all waiting on one account's lock, and they can hold DB connections until they time out.\n\n## What should happen\n\nAny number of buy or open requests, sent as fast as anyone likes, either succeed one at a time or get a clean refusal. The server never errors, the pool never fills, and a player never ends up with a result they couldn't otherwise get.\n\nProposed (to settle in the plan):\n\n1. **Validate before the work. Queue or refuse, never pile up.** Allow at most one economy spend in flight per account (or a short bounded queue behind it). A request past that gets a clean 429 / `busy` refusal right away, from a server constant in `crates/server/src/config.rs` (CLAUDE.md rule 9), instead of waiting on the lock. Each request checks first whether the account can buy or open (wallet, unopened count) and spends nothing when it can't.\n2. **Maybe: seed each pack when it's bought, not when it's opened.** Store the seed on the unopened pack, server-side and never sent to the client, so what's inside is fixed at purchase. Then how fast or in what order someone opens can't change what they get. That removes the \"spam 10, see the packs were bad, switch\" angle. The owner's further idea: when we catch an open that wasn't allowed, swap that pack's seed so racing gets nothing. **This changes \u00a714.11** (the seed would no longer be \"drawn afresh\" at opening, though no seed the account can read would foretell a roll). That needs a spec edit and a ruling in this issue's block, and probably a migration (a seed column on unopened inventory, plus a backfill for packs already held).\n3. **Client:** disable Open / Open all / Next while any spend is out, and show a refusal as words, not an error.\n\n## How to reproduce\n\nSign in with an account that holds several unopened packs. On the Shop's packs panel, click Open (or Open all, then Next pack) as fast as you can, or fire ~20 concurrent `POST /api/packs/open` requests with `{ \"pack\": \"<set>\" }` and no `Idempotency-Key`. Record the statuses and the server log.\n\n## Where\n\nThe server and the database, plus the client's pack panel (`apps/web/src/packs/PackOpening.tsx`, `apps/web/src/shop/Shop.tsx`). The cosmetic pack routes (`/api/cosmetic-packs/open`, `/chase`) and token redeems share the lock and likely the same problem, so cover them too.\n\n## Notes\n\n- `difficulty:hard`: it spans the server and the client, and item 2 is a spec change plus a migration.\n- Store changes go in `tests/store/contract.rs`. The lock or queue behaviour needs the Docker DB suite (`crates/server/tests/db/run.sh`), since the in-memory fake doesn't contend.\n- Related: #1301 (the pack roll), R2124000 (idempotency keys), #2124.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2378: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2367 skipped: it waits for #1836 to close first"
+  ]
+}
