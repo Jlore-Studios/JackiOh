@@ -1,7 +1,7 @@
 {
   "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
   "sources": "#2226",
-  "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship). Queued as a unit's trigger it answered every event its condition admits since R2271000 (v0.5.2b), so 饕餮 holding Wormhole stole the opponent's Spells from its unit zone; before R2271000 read that condition, the same 饕餮 countered and recast its own controller's Spell for ever, which the daily fuzz waves of #2226 found. The classifier shows Glitch in the System (classic-018), Tnack Trav (stinkyscape-020), Beam v3 and Repeater v3 (stinkyscape-050, 051), Miner v2 and Miner v5 (stinkyscape-063, 066), Ozark (stinkyscape-078), Phalanx (stinkyscape-082), Spacerace Stimulus (stinkyscape-131), Call to Chaos (Scape Edition) (stinkyscape-151) and the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in, playing differently, and a divergence no card explains: a Trap fused into a card a pool made mid-game (a 饕餮 drawn from one).",
+  "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship). Queued as a unit's trigger it answered every event its condition admits since R2271000 (v0.5.2b), so 饕餮 holding Wormhole stole the opponent's Spells from its unit zone; before R2271000 read that condition, the same 饕餮 countered and recast its own controller's Spell for ever, which the daily fuzz waves of #2226 found. The classifier shows Tesla (classic-005), Glowy Jelly Bean (core-026), RCTA (CN) (meditative-035), 饕餮 (meditative-047), Catboy Maid SSR+ (meditative-102), Beam v4 (stinkyscape-054), Spacerace Stimulus (stinkyscape-131) and the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in, playing differently.",
   "player": {
     "title": "A Trap fused into a Unit stays quiet",
     "new": [],
@@ -14,17 +14,13 @@
   },
   "cards": [],
   "plays": [
-    "classic-018",
-    "stinkyscape-020",
-    "stinkyscape-050",
-    "stinkyscape-051",
-    "stinkyscape-063",
-    "stinkyscape-066",
-    "stinkyscape-078",
-    "stinkyscape-082",
+    "classic-005",
+    "core-026",
+    "meditative-035",
+    "meditative-047",
+    "meditative-102",
+    "stinkyscape-054",
     "stinkyscape-131",
-    "stinkyscape-151",
     "stinkyscape-t-dormant-starship"
-  ],
-  "rule": true
+  ]
 }
